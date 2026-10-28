@@ -3,6 +3,7 @@ import { LAYOUT } from '../data/layout';
 import { finishDay } from './closing';
 import { secondsToTicks } from './constants';
 import { spawnCustomers, stepCustomers } from './customers';
+import { stepEvents } from './events';
 import { computeModifiers } from './effects';
 import { applyMenuInput } from './menu';
 import { applyMovement } from './movement';
@@ -76,6 +77,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
 }
 
 function stepDay(s: GameState, doorsOpen: boolean): void {
+  stepEvents(s, doorsOpen);
   const m = computeModifiers(s);
   applyMovement(s, m.moveSpeed);
   for (const p of s.players) {

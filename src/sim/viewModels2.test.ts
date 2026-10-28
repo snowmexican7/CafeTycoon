@@ -26,3 +26,16 @@ describe('night menu vm', () => {
     ]);
   });
 });
+
+describe('hud events', () => {
+  it('lists active events and keys them without seconds', () => {
+    const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    s.events = [{ kind: 'rushHour', ticksLeft: 61 }];
+    expect(hudViewModel(s).events).toEqual([{ kind: 'rushHour', label: 'Rush hour', secondsLeft: 2 }]);
+    const key = hudStructureKey(hudViewModel(s));
+    s.events[0].ticksLeft = 30;
+    expect(hudStructureKey(hudViewModel(s))).toBe(key);
+    s.events.push({ kind: 'powerFlicker', ticksLeft: 30 });
+    expect(hudStructureKey(hudViewModel(s))).not.toBe(key);
+  });
+});

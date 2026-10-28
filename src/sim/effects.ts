@@ -1,5 +1,6 @@
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
+import { eventActive } from './events';
 import { rngNext } from './rng';
 import type { DrinkId, Effect, GameState, StationKind, SupplyId } from './types';
 
@@ -89,6 +90,10 @@ export function computeModifiers(state: GameState): Modifiers {
   const ramp = weekOf(state.day) - 1;
   m.traffic *= (rep.base + rep.perStar * state.reputation) * ECONOMY.pace.arrival[paceIndex] * ECONOMY.weekRamp.traffic ** ramp;
   m.patience *= ECONOMY.pace.patience[paceIndex] * ECONOMY.weekRamp.patience ** ramp;
+  if (eventActive(state, 'rushHour')) {
+    m.traffic *= ECONOMY.events.rushHour.traffic;
+    m.patience *= ECONOMY.events.rushHour.patience;
+  }
   return m;
 }
 
