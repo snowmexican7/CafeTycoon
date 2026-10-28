@@ -1,8 +1,9 @@
 @import './ui/styles/base.css';
 @import './ui/styles/hud.css';
+@import './ui/styles/night.css';
 
 /* Legacy screens not yet restyled. */
-#title, #night, #closing, #weekEnd, #pause, #lobby { color: var(--text); font-family: system-ui, sans-serif; }
+#title, #closing, #weekEnd, #pause, #lobby { color: var(--text); font-family: system-ui, sans-serif; }
 :root {
   --bg: #1b1410;
   --panel: #2b2118;
@@ -17,7 +18,7 @@
 * { box-sizing: border-box; }
 
 /* overlays */
-#title, #night, #closing, #weekEnd, #pause {
+#title, #closing, #weekEnd, #pause {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
   padding: 16px; background: rgba(0,0,0,.55); z-index: 10; overflow: auto;
 }
@@ -39,15 +40,6 @@ table.history, table.stats { width: 100%; border-collapse: collapse; font-size: 
 table td, table th { padding: 6px 8px; text-align: left; border-bottom: 1px solid #4a3b2e; }
 table.stats td:last-child { text-align: right; } tr.total td { font-weight: 700; color: var(--accent); }
 
-/* night */
-.night-head { display: flex; gap: 16px; align-items: baseline; } .big { font-size: 1.4rem; font-weight: 700; } .night-head .clock { font-family: ui-monospace, Menlo, monospace; }
-.takings { padding: 8px 12px; background: var(--panel-2); border-radius: 8px; margin-top: 6px; }
-.hand { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-.card { text-align: left; display: flex; flex-direction: column; gap: 6px; padding: 12px; min-height: 150px; border-radius: 12px; border: 2px solid #5a4a3b; }
-.card.tomorrow { border-style: dashed; } .card:not(:disabled):hover { border-color: var(--accent); }
-.card-top { display: flex; justify-content: space-between; gap: 8px; } .card .name { font-weight: 700; } .card .cost { color: var(--accent); font-weight: 700; }
-.card .effect { color: var(--good); font-size: .9rem; } .card .flavor { color: var(--muted); font-size: .85rem; font-style: italic; flex: 1; } .card .tag { font-size: .75rem; color: var(--muted); text-transform: uppercase; }
-.ready-row { justify-content: space-between; } .pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .pill { padding: 4px 10px; border-radius: 999px; background: var(--panel-2); font-size: .85rem; } .pill.on { background: var(--good); color: var(--accent-ink); }
 .score { font-size: 2.6rem; font-weight: 800; color: var(--accent); margin: 4px 0; }
 ul.bought { margin: 0; padding-left: 20px; }

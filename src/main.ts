@@ -22,7 +22,7 @@ import { createSettingsStore } from './storage/settingsStore';
 import { createSnapshotStore } from './storage/snapshotStore';
 import { createClosing } from './ui/closing';
 import { createHud } from './ui/hud';
-import { hudLive } from './ui/live';
+import { hudLive, nightExtras } from './ui/live';
 import { createLobby } from './ui/lobby';
 import { createNight } from './ui/night';
 import { createPause } from './ui/pause';
@@ -331,7 +331,7 @@ async function main(): Promise<void> {
     hud.render(hudViewModel(state), hudLive(state, s.me));
 
     if (state.phase === 'closing') s.lastClosing = state;
-    if (state.phase === 'night') night.render(nightViewModel(state, s.me));
+    if (state.phase === 'night') night.render(nightViewModel(state, s.me), nightExtras(state, s.me), s.code);
 
     const canSave = s.role !== 'peer';
     if (state.phase !== s.lastPhase) {
