@@ -29,15 +29,19 @@ export async function createRenderer(
   mount.appendChild(app.canvas);
 
   // Fit the diorama to the space available, keeping its aspect ratio.
+  // The mount is the stage box between the HUD gutters (style.css); leave room for the wooden frame.
+  const FRAME = 24;
   const fit = () => {
-    const maxW = Math.min(mount.clientWidth || SCENE_WIDTH, 960);
-    const maxH = Math.max(240, window.innerHeight - 72);
+    const maxW = Math.max(240, (mount.clientWidth || SCENE_WIDTH) - FRAME);
+    const maxH = Math.max(240, (mount.clientHeight || window.innerHeight - 72) - FRAME);
     const scale = Math.min(maxW / SCENE_WIDTH, maxH / SCENE_HEIGHT);
     app.canvas.style.width = `${Math.round(SCENE_WIDTH * scale)}px`;
     app.canvas.style.height = `${Math.round(SCENE_HEIGHT * scale)}px`;
   };
   fit();
   window.addEventListener('resize', fit);
+  const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit);
+  ro?.observe(mount);
 
   const scene = new Scene();
   app.stage.addChild(scene.root);
@@ -46,6 +50,7 @@ export async function createRenderer(
     setLocalPlayer: (id) => scene.setLocalPlayer(id),
     destroy: () => {
       window.removeEventListener('resize', fit);
+      ro?.disconnect();
       app.destroy(true, { children: true });
     },
   };

@@ -1,0 +1,167 @@
+/**
+ * Presentational helpers for the restyled overlays. They read GameState directly for the things
+ * the view models do not carry (order tickets, crew, what you hold, the day bar), and never change
+ * the sim or the view models. Each block has its own key so the DOM only rebuilds when it changes.
+ */
+import { catalogueById } from '../data/catalogue';
+import { ECONOMY } from '../data/economy';
+import { TICK_RATE } from '../sim/constants';
+import { computeModifiers } from '../sim/effects';
+import { nearestStation } from '../sim/movement';
+import type { CatalogueItem, DrinkId, GameState, ItemKind, PlayerId, StationKind, SupplyId } from '../sim/types';
+
+export const PLAYER_HEX = ['#e0564a', '#4c8fd6', '#4fae7b', '#8a6bbf'] as const;
+export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+export const ITEM_LABEL: Record<ItemKind, string> = { grounds: 'Grounds', espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew' };
+export const STATION_NAME: Record<StationKind, string> = {
+  grinder: 'Grinder',
+  espresso: 'Espresso machine',
+  steamer: 'Steamer',
+  coldBrewTap: 'Cold brew tap',
+  counter: 'Pick-up counter',
+  trash: 'Trash',
+};
+export const SUPPLY_NAME: Record<SupplyId, string> = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew' };
+/** The steps on an order ticket, in the order a barista does them. */
+export const DRINK_STEPS: Record<DrinkId, string[]> = {
+  espresso: ['Grind', 'Pull', 'Hand off'],
+  latte: ['Grind', 'Pull', 'Steam', 'Hand off'],
+  coldBrew: ['Tap', 'Hand off'],
+};
+
+export interface CrewMember {
+  id: PlayerId;
+  name: string;
+  initial: string;
+  color: string;
+  me: boolean;
+  connected: boolean;
+}
+
+export interface OrderTicket {
+  id: number;
+  drink: DrinkId;
+  /** Patience left, 0..1. Changes every tick: patch it, do not key on it. */
+  patience: number;
+}
+
+export interface HandHint {
+  /** True when pressing E would do something right now. */
+  go: boolean;
+  /** "Grind beans", "Needs grounds", "Walk up to a station"... */
+  title: string;
+  /** Where, and how long it takes. */
+  detail: string;
+}
+
+export interface HudLive {
+  dayInWeek: number;
+  /** 0..1 through today's opening hours (or through the closing grace). */
+  progress: number;
+  open: boolean;
+  orders: OrderTicket[];
+  crew: CrewMember[];
+  holding: ItemKind | null;
+  meName: string;
+  hint: HandHint;
+}
+
+export function crewOf(state: GameState, me: PlayerId): CrewMember[] {
+  return state.players.map((p, i) => ({
+    id: p.id,
+    name: p.name,
+    initial: (p.name.trim()[0] ?? '?').toUpperCase(),
+    color: PLAYER_HEX[i % PLAYER_HEX.length],
+    me: p.id === me,
+    connected: p.connected,
+  }));
+}
+
+const VERB: Record<'grinder' | 'espresso' | 'steamer' | 'coldBrewTap', string> = {
+  grinder: 'Grind beans',
+  espresso: 'Pull a shot',
+  steamer: 'Steam milk',
+  coldBrewTap: 'Pour cold brew',
+};
+const TAKES: Record<keyof typeof VERB, ItemKind | null> = { grinder: null, espresso: 'grounds', steamer: 'espresso', coldBrewTap: null };
+const USES: Record<keyof typeof VERB, SupplyId | null> = { grinder: 'beans', espresso: null, steamer: 'milk', coldBrewTap: 'concentrate' };
+
+/** A plain-words hint for the nearest station, mirroring the interact rules (display only). */
+export function handHint(state: GameState, me: PlayerId): HandHint {
+  const player = state.players.find((p) => p.id === me);
+  const idle = (title: string, detail: string): HandHint => ({ go: false, title, detail });
+  const go = (title: string, detail: string): HandHint => ({ go: true, title, detail });
+  if (!player || (state.phase !== 'day' && state.phase !== 'closing')) return idle('', '');
+  const station = nearestStation(state, player.pos);
+  if (!station) return idle('Walk up to a station', 'E uses the nearest one');
+  const where = STATION_NAME[station.kind];
+  const held = player.holding;
+  if (station.kind === 'trash') return held ? go(`Bin the ${ITEM_LABEL[held].toLowerCase()}`, where) : idle('Hands are empty', where);
+  if (station.kind === 'counter') return held && held !== 'grounds' ? go(`Hand off ${ITEM_LABEL[held].toLowerCase()}`, where) : idle('Bring a drink here', where);
+  const kind = station.kind;
+  if (station.output !== null && held === null) return go(`Pick up ${ITEM_LABEL[station.output].toLowerCase()}`, where);
+  if (station.busyTicksLeft > 0) return idle(`Ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`, where);
+  if (station.output !== null) return idle('Hands full', where);
+  const need = TAKES[kind];
+  if (held !== need) return idle(need ? `Needs ${ITEM_LABEL[need].toLowerCase()}` : 'Hands full', where);
+  const supply = USES[kind];
+  if (supply && state.supplies[supply] < 1) return idle(`Out of ${SUPPLY_NAME[supply].toLowerCase()}`, where);
+  const secs = ECONOMY.stationSeconds[kind] / computeModifiers(state).stationSpeed[kind];
+  return go(VERB[kind], `${where} · ${secs.toFixed(1)} s`);
+}
+
+export function hudLive(state: GameState, me: PlayerId): HudLive {
+  const total = state.phase === 'closing' ? ECONOMY.closingGraceSeconds * TICK_RATE : state.settings.dayLengthSec * TICK_RATE;
+  const progress = total > 0 ? Math.max(0, Math.min(1, 1 - state.phaseTicksLeft / total)) : 0;
+  const player = state.players.find((p) => p.id === me);
+  return {
+    dayInWeek: (state.day - 1) % 7,
+    progress,
+    open: state.phase === 'day',
+    orders: state.customers.map((c) => ({ id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0 })),
+    crew: crewOf(state, me),
+    holding: player?.holding ?? null,
+    meName: player?.name ?? '',
+    hint: handHint(state, me),
+  };
+}
+
+/** Keys for the HUD's independently rebuilt blocks (everything except per-tick values). */
+export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}`).join(',');
+export const crewKey = (l: HudLive) => l.crew.map((c) => `${c.id}:${c.name}:${c.connected ? 1 : 0}:${c.me ? 1 : 0}`).join(',');
+export const handKey = (l: HudLive) => `${l.holding}|${l.meName}|${l.hint.go}|${l.hint.title}|${l.hint.detail}`;
+
+export interface NightExtras {
+  day: number;
+  weekday: string;
+  /** 0..1 of the night left. Patched, not keyed. */
+  left: number;
+  served: number;
+  lost: number;
+  reputation: number;
+  crew: CrewMember[];
+  bought: { itemId: string; name: string; category: CatalogueItem['category'] }[];
+}
+
+export function nightExtras(state: GameState, me: PlayerId): NightExtras {
+  const last = state.days.length ? state.days[state.days.length - 1] : null;
+  const total = state.settings.nightLengthSec * TICK_RATE;
+  return {
+    day: state.day,
+    weekday: WEEKDAYS[(state.day - 1) % 7],
+    left: total > 0 ? Math.max(0, Math.min(1, state.phaseTicksLeft / total)) : 0,
+    served: last?.served ?? 0,
+    lost: (last?.lost ?? 0) + (last?.turnedAway ?? 0),
+    reputation: state.reputation,
+    crew: crewOf(state, me),
+    bought: state.boughtTonight.map((id) => ({ itemId: id, name: catalogueById[id]?.name ?? id, category: catalogueById[id]?.category ?? 'oddball' })),
+  };
+}
+
+export const nightExtrasKey = (n: NightExtras) =>
+  `${n.day}|${n.served}|${n.lost}|${n.reputation}|${crewKey({ crew: n.crew } as HudLive)}|${n.bought.map((b) => b.itemId).join(',')}`;
+
+export function categoryOf(itemId: string): CatalogueItem['category'] {
+  return catalogueById[itemId]?.category ?? 'oddball';
+}

@@ -1,3 +1,8 @@
+@import './ui/styles/base.css';
+@import './ui/styles/hud.css';
+
+/* Legacy screens not yet restyled. */
+#title, #night, #closing, #weekEnd, #pause, #lobby { color: var(--text); font-family: system-ui, sans-serif; }
 :root {
   --bg: #1b1410;
   --panel: #2b2118;
@@ -8,15 +13,8 @@
   --accent-ink: #1b1410;
   --good: #66bb6a;
   --bad: #e57373;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-  color: var(--text);
-  background: var(--bg);
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; background: var(--bg); }
-body { display: flex; flex-direction: column; align-items: center; padding: 0 16px 24px; }
-#game { width: min(100%, 960px); margin-top: 56px; }
-#game canvas { border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
 
 /* overlays */
 #title, #night, #closing, #weekEnd, #pause {
@@ -41,14 +39,6 @@ table.history, table.stats { width: 100%; border-collapse: collapse; font-size: 
 table td, table th { padding: 6px 8px; text-align: left; border-bottom: 1px solid #4a3b2e; }
 table.stats td:last-child { text-align: right; } tr.total td { font-weight: 700; color: var(--accent); }
 
-/* hud */
-#hud { position: fixed; top: 0; left: 0; right: 0; z-index: 5; }
-#hud .bar { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 10px 16px; background: var(--panel); font-size: .95rem; }
-#hud .clock { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.15rem; }
-#hud .cash { color: var(--accent); font-weight: 700; } #hud .rep { color: #ffd54f; }
-#hud .menu span { margin-right: 10px; } #hud .menu .off { text-decoration: line-through; color: var(--muted); }
-#hud .toast { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); background: var(--accent); color: var(--accent-ink); padding: 10px 16px; border-radius: 10px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,.4); max-width: 90vw; }
-
 /* night */
 .night-head { display: flex; gap: 16px; align-items: baseline; } .big { font-size: 1.4rem; font-weight: 700; } .night-head .clock { font-family: ui-monospace, Menlo, monospace; }
 .takings { padding: 8px 12px; background: var(--panel-2); border-radius: 8px; margin-top: 6px; }
@@ -69,4 +59,3 @@ ul.bought { margin: 0; padding-left: 20px; }
 .status { color: var(--accent); font-weight: 600; }
 .join-row input { text-transform: uppercase; letter-spacing: .2em; width: 9em; }
 .room-line { background: var(--panel-2); padding: 8px 12px; border-radius: 8px; }
-#hud .room b { color: var(--accent); }

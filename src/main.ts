@@ -22,6 +22,7 @@ import { createSettingsStore } from './storage/settingsStore';
 import { createSnapshotStore } from './storage/snapshotStore';
 import { createClosing } from './ui/closing';
 import { createHud } from './ui/hud';
+import { hudLive } from './ui/live';
 import { createLobby } from './ui/lobby';
 import { createNight } from './ui/night';
 import { createPause } from './ui/pause';
@@ -184,6 +185,7 @@ async function main(): Promise<void> {
     title.hide();
     hud.setRoom(code);
     hud.show();
+    renderer.setLocalPlayer(playerId);
     return s;
   }
 
@@ -305,6 +307,7 @@ async function main(): Promise<void> {
     }
     session = null;
     hud.setRoom(null);
+    renderer.setLocalPlayer(null);
     lobby.hide();
     if (backToTitle) showTitle();
   }
@@ -325,7 +328,7 @@ async function main(): Promise<void> {
       renderLobby(s);
     }
     if (s.peerStatus !== 'hostAway') lobby.hide();
-    hud.render(hudViewModel(state));
+    hud.render(hudViewModel(state), hudLive(state, s.me));
 
     if (state.phase === 'closing') s.lastClosing = state;
     if (state.phase === 'night') night.render(nightViewModel(state, s.me));

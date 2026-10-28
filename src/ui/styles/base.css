@@ -1,0 +1,65 @@
+/* Page shell shared by every screen (tokens live in ../theme.css). */
+:root { --gutter: clamp(200px, 19vw, 264px); --topbar: 64px; --bottombar: 82px; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: var(--font-body); color: var(--ink); overflow: hidden;
+  background: #2a1a12 radial-gradient(circle at 50% 40%, #4a2e1f 0%, #2a1a12 70%);
+}
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(#ffffff0d 1.2px, transparent 1.4px); background-size: 18px 18px;
+}
+h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; }
+[hidden] { display: none !important; }
+
+/* The café stage sits between the HUD gutters; render/app.ts scales the canvas to this box. */
+#game {
+  position: fixed; top: var(--topbar); bottom: var(--bottombar); left: var(--gutter); right: var(--gutter);
+  display: flex; align-items: center; justify-content: center; margin: 0; width: auto;
+}
+
+/* Buttons and fields shared by the restyled screens. */
+.btn {
+  font-family: var(--font-display); font-weight: 600; font-size: 17px; line-height: 1.1; border: 0; border-radius: 14px;
+  padding: 12px 18px; min-height: 44px; cursor: pointer; background: var(--foam); color: var(--ink);
+  box-shadow: 0 4px 0 #d4b896, 0 8px 16px rgba(58, 36, 24, .15);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  transition: transform .08s ease, box-shadow .08s ease, filter .12s ease;
+}
+.btn:hover:not(:disabled) { filter: brightness(1.04); transform: translateY(-1px); }
+.btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #d4b896, 0 4px 8px rgba(58, 36, 24, .15); }
+.btn:disabled { opacity: .55; cursor: default; filter: saturate(.6); }
+.btn.primary { background: var(--caramel); color: #fff; box-shadow: 0 4px 0 var(--caramel-dk), 0 10px 18px rgba(185, 101, 31, .35); text-shadow: 0 1px 0 rgba(0, 0, 0, .15); }
+.btn.mint { background: var(--mint); color: #12392d; box-shadow: 0 4px 0 var(--mint-dk), 0 10px 18px rgba(63, 158, 128, .3); }
+.btn.ghost { background: transparent; box-shadow: inset 0 0 0 2px var(--oat); }
+.btn.big { font-size: 19px; padding: 14px 24px; min-height: 52px; }
+.btn.block { width: 100%; }
+:where(button, input, select, a, [tabindex]):focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
+.btn.primary:focus-visible { outline-color: var(--espresso); }
+
+.fld { display: flex; flex-direction: column; gap: 5px; }
+.fld > span, .lbl { font: 700 11.5px var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+.inp {
+  font: 600 16px var(--font-body); color: var(--ink); background: #fff; border: 2px solid var(--oat); border-radius: 12px;
+  padding: 9px 12px; min-height: 44px; width: 100%;
+}
+.inp:focus { border-color: var(--caramel); outline: none; box-shadow: 0 0 0 3px #e08a3c33; }
+select.inp { appearance: none; padding-right: 34px; cursor: pointer;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a5b46' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center; }
+
+/* Segmented control built from radio inputs (pace on the title and pause screens). */
+.seg { display: flex; background: var(--latte); border-radius: 12px; padding: 4px; gap: 2px; }
+.seg label { flex: 1; position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: block; text-align: center; font: 600 14px var(--font-display); padding: 8px 4px; border-radius: 9px; color: var(--ink-soft); cursor: pointer; }
+.seg input:checked + span { background: var(--cherry); color: #fff; box-shadow: 0 2px 0 #b8413a; }
+.seg input:focus-visible + span { outline: 3px solid var(--sky); outline-offset: 1px; }
+.seg input:disabled + span { cursor: default; opacity: .6; }
+
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 12px var(--font-display); letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
+.key { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 6px; background: var(--foam); color: var(--ink); font: 700 12px var(--font-display); box-shadow: 0 2px 0 #c9b294; }
+.av { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--crema); display: grid; place-items: center; color: #fff; font: 700 12px var(--font-display); flex: none; }
+
+/* A modal shade for the pause / results screens. */
+.shade { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto;
+  background: rgba(30, 18, 10, .55); backdrop-filter: blur(3px); }
