@@ -36,3 +36,11 @@ describe('createRun', () => {
     expect(s.phaseTicksLeft).toBe(30 * 60);
   });
 });
+
+describe('seed quality', () => {
+  it('spreads the scenario roll across small consecutive seeds', () => {
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 40; seed++) seen.add(createRun({ ...opts, seed }).scenario);
+    expect(seen.size).toBe(4);
+  });
+});

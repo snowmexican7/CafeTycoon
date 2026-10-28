@@ -28,3 +28,11 @@ describe('rng', () => {
     expect([...seen].sort()).toEqual([0, 1, 2, 3]);
   });
 });
+
+describe('seed quality', () => {
+  it('does not let consecutive small seeds all start on the same side of 0.5', () => {
+    const halves = new Set<boolean>();
+    for (let seed = 1; seed <= 6; seed++) halves.add(rngNext({ rng: seedRng(seed) }) >= 0.5);
+    expect(halves.size).toBe(2);
+  });
+});

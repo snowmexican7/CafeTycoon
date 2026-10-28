@@ -3,9 +3,12 @@
  * so it can live inside the plain GameState object.
  */
 
-/** Initial generator state for a seed (coerced to uint32). */
+/** Initial generator state for a seed: the seed is scrambled first so that seeds 1, 2, 3 do not share early draws. */
 export function seedRng(seed: number): number {
-  return seed >>> 0;
+  let h = (seed >>> 0) ^ 0x9e3779b9;
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return (h ^ (h >>> 16)) >>> 0;
 }
 
 /** Advance the generator stored on `state.rng` and return a float in [0, 1). */
