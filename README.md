@@ -2,7 +2,7 @@
 
 A small cafe-management game built for fun by a few friends. Play it in the browser.
 
-**Play:** https://USERNAME.github.io/CafeTycoon/ (fill in once Pages is live)
+**Play:** https://snowmexican7.github.io/CafeTycoon/
 
 ## Working on it
 
