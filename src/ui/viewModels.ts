@@ -121,7 +121,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
       const cost = restockCost(state, supply, 1);
       return { supply, count: state.supplies[supply], packSize: ECONOMY.packs[supply].size, packCost: money(cost), affordable: state.cash >= cost };
     }),
-    ready: state.players.map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
+    ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
     meReady: state.ready.includes(me),
     menu: DRINKS.map((drink) => ({ drink, on: state.menu[drink] })),
   };

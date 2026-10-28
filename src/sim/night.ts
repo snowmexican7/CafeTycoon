@@ -91,7 +91,7 @@ export function applyNightInput(state: GameState, input: PlayerInput): GameState
 /** One tick of night: count down, and open the doors when time is up or everyone connected is ready. */
 export function stepNight(state: GameState): GameState {
   state.phaseTicksLeft -= 1;
-  const connected = state.players.filter((p) => p.connected);
+  const connected = state.players.filter((p) => p.connected && !p.bot);
   const everyoneReady = connected.length > 0 && connected.every((p) => state.ready.includes(p.id));
   if (state.phaseTicksLeft <= 0 || everyoneReady) return startDay(state);
   return state;

@@ -6,6 +6,7 @@ import { SCENARIOS } from '../data/scenarios';
 import { scheduleEvents } from './events';
 import { morningNotes } from './describe';
 import { dealHand } from './night';
+import { syncBots } from './bots/roster';
 import type { CreateRunOptions, DayStats, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
@@ -106,6 +107,7 @@ export function startDay(state: GameState): GameState {
   state.today = freshDayStats(state.day);
   state.events = [];
   state.eventSchedule = [];
+  syncBots(state);
   scheduleEvents(state);
   state.morningNotes = morningNotes(state);
   return state;

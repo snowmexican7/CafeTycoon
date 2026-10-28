@@ -3,7 +3,7 @@ import type { HostToClient } from '../net/transport';
 import { createRun } from '../sim/run';
 import { createLoop } from './loop';
 
-const initial = () => createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+const initial = () => createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
 
 describe('loop', () => {
   it('steps at 60 Hz from elapsed time and snapshots at 20 Hz', () => {

@@ -13,15 +13,18 @@ import { stepPass } from './pass';
 import { interact, stepStations } from './stations';
 import type { GameState, PlayerInput } from './types';
 import { validateInput } from './validate';
+import { isBotId } from './bots/roster';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
+  const existing = s.players.find((p) => p.id === input.playerId);
+  if (existing?.bot || (input.kind === 'join' && isBotId(input.playerId))) return;
   switch (input.kind) {
     case 'join': {
-      const existing = s.players.find((p) => p.id === input.playerId);
       if (existing) existing.connected = true;
       else {
-        s.players.push({
+        const firstBot = s.players.findIndex((p) => p.bot);
+        s.players.splice(firstBot === -1 ? s.players.length : firstBot, 0, {
           id: input.playerId,
           name: input.name,
           pos: { ...LAYOUT.door },

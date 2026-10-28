@@ -7,7 +7,7 @@ import type { GameState, PlayerId } from '../sim/types';
 export function markPeersAway(state: GameState, hostId: PlayerId): GameState {
   const s = structuredClone(state);
   for (const p of s.players) {
-    if (p.id === hostId) continue;
+    if (p.id === hostId || p.bot) continue;
     p.connected = false;
     p.moveDir = { x: 0, y: 0 };
     p.interactQueued = false;
