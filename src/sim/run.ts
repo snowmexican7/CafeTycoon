@@ -3,6 +3,7 @@ import { LAYOUT } from '../data/layout';
 import { secondsToTicks } from './constants';
 import { rngInt, seedRng } from './rng';
 import { SCENARIOS } from '../data/scenarios';
+import { dealHand } from './night';
 import type { CreateRunOptions, DayStats, GameState, Player, Settings } from './types';
 
 function freshDayStats(day: number): DayStats {
@@ -65,8 +66,7 @@ export function startNight(state: GameState): GameState {
   state.phaseTicksLeft = secondsToTicks(state.settings.nightLengthSec);
   state.ready = [];
   state.boughtTonight = [];
-  state.hand = [];
-  return state;
+  return dealHand(state);
 }
 
 /** Open the doors for `state.day`. */
