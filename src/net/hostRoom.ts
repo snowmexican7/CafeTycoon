@@ -45,6 +45,7 @@ export function createHostRoom(link: RoomLink, local: Transport, host: Member, o
       link.send('hello', { t: 'hello', protocol: PROTOCOL_VERSION, hostToken: host.token, reject: 'version' }, peerId);
       return;
     }
+    if (msg.token === host.token) return; // nobody joins as the host
     for (const [otherPeer, member] of byPeer) {
       if (member.token === msg.token && otherPeer !== peerId) byPeer.delete(otherPeer);
     }

@@ -7,7 +7,10 @@ import { describeEffects } from '../sim/describe';
 import { computeModifiers, weekOf } from '../sim/effects';
 import { restockCost } from '../sim/night';
 import { scoreRun } from '../sim/score';
+import type { PeerStatus } from '../net/peerSession';
+import type { Member } from '../net/protocol';
 import type { DayStats, DrinkId, GameState, Phase, PlayerId, RunRecord, SupplyId } from '../sim/types';
+import type { RoomRecord } from '../storage/roomStore';
 
 const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
 const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate'];
@@ -176,10 +179,12 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
 export interface TitleVM {
   history: { date: string; score: string; days: number; scenario: string; players: string }[];
   canResume: boolean;
+  rejoinCode: string | null;
 }
 
-export function titleViewModel(history: RunRecord[], snapshot: GameState | null): TitleVM {
+export function titleViewModel(history: RunRecord[], snapshot: GameState | null, room: RoomRecord | null = null): TitleVM {
   return {
+    rejoinCode: room?.role === 'peer' ? room.code : null,
     history: history.map((r) => ({
       date: r.date,
       score: money(r.score),
@@ -201,4 +206,30 @@ export function nightStructureKey(vm: NightVM): string {
 export function hudStructureKey(vm: HudVM): string {
   const { clock: _clock, cash: _cash, ...rest } = vm;
   return JSON.stringify(rest);
+}
+
+export interface LobbyVM {
+  code: string;
+  members: string[];
+  isHost: boolean;
+  canStart: boolean;
+  statusText: string;
+}
+
+export function lobbyViewModel(input: { code: string; members: Member[]; isHost: boolean; status: PeerStatus | 'hosting'; started: boolean }): LobbyVM {
+  const { status, started } = input;
+  let statusText = '';
+  if (status === 'hosting') statusText = started ? 'Room open. Friends can still join.' : 'Share the code. Start when everyone is in.';
+  else if (status === 'connecting') statusText = 'Finding the host…';
+  else if (status === 'connected') statusText = started ? '' : 'Waiting for the host to start…';
+  else if (status === 'hostAway') statusText = 'Waiting for the host to come back…';
+  else if (status === 'rejected') statusText = 'Version mismatch. Both of you reload.';
+  else if (status === 'failed') statusText = 'Could not connect.';
+  return {
+    code: input.code,
+    members: input.members.map((m) => m.name),
+    isHost: input.isHost,
+    canStart: input.isHost && !started,
+    statusText,
+  };
 }

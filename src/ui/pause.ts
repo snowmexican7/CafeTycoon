@@ -1,13 +1,20 @@
 import type { Pace } from '../sim/types';
-import { hide, onAction, show } from './dom';
+import { esc, hide, onAction, show } from './dom';
 
 const DAY_LENGTHS = [60, 90, 120, 150, 180, 240, 300];
 const PACE_NAMES = ['Chill', 'Relaxed', 'Normal', 'Busy', 'Chaos'];
 
+export interface PauseInfo {
+  pace: Pace;
+  dayLengthSec: number;
+  isHost: boolean;
+  room?: { code: string; members: string[] };
+}
+
 export function createPause(
   container: HTMLElement,
   handlers: { onSettings(patch: { pace?: Pace; dayLengthSec?: number }): void; onQuit(): void },
-): { render(current: { pace: Pace; dayLengthSec: number; isHost: boolean }): void; toggle(): void; show(): void; hide(): void } {
+): { render(current: PauseInfo): void; toggle(): void; show(): void; hide(): void } {
   onAction(container, (action) => {
     if (action === 'resume') hide(container);
     else if (action === 'quit') handlers.onQuit();
@@ -20,10 +27,14 @@ export function createPause(
   return {
     render(current) {
       const dis = current.isHost ? '' : 'disabled';
+      const room = current.room
+        ? `<p class="room-line">Room <b>${esc(current.room.code)}</b> · ${current.room.members.map(esc).join(', ')}</p>`
+        : '';
       container.innerHTML = `
         <div class="panel">
           <h2>Paused</h2>
-          <p class="muted small">The café keeps running while this is open.</p>
+          <p class="muted small">The café keeps running while this is open.${current.isHost ? '' : ' Only the host can change settings.'}</p>
+          ${room}
           <div class="form">
             <label>Pace <select name="pace" ${dis}>${PACE_NAMES.map((n, i) => `<option value="${i + 1}" ${current.pace === i + 1 ? 'selected' : ''}>${i + 1} · ${n}</option>`).join('')}</select></label>
             <label>Day length (from tomorrow) <select name="dayLength" ${dis}>${DAY_LENGTHS.map((s) => `<option value="${s}" ${current.dayLengthSec === s ? 'selected' : ''}>${s} s</option>`).join('')}</select></label>

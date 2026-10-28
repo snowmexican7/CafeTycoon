@@ -102,6 +102,18 @@ describe('HostRoom', () => {
     expect(room.members()).toEqual([{ token: 'H', name: 'Host' }]);
   });
 
+  it("ignores a join that claims the host's own token", () => {
+    const link = createFakeLink();
+    const local = fakeLocal();
+    const room = createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+    link.peerJoins('p1');
+    link.receive('join', join('H', 'Impostor'), 'p1');
+    expect(local.inputs).toEqual([]);
+    expect(room.members()).toEqual([{ token: 'H', name: 'Host' }]);
+    link.receive('input', { t: 'input', input: { kind: 'ready', playerId: 'H' } }, 'p1');
+    expect(local.inputs).toEqual([]);
+  });
+
   it('closes the link and stops relaying', () => {
     const link = createFakeLink();
     const local = fakeLocal();

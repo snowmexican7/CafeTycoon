@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
 import type { RunRecord } from '../sim/types';
-import { closingViewModel, hudStructureKey, hudViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
+import { closingViewModel, hudStructureKey, hudViewModel, lobbyViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 
@@ -119,5 +119,35 @@ describe('overlay structure keys', () => {
     expect(hudStructureKey(hudViewModel(s))).toBe(a);
     s.supplies.milk = 0;
     expect(hudStructureKey(hudViewModel(s))).not.toBe(a);
+  });
+});
+
+describe('lobby view model', () => {
+  const members = [
+    { token: 'H', name: 'Host' },
+    { token: 'T1', name: 'Sam' },
+  ];
+  it('describes the host lobby before and after start', () => {
+    expect(lobbyViewModel({ code: 'ABCDE', members, isHost: true, status: 'hosting', started: false })).toEqual({
+      code: 'ABCDE',
+      members: ['Host', 'Sam'],
+      isHost: true,
+      canStart: true,
+      statusText: 'Share the code. Start when everyone is in.',
+    });
+    expect(lobbyViewModel({ code: 'ABCDE', members, isHost: true, status: 'hosting', started: true }).canStart).toBe(false);
+  });
+  it('describes every peer status', () => {
+    const base = { code: 'ABCDE', members, isHost: false, started: false } as const;
+    expect(lobbyViewModel({ ...base, status: 'connecting' }).statusText).toBe('Finding the host…');
+    expect(lobbyViewModel({ ...base, status: 'connected' }).statusText).toBe('Waiting for the host to start…');
+    expect(lobbyViewModel({ ...base, status: 'connected', started: true }).statusText).toBe('');
+    expect(lobbyViewModel({ ...base, status: 'hostAway', started: true }).statusText).toBe('Waiting for the host to come back…');
+    expect(lobbyViewModel({ ...base, status: 'failed' }).canStart).toBe(false);
+  });
+  it('offers rejoin on the title when the room store says peer', () => {
+    expect(titleViewModel([], null, { code: 'ABCDE', role: 'peer' }).rejoinCode).toBe('ABCDE');
+    expect(titleViewModel([], null, { code: 'ABCDE', role: 'host' }).rejoinCode).toBeNull();
+    expect(titleViewModel([], null, null).rejoinCode).toBeNull();
   });
 });
