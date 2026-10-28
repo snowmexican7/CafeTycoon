@@ -1,27 +1,39 @@
 import { esc, hide, onAction, show } from './dom';
+import { coin, moon, stars } from './icons';
 import type { ClosingVM } from './viewModels';
 
+const rep = (s: string) => Number.parseFloat(s) || 0;
+
+/** End-of-day results: a receipt for the day, then on to the night shop. */
 export function createClosing(container: HTMLElement): { render(vm: ClosingVM): void; show(): void; hide(): void } {
   onAction(container, (action) => {
     if (action === 'continue') hide(container);
   });
   return {
     render(vm) {
+      const loss = vm.profit.startsWith('-');
+      const before = rep(vm.reputationBefore);
+      const after = rep(vm.reputationAfter);
+      const repTrend = after > before ? 'up' : after < before ? 'down' : 'same';
       container.innerHTML = `
-        <div class="panel">
-          <h2>${esc(vm.dayLabel)} closed</h2>
-          <table class="stats">
-            <tr><td>Served</td><td>${vm.served}</td></tr>
-            <tr><td>Stormed out</td><td>${vm.lost}</td></tr>
-            <tr><td>Turned away (queue full)</td><td>${vm.turnedAway}</td></tr>
-            <tr><td>Sales</td><td>${esc(vm.sales)}</td></tr>
-            <tr><td>Tips</td><td>${esc(vm.tips)}</td></tr>
-            <tr><td>Rent</td><td>-${esc(vm.rent)}</td></tr>
-            <tr class="total"><td>Profit</td><td>${esc(vm.profit)}</td></tr>
-            <tr><td>Reputation</td><td>${esc(vm.reputationBefore)} → ${esc(vm.reputationAfter)}</td></tr>
-          </table>
-          <div class="row"><button class="primary" data-action="continue">Continue</button></div>
+        <div class="paper menu results" role="dialog" aria-modal="true" aria-labelledby="res-h">
+          <div class="menu-hd"><span class="badge-ic night">${moon(26)}</span><div><h2 id="res-h">${esc(vm.dayLabel)} closed</h2><p>Lights off, chairs up. Here's how it went.</p></div></div>
+          <div class="profit ${loss ? 'loss' : ''}">${coin(34)}<span>${loss ? '' : '+'}${esc(vm.profit)}</span><small>profit</small></div>
+          <div class="tiles">
+            <div><b>${vm.served}</b><small>SERVED</small></div>
+            <div class="${vm.lost ? 'bad' : ''}"><b>${vm.lost}</b><small>STORMED OUT</small></div>
+            <div class="${vm.turnedAway ? 'bad' : ''}"><b>${vm.turnedAway}</b><small>TURNED AWAY</small></div>
+          </div>
+          <div class="receipt-lines">
+            <div class="line"><span>Sales</span><span>${esc(vm.sales)}</span></div>
+            <div class="line"><span>Tips</span><span>${esc(vm.tips)}</span></div>
+            <div class="line"><span>Rent</span><span class="neg">−${esc(vm.rent)}</span></div>
+          </div>
+          <div class="rep ${repTrend}"><span class="lbl">Reputation</span><span class="st">${stars(before)}</span><span class="arrow">→</span><span class="st">${stars(after)}</span>
+            <b>${esc(vm.reputationAfter)}</b></div>
+          <button class="btn primary big block" data-action="continue">On to the night shop</button>
         </div>`;
+      container.querySelector<HTMLElement>('[data-action=continue]')?.focus({ preventScroll: true });
     },
     show: () => show(container),
     hide: () => hide(container),

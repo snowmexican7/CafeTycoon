@@ -26,6 +26,7 @@ import { hudLive, nightExtras } from './ui/live';
 import { createLobby } from './ui/lobby';
 import { createNight } from './ui/night';
 import { createPause } from './ui/pause';
+import { createRoadmap } from './ui/roadmap';
 import { createTitle, type StartChoice } from './ui/title';
 import { closingViewModel, hudViewModel, lobbyViewModel, nightViewModel, titleViewModel, weekEndViewModel } from './ui/viewModels';
 import { createWeekEnd } from './ui/weekEnd';
@@ -103,13 +104,14 @@ async function main(): Promise<void> {
   const send = (input: PlayerInput) => session?.transport.sendInput(input);
   const me = () => session?.me ?? '';
 
+  const roadmap = createRoadmap();
   const title = createTitle($('#title'), {
     onStart: (choice) => startSolo(choice),
     onHost: (choice) => startHost(choice),
     onJoin: (code, name) => startPeer(code, name),
     onResume: () => resume(),
     onRejoin: (code) => startPeer(code, stores.settings.get().playerName),
-  });
+  }, roadmap);
   const hud = createHud($('#hud'));
   const night = createNight($('#night'), {
     onBuy: (itemId) => send({ kind: 'buy', playerId: me(), itemId }),
@@ -125,7 +127,7 @@ async function main(): Promise<void> {
   const pause = createPause($('#pause'), {
     onSettings: (patch) => send({ kind: 'settings', playerId: me(), settings: patch }),
     onQuit: () => endSession(),
-  });
+  }, roadmap);
   const lobby = createLobby($('#lobby'), {
     onStart: () => startHostedRun(),
     onLeave: () => {

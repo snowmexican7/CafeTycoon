@@ -1,8 +1,9 @@
 import type { Pace } from '../sim/types';
 import { esc, hide, onAction, show } from './dom';
-
-const DAY_LENGTHS = [60, 90, 120, 150, 180, 240, 300];
-const PACE_NAMES = ['Chill', 'Relaxed', 'Normal', 'Busy', 'Chaos'];
+import { pauseGlyph } from './icons';
+import { PLAYER_HEX } from './live';
+import { roadmapIcon, type RoadmapDrawer } from './roadmap';
+import { dayOptions, paceSeg } from './title';
 
 export interface PauseInfo {
   pace: Pace;
@@ -14,38 +15,51 @@ export interface PauseInfo {
 export function createPause(
   container: HTMLElement,
   handlers: { onSettings(patch: { pace?: Pace; dayLengthSec?: number }): void; onQuit(): void },
+  roadmap?: RoadmapDrawer,
 ): { render(current: PauseInfo): void; toggle(): void; show(): void; hide(): void } {
   onAction(container, (action) => {
     if (action === 'resume') hide(container);
     else if (action === 'quit') handlers.onQuit();
+    else if (action === 'roadmap') roadmap?.open({ readOnly: true });
   });
   container.addEventListener('change', (ev) => {
-    const el = ev.target as HTMLSelectElement;
+    const el = ev.target as HTMLInputElement | HTMLSelectElement;
     if (el.name === 'pace') handlers.onSettings({ pace: Number(el.value) as Pace });
     if (el.name === 'dayLength') handlers.onSettings({ dayLengthSec: Number(el.value) });
   });
+  container.addEventListener('click', (ev) => {
+    if (ev.target === container) hide(container);
+  });
+  const focusResume = () => container.querySelector<HTMLElement>('[data-action=resume]')?.focus();
   return {
     render(current) {
       const dis = current.isHost ? '' : 'disabled';
       const room = current.room
-        ? `<p class="room-line">Room <b>${esc(current.room.code)}</b> · ${current.room.members.map(esc).join(', ')}</p>`
+        ? `<div class="roomline"><span class="pill room"><small>ROOM</small><b>${esc(current.room.code)}</b></span>
+            <span class="crew">${current.room.members
+              .map((m, i) => `<span class="mem"><span class="av" style="background:${PLAYER_HEX[i % PLAYER_HEX.length]}">${esc((m[0] ?? '?').toUpperCase())}</span>${esc(m)}</span>`)
+              .join('')}</span></div>`
         : '';
       container.innerHTML = `
-        <div class="panel">
-          <h2>Paused</h2>
-          <p class="muted small">The café keeps running while this is open.${current.isHost ? '' : ' Only the host can change settings.'}</p>
+        <div class="paper menu pausecard" role="dialog" aria-modal="true" aria-labelledby="pause-h">
+          <div class="menu-hd"><span class="badge-ic">${pauseGlyph(22)}</span><div><h2 id="pause-h">Paused</h2>
+            <p>The café keeps running while this is open.</p></div></div>
           ${room}
-          <div class="form">
-            <label>Pace <select name="pace" ${dis}>${PACE_NAMES.map((n, i) => `<option value="${i + 1}" ${current.pace === i + 1 ? 'selected' : ''}>${i + 1} · ${n}</option>`).join('')}</select></label>
-            <label>Day length (from tomorrow) <select name="dayLength" ${dis}>${DAY_LENGTHS.map((s) => `<option value="${s}" ${current.dayLengthSec === s ? 'selected' : ''}>${s} s</option>`).join('')}</select></label>
+          <div class="sec-h">Settings${current.isHost ? '' : ' <span class="chip">host only</span>'}</div>
+          <div class="fld"><span class="lbl">Pace</span>${paceSeg(current.pace, !current.isHost)}</div>
+          <label class="fld"><span class="lbl">Day length <em>(from tomorrow)</em></span><select class="inp" name="dayLength" ${dis}>${dayOptions(current.dayLengthSec)}</select></label>
+          <div class="menu-btns">
+            <button class="btn primary big block" data-action="resume">Back to the café</button>
+            <div class="two"><button class="btn" data-action="roadmap">${roadmapIcon}Roadmap</button><button class="btn ghost danger" data-action="quit">Quit to title</button></div>
           </div>
-          <div class="row"><button class="primary" data-action="resume">Back to the café</button><button data-action="quit">Quit to title</button></div>
+          <p class="hint"><span class="key">Esc</span> closes this menu</p>
         </div>`;
+      if (!container.hidden) focusResume();
     },
     toggle() {
-      container.hidden ? show(container) : hide(container);
+      if (container.hidden) { show(container); focusResume(); } else hide(container);
     },
-    show: () => show(container),
+    show: () => { show(container); focusResume(); },
     hide: () => hide(container),
   };
 }
