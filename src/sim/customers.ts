@@ -2,7 +2,8 @@ import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import { computeModifiers } from './effects';
 import { rngNext } from './rng';
-import type { DrinkId, GameState, PlayerId } from './types';
+import { tallyDrink } from './tally';
+import type { Customer, DrinkId, GameState, PlayerId } from './types';
 
 const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
 
@@ -53,6 +54,19 @@ export function stepCustomers(state: GameState): GameState {
   return state;
 }
 
+/** Pay out one served customer: price, patience-scaled tip, cash, stats, and leave the queue. */
+export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId): void {
+  const m = computeModifiers(state);
+  const price = round2(ECONOMY.prices[drink] * m.price[drink]);
+  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate));
+  state.cash = round2(state.cash + price + tip);
+  state.today.sales = round2(state.today.sales + price);
+  state.today.tips = round2(state.today.tips + tip);
+  state.today.served += 1;
+  tallyDrink(state.today, drink);
+  state.customers = state.customers.filter((c) => c !== customer);
+}
+
 /** Hand the held drink to the most impatient customer who ordered it; tip scales with patience left. */
 export function serveDrink(state: GameState, playerId: PlayerId): GameState {
   const player = state.players.find((p) => p.id === playerId);
@@ -63,14 +77,7 @@ export function serveDrink(state: GameState, playerId: PlayerId): GameState {
     if (c.drink === drink && (target === null || c.patienceLeft < target.patienceLeft)) target = c;
   }
   if (target === null) return state;
-  const m = computeModifiers(state);
-  const price = round2(ECONOMY.prices[drink] * m.price[drink]);
-  const tip = round2(price * ((ECONOMY.maxTipRate * target.patienceLeft) / target.patienceMax + m.tipRate));
-  state.cash = round2(state.cash + price + tip);
-  state.today.sales = round2(state.today.sales + price);
-  state.today.tips = round2(state.today.tips + tip);
-  state.today.served += 1;
-  state.customers = state.customers.filter((c) => c !== target);
+  serveCustomer(state, target, drink);
   player.holding = null;
   return state;
 }

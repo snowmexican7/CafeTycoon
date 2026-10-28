@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
 import { createHostRoom } from './hostRoom';
+import { PROTOCOL_VERSION } from './protocol';
 import { createFakeLink } from './testing/fakeLink';
 import type { HostToClient, Transport } from './transport';
 
@@ -23,7 +24,7 @@ function fakeLocal() {
   return { t, inputs, emit: (s: HostToClient) => handlers.forEach((h) => h(s)) };
 }
 const snap = (): HostToClient => ({ t: 'snapshot', state: createRun({ seed: 1, hostId: 'H', players: [{ id: 'H', name: 'Host' }] }), sentAt: 1 });
-const join = (token: string, name: string, protocol = 1) => ({ t: 'join', protocol, token, name });
+const join = (token: string, name: string, protocol: number = PROTOCOL_VERSION) => ({ t: 'join', protocol, token, name });
 const kinds = (inputs: unknown[], kind: string) => inputs.filter((i) => (i as { kind: string }).kind === kind);
 
 describe('HostRoom', () => {
@@ -34,7 +35,7 @@ describe('HostRoom', () => {
     createHostRoom(link, local.t, { token: 'H', name: 'Host' }, (m) => members.push(m));
     local.emit(snap());
     link.peerJoins('p1');
-    expect(link.sent.at(-1)).toMatchObject({ kind: 'hello', target: 'p1', data: { t: 'hello', protocol: 1, hostToken: 'H' } });
+    expect(link.sent.at(-1)).toMatchObject({ kind: 'hello', target: 'p1', data: { t: 'hello', protocol: PROTOCOL_VERSION, hostToken: 'H' } });
     link.receive('join', join('T1', 'Sam'), 'p1');
     expect(local.inputs).toEqual([{ kind: 'join', playerId: 'T1', name: 'Sam' }]);
     expect(link.sent.filter((s) => s.kind === 'snap' && s.target === 'p1')).toHaveLength(1);
@@ -62,7 +63,7 @@ describe('HostRoom', () => {
     const local = fakeLocal();
     createHostRoom(link, local.t, { token: 'H', name: 'Host' });
     link.peerJoins('p1');
-    link.receive('join', join('T1', 'Sam', 2), 'p1');
+    link.receive('join', join('T1', 'Sam', 1), 'p1');
     expect(link.sent.at(-1)).toMatchObject({ kind: 'hello', target: 'p1', data: { reject: 'version' } });
     expect(local.inputs).toEqual([]);
   });

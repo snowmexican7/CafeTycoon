@@ -7,8 +7,25 @@ import { morningNotes } from './describe';
 import { dealHand } from './night';
 import type { CreateRunOptions, DayStats, GameState, Player, Settings } from './types';
 
-function freshDayStats(day: number): DayStats {
-  return { day, served: 0, lost: 0, turnedAway: 0, sales: 0, tips: 0, rent: 0 };
+export function freshDayStats(day: number): DayStats {
+  return {
+    day,
+    served: 0,
+    lost: 0,
+    turnedAway: 0,
+    sales: 0,
+    tips: 0,
+    rent: 0,
+    wasted: 0,
+    fines: 0,
+    bonus: 0,
+    botMistakes: 0,
+    lostRegulars: 0,
+    inspection: null,
+    events: [],
+    drinks: { espresso: 0, latte: 0, coldBrew: 0 },
+    influencer: null,
+  };
 }
 
 /** Build a new run on its first night. Same options and seed give an identical state. */
@@ -17,6 +34,8 @@ export function createRun(opts: CreateRunOptions): GameState {
     dayLengthSec: ECONOMY.dayLengthSec,
     nightLengthSec: ECONOMY.nightLengthSec,
     pace: 3,
+    bots: 'auto',
+    botSkill: 3,
     ...opts.settings,
   };
   const players: Player[] = opts.players.map((p, i) => ({
@@ -27,6 +46,7 @@ export function createRun(opts: CreateRunOptions): GameState {
     interactQueued: false,
     holding: null,
     connected: true,
+    idleTicks: 0,
   }));
   const state: GameState = {
     seed: opts.seed,
@@ -56,6 +76,13 @@ export function createRun(opts: CreateRunOptions): GameState {
     today: freshDayStats(1),
     days: [],
     morningNotes: [],
+    pass: [],
+    menu: { espresso: true, latte: true, coldBrew: true },
+    eventSchedule: [],
+    events: [],
+    regulars: [],
+    log: [],
+    nextLogSeq: 1,
   };
   state.scenario = SCENARIOS[rngInt(state, SCENARIOS.length)].id;
   return startNight(state);

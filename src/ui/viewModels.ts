@@ -51,6 +51,7 @@ export interface HudVM {
   notes: string[];
   phase: Phase;
   seed: number;
+  pass?: { item: DrinkId; secondsLeft: number }[];
 }
 
 export function hudViewModel(state: GameState): HudVM {
@@ -66,6 +67,7 @@ export function hudViewModel(state: GameState): HudVM {
     notes: state.morningNotes,
     phase: state.phase,
     seed: state.seed,
+    pass: state.pass.map((i) => ({ item: i.item, secondsLeft: Math.ceil(i.ticksLeft / 60) })),
   };
 }
 
@@ -204,8 +206,9 @@ export function nightStructureKey(vm: NightVM): string {
 
 /** Everything about the HUD except the clock and cash. */
 export function hudStructureKey(vm: HudVM): string {
-  const { clock: _clock, cash: _cash, ...rest } = vm;
-  return JSON.stringify(rest);
+  const { clock: _clock, cash: _cash, pass, ...rest } = vm;
+  // per-tick values are patched, not rebuilt: the pass keys on its items only
+  return JSON.stringify({ ...rest, pass: pass?.map((i) => i.item) });
 }
 
 export interface LobbyVM {

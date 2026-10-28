@@ -7,10 +7,76 @@ export type Phase = 'night' | 'day' | 'closing' | 'weekEnd' | 'ended';
 export type ScenarioId = 'normal' | 'campusTown' | 'rainyWeek' | 'touristSeason';
 export type Rarity = 'common' | 'uncommon' | 'rare';
 export type Pace = 1 | 2 | 3 | 4 | 5;
+export type EventKind = 'rushHour' | 'powerFlicker' | 'influencerVisit' | 'healthInspector';
+export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer';
+export type Personality = 'rookie' | 'steady' | 'veteran' | 'human'; // 'human' = tester stand-in
+export type BotSkill = 1 | 2 | 3 | 4 | 5;
+export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash';
 
 export interface Vec2 {
   x: number;
   y: number;
+}
+
+export type BotStep = { kind: 'use'; station: string; action: BotAction } | { kind: 'idle'; node: Vec2 };
+
+export interface PassItem {
+  item: DrinkId;
+  ticksLeft: number;
+}
+
+/** Absolute state.tick at which the event starts. */
+export interface ScheduledEvent {
+  kind: EventKind;
+  startTick: number;
+}
+
+export interface ActiveEvent {
+  kind: EventKind;
+  ticksLeft: number;
+  customerId?: number;
+}
+
+export interface Regular {
+  name: string;
+  drink: DrinkId;
+  visits: number;
+  lost: number;
+}
+
+export interface BotState {
+  personality: Personality;
+  reactionTicksLeft: number;
+  yieldTicksLeft: number;
+  plan: BotStep[];
+  claim: number | null;
+  mistakes: number;
+  claimDrink: DrinkId | null;
+  thinkTicksLeft: number;
+  path: Vec2[];
+  yields: number;
+  nodeRank: number;
+  waitTicks: number;
+  noticeTicksLeft: number;
+}
+
+export type SimEventKind =
+  | 'pass.put'
+  | 'pass.take'
+  | 'pass.serve'
+  | 'pass.stale'
+  | 'trash'
+  | 'bot.mistake'
+  | 'event.start'
+  | 'event.end'
+  | 'inspection'
+  | 'influencer';
+
+export interface SimEvent {
+  seq: number;
+  tick: number;
+  kind: SimEventKind;
+  data: Record<string, string | number | boolean>;
 }
 
 export interface Player {
@@ -21,6 +87,8 @@ export interface Player {
   interactQueued: boolean;
   holding: ItemKind | null;
   connected: boolean;
+  bot?: BotState;
+  idleTicks: number;
 }
 
 export interface Station {
@@ -36,6 +104,9 @@ export interface Customer {
   drink: DrinkId;
   patienceLeft: number;
   patienceMax: number;
+  kind?: CustomerKind; // absent = 'normal'
+  extra?: DrinkId[];
+  name?: string;
 }
 
 export type Effect =
@@ -78,6 +149,8 @@ export interface Settings {
   dayLengthSec: number;
   nightLengthSec: number;
   pace: Pace;
+  bots: number | 'auto';
+  botSkill: BotSkill;
 }
 
 export interface DayStats {
@@ -88,6 +161,15 @@ export interface DayStats {
   sales: number;
   tips: number;
   rent: number;
+  wasted?: number;
+  fines?: number;
+  bonus?: number;
+  botMistakes?: number;
+  lostRegulars?: number;
+  inspection?: 'pass' | 'fail' | null;
+  events?: EventKind[];
+  drinks?: Record<DrinkId, number>;
+  influencer?: 'served' | 'lost' | null;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -119,6 +201,13 @@ export interface GameState {
   today: DayStats;
   days: DayStats[];
   morningNotes: string[];
+  pass: PassItem[];
+  menu: Record<DrinkId, boolean>;
+  eventSchedule: ScheduledEvent[];
+  events: ActiveEvent[];
+  regulars: Regular[];
+  log: SimEvent[];
+  nextLogSeq: number;
 }
 
 export type PlayerInput =
@@ -127,6 +216,7 @@ export type PlayerInput =
   | { kind: 'restock'; playerId: PlayerId; supply: SupplyId; packs: number }
   | { kind: 'ready'; playerId: PlayerId }
   | { kind: 'weekEnd'; playerId: PlayerId; choice: 'stop' | 'continue' }
+  | { kind: 'menu'; playerId: PlayerId; drink: DrinkId; on: boolean }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
   | { kind: 'join'; playerId: PlayerId; name: string }
   | { kind: 'leave'; playerId: PlayerId };
