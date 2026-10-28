@@ -54,8 +54,9 @@ figure things out on the fly.
 - **Team:** the owner (snowmexican7 on GitHub), three or four friends, and AI coding agents.
   Everyone is remote. Skill levels vary, so the repo must be easy to clone and run.
 - **Time:** weeks, not months. Phase one is the only phase planned in detail.
-- **Accounts:** GitHub (exists) and one free Cloudflare account. Nothing else unless phase
-  three proves the free models aren't good enough.
+- **Accounts:** GitHub (exists) and nothing else for phases one and two. A Cloudflare
+  account appears only if direct connections fail for a regular player or when someone
+  volunteers to own one; an AI key appears in phase three.
 - **Hosting:** the client is a static site on GitHub Pages at
   `https://snowmexican7.github.io/CafeTycoon/`. The repo is public, so no secrets and no
   assets the team can't share.
@@ -245,8 +246,11 @@ week. It's a weekly-challenge mode for the cost of a text box, so it's in phase 
 
 ## 10. Multiplayer
 
-Everyone is remote, so something must connect the browsers. The design keeps all game
-logic in the browsers and uses the smallest possible thing in the middle.
+Everyone is remote, so the browsers must find each other. The design keeps all game logic
+in the browsers and, for now, puts **nothing** in the middle: no server and no account.
+(Revised 2026-10-28: the team chose to start peer-to-peer because nobody wants to own a
+hosting account until the game has proven itself. The relay that was here before is kept
+below as the upgrade path.)
 
 **Roles.** The player who creates the room is the **host**. The host's browser runs the
 authoritative simulation. Every other browser is a **peer** that sends inputs and renders
@@ -256,58 +260,60 @@ what the host says is true. Solo play is the host alone, same code path.
 Browsers throttle a background tab's timers to about once a second, and the host will
 alt-tab to voice chat; in a Worker the day keeps running. The host's own renderer consumes
 snapshots from the Worker exactly as a peer consumes them from the network, so there is one
-rendering path. (My call; cheap on day one, painful to retrofit later.)
+rendering path. (Built in phase 1a.)
 
-**Relay.** A Cloudflare Worker with one Durable Object per room. It knows nothing about the
-game. A peer's message goes to the host; a host's message goes to every peer. Room codes
-are five letters. When the host disconnects, the relay tells everyone to wait, and closes
-the room only if the host hasn't returned within two minutes (see "Joining and dropping").
-The relay is the only backend, and it is the thing that later grows into the log sink
-(phase two) and the AI gateway (phase three).
+**Connecting.** Browsers connect directly to each other with WebRTC through a small
+serverless library (Trystero). Public relays that anyone may use carry only the
+introduction: who is in the room and how to reach them. Game traffic then flows browser to
+browser. The room is named by a five-letter room code typed by everyone; the library
+derives the room's identity from an app id and that code, and the code also acts as a
+password so strangers on the public relays cannot read room traffic. Once in the room, the
+host announces itself; peers announce their player token and display name to the host.
 
 **Traffic.**
-- Peers send input (movement vector, interact press) when it changes, capped at 20 a second.
+- Peers send input (movement vector, interact press) to the host when it changes, capped at
+  20 a second.
 - The host steps the simulation at a fixed 60 Hz and broadcasts a full state snapshot at
   20 Hz. State is small (a handful of baristas, stations, and customers), so plain JSON is
-  fine for phase one; measure before optimising.
+  fine for now; measure before optimising.
 - Peers render by interpolating between the last two snapshots with about a 100 ms buffer.
-- **No client-side prediction in phase one.** A peer's own barista moves when the host
-  says so, so a peer feels their own latency. For friends on home broadband this is
-  typically 50–150 ms. The design accepts this for phase one and lists prediction as the
-  first phase-two item if it feels bad. (My call, to keep phase one small.)
+- **No client-side prediction yet.** A peer's own barista moves when the host says so, so a
+  peer feels their own latency. For friends on home broadband this is typically 50–150 ms.
+  Prediction is the first phase-two item if it feels bad.
 
-**Free-tier budget.** Cloudflare counts a WebSocket message into a Durable Object as
-1/20th of a request and outgoing messages as free. Three peers sending at most 20 inputs a
-second plus the host sending 20 snapshots a second is about 80 incoming messages a second,
-or roughly 7,000 requests over a 30-minute run against a daily allowance of 100,000. Active
-time is about 225 GB-seconds per run against 13,000 a day. Three runs a night fits with room
-to spare, provided the relay uses the WebSocket Hibernation API so idle rooms cost nothing.
+**Joining and dropping.** A player may join at any time by entering the room code; a new
+barista appears at the door. Late joiners get the full state on arrival. Every player has a
+**player token**, a random id the browser keeps in `localStorage`, so a player is a token
+rather than a connection:
 
-**Joining and dropping.** A player may join at any time; a new barista appears at the door.
-Late joiners get the full state on arrival. Every player has a **player token**, a random id
-the browser keeps in `localStorage`, so a player is a token rather than a connection:
+- A **peer drops** (tab closed, network blip): the host notices the connection close, the
+  barista stops and drops whatever it held, and if the same token comes back during the run
+  it gets that barista back. (Phase 1a already implements `leave` this way.)
+- The **host drops**: the peers notice the host's connection close, show "Waiting for the
+  host…", and stay in the room. If the host reopens the page and the room, it restores the
+  run from its own snapshot (section 11), announces itself again, and the peers re-send
+  their tokens; play continues. There is no timer: peers wait until they choose to leave.
 
-- A **peer drops** (tab closed, network blip): the relay tells the host, the barista freezes
-  in place still holding whatever it held, and if the same token comes back within the run
-  it gets that barista back. The host may remove a frozen barista from the pause menu.
-- The **host drops**: the room goes into a "waiting for host" state for two minutes. Peers
-  see that message; the simulation is paused. If the host's token reconnects in time (a
-  refresh, say), it reclaims the room, restores the run from its own snapshot (section 11),
-  resends full state, and play continues. After two minutes the relay closes the room and
-  tells everyone.
+**Night in co-op.** Shared cash, anyone can buy, Ready-up as in section 7. Night and
+week-end inputs travel the same path as movement.
 
-(My call. It makes "a refresh mid-run resumes" true for everyone, not just the host, at the
-cost of the relay tracking tokens and a two-minute timer.)
+**What can go wrong, and the plan for it.** Direct connections fail for some home,
+campus, and corporate networks (strict NAT, no relay to fall back on), and the public
+introduction relays are run by strangers and can be slow or down. The client shows a clear
+message when a connection has not formed within about fifteen seconds, with the two cheap
+remedies (try again; join from a phone hotspot). If this bites a regular player, the fix is
+the relay below, swapped in behind the same `Transport` interface.
 
-**Night in co-op.** Shared cash, anyone can buy, Ready-up as in section 7.
+**Upgrade path: a relay.** A Cloudflare Worker with one Durable Object per room that
+forwards messages (peer to host, host to all) and knows nothing about the game. Every
+browser connects outward to it, so nobody's network matters. The same account could later
+hold logs and an AI key. Costs one free account, owned by whoever volunteers; the free tier
+comfortably covers three runs a night (about 7,000 of 100,000 daily requests). Not built
+until it is needed.
 
-**Why not peer-to-peer with no relay?** Direct browser-to-browser connections fail for a
-meaningful share of home networks and there's no fix without a server anyway. The relay
-costs one free account and makes "it just connects" true.
-
-**Why not a server-run simulation?** It would mean running the game loop inside the
-Worker, which fights the free plan's CPU limits and moves game code out of the browser
-where it's easiest to test and debug. Host-authoritative is enough for friends.
+**Why not a server-run simulation?** It would move game code out of the browser, where it
+is easiest to test and debug, and with no server at all it is moot. Host-authoritative is
+enough for friends.
 
 ## 11. Persistence and saves
 
@@ -318,7 +324,7 @@ where it's easiest to test and debug. Host-authoritative is enough for friends.
   (section 10).
 - **Run history.** After each run, the host's browser appends one record: date, player
   names, seed, scenario, days completed, score, items bought. Shown on the title screen.
-  Phase two moves this into the relay's storage so any host sees the same history.
+  Phase two shares it by export and import (or by a relay's storage, if one exists by then).
 - Settings (pace, day length, display name) live in each player's `localStorage`.
 
 ## 12. Determinism and randomness
@@ -347,10 +353,11 @@ recording hard later, which the determinism above guarantees.
 - A generated end-of-run summary: served vs lost customers per day, money per drink,
   items offered vs bought, idle time per player, frustration counts per player.
 
-**Where it goes.** Each browser batches events and sends them to the relay, which appends
-them to the room's storage. At run end the host triggers a flush. A small authenticated
-endpoint lets the owner download a wave's logs as newline-delimited JSON for the analysis
-agent. Friends-only, so there's no consent flow beyond a line in the README.
+**Where it goes.** Each peer batches its UI events and sends them to the host over the
+same peer-to-peer channel as inputs. The host appends everything to one in-memory log and,
+at run end, offers it as a newline-delimited JSON download; the owner drops those files
+where the analysis agent can read them. If a relay with storage exists by then, the host
+uploads instead. Friends-only, so there's no consent flow beyond a line in the README.
 
 ## 14. AI (phase three, principles fixed now)
 
@@ -362,14 +369,16 @@ into a bounded rule, maybe AI teammates. The original prompt's hard rules stand:
 2. **Pre-generate at night**, read from a pool by day.
 3. **Validate and clamp everything** before it touches state. The pitch-an-idea limits in
    the original prompt (section 8 there) are the template.
-4. **Keys stay in the Worker.** The browser never holds a model key.
+4. **Keys stay off the public site.** With no server, the host pastes their own key into
+   their browser for the session (kept in `localStorage`, never in the repo) and only the
+   host's browser calls the model; peers get the results through the host. A relay that
+   holds the key is the upgrade.
 5. **Budget caps** enforced in the Worker, with a spend readout in settings.
 
-**Account plan.** Phase three starts on Cloudflare's own built-in models (Workers AI), which the
-existing account already includes at 10,000 free "neurons" a day across a range of current
-open models, so no new account is needed to find out
-whether AI makes the game better. Only if those models are too weak for dialogue and
-judging does the team add one aggregator account that fronts every vendor at once. The
+**Account plan.** Phase three needs one model key from somewhere. Cheapest in accounts: one
+aggregator account that fronts every vendor, owned by whoever runs AI nights, with the key
+pasted into the host's browser. If a Cloudflare account exists by then, its built-in
+models (Workers AI, 10,000 free "neurons" a day) need no further account at all. The
 specific model names and prices in the original prompt are unverified and should be
 treated as nothing more than a hint of what to look at.
 
@@ -398,28 +407,26 @@ team wants scenes, tweens, and audio batteries included; Phaser 3 is frozen at 3
 ```
 src/
   sim/        pure game logic: state, step(), catalogue, scenarios, rng, scoring. No DOM.
-  net/        relay client, host and peer roles, message types, snapshot interpolation
+  net/        Transport interface, local (Worker) transport, peer-to-peer transport, host and peer roles
   render/     PixiJS scene, sprites, HUD, input capture
   ui/         HTML overlays: title, lobby, night screen, closing summary, score, settings
   main.ts
-worker/       Cloudflare Worker + Durable Object relay (own tsconfig and wrangler config)
 data/         catalogue.json, scenarios.json (or .ts modules with the same shape)
 docs/
-.github/workflows/   ci.yml (test + build), pages.yml (deploy client), worker.yml (deploy relay)
+.github/workflows/   deploy.yml (test + build on every push; deploy Pages on main)
 ```
 
 **The simulation contract.** `step(state, inputs, dt) -> state` with no side effects, plus
 small pure helpers (`dealHand`, `applyEffects`, `scoreWeek`). Everything in `src/sim` is
 unit tested; nothing in it imports from `render`, `ui`, `net`, or the DOM.
 
-**The relay contract.** WebSocket messages `{ t: 'join' | 'input' | 'snapshot' | 'event' |
-'peerLeft' | 'hostAway' | 'hostBack' | 'closed', ... }`, each carrying the sender's player token.
-The Durable Object forwards game messages without parsing them; the only state it keeps is
-the room's host token, the connected tokens, and a two-minute timer that starts when the
-host disconnects. Rooms close when that timer runs out or the host ends the run.
+**The network contract.** Messages `{ t: 'hello' | 'join' | 'input' | 'snapshot' | 'event', ... }`
+carry the sender's player token. The host's browser is the only place that interprets
+them: it feeds `join`, `leave` (from a closed connection), and `input` into the simulation and
+broadcasts `snapshot`. A relay, if one is ever added, forwards these same messages blindly.
 
 **Testing.** Phase one: Vitest for `src/sim` (dealing rules, station timing, patience and
-tips, economy, scoring, determinism given a seed) and for the relay's forwarding logic. A
+tips, economy, scoring, determinism given a seed) and for the host-side message handling. A
 written manual checklist for the multiplayer smoke test (two browser tabs plus one friend).
 Playwright headless runs and screenshots are phase two.
 
@@ -427,22 +434,21 @@ Playwright headless runs and screenshots are phase two.
 - GitHub Pages switches from "deploy from branch" to a GitHub Actions workflow that runs
   the Vite build with base path `/CafeTycoon/` and publishes `dist/`. Current action majors:
   checkout v7, setup-node v7, configure-pages v6, upload-pages-artifact v5, deploy-pages v5.
-- The Worker deploys from a second workflow using `cloudflare/wrangler-action@v4` (4.1.3 or
-  newer; 4.1.0 and 4.1.1 are broken), with the Cloudflare API token and account id stored as
-  GitHub repository secrets. The owner creates the token once in the Cloudflare dashboard from
-  the "Edit Cloudflare Workers" template scoped to the one account; Durable Object bindings
-  need no extra permission.
-- The client reads the relay URL from a build-time constant.
+- Nothing else deploys. If the relay is ever built, it deploys from a second workflow using
+  `cloudflare/wrangler-action@v4` (4.1.3 or newer) with the account's API token stored as a
+  GitHub repository secret; see `docs/reference/2026-10-28-stack-research.md`.
 
 ## 16. Accounts and services across the whole roadmap
 
 | Account | Needed from | Used for | Cost | Replaced later? |
 |---|---|---|---|---|
 | GitHub (exists) | now | code, CI, Pages hosting of the client, secrets for deploy | $0 | no |
-| Cloudflare | phase 1 | Worker + Durable Object relay; phase 2 log and history storage; phase 3 built-in AI models and the AI gateway | $0 free plan (whether sign-up asks for a card is unconfirmed; check when creating it) | no |
-| AI aggregator (e.g. OpenRouter) | phase 3, **only if** Cloudflare's built-in models disappoint | stronger dialogue and judging models | a few $/month | no |
+| Cloudflare | **optional**: only if direct connections fail for a regular player, or when someone volunteers to own it | relay for co-op; later log storage; built-in AI models | $0 free plan (whether sign-up asks for a card is unconfirmed) | no |
+| AI key (one aggregator account, e.g. OpenRouter) | phase 3 | dialogue and pitch judging, key pasted into the host's browser | a few $/month | no (unless Cloudflare's built-in models cover it) |
 
-Two accounts, possibly ever. Nothing in the plan is set up and then thrown away.
+One account for phases one and two. Whoever volunteers for the others owns them; nothing in
+the plan is set up and then thrown away, and the relay slots in behind the existing
+`Transport` interface.
 
 ## 17. Roadmap
 
@@ -460,18 +466,18 @@ in CI, and both deploys happen automatically on push.
 - Day events (rush, breakdown, inspector, influencer).
 - Pitch an idea, with the keyword judge and the clamp from the original prompt.
 - Telemetry per section 13, the download endpoint, and the first analysis-agent review.
-- Run history in the relay's storage.
+- Run history shared between hosts by export and import.
 - Client-side prediction if phase-one logs or complaints say input lag hurts.
 - Playwright smoke run and screenshots in CI.
 - First pass of juice: sound effects, a little screen shake, a combo-tip indicator.
 
 **Phase 3: AI.**
-- Customer chatter pre-generated at night from Cloudflare's built-in models.
+- Customer chatter pre-generated at night by the host's browser with the host's own key.
 - AI pitch judge with the scripted fallback.
 - AI-authored catalogue items and scenarios, generated offline and reviewed by a human
   before they enter the data files.
 - Optional AI teammates for one- and two-player sessions.
-- Budget caps and the spend readout. Add an aggregator account only if needed.
+- Budget caps and the spend readout, enforced in the host's browser.
 
 **Phase 4: bigger games.**
 - 2v2: two cafés on one street sharing a customer pool, match settings, results screen.
@@ -491,9 +497,9 @@ in CI, and both deploys happen automatically on push.
   Ready-up.
 - Four scenarios.
 - Seven-day week, score screen, keep-going with the ramp.
-- Host-authoritative co-op for 1–4 via the Cloudflare relay, with the simulation in a Web
-  Worker on the host; late join; player tokens; peer reconnection; host refresh resume within
-  two minutes.
+- Host-authoritative co-op for 1–4 over direct peer-to-peer connections, with the simulation
+  in a Web Worker on the host; room codes; late join; player tokens; peer reconnection; host
+  refresh resume while peers wait.
 - Vitest coverage of `src/sim`; CI; Pages and Worker deploys from Actions; README with
   how to play, host, and develop.
 
@@ -521,6 +527,9 @@ in CI, and both deploys happen automatically on push.
     reclaimed; a dropped host has two minutes to come back before the room closes.
 14. On the host, the simulation runs in a Web Worker so an alt-tabbed host doesn't freeze
     the game for everyone.
+15. (Team decision, 2026-10-28) Co-op starts peer-to-peer with no server and no new account;
+    the Cloudflare relay is the documented upgrade if connections fail for someone or when
+    somebody volunteers to own an account.
 
 ## 20. Left to the builder
 
@@ -528,7 +537,7 @@ in CI, and both deploys happen automatically on push.
   people," not any specific figure.
 - Café layout and station placement, collision model, sprite style within "shapes and
   simple sprites," HUD layout.
-- Snapshot format, interpolation details, relay message framing, room-code generation,
+- Snapshot format, interpolation details, message framing, room-code generation,
   reconnection handling details.
 - Test organisation and the manual multiplayer checklist.
 - Exact patch versions to pin at scaffolding time.
