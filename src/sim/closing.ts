@@ -1,4 +1,5 @@
 import { ECONOMY } from '../data/economy';
+import { loseCustomer } from './customers';
 import { rentForDay } from './effects';
 import { eventActive, judgeInspection } from './events';
 import { startNight } from './run';
@@ -11,8 +12,7 @@ function round2(n: number): number {
 /** Doors shut: lose the queue, clean up, pay rent, move reputation, and decide what comes next. */
 export function finishDay(state: GameState): GameState {
   if (eventActive(state, 'healthInspector')) judgeInspection(state);
-  state.today.lost += state.customers.length;
-  if (state.customers.some((c) => c.kind === 'influencer')) state.today.influencer = 'lost';
+  for (const c of state.customers) loseCustomer(state, c);
   state.customers = [];
   state.pass = [];
   state.events = [];

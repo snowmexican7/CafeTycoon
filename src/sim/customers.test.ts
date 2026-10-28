@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { availableDrinks, spawnCustomers, stepCustomers } from './customers';
+import { addCustomer, availableDrinks, rollKind, spawnCustomers, stepCustomers } from './customers';
+import { counterInteract } from './pass';
 import { createRun, startDay } from './run';
 import { interact } from './stations';
 
 const day = () => {
-  const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+  const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
   s.scenario = 'normal';
   return startDay(s);
 };
@@ -67,5 +68,69 @@ describe('customers', () => {
     s = interact(s, 'p1');
     expect(s.players[0].holding).toBeNull(); // nobody ordered it: it goes onto the pass
     expect(s.pass).toEqual([{ item: 'coldBrew', ticksLeft: 36000 }]);
+  });
+
+  it('day 1 spawns only normal and impatient; later days follow the 0.65/0.15/0.12/0.08 mix', () => {
+    const s = day();
+    const share = (kind: string, n = 2000) => {
+      let c = 0;
+      for (let i = 0; i < n; i++) if (rollKind(s) === kind) c++;
+      return c / n;
+    };
+    s.day = 1;
+    expect(share('group')).toBe(0);
+    expect(share('regular')).toBe(0);
+    const imp1 = share('impatient');
+    expect(imp1).toBeGreaterThanOrEqual(0.11);
+    expect(imp1).toBeLessThanOrEqual(0.19);
+    s.day = 2;
+    const group = share('group');
+    const regular = share('regular');
+    expect(group).toBeGreaterThanOrEqual(0.09);
+    expect(group).toBeLessThanOrEqual(0.15);
+    expect(regular).toBeGreaterThanOrEqual(0.05);
+    expect(regular).toBeLessThanOrEqual(0.11);
+    const normal = addCustomer(s, 'normal')!;
+    const impatient = addCustomer(s, 'impatient')!;
+    const grp = addCustomer(s, 'group')!;
+    expect(impatient.patienceMax / normal.patienceMax).toBeCloseTo(0.6, 2);
+    expect(1 + (grp.extra?.length ?? 0)).toBeGreaterThanOrEqual(2);
+    expect(1 + (grp.extra?.length ?? 0)).toBeLessThanOrEqual(3);
+    expect(grp.patienceMax / normal.patienceMax).toBeCloseTo(1.3, 2);
+    expect(s.customers).toHaveLength(3);
+  });
+
+  it('a group orders 2-3 drinks, refills patience on each, and leaves after the last', () => {
+    const s = day();
+    s.customers = [{ id: 1, kind: 'group', drink: 'espresso', extra: ['latte'], patienceLeft: 100, patienceMax: 1000 }];
+    s.players[0].holding = 'espresso';
+    counterInteract(s, 'p1');
+    expect(s.customers[0]).toMatchObject({ drink: 'latte', extra: [], patienceLeft: 400 });
+    expect(s.today.served).toBe(1);
+    expect(s.today.drinks?.espresso).toBe(1);
+    s.players[0].holding = 'latte';
+    counterInteract(s, 'p1');
+    expect(s.customers).toEqual([]);
+    expect(s.today.served).toBe(2);
+    expect(s.today.drinks?.latte).toBe(1);
+  });
+
+  it('a group that walks out counts one lost per unserved drink', () => {
+    const s = day();
+    s.customers = [{ id: 1, kind: 'group', drink: 'espresso', extra: ['latte', 'coldBrew'], patienceLeft: 1, patienceMax: 1000 }];
+    stepCustomers(s);
+    expect(s.today.lost).toBe(3);
+    expect(s.customers).toEqual([]);
+  });
+
+  it('impatient customers tip 1.5x', () => {
+    const tipFor = (kind?: 'impatient') => {
+      const s = day();
+      s.customers = [{ id: 1, kind, drink: 'latte', patienceLeft: 500, patienceMax: 1000 }];
+      s.players[0].holding = 'latte';
+      counterInteract(s, 'p1');
+      return s.today.tips;
+    };
+    expect(tipFor('impatient')).toBeCloseTo(tipFor() * 1.5, 1);
   });
 });
