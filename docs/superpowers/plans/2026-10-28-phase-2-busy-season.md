@@ -87,7 +87,7 @@ This is the first task that changes the shape of `GameState`, so it bumps `SNAPS
 **Files:**
 - Modify: `src/sim/types.ts`, `src/sim/run.ts`, `src/sim/step.ts`, `src/data/economy.ts`, `src/storage/snapshotStore.ts:7`, `src/net/protocol.ts:6`
 - Create: `src/sim/log.ts`, `src/sim/tally.ts`
-- Test: `src/sim/run.test.ts`, `src/sim/log.test.ts`, `src/net/hostRoom.test.ts`, `src/net/peerSession.test.ts`, `src/storage/stores.test.ts`
+- Test: `src/sim/run.test.ts`, `src/sim/log.test.ts`, `src/net/hostRoom.test.ts`, `src/net/peerSession.test.ts`, `src/net/protocol.test.ts`, `src/sim/step.test.ts`, `src/storage/stores.test.ts`
 
 **Interfaces:**
 - Produces (`types.ts`, all added in this task even if used later, so the version bumps once):
@@ -177,7 +177,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `src/sim/pass.ts`, `src/sim/pass.test.ts`, `src/sim/viewModels2.test.ts`
-- Modify: `src/sim/stations.ts` (counter → `counterInteract`; trash counts waste), `src/sim/customers.ts` (extract `serveCustomer`), `src/sim/step.ts`, `src/sim/closing.ts`, `src/ui/viewModels.ts`
+- Modify: `src/sim/stations.ts` (counter → `counterInteract`; trash counts waste), `src/sim/customers.ts` (extract `serveCustomer`), `src/sim/step.ts`, `src/sim/closing.ts`, `src/ui/viewModels.ts`, `src/sim/customers.test.ts`
 
 **Interfaces:**
 - Consumes: `emitLog`, `tally`, `tallyDrink`, `ECONOMY.pass`.
@@ -216,6 +216,8 @@ it('stale drinks vanish and count as waste; day end clears without waste', () =>
 it('binning a drink counts as waste, binning grounds does not', () => { /* at trash (10,2): latte → wasted 1; grounds → still 1 */ });
 ```
 
+In `customers.test.ts`, the case that expects an unwanted cold brew to stay in the player's hand (around its lines 66–68) changes: the drink now goes onto `state.pass` and `holding` becomes `null`.
+
 `viewModels2.test.ts`: `'hud lists the pass and keys it without seconds'` — pass `[{ item: 'latte', ticksLeft: 125 }]` → `hudViewModel(s).pass` equals `[{ item: 'latte', secondsLeft: 3 }]`; key unchanged after `ticksLeft = 60`; changed after pushing a second item.
 
 - [ ] **Step 2: Run to see them fail**
@@ -228,7 +230,7 @@ Expected: FAIL with `counterInteract is not a function` / `Cannot find module '.
 - [ ] **Step 4: Run all tests and the build**
 
 Run: `npm test && npm run build`
-Expected: PASS (the existing `stations.test.ts` serve tests still pass through `counterInteract`).
+Expected: PASS (the updated `customers.test.ts` passes).
 
 - [ ] **Step 5: Commit, merge, push**
 
@@ -330,7 +332,7 @@ it('rush hour doubles traffic and trims patience for 30 s', () => {
 });
 it('a power flicker pauses stations for 4 s and loses nothing', () => {
   s.stations[0].busyTicksLeft = 100; s.events = [{ kind: 'powerFlicker', ticksLeft: 240 }];
-  s = ticks(s, 240); expect(s.stations[0].busyTicksLeft).toBe(100);
+  s = ticks(s, 240); expect(s.stations[0].busyTicksLeft).toBe(99);  // stepEvents removes the event on tick 240, then stepStations counts down once
   s = ticks(s, 100); expect(s.stations[0].output).toBe('grounds');
 });
 it('is deterministic per seed', () => { /* two startDay(day 2) from same state → equal eventSchedule */ });
@@ -380,6 +382,7 @@ it('the inspector fines 15 at four wasted drinks and passes below', () => {
   // fresh day with wasted 3 → inspection 'pass', and finishDay reputation 2.5 + 0.2 + 0.1 = 2.8 with served 10 lost 0
 });
 it('an influencer jumps a full queue, pays a bonus and boosts traffic', () => {
+  s.scenario = 'normal'; s.owned = [];  // the seed-rolled scenario may bias cold brew
   s.customers = six normal espresso customers; s.eventSchedule = [{ kind: 'influencerVisit', startTick: s.tick + 1 }];
   s = step(s, []); const inf = s.customers.find((c) => c.kind === 'influencer')!;
   expect(s.customers).toHaveLength(7); expect(inf.drink).toBe('latte');
@@ -537,7 +540,7 @@ git checkout main && git merge --no-ff phase2-s4-customers && npm test && npm ru
 
 **Files:**
 - Create: `src/sim/bots/roster.ts`, `src/sim/bots/roster.test.ts`
-- Modify: `src/sim/run.ts` (`startDay` calls `syncBots`), `src/sim/step.ts` (`applyInput`), `src/sim/night.ts` (`stepNight` ready check), `src/sim/closing.ts`, `src/sim/validate.ts` (`sanitizeSettings`), `src/sim/score.ts`, `src/net/hostResume.ts`, `src/net/hostResume.test.ts`, `src/ui/viewModels.ts`, `src/sim/viewModels2.test.ts`; fixtures in `src/sim/*.test.ts` that assume an exact player list get `settings: { bots: 0 }`.
+- Modify: `src/sim/run.ts` (`startDay` calls `syncBots`), `src/sim/step.ts` (`applyInput`), `src/sim/night.ts` (`stepNight` ready check), `src/sim/closing.ts`, `src/sim/validate.ts` (`sanitizeSettings`), `src/sim/score.ts`, `src/net/hostResume.ts`, `src/net/hostResume.test.ts`, `src/ui/viewModels.ts`, `src/sim/viewModels2.test.ts`; every existing `createRun` fixture in `src/sim/*.test.ts`, `src/net/*.test.ts`, `src/storage/*.test.ts` and `src/host/*.test.ts` that runs the day loop gets `settings: { bots: 0 }` (keep roster tests on 'auto' or explicit counts); otherwise bots act inside unrelated tests from Task 10 on.
 
 **Interfaces:**
 - Produces (`roster.ts`): `BOT_IDS = ['bot-1', 'bot-2', 'bot-3']`; `BOT_PERSONALITIES: Personality[] = ['steady', 'rookie', 'veteran']`; `isBot(p: Player): boolean`; `isBotId(id: string): boolean` (`id.startsWith('bot-')`); `humanCount(state): number` (connected players without `bot`, plus bots with personality `'human'`); `wantedBots(state): number` — `'auto'` → `max(0, 3 − h)`, number `n` → `min(n, 4 − h, 3)`, floored at 0; `makeBotState(personality: Personality): BotState` (all counters 0, `plan: []`, `path: []`, `claim`/`claimDrink: null`, `thinkTicksLeft: 0`); `syncBots(state): GameState` (removes over-cap `bot-*` players highest id first; adds missing lowest free ids with name `names[i]`, personality `BOT_PERSONALITIES[i]`, `pos = { ...(LAYOUT.spawnPoints[state.players.length] ?? LAYOUT.door) }`, `connected: true`, `idleTicks: 0`, appended after everyone); `resetBotsForNight(state)` (plan, path, claim, claimDrink cleared, `moveDir` zero, counters zero except `mistakes`); `addStandIns(state, n): GameState` (ids `sim-1..n`, names `Stand-in 1..n`, personality `'human'`, used by the tester only); `botSpeed(state, bot: BotState): number` — `personalities[p].speed × (p === 'human' ? 1 : skill.speed[botSkill − 1])`.
@@ -564,8 +567,12 @@ it('a friend who joins mid-week replaces a bot the next morning, highest id firs
 });
 it('bots are not in the ready check, the night list or the run summary', () => { /* p1 and p2 ready → stepNight opens doors; nightViewModel.ready has 2 rows; summarizeRun.players ['K','S'] */ });
 it('Review Focus 3: inputs naming a bot are ignored and nobody joins as a bot', () => {
-  s = step(s, [{ kind: 'join', playerId: 'bot-2', name: 'Evil' }, { kind: 'leave', playerId: 'bot-1' }, { kind: 'move', playerId: 'bot-1', x: 1, y: 0, interact: true }]);
-  expect(s.players.filter(isBot).map((p) => [p.id, p.connected, p.moveDir.x])).toEqual([['bot-1', true, 0]]);
+  // state in the night phase (bots present after startDay, then back to night); no assertion about movement over a step
+  const before = s.players.find((p) => p.id === 'bot-1')!; const ready = [...s.ready];
+  s = step(s, [{ kind: 'join', playerId: 'bot-2', name: 'Evil' }, { kind: 'leave', playerId: 'bot-1' }, { kind: 'move', playerId: 'bot-1', x: 1, y: 0, interact: true }, { kind: 'ready', playerId: 'bot-1' }, { kind: 'menu', playerId: 'bot-1', drink: 'latte', on: false }]);
+  const bot = s.players.find((p) => p.id === 'bot-1')!;
+  expect([bot.connected, bot.moveDir, bot.holding]).toEqual([before.connected, before.moveDir, before.holding]);
+  expect(s.ready).toEqual(ready); expect(s.menu.latte).toBe(true); expect(s.players.filter(isBot).map((p) => p.id)).not.toContain('bot-2');
 });
 it('settings clamp bots to 0..3 or auto and skill to 1..5', () => { /* bots 9 → 3, -1 → 0, 'x' dropped, 'auto' kept; botSkill 0 → 1 */ });
 ```
@@ -674,20 +681,22 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 `uncoveredOrder`: pool per drink = drinks held by players other than claiming bots, plus station outputs, plus stations busy producing that drink, plus pass items. Walk `customers` in queue order: skip if another bot's `claim === c.id`; skip if `c.drink` not in `availableDrinks`; if `pool[c.drink] > 0` decrement and skip; else return `c`.
 
+`dropPlan(state, p): BotStep[]` is one helper — `[counter put]` if `p` holds a drink, `[trash]` if it holds anything else, `[]` if empty — used in both the claim-drop and the abandon lines below (and the `serve` fallback).
+
 `stepBots` per connected bot (players order), with `b = p.bot`:
 ```
 p.moveDir = {0,0}
 if b.claim !== null and (no customer with id claim, or its drink !== b.claimDrink): drop claim;
-    b.plan = holding is a drink ? [counter put] : holding ? [trash] : []          // Review Focus 1
-if b.plan empty or plan[0] is idle: b.thinkTicksLeft -= 1
-    if b.thinkTicksLeft <= 0: b.thinkTicksLeft = thinkTicks (6); next = think(state, p)
+    b.plan = dropPlan(state, p)          // Review Focus 1
+if b.plan empty or plan[0] is idle: b.thinkTicksLeft -= 1   // thinkTicks = ECONOMY.bots.thinkTicks (6)
+    if b.thinkTicksLeft <= 0: b.thinkTicksLeft = ECONOMY.bots.thinkTicks (6); next = think(state, p)
         if next non-empty and next[0] is a 'use' step: b.plan = next; b.path = []; b.yields = 0; b.nodeRank = 0; b.waitTicks = 0
         else if b.plan empty: b.plan = next
 if b.plan empty: return
 step = plan[0]; node = idle ? step.node : targetNodes(station, p.pos)[min(nodeRank, len-1)]; none → abandon
-if dist(p.pos, node) > arriveRadius:
+if dist(p.pos, node) > ECONOMY.bots.arriveRadius (0.08):
     if b.path empty: b.path = findPath(state, p.pos, node) ?? abandon
-    if dist(p.pos, path[0]) <= arriveRadius: path = [] and return (re-plan next tick)
+    if dist(p.pos, path[0]) <= ECONOMY.bots.arriveRadius: path = [] and return (re-plan next tick)
     p.moveDir = path[0] − p.pos; return
 if idle: pop; return
 precondition by action (station st, recipe r):
@@ -697,11 +706,11 @@ precondition by action (station st, recipe r):
           else abandon
   take:   st.output and holding null → E, pop;  st busy → wait;  else abandon
   serve:  noticeTicksLeft > 0 → wait; a customer wants the held drink, or holding null and a pass drink matches → E, pop;
-          else plan = holding ? [counter put] : []
+          else plan = dropPlan(state, p)
   put:    noticeTicksLeft > 0 → wait; E, pop
   trash:  E, pop
-wait: b.waitTicks += 1; > maxWaitTicks (600) → abandon
-abandon: claim = null; plan = holding drink ? [counter put] : holding ? [trash] : []; path = []
+wait: b.waitTicks += 1; > ECONOMY.bots.maxWaitTicks (600) → abandon
+abandon: claim = null; plan = dropPlan(state, p); path = []
 E = p.interactQueued = true; any pop resets waitTicks
 ```
 
@@ -713,6 +722,8 @@ E = p.interactQueued = true; any pop resets waitTicks
 4. `[{ kind: 'idle', node: idleNode(state, p) }]`.
 
 In this slice there is no reaction delay, no mistake and no yielding (Task 11–13).
+
+Bot test fixtures stop arrivals by pushing `{ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] }` onto `state.owned`, so only hand-placed customers exist; this is why the `served + 1`, `beans unchanged` and `two cold brews on the pass` assertions are exact.
 
 - [ ] **Step 1: Write the failing tests** (`brain.test.ts`; `solo = createRun({ seed: 2, hostId: 'p1', players: [p1], settings: { bots: 1 } })` then `startDay`; p1 never moves; queue set by hand; `settings.dayLengthSec` 600 so the day does not end)
 
@@ -771,10 +782,13 @@ git checkout main && git merge --no-ff phase2-s5-bots && npm test && npm run bui
 - Modify: `src/sim/bots/brain.ts`, `src/sim/bots/roster.ts`, `src/sim/bots/brain.test.ts`
 
 **Interfaces:**
-- Produces: `underPressure(state: GameState): boolean` (`customers.length >= 4 || eventActive(state, 'rushHour')`); `reactionDelay(state: GameState, bot: BotState): number` = `round((30 + rngInt(state, 91)) × personality.reaction × skillReaction × (pressure ? 0.8 : 1))`, where `skillReaction = [1.6, 1.3, 1.0, 0.8, 0.6][botSkill − 1]` and is 1 for `'human'` (whose `reaction` 0 makes the delay 0). The rng draw happens even for `'human'` so the stream does not depend on personality mix.
+- Produces: `underPressure(state: GameState): boolean` (`customers.length >= ECONOMY.bots.pressureQueue` (4) `|| eventActive(state, 'rushHour')`); `reactionDelay(state: GameState, bot: BotState): number` = `round((lo + rngInt(state, hi - lo + 1)) × personality.reaction × skillReaction × (pressure ? ECONOMY.bots.pressure.reaction : 1))`, where `[lo, hi] = ECONOMY.bots.reactionTicks` (`[30, 120]`), `pressure.reaction` is 0.8, `skillReaction = ECONOMY.bots.skill.reaction[botSkill − 1]` (`[1.6, 1.3, 1.0, 0.8, 0.6]`) and is 1 for `'human'` (whose `reaction` 0 makes the delay 0). The rng draw happens even for `'human'` so the stream does not depend on personality mix.
+- All bot numbers are read from `ECONOMY.bots`; none are literals in `brain.ts` or `roster.ts`, so Task 18 can tune them in `economy.ts`.
 - `stepBots`: when a new `'use'` plan is adopted, `b.reactionTicksLeft = reactionDelay(...)`; while `reactionTicksLeft > 0` decrement and stand still (no step executes).
 
 - [ ] **Step 1: Write the failing tests**
+
+Fixtures: as in Task 10 Step 1 (arrivals stopped with the `test-no-traffic` owned item).
 
 ```ts
 it('waits 0.5–2 s scaled by personality, skill and pressure before acting', () => {
@@ -814,10 +828,12 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Modify: `src/sim/bots/brain.ts`, `src/sim/step.ts` (position 5), `src/sim/bots/brain.test.ts`
 
 **Interfaces:**
-- Produces: `afterBotInteract(state: GameState, p: Player, heldBefore: ItemKind | null): void` — when `p.bot`, `heldBefore === null`, `p.holding` is a `DrinkId`, and `nearestStation(state, p.pos)` is a recipe station: roll `rngNext(state) < personality.mistake × skillMistake × (pressure ? 1.5 : 1)` (`skillMistake = [2.0, 1.5, 1.0, 0.7, 0.4][botSkill − 1]`, 1 for `'human'`). On a mistake: `b.mistakes += 1`, `tally(today, 'botMistakes')`, `emitLog('bot.mistake', { bot: p.name, drink })`, `b.noticeTicksLeft = 48 + rngInt(state, 73)`.
+- Produces: `afterBotInteract(state: GameState, p: Player, heldBefore: ItemKind | null): void` — when `p.bot`, `heldBefore === null`, `p.holding` is a `DrinkId`, and `nearestStation(state, p.pos)` is a recipe station: roll `rngNext(state) < personality.mistake × skillMistake × (pressure ? ECONOMY.bots.pressure.mistake : 1)` (`pressure.mistake` is 1.5; `skillMistake = ECONOMY.bots.skill.mistake[botSkill − 1]` = `[2.0, 1.5, 1.0, 0.7, 0.4]`, 1 for `'human'`). On a mistake: `b.mistakes += 1`, `tally(today, 'botMistakes')`, `emitLog('bot.mistake', { bot: p.name, drink })`, `b.noticeTicksLeft = lo + rngInt(state, hi - lo + 1)` with `[lo, hi] = ECONOMY.bots.noticeTicks` (`[48, 120]`).
 - `stepBots`: while `noticeTicksLeft > 0` the bot keeps walking its plan but `serve`/`put` wait (Task 10); at 0 → `plan = [trash, ...(claimDrink && claim ? chainFor(claimDrink, 'serve') : [])]`, `path = []`. The binned drink counts as waste through the Task 2 trash rule.
 
 - [ ] **Step 1: Write the failing tests**
+
+Fixtures: as in Task 10 Step 1 (arrivals stopped with the `test-no-traffic` owned item).
 
 ```ts
 it('a botched drink is noticed, binned, counted and remade', () => {
@@ -858,9 +874,11 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Modify: `src/sim/bots/brain.ts`, `src/sim/bots/brain.test.ts`
 
 **Interfaces:**
-- In `stepBots`, before setting `moveDir` toward `path[0]`: if any other connected player is within `yieldRadius` (0.7) of `path[0]` → `b.yieldTicksLeft = 18 + rngInt(state, 43)`, `b.yields += 1`, `b.path = []`; if `b.yields >= 3` → `b.nodeRank += 1`, `b.yields = 0`. While `yieldTicksLeft > 0` decrement and stand still; at 0 the path is recomputed next tick. `nodeRank` resets when a step pops.
+- In `stepBots`, before setting `moveDir` toward `path[0]`: if any other connected player is within `ECONOMY.bots.yieldRadius` (0.7) of `path[0]` → `b.yieldTicksLeft = lo + rngInt(state, hi - lo + 1)` with `[lo, hi] = ECONOMY.bots.yieldTicks` (`[18, 60]`), `b.yields += 1`, `b.path = []`; if `b.yields >= 3` → `b.nodeRank += 1`, `b.yields = 0`. While `yieldTicksLeft > 0` decrement and stand still; at 0 the path is recomputed next tick. `nodeRank` resets when a step pops.
 
 - [ ] **Step 1: Write the failing tests**
+
+Fixtures: as in Task 10 Step 1 (arrivals stopped with the `test-no-traffic` owned item).
 
 ```ts
 it('yields 0.3–1 s to a player on its next waypoint, then re-plans', () => {
@@ -921,8 +939,8 @@ export interface Telemetry {
   record(kind: string, data: unknown, tick?: number): void;
   input(input: PlayerInput): void;          // validated via validateInput; null → nothing
   snapshot(state: GameState): void;
-  peerEvents(token: string, events: TeleEvent[]): void;   // rows 'ui.<kind>' with data { from: token, ...data }
-  ui(kind: string, data?: unknown): void;   // 'ui.<kind>'
+  peerEvents(token: string, events: TeleEvent[]): void;   // rows '<kind>' (e.g. 'frame.long') with data { from: token, ...data }
+  ui(kind: string, data?: unknown): void;   // row kind '<kind>' (e.g. 'frame.long', 'input.mash'), no 'ui.' prefix
   summary(state: GameState): TelemetrySummary;
   toNdjson(): string;
   rows(): TelemetryRow[];
@@ -998,8 +1016,8 @@ it('parses tele batches and rejects bad ones', () => {
 it('forwards a member's tele batch and drops impersonation', () => { /* member T1 sends token T1 → onTele('T1', events); token 'H' → no call; non-member → no call */ });
 // hostResume-style integration in hostRoom.test.ts
 it('a HostRoom on a telemetry-wrapped transport records peer joins and inputs', () => {
-  // tele = createTelemetry(meta, { now: () => 0 }); room = createHostRoom(link, withTelemetry(fakeLocal().t, tele), host)
-  // peer T1 joins and sends a move → tele.rows() kinds include 'input' and 'peer.join'; the inner transport received both
+  // const local = fakeLocal(); const tele = createTelemetry(meta, { now: () => 0 }); const room = createHostRoom(link, withTelemetry(local.t, tele), host)  // keep `local` to assert on it below
+  // peer T1 joins and sends a move → tele.rows() kinds include 'input' and 'peer.join'; `local` (the inner transport) received both
 });
 // peerSession.test.ts
 it('sends tele batches to the host only once connected', () => { /* before hello: nothing; after: link.sent last { kind: 'tele', target: 'hostPeer' } */ });
@@ -1037,7 +1055,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 3. `startSolo`, `startHost`, `resume`: `const tele = createTelemetry({ host: <host name>, build: new Date(document.lastModified).toISOString(), protocol: PROTOCOL_VERSION })` and `const local = withTelemetry(createLocalTransport(), tele)`; after `createSession`, `s.telemetry = tele; setUiTelemetrySink((k, d) => tele.ui(k, d))`.
 4. `openHostRoom`: pass `undefined`-safe fifth argument `{ onTele: (token, events) => s.telemetry?.peerEvents(token, events) }`.
 5. `startPeer`: `const buffer = createUiBuffer(); setUiTelemetrySink(buffer.push); s.teleTimer = setInterval(() => transport.sendTele(buffer.drain()), 2000)`.
-6. `frame()`: keep `let lastFrameAt = performance.now()`; when `now − lastFrameAt > 250` record `frame.long { ms }` via `uiTelemetry.ui('frame.long', { ms })` (host sink writes to the collector, peer sink to the buffer).
+6. `frame()`: the hook keeps its own `performance.now()` timestamp of the previous frame; when `now − previous > 250` record `frame.long { ms }` via `uiTelemetry.ui('frame.long', { ms })` (host sink writes to the collector, peer sink to the buffer).
 7. After `main()` setup: `window.cafetycoon = { telemetry: { download: () => session?.telemetry?.download(), rows: () => session?.telemetry?.rows() ?? [] } }` (typed through a `declare global` block in `src/host/telemetry.ts`), plus `downloadTelemetry()` and a `telemetryRows()` getter in `main` scope for the UI agent to wire.
 8. `endSession`: `setUiTelemetrySink(null)`.
 
@@ -1053,7 +1071,7 @@ Expected: exit code 0.
 - [ ] **Step 3: Verify in the browser**
 
 Run: `npm test && npm run build`, then `npm run dev`, play one solo day, and in the console run `cafetycoon.telemetry.rows().slice(0, 3)`.
-Expected: green; the console shows a `meta` row, a `snapshot` row and `input` rows; `cafetycoon.telemetry.download()` saves an `.ndjson` file. With a second tab joined as a peer, the host's rows gain `peer.join` and, after a forced long frame in the peer tab, a `ui.frame.long` row within 2 s.
+Expected: green; the console shows a `meta` row, a `snapshot` row and `input` rows; `cafetycoon.telemetry.download()` saves an `.ndjson` file. With a second tab joined as a peer, the host's rows gain `peer.join` and, after a forced long frame in the peer tab, a `frame.long` row within 2 s.
 
 - [ ] **Step 4: Commit, merge, push**
 
@@ -1144,7 +1162,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 **Files:**
 - Modify: `src/data/economy.ts` (only the knobs below), `docs/superpowers/specs/2026-10-28-phase-2-busy-season-design.md` §16 (record the pass), `docs/BACKLOG.md` ("Decisions not recorded elsewhere")
 
-- [ ] **Step 1: Measure** — `npm run balance -- --weeks 50 --seed 1 --pace 3 --skill 3 --menu all --json > /tmp/h2b1.json` and `npm run balance -- --weeks 50 --seed 1 --humans 0 --bots 3 --json > /tmp/b3.json`.
+- [ ] **Step 1: Measure** — `npx tsx scripts/balance.ts --weeks 50 --seed 1 --pace 3 --skill 3 --menu all --json > /tmp/h2b1.json` and `npx tsx scripts/balance.ts --weeks 50 --seed 1 --humans 0 --bots 3 --json > /tmp/b3.json` (not `npm run balance`: npm's banner line would break the JSON).
 - [ ] **Step 2: Check the §11 targets** — two humans + one bot: ≥ 95% of weeks not bankrupt through seven days, ≥ 80% end with `finalCash > 100`, loss rate `lost / (served + lost)` in [0.15, 0.35]; three bots: ≥ 60% finish, and mean final cash below the two-humans table.
 - [ ] **Step 3: Tune only if a target misses**, turning knobs strictly in this order and re-measuring after each: bot mistake rates, `pass.staleSeconds`, `baseArrivalsPerSecond`, `patienceSeconds`, `events.inspector.wastedLimit`. Nothing else.
 - [ ] **Step 4: Record** before/after numbers for every target and each knob changed in spec §16 and one BACKLOG line; run `npm test && npm run build` (fix any sim test whose sampled numbers moved, by adjusting the fixture, not the rule).
@@ -1168,7 +1186,7 @@ git checkout main && git merge --no-ff phase2-s8-balance && npm test && npm run 
 - Modify: `README.md`, `docs/BACKLOG.md`, `public/roadmap.json`
 
 - [ ] **Step 1: README "Try it"** — under "How to play": the pass (E with a spare drink sets it down, E empty-handed serves or picks up; espresso goes stale in 45 s, latte 60 s, cold brew 10 min), bots (solo gets two, a friend replaces one next morning), events and customer kinds in one line each, the telemetry console commands and that nothing is uploaded. Under "Working on it": `npm run balance -- --weeks 10` and the main options.
-- [ ] **Step 2: BACKLOG** — a "Needs UI" section with one line per spec §13 item: `HudVM.pass`; `NightVM.menu` + `menu` input; `HudVM.events` banners and inspection/influencer toasts (`state.log` kinds `inspection`, `influencer`); customer kind tells (`Customer.kind`, `name`, `extra.length`); bot tells (`Player.bot`, personality); receipt fields via `receiptViewModel` (Task 7); telemetry download button (`downloadTelemetry()`); `uiTelemetry.ui(kind, data)` calls on the night screen; title/pause settings for `bots` and `botSkill` (input `settings`). Also a "Deferred" line for syrups (spec §4 sketch).
+- [ ] **Step 2: BACKLOG** — a "Needs UI" section with one line per spec §13 item: `HudVM.pass`; `NightVM.menu` + `menu` input; `HudVM.events` banners and inspection/influencer toasts (`state.log` kinds `inspection`, `influencer`); customer kind tells (`Customer.kind`, `name`, `extra.length`); bot tells (`Player.bot`, personality); receipt fields via `receiptViewModel` (Task 7); telemetry download button (`downloadTelemetry()`); `uiTelemetry.ui(kind, data)` calls on the night screen; title/pause settings for `bots` and `botSkill` (input `settings`). Add one line: "`nightViewModel.ready` now omits bots; `hudStructureKey` ignores per-tick `secondsLeft` fields (pass, events)." Also a "Deferred" line for syrups (spec §4 sketch).
 - [ ] **Step 3: roadmap.json** — phase 2 goals: day events, better customers, scripted bots, bots feel human, bots path/yield, personalities, skill dial, telemetry → `"done"`; balance pass → `"doing"` (playtest pending); cards, sound, difficulty pacing stay `"todo"`.
 - [ ] **Step 4: Verify** — `npm test && npm run build` (the `public/roadmap.json` shape test in `src/render/theme.test.ts` stays green).
 - [ ] **Step 5: Commit, merge, push**
