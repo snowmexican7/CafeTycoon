@@ -9,7 +9,7 @@ import { rngInt, rngNext } from '../rng';
 import { STATION_RECIPES } from '../stations';
 import { tally } from '../tally';
 import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Player, Station, StationKind, Vec2 } from '../types';
-import { findPath, idleNode, targetNodes } from './path';
+import { findPath, idleNode, nodeOf, targetNodes } from './path';
 
 const BOTS = ECONOMY.bots;
 
@@ -103,8 +103,11 @@ function coldBrewsAhead(state: GameState): number {
 function orphanedDrink(state: GameState, self: Player): Station | null {
   const takenBy = (st: Station) =>
     state.players.some((p) => p !== self && p.bot && isTakeAt(p.bot.plan[0], st));
+  // A person standing at the machine is about to take it themselves.
+  const personAt = (st: Station) =>
+    state.players.some((p) => !p.bot && p.connected && dist(p.pos, st.pos) <= ECONOMY.interactRangeTiles);
   const candidates = state.stations
-    .filter((st) => isRecipeKind(st.kind) && isDrink(st.output) && !takenBy(st))
+    .filter((st) => isRecipeKind(st.kind) && isDrink(st.output) && !takenBy(st) && !personAt(st))
     .map((st) => ({ st, d: dist(st.pos, self.pos) }))
     .sort((a, b) => a.d - b.d || a.st.pos.y - b.st.pos.y || a.st.pos.x - b.st.pos.x);
   return candidates[0]?.st ?? null;
@@ -200,12 +203,16 @@ function setPlan(b: BotState, plan: BotStep[]): void {
   b.path = [];
   b.yields = 0;
   b.nodeRank = 0;
+  b.target = null;
   b.waitTicks = 0;
 }
 
 function pop(b: BotState): void {
   b.plan.shift();
   b.path = [];
+  b.yields = 0;
+  b.nodeRank = 0;
+  b.target = null;
   b.waitTicks = 0;
 }
 
@@ -278,11 +285,50 @@ function act(state: GameState, p: Player, action: BotAction, st: Station): void 
   }
 }
 
+/** The bot has yielded during this step: from now on it plans around the other players. */
+const hasYielded = (b: BotState): boolean => b.yields > 0 || b.nodeRank > 0;
+
+/**
+ * Someone else (person or bot) is standing on the bot's next waypoint. A bot that has run out of
+ * other target nodes and yielded another yieldsBeforeRerank times walks through (nobody collides).
+ */
+function shouldYield(state: GameState, self: Player, waypoint: Vec2, maxRank: number): boolean {
+  const b = self.bot!;
+  if (b.nodeRank >= maxRank && b.yields >= 2 * BOTS.yieldsBeforeRerank) return false;
+  return state.players.some((p) => p !== self && p.connected && dist(p.pos, waypoint) <= BOTS.yieldRadius);
+}
+
+/**
+ * Stand aside for a moment, then re-plan; after yieldsBeforeRerank yields toward one node, try the
+ * next-nearest. At the last node the yields keep counting until shouldYield lets the bot through.
+ */
+function yieldWay(state: GameState, b: BotState, maxRank: number): void {
+  const [lo, hi] = BOTS.yieldTicks;
+  b.yieldTicksLeft = lo + rngInt(state, hi - lo + 1);
+  b.yields += 1;
+  b.path = [];
+  if (b.yields >= BOTS.yieldsBeforeRerank && b.nodeRank < maxRank) {
+    b.nodeRank += 1;
+    b.yields = 0;
+    b.target = null; // re-pinned at the new rank next tick
+  }
+}
+
+/** A path to `node`; after a yield, around the nodes other players stand on when such a path exists. */
+function planPath(state: GameState, p: Player, node: Vec2): Vec2[] | null {
+  if (hasYielded(p.bot!)) {
+    const avoid = state.players.filter((o) => o !== p && o.connected).map((o) => nodeOf(state, o.pos));
+    const around = findPath(state, p.pos, node, avoid);
+    if (around !== null) return around;
+  }
+  return findPath(state, p.pos, node);
+}
+
 /** Head for `node` along a fresh A* path, one tile centre at a time. */
-function walkToward(state: GameState, p: Player, node: Vec2): void {
+function walkToward(state: GameState, p: Player, node: Vec2, maxRank: number): void {
   const b = p.bot!;
   if (b.path.length === 0) {
-    const path = findPath(state, p.pos, node);
+    const path = planPath(state, p, node);
     if (path === null) return abandon(state, p);
     b.path = path;
     if (b.path.length === 0) return;
@@ -291,6 +337,7 @@ function walkToward(state: GameState, p: Player, node: Vec2): void {
     b.path = []; // re-plan from this node next tick
     return;
   }
+  if (shouldYield(state, p, b.path[0], maxRank)) return yieldWay(state, b, maxRank);
   p.moveDir = { x: b.path[0].x - p.pos.x, y: b.path[0].y - p.pos.y };
 }
 
@@ -314,7 +361,10 @@ function stepBot(state: GameState, p: Player): void {
     b.reactionTicksLeft -= 1;
     return;
   }
-  // Task 13 (yieldTicksLeft) wait slots in here.
+  if (b.yieldTicksLeft > 0) {
+    b.yieldTicksLeft -= 1;
+    return;
+  }
 
   if (b.plan.length === 0 || b.plan[0].kind === 'idle') {
     b.thinkTicksLeft -= 1;
@@ -333,15 +383,19 @@ function stepBot(state: GameState, p: Player): void {
   const current = b.plan[0];
   let node: Vec2;
   let station: Station | null = null;
+  let maxRank = 0;
   if (current.kind === 'idle') node = current.node;
   else {
     station = state.stations.find((s) => s.id === current.station) ?? null;
     const nodes = station ? targetNodes(state, station, p.pos) : [];
     if (nodes.length === 0) return abandon(state, p);
-    node = nodes[Math.min(b.nodeRank, nodes.length - 1)];
+    maxRank = nodes.length - 1;
+    // Pinned once per step (and per rank): re-ranking from a moving bot would swap tied nodes every tick.
+    b.target ??= nodes[Math.min(b.nodeRank, maxRank)];
+    node = b.target;
   }
 
-  if (dist(p.pos, node) > BOTS.arriveRadius) return walkToward(state, p, node);
+  if (dist(p.pos, node) > BOTS.arriveRadius) return walkToward(state, p, node, maxRank);
   if (current.kind === 'idle' || station === null) return pop(b);
   // Within arriveRadius of a node that ties between two stations, edge onto the node so "use" hits the right one.
   if (nearestStation(state, p.pos)?.id !== station.id) {

@@ -4,7 +4,8 @@ import { createRun, startDay } from '../run';
 import { nearestStation } from '../movement';
 import { step } from '../step';
 import type { GameState, Personality, Player } from '../types';
-import { chainFor, reactionDelay, uncoveredOrder } from './brain';
+import { chainFor, reactionDelay, think, uncoveredOrder } from './brain';
+import { findPath, targetNodes } from './path';
 import { addStandIns, botSpeed, makeBotState } from './roster';
 
 /** One human p1 who never moves, `bots` bot baristas, no arrivals, and a long day. */
@@ -244,12 +245,12 @@ describe('bot feel: reaction delay, personalities, pressure and the skill dial',
 });
 
 describe('bot feel: mistakes, noticing and remaking', () => {
-  /** Run `ticks` ticks keeping two espresso customers in the queue; collect every 'bot.mistake' log entry. */
+  /** Run `ticks` ticks with a queue long enough to put the crew under pressure; collect every 'bot.mistake' log entry. */
   function busyEspressoDay(s: GameState, ticks: number): { s: GameState; mistakeLogs: number } {
     let nextId = 1000;
     const seen = new Set<number>();
     for (let i = 0; i < ticks; i++) {
-      while (s.customers.length < 2) s.customers.push({ id: nextId++, drink: 'espresso', ...huge });
+      while (s.customers.length < ECONOMY.bots.pressureQueue) s.customers.push({ id: nextId++, drink: 'espresso', ...huge });
       s = step(s, []);
       for (const e of s.log) if (e.kind === 'bot.mistake') seen.add(e.seq);
     }
@@ -280,6 +281,8 @@ describe('bot feel: mistakes, noticing and remaking', () => {
     let s = cafe(1);
     s.customers = [{ id: 900, drink: 'espresso', ...huge }];
     s = runUntil(s, (x) => bot(x).holding === 'espresso', 60 * 30);
+    bot(s).bot!.noticeTicksLeft = 10_000; // hold the drink unchecked until the bot is waiting at the counter
+    s = runUntil(s, (x) => bot(x).bot!.waitTicks > 0, 60 * 30);
     bot(s).bot!.noticeTicksLeft = 100;
     const served = s.today.served;
     const wasted = s.today.wasted ?? 0;
@@ -316,5 +319,128 @@ describe('bot feel: mistakes, noticing and remaking', () => {
     s = busyEspressoDay(s, 60 * 120).s;
     expect(s.today.served).toBeGreaterThan(0);
     expect(s.today.botMistakes ?? 0).toBe(0);
+  });
+});
+
+describe('bot feel: yielding', () => {
+  /** bot-1 standing exactly on (6,4) with a fresh plan to grind, p1 parked out of the way. */
+  function headingToGrinder(): GameState {
+    const s = cafe(1);
+    s.menu.coldBrew = false;
+    s.players.find((p) => p.id === 'p1')!.pos = { x: 11, y: 5 };
+    const b = bot(s);
+    b.pos = { x: 6, y: 4 };
+    b.bot!.plan = [{ kind: 'use', station: 'grinder', action: 'insert' }];
+    b.bot!.path = [];
+    return s;
+  }
+  /** Where the bot will step next on its way to the grinder node of its current rank. */
+  function nextWaypoint(s: GameState): { x: number; y: number } {
+    const b = bot(s);
+    const grinder = s.stations.find((st) => st.id === 'grinder')!;
+    const nodes = targetNodes(s, grinder, b.pos);
+    return findPath(s, b.pos, nodes[Math.min(b.bot!.nodeRank, nodes.length - 1)])![0];
+  }
+  const [lo, hi] = ECONOMY.bots.yieldTicks;
+
+  it('yields 0.3–1 s to a player on its next waypoint, then re-plans', () => {
+    let s = headingToGrinder();
+    s.players.find((p) => p.id === 'p1')!.pos = nextWaypoint(s);
+    const pos = { ...bot(s).pos };
+    s = step(s, []);
+    const b = bot(s);
+    expect(b.bot!.yieldTicksLeft).toBeGreaterThanOrEqual(lo);
+    expect(b.bot!.yieldTicksLeft).toBeLessThanOrEqual(hi);
+    expect(b.bot!.yields).toBe(1);
+    expect(b.bot!.path).toEqual([]);
+    expect(b.moveDir).toEqual({ x: 0, y: 0 });
+    expect(b.pos).toEqual(pos);
+    const waiting = b.bot!.yieldTicksLeft;
+    s.players.find((p) => p.id === 'p1')!.pos = { x: 11, y: 5 }; // p1 steps aside
+    for (let i = 0; i < waiting; i++) s = step(s, []);
+    expect(bot(s).pos).toEqual(pos);
+    expect(bot(s).bot!.yieldTicksLeft).toBe(0);
+    s = step(s, []);
+    expect(bot(s).pos).not.toEqual(pos); // on its way again
+  });
+
+  /** People standing still on all four neighbours of the bot at (6,4): there is no way around them. */
+  function boxedIn(): GameState {
+    const s = headingToGrinder();
+    const spots = [{ x: 5, y: 4 }, { x: 7, y: 4 }, { x: 6, y: 3 }, { x: 6, y: 5 }];
+    s.players.find((p) => p.id === 'p1')!.pos = spots[0];
+    for (let i = 1; i < spots.length; i++) {
+      s.players.unshift({ id: `p${i + 1}`, name: `P${i + 1}`, pos: spots[i], moveDir: { x: 0, y: 0 }, interactQueued: false, holding: null, connected: true, idleTicks: 0 });
+    }
+    return s;
+  }
+  const grinderNodes = (s: GameState) => targetNodes(s, s.stations.find((st) => st.id === 'grinder')!, bot(s).pos).length;
+  const grinding = (x: GameState) => x.stations.find((st) => st.id === 'grinder')!.busyTicksLeft > 0;
+
+  it('after three yields it picks the next-nearest target node', () => {
+    let s = boxedIn();
+    let yields = 0;
+    for (let i = 0; i < 4 * hi && bot(s).bot!.nodeRank === 0; i++) {
+      const before = bot(s).bot!.yieldTicksLeft;
+      s = step(s, []);
+      if (bot(s).bot!.yieldTicksLeft > before) yields += 1;
+      expect(bot(s).pos).toEqual({ x: 6, y: 4 });
+    }
+    expect(yields).toBe(ECONOMY.bots.yieldsBeforeRerank);
+    expect(bot(s).bot!.nodeRank).toBe(1);
+    expect(bot(s).bot!.yields).toBe(0);
+    s.players = s.players.filter((p) => p.bot || p.id === 'p1');
+    s.players.find((p) => p.id === 'p1')!.pos = { x: 11, y: 5 };
+    s = runUntil(s, grinding, 60 * 10);
+    expect(bot(s).bot!.nodeRank).toBe(0); // the step popped
+  });
+
+  it('never ranks past the last target node, and in the end walks through', () => {
+    let s = boxedIn();
+    const max = grinderNodes(s) - 1;
+    for (let i = 0; i < 60 * 60 && !grinding(s); i++) {
+      s = step(s, []);
+      expect(bot(s).bot!.nodeRank).toBeLessThanOrEqual(max);
+    }
+    expect(grinding(s)).toBe(true);
+  });
+
+  it('gets round a person parked on its first waypoint', () => {
+    let s = headingToGrinder();
+    s.players.find((p) => p.id === 'p1')!.pos = nextWaypoint(s);
+    s = runUntil(s, grinding, 900);
+    expect(s.players.find((p) => p.id === 'p1')!.pos).toEqual(nextWaypoint(headingToGrinder()));
+  });
+
+  it('humans never collide with bots', () => {
+    const walk = (withBot: boolean) => {
+      let s = cafe(1);
+      const p1 = s.players.find((p) => p.id === 'p1')!;
+      p1.pos = { x: 4, y: 4 };
+      if (withBot) {
+        bot(s).pos = { x: 6, y: 4 };
+        bot(s).bot!.reactionTicksLeft = 10_000; // stands still
+      } else s.players = s.players.filter((p) => !p.bot);
+      const trail: { x: number; y: number }[] = [];
+      for (let i = 0; i < 60; i++) {
+        s = step(s, [{ kind: 'move', playerId: 'p1', x: 1, y: 0, interact: false }]);
+        trail.push({ ...s.players.find((p) => p.id === 'p1')!.pos });
+      }
+      return trail;
+    };
+    const trail = walk(true);
+    expect(trail.some((q) => Math.abs(q.x - 6) < 0.1)).toBe(true); // passed through the bot's tile
+    expect(trail).toEqual(walk(false));
+  });
+
+  it('a bot leaves a finished drink alone while a person is working that machine', () => {
+    const s = cafe(1);
+    s.menu.coldBrew = false;
+    s.stations.find((st) => st.id === 'espresso')!.output = 'espresso';
+    const p1 = s.players.find((p) => p.id === 'p1')!;
+    p1.pos = { x: 3, y: 2 };
+    expect(think(s, bot(s))[0].kind).toBe('idle');
+    p1.pos = { x: 11, y: 5 };
+    expect(think(s, bot(s))).toEqual([{ kind: 'use', station: 'espresso', action: 'take' }]);
   });
 });

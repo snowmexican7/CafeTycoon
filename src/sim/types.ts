@@ -56,6 +56,8 @@ export interface BotState {
   path: Vec2[];
   yields: number;
   nodeRank: number;
+  /** The node pinned for the current 'use' step (recomputed when nodeRank changes). */
+  target?: Vec2 | null;
   waitTicks: number;
   noticeTicksLeft: number;
 }

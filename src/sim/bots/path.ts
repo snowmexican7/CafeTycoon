@@ -48,14 +48,15 @@ interface OpenEntry {
  * A* over walkable tile centres (4-neighbour, unit steps, Manhattan heuristic).
  * Returns the nodes to visit after the start node (the start is prepended only when `from` is
  * farther than arriveRadius from it), [] when already at the goal, null when unreachable.
+ * Nodes in `avoid` (other than the goal) are treated as unwalkable.
  */
-export function findPath(state: GameState, from: Vec2, to: Vec2): Vec2[] | null {
+export function findPath(state: GameState, from: Vec2, to: Vec2, avoid: Vec2[] = []): Vec2[] | null {
   if (!isWalkable(state, to)) return null;
   const start = nodeOf(state, from);
   const goalKey = key(to);
   const open = new Map<string, OpenEntry>([[key(start), { node: start, g: 0, h: manhattan(start, to), order: 0 }]]);
   const cameFrom = new Map<string, Vec2>();
-  const closed = new Set<string>();
+  const closed = new Set<string>(avoid.map(key).filter((k) => k !== goalKey));
   let counter = 1;
 
   for (;;) {
