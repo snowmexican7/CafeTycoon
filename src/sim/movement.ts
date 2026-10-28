@@ -35,7 +35,7 @@ export function applyMovement(state: GameState, moveSpeedMul: number): GameState
 /** The closest station within interact range of `pos`, or null. Ties go to the lower index. */
 export function nearestStation(state: GameState, pos: Vec2): Station | null {
   let best: Station | null = null;
-  let bestDist = ECONOMY.interactRangeTiles;
+  let bestDist: number = ECONOMY.interactRangeTiles;
   for (const s of state.stations) {
     const d = Math.hypot(pos.x - s.pos.x, pos.y - s.pos.y);
     if (d < bestDist || (best === null && d <= bestDist)) {
