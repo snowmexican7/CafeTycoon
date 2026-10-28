@@ -87,6 +87,9 @@ balance is tuned by simulation instead of by hand-playing.
   has a drink → pick up the one with the least `ticksLeft`. Else → nothing.
 - `ECONOMY.pass.staleSeconds = { espresso: 45, latte: 60, coldBrew: 600 }`. Each tick
   decrements `ticksLeft`; at 0 the drink vanishes and `today.wasted += 1`.
+- **Any drink that goes into the trash also counts as `today.wasted`**, whether a human or a bot
+  threw it away. Grounds in the trash do not count. Waste is the one "mess" the sim has, and a
+  sloppy bot getting the café fined is an intended dynamic.
 - Grounds can never go on the pass (they are not a `DrinkId`).
 - Day end clears the pass (nothing is counted as wasted then).
 - Telemetry records `pass.put`, `pass.take`, `pass.serve`, `pass.stale`.
@@ -119,7 +122,7 @@ balance is tuned by simulation instead of by hand-playing.
   for them). Served → `today.bonus += 10` (cash +10) and traffic ×1.3 for the rest of the
   day. Lost → nothing beyond the normal loss. The event is active until the influencer
   leaves.
-- **healthInspector** (20 s): at the end, if `today.wasted ≥ 3` → `today.fines += 15`
+- **healthInspector** (20 s): at the end, if `today.wasted ≥ 4` → `today.fines += 15`
   (cash −15) and `today.inspection = 'fail'`; else `today.inspection = 'pass'` and
   reputation +0.1 at day end (in addition to the normal ±0.2).
 - Events affect modifiers through `computeModifiers` (traffic, patience) and stations
@@ -137,9 +140,16 @@ balance is tuned by simulation instead of by hand-playing.
 - **group**: 2–3 drinks, each drawn from the menu; patience ×1.3; after each drink is
   served, `patienceLeft = min(patienceMax, patienceLeft + 0.3 × patienceMax)`; each drink
   pays normally. Serving matches the current `drink`; when `extra` is empty they leave.
+  **Accounting:** a group takes one queue slot; each drink served counts as one `served` and
+  one `drinks[drink]`; a group that runs out of patience counts one `lost` per drink still
+  unserved (current plus `extra`). Reputation therefore stays per drink on both sides.
 - **regular**: up to `ECONOMY.regulars.max = 3` per run, stored in
   `GameState.regulars: { name; drink; visits; lost }[]`, created on first appearance with a
   name from a fixed list and a drink from the menu; same drink every visit; tip ×1.25.
+  When the spawn roll picks "regular" and the roster already has 3, one existing regular who
+  is not currently in the queue returns (uniform rng pick); if all three are in the queue, a
+  normal customer spawns instead. Every appearance increments `visits`. A lost regular keeps
+  coming back (`lost` counts how often you let them down).
   Losing one adds `today.lostRegulars += 1`, and lost regulars count twice in the
   reputation ratio at day end.
 - Each served drink increments `today.drinks[drink]`.
@@ -153,8 +163,11 @@ humans. Bots render as baristas with no renderer change (the name tag is the UI 
 yieldTicksLeft: number; plan: BotStep[]; claim: number | null; mistakes: number }`.
 
 **Count.** `Settings.bots: number | 'auto'` (default `'auto'`) and `Settings.botSkill: 1..5`
-(default 3). Auto = `max(0, 3 − connected humans)`, recomputed at run creation and at every
-`startDay`, so a friend who joins mid-week replaces a bot the next morning. Bots never count
+(default 3). Auto = `max(0, 3 − connected humans)`. A numeric setting is a **cap**: bots =
+`min(setting, 4 − connected humans)`, so the café never has more than four baristas (the
+layout has four spawn points). The count is recomputed at run creation and at every
+`startDay`; a bot that is over the cap is removed from `players` that morning ("Mo went
+home"), highest id first, and bot ids `bot-1..3` are reused in order. Bots never count
 toward the night's ready check and never buy or restock.
 
 **Movement.** Bots move with `moveDir` and `interactQueued` exactly like humans; the same
@@ -201,7 +214,9 @@ and telemetry `bot.mistake` all count it.
 | steady | 1.00 | 1.0 | 0.06 | yes |
 | veteran | 0.90 | 1.3 | 0.02 | yes |
 
-Bot 1 is steady, bot 2 rookie, bot 3 veteran. Speed multiplies the bot's own move speed.
+Bot 1 is steady, bot 2 rookie, bot 3 veteran. Speed multiplies the bot's own move speed, and
+reaction multiplies the delay, so the table is intended as written: the veteran is slow to
+start and slow on their feet but almost never botches a drink; the rookie is quick and sloppy.
 
 **Pressure.** While `customers.length ≥ 4` or rushHour is active: mistake ×1.5, reaction ×0.8.
 
@@ -239,17 +254,29 @@ mistake `[2.0, 1.5, 1.0, 0.7, 0.4]`, speed `[0.85, 0.92, 1.0, 1.05, 1.10]`.
   dependency). Options: `--weeks N` (default 10), `--seed S`, `--bots 0..3` (default 3),
   `--skill 1..5`, `--pace 1..5`, `--scenario id|random`, `--menu all|espresso|latte|coldBrew`
   or a comma list, `--compare menus` (runs the four menus on the same seeds), `--json`.
+- **Who plays.** `--humans N` (default 2) adds N stand-in humans: bots with the `human`
+  personality (speed 1.0, no reaction delay, no mistakes, preps). `--bots N` (default 1)
+  adds ordinary bots at `--skill`. The default is therefore the spec's target table of two
+  humans plus one bot. `--humans 0 --bots 3` is the bots-only café; `--humans 0 --bots 0`
+  is allowed and prints a warning that nothing will be served.
 - Night policy: restock to targets (beans 40, milk 20, concentrate 30) when affordable; buy
   the cheapest affordable permanent card when cash exceeds twice its cost; otherwise nothing.
 - Output per day: cash, served, lost, turned away, wasted, bot mistakes, events; totals and
   a per-drink table; with `--compare`, one row per menu with mean final cash and loss rate.
 - Deterministic: the same options and seed print the same numbers. One test runs a single
   short week through the tester entry point.
+- **Tuning targets** for the one tuning pass (pace 3, skill 3, full menu, 50 seeds):
+  two humans + one bot finish seven days without bankruptcy in ≥ 95% of seeds, end the week
+  with more cash than they started in ≥ 80%, and lose between 15% and 35% of drinks
+  (lost / (served + lost)); three bots alone finish the week in ≥ 60% of seeds and never
+  beat the two-humans table on mean cash. Knobs the pass may turn, in order: bot mistake
+  rates, stale seconds, base traffic, patience, inspector limit. Anything else waits for
+  a playtest. The pass is recorded in the execution ledger and in §16.
 
 ## 12. Data additions (`src/data/economy.ts`)
 
 `pass: { slots: 3, staleSeconds: { espresso: 45, latte: 60, coldBrew: 600 } }`,
-`events: { scheduleWeights: [0.35, 0.45, 0.20], windowStart: 0.15, windowEnd: 0.75, rushHour: { seconds: 30, traffic: 2.0, patience: 0.9 }, powerFlicker: { seconds: 4 }, influencer: { patience: 1.5, bonus: 10, trafficAfter: 1.3 }, inspector: { seconds: 20, wastedLimit: 3, fine: 15, reputationBonus: 0.1 } }`,
+`events: { scheduleWeights: [0.35, 0.45, 0.20], windowStart: 0.15, windowEnd: 0.75, rushHour: { seconds: 30, traffic: 2.0, patience: 0.9 }, powerFlicker: { seconds: 4 }, influencer: { patience: 1.5, bonus: 10, trafficAfter: 1.3 }, inspector: { seconds: 20, wastedLimit: 4, fine: 15, reputationBonus: 0.1 } }`,
 `customers: { mixDay1: { normal: 0.85, impatient: 0.15 }, mix: { normal: 0.65, impatient: 0.15, group: 0.12, regular: 0.08 }, impatient: { patience: 0.6, tip: 1.5 }, group: { min: 2, max: 3, patience: 1.3, refill: 0.3 }, regular: { tip: 1.25, max: 3, lostWeight: 2 } }`,
 `bots: { thinkTicks: 6, reactionTicks: [30, 120], noticeTicks: [48, 120], yieldTicks: [18, 60], yieldRadius: 0.7, pressureQueue: 4, pressure: { mistake: 1.5, reaction: 0.8 }, personalities: {…}, skill: {…}, names: ['Bo', 'Lu', 'Mo'] }`.
 
@@ -290,3 +317,9 @@ regulars' name list; test fixtures; how the tester formats its tables.
 - Lost regulars count double toward reputation.
 - No auto-serve from the pass.
 - Syrups wait for Group B.
+- Trash use counts as waste (so bot mistakes can earn an inspector fine; limit raised to 4).
+- Groups count per drink on both served and lost; a group holds one queue slot.
+- Lost regulars keep coming back.
+- Baristas are capped at four, bots included.
+- The tester's stand-in humans are perfect bots, so its "human" table is a ceiling, not a
+  prediction of real friends.
