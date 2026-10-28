@@ -118,3 +118,12 @@ export function baristaLook(index: number): { cap: number; skin: number; hair: n
 export function isNightLook(phase: string): boolean {
   return phase !== 'day' && phase !== 'closing';
 }
+
+export type Facing = 'up' | 'down';
+
+/** Which way a barista looks: the last vertical direction it moved in (pure left/right keeps the old facing). */
+export function nextFacing(prev: Facing, moveDir: { x: number; y: number }): Facing {
+  if (moveDir.y < 0) return 'up';
+  if (moveDir.y > 0) return 'down';
+  return prev;
+}
