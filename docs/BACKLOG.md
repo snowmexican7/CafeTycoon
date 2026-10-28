@@ -44,6 +44,22 @@ playtest complains about it.
 - The browser console shows a failing connection to one public Nostr relay
   (relay.flashapp.me). Expected noise; the other relays carry the room.
 
+## UI overhaul, group B: deferred and open items
+- Suggestion flow: "Suggest an idea" opens a blank issue at
+  https://github.com/snowmexican7/CafeTycoon/issues/new. Once Kennedy approves the suggestion
+  issue template, point `SUGGEST_URL` in `src/ui/roadmapModel.ts` at it
+  (`issues/new?template=…`) and create the `suggestion` label. The Suggestions tab lists open
+  issues with that label, so it reads "No ideas yet" until the label exists.
+- "X served a Latte" toasts in the HUD need a served event from the sim (Claude's side).
+- "Crew says" mood reactions on the HUD/night only show when `feedbackIssue` is set; it is
+  always null today, so they stay hidden.
+- Night shop Upgrades and Ads tabs (and the pitch tab) are locked "Soon" placeholders until
+  phase 3 ships those systems.
+- The lobby offers "Copy code" only. A join link (`?room=CODE`) needs URL-param handling in
+  `main.ts` and the title screen.
+- The roadmap progress bar counts a doing goal as half done. It is computed from
+  `public/roadmap.json` in `src/ui/roadmapModel.ts`.
+
 ## Decisions not recorded elsewhere
 - 2026-10-28: Telemetry is a phase 2 goal. The roadmap rewrite had dropped it; Kennedy wants
   it. Host-recorded, downloaded as a file, no new accounts; see design spec §13.
@@ -59,3 +75,8 @@ playtest complains about it.
   `src/sim`, `src/net`, `src/host`, `src/storage` and the phase 2 bots.
 - Pull requests and code review start when someone other than Kennedy contributes. Until
   then both agents push straight to `main` once tests and the build pass.
+- 2026-10-28: Group B UI. Seed entry, run history and the key list stay on the title
+  screen but are folded down (a seed field in the footer and a "Past runs & controls"
+  disclosure). The pause menu shows the roadmap read-only, with no Suggestions tab. The
+  legacy dark-panel CSS in `src/style.css` is gone, and every screen now uses
+  `src/ui/styles/*.css`.
