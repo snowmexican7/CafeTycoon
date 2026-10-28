@@ -4,9 +4,15 @@ import type { ClientToHost, HostToClient, Transport } from './transport';
 export function createLocalTransport(): Transport {
   const worker = new Worker(new URL('../host/simWorker.ts', import.meta.url), { type: 'module' });
   const handlers = new Set<(snap: HostToClient) => void>();
+  const errorHandlers = new Set<(message: string) => void>();
+  const fail = (message: string) => {
+    for (const h of errorHandlers) h(message);
+  };
   worker.onmessage = (ev: MessageEvent<HostToClient>) => {
     for (const h of handlers) h(ev.data);
   };
+  worker.onerror = (ev) => fail(ev.message || 'The game simulation crashed.');
+  worker.onmessageerror = () => fail('The game simulation sent something unreadable.');
   const send = (msg: ClientToHost) => worker.postMessage(msg);
   return {
     start: (opts) => send({ t: 'start', opts }),
@@ -18,8 +24,15 @@ export function createLocalTransport(): Transport {
         handlers.delete(handler);
       };
     },
+    onError(handler) {
+      errorHandlers.add(handler);
+      return () => {
+        errorHandlers.delete(handler);
+      };
+    },
     close() {
       handlers.clear();
+      errorHandlers.clear();
       worker.terminate();
     },
   };

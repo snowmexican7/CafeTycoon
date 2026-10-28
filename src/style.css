@@ -61,3 +61,4 @@ table.stats td:last-child { text-align: right; } tr.total td { font-weight: 700;
 .pill { padding: 4px 10px; border-radius: 999px; background: var(--panel-2); font-size: .85rem; } .pill.on { background: var(--good); color: var(--accent-ink); }
 .score { font-size: 2.6rem; font-weight: 800; color: var(--accent); margin: 4px 0; }
 ul.bought { margin: 0; padding-left: 20px; }
+.notice { background: var(--bad); color: var(--accent-ink); padding: 8px 12px; border-radius: 8px; font-weight: 600; }

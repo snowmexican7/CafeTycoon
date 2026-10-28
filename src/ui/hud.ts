@@ -1,5 +1,5 @@
 import { esc, hide, show } from './dom';
-import type { HudVM } from './viewModels';
+import { hudStructureKey, type HudVM } from './viewModels';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew' } as const;
 const DRINK_LABEL = { espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew' } as const;
@@ -9,8 +9,16 @@ export function createHud(container: HTMLElement): { render(vm: HudVM): void; to
   const bar = container.querySelector<HTMLElement>('.bar')!;
   const toast = container.querySelector<HTMLElement>('.toast')!;
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastKey = '';
   return {
     render(vm) {
+      const key = hudStructureKey(vm);
+      if (key === lastKey) {
+        bar.querySelector('.clock')!.textContent = vm.clock;
+        bar.querySelector('.cash')!.textContent = vm.cash;
+        return;
+      }
+      lastKey = key;
       const phase = vm.phase === 'closing' ? 'Closing' : vm.phase === 'day' ? 'Open' : vm.phase === 'night' ? 'Night' : '';
       bar.innerHTML = `
         <span class="day">${esc(vm.dayLabel)}</span>

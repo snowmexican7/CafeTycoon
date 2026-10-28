@@ -140,3 +140,28 @@ describe('step', () => {
     });
   });
 });
+
+describe('input validation', () => {
+  const day = () => ticks(createRun(opts), 60 * 60);
+  it('clamps settings into range and ignores non-numbers', () => {
+    let s = step(day(), [{ kind: 'settings', playerId: 'p1', settings: { pace: 9 as never } }]);
+    expect(s.settings.pace).toBe(5);
+    s = step(s, [{ kind: 'settings', playerId: 'p1', settings: { pace: NaN as never } }]);
+    expect(s.settings.pace).toBe(5);
+    s = step(s, [{ kind: 'settings', playerId: 'p1', settings: { dayLengthSec: 5, nightLengthSec: 10_000 } }]);
+    expect(s.settings.dayLengthSec).toBe(30);
+    expect(s.settings.nightLengthSec).toBe(600);
+    expect(Number.isFinite(computeModifiers(s).traffic)).toBe(true);
+  });
+  it('rejects malformed restock and move inputs', () => {
+    let s = createRun(opts);
+    for (const packs of [NaN, 0, -1, 1.5, Infinity]) {
+      s = step(s, [{ kind: 'restock', playerId: 'p1', supply: 'beans', packs }]);
+    }
+    expect(s.cash).toBe(100);
+    expect(s.supplies.beans).toBe(20);
+    s = step(day(), [{ kind: 'move', playerId: 'p1', x: NaN, y: 5, interact: 'yes' as never }]);
+    expect(s.players[0].moveDir).toEqual({ x: 0, y: 1 });
+    expect(s.players[0].interactQueued).toBe(false);
+  });
+});

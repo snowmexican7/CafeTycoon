@@ -9,6 +9,7 @@ import { applyNightInput, stepNight } from './night';
 import { startNight } from './run';
 import { interact, stepStations } from './stations';
 import type { GameState, PlayerInput } from './types';
+import { validateInput } from './validate';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -40,11 +41,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     }
     case 'settings':
-      if (isHost) {
-        for (const [k, v] of Object.entries(input.settings)) {
-          if (v !== undefined) (s.settings as unknown as Record<string, unknown>)[k] = v;
-        }
-      }
+      if (isHost) Object.assign(s.settings, input.settings);
       break;
     case 'move': {
       const p = s.players.find((x) => x.id === input.playerId);
@@ -96,7 +93,10 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
 export function step(state: GameState, inputs: PlayerInput[]): GameState {
   const s = structuredClone(state);
   s.tick += 1;
-  for (const input of inputs) applyInput(s, input);
+  for (const raw of inputs) {
+    const input = validateInput(raw);
+    if (input) applyInput(s, input);
+  }
   switch (s.phase) {
     case 'night':
       stepNight(s);

@@ -16,7 +16,7 @@ const PACE_NAMES = ['Chill', 'Relaxed', 'Normal', 'Busy', 'Chaos'];
 export function createTitle(
   container: HTMLElement,
   handlers: { onStart(choice: StartChoice): void; onResume(): void },
-): { render(vm: TitleVM, settings: LocalSettings): void; show(): void; hide(): void } {
+): { render(vm: TitleVM, settings: LocalSettings, notice?: string): void; show(): void; hide(): void } {
   onAction(container, (action) => {
     if (action === 'resume') return handlers.onResume();
     if (action !== 'start') return;
@@ -31,7 +31,7 @@ export function createTitle(
   });
 
   return {
-    render(vm, settings) {
+    render(vm, settings, notice) {
       const paceOptions = PACE_NAMES.map((n, i) => `<option value="${i + 1}" ${settings.pace === i + 1 ? 'selected' : ''}>${i + 1} · ${n}</option>`).join('');
       const dayOptions = DAY_LENGTHS.map((s) => `<option value="${s}" ${settings.dayLengthSec === s ? 'selected' : ''}>${s} s</option>`).join('');
       const history = vm.history.length
@@ -42,6 +42,7 @@ export function createTitle(
       container.innerHTML = `
         <div class="panel">
           <h1>☕ CafeTycoon</h1>
+          ${notice ? `<p class="notice">${esc(notice)}</p>` : ''}
           <p class="muted">Frantic by day, a draft by night. One café week, seven days, about thirty minutes.</p>
           <div class="form">
             <label>Your name <input name="name" maxlength="16" value="${esc(settings.playerName)}"></label>

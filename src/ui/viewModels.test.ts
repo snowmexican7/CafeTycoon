@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
 import type { RunRecord } from '../sim/types';
-import { closingViewModel, hudViewModel, money, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
+import { closingViewModel, hudStructureKey, hudViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 
@@ -89,5 +89,35 @@ describe('view models', () => {
     const ended = run();
     ended.phase = 'ended';
     expect(titleViewModel([], ended).canResume).toBe(false);
+  });
+});
+
+describe('overlay structure keys', () => {
+  it('ignores clock and cash but notices hand, affordability, ready, and takings changes', () => {
+    const s = run();
+    s.cash = 50;
+    s.hand = ['dualBoiler', 'streetSign'];
+    const a = nightStructureKey(nightViewModel(s, 'p1'));
+    s.phaseTicksLeft -= 60;
+    s.cash = 49;
+    expect(nightStructureKey(nightViewModel(s, 'p1'))).toBe(a);
+    s.cash = 10; // streetSign no longer affordable
+    expect(nightStructureKey(nightViewModel(s, 'p1'))).not.toBe(a);
+    s.cash = 50;
+    s.ready = ['p2'];
+    expect(nightStructureKey(nightViewModel(s, 'p1'))).not.toBe(a);
+    s.ready = [];
+    s.hand = ['streetSign'];
+    expect(nightStructureKey(nightViewModel(s, 'p1'))).not.toBe(a);
+  });
+
+  it('keys the hud by everything except the clock and cash', () => {
+    const s = run();
+    const a = hudStructureKey(hudViewModel(s));
+    s.phaseTicksLeft -= 60;
+    s.cash += 3;
+    expect(hudStructureKey(hudViewModel(s))).toBe(a);
+    s.supplies.milk = 0;
+    expect(hudStructureKey(hudViewModel(s))).not.toBe(a);
   });
 });

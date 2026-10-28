@@ -1,6 +1,6 @@
 import type { SupplyId } from '../sim/types';
 import { esc, hide, onAction, show } from './dom';
-import type { NightVM } from './viewModels';
+import { nightStructureKey, type NightVM } from './viewModels';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew concentrate' } as const;
 
@@ -13,8 +13,16 @@ export function createNight(
     else if (action === 'restock') handlers.onRestock(el.dataset.supply as SupplyId);
     else if (action === 'ready') handlers.onReady();
   });
+  let lastKey = '';
   return {
     render(vm) {
+      const key = nightStructureKey(vm);
+      if (key === lastKey) {
+        container.querySelector('.night-head .clock')!.textContent = vm.clock;
+        container.querySelector('.night-head .cash')!.textContent = vm.cash;
+        return;
+      }
+      lastKey = key;
       const takings = vm.takings
         ? `<div class="takings">Yesterday: sales ${esc(vm.takings.sales)} · tips ${esc(vm.takings.tips)} · rent ${esc(vm.takings.rent)} · <b>profit ${esc(vm.takings.profit)}</b></div>`
         : '<div class="takings muted">First night. Spend wisely, or don\'t.</div>';

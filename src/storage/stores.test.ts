@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
 import { createHistoryStore } from './historyStore';
 import { createSettingsStore } from './settingsStore';
-import { createSnapshotStore } from './snapshotStore';
+import { SNAPSHOT_VERSION, createSnapshotStore } from './snapshotStore';
 import { memoryStorage } from './storageLike';
 
 describe('stores', () => {
@@ -36,5 +36,21 @@ describe('stores', () => {
     expect(createSettingsStore(st, () => 'other').get().playerToken).toBe('tok1');
     expect(s.set({ playerName: 'Ken' }).playerName).toBe('Ken');
     expect(s.get().pace).toBe(3);
+  });
+});
+
+describe('snapshot versioning', () => {
+  it('stamps saves with the schema version and refuses other versions', () => {
+    const st = memoryStorage();
+    const store = createSnapshotStore(st);
+    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+    store.save(s);
+    expect(JSON.parse(st.getItem('cafetycoon.run')!).version).toBe(SNAPSHOT_VERSION);
+    st.setItem('cafetycoon.run', JSON.stringify({ version: SNAPSHOT_VERSION - 1, state: s }));
+    expect(store.load()).toBeNull();
+    st.setItem('cafetycoon.run', JSON.stringify(s)); // legacy unversioned blob
+    expect(store.load()).toBeNull();
+    st.setItem('cafetycoon.run', JSON.stringify({ version: SNAPSHOT_VERSION, state: null }));
+    expect(store.load()).toBeNull();
   });
 });

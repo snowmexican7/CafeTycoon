@@ -2,11 +2,6 @@ name: Test, build, deploy
 
 on:
   push:
-  pull_request:
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
   test:
@@ -28,6 +23,9 @@ jobs:
     needs: test
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write

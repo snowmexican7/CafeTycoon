@@ -190,3 +190,15 @@ export function titleViewModel(history: RunRecord[], snapshot: GameState | null)
     canResume: snapshot !== null && snapshot.phase !== 'ended',
   };
 }
+
+/** Everything about the night screen except the two values that change every snapshot. */
+export function nightStructureKey(vm: NightVM): string {
+  const { clock: _clock, cash: _cash, ...rest } = vm;
+  return JSON.stringify(rest);
+}
+
+/** Everything about the HUD except the clock and cash. */
+export function hudStructureKey(vm: HudVM): string {
+  const { clock: _clock, cash: _cash, ...rest } = vm;
+  return JSON.stringify(rest);
+}

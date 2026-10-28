@@ -16,5 +16,7 @@ export interface Transport {
   sendInput(input: PlayerInput): void;
   /** Subscribe to snapshots; returns an unsubscribe function. */
   onSnapshot(handler: (snap: HostToClient) => void): () => void;
+  /** Subscribe to fatal transport or simulation errors; returns an unsubscribe function. */
+  onError(handler: (message: string) => void): () => void;
   close(): void;
 }

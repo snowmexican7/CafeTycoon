@@ -30,6 +30,8 @@ const today = () => new Date().toISOString().slice(0, 10);
 interface Session {
   transport: Transport;
   unsubscribe: () => void;
+  unsubscribeError: () => void;
+  watchdog: ReturnType<typeof setTimeout> | null;
   me: PlayerId;
   prev: GameState | null;
   next: GameState | null;
@@ -87,8 +89,8 @@ async function main(): Promise<void> {
     onQuit: () => endSession(),
   });
 
-  function showTitle(): void {
-    title.render(titleViewModel(stores.history.list(), stores.snapshot.load()), stores.settings.get());
+  function showTitle(notice?: string): void {
+    title.render(titleViewModel(stores.history.list(), stores.snapshot.load()), stores.settings.get(), notice);
     title.show();
     for (const o of [hud, night, closing, weekEnd, pause]) o.hide();
   }
@@ -100,6 +102,8 @@ async function main(): Promise<void> {
     const s: Session = {
       transport,
       unsubscribe: () => {},
+      unsubscribeError: () => {},
+      watchdog: null,
       me: playerId,
       prev: null,
       next: null,
@@ -110,14 +114,29 @@ async function main(): Promise<void> {
       recorded: false,
     };
     s.unsubscribe = transport.onSnapshot((snap) => onSnapshot(s, snap));
+    s.unsubscribeError = transport.onError((message) => {
+      console.error('Simulation error:', message);
+      abandonSession(s, 'The run hit an error and had to be discarded. Sorry about that.');
+    });
+    s.watchdog = setTimeout(() => abandonSession(s, 'The saved run could not be started, so it was discarded.'), 2000);
     session = s;
     title.hide();
     hud.show();
     begin(transport);
   }
 
+  /** A run that crashed or never produced a snapshot: drop its save and go back to the title with a note. */
+  function abandonSession(s: Session, message: string): void {
+    if (session !== s) return;
+    stores.snapshot.clear();
+    endSession();
+    showTitle(message);
+  }
+
   function endSession(): void {
+    if (session?.watchdog) clearTimeout(session.watchdog);
     session?.unsubscribe();
+    session?.unsubscribeError();
     session?.transport.close();
     session = null;
     showTitle();
@@ -125,6 +144,10 @@ async function main(): Promise<void> {
 
   function onSnapshot(s: Session, snap: HostToClient): void {
     if (session !== s) return;
+    if (s.watchdog) {
+      clearTimeout(s.watchdog);
+      s.watchdog = null;
+    }
     const state = snap.state;
     const now = performance.now();
     s.prev = s.next;
