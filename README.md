@@ -55,7 +55,8 @@ npm run build    # type-check and build into dist/
 
 ## Where things are
 
-- **Design and roadmap:** [`docs/superpowers/specs/2026-10-28-cafetycoon-design.md`](docs/superpowers/specs/2026-10-28-cafetycoon-design.md)
+- **Roadmap:** [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- **Design:** [`docs/superpowers/specs/2026-10-28-cafetycoon-design.md`](docs/superpowers/specs/2026-10-28-cafetycoon-design.md)
 - **Phase 1a plan:** [`docs/superpowers/plans/2026-10-28-phase-1a-solo-cafe.md`](docs/superpowers/plans/2026-10-28-phase-1a-solo-cafe.md)
 - **Playtest checklist:** [`docs/playtest-checklist.md`](docs/playtest-checklist.md)
 - **Co-op playtest checklist:** [`docs/playtest-checklist-coop.md`](docs/playtest-checklist-coop.md)

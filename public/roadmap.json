@@ -2,6 +2,12 @@
   "updated": "2026-10-28",
   "repo": "snowmexican7/CafeTycoon",
   "draft": true,
+  "order": "Phases go from easiest and lowest risk to hardest and riskiest. Each finished phase stays playable at its own versioned build while the next one is built on a branch.",
+  "releaseApproach": [
+    "Every finished phase ships as a stable build at its own versioned path (e.g. /v3/).",
+    "The next phase is built on its own branch and never touches the stable build.",
+    "Game night always runs on the last stable build."
+  ],
   "phases": [
     {
       "id": 1,
@@ -11,10 +17,10 @@
       "suggested": false,
       "aim": "A game that runs, looks decent, and friends can playtest together.",
       "goals": [
-        { "text": "Direct co-op with room codes (1–4 players)", "state": "doing" },
-        { "text": "Cozy look: café diorama scene", "state": "doing" },
-        { "text": "Cozy look: HUD, night screen, title and menus", "state": "todo" },
-        { "text": "Roadmap panel on the title screen + suggestion flow", "state": "todo" },
+        { "text": "Direct peer-to-peer co-op with room codes (1–4 players)", "state": "done" },
+        { "text": "Cozy look, group A: café diorama scene", "state": "done" },
+        { "text": "Cozy look, group B: HUD, night screen, title, menus and lobby", "state": "todo" },
+        { "text": "Roadmap drawer on the title screen + suggestion flow", "state": "todo" },
         { "text": "Deployed on GitHub Pages; join with a link and a room code", "state": "doing" },
         { "text": "First game night: 4 friends finish a week", "state": "todo" }
       ],
@@ -24,75 +30,100 @@
     {
       "id": 2,
       "name": "Busy season",
-      "tagline": "gameplay dynamics",
+      "tagline": "gameplay dynamics + station bots",
       "status": "next",
       "suggested": false,
-      "aim": "Make the rush fun, chaotic and replayable, in the Overcooked spirit.",
+      "aim": "Make the rush fun, chaotic and replayable, in the Overcooked spirit, and let bots fill empty stations. Lowest risk: new content on systems that already work.",
       "goals": [
         { "text": "Day events: rush hour, health inspector, power flicker, influencer visit", "state": "todo" },
         { "text": "40+ cards with combos and synergies", "state": "todo" },
         { "text": "Better customers: impatient regulars, big group orders", "state": "todo" },
         { "text": "Difficulty pacing across the week", "state": "todo" },
         { "text": "Sound and juice: dings, steam, coin pops, spill shake", "state": "todo" },
-        { "text": "Light local telemetry on what ends runs", "state": "todo" },
+        { "text": "Scripted station bots (no AI model) fill empty stations", "state": "todo" },
+        { "text": "Bots feel human: random 0.5–2 s reaction delay, 5–10% mistakes they notice and remake", "state": "todo" },
+        { "text": "Bots walk real paths around the counter and can bump into players and each other", "state": "todo" },
+        { "text": "Bot personalities (speed, accuracy, focus); more mistakes under rush pressure", "state": "todo" },
+        { "text": "One bot-skill difficulty dial, from clumsy to sharp", "state": "todo" },
         { "text": "Balance pass", "state": "todo" }
       ],
-      "doneWhen": "The crew asks to play a second week unprompted, and weeks feel different from each other.",
+      "doneWhen": "The crew asks to play a second week unprompted, weeks feel different from each other, and 2 players plus 1 bot can finish a week with the bot feeling helpful but not perfect.",
       "feedbackIssue": null
     },
     {
       "id": 3,
       "name": "Real-life growth",
       "tagline": "stand → cart → café",
-      "status": "suggested",
-      "suggested": true,
-      "aim": "A progression that feels like running a real café.",
+      "status": "planned",
+      "suggested": false,
+      "aim": "A progression that feels like running a real café, with saves that carry over.",
       "goals": [
-        { "text": "Upgrade path: stand → cart → café (register → kiosk → tap terminal)", "state": "todo" },
-        { "text": "Parody ads tab (Chirper, InstaGlam, The Daily Grind)", "state": "todo" },
+        { "text": "Upgrade path: stand → cart → café", "state": "todo" },
+        { "text": "Checkout path: register → kiosk → Squarely tap terminal", "state": "todo" },
+        { "text": "Parody ads tab (Palm Book and friends)", "state": "todo" },
         { "text": "\"Pitch an idea\" with a scripted keyword judge (no AI)", "state": "todo" },
-        { "text": "Simple layout editor between weeks", "state": "todo" },
-        { "text": "Unlocks carried between runs", "state": "todo" }
+        { "text": "Layout editor: move stations between nights", "state": "todo" },
+        { "text": "Saves and unlocks carried between runs", "state": "todo" }
       ],
-      "doneWhen": "A full run feels like \"we started tiny and built something\", and every locked night tab is live.",
+      "doneWhen": "A run feels like \"we started tiny and built something\", every locked night tab is live, and saves survive a refresh and a new game night with no lost progress.",
       "feedbackIssue": null
     },
     {
       "id": 4,
-      "name": "Smart café",
-      "tagline": "optional AI",
+      "name": "Franchise & rivals",
+      "tagline": "the long game",
       "status": "planned",
       "suggested": false,
-      "aim": "AI makes the café feel alive, as an option and never required.",
+      "aim": "Bigger games across several cafés and game nights. Big new systems, but still predictable code we can test.",
       "goals": [
-        { "text": "AI teammates to fill empty slots", "state": "todo" },
-        { "text": "AI modes: Off / Lite / Full", "state": "todo" },
-        { "text": "Customer and staff dialogue", "state": "todo" },
-        { "text": "AI pitch judge", "state": "todo" },
-        { "text": "Backend relay within budget (< $20/month, capped per room per day)", "state": "todo" }
+        { "text": "Campus franchise of several cafés", "state": "todo" },
+        { "text": "Manager mode: assign crews, read reports", "state": "todo" },
+        { "text": "Phone calls and travel between sites", "state": "todo" },
+        { "text": "2v2 rival chains on a shared street, competing for the same customers", "state": "todo" },
+        { "text": "Seasons that carry across game nights", "state": "todo" }
       ],
-      "doneWhen": "A solo player plus 3 AI teammates can finish a week, and switching AI off changes nothing else.",
+      "doneWhen": "4 players finish a 2v2 match with a results screen, and the crew plays one season across 2+ game nights without a save problem.",
       "feedbackIssue": null
     },
     {
       "id": 5,
-      "name": "Franchise & rivals",
-      "tagline": "the long game",
-      "status": "suggested",
-      "suggested": true,
-      "aim": "The long game.",
+      "name": "Smart café",
+      "tagline": "optional AI (hardest)",
+      "status": "planned",
+      "suggested": false,
+      "aim": "AI makes the café feel alive, as an option and never required. Hardest phase: outside services, real costs, unpredictable answers.",
       "goals": [
-        { "text": "Campus franchise of several cafés (manager mode)", "state": "todo" },
-        { "text": "2v2 rival cafés on a shared street", "state": "todo" },
-        { "text": "Seasonal events", "state": "todo" },
-        { "text": "Optional friends-only leaderboards", "state": "todo" }
+        { "text": "AI modes: Off / Lite / Full", "state": "todo" },
+        { "text": "LLM dialogue: customers, staff and bot personalities that talk", "state": "todo" },
+        { "text": "AI pitch judge, with the scripted judge as fallback", "state": "todo" },
+        { "text": "Creative out-of-scope player actions, bounded by the rules", "state": "todo" },
+        { "text": "Server-side backend that keeps API keys safe, capped per room per day", "state": "todo" },
+        { "text": "Scripted bots still make the drinks; the LLM never does split-second station work", "state": "todo" },
+        { "text": "AI never blocks play: scripted fallbacks everywhere", "state": "todo" }
       ],
-      "doneWhen": "A group can play a \"season\" across multiple game nights.",
+      "doneWhen": "1 human plus 3 AI teammates finish a week under budget (< $20/month total), and switching AI off changes nothing else.",
+      "feedbackIssue": null
+    },
+    {
+      "id": 6,
+      "name": "Polish",
+      "tagline": "no new features",
+      "status": "planned",
+      "suggested": false,
+      "aim": "Make everything we built solid and smooth.",
+      "goals": [
+        { "text": "Bug-fix pass from the playtest backlog", "state": "todo" },
+        { "text": "Visual passes", "state": "todo" },
+        { "text": "Performance on older laptops", "state": "todo" },
+        { "text": "Save cleanup and migration", "state": "todo" }
+      ],
+      "doneWhen": "A full game night runs on the stable build with zero known crash bugs, steady frame rate on every friend's machine, and old saves still load.",
       "feedbackIssue": null
     }
   ],
   "changelog": [
-    { "date": "2026-10-28", "text": "Phase 1b co-op plan written" },
-    { "date": "2026-10-28", "text": "UI overhaul round 1: cozy diorama café scene" }
+    { "date": "2026-10-28", "text": "Phase 1b peer-to-peer co-op merged" },
+    { "date": "2026-10-28", "text": "UI overhaul round 1: cozy diorama café scene" },
+    { "date": "2026-10-28", "text": "Roadmap reordered into 6 phases by difficulty; scripted station bots moved to Phase 2" }
   ]
 }

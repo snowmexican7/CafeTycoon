@@ -49,8 +49,8 @@ describe('render theme', () => {
 
 describe('public/roadmap.json', () => {
   const roadmap = JSON.parse(roadmapRaw);
-  it('lists five phases with valid statuses and goals', () => {
-    expect(roadmap.phases.map((p: { id: number }) => p.id)).toEqual([1, 2, 3, 4, 5]);
+  it('lists six phases with valid statuses and goals', () => {
+    expect(roadmap.phases.map((p: { id: number }) => p.id)).toEqual([1, 2, 3, 4, 5, 6]);
     for (const p of roadmap.phases) {
       expect(['done', 'now', 'next', 'planned', 'suggested']).toContain(p.status);
       expect(p.goals.length).toBeGreaterThan(0);

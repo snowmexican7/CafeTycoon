@@ -452,6 +452,8 @@ the plan is set up and then thrown away, and the relay slots in behind the exist
 
 ## 17. Roadmap
 
+> **Superseded (2026-10-28):** the agreed phase order now lives in [`docs/ROADMAP.md`](../../ROADMAP.md) and `public/roadmap.json`: six phases ordered by difficulty and risk (1 Open the doors, 2 Busy season + scripted station bots, 3 Real-life growth, 4 Franchise & rivals, 5 Smart café / AI, 6 Polish). The list below is the original plan, kept for history.
+
 Phases, not dates. Each phase ends with a game night and, from phase two on, a log review
 by the analysis agent. "Wave" in the owner's words equals one phase's game-night-and-review.
 
