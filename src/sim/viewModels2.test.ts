@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hudStructureKey, hudViewModel, nightViewModel } from '../ui/viewModels';
+import { hudStructureKey, hudViewModel, nightViewModel, receiptViewModel } from '../ui/viewModels';
 import { createRun, startDay } from './run';
 
 describe('hud pass', () => {
@@ -37,5 +37,47 @@ describe('hud events', () => {
     expect(hudStructureKey(hudViewModel(s))).toBe(key);
     s.events.push({ kind: 'powerFlicker', ticksLeft: 30 });
     expect(hudStructureKey(hudViewModel(s))).not.toBe(key);
+  });
+});
+
+describe('receipt vm', () => {
+  it('gives zeros for a phase-1 day', () => {
+    expect(receiptViewModel({ day: 1, served: 3, lost: 1, turnedAway: 0, sales: 10, tips: 1, rent: 5 })).toEqual({
+      wasted: 0,
+      fines: '$0.00',
+      bonus: '$0.00',
+      inspection: null,
+      events: [],
+      botMistakes: 0,
+      lostRegulars: 0,
+      drinks: [
+        { drink: 'espresso', count: 0 },
+        { drink: 'latte', count: 0 },
+        { drink: 'coldBrew', count: 0 },
+      ],
+    });
+  });
+
+  it('maps every field of a full day', () => {
+    expect(
+      receiptViewModel({
+        day: 2, served: 3, lost: 1, turnedAway: 0, sales: 10, tips: 1, rent: 5,
+        wasted: 4, fines: 15, bonus: 25.5, botMistakes: 2, lostRegulars: 1, inspection: 'fail',
+        events: ['rushHour', 'healthInspector'], drinks: { espresso: 1, latte: 2, coldBrew: 0 },
+      }),
+    ).toEqual({
+      wasted: 4,
+      fines: '$15.00',
+      bonus: '$25.50',
+      inspection: 'fail',
+      events: ['Rush hour', 'Health inspector'],
+      botMistakes: 2,
+      lostRegulars: 1,
+      drinks: [
+        { drink: 'espresso', count: 1 },
+        { drink: 'latte', count: 2 },
+        { drink: 'coldBrew', count: 0 },
+      ],
+    });
   });
 });
