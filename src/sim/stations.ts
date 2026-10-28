@@ -1,7 +1,9 @@
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import { computeModifiers } from './effects';
-import { serveDrink } from './customers';
+import { emitLog } from './log';
+import { counterInteract } from './pass';
+import { tally } from './tally';
 import { nearestStation } from './movement';
 import type { GameState, ItemKind, PlayerId, StationKind, SupplyId } from './types';
 
@@ -38,11 +40,15 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   if (!station) return state;
 
   if (station.kind === 'trash') {
+    if (player.holding !== null && player.holding !== 'grounds') {
+      tally(state.today, 'wasted');
+      emitLog(state, 'trash', { item: player.holding, by: playerId });
+    }
     player.holding = null;
     return state;
   }
   if (station.kind === 'counter') {
-    return serveDrink(state, playerId);
+    return counterInteract(state, playerId);
   }
 
   const recipe = STATION_RECIPES[station.kind];

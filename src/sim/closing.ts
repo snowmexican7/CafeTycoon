@@ -11,6 +11,7 @@ function round2(n: number): number {
 export function finishDay(state: GameState): GameState {
   state.today.lost += state.customers.length;
   state.customers = [];
+  state.pass = [];
   for (const s of state.stations) {
     s.busyTicksLeft = 0;
     s.output = null;

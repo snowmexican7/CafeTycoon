@@ -65,6 +65,7 @@ describe('customers', () => {
     expect(s.players[0].holding).toBeNull();
     s.players[0].holding = 'coldBrew';
     s = interact(s, 'p1');
-    expect(s.players[0].holding).toBe('coldBrew'); // nobody ordered it: nothing happens
+    expect(s.players[0].holding).toBeNull(); // nobody ordered it: it goes onto the pass
+    expect(s.pass).toEqual([{ item: 'coldBrew', ticksLeft: 36000 }]);
   });
 });

@@ -7,6 +7,7 @@ import { computeModifiers } from './effects';
 import { applyMovement } from './movement';
 import { applyNightInput, stepNight } from './night';
 import { startNight } from './run';
+import { stepPass } from './pass';
 import { interact, stepStations } from './stations';
 import type { GameState, PlayerInput } from './types';
 import { validateInput } from './validate';
@@ -78,6 +79,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   }
   for (const p of s.players) p.interactQueued = false;
   stepStations(s);
+  stepPass(s);
   if (doorsOpen) spawnCustomers(s);
   stepCustomers(s);
   for (const p of s.players) {
