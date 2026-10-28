@@ -4,12 +4,13 @@ import { scenarioById } from '../data/scenarios';
 import { TICK_RATE } from '../sim/constants';
 import { availableDrinks } from '../sim/customers';
 import { describeEffects } from '../sim/describe';
+import { EVENT_LABELS } from '../sim/events';
 import { computeModifiers, weekOf } from '../sim/effects';
 import { restockCost } from '../sim/night';
 import { scoreRun } from '../sim/score';
 import type { PeerStatus } from '../net/peerSession';
 import type { Member } from '../net/protocol';
-import type { DayStats, DrinkId, GameState, Phase, PlayerId, RunRecord, SupplyId } from '../sim/types';
+import type { DayStats, DrinkId, EventKind, GameState, Phase, PlayerId, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 
 const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
@@ -52,6 +53,7 @@ export interface HudVM {
   phase: Phase;
   seed: number;
   pass?: { item: DrinkId; secondsLeft: number }[];
+  events?: { kind: EventKind; label: string; secondsLeft: number }[];
 }
 
 export function hudViewModel(state: GameState): HudVM {
@@ -68,6 +70,7 @@ export function hudViewModel(state: GameState): HudVM {
     phase: state.phase,
     seed: state.seed,
     pass: state.pass.map((i) => ({ item: i.item, secondsLeft: Math.ceil(i.ticksLeft / 60) })),
+    events: state.events.map((e) => ({ kind: e.kind, label: EVENT_LABELS[e.kind], secondsLeft: Math.ceil(e.ticksLeft / 60) })),
   };
 }
 
@@ -208,9 +211,9 @@ export function nightStructureKey(vm: NightVM): string {
 
 /** Everything about the HUD except the clock and cash. */
 export function hudStructureKey(vm: HudVM): string {
-  const { clock: _clock, cash: _cash, pass, ...rest } = vm;
+  const { clock: _clock, cash: _cash, pass, events, ...rest } = vm;
   // per-tick values are patched, not rebuilt: the pass keys on its items only
-  return JSON.stringify({ ...rest, pass: pass?.map((i) => i.item) });
+  return JSON.stringify({ ...rest, pass: pass?.map((i) => i.item), events: events?.map((e) => e.kind) });
 }
 
 export interface LobbyVM {

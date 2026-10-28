@@ -1,6 +1,7 @@
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import { computeModifiers } from './effects';
+import { eventActive } from './events';
 import { emitLog } from './log';
 import { counterInteract } from './pass';
 import { tally } from './tally';
@@ -23,6 +24,7 @@ function isRecipeStation(kind: StationKind): kind is RecipeStation {
 
 /** Stations keep working after you walk away; finished items wait on the station. */
 export function stepStations(state: GameState): GameState {
+  if (eventActive(state, 'powerFlicker')) return state;
   for (const s of state.stations) {
     if (s.busyTicksLeft > 0) {
       s.busyTicksLeft -= 1;

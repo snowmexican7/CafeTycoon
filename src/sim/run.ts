@@ -3,6 +3,7 @@ import { LAYOUT } from '../data/layout';
 import { secondsToTicks } from './constants';
 import { rngInt, seedRng } from './rng';
 import { SCENARIOS } from '../data/scenarios';
+import { scheduleEvents } from './events';
 import { morningNotes } from './describe';
 import { dealHand } from './night';
 import type { CreateRunOptions, DayStats, GameState, Player, Settings } from './types';
@@ -103,6 +104,9 @@ export function startDay(state: GameState): GameState {
   state.phaseTicksLeft = secondsToTicks(state.settings.dayLengthSec);
   state.customers = [];
   state.today = freshDayStats(state.day);
+  state.events = [];
+  state.eventSchedule = [];
+  scheduleEvents(state);
   state.morningNotes = morningNotes(state);
   return state;
 }

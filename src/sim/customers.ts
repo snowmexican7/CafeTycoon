@@ -1,7 +1,9 @@
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import { computeModifiers } from './effects';
+import { emitLog } from './log';
 import { rngNext } from './rng';
+import { tally } from './tally';
 import { tallyDrink } from './tally';
 import type { Customer, DrinkId, GameState, PlayerId } from './types';
 
@@ -42,12 +44,29 @@ export function spawnCustomers(state: GameState): GameState {
   return state;
 }
 
+/** The influencer joins even a full queue (never past capacity + 1) and orders the café's most favoured drink. */
+export function spawnInfluencer(state: GameState): Customer | null {
+  const menu = availableDrinks(state);
+  if (menu.length === 0 || state.customers.length > ECONOMY.queueCapacity) return null;
+  const m = computeModifiers(state);
+  const top = Math.max(...menu.map((d) => m.orderBias[d]));
+  const tied = menu.filter((d) => m.orderBias[d] === top);
+  const drink = tied.includes('latte') ? 'latte' : tied[0];
+  const patienceMax = Math.round(ECONOMY.patienceSeconds * m.patience * ECONOMY.events.influencer.patience * TICK_RATE);
+  const customer: Customer = { id: state.nextCustomerId++, drink, patienceLeft: patienceMax, patienceMax, kind: 'influencer' };
+  state.customers.push(customer);
+  return customer;
+}
+
 /** Patience drains one tick at a time; at zero the customer storms out and counts as lost. */
 export function stepCustomers(state: GameState): GameState {
   const remaining = [];
   for (const c of state.customers) {
     c.patienceLeft -= 1;
-    if (c.patienceLeft <= 0) state.today.lost += 1;
+    if (c.patienceLeft <= 0) {
+      state.today.lost += 1;
+      if (c.kind === 'influencer') state.today.influencer = 'lost';
+    }
     else remaining.push(c);
   }
   state.customers = remaining;
@@ -64,6 +83,12 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   state.today.tips = round2(state.today.tips + tip);
   state.today.served += 1;
   tallyDrink(state.today, drink);
+  if (customer.kind === 'influencer') {
+    tally(state.today, 'bonus', ECONOMY.events.influencer.bonus);
+    state.cash = round2(state.cash + ECONOMY.events.influencer.bonus);
+    state.today.influencer = 'served';
+    emitLog(state, 'influencer', { result: 'served' });
+  }
   state.customers = state.customers.filter((c) => c !== customer);
 }
 

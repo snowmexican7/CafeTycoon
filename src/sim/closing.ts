@@ -1,5 +1,6 @@
 import { ECONOMY } from '../data/economy';
 import { rentForDay } from './effects';
+import { eventActive, judgeInspection } from './events';
 import { startNight } from './run';
 import type { GameState } from './types';
 
@@ -9,9 +10,13 @@ function round2(n: number): number {
 
 /** Doors shut: lose the queue, clean up, pay rent, move reputation, and decide what comes next. */
 export function finishDay(state: GameState): GameState {
+  if (eventActive(state, 'healthInspector')) judgeInspection(state);
   state.today.lost += state.customers.length;
+  if (state.customers.some((c) => c.kind === 'influencer')) state.today.influencer = 'lost';
   state.customers = [];
   state.pass = [];
+  state.events = [];
+  state.eventSchedule = [];
   for (const s of state.stations) {
     s.busyTicksLeft = 0;
     s.output = null;
@@ -25,7 +30,8 @@ export function finishDay(state: GameState): GameState {
   const { served, lost } = state.today;
   const ratio = served + lost === 0 ? 1 : served / (served + lost);
   const r = ECONOMY.reputation;
-  const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta);
+  const bonus = state.today.inspection === 'pass' ? ECONOMY.events.inspector.reputationBonus : 0;
+  const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus;
   state.reputation = round2(Math.min(r.max, Math.max(r.min, next)));
 
   state.days.push(state.today);
