@@ -2,12 +2,13 @@
   "updated": "2026-10-28",
   "repo": "snowmexican7/CafeTycoon",
   "draft": true,
-  "order": "Phases go from easiest and lowest risk to hardest and riskiest. Each finished phase stays playable at its own versioned build while the next one is built on a branch.",
+  "order": "Phases go from easiest and lowest risk to hardest and riskiest. main stays the stable, playable build while risky work for the next phase happens on a branch.",
   "releaseApproach": [
-    "Every finished phase ships as a stable build at its own versioned path (e.g. /v3/).",
-    "The next phase is built on its own branch and never touches the stable build.",
-    "Game night always runs on the last stable build."
+    "main is always the stable, playable build, and game night runs on it.",
+    "Each finished phase gets a git tag (v1, v2, ...).",
+    "Risky phase work happens on branches and merges into main only when green and playtested."
   ],
+  "moodReactions": { "happy": "laugh", "neutral": "eyes", "unhappy": "confused" },
   "phases": [
     {
       "id": 1,
@@ -42,7 +43,7 @@
         { "text": "Sound and juice: dings, steam, coin pops, spill shake", "state": "todo" },
         { "text": "Scripted station bots (no AI model) fill empty stations", "state": "todo" },
         { "text": "Bots feel human: random 0.5–2 s reaction delay, 5–10% mistakes they notice and remake", "state": "todo" },
-        { "text": "Bots walk real paths around the counter and can bump into players and each other", "state": "todo" },
+        { "text": "Bots path around players and stations, and sometimes hesitate or yield when a player is in their way (no new player-to-player collision for humans; revisit after playtests)", "state": "todo" },
         { "text": "Bot personalities (speed, accuracy, focus); more mistakes under rush pressure", "state": "todo" },
         { "text": "One bot-skill difficulty dial, from clumsy to sharp", "state": "todo" },
         { "text": "Balance pass", "state": "todo" }

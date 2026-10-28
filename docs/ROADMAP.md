@@ -4,9 +4,9 @@
 > The design spec (`superpowers/specs/2026-10-28-cafetycoon-design.md`, §17) uses older numbering (P3 = AI, P4 = bigger games). This roadmap supersedes it.
 
 ## Release approach
-- **Stable build per phase.** Each finished phase stays live at its own versioned path (e.g. `/v3/`), so it keeps working while later phases are built.
-- **Next phase on its own branch.** Work for the next phase happens on a branch and only reaches main/the new versioned build once it passes its "done when".
-- **Game night always runs on the last stable build.** Nothing in progress can break a game night.
+- **`main` is always the stable, playable build.** The live GitHub Pages site deploys from `main`, so game night always runs on it.
+- **Each finished phase gets a git tag** (`v1`, `v2`, …) when it passes its "done when", so any earlier stable build can be checked out or rebuilt if needed.
+- **Risky phase work happens on branches** and merges into `main` only when tests and the build are green and it has been playtested. Nothing in progress can break a game night. (No versioned `/vN/` paths; that would mean extra CI for the same guarantee.)
 
 ## Phases
 
@@ -14,7 +14,7 @@
 - **Aim:** a game that runs, looks decent, and that friends can actually playtest together. Big because it's the first phase, but it builds on a playable base.
 - **Goals:**
   - Direct peer-to-peer co-op with room codes for 1–4 players. *(done, on main)*
-  - UI overhaul Group A (café diorama scene, *done*) and Group B (HUD, night, title, menus, lobby), per `UI_OVERHAUL.md`.
+  - UI overhaul Group A (café diorama scene, *done*) and Group B (HUD, night, title, menus, lobby), per [`docs/UI_OVERHAUL.md`](UI_OVERHAUL.md).
   - Roadmap drawer on the title screen, plus the suggestion flow.
   - Deployed on GitHub Pages; anyone with the link and a room code can join.
 - **Done when:** 4 friends in 4 homes finish a full 7-day week to the score screen with no crash or desync, and at least 3 of them say it "looks like a real game."
@@ -25,7 +25,7 @@
 - **Scripted station bots (plain code, no AI model)** fill empty stations so 1–3 players always have a full café:
   - **Reaction delay:** a random ~0.5–2 s before starting an order.
   - **Mistakes:** ~5–10% chance of a wrong size or missed shot, which the bot notices and remakes.
-  - **Real walking:** pathfinding around the counter with collisions, so bots bump into players and get stuck behind each other.
+  - **Real walking:** bots path around players and stations, and sometimes hesitate or yield when a player is in their way. No new player-to-player collision for humans (revisit after playtests).
   - **Personalities:** per-bot speed, accuracy and focus (fast-but-sloppy rookie, slow careful veteran).
   - **Pressure:** more mistakes during rushes.
   - **Difficulty dial:** one bot-skill setting nudges all of the above, from clumsy to sharp.
@@ -60,12 +60,12 @@
 ### Entry point
 - A persistent **Roadmap** pill on the title screen (top right) with a badge showing "N new" since the player last opened it. The last-seen time is stored in `localStorage`.
 - Also listed in the pause menu as "Roadmap & ideas", as a read-only view during a run.
-- Clicking it opens a right-side **drawer** (see `mockups/title.png`), which closes with Esc or a click outside it.
+- Clicking it opens a right-side **drawer** (see [`docs/mockups/title.png`](mockups/title.png)), which closes with Esc or a click outside it.
 
 ### Drawer contents
 1. **Header:** title, a one-line pitch, and an overall progress track (6 segments, current phase % from its goals).
 2. **Phases tab (default):** a vertical stepper.
-   - The current phase is expanded: a goals checklist (done / in progress / to do), a **"Done when"** line, **Crew says** mood counts (😀 😐 🙁 from reactions), and the top 1–2 suggestions for that phase with votes.
+   - The current phase is expanded: a goals checklist (done / in progress / to do), a **"Done when"** line, **Crew says** mood counts from reactions on that phase's feedback issue (😄 = happy, 👀 = neutral/unsure, 😕 = unhappy; other reactions are ignored), and the top 1–2 suggestions for that phase with votes.
    - The other phases are collapsed into one line each, with a status chip: **Now / Next / Planned / Suggested / Done**. Suggested phases (none right now) use a dashed chip so they visibly read as "not decided".
 3. **Suggestions tab:** all suggestions sorted by 👍. There are filter chips per phase, and each row shows the title, author, phase label, vote count, and a "Vote on GitHub" link.
 4. **Changelog tab:** the last 10 merged PR titles, or a hand-written `changelog` array in the JSON.
@@ -93,7 +93,7 @@
   "changelog": [ { "date": "2026-10-28", "text": "Phase 1b co-op plan written" } ]
 }
 ```
-`status` is one of `done | now | next | planned | suggested`. `feedbackIssue` is the number of a pinned "How do you feel about Phase N?" issue whose reactions feed the **Crew says** counts.
+`status` is one of `done | now | next | planned | suggested`. `feedbackIssue` is the number of that phase's "How's Phase N going?" issue (labels `feedback` + `phase-N`). Its reactions feed the **Crew says** counts: 😄 (`laugh`) = happy, 👀 (`eyes`) = neutral/unsure, 😕 (`confused`) = unhappy; 👍 👎 🎉 ❤️ 🚀 are ignored. Only the current phase's issue is pinned (GitHub allows at most 3 pins); the others are found by label.
 
 ### Storage options for suggestions (static GitHub Pages, budget < $20/mo)
 
@@ -109,7 +109,7 @@
 - **Posting:** "+ Suggest an idea" opens
   `https://github.com/snowmexican7/CafeTycoon/issues/new?template=suggestion.yml&labels=suggestion,phase-1&title=Idea:%20`
   in a new tab, with the phase prefilled from wherever the button was clicked.
-- **Reading:** `GET https://api.github.com/repos/snowmexican7/CafeTycoon/issues?labels=suggestion&state=open&per_page=50` (each issue includes `reactions["+1"]`), plus `GET /issues/{feedbackIssue}` for each phase's mood counts. That's about 6 requests per open, cached in `localStorage` for 10 minutes, so it stays well under the 60/hour limit. If the API fails or is rate-limited, show the cached copy with "updated X min ago" and still show the phases from `roadmap.json`.
+- **Reading:** `GET https://api.github.com/repos/snowmexican7/CafeTycoon/issues?labels=suggestion&state=open&per_page=50` (each issue includes `reactions["+1"]`), plus `GET /issues/{feedbackIssue}` for the current phase's mood counts (other phases' feedback issues come from `GET /issues?labels=feedback&state=all`, read by their `phase-N` label). That's about 3 requests per open, cached in `localStorage` for 10 minutes, so it stays well under the 60/hour limit. If the API fails or is rate-limited, show the cached copy with "updated X min ago" and still show the phases from `roadmap.json`.
 - **Fallback for friends without GitHub:** a "Copy my idea" box that copies a formatted text to the clipboard, so they can text it to Kennedy.
 - **Code shape:** `src/ui/roadmap.ts` depends on an interface
   `interface SuggestionSource { list(): Promise<Suggestion[]>; mood(phase: number): Promise<Mood>; suggestUrl(phase: number): string }`
@@ -139,10 +139,11 @@ body:
     id: feel
     attributes:
       label: How do you feel about the game right now?
-      options: ["😀 Loving it", "😐 It's okay", "🙁 Not fun yet"]
+      options: ["😄 Loving it", "👀 It's okay / not sure", "😕 Not fun yet"]
 ```
 
 ### One-time GitHub setup *(needs Kennedy's approval; not done)*
-- Create the labels `suggestion`, `phase-1` … `phase-6`.
-- Create 6 pinned issues, "How do you feel about Phase N?", and put their numbers in `roadmap.json`.
-- Keep the repo public with Issues enabled. Note in the repo README that this is Kennedy Daniels' personal project, paid for personally, and paid for personally (only needed if the church GitHub account is ever used).
+- Create the labels `suggestion`, `feedback`, `phase-1` … `phase-6`.
+- Create **one pinned** feedback issue for the current phase, "How's Phase 1 going?" (labels `feedback` + `phase-1`), whose body says: react 😄 if you're happy, 👀 if you're neutral or unsure, 😕 if you're unhappy. Put its number in that phase's `feedbackIssue` in `roadmap.json`.
+- **When a phase finishes:** unpin its issue (it stays findable by `feedback` + `phase-N`), open and pin "How's Phase N+1 going?", and update `roadmap.json`. Only one feedback issue is pinned at a time.
+- Keep the repo public with Issues enabled. Note in the repo README that this is Kennedy Daniels' personal project, paid for personally (only needed if the church GitHub account is ever used).

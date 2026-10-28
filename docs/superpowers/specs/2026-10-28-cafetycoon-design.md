@@ -444,7 +444,7 @@ Playwright headless runs and screenshots are phase two.
 |---|---|---|---|---|
 | GitHub (exists) | now | code, CI, Pages hosting of the client, secrets for deploy | $0 | no |
 | Cloudflare | **optional**: only if direct connections fail for a regular player, or when someone volunteers to own it | relay for co-op; later log storage; built-in AI models | $0 free plan (whether sign-up asks for a card is unconfirmed) | no |
-| AI key (one aggregator account, e.g. OpenRouter) | phase 3 | dialogue and pitch judging, key pasted into the host's browser | a few $/month | no (unless Cloudflare's built-in models cover it) |
+| AI key (one aggregator account, e.g. OpenRouter) | phase 5 | dialogue and pitch judging, key pasted into the host's browser | a few $/month | no (unless Cloudflare's built-in models cover it) |
 
 One account for phases one and two. Whoever volunteers for the others owns them; nothing in
 the plan is set up and then thrown away, and the relay slots in behind the existing
