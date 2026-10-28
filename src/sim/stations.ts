@@ -1,6 +1,7 @@
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import { computeModifiers } from './effects';
+import { serveDrink } from './customers';
 import { nearestStation } from './movement';
 import type { GameState, ItemKind, PlayerId, StationKind, SupplyId } from './types';
 
@@ -41,7 +42,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     return state;
   }
   if (station.kind === 'counter') {
-    return state; // Task 8 wires serveDrink here
+    return serveDrink(state, playerId);
   }
 
   const recipe = STATION_RECIPES[station.kind];
