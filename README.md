@@ -17,8 +17,10 @@ random upgrades, so no two runs play the same.
 
 ## Working on it
 
-- Clone the repo, commit to `main`, push. GitHub Pages republishes the site from `main`
-  automatically.
+- You need Node 24 (22.12 or newer works). Clone the repo, then `npm install`.
+- `npm run dev` starts the game locally, `npm test` runs the simulation tests, `npm run build`
+  type-checks and builds the site into `dist/`.
+- Push to `main` and GitHub Actions runs the tests, builds, and republishes the site.
 - Pull before you push.
 - Never commit secrets or assets we don't have the right to share. The repo and the game
   are public.
