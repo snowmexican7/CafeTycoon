@@ -2,9 +2,8 @@ import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { secondsToTicks } from './constants';
 import { rngInt, seedRng } from './rng';
-import type { CreateRunOptions, DayStats, GameState, Player, ScenarioId, Settings } from './types';
-
-const SCENARIO_IDS: ScenarioId[] = ['normal', 'campusTown', 'rainyWeek', 'touristSeason'];
+import { SCENARIOS } from '../data/scenarios';
+import type { CreateRunOptions, DayStats, GameState, Player, Settings } from './types';
 
 function freshDayStats(day: number): DayStats {
   return { day, served: 0, lost: 0, turnedAway: 0, sales: 0, tips: 0, rent: 0 };
@@ -56,7 +55,7 @@ export function createRun(opts: CreateRunOptions): GameState {
     days: [],
     morningNotes: [],
   };
-  state.scenario = SCENARIO_IDS[rngInt(state, SCENARIO_IDS.length)];
+  state.scenario = SCENARIOS[rngInt(state, SCENARIOS.length)].id;
   return startNight(state);
 }
 
