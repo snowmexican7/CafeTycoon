@@ -1,0 +1,93 @@
+import { describe, it, expect } from 'vitest';
+import { createRun } from '../sim/run';
+import type { RunRecord } from '../sim/types';
+import { closingViewModel, hudViewModel, money, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
+
+const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
+
+describe('view models', () => {
+  it('formats money and the hud', () => {
+    expect(money(1234.5)).toBe('$1,234.50');
+    expect(money(-20)).toBe('-$20.00');
+    const s = run();
+    s.phaseTicksLeft = 61 * 60;
+    s.cash = 84.5;
+    s.reputation = 2.7;
+    s.supplies.milk = 0;
+    const h = hudViewModel(s);
+    expect(h.dayLabel).toBe('Day 1');
+    expect(h.clock).toBe('1:01');
+    expect(h.cash).toBe('$84.50');
+    expect(h.reputation).toBe('2.7★');
+    expect(h.seed).toBe(5);
+    expect(h.menu.find((m) => m.id === 'latte')!.available).toBe(false);
+    s.day = 9;
+    expect(hudViewModel(s).dayLabel).toBe('Day 9 (week 2)');
+  });
+
+  it('builds the night screen', () => {
+    const s = run();
+    s.cash = 50;
+    s.hand = ['dualBoiler', 'streetSign'];
+    s.ready = ['p2'];
+    const n = nightViewModel(s, 'p1');
+    expect(n.takings).toBeNull();
+    expect(n.hand.map((c) => c.affordable)).toEqual([false, true]);
+    expect(n.hand[1]).toMatchObject({ name: 'Street sign', cost: '$15.00', effect: '+5% customers', duration: 'permanent' });
+    expect(n.ready).toEqual([
+      { id: 'p1', name: 'K', ready: false },
+      { id: 'p2', name: 'S', ready: true },
+    ]);
+    expect(n.meReady).toBe(false);
+    expect(n.restock[0]).toMatchObject({ supply: 'beans', count: 20, packSize: 10, packCost: '$8.00', affordable: true });
+    s.day = 2;
+    s.days = [{ day: 1, served: 7, lost: 3, turnedAway: 0, sales: 30, tips: 5, rent: 25 }];
+    expect(nightViewModel(s, 'p1').takings).toEqual({ sales: '$30.00', tips: '$5.00', rent: '$25.00', profit: '$10.00' });
+  });
+
+  it('builds closing and week-end screens', () => {
+    const before = run();
+    before.today = { day: 1, served: 7, lost: 3, turnedAway: 1, sales: 30, tips: 5, rent: 0 };
+    before.reputation = 2.5;
+    const after = run();
+    after.days = [{ ...before.today, rent: 25 }];
+    after.reputation = 2.7;
+    expect(closingViewModel(before, after)).toEqual({
+      dayLabel: 'Day 1',
+      served: 7,
+      lost: 3,
+      turnedAway: 1,
+      sales: '$30.00',
+      tips: '$5.00',
+      rent: '$25.00',
+      profit: '$10.00',
+      reputationBefore: '2.5★',
+      reputationAfter: '2.7★',
+    });
+    after.cash = 160;
+    after.days.push({ day: 2, served: 9, lost: 1, turnedAway: 0, sales: 40, tips: 8, rent: 25 });
+    after.owned = [{ itemId: 'streetSign', effects: [] }];
+    const w = weekEndViewModel(after, 'p2');
+    expect(w).toEqual({
+      score: '$60.00',
+      daysCompleted: 2,
+      customersServed: 16,
+      bestDay: { day: 2, profit: '$23.00' },
+      itemsBought: ['Street sign'],
+      seed: 5,
+      isHost: false,
+      bankrupt: false,
+    });
+  });
+
+  it('builds the title screen', () => {
+    const rec: RunRecord = { date: '2026-10-28', seed: 1, scenario: 'rainyWeek', players: ['K', 'S'], daysCompleted: 7, score: 412.25, itemsBought: [] };
+    const t = titleViewModel([rec], null);
+    expect(t.canResume).toBe(false);
+    expect(t.history[0]).toEqual({ date: '2026-10-28', score: '$412.25', days: 7, scenario: 'Rainy week', players: 'K, S' });
+    expect(titleViewModel([], run()).canResume).toBe(true);
+    const ended = run();
+    ended.phase = 'ended';
+    expect(titleViewModel([], ended).canResume).toBe(false);
+  });
+});
