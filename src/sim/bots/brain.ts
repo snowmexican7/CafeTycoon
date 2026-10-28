@@ -43,7 +43,15 @@ function claimedByOther(state: GameState, self: Player, customerId: number): boo
   return state.players.some((p) => p !== self && p.bot?.claim === customerId);
 }
 
-/** Drinks already on their way: held by non-claiming players, waiting or brewing at stations, or on the pass. */
+/** A claiming bot whose next step is to take from `st`: that drink is already accounted for by its claim. */
+function claimedAtStation(state: GameState, st: Station): boolean {
+  return state.players.some((p) => p.bot?.claim != null && isTakeAt(p.bot.plan[0], st));
+}
+
+/**
+ * Drinks already on their way: held by non-claiming players, waiting or brewing at stations (unless a
+ * claiming bot is about to take them), or on the pass.
+ */
 function coveragePool(state: GameState): Record<DrinkId, number> {
   const pool: Record<DrinkId, number> = { espresso: 0, latte: 0, coldBrew: 0 };
   for (const p of state.players) {
@@ -51,6 +59,7 @@ function coveragePool(state: GameState): Record<DrinkId, number> {
     if (isDrink(p.holding)) pool[p.holding] += 1;
   }
   for (const st of state.stations) {
+    if (claimedAtStation(state, st)) continue;
     if (isDrink(st.output)) pool[st.output] += 1;
     if (st.busyTicksLeft > 0 && isRecipeKind(st.kind)) {
       const gives = STATION_RECIPES[st.kind].gives;

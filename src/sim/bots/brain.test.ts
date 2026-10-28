@@ -3,7 +3,7 @@ import { ECONOMY } from '../../data/economy';
 import { createRun, startDay } from '../run';
 import { step } from '../step';
 import type { GameState, Player } from '../types';
-import { chainFor } from './brain';
+import { chainFor, uncoveredOrder } from './brain';
 
 /** One human p1 who never moves, `bots` bot baristas, no arrivals, and a long day. */
 function cafe(bots: number): GameState {
@@ -64,6 +64,22 @@ describe('bot brain', () => {
     const claims = [bot(s, 'bot-1').bot!.claim, bot(s, 'bot-2').bot!.claim];
     expect([...claims].sort()).toEqual([910, 911]);
     expect(claims[0]).not.toBe(claims[1]);
+  });
+
+  it("a claiming bot's drink still in a machine does not hide the next customer who ordered it", () => {
+    let s = cafe(2);
+    s.customers = [{ id: 920, drink: 'latte', ...huge }, { id: 921, drink: 'latte', ...huge }];
+    const steamer = (x: GameState) => x.stations.find((st) => st.id === 'steamer')!;
+    s = runUntil(s, (x) => {
+      const first = bot(x, 'bot-1').bot!.plan[0];
+      return steamer(x).busyTicksLeft > 0 && first?.kind === 'use' && first.station === 'steamer' && first.action === 'take';
+    }, 60 * 30);
+    const bot1 = bot(s, 'bot-1').bot!.claim;
+    const other = bot1 === 920 ? 921 : 920;
+    expect(uncoveredOrder(s, bot(s, 'bot-2'))?.id).toBe(other);
+    const served = s.today.served;
+    s = runUntil(s, (x) => x.customers.length === 0, 60 * 60);
+    expect(s.today.served).toBe(served + 2);
   });
 
   it('Review Focus 1: when the claimed customer is served by someone else the bot puts its drink on the pass', () => {
