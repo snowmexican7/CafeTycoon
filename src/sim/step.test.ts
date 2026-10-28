@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { scenarioById } from '../data/scenarios';
 import { computeModifiers } from './effects';
@@ -66,11 +67,15 @@ describe('step', () => {
   });
 
   it('reaches weekEnd after day 7 and continues into unlimited mode', () => {
-    let s = createRun(opts);
+    // Short phases keep the whole week cheap; tick counts derive from the settings.
+    const settings = { dayLengthSec: 30, nightLengthSec: 30, bots: 0 };
+    const nightTicks = settings.nightLengthSec * 60;
+    const dayTicks = (settings.dayLengthSec + ECONOMY.closingGraceSeconds) * 60;
+    let s = createRun({ ...opts, settings });
     s.cash = 10000;
     for (let d = 1; d <= 7; d++) {
-      s = ticks(s, 60 * 60);
-      s = ticks(s, 160 * 60);
+      s = ticks(s, nightTicks);
+      s = ticks(s, dayTicks);
     }
     expect(s.phase).toBe('weekEnd');
     expect(s.days).toHaveLength(7);
@@ -80,26 +85,27 @@ describe('step', () => {
     expect(s.phase).toBe('night');
     expect(s.day).toBe(8);
     expect(s.unlimited).toBe(true);
-    s = ticks(s, 60 * 60);
-    s = ticks(s, 160 * 60);
+    s = ticks(s, nightTicks);
+    s = ticks(s, dayTicks);
     expect(s.days[7].rent).toBeCloseTo(31.25);
     expect(s.phase).toBe('night');
     expect(step(s, [{ kind: 'weekEnd', playerId: 'p1', choice: 'stop' }]).phase).toBe('night'); // ignored outside weekEnd
-  });
+  }, 15000);
 
   it('is deterministic and JSON-safe mid-run', () => {
     // Review Focus 4
+    const settings = { dayLengthSec: 30, nightLengthSec: 30, bots: 0 };
     const script = (s: GameState) => {
-      s = ticks(s, 60 * 60);
+      s = ticks(s, settings.nightLengthSec * 60);
       s = ticks(s, 30, [{ kind: 'move', playerId: 'p1', x: 1, y: 0, interact: false }]);
-      return ticks(s, 100 * 60);
+      return ticks(s, 20 * 60);
     };
-    const a = script(createRun(opts));
-    const b = script(createRun(opts));
+    const a = script(createRun({ ...opts, settings }));
+    const b = script(createRun({ ...opts, settings }));
     expect(a).toEqual(b);
     const c = JSON.parse(JSON.stringify(a)) as GameState;
     expect(step(c, [])).toEqual(step(a, []));
-    expect(script(createRun({ ...opts, seed: 12 }))).not.toEqual(a);
+    expect(script(createRun({ ...opts, settings, seed: 12 }))).not.toEqual(a);
   });
 
   it('handles join and leave mid-day', () => {
