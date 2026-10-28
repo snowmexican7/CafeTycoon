@@ -3,7 +3,7 @@ import { CATALOGUE, catalogueById } from '../data/catalogue';
 import { applyNightInput, dealHand, eligibleItems, restockCost, stepNight } from './night';
 import { createRun } from './run';
 
-const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
+const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
 
 describe('night phase', () => {
   it('deals five distinct eligible ids with a cheap option', () => {

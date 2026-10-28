@@ -7,7 +7,7 @@ const at = (s: GameState, pid: string, x: number, y: number) => {
   s.players.find((p) => p.id === pid)!.pos = { x, y };
   return s;
 };
-const run2 = () => createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
+const run2 = () => createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
 
 describe('stations', () => {
   it('grinds beans into grounds over 2.5 s', () => {

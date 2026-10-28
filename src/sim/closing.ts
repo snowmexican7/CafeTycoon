@@ -3,6 +3,7 @@ import { loseCustomer } from './customers';
 import { rentForDay } from './effects';
 import { eventActive, judgeInspection } from './events';
 import { startNight } from './run';
+import { resetBotsForNight } from './bots/roster';
 import type { GameState } from './types';
 
 function round2(n: number): number {
@@ -22,6 +23,7 @@ export function finishDay(state: GameState): GameState {
     s.output = null;
   }
   for (const p of state.players) p.holding = null;
+  resetBotsForNight(state);
 
   const rent = rentForDay(state);
   state.today.rent = rent;

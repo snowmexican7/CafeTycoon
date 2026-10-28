@@ -11,7 +11,7 @@ export function summarizeRun(state: GameState, date: string): RunRecord {
     date,
     seed: state.seed,
     scenario: state.scenario,
-    players: state.players.map((p) => p.name),
+    players: state.players.filter((p) => !p.bot).map((p) => p.name),
     daysCompleted: state.days.length,
     score: scoreRun(state),
     itemsBought: state.owned.map((o) => o.itemId),

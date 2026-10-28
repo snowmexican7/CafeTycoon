@@ -1,4 +1,5 @@
-import type { DrinkId, Pace, PlayerInput, Settings, SupplyId } from './types';
+import { ECONOMY } from '../data/economy';
+import type { BotSkill, DrinkId, Pace, PlayerInput, Settings, SupplyId } from './types';
 
 const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate'];
 const DRINK_IDS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
@@ -6,6 +7,7 @@ const MIN_PHASE_SEC = 30;
 const MAX_PHASE_SEC = 600;
 const MAX_PACKS = 100;
 const MAX_NAME = 16;
+const MAX_BOTS = ECONOMY.bots.names.length;
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -17,6 +19,9 @@ export function sanitizeSettings(raw: Partial<Settings>): Partial<Settings> {
   if (finite(raw.pace)) out.pace = clamp(Math.round(raw.pace), 1, 5) as Pace;
   if (finite(raw.dayLengthSec)) out.dayLengthSec = clamp(Math.round(raw.dayLengthSec), MIN_PHASE_SEC, MAX_PHASE_SEC);
   if (finite(raw.nightLengthSec)) out.nightLengthSec = clamp(Math.round(raw.nightLengthSec), MIN_PHASE_SEC, MAX_PHASE_SEC);
+  if (raw.bots === 'auto') out.bots = 'auto';
+  else if (finite(raw.bots)) out.bots = clamp(Math.round(raw.bots), 0, MAX_BOTS);
+  if (finite(raw.botSkill)) out.botSkill = clamp(Math.round(raw.botSkill), 1, 5) as BotSkill;
   return out;
 }
 

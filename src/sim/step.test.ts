@@ -8,7 +8,7 @@ import { scoreRun, summarizeRun } from './score';
 import { step } from './step';
 import type { GameState, PlayerInput } from './types';
 
-const opts = { seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] };
+const opts = { seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } };
 const ticks = (s: GameState, n: number, inputs: PlayerInput[] = []) => {
   for (let i = 0; i < n; i++) s = step(s, i === 0 ? inputs : []);
   return s;
