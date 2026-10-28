@@ -1,11 +1,15 @@
 import { ECONOMY } from '../../data/economy';
 import { LAYOUT } from '../../data/layout';
 import { availableDrinks } from '../customers';
+import { eventActive } from '../events';
 import type { Modifiers } from '../effects';
 import { nearestStation } from '../movement';
+import { emitLog } from '../log';
+import { rngInt, rngNext } from '../rng';
 import { STATION_RECIPES } from '../stations';
+import { tally } from '../tally';
 import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Player, Station, StationKind, Vec2 } from '../types';
-import { findPath, idleNode, targetNodes } from './path';
+import { findPath, idleNode, nodeOf, targetNodes } from './path';
 
 const BOTS = ECONOMY.bots;
 
@@ -99,8 +103,11 @@ function coldBrewsAhead(state: GameState): number {
 function orphanedDrink(state: GameState, self: Player): Station | null {
   const takenBy = (st: Station) =>
     state.players.some((p) => p !== self && p.bot && isTakeAt(p.bot.plan[0], st));
+  // A person standing at the machine is about to take it themselves.
+  const personAt = (st: Station) =>
+    state.players.some((p) => !p.bot && p.connected && dist(p.pos, st.pos) <= ECONOMY.interactRangeTiles);
   const candidates = state.stations
-    .filter((st) => isRecipeKind(st.kind) && isDrink(st.output) && !takenBy(st))
+    .filter((st) => isRecipeKind(st.kind) && isDrink(st.output) && !takenBy(st) && !personAt(st))
     .map((st) => ({ st, d: dist(st.pos, self.pos) }))
     .sort((a, b) => a.d - b.d || a.st.pos.y - b.st.pos.y || a.st.pos.x - b.st.pos.x);
   return candidates[0]?.st ?? null;
@@ -147,17 +154,65 @@ export function think(state: GameState, p: Player): BotStep[] {
   return [{ kind: 'idle', node: idleNode(state, p) }];
 }
 
+/** A long queue or the rush hour: bots react faster and fumble more. */
+export function underPressure(state: GameState): boolean {
+  return state.customers.length >= BOTS.pressureQueue || eventActive(state, 'rushHour');
+}
+
+/** Skill-dial multiplier for the bot's personality; stand-ins ('human') ignore the dial. */
+function skillFactor(state: GameState, bot: BotState, dial: readonly number[]): number {
+  return bot.personality === 'human' ? 1 : dial[state.settings.botSkill - 1];
+}
+
+/**
+ * Ticks a bot hesitates before starting a newly adopted job. Always draws from the rng, even for a
+ * stand-in (whose reaction is 0), so the stream does not depend on the crew's personalities.
+ */
+export function reactionDelay(state: GameState, bot: BotState): number {
+  const [lo, hi] = BOTS.reactionTicks;
+  const base = lo + rngInt(state, hi - lo + 1);
+  const personality = BOTS.personalities[bot.personality].reaction;
+  const skill = skillFactor(state, bot, BOTS.skill.reaction);
+  const pressure = underPressure(state) ? BOTS.pressure.reaction : 1;
+  return Math.round(base * personality * skill * pressure);
+}
+
+/**
+ * Right after a bot's "use": a drink just taken from a recipe station with empty hands may be botched.
+ * The bot does not know yet; it notices after a while (see stepBot) and bins it.
+ */
+export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKind | null): void {
+  const b = p.bot;
+  if (!b || heldBefore !== null || !isDrink(p.holding)) return;
+  const st = nearestStation(state, p.pos);
+  if (!st || !isRecipeKind(st.kind)) return;
+  const chance =
+    BOTS.personalities[b.personality].mistake *
+    skillFactor(state, b, BOTS.skill.mistake) *
+    (underPressure(state) ? BOTS.pressure.mistake : 1);
+  if (rngNext(state) >= chance) return;
+  b.mistakes += 1;
+  tally(state.today, 'botMistakes');
+  emitLog(state, 'bot.mistake', { bot: p.name, drink: p.holding });
+  const [lo, hi] = BOTS.noticeTicks;
+  b.noticeTicksLeft = lo + rngInt(state, hi - lo + 1);
+}
+
 function setPlan(b: BotState, plan: BotStep[]): void {
   b.plan = plan;
   b.path = [];
   b.yields = 0;
   b.nodeRank = 0;
+  b.target = null;
   b.waitTicks = 0;
 }
 
 function pop(b: BotState): void {
   b.plan.shift();
   b.path = [];
+  b.yields = 0;
+  b.nodeRank = 0;
+  b.target = null;
   b.waitTicks = 0;
 }
 
@@ -194,6 +249,8 @@ function act(state: GameState, p: Player, action: BotAction, st: Station): void 
   switch (action) {
     case 'insert': {
       if (!isRecipeKind(st.kind)) return abandon(state, p);
+      // A drink not yet checked stays in hand: a botched espresso must not become a latte.
+      if (b.noticeTicksLeft > 0 && isDrink(p.holding)) return wait(state, p);
       const r = STATION_RECIPES[st.kind];
       const idle = st.busyTicksLeft === 0 && st.output === null;
       const stocked = r.consumes === null || state.supplies[r.consumes] >= 1;
@@ -228,11 +285,50 @@ function act(state: GameState, p: Player, action: BotAction, st: Station): void 
   }
 }
 
+/** The bot has yielded during this step: from now on it plans around the other players. */
+const hasYielded = (b: BotState): boolean => b.yields > 0 || b.nodeRank > 0;
+
+/**
+ * Someone else (person or bot) is standing on the bot's next waypoint. A bot that has run out of
+ * other target nodes and yielded another yieldsBeforeRerank times walks through (nobody collides).
+ */
+function shouldYield(state: GameState, self: Player, waypoint: Vec2, maxRank: number): boolean {
+  const b = self.bot!;
+  if (b.nodeRank >= maxRank && b.yields >= 2 * BOTS.yieldsBeforeRerank) return false;
+  return state.players.some((p) => p !== self && p.connected && dist(p.pos, waypoint) <= BOTS.yieldRadius);
+}
+
+/**
+ * Stand aside for a moment, then re-plan; after yieldsBeforeRerank yields toward one node, try the
+ * next-nearest. At the last node the yields keep counting until shouldYield lets the bot through.
+ */
+function yieldWay(state: GameState, b: BotState, maxRank: number): void {
+  const [lo, hi] = BOTS.yieldTicks;
+  b.yieldTicksLeft = lo + rngInt(state, hi - lo + 1);
+  b.yields += 1;
+  b.path = [];
+  if (b.yields >= BOTS.yieldsBeforeRerank && b.nodeRank < maxRank) {
+    b.nodeRank += 1;
+    b.yields = 0;
+    b.target = null; // re-pinned at the new rank next tick
+  }
+}
+
+/** A path to `node`; after a yield, around the nodes other players stand on when such a path exists. */
+function planPath(state: GameState, p: Player, node: Vec2): Vec2[] | null {
+  if (hasYielded(p.bot!)) {
+    const avoid = state.players.filter((o) => o !== p && o.connected).map((o) => nodeOf(state, o.pos));
+    const around = findPath(state, p.pos, node, avoid);
+    if (around !== null) return around;
+  }
+  return findPath(state, p.pos, node);
+}
+
 /** Head for `node` along a fresh A* path, one tile centre at a time. */
-function walkToward(state: GameState, p: Player, node: Vec2): void {
+function walkToward(state: GameState, p: Player, node: Vec2, maxRank: number): void {
   const b = p.bot!;
   if (b.path.length === 0) {
-    const path = findPath(state, p.pos, node);
+    const path = planPath(state, p, node);
     if (path === null) return abandon(state, p);
     b.path = path;
     if (b.path.length === 0) return;
@@ -241,6 +337,7 @@ function walkToward(state: GameState, p: Player, node: Vec2): void {
     b.path = []; // re-plan from this node next tick
     return;
   }
+  if (shouldYield(state, p, b.path[0], maxRank)) return yieldWay(state, b, maxRank);
   p.moveDir = { x: b.path[0].x - p.pos.x, y: b.path[0].y - p.pos.y };
 }
 
@@ -252,15 +349,33 @@ function stepBot(state: GameState, p: Player): void {
     b.claimDrink = null;
     setPlan(b, dropPlan(state, p)); // Review Focus 1
   }
-  // Task 11 (reactionTicksLeft) and Task 13 (yieldTicksLeft) waits slot in here.
+  if (b.noticeTicksLeft > 0) {
+    b.noticeTicksLeft -= 1;
+    if (b.noticeTicksLeft === 0) {
+      // Noticed the botched drink in hand: bin it, then remake the claimed order (if still on one).
+      const remake = b.claimDrink && b.claim !== null ? chainFor(b.claimDrink, 'serve') : [];
+      setPlan(b, [use('trash', 'trash'), ...remake]);
+    }
+  }
+  if (b.reactionTicksLeft > 0) {
+    b.reactionTicksLeft -= 1;
+    return;
+  }
+  if (b.yieldTicksLeft > 0) {
+    b.yieldTicksLeft -= 1;
+    return;
+  }
 
   if (b.plan.length === 0 || b.plan[0].kind === 'idle') {
     b.thinkTicksLeft -= 1;
     if (b.thinkTicksLeft <= 0) {
       b.thinkTicksLeft = BOTS.thinkTicks;
       const next = think(state, p);
-      if (next.length > 0 && next[0].kind === 'use') setPlan(b, next);
-      else if (b.plan.length === 0) b.plan = next;
+      if (next.length > 0 && next[0].kind === 'use') {
+        setPlan(b, next);
+        b.reactionTicksLeft = reactionDelay(state, b);
+        if (b.reactionTicksLeft > 0) return; // a moment to react before moving off
+      } else if (b.plan.length === 0) b.plan = next;
     }
   }
   if (b.plan.length === 0) return;
@@ -268,22 +383,26 @@ function stepBot(state: GameState, p: Player): void {
   const current = b.plan[0];
   let node: Vec2;
   let station: Station | null = null;
+  let maxRank = 0;
   if (current.kind === 'idle') node = current.node;
   else {
     station = state.stations.find((s) => s.id === current.station) ?? null;
     const nodes = station ? targetNodes(state, station, p.pos) : [];
     if (nodes.length === 0) return abandon(state, p);
-    node = nodes[Math.min(b.nodeRank, nodes.length - 1)];
+    maxRank = nodes.length - 1;
+    // Pinned once per step (and per rank): re-ranking from a moving bot would swap tied nodes every tick.
+    b.target ??= nodes[Math.min(b.nodeRank, maxRank)];
+    node = b.target;
   }
 
-  if (dist(p.pos, node) > BOTS.arriveRadius) return walkToward(state, p, node);
+  if (dist(p.pos, node) > BOTS.arriveRadius) return walkToward(state, p, node, maxRank);
   if (current.kind === 'idle' || station === null) return pop(b);
   // Within arriveRadius of a node that ties between two stations, edge onto the node so "use" hits the right one.
   if (nearestStation(state, p.pos)?.id !== station.id) {
     p.moveDir = { x: node.x - p.pos.x, y: node.y - p.pos.y };
     return;
   }
-  // Task 11 (noticeTicksLeft) is checked in act() for serve and put.
+  // noticeTicksLeft is checked in act(): serve, put and insert-with-a-drink wait for it.
   act(state, p, current.action, station);
 }
 

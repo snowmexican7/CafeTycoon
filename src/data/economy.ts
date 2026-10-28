@@ -65,6 +65,7 @@ export const ECONOMY = {
     noticeTicks: [48, 120],
     yieldTicks: [18, 60],
     yieldRadius: 0.7,
+    yieldsBeforeRerank: 3, // yields toward one target node before trying the next-nearest
     pressureQueue: 4,
     pressure: { mistake: 1.5, reaction: 0.8 },
     personalities: {

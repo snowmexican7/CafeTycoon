@@ -41,6 +41,7 @@ export function makeBotState(personality: Personality): BotState {
     path: [],
     yields: 0,
     nodeRank: 0,
+    target: null,
     waitTicks: 0,
     noticeTicksLeft: 0,
   };
