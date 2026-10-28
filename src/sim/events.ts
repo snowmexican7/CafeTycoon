@@ -1,8 +1,10 @@
 import { ECONOMY } from '../data/economy';
 import { secondsToTicks } from './constants';
+import { spawnInfluencer } from './customers';
 import { emitLog } from './log';
+import { tally } from './tally';
 import { rngInt, rngNext } from './rng';
-import type { EventKind, GameState } from './types';
+import type { ActiveEvent, EventKind, GameState } from './types';
 
 export const EVENT_LABELS: Record<EventKind, string> = {
   rushHour: 'Rush hour',
@@ -13,7 +15,7 @@ export const EVENT_LABELS: Record<EventKind, string> = {
 
 const ALL_KINDS: EventKind[] = ['rushHour', 'powerFlicker', 'influencerVisit', 'healthInspector'];
 
-/** How long an event stays active, in ticks. The influencer has no timer yet (Task 5). */
+/** How long an event stays active, in ticks. The influencer's own timer is its customer's patience. */
 function durationTicks(kind: EventKind): number {
   const e = ECONOMY.events;
   switch (kind) {
@@ -47,6 +49,18 @@ export function scheduleEvents(state: GameState): GameState {
   return state;
 }
 
+/** The inspector's verdict: four or more drinks thrown away today is a fine, anything less a pass. */
+export function judgeInspection(state: GameState): void {
+  const { wastedLimit, fine } = ECONOMY.events.inspector;
+  const failed = (state.today.wasted ?? 0) >= wastedLimit;
+  if (failed) {
+    tally(state.today, 'fines', fine);
+    state.cash = Math.round((state.cash - fine) * 100) / 100;
+  }
+  state.today.inspection = failed ? 'fail' : 'pass';
+  emitLog(state, 'inspection', { result: state.today.inspection });
+}
+
 export function eventActive(state: GameState, kind: EventKind): boolean {
   return state.events.some((e) => e.kind === kind);
 }
@@ -60,16 +74,22 @@ export function stepEvents(state: GameState, doorsOpen: boolean): GameState {
       state.today.events = [...(state.today.events ?? []), e.kind];
       emitLog(state, 'event.start', { kind: e.kind });
       if (e.kind === 'influencerVisit') {
-        // Task 5 replaces this branch with the influencer customer; for now it begins and ends at once.
-        emitLog(state, 'event.end', { kind: e.kind });
+        const customer = spawnInfluencer(state);
+        if (customer) state.events.push({ kind: e.kind, ticksLeft: customer.patienceMax, customerId: customer.id });
+        else emitLog(state, 'event.end', { kind: e.kind });
       } else {
         state.events.push({ kind: e.kind, ticksLeft: durationTicks(e.kind) });
       }
     }
   }
   for (const e of state.events) e.ticksLeft -= 1;
-  const ended = state.events.filter((e) => e.ticksLeft <= 0);
-  state.events = state.events.filter((e) => e.ticksLeft > 0);
-  for (const e of ended) emitLog(state, 'event.end', { kind: e.kind });
+  const over = (e: ActiveEvent) =>
+    e.ticksLeft <= 0 || (e.kind === 'influencerVisit' && !state.customers.some((c) => c.id === e.customerId));
+  const ended = state.events.filter(over);
+  state.events = state.events.filter((e) => !over(e));
+  for (const e of ended) {
+    if (e.kind === 'healthInspector') judgeInspection(state);
+    emitLog(state, 'event.end', { kind: e.kind });
+  }
   return state;
 }

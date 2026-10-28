@@ -94,6 +94,7 @@ export function computeModifiers(state: GameState): Modifiers {
     m.traffic *= ECONOMY.events.rushHour.traffic;
     m.patience *= ECONOMY.events.rushHour.patience;
   }
+  if (state.today.influencer === 'served') m.traffic *= ECONOMY.events.influencer.trafficAfter;
   return m;
 }
 

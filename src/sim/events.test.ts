@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ECONOMY } from '../data/economy';
 import { computeModifiers } from './effects';
+import { counterInteract } from './pass';
 import { createRun, startDay } from './run';
 import { step } from './step';
 import type { GameState } from './types';
@@ -68,14 +69,6 @@ describe('rush hour', () => {
     expect(s.today.events).toEqual(['rushHour']);
     expect(s.log.some((e) => e.kind === 'event.end')).toBe(true);
   });
-
-  it('an influencer visit starts and ends at once with no active entry', () => {
-    let s = dayTwo(1);
-    s.eventSchedule = [{ kind: 'influencerVisit', startTick: s.tick + 1 }];
-    s = step(s, []);
-    expect(s.events).toEqual([]);
-    expect(s.today.events).toEqual(['influencerVisit']);
-  });
 });
 
 describe('power flicker', () => {
@@ -88,5 +81,112 @@ describe('power flicker', () => {
     expect(s.stations[0].busyTicksLeft).toBe(99); // stepEvents removes the event on tick 240, then stepStations counts down once
     s = ticks(s, 100);
     expect(s.stations[0].output).toBe('grounds');
+  });
+});
+
+describe('health inspector', () => {
+  it('fines 15 at four wasted drinks and passes below, with a reputation bonus', () => {
+    let s = dayTwo(1);
+    s.eventSchedule = [];
+    s.today.wasted = 4;
+    s.events = [{ kind: 'healthInspector', ticksLeft: 1 }];
+    const cash = s.cash;
+    s = step(s, []);
+    expect(s.today).toMatchObject({ fines: 15, inspection: 'fail' });
+    expect(s.cash).toBeCloseTo(cash - 15);
+    expect(s.events).toEqual([]);
+
+    let t = dayTwo(1);
+    t.eventSchedule = [];
+    t.today.wasted = 3;
+    t.events = [{ kind: 'healthInspector', ticksLeft: 1 }];
+    t = step(t, []);
+    expect(t.today.inspection).toBe('pass');
+    expect(t.today.fines).toBe(0);
+    t.today.served = 10;
+    t.today.lost = 0;
+    t.reputation = 2.5;
+    t.phase = 'closing';
+    t.phaseTicksLeft = 1;
+    t = step(t, []);
+    expect(t.reputation).toBeCloseTo(2.8);
+  });
+
+  it('Review Focus 5: day end with an active inspector and drinks on the pass', () => {
+    let s = dayTwo(1);
+    s.eventSchedule = [];
+    s.today.wasted = 0;
+    s.events = [
+      { kind: 'healthInspector', ticksLeft: 500 },
+      { kind: 'rushHour', ticksLeft: 900 },
+    ];
+    s.pass = [{ item: 'latte', ticksLeft: 999 }];
+    s.phase = 'closing';
+    s.phaseTicksLeft = 1;
+    s = step(s, []);
+    const d = s.days.at(-1)!;
+    expect(d.inspection).toBe('pass');
+    expect(d.wasted).toBe(0);
+    expect([s.pass, s.events]).toEqual([[], []]);
+    s = ticks(s, 60 * 60);
+    expect(s.phase).toBe('day');
+    expect(s.today.inspection).toBeNull();
+  });
+});
+
+describe('influencer visit', () => {
+  it('jumps a full queue, pays a bonus and boosts traffic', () => {
+    let s = dayTwo(1);
+    s.scenario = 'normal';
+    s.owned = [];
+    s.customers = Array.from({ length: 6 }, (_, i) => ({
+      id: 100 + i,
+      drink: 'espresso' as const,
+      patienceLeft: 99999,
+      patienceMax: 99999,
+    }));
+    s.eventSchedule = [{ kind: 'influencerVisit', startTick: s.tick + 1 }];
+    s = step(s, []);
+    const inf = s.customers.find((c) => c.kind === 'influencer')!;
+    expect(s.customers).toHaveLength(7);
+    expect(inf.drink).toBe('latte');
+    expect(inf.patienceMax).toBe(Math.round(25 * computeModifiers(s).patience * 1.5 * 60));
+    expect(s.events).toEqual([{ kind: 'influencerVisit', ticksLeft: inf.patienceMax - 1, customerId: inf.id }]);
+
+    const before = computeModifiers(s).traffic;
+    const cash = s.cash;
+    s.players[0].holding = 'latte';
+    counterInteract(s, s.players[0].id);
+    expect(s.customers.some((c) => c.kind === 'influencer')).toBe(false);
+    expect(s.today).toMatchObject({ bonus: ECONOMY.events.influencer.bonus, influencer: 'served' });
+    expect(s.cash).toBeGreaterThan(cash + ECONOMY.events.influencer.bonus);
+    expect(computeModifiers(s).traffic).toBeCloseTo(before * ECONOMY.events.influencer.trafficAfter);
+    s = step(s, []);
+    expect(s.events).toEqual([]);
+    expect(s.log.filter((e) => e.kind === 'event.end').length).toBe(1);
+  });
+
+  it('is lost when the queue is already at seven, or when patience runs out', () => {
+    let s = dayTwo(1);
+    s.scenario = 'normal';
+    s.owned = [];
+    s.customers = Array.from({ length: 7 }, (_, i) => ({ id: 100 + i, drink: 'espresso' as const, patienceLeft: 99999, patienceMax: 99999 }));
+    s.eventSchedule = [{ kind: 'influencerVisit', startTick: s.tick + 1 }];
+    s = step(s, []);
+    expect(s.customers).toHaveLength(7);
+    expect(s.events).toEqual([]);
+    expect(s.today.events).toEqual(['influencerVisit']);
+
+    let t = dayTwo(1);
+    t.scenario = 'normal';
+    t.owned = [];
+    t.eventSchedule = [{ kind: 'influencerVisit', startTick: t.tick + 1 }];
+    t = step(t, []);
+    const inf = t.customers.find((c) => c.kind === 'influencer')!;
+    inf.patienceLeft = 1;
+    t = step(t, []);
+    expect(t.today.influencer).toBe('lost');
+    t = step(t, []);
+    expect(t.events).toEqual([]);
   });
 });
