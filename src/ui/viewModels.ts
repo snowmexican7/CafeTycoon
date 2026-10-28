@@ -241,3 +241,28 @@ export function lobbyViewModel(input: { code: string; members: Member[]; isHost:
     statusText,
   };
 }
+
+export interface ReceiptVM {
+  wasted: number;
+  fines: string;
+  bonus: string;
+  inspection: 'pass' | 'fail' | null;
+  events: string[];
+  botMistakes: number;
+  lostRegulars: number;
+  drinks: { drink: DrinkId; count: number }[];
+}
+
+/** The closing receipt's extra lines; every phase-2 field is optional on old days. */
+export function receiptViewModel(d: DayStats): ReceiptVM {
+  return {
+    wasted: d.wasted ?? 0,
+    fines: money(d.fines ?? 0),
+    bonus: money(d.bonus ?? 0),
+    inspection: d.inspection ?? null,
+    events: (d.events ?? []).map((k) => EVENT_LABELS[k]),
+    botMistakes: d.botMistakes ?? 0,
+    lostRegulars: d.lostRegulars ?? 0,
+    drinks: DRINKS.map((drink) => ({ drink, count: d.drinks?.[drink] ?? 0 })),
+  };
+}

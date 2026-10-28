@@ -5,7 +5,7 @@ import { emitLog } from './log';
 import { rngInt, rngNext } from './rng';
 import { tally } from './tally';
 import { tallyDrink } from './tally';
-import type { Customer, CustomerKind, DrinkId, GameState, PlayerId } from './types';
+import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular } from './types';
 
 const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
 
@@ -60,27 +60,50 @@ function patienceFor(m: Modifiers, mul: number): number {
   return Math.round(ECONOMY.patienceSeconds * m.patience * mul * TICK_RATE);
 }
 
+/** The regular who comes in next: a new one while the roster has room, else one not queued whose drink is on the menu. */
+export function pickRegular(state: GameState, menu: DrinkId[]): Regular | null {
+  const cfg = ECONOMY.customers.regular;
+  if (state.regulars.length < cfg.max) {
+    const regular: Regular = { name: cfg.names[state.regulars.length], drink: drawDrink(state, menu, computeModifiers(state)), visits: 0, lost: 0 };
+    state.regulars.push(regular);
+    return regular;
+  }
+  const candidates = state.regulars.filter((r) => !state.customers.some((c) => c.name === r.name) && menu.includes(r.drink));
+  return candidates.length === 0 ? null : candidates[rngInt(state, candidates.length)];
+}
+
 /** Draw the drink(s), apply the kind's patience and queue the customer; null when nothing can be made. */
 export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influencer'>): Customer | null {
   const menu = availableDrinks(state);
   if (menu.length === 0) return null;
   const m = computeModifiers(state);
+  const regular = kind === 'regular' ? pickRegular(state, menu) : null;
+  if (kind === 'regular' && regular === null) kind = 'normal';
   const g = ECONOMY.customers.group;
   const count = kind === 'group' ? g.min + rngInt(state, g.max - g.min + 1) : 1;
-  const drinks = Array.from({ length: count }, () => drawDrink(state, menu, m));
+  const drinks = regular ? [regular.drink] : Array.from({ length: count }, () => drawDrink(state, menu, m));
   const mul = kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1;
   const patienceMax = patienceFor(m, mul);
   const customer: Customer = { id: state.nextCustomerId++, drink: drinks[0], patienceLeft: patienceMax, patienceMax };
-  // TODO(Task 7): replace this placeholder; 'regular' behaves like 'normal' until its own branch exists.
   if (kind === 'impatient' || kind === 'group') customer.kind = kind;
   if (kind === 'group') customer.extra = drinks.slice(1);
+  if (regular) {
+    regular.visits += 1;
+    customer.kind = 'regular';
+    customer.name = regular.name;
+  }
   state.customers.push(customer);
   return customer;
 }
 
-/** A customer leaves unserved: one lost per drink still owed, plus influencer bookkeeping. */
+/** A customer leaves unserved: one lost per drink still owed, plus regular and influencer bookkeeping. */
 export function loseCustomer(state: GameState, c: Customer): void {
   state.today.lost += 1 + (c.extra?.length ?? 0);
+  if (c.kind === 'regular') {
+    const regular = state.regulars.find((r) => r.name === c.name);
+    if (regular) regular.lost += 1;
+    tally(state.today, 'lostRegulars');
+  }
   if (c.kind === 'influencer') state.today.influencer = 'lost';
 }
 

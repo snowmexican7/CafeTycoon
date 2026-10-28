@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { finishDay } from './closing';
 import { addCustomer, availableDrinks, rollKind, spawnCustomers, stepCustomers } from './customers';
 import { counterInteract } from './pass';
 import { createRun, startDay } from './run';
@@ -132,5 +133,34 @@ describe('customers', () => {
       return s.today.tips;
     };
     expect(tipFor('impatient')).toBeCloseTo(tipFor() * 1.5, 1);
+  });
+
+  it('creates up to three regulars, then brings back one not already queued', () => {
+    const s = day();
+    for (let i = 0; i < 3; i++) addCustomer(s, 'regular');
+    expect(s.regulars.map((r) => [r.name, r.visits])).toEqual([['Ada', 1], ['Ravi', 1], ['June', 1]]);
+    s.customers = s.customers.filter((c) => c.name === 'Ada' || c.name === 'Ravi');
+    expect(addCustomer(s, 'regular')).toMatchObject({ kind: 'regular', name: 'June' });
+    expect(s.regulars[2].visits).toBe(2);
+    const fallback = addCustomer(s, 'regular'); // all three queued: a normal customer (kind absent) instead
+    expect(fallback?.kind).toBeUndefined();
+    expect(fallback?.name).toBeUndefined();
+  });
+
+  it('a lost regular counts double toward reputation and keeps coming back', () => {
+    const rep = (served: number) => {
+      const s = day();
+      s.regulars = [{ name: 'Ada', drink: 'latte', visits: 1, lost: 0 }];
+      s.customers = [{ id: 1, kind: 'regular', name: 'Ada', drink: 'latte', patienceLeft: 1, patienceMax: 100 }];
+      stepCustomers(s);
+      expect(s.today).toMatchObject({ lost: 1, lostRegulars: 1 });
+      expect(s.regulars[0].lost).toBe(1);
+      s.today.served = served;
+      const before = s.reputation;
+      finishDay(s);
+      return Math.round((s.reputation - before) * 100) / 100;
+    };
+    expect(rep(6)).toBe(0.2); // 6/8 = 0.75
+    expect(rep(4)).toBe(-0.2); // 4/6 < 0.7
   });
 });

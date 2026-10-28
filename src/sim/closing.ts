@@ -28,7 +28,8 @@ export function finishDay(state: GameState): GameState {
   state.cash = round2(state.cash - rent);
 
   const { served, lost } = state.today;
-  const ratio = served + lost === 0 ? 1 : served / (served + lost);
+  const weighted = lost + (state.today.lostRegulars ?? 0) * (ECONOMY.customers.regular.lostWeight - 1);
+  const ratio = served + lost === 0 ? 1 : served / (served + weighted);
   const r = ECONOMY.reputation;
   const bonus = state.today.inspection === 'pass' ? ECONOMY.events.inspector.reputationBonus : 0;
   const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus;
