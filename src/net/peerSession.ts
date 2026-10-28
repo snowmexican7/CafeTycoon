@@ -30,6 +30,8 @@ export function createPeerSession(link: RoomLink, opts: PeerSessionOptions): Pee
   const lobbyHandlers = new Set<(msg: LobbyMsg) => void>();
   let status: PeerStatus = 'connecting';
   let hostPeerId: string | null = null;
+  let hostToken: string | null = null;
+  let lastPhase: string | null = null;
   let timer: unknown = opts.setTimer(() => {
     timer = null;
     fail(HOST_TIMEOUT_MESSAGE);
@@ -60,6 +62,9 @@ export function createPeerSession(link: RoomLink, opts: PeerSessionOptions): Pee
       fail(VERSION_MISMATCH_MESSAGE, 'rejected');
       return;
     }
+    // The first host we accept is the host for the whole run; a returning host keeps its token.
+    if (hostToken !== null && msg.hostToken !== hostToken) return;
+    hostToken = msg.hostToken;
     clearTimer();
     hostPeerId = peerId;
     link.send('join', { t: 'join', protocol: PROTOCOL_VERSION, token: opts.token, name: opts.name }, peerId);
@@ -70,6 +75,7 @@ export function createPeerSession(link: RoomLink, opts: PeerSessionOptions): Pee
     if (peerId !== hostPeerId) return;
     const msg = parseSnap(data);
     if (!msg) return;
+    lastPhase = msg.state.phase;
     const snap: HostToClient = { t: 'snapshot', state: msg.state, sentAt: msg.sentAt };
     for (const h of snapshotHandlers) h(snap);
   });
@@ -84,12 +90,18 @@ export function createPeerSession(link: RoomLink, opts: PeerSessionOptions): Pee
   link.onPeerLeave((peerId) => {
     if (peerId !== hostPeerId || dead()) return;
     hostPeerId = null;
+    // A host leaving after the final snapshot is just the run ending, not an outage.
+    if (lastPhase === 'ended') return;
     setStatus('hostAway');
   });
 
   link.onError((message) => {
-    if (dead()) return;
-    fail(message);
+    // The library reports a failure for any peer in the room, not only the host. Before we have
+    // found the host that means we probably cannot reach it; afterwards it is somebody else's
+    // problem and must not eject a player who is already in the game.
+    console.warn('Room connection error:', message);
+    if (dead() || status !== 'connecting') return;
+    fail(HOST_TIMEOUT_MESSAGE);
   });
 
   const subscribe = <T>(set: Set<T>, handler: T) => {

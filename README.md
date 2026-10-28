@@ -26,7 +26,8 @@ One of you presses **Host a co-op run** and reads out the five-letter room code.
 type it under **Join a room**. The host presses **Start the run** once everyone is in; friends
 can still join later. The host's browser runs the game, so the host keeps that tab open. If
 anyone refreshes, the title screen offers **Rejoin room** or **Resume run** and the game
-carries on. Connections are direct browser-to-browser with no server; a few home or campus
+carries on. Keep playing in the same tab: a new tab is a new barista. Connections are direct
+browser-to-browser with no server; a few home or campus
 networks block that, in which case a phone hotspot on the affected side usually works.
 
 ## Working on it

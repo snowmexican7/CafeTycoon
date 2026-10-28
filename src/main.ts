@@ -1,6 +1,7 @@
 import './style.css';
 import { SNAPSHOT_INTERVAL_MS } from './host/loop';
 import { createHostRoom, type HostRoom } from './net/hostRoom';
+import { markPeersAway } from './net/hostResume';
 import { createLocalTransport } from './net/localTransport';
 import type { PeerStatus } from './net/peerSession';
 import { createPeerTransport } from './net/peerTransport';
@@ -198,6 +199,7 @@ async function main(): Promise<void> {
 
   function startSolo(choice: StartChoice): void {
     const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec });
+    stores.hostRoom.clear(); // a solo run never reopens an old room
     const local = createLocalTransport();
     const id = tabIdentity();
     const s = createSession('solo', null, local, id);
@@ -277,7 +279,7 @@ async function main(): Promise<void> {
       const settings = stores.settings.get();
       openHostRoom(s, local, room.code, { token: saved.hostId, name: saved.players.find((p) => p.id === saved.hostId)?.name ?? settings.playerName });
       armWatchdog(s);
-      local.resume(saved);
+      local.resume(markPeersAway(saved, saved.hostId));
       return;
     }
     const s = createSession('solo', null, local, saved.hostId);
@@ -379,6 +381,15 @@ async function main(): Promise<void> {
   });
 
   function frame(): void {
+    requestAnimationFrame(frame); // re-arm first so a bad frame can never stop rendering for good
+    try {
+      drawAndSend();
+    } catch (err) {
+      console.error('Frame error:', err);
+    }
+  }
+
+  function drawAndSend(): void {
     const s = session;
     if (s?.next) {
       const alpha = (performance.now() - s.nextArrivedAt) / SNAPSHOT_INTERVAL_MS;
@@ -392,7 +403,6 @@ async function main(): Promise<void> {
         interactPending = false;
       }
     }
-    requestAnimationFrame(frame);
   }
 
   showTitle();

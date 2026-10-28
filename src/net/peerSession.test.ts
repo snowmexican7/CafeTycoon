@@ -78,15 +78,55 @@ describe('PeerSession', () => {
     expect(statuses).toEqual(['failed']);
   });
 
-  it('surfaces a version rejection and link errors', () => {
+  it('surfaces a version rejection', () => {
     const a = setup();
     a.link.receive('hello', { ...hello(), reject: 'version' }, 'hostPeer');
     expect(a.errors).toEqual([VERSION_MISMATCH_MESSAGE]);
     expect(a.peer.status()).toBe('rejected');
-    const b = setup();
-    b.link.fail('could not connect to peer');
-    expect(b.errors).toEqual(['could not connect to peer']);
-    expect(b.peer.status()).toBe('failed');
+  });
+
+  it('reports a link error while connecting with the remedies message', () => {
+    const { link, peer, errors } = setup();
+    link.fail('could not connect to peer abc after exchanging SDP; configure TURN servers');
+    expect(errors).toEqual([HOST_TIMEOUT_MESSAGE]);
+    expect(peer.status()).toBe('failed');
+  });
+
+  it('ignores link errors once connected', () => {
+    const { link, peer, errors, statuses } = setup();
+    link.receive('hello', hello(), 'hostPeer');
+    link.fail('could not connect to peer otherPeer after exchanging SDP');
+    expect(errors).toEqual([]);
+    expect(peer.status()).toBe('connected');
+    expect(statuses).toEqual(['connected']);
+    link.peerLeaves('hostPeer');
+    link.fail('another mesh failure');
+    expect(errors).toEqual([]);
+    expect(peer.status()).toBe('hostAway');
+  });
+
+  it('does not report the host away once the run has ended', () => {
+    const { link, peer, statuses } = setup();
+    link.receive('hello', hello(), 'hostPeer');
+    link.receive('snap', { t: 'snap', state: { phase: 'ended' }, sentAt: 9 }, 'hostPeer');
+    link.peerLeaves('hostPeer');
+    expect(peer.status()).toBe('connected');
+    expect(statuses).toEqual(['connected']);
+  });
+
+  it('only follows a hello that carries the same host token', () => {
+    const { link, peer, snaps } = setup();
+    link.receive('hello', hello('H'), 'hostA');
+    link.receive('hello', hello('X'), 'rogue');
+    expect(link.sent.filter((s) => s.kind === 'join' && s.target === 'rogue')).toHaveLength(0);
+    link.receive('snap', { t: 'snap', state: { phase: 'day' }, sentAt: 1 }, 'rogue');
+    expect(snaps).toEqual([]);
+    link.peerLeaves('hostA');
+    link.receive('hello', hello('X'), 'rogue2');
+    expect(peer.status()).toBe('hostAway');
+    link.receive('hello', hello('H'), 'hostB');
+    expect(peer.status()).toBe('connected');
+    expect(link.sent.at(-1)).toMatchObject({ kind: 'join', target: 'hostB' });
   });
 
   it('clears the timer and leaves the room on close', () => {
