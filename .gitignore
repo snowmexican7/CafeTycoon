@@ -19,3 +19,6 @@ Thumbs.db
 
 # TypeScript incremental state
 *.tsbuildinfo
+
+# Local app config
+.claude/
