@@ -1,8 +1,10 @@
 import { ECONOMY } from '../../data/economy';
 import { LAYOUT } from '../../data/layout';
 import { availableDrinks } from '../customers';
+import { eventActive } from '../events';
 import type { Modifiers } from '../effects';
 import { nearestStation } from '../movement';
+import { rngInt } from '../rng';
 import { STATION_RECIPES } from '../stations';
 import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Player, Station, StationKind, Vec2 } from '../types';
 import { findPath, idleNode, targetNodes } from './path';
@@ -147,6 +149,29 @@ export function think(state: GameState, p: Player): BotStep[] {
   return [{ kind: 'idle', node: idleNode(state, p) }];
 }
 
+/** A long queue or the rush hour: bots react faster and fumble more. */
+export function underPressure(state: GameState): boolean {
+  return state.customers.length >= BOTS.pressureQueue || eventActive(state, 'rushHour');
+}
+
+/** Skill-dial multiplier for the bot's personality; stand-ins ('human') ignore the dial. */
+function skillFactor(state: GameState, bot: BotState, dial: readonly number[]): number {
+  return bot.personality === 'human' ? 1 : dial[state.settings.botSkill - 1];
+}
+
+/**
+ * Ticks a bot hesitates before starting a newly adopted job. Always draws from the rng, even for a
+ * stand-in (whose reaction is 0), so the stream does not depend on the crew's personalities.
+ */
+export function reactionDelay(state: GameState, bot: BotState): number {
+  const [lo, hi] = BOTS.reactionTicks;
+  const base = lo + rngInt(state, hi - lo + 1);
+  const personality = BOTS.personalities[bot.personality].reaction;
+  const skill = skillFactor(state, bot, BOTS.skill.reaction);
+  const pressure = underPressure(state) ? BOTS.pressure.reaction : 1;
+  return Math.round(base * personality * skill * pressure);
+}
+
 function setPlan(b: BotState, plan: BotStep[]): void {
   b.plan = plan;
   b.path = [];
@@ -252,15 +277,22 @@ function stepBot(state: GameState, p: Player): void {
     b.claimDrink = null;
     setPlan(b, dropPlan(state, p)); // Review Focus 1
   }
-  // Task 11 (reactionTicksLeft) and Task 13 (yieldTicksLeft) waits slot in here.
+  if (b.reactionTicksLeft > 0) {
+    b.reactionTicksLeft -= 1;
+    return;
+  }
+  // Task 13 (yieldTicksLeft) wait slots in here.
 
   if (b.plan.length === 0 || b.plan[0].kind === 'idle') {
     b.thinkTicksLeft -= 1;
     if (b.thinkTicksLeft <= 0) {
       b.thinkTicksLeft = BOTS.thinkTicks;
       const next = think(state, p);
-      if (next.length > 0 && next[0].kind === 'use') setPlan(b, next);
-      else if (b.plan.length === 0) b.plan = next;
+      if (next.length > 0 && next[0].kind === 'use') {
+        setPlan(b, next);
+        b.reactionTicksLeft = reactionDelay(state, b);
+        if (b.reactionTicksLeft > 0) return; // a moment to react before moving off
+      } else if (b.plan.length === 0) b.plan = next;
     }
   }
   if (b.plan.length === 0) return;

@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { ECONOMY } from '../../data/economy';
 import { createRun, startDay } from '../run';
 import { step } from '../step';
-import type { GameState, Player } from '../types';
-import { chainFor, uncoveredOrder } from './brain';
+import type { GameState, Personality, Player } from '../types';
+import { chainFor, reactionDelay, uncoveredOrder } from './brain';
+import { addStandIns, botSpeed, makeBotState } from './roster';
 
 /** One human p1 who never moves, `bots` bot baristas, no arrivals, and a long day. */
 function cafe(bots: number): GameState {
@@ -105,7 +106,7 @@ describe('bot brain', () => {
     s = runUntil(s, (x) => machine(x).busyTicksLeft > 0 || machine(x).output === 'espresso', 60 * 30);
     expect(bot(s).bot!.claim).toBe(900);
     s.customers = [];
-    s = runUntil(s, (x) => machine(x).output === null && machine(x).busyTicksLeft === 0 && bot(x).holding === null && x.pass.some((i) => i.item === 'espresso'), 600);
+    s = runUntil(s, (x) => machine(x).output === null && machine(x).busyTicksLeft === 0 && bot(x).holding === null && x.pass.some((i) => i.item === 'espresso'), 60 * 15); // brew, plus a reaction delay per adopted job
     expect(bot(s).bot!.claim).toBeNull();
   });
 
@@ -175,5 +176,68 @@ describe('bot brain', () => {
       y = step(y, []);
     }
     expect(y).toEqual(x);
+  });
+});
+
+describe('bot feel: reaction delay, personalities, pressure and the skill dial', () => {
+  /** 200 adoptions' worth of delays for a personality at a skill level, drawn from the seeded rng. */
+  function delays(personality: Personality, skill: GameState['settings']['botSkill'], queued: number): number[] {
+    const s = cafe(0);
+    s.settings.botSkill = skill;
+    s.customers = Array.from({ length: queued }, (_, i) => ({ id: 800 + i, drink: 'espresso' as const, ...huge }));
+    const b = makeBotState(personality);
+    return Array.from({ length: 200 }, () => reactionDelay(s, b));
+  }
+  const range = (xs: number[]) => [Math.min(...xs), Math.max(...xs)];
+  const [lo, hi] = ECONOMY.bots.reactionTicks;
+
+  it('waits 0.5–2 s scaled by personality, skill and pressure before acting', () => {
+    const steady = delays('steady', 3, 0);
+    expect(steady.every((d) => Number.isInteger(d) && d >= lo && d <= hi)).toBe(true);
+    expect(range(steady)[0]).toBeLessThan(lo + 10);
+    expect(range(steady)[1]).toBeGreaterThan(hi - 10);
+
+    const veteran = delays('veteran', 1, 0);
+    expect(veteran.every((d) => d >= Math.round(lo * 1.3 * 1.6) && d <= Math.round(hi * 1.3 * 1.6))).toBe(true);
+    expect(range(veteran)[1]).toBeGreaterThan(Math.round(hi * 1.3 * 1.6) - 25);
+
+    const rookie = delays('rookie', 5, ECONOMY.bots.pressureQueue);
+    expect(rookie.every((d) => d >= Math.round(lo * 0.8 * 0.6 * 0.8) && d <= Math.round(hi * 0.8 * 0.6 * 0.8))).toBe(true);
+    expect(range(rookie)[1]).toBeGreaterThan(Math.round(hi * 0.8 * 0.6 * 0.8) - 6);
+  });
+
+  it('a bot stands still while it reacts to a new job, then gets going', () => {
+    let s = cafe(1);
+    s.customers = [{ id: 900, drink: 'espresso', ...huge }];
+    s = runUntil(s, (x) => bot(x).bot!.claim === 900, 60);
+    const waiting = bot(s).bot!.reactionTicksLeft;
+    expect(waiting).toBeGreaterThanOrEqual(lo);
+    const pos = { ...bot(s).pos };
+    for (let i = 0; i < waiting; i++) {
+      s = step(s, []);
+      expect(bot(s).pos).toEqual(pos);
+      expect(bot(s).moveDir).toEqual({ x: 0, y: 0 });
+    }
+    expect(bot(s).bot!.reactionTicksLeft).toBe(0);
+    s = step(s, []);
+    expect(bot(s).pos).not.toEqual(pos);
+  });
+
+  it('stand-ins react instantly and move at speed 1 whatever the skill', () => {
+    const s = addStandIns(cafe(0), 1);
+    s.settings.botSkill = 1;
+    const standIn = s.players.find((p) => p.id === 'sim-1')!.bot!;
+    const rng = s.rng;
+    expect(reactionDelay(s, standIn)).toBe(0);
+    expect(s.rng).not.toBe(rng); // the draw still happens, so the stream does not depend on the crew
+    expect(botSpeed(s, standIn)).toBe(1);
+  });
+
+  it('the skill dial scales speed', () => {
+    const s = cafe(0);
+    s.settings.botSkill = 1;
+    expect(botSpeed(s, makeBotState('steady'))).toBeCloseTo(0.85);
+    s.settings.botSkill = 5;
+    expect(botSpeed(s, makeBotState('rookie'))).toBeCloseTo(1.1 * 1.1);
   });
 });
