@@ -46,9 +46,10 @@
         { "text": "Bots path around players and stations, and sometimes hesitate or yield when a player is in their way (no new player-to-player collision for humans; revisit after playtests)", "state": "todo" },
         { "text": "Bot personalities (speed, accuracy, focus); more mistakes under rush pressure", "state": "todo" },
         { "text": "One bot-skill difficulty dial, from clumsy to sharp", "state": "todo" },
+        { "text": "Telemetry: the host records the run (seed, inputs, snapshots) plus peers' UI events, and downloads one JSON-lines file at run end for the design-analysis agent (no new accounts)", "state": "todo" },
         { "text": "Balance pass", "state": "todo" }
       ],
-      "doneWhen": "The crew asks to play a second week unprompted, weeks feel different from each other, and 2 players plus 1 bot can finish a week with the bot feeling helpful but not perfect.",
+      "doneWhen": "The crew asks to play a second week unprompted, weeks feel different from each other, and 2 players plus 1 bot can finish a week with the bot feeling helpful but not perfect. The first game night's telemetry file has been reviewed by the analysis agent.",
       "feedbackIssue": null
     },
     {
@@ -125,6 +126,7 @@
   "changelog": [
     { "date": "2026-10-28", "text": "Phase 1b peer-to-peer co-op merged" },
     { "date": "2026-10-28", "text": "UI overhaul round 1: cozy diorama café scene" },
-    { "date": "2026-10-28", "text": "Roadmap reordered into 6 phases by difficulty; scripted station bots moved to Phase 2" }
+    { "date": "2026-10-28", "text": "Roadmap reordered into 6 phases by difficulty; scripted station bots moved to Phase 2" },
+    { "date": "2026-10-28", "text": "Telemetry restored to Phase 2: host-recorded run log and peer UI events, downloaded as a file; no new accounts" }
   ]
 }

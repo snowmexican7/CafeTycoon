@@ -22,6 +22,7 @@
 ### Phase 2: Busy season *(next)*: gameplay dynamics + station bots
 - **Why here:** lowest risk. Mostly new content on systems that already work.
 - **Goals:** day events (rush hour, health inspector, a power flicker, an influencer visit) · 40+ cards with combos and synergies · better customer behaviours (impatient regulars, big group orders) · difficulty pacing across the week · sound and juice (dings, steam, coin pops, screen shake on a spill) · balance pass.
+- **Telemetry (no new accounts):** the host records the run (seed, scenario, every player's inputs, a snapshot at each phase boundary) and each peer's UI events (cards hovered but not bought, button mashing, frames over 250 ms, disconnects), sent over the same peer-to-peer channel as inputs. At run end the host downloads one newline-delimited JSON file that Kennedy drops where the design-analysis agent can read it. First analysis review after the first Phase 2 game night. Details: design spec §13.
 - **Scripted station bots (plain code, no AI model)** fill empty stations so 1–3 players always have a full café:
   - **Reaction delay:** a random ~0.5–2 s before starting an order.
   - **Mistakes:** ~5–10% chance of a wrong size or missed shot, which the bot notices and remakes.
@@ -29,7 +30,7 @@
   - **Personalities:** per-bot speed, accuracy and focus (fast-but-sloppy rookie, slow careful veteran).
   - **Pressure:** more mistakes during rushes.
   - **Difficulty dial:** one bot-skill setting nudges all of the above, from clumsy to sharp.
-- **Done when:** the crew asks to play a second week unprompted, weeks feel different from each other, and 2 players plus 1 bot finish a week with the bot feeling helpful but not perfect.
+- **Done when:** the crew asks to play a second week unprompted, weeks feel different from each other, and 2 players plus 1 bot finish a week with the bot feeling helpful but not perfect. The first game night's telemetry file has been reviewed by the analysis agent.
 
 ### Phase 3: Real-life growth
 - **Why here:** saves that carry across nights are where bugs start to matter.
@@ -146,4 +147,4 @@ body:
 - Create the labels `suggestion`, `feedback`, `phase-1` … `phase-6`.
 - Create **one pinned** feedback issue for the current phase, "How's Phase 1 going?" (labels `feedback` + `phase-1`), whose body says: react 😄 if you're happy, 👀 if you're neutral or unsure, 😕 if you're unhappy. Put its number in that phase's `feedbackIssue` in `roadmap.json`.
 - **When a phase finishes:** unpin its issue (it stays findable by `feedback` + `phase-N`), open and pin "How's Phase N+1 going?", and update `roadmap.json`. Only one feedback issue is pinned at a time.
-- Keep the repo public with Issues enabled. Note in the repo README that this is Kennedy Daniels' personal project, paid for personally (only needed if the church GitHub account is ever used).
+- Keep the repo public with Issues enabled.

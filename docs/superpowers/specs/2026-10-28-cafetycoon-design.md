@@ -1,5 +1,7 @@
 # CafeTycoon: design and roadmap
 
+> **Phase numbers in this document are the original plan's.** The current order is in [`docs/ROADMAP.md`](../../ROADMAP.md): six phases by difficulty and risk. Telemetry stays phase 2, the scripted pitch judge moves to phase 3 (Real-life growth), and AI moves to phase 5 (Smart café). Section 17 below is kept for history.
+
 **Date:** 2026-10-28
 **Status:** draft for team approval. Nothing is built yet.
 **Supersedes:** `docs/reference/original-build-prompt.md` (kept for its detailed numbers).
@@ -46,7 +48,7 @@ figure things out on the fly.
 - A game night that depends on one person's PC running a server, or on anyone's home
   network being configured a certain way.
 - More than two online accounts across the whole roadmap, and anything that costs money
-  before phase three.
+  before the AI phase (phase 5 in `docs/ROADMAP.md`).
 - Any AI feature that can stall or break gameplay when a model is slow or wrong.
 
 ## 3. Constraints
@@ -56,12 +58,12 @@ figure things out on the fly.
 - **Time:** weeks, not months. Phase one is the only phase planned in detail.
 - **Accounts:** GitHub (exists) and nothing else for phases one and two. A Cloudflare
   account appears only if direct connections fail for a regular player or when someone
-  volunteers to own one; an AI key appears in phase three.
+  volunteers to own one; an AI key appears in the AI phase (phase 5 in `docs/ROADMAP.md`).
 - **Hosting:** the client is a static site on GitHub Pages at
   `https://snowmexican7.github.io/CafeTycoon/`. The repo is public, so no secrets and no
   assets the team can't share.
 - **Platform:** desktop browsers (current Chrome, Firefox, Safari, Edge). Keyboard controls.
-- **Budget:** $0 through phase two. Phase three AI should stay under a few dollars a month.
+- **Budget:** $0 until the AI phase (phase 5 in `docs/ROADMAP.md`), which should stay under a few dollars a month.
 
 ## 4. Prior art the team has in mind
 
@@ -359,7 +361,7 @@ at run end, offers it as a newline-delimited JSON download; the owner drops thos
 where the analysis agent can read them. If a relay with storage exists by then, the host
 uploads instead. Friends-only, so there's no consent flow beyond a line in the README.
 
-## 14. AI (phase three, principles fixed now)
+## 14. AI (phase five in `docs/ROADMAP.md`; principles fixed now)
 
 The end goal includes AI: varied customer chatter, a game master that turns a typed idea
 into a bounded rule, maybe AI teammates. The original prompt's hard rules stand:
@@ -375,14 +377,14 @@ into a bounded rule, maybe AI teammates. The original prompt's hard rules stand:
    holds the key is the upgrade.
 5. **Budget caps** enforced in the Worker, with a spend readout in settings.
 
-**Account plan.** Phase three needs one model key from somewhere. Cheapest in accounts: one
+**Account plan.** The AI phase needs one model key from somewhere. Cheapest in accounts: one
 aggregator account that fronts every vendor, owned by whoever runs AI nights, with the key
 pasted into the host's browser. If a Cloudflare account exists by then, its built-in
 models (Workers AI, 10,000 free "neurons" a day) need no further account at all. The
 specific model names and prices in the original prompt are unverified and should be
 treated as nothing more than a hint of what to look at.
 
-**Pitch an idea** itself does not need AI: phase two ships it with a keyword judge so the
+**Pitch an idea** itself does not need AI: phase three (Real-life growth) ships it with a keyword judge so the
 mechanic exists and the team can feel it before any model is involved.
 
 ## 15. Technical design
