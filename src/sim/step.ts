@@ -14,7 +14,7 @@ import { interact, stepStations } from './stations';
 import type { GameState, PlayerInput } from './types';
 import { validateInput } from './validate';
 import { isBotId } from './bots/roster';
-import { stepBots } from './bots/brain';
+import { afterBotInteract, stepBots } from './bots/brain';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -86,7 +86,10 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepBots(s, m);
   applyMovement(s, m.moveSpeed);
   for (const p of s.players) {
-    if (p.interactQueued) interact(s, p.id);
+    if (!p.interactQueued) continue;
+    const held = p.holding;
+    interact(s, p.id);
+    if (p.bot) afterBotInteract(s, p, held);
   }
   for (const p of s.players) p.interactQueued = false;
   stepStations(s);

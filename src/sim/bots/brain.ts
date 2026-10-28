@@ -4,8 +4,10 @@ import { availableDrinks } from '../customers';
 import { eventActive } from '../events';
 import type { Modifiers } from '../effects';
 import { nearestStation } from '../movement';
-import { rngInt } from '../rng';
+import { emitLog } from '../log';
+import { rngInt, rngNext } from '../rng';
 import { STATION_RECIPES } from '../stations';
+import { tally } from '../tally';
 import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Player, Station, StationKind, Vec2 } from '../types';
 import { findPath, idleNode, targetNodes } from './path';
 
@@ -172,6 +174,27 @@ export function reactionDelay(state: GameState, bot: BotState): number {
   return Math.round(base * personality * skill * pressure);
 }
 
+/**
+ * Right after a bot's "use": a drink just taken from a recipe station with empty hands may be botched.
+ * The bot does not know yet; it notices after a while (see stepBot) and bins it.
+ */
+export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKind | null): void {
+  const b = p.bot;
+  if (!b || heldBefore !== null || !isDrink(p.holding)) return;
+  const st = nearestStation(state, p.pos);
+  if (!st || !isRecipeKind(st.kind)) return;
+  const chance =
+    BOTS.personalities[b.personality].mistake *
+    skillFactor(state, b, BOTS.skill.mistake) *
+    (underPressure(state) ? BOTS.pressure.mistake : 1);
+  if (rngNext(state) >= chance) return;
+  b.mistakes += 1;
+  tally(state.today, 'botMistakes');
+  emitLog(state, 'bot.mistake', { bot: p.name, drink: p.holding });
+  const [lo, hi] = BOTS.noticeTicks;
+  b.noticeTicksLeft = lo + rngInt(state, hi - lo + 1);
+}
+
 function setPlan(b: BotState, plan: BotStep[]): void {
   b.plan = plan;
   b.path = [];
@@ -219,6 +242,8 @@ function act(state: GameState, p: Player, action: BotAction, st: Station): void 
   switch (action) {
     case 'insert': {
       if (!isRecipeKind(st.kind)) return abandon(state, p);
+      // A drink not yet checked stays in hand: a botched espresso must not become a latte.
+      if (b.noticeTicksLeft > 0 && isDrink(p.holding)) return wait(state, p);
       const r = STATION_RECIPES[st.kind];
       const idle = st.busyTicksLeft === 0 && st.output === null;
       const stocked = r.consumes === null || state.supplies[r.consumes] >= 1;
@@ -277,6 +302,14 @@ function stepBot(state: GameState, p: Player): void {
     b.claimDrink = null;
     setPlan(b, dropPlan(state, p)); // Review Focus 1
   }
+  if (b.noticeTicksLeft > 0) {
+    b.noticeTicksLeft -= 1;
+    if (b.noticeTicksLeft === 0) {
+      // Noticed the botched drink in hand: bin it, then remake the claimed order (if still on one).
+      const remake = b.claimDrink && b.claim !== null ? chainFor(b.claimDrink, 'serve') : [];
+      setPlan(b, [use('trash', 'trash'), ...remake]);
+    }
+  }
   if (b.reactionTicksLeft > 0) {
     b.reactionTicksLeft -= 1;
     return;
@@ -315,7 +348,7 @@ function stepBot(state: GameState, p: Player): void {
     p.moveDir = { x: node.x - p.pos.x, y: node.y - p.pos.y };
     return;
   }
-  // Task 11 (noticeTicksLeft) is checked in act() for serve and put.
+  // noticeTicksLeft is checked in act(): serve, put and insert-with-a-drink wait for it.
   act(state, p, current.action, station);
 }
 

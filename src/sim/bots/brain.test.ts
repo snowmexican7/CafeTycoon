@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ECONOMY } from '../../data/economy';
 import { createRun, startDay } from '../run';
+import { nearestStation } from '../movement';
 import { step } from '../step';
 import type { GameState, Personality, Player } from '../types';
 import { chainFor, reactionDelay, uncoveredOrder } from './brain';
@@ -239,5 +240,81 @@ describe('bot feel: reaction delay, personalities, pressure and the skill dial',
     expect(botSpeed(s, makeBotState('steady'))).toBeCloseTo(0.85);
     s.settings.botSkill = 5;
     expect(botSpeed(s, makeBotState('rookie'))).toBeCloseTo(1.1 * 1.1);
+  });
+});
+
+describe('bot feel: mistakes, noticing and remaking', () => {
+  /** Run `ticks` ticks keeping two espresso customers in the queue; collect every 'bot.mistake' log entry. */
+  function busyEspressoDay(s: GameState, ticks: number): { s: GameState; mistakeLogs: number } {
+    let nextId = 1000;
+    const seen = new Set<number>();
+    for (let i = 0; i < ticks; i++) {
+      while (s.customers.length < 2) s.customers.push({ id: nextId++, drink: 'espresso', ...huge });
+      s = step(s, []);
+      for (const e of s.log) if (e.kind === 'bot.mistake') seen.add(e.seq);
+    }
+    return { s, mistakeLogs: seen.size };
+  }
+
+  it('a botched drink is noticed, binned, counted and remade', () => {
+    let s = cafe(1);
+    bot(s).bot!.personality = 'rookie';
+    s.settings.botSkill = 1;
+    const served = s.today.served;
+    const run = busyEspressoDay(s, 60 * 120);
+    // let any botch still in hand be noticed and binned
+    s = runUntil(run.s, (x) => {
+      const b = bot(x).bot!;
+      const first = b.plan[0];
+      return b.noticeTicksLeft === 0 && !(first?.kind === 'use' && first.action === 'trash');
+    }, 60 * 5);
+    const mistakes = s.today.botMistakes ?? 0;
+    expect(mistakes).toBeGreaterThan(0);
+    expect(bot(s).bot!.mistakes).toBe(mistakes);
+    expect(s.today.wasted ?? 0).toBeGreaterThanOrEqual(mistakes);
+    expect(run.mistakeLogs).toBeGreaterThan(0);
+    expect(s.today.served).toBeGreaterThan(served);
+  });
+
+  it('a botched drink is never handed over before it is noticed', () => {
+    let s = cafe(1);
+    s.customers = [{ id: 900, drink: 'espresso', ...huge }];
+    s = runUntil(s, (x) => bot(x).holding === 'espresso', 60 * 30);
+    bot(s).bot!.noticeTicksLeft = 100;
+    const served = s.today.served;
+    const wasted = s.today.wasted ?? 0;
+    for (let i = 0; i < 99; i++) s = step(s, []);
+    expect(s.today.served).toBe(served);
+    expect(bot(s).holding).toBe('espresso');
+    expect(nearestStation(s, bot(s).pos)?.kind).toBe('counter'); // waiting at the counter, drink in hand
+    s = runUntil(s, (x) => (x.today.wasted ?? 0) > wasted, 60 * 10); // noticed: binned
+    expect(s.today.served).toBe(served);
+    expect(bot(s).bot!.claim).toBe(900); // still on the order
+    s = runUntil(s, (x) => x.today.served > served, 60 * 60); // and remade
+    expect(s.customers).toEqual([]);
+  });
+
+  it('a drink not yet checked is not carried on into the next machine', () => {
+    let s = cafe(1);
+    s.customers = [{ id: 900, drink: 'latte', ...huge }];
+    s = runUntil(s, (x) => bot(x).holding === 'espresso', 60 * 30);
+    bot(s).bot!.noticeTicksLeft = 100;
+    const steamer = (x: GameState) => x.stations.find((st) => st.id === 'steamer')!;
+    for (let i = 0; i < 99; i++) {
+      s = step(s, []);
+      expect(steamer(s).busyTicksLeft).toBe(0);
+    }
+    expect(bot(s).holding).toBe('espresso');
+    const served = s.today.served;
+    s = runUntil(s, (x) => x.today.served > served, 60 * 60); // binned, remade from scratch, served
+    expect(s.today.drinks!.latte).toBe(1);
+  });
+
+  it('stand-ins never botch', () => {
+    let s = addStandIns(cafe(0), 1);
+    s.settings.botSkill = 1;
+    s = busyEspressoDay(s, 60 * 120).s;
+    expect(s.today.served).toBeGreaterThan(0);
+    expect(s.today.botMistakes ?? 0).toBe(0);
   });
 });
