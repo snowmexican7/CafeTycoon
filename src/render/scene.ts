@@ -1,121 +1,94 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container } from 'pixi.js';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
-import type { DrinkId, ItemKind, PlayerId, StationKind } from '../sim/types';
+import { nearestStation } from '../sim/movement';
+import type { PlayerId } from '../sim/types';
 import type { RenderView } from './interpolate';
+import { Actors } from './layers/actors';
+import { buildDecor } from './layers/decor';
+import { Effects } from './layers/fx';
+import { buildFloor } from './layers/floor';
+import { Lighting, buildLamps } from './layers/light';
+import { StationOverlay, buildStation, type StationOverlayState } from './layers/stations';
+import { buildWall } from './layers/wall';
+import { FRONT, MAT, TILE as THEME_TILE, WALL, isNightLook, sx, sy } from './theme';
 
-export const TILE = 64;
+export const TILE = THEME_TILE;
+export const SCENE_BACKGROUND = MAT.backdrop;
 
-const COLORS = {
-  background: 0x2b2118,
-  floor: 0xd9c7a7,
-  floorLine: 0xc9b58f,
-  customer: 0x9e9e9e,
-  text: 0xffffff,
-  textDark: 0x2b2118,
-};
-const STATION_COLORS: Record<StationKind, number> = {
-  grinder: 0x8d6e63,
-  espresso: 0x455a64,
-  steamer: 0x90a4ae,
-  coldBrewTap: 0x1e3a5f,
-  trash: 0x616161,
-  counter: 0xa1887f,
-};
-const STATION_LABELS: Record<StationKind, string> = {
-  grinder: 'Grinder',
-  espresso: 'Espresso',
-  steamer: 'Steamer',
-  coldBrewTap: 'Cold brew',
-  trash: 'Trash',
-  counter: 'Counter',
-};
-const ITEM_COLORS: Record<ItemKind, number> = { grounds: 0x6d4c41, espresso: 0x3e2723, latte: 0xf5e6c8, coldBrew: 0x1a237e };
-const BARISTA_COLORS = [0xe53935, 0x1e88e5, 0x43a047, 0xfdd835];
+/** Canvas size: the sim floor plus the render-only back wall and front margin. */
+export const SCENE_WIDTH = LAYOUT.width * TILE;
+export const SCENE_HEIGHT = WALL + LAYOUT.height * TILE + FRONT;
 
-const px = (tiles: number) => tiles * TILE;
-
-/** Draws the café from a RenderView. Static parts are drawn once; everything that moves is redrawn each frame. */
+/**
+ * The café as a little diorama, drawn from a RenderView. Layers, back to front:
+ * wall → floor (both cached) → depth-sorted stations/decor/people → lighting → overlays (bars, focus, tags) → fx.
+ * Purely visual: positions come straight from the sim, and the art for each station stays inside its tile.
+ */
 export class Scene {
   readonly root = new Container();
-  private readonly dynamic = new Graphics();
-  private readonly labels = new Container();
-  private readonly nameTexts = new Map<PlayerId, Text>();
+  private readonly wall = buildWall(SCENE_WIDTH);
+  private readonly depth = new Container();
+  private readonly overlay = new Container();
+  private readonly tags = new Container();
+  private readonly stationOverlay = new StationOverlay();
+  private readonly lighting = new Lighting(SCENE_WIDTH, SCENE_HEIGHT);
+  private readonly fx = new Effects();
+  private readonly actors: Actors;
+  private localId: PlayerId | null = null;
+  private lastTime = performance.now() / 1000;
 
   constructor() {
-    const floor = new Graphics();
-    floor.rect(0, 0, px(LAYOUT.width), px(LAYOUT.height)).fill(COLORS.floor);
-    for (let x = 1; x < LAYOUT.width; x++) floor.rect(px(x) - 1, 0, 2, px(LAYOUT.height)).fill(COLORS.floorLine);
-    for (let y = 1; y < LAYOUT.height; y++) floor.rect(0, px(y) - 1, px(LAYOUT.width), 2).fill(COLORS.floorLine);
-    for (const s of LAYOUT.stations) {
-      floor.roundRect(px(s.pos.x - 0.5) + 4, px(s.pos.y - 0.5) + 4, TILE - 8, TILE - 8, 10).fill(STATION_COLORS[s.kind]);
-      const label = new Text({ text: STATION_LABELS[s.kind], style: { fontFamily: 'system-ui, sans-serif', fontSize: 12, fill: COLORS.textDark } });
-      label.anchor.set(0.5, 0);
-      label.position.set(px(s.pos.x), px(s.pos.y + 0.5) + 2);
-      this.labels.addChild(label);
-    }
-    this.root.addChild(floor, this.dynamic, this.labels);
+    const floor = buildFloor(SCENE_WIDTH, SCENE_HEIGHT, LAYOUT.door);
+    floor.cacheAsTexture(true);
+    this.depth.sortableChildren = true;
+    for (const s of LAYOUT.stations) this.depth.addChild(buildStation(s.kind, s.pos));
+    for (const d of buildDecor(SCENE_WIDTH, LAYOUT.height)) this.depth.addChild(d);
+    this.actors = new Actors(this.depth, this.tags);
+    this.overlay.addChild(this.stationOverlay.root, this.tags);
+    this.root.addChild(this.wall.root, buildLamps(), floor, this.depth, this.lighting.root, this.overlay, this.fx.root);
+  }
+
+  /** Which barista is "me" (gets the ring and the station focus). Unset = the only player, if there's exactly one. */
+  setLocalPlayer(id: PlayerId | null): void {
+    this.localId = id;
   }
 
   update(view: RenderView): void {
     const { state } = view;
-    const g = this.dynamic;
-    g.clear();
-    const mods = computeModifiers(state);
+    const now = performance.now() / 1000;
+    const dt = Math.min(0.1, Math.max(0, now - this.lastTime));
+    this.lastTime = now;
 
-    for (const s of state.stations) {
+    const night = isNightLook(state.phase);
+    this.wall.setNight(night);
+    this.lighting.setNight(night);
+
+    const mods = computeModifiers(state);
+    const stations: StationOverlayState[] = state.stations.map((s) => {
+      let progress: number | null = null;
       if (s.busyTicksLeft > 0 && s.kind !== 'counter' && s.kind !== 'trash') {
         const total = Math.round((ECONOMY.stationSeconds[s.kind] / mods.stationSpeed[s.kind]) * TICK_RATE);
-        const frac = Math.max(0, Math.min(1, 1 - s.busyTicksLeft / total));
-        const x = px(s.pos.x - 0.5) + 6;
-        const y = px(s.pos.y - 0.5) - 8;
-        g.rect(x, y, TILE - 12, 6).fill(0x000000);
-        g.rect(x, y, (TILE - 12) * frac, 6).fill(0x66bb6a);
+        progress = Math.max(0, Math.min(1, 1 - s.busyTicksLeft / total));
       }
-      if (s.output) g.circle(px(s.pos.x), px(s.pos.y), 10).fill(ITEM_COLORS[s.output]).stroke({ width: 2, color: 0xffffff });
-    }
-
-    state.customers.forEach((c, i) => {
-      const slot = LAYOUT.queueSlots[Math.min(i, LAYOUT.queueSlots.length - 1)];
-      const cx = px(slot.x);
-      const cy = px(slot.y);
-      g.roundRect(cx - 14, cy - 14, 28, 28, 6).fill(COLORS.customer);
-      g.circle(cx, cy, 7).fill(ITEM_COLORS[c.drink as DrinkId]);
-      const frac = c.patienceLeft / c.patienceMax;
-      const r = Math.round(255 * (1 - frac));
-      const gr = Math.round(200 * frac);
-      g.rect(cx - 16, cy - 24, 32, 5).fill(0x000000);
-      g.rect(cx - 16, cy - 24, 32 * frac, 5).fill((r << 16) | (gr << 8));
+      return { kind: s.kind, pos: s.pos, progress, output: s.output };
     });
 
-    const seen = new Set<PlayerId>();
-    state.players.forEach((p, i) => {
-      seen.add(p.id);
-      const pos = view.baristaPositions[p.id] ?? p.pos;
-      const color = BARISTA_COLORS[i % BARISTA_COLORS.length];
-      const alpha = p.connected ? 1 : 0.35;
-      g.circle(px(pos.x), px(pos.y), TILE * 0.3).fill({ color, alpha }).stroke({ width: 2, color: 0x000000, alpha });
-      if (p.holding) g.circle(px(pos.x) + 14, px(pos.y) - 14, 8).fill(ITEM_COLORS[p.holding]).stroke({ width: 2, color: 0xffffff });
-      let t = this.nameTexts.get(p.id);
-      if (!t) {
-        t = new Text({ text: p.name, style: { fontFamily: 'system-ui, sans-serif', fontSize: 13, fill: COLORS.text, stroke: { color: 0x000000, width: 3 } } });
-        t.anchor.set(0.5, 1);
-        this.labels.addChild(t);
-        this.nameTexts.set(p.id, t);
-      }
-      t.text = p.name;
-      t.alpha = alpha;
-      t.position.set(px(pos.x), px(pos.y) - TILE * 0.35);
-    });
-    for (const [id, t] of this.nameTexts) {
-      if (!seen.has(id)) {
-        t.destroy();
-        this.nameTexts.delete(id);
-      }
+    const localId = this.localId ?? (state.players.length === 1 ? state.players[0].id : null);
+    const me = localId ? state.players.find((p) => p.id === localId) : undefined;
+    let focus = null;
+    if (me && me.connected && (state.phase === 'day' || state.phase === 'closing')) {
+      const pos = view.baristaPositions[me.id] ?? me.pos;
+      focus = nearestStation(state, pos)?.pos ?? null;
     }
+
+    this.stationOverlay.update(stations, focus, now);
+    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now);
+
+    const counter = LAYOUT.stations.find((s) => s.kind === 'counter');
+    if (counter) this.fx.track(state.day, state.today.sales + state.today.tips, sx(counter.pos.x), sy(counter.pos.y) - 70);
+    this.fx.step(dt);
   }
 }
-
-export const SCENE_BACKGROUND = COLORS.background;

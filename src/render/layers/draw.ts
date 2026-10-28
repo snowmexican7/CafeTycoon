@@ -1,0 +1,117 @@
+import { FillGradient, Graphics, Text } from 'pixi.js';
+import type { ItemKind } from '../../sim/types';
+import { FONT_DISPLAY, MAT, PALETTE } from '../theme';
+
+/** Small Graphics helpers shared by every layer. Pure drawing; no game logic. */
+
+export function shadow(g: Graphics, x: number, y: number, rx = 36, ry = 9, alpha = 0.22): void {
+  g.ellipse(x, y, rx, ry).fill({ color: MAT.shadow, alpha });
+}
+
+/** A dashed ellipse outline (Pixi has no native dashes). */
+export function dashedEllipse(g: Graphics, cx: number, cy: number, rx: number, ry: number, dash: number, gap: number, color: number, width: number, alpha = 1): void {
+  const circumference = Math.PI * (3 * (rx + ry) - Math.sqrt((3 * rx + ry) * (rx + 3 * ry)));
+  const step = (dash + gap) / circumference;
+  const on = dash / circumference;
+  for (let t = 0; t < 1; t += step) {
+    const a0 = t * Math.PI * 2;
+    const a1 = Math.min(t + on, 1) * Math.PI * 2;
+    g.moveTo(cx + Math.cos(a0) * rx, cy + Math.sin(a0) * ry);
+    const n = 4;
+    for (let i = 1; i <= n; i++) {
+      const a = a0 + ((a1 - a0) * i) / n;
+      g.lineTo(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry);
+    }
+  }
+  g.stroke({ width, color, alpha, cap: 'round' });
+}
+
+/** Upper half of an ellipse, closed along its base (cap domes, lamp shades, bells). */
+export function halfDome(g: Graphics, cx: number, baseY: number, rx: number, ry: number): Graphics {
+  const pts: number[] = [];
+  for (let i = 0; i <= 16; i++) {
+    const a = Math.PI + (Math.PI * i) / 16;
+    pts.push(cx + Math.cos(a) * rx, baseY + Math.sin(a) * ry);
+  }
+  return g.poly(pts);
+}
+
+/** Horizontal metal/plastic sheen: dark → light → dark across the shape (local texture space). */
+export function sheen(stops: [number, number, number]): FillGradient {
+  return new FillGradient({
+    type: 'linear',
+    start: { x: 0, y: 0 },
+    end: { x: 1, y: 0 },
+    colorStops: [
+      { offset: 0, color: stops[0] },
+      { offset: 0.45, color: stops[1] },
+      { offset: 1, color: stops[2] },
+    ],
+    textureSpace: 'local',
+  });
+}
+
+export function vertical(top: number, bottom: number): FillGradient {
+  return new FillGradient({
+    type: 'linear',
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 1 },
+    colorStops: [
+      { offset: 0, color: top },
+      { offset: 1, color: bottom },
+    ],
+    textureSpace: 'local',
+  });
+}
+
+/** Radial glow from `rgb` at `alpha` in the centre to transparent at the edge. */
+export function glow(rgb: string, alpha: number): FillGradient {
+  return new FillGradient({
+    type: 'radial',
+    center: { x: 0.5, y: 0.5 },
+    innerRadius: 0,
+    outerCenter: { x: 0.5, y: 0.5 },
+    outerRadius: 0.5,
+    colorStops: [
+      { offset: 0, color: `rgba(${rgb},${alpha})` },
+      { offset: 1, color: `rgba(${rgb},0)` },
+    ],
+    textureSpace: 'local',
+  });
+}
+
+export function label(text: string, size: number, fill: number, weight: '500' | '600' | '700' | '800' = '600', family = FONT_DISPLAY, letterSpacing = 0): Text {
+  const t = new Text({ text, style: { fontFamily: family, fontWeight: weight, fontSize: size, fill, letterSpacing } });
+  t.anchor.set(0.5, 0.5);
+  return t;
+}
+
+export const CHROME = sheen([0xb7c3c9, 0xf6fafb, 0x9fadb4]);
+
+/** A held/finished item icon centred on (x, y), scaled by k. */
+export function drawItem(g: Graphics, kind: ItemKind, x: number, y: number, k = 1): void {
+  const X = (dx: number) => x + dx * k;
+  const Y = (dy: number) => y + dy * k;
+  const cupStroke = { width: 1, color: 0xe5d6c2 };
+  if (kind === 'grounds') {
+    g.roundRect(X(2), Y(-3), 14 * k, 5 * k, 2.5 * k).fill(0x2b2b30);
+    g.ellipse(X(-4), Y(0), 10 * k, 6 * k).fill(MAT.chrome).stroke({ width: 1, color: 0x7d8a91 });
+    g.ellipse(X(-4), Y(-1), 7 * k, 3.6 * k).fill(0x5b3a24);
+  } else if (kind === 'espresso') {
+    g.ellipse(X(0), Y(6), 12 * k, 3.5 * k).fill(0xffffff).stroke(cupStroke);
+    g.poly([X(-7), Y(-6), X(7), Y(-6), X(5), Y(5), X(-5), Y(5)]).fill(0xffffff).stroke(cupStroke);
+    g.ellipse(X(0), Y(-6), 7 * k, 2.2 * k).fill(0x5a3320);
+    g.moveTo(X(7), Y(-3)).quadraticCurveTo(X(12), Y(-2), X(8), Y(2)).stroke({ width: 2.4 * k, color: 0xffffff });
+  } else if (kind === 'latte') {
+    g.poly([X(-8), Y(-12), X(8), Y(-12), X(6), Y(8), X(-6), Y(8)]).fill(0xffffff).stroke(cupStroke);
+    g.rect(X(-7.6), Y(-6), 15.2 * k, 6 * k).fill({ color: PALETTE.cherry, alpha: 0.85 });
+    g.ellipse(X(0), Y(-12), 8 * k, 2.6 * k).fill(0xe9c79c);
+    g.ellipse(X(0), Y(-12.4), 2.6 * k, 1.2 * k).fill(0xffffff);
+  } else if (kind === 'coldBrew') {
+    g.poly([X(-8), Y(-12), X(8), Y(-12), X(6), Y(8), X(-6), Y(8)]).fill({ color: 0xc9e7f7, alpha: 0.9 }).stroke({ width: 1, color: 0x9fc9e2 });
+    g.poly([X(-7.3), Y(-6), X(7.3), Y(-6), X(5.9), Y(7.5), X(-5.9), Y(7.5)]).fill(0x5b3420);
+    g.roundRect(X(-5), Y(-5), 5 * k, 5 * k, k).fill({ color: 0xe6f5ff, alpha: 0.85 });
+    g.roundRect(X(1), Y(-2), 4.5 * k, 4.5 * k, k).fill({ color: 0xe6f5ff, alpha: 0.8 });
+    g.poly([X(2), Y(-21), X(4.6), Y(-20.5), X(4.2), Y(-7), X(1.6), Y(-7.5)]).fill(PALETTE.mint);
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "updated": "2026-10-28",
+  "repo": "snowmexican7/CafeTycoon",
+  "draft": true,
+  "phases": [
+    {
+      "id": 1,
+      "name": "Open the doors",
+      "tagline": "playable co-op",
+      "status": "now",
+      "suggested": false,
+      "aim": "A game that runs, looks decent, and friends can playtest together.",
+      "goals": [
+        { "text": "Direct co-op with room codes (1–4 players)", "state": "doing" },
+        { "text": "Cozy look: café diorama scene", "state": "doing" },
+        { "text": "Cozy look: HUD, night screen, title and menus", "state": "todo" },
+        { "text": "Roadmap panel on the title screen + suggestion flow", "state": "todo" },
+        { "text": "Deployed on GitHub Pages; join with a link and a room code", "state": "doing" },
+        { "text": "First game night: 4 friends finish a week", "state": "todo" }
+      ],
+      "doneWhen": "4 friends in 4 homes finish a full 7-day week with no crash or desync, and 3+ say it looks like a real game.",
+      "feedbackIssue": null
+    },
+    {
+      "id": 2,
+      "name": "Busy season",
+      "tagline": "gameplay dynamics",
+      "status": "next",
+      "suggested": false,
+      "aim": "Make the rush fun, chaotic and replayable, in the Overcooked spirit.",
+      "goals": [
+        { "text": "Day events: rush hour, health inspector, power flicker, influencer visit", "state": "todo" },
+        { "text": "40+ cards with combos and synergies", "state": "todo" },
+        { "text": "Better customers: impatient regulars, big group orders", "state": "todo" },
+        { "text": "Difficulty pacing across the week", "state": "todo" },
+        { "text": "Sound and juice: dings, steam, coin pops, spill shake", "state": "todo" },
+        { "text": "Light local telemetry on what ends runs", "state": "todo" },
+        { "text": "Balance pass", "state": "todo" }
+      ],
+      "doneWhen": "The crew asks to play a second week unprompted, and weeks feel different from each other.",
+      "feedbackIssue": null
+    },
+    {
+      "id": 3,
+      "name": "Real-life growth",
+      "tagline": "stand → cart → café",
+      "status": "suggested",
+      "suggested": true,
+      "aim": "A progression that feels like running a real café.",
+      "goals": [
+        { "text": "Upgrade path: stand → cart → café (register → kiosk → tap terminal)", "state": "todo" },
+        { "text": "Parody ads tab (Chirper, InstaGlam, The Daily Grind)", "state": "todo" },
+        { "text": "\"Pitch an idea\" with a scripted keyword judge (no AI)", "state": "todo" },
+        { "text": "Simple layout editor between weeks", "state": "todo" },
+        { "text": "Unlocks carried between runs", "state": "todo" }
+      ],
+      "doneWhen": "A full run feels like \"we started tiny and built something\", and every locked night tab is live.",
+      "feedbackIssue": null
+    },
+    {
+      "id": 4,
+      "name": "Smart café",
+      "tagline": "optional AI",
+      "status": "planned",
+      "suggested": false,
+      "aim": "AI makes the café feel alive, as an option and never required.",
+      "goals": [
+        { "text": "AI teammates to fill empty slots", "state": "todo" },
+        { "text": "AI modes: Off / Lite / Full", "state": "todo" },
+        { "text": "Customer and staff dialogue", "state": "todo" },
+        { "text": "AI pitch judge", "state": "todo" },
+        { "text": "Backend relay within budget (< $20/month, capped per room per day)", "state": "todo" }
+      ],
+      "doneWhen": "A solo player plus 3 AI teammates can finish a week, and switching AI off changes nothing else.",
+      "feedbackIssue": null
+    },
+    {
+      "id": 5,
+      "name": "Franchise & rivals",
+      "tagline": "the long game",
+      "status": "suggested",
+      "suggested": true,
+      "aim": "The long game.",
+      "goals": [
+        { "text": "Campus franchise of several cafés (manager mode)", "state": "todo" },
+        { "text": "2v2 rival cafés on a shared street", "state": "todo" },
+        { "text": "Seasonal events", "state": "todo" },
+        { "text": "Optional friends-only leaderboards", "state": "todo" }
+      ],
+      "doneWhen": "A group can play a \"season\" across multiple game nights.",
+      "feedbackIssue": null
+    }
+  ],
+  "changelog": [
+    { "date": "2026-10-28", "text": "Phase 1b co-op plan written" },
+    { "date": "2026-10-28", "text": "UI overhaul round 1: cozy diorama café scene" }
+  ]
+}

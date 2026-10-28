@@ -1,0 +1,40 @@
+/*
+ * CafeTycoon design tokens ("toy café diorama"). Same names as src/render/theme.ts.
+ * Round 1 of the UI overhaul only adds tokens, the bundled fonts and the stage frame;
+ * the menus/HUD restyle (style.css) comes after the co-op work merges.
+ * Fonts: Fredoka + Nunito, SIL Open Font License 1.1 (see ./fonts/OFL-*.txt), subset to Latin.
+ */
+@font-face { font-family: 'Fredoka'; src: url('./fonts/Fredoka.woff2') format('woff2'); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: 'Nunito'; src: url('./fonts/Nunito.woff2') format('woff2'); font-weight: 200 1000; font-display: swap; }
+
+:root {
+  --espresso: #3a2418; --espresso-2: #4e3324; --roast: #6b4430;
+  --crema: #fff4e2; --latte: #f3dfc1; --foam: #fffaf2; --oat: #e6cfa8;
+  --caramel: #e08a3c; --caramel-dk: #b9651f; --honey: #f6c35b;
+  --cherry: #e0564a; --mint: #7fcfb4; --mint-dk: #3f9e80; --sky: #9fd0ee; --plum: #8a6bbf;
+  --ink: #3a2418; --ink-soft: #7a5b46; --line: rgba(58, 36, 24, .14);
+  --good: #4fae7b; --warn: #f0a63a; --bad: #e0564a;
+  --night: #241c35; --night-2: #33294a; --lamp: #ffcf7a;
+  --r-sm: 10px; --r-md: 16px; --r-lg: 24px;
+  --sh-1: 0 2px 0 rgba(58, 36, 24, .18), 0 6px 14px rgba(58, 36, 24, .16);
+  --sh-2: 0 4px 0 rgba(58, 36, 24, .22), 0 18px 40px rgba(30, 16, 8, .28);
+  --font-display: 'Fredoka', system-ui, sans-serif;
+  --font-body: 'Nunito', system-ui, sans-serif;
+}
+
+/* The café stage: a wooden toy frame around the Pixi canvas (render/app.ts sizes it to fit). */
+#game { display: flex; justify-content: center; }
+#game canvas {
+  border-radius: 20px;
+  box-shadow: 0 0 0 8px #6b4430, 0 0 0 11px #3a2418, 0 22px 50px rgba(0, 0, 0, .5);
+}
+
+/* Shared building blocks for the round-2 screens. Nothing uses these yet, so nothing changes today. */
+.t-display { font-family: var(--font-display); }
+.t-btn { font-family: var(--font-display); font-weight: 600; border: 0; border-radius: 14px; padding: 12px 18px; cursor: pointer;
+  background: var(--foam); color: var(--ink); box-shadow: 0 4px 0 #d4b896, 0 8px 16px rgba(58, 36, 24, .15); }
+.t-btn.primary { background: var(--caramel); color: #fff; box-shadow: 0 4px 0 var(--caramel-dk), 0 10px 18px rgba(185, 101, 31, .35); }
+.t-btn.mint { background: var(--mint); color: #12392d; box-shadow: 0 4px 0 var(--mint-dk), 0 10px 18px rgba(63, 158, 128, .3); }
+.t-chip { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-display); font-weight: 600; font-size: 12px;
+  letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
+.t-paper { background: var(--crema); color: var(--ink); border-radius: var(--r-lg); box-shadow: var(--sh-2); }
