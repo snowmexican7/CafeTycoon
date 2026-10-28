@@ -4,6 +4,7 @@ import { finishDay } from './closing';
 import { secondsToTicks } from './constants';
 import { spawnCustomers, stepCustomers } from './customers';
 import { computeModifiers } from './effects';
+import { applyMenuInput } from './menu';
 import { applyMovement } from './movement';
 import { applyNightInput, stepNight } from './night';
 import { startNight } from './run';
@@ -57,6 +58,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'restock':
     case 'ready':
       applyNightInput(s, input);
+      break;
+    case 'menu':
+      applyMenuInput(s, input);
       break;
     case 'weekEnd':
       if (isHost && s.phase === 'weekEnd') {

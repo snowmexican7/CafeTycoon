@@ -13,7 +13,7 @@ function round2(n: number): number {
 
 /** Drinks the café can still make: every supply the recipe needs has at least one unit. */
 export function availableDrinks(state: GameState): DrinkId[] {
-  return DRINKS.filter((d) => ECONOMY.drinkSupplies[d].every((s) => state.supplies[s] >= 1));
+  return DRINKS.filter((d) => state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => state.supplies[s] >= 1));
 }
 
 /** One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. */

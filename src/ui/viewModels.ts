@@ -89,6 +89,7 @@ export interface NightVM {
   restock: { supply: SupplyId; count: number; packSize: number; packCost: string; affordable: boolean }[];
   ready: { id: PlayerId; name: string; ready: boolean }[];
   meReady: boolean;
+  menu?: { drink: DrinkId; on: boolean }[];
 }
 
 export function nightViewModel(state: GameState, me: PlayerId): NightVM {
@@ -119,6 +120,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     }),
     ready: state.players.map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
     meReady: state.ready.includes(me),
+    menu: DRINKS.map((drink) => ({ drink, on: state.menu[drink] })),
   };
 }
 
