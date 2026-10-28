@@ -81,11 +81,24 @@ describe('bot brain', () => {
     expect(s.pass.some((i) => i.item === 'espresso')).toBe(true);
   });
 
+  it('a drink orphaned in a machine by a departed customer is collected, not left blocking it', () => {
+    let s = cafe(1);
+    s.menu.coldBrew = false; // no pass prep, so the bot's next think goes straight to the orphaned drink
+    s.customers = [{ id: 900, drink: 'espresso', ...huge }];
+    const machine = (x: GameState) => x.stations.find((st) => st.id === 'espresso')!;
+    s = runUntil(s, (x) => machine(x).busyTicksLeft > 0 || machine(x).output === 'espresso', 60 * 30);
+    expect(bot(s).bot!.claim).toBe(900);
+    s.customers = [];
+    s = runUntil(s, (x) => machine(x).output === null && machine(x).busyTicksLeft === 0 && bot(x).holding === null && x.pass.some((i) => i.item === 'espresso'), 600);
+    expect(bot(s).bot!.claim).toBeNull();
+  });
+
   it('Review Focus 2: a bot does not wait forever at a blocked machine', () => {
     let s = cafe(1);
     s.customers = [{ id: 900, drink: 'espresso', ...huge }];
-    s.stations.find((x) => x.id === 'espresso')!.output = 'latte'; // a leftover the bot cannot use
     s = runUntil(s, (x) => bot(x).holding === 'grounds', 60 * 30);
+    // A leftover the bot cannot use while holding grounds; placed now, mid-chain, so the orphan rule does not collect it first.
+    s.stations.find((x) => x.id === 'espresso')!.output = 'latte';
     s = runUntil(s, (x) => bot(x).bot!.waitTicks > 0, 60 * 5); // stuck at the machine with grounds in hand
     s = runUntil(
       s,
@@ -98,7 +111,7 @@ describe('bot brain', () => {
       60 * 15,
     );
     expect(bot(s).holding).toBeNull();
-    expect(s.stations.find((x) => x.id === 'espresso')!.output).toBe('latte');
+    expect(bot(s).bot!.plan[0]).toEqual({ kind: 'use', station: 'espresso', action: 'take' }); // now collects the leftover
   });
 
   it('bots prep cold brew for the pass when nothing is waiting, up to two', () => {

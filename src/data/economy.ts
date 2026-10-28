@@ -80,6 +80,7 @@ export const ECONOMY = {
     },
     names: ['Bo', 'Lu', 'Mo'],
     maxWaitTicks: 600,
+    prepColdBrews: 2, // prepping bots keep at most this many cold brews ahead (pass + hands + tap)
     arriveRadius: 0.08,
   },
 } as const;

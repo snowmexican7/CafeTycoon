@@ -8,8 +8,6 @@ import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKi
 import { findPath, idleNode, targetNodes } from './path';
 
 const BOTS = ECONOMY.bots;
-/** Prepping bots keep at most this many cold brews ahead (on the pass, in hand, or in the tap). */
-const PREP_COLD_BREW_CAP = 2;
 
 type RecipeKind = keyof typeof STATION_RECIPES;
 
@@ -88,11 +86,22 @@ function coldBrewsAhead(state: GameState): number {
   return onPass + held + inTap;
 }
 
+/** A drink left sitting in a machine that no other bot is already on its way to take; nearest first. */
+function orphanedDrink(state: GameState, self: Player): Station | null {
+  const takenBy = (st: Station) =>
+    state.players.some((p) => p !== self && p.bot && isTakeAt(p.bot.plan[0], st));
+  const candidates = state.stations
+    .filter((st) => isRecipeKind(st.kind) && isDrink(st.output) && !takenBy(st))
+    .map((st) => ({ st, d: dist(st.pos, self.pos) }))
+    .sort((a, b) => a.d - b.d || a.st.pos.y - b.st.pos.y || a.st.pos.x - b.st.pos.x);
+  return candidates[0]?.st ?? null;
+}
+
 function shouldPrep(state: GameState, p: Player): boolean {
   return (
     BOTS.personalities[p.bot!.personality].preps &&
     state.pass.length < ECONOMY.pass.slots &&
-    coldBrewsAhead(state) < PREP_COLD_BREW_CAP &&
+    coldBrewsAhead(state) < BOTS.prepColdBrews &&
     availableDrinks(state).includes('coldBrew')
   );
 }
@@ -110,6 +119,9 @@ export function think(state: GameState, p: Player): BotStep[] {
     if (state.pass.length < ECONOMY.pass.slots) return [use('counter', 'put')];
     return [use('trash', 'trash')];
   }
+  // 0b. Collect a drink left in a machine (e.g. its customer left mid-chain); rule 0 then places it.
+  const orphan = orphanedDrink(state, p);
+  if (orphan) return [{ kind: 'use', station: orphan.id, action: 'take' }];
   // 1. A drink on the pass that a customer (not another bot's) is waiting for.
   const onPass = new Set(state.pass.map((i) => i.item));
   if (state.customers.some((c) => !claimedByOther(state, p, c.id) && onPass.has(c.drink))) return [use('counter', 'serve')];
