@@ -4,7 +4,14 @@ import { hudStructureKey, type HudVM } from './viewModels';
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew' } as const;
 const DRINK_LABEL = { espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew' } as const;
 
-export function createHud(container: HTMLElement): { render(vm: HudVM): void; toast(lines: string[]): void; show(): void; hide(): void } {
+export function createHud(container: HTMLElement): {
+  render(vm: HudVM): void;
+  toast(lines: string[]): void;
+  setRoom(code: string | null): void;
+  show(): void;
+  hide(): void;
+} {
+  let roomCode: string | null = null;
   container.innerHTML = '<div class="bar"></div><div class="toast" hidden></div>';
   const bar = container.querySelector<HTMLElement>('.bar')!;
   const toast = container.querySelector<HTMLElement>('.toast')!;
@@ -28,7 +35,8 @@ export function createHud(container: HTMLElement): { render(vm: HudVM): void; to
         <span class="rep">${esc(vm.reputation)}</span>
         <span class="supplies">${vm.supplies.map((s) => `${SUPPLY_LABEL[s.id]} ${s.count}`).join(' · ')}</span>
         <span class="menu">${vm.menu.map((m) => `<span class="${m.available ? '' : 'off'}">${DRINK_LABEL[m.id]} ${esc(m.price)}</span>`).join('')}</span>
-        <span class="seed muted small">seed ${vm.seed}</span>`;
+        <span class="seed muted small">seed ${vm.seed}</span>
+        ${roomCode ? `<span class="room small">room <b>${esc(roomCode)}</b></span>` : ''}`;
     },
     toast(lines) {
       if (lines.length === 0) return;
@@ -36,6 +44,10 @@ export function createHud(container: HTMLElement): { render(vm: HudVM): void; to
       show(toast);
       if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(() => hide(toast), 6000);
+    },
+    setRoom(code) {
+      roomCode = code;
+      lastKey = '';
     },
     show: () => show(container),
     hide: () => hide(container),

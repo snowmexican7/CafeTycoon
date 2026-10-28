@@ -1,36 +1,81 @@
 import './style.css';
 import { SNAPSHOT_INTERVAL_MS } from './host/loop';
+import { createHostRoom, type HostRoom } from './net/hostRoom';
+import { markPeersAway } from './net/hostResume';
 import { createLocalTransport } from './net/localTransport';
+import type { PeerStatus } from './net/peerSession';
+import { createPeerTransport } from './net/peerTransport';
+import type { Member } from './net/protocol';
+import { makeRoomCode, normalizeRoomCode } from './net/roomCode';
+import { createTrysteroLink } from './net/roomLink';
 import { createSendGate } from './net/sendGate';
 import type { HostToClient, Transport } from './net/transport';
 import { createRenderer } from './render/app';
 import { interpolateView } from './render/interpolate';
 import { createKeyboard } from './render/keyboard';
 import { summarizeRun } from './sim/score';
-import type { GameState, Phase, PlayerId, PlayerInput } from './sim/types';
+import type { CreateRunOptions, GameState, Phase, PlayerId, PlayerInput } from './sim/types';
 import { createHistoryStore } from './storage/historyStore';
+import { createRoomStore } from './storage/roomStore';
+import { memoryStorage, type StorageLike } from './storage/storageLike';
 import { createSettingsStore } from './storage/settingsStore';
 import { createSnapshotStore } from './storage/snapshotStore';
 import { createClosing } from './ui/closing';
 import { createHud } from './ui/hud';
+import { createLobby } from './ui/lobby';
 import { createNight } from './ui/night';
 import { createPause } from './ui/pause';
-import { createTitle } from './ui/title';
-import { closingViewModel, hudViewModel, nightViewModel, titleViewModel, weekEndViewModel } from './ui/viewModels';
+import { createTitle, type StartChoice } from './ui/title';
+import { closingViewModel, hudViewModel, lobbyViewModel, nightViewModel, titleViewModel, weekEndViewModel } from './ui/viewModels';
 import { createWeekEnd } from './ui/weekEnd';
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
+
+/** Per-tab storage, or an in-memory stand-in where the browser blocks it. */
+function tabStorage(): StorageLike {
+  try {
+    sessionStorage.getItem('probe');
+    return sessionStorage;
+  } catch {
+    return memoryStorage();
+  }
+}
+const perTab = tabStorage();
+
 const stores = {
   snapshot: createSnapshotStore(localStorage),
   history: createHistoryStore(localStorage),
   settings: createSettingsStore(localStorage, () => crypto.randomUUID()),
+  // The host's room belongs with the run save (per browser); a peer's room belongs with the tab's identity.
+  hostRoom: createRoomStore(localStorage, 'cafetycoon.room.host'),
+  peerRoom: createRoomStore(perTab, 'cafetycoon.room.peer'),
 };
 const today = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * Who this tab is. Per tab (sessionStorage) so a refresh keeps the same barista while a second
+ * tab in the same browser is a second player; falls back to the per-browser token if blocked.
+ */
+function tabIdentity(): PlayerId {
+  try {
+    const existing = perTab.getItem('cafetycoon.tab');
+    if (existing) return existing;
+    const fresh = crypto.randomUUID();
+    perTab.setItem('cafetycoon.tab', fresh);
+    return fresh;
+  } catch {
+    return stores.settings.get().playerToken;
+  }
+}
+
+type Role = 'solo' | 'host' | 'peer';
+
 interface Session {
+  role: Role;
+  code: string | null;
   transport: Transport;
-  unsubscribe: () => void;
-  unsubscribeError: () => void;
+  room: HostRoom | null;
+  unsubscribers: (() => void)[];
   watchdog: ReturnType<typeof setTimeout> | null;
   me: PlayerId;
   prev: GameState | null;
@@ -40,6 +85,10 @@ interface Session {
   lastClosing: GameState | null;
   lastSaveMs: number;
   recorded: boolean;
+  members: Member[];
+  peerStatus: PeerStatus | 'hosting';
+  started: boolean;
+  pendingStart: StartChoice | null;
 }
 
 async function main(): Promise<void> {
@@ -54,23 +103,11 @@ async function main(): Promise<void> {
   const me = () => session?.me ?? '';
 
   const title = createTitle($('#title'), {
-    onStart(choice) {
-      const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec });
-      const seed = choice.seed ?? Math.floor(Math.random() * 2 ** 31);
-      startSession(settings.playerToken, (t) =>
-        t.start({
-          seed,
-          hostId: settings.playerToken,
-          players: [{ id: settings.playerToken, name: settings.playerName }],
-          settings: { pace: settings.pace, dayLengthSec: settings.dayLengthSec, nightLengthSec: settings.nightLengthSec },
-        }),
-      );
-    },
-    onResume() {
-      const saved = stores.snapshot.load();
-      if (!saved) return showTitle();
-      startSession(saved.hostId, (t) => t.resume(saved));
-    },
+    onStart: (choice) => startSolo(choice),
+    onHost: (choice) => startHost(choice),
+    onJoin: (code, name) => startPeer(code, name),
+    onResume: () => resume(),
+    onRejoin: (code) => startPeer(code, stores.settings.get().playerName),
   });
   const hud = createHud($('#hud'));
   const night = createNight($('#night'), {
@@ -88,21 +125,39 @@ async function main(): Promise<void> {
     onSettings: (patch) => send({ kind: 'settings', playerId: me(), settings: patch }),
     onQuit: () => endSession(),
   });
+  const lobby = createLobby($('#lobby'), {
+    onStart: () => startHostedRun(),
+    onLeave: () => {
+      if (session?.role === 'host') stores.hostRoom.clear();
+      else stores.peerRoom.clear();
+      endSession();
+    },
+  });
 
   function showTitle(notice?: string): void {
-    title.render(titleViewModel(stores.history.list(), stores.snapshot.load()), stores.settings.get(), notice);
+    title.render(titleViewModel(stores.history.list(), stores.snapshot.load(), stores.peerRoom.load()), stores.settings.get(), notice);
     title.show();
-    for (const o of [hud, night, closing, weekEnd, pause]) o.hide();
+    for (const o of [hud, night, closing, weekEnd, pause, lobby]) o.hide();
   }
 
-  function startSession(playerId: PlayerId, begin: (t: Transport) => void): void {
-    session?.unsubscribe();
-    session?.transport.close();
-    const transport = createLocalTransport();
+  function runOptions(choice: StartChoice, hostId: PlayerId, players: Member[]): CreateRunOptions {
+    const settings = stores.settings.get();
+    return {
+      seed: choice.seed ?? Math.floor(Math.random() * 2 ** 31),
+      hostId,
+      players: players.map((m) => ({ id: m.token, name: m.name })),
+      settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec },
+    };
+  }
+
+  function createSession(role: Role, code: string | null, transport: Transport, playerId: PlayerId): Session {
+    endSession(false);
     const s: Session = {
+      role,
+      code,
       transport,
-      unsubscribe: () => {},
-      unsubscribeError: () => {},
+      room: null,
+      unsubscribers: [],
       watchdog: null,
       me: playerId,
       prev: null,
@@ -112,34 +167,146 @@ async function main(): Promise<void> {
       lastClosing: null,
       lastSaveMs: 0,
       recorded: false,
+      members: [],
+      peerStatus: 'hosting',
+      started: false,
+      pendingStart: null,
     };
-    s.unsubscribe = transport.onSnapshot((snap) => onSnapshot(s, snap));
-    s.unsubscribeError = transport.onError((message) => {
-      console.error('Simulation error:', message);
-      abandonSession(s, 'The run hit an error and had to be discarded. Sorry about that.');
-    });
-    s.watchdog = setTimeout(() => abandonSession(s, 'The saved run could not be started, so it was discarded.'), 2000);
+    s.unsubscribers.push(transport.onSnapshot((snap) => onSnapshot(s, snap)));
+    s.unsubscribers.push(
+      transport.onError((message) => {
+        console.error('Transport error:', message);
+        if (s.role === 'peer') stores.peerRoom.clear();
+        abandonSession(s, s.role === 'peer' ? message : 'The run hit an error and had to be discarded. Sorry about that.');
+      }),
+    );
     session = s;
     title.hide();
+    hud.setRoom(code);
     hud.show();
-    begin(transport);
+    return s;
   }
 
-  /** A run that crashed or never produced a snapshot: drop its save and go back to the title with a note. */
+  /** The simulation must produce a first snapshot soon after start/resume, or the save is bad. */
+  function armWatchdog(s: Session): void {
+    s.watchdog = setTimeout(() => abandonSession(s, 'The saved run could not be started, so it was discarded.'), 2000);
+  }
+
+  function renderLobby(s: Session): void {
+    if (!s.code) return;
+    lobby.render(lobbyViewModel({ code: s.code, members: s.members, isHost: s.role === 'host', status: s.peerStatus, started: s.started }));
+  }
+
+  function startSolo(choice: StartChoice): void {
+    const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec });
+    stores.hostRoom.clear(); // a solo run never reopens an old room
+    const local = createLocalTransport();
+    const id = tabIdentity();
+    const s = createSession('solo', null, local, id);
+    armWatchdog(s);
+    local.start(runOptions(choice, id, [{ token: id, name: settings.playerName }]));
+  }
+
+  function openHostRoom(s: Session, local: Transport, code: string, hostMember: Member): void {
+    const link = createTrysteroLink(code);
+    s.room = createHostRoom(link, local, hostMember, (members) => {
+      s.members = members;
+      renderLobby(s);
+    });
+    s.members = s.room.members();
+    s.peerStatus = 'hosting';
+    renderLobby(s);
+  }
+
+  function startHost(choice: StartChoice): void {
+    const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec });
+    const code = makeRoomCode(Math.random);
+    stores.hostRoom.save({ code, role: 'host' });
+    const local = createLocalTransport();
+    const id = tabIdentity();
+    const s = createSession('host', code, local, id);
+    s.pendingStart = choice;
+    openHostRoom(s, local, code, { token: id, name: settings.playerName });
+    lobby.show();
+  }
+
+  function startHostedRun(): void {
+    const s = session;
+    if (!s || s.role !== 'host' || s.started || !s.pendingStart || !s.room) return;
+    armWatchdog(s);
+    s.transport.start(runOptions(s.pendingStart, s.me, s.room.members()));
+    s.pendingStart = null;
+  }
+
+  function startPeer(rawCode: string, name: string): void {
+    const code = normalizeRoomCode(rawCode);
+    if (!code) {
+      showTitle('Room codes are five letters, like KQZTM.');
+      return;
+    }
+    const settings = stores.settings.set({ playerName: name.trim() || 'Barista' });
+    stores.peerRoom.save({ code, role: 'peer' });
+    const id = tabIdentity();
+    const transport = createPeerTransport(code, id, settings.playerName);
+    const s = createSession('peer', code, transport, id);
+    s.peerStatus = 'connecting';
+    s.unsubscribers.push(
+      transport.onStatus((status) => {
+        s.peerStatus = status;
+        if (status === 'hostAway') lobby.show();
+        else if (status === 'connected' && s.next) lobby.hide();
+        renderLobby(s);
+      }),
+    );
+    s.unsubscribers.push(
+      transport.onLobby((msg) => {
+        s.members = msg.members;
+        s.started = msg.started;
+        renderLobby(s);
+      }),
+    );
+    renderLobby(s);
+    lobby.show();
+  }
+
+  function resume(): void {
+    const saved = stores.snapshot.load();
+    if (!saved) return showTitle();
+    const room = stores.hostRoom.load();
+    const local = createLocalTransport();
+    if (room?.role === 'host') {
+      const s = createSession('host', room.code, local, saved.hostId);
+      const settings = stores.settings.get();
+      openHostRoom(s, local, room.code, { token: saved.hostId, name: saved.players.find((p) => p.id === saved.hostId)?.name ?? settings.playerName });
+      armWatchdog(s);
+      local.resume(markPeersAway(saved, saved.hostId));
+      return;
+    }
+    const s = createSession('solo', null, local, saved.hostId);
+    armWatchdog(s);
+    local.resume(saved);
+  }
+
+  /** A run that crashed, never produced a snapshot, or lost its host for good: back to the title with a note. */
   function abandonSession(s: Session, message: string): void {
     if (session !== s) return;
-    stores.snapshot.clear();
-    endSession();
+    if (s.role !== 'peer') stores.snapshot.clear();
+    endSession(false);
     showTitle(message);
   }
 
-  function endSession(): void {
-    if (session?.watchdog) clearTimeout(session.watchdog);
-    session?.unsubscribe();
-    session?.unsubscribeError();
-    session?.transport.close();
+  function endSession(backToTitle = true): void {
+    const s = session;
+    if (s) {
+      if (s.watchdog) clearTimeout(s.watchdog);
+      for (const u of s.unsubscribers) u();
+      s.room?.close();
+      s.transport.close();
+    }
     session = null;
-    showTitle();
+    hud.setRoom(null);
+    lobby.hide();
+    if (backToTitle) showTitle();
   }
 
   function onSnapshot(s: Session, snap: HostToClient): void {
@@ -153,11 +320,17 @@ async function main(): Promise<void> {
     s.prev = s.next;
     s.next = state;
     s.nextArrivedAt = now;
+    if (!s.started) {
+      s.started = true;
+      renderLobby(s);
+    }
+    if (s.peerStatus !== 'hostAway') lobby.hide();
     hud.render(hudViewModel(state));
 
     if (state.phase === 'closing') s.lastClosing = state;
     if (state.phase === 'night') night.render(nightViewModel(state, s.me));
 
+    const canSave = s.role !== 'peer';
     if (state.phase !== s.lastPhase) {
       const from = s.lastPhase;
       s.lastPhase = state.phase;
@@ -180,12 +353,14 @@ async function main(): Promise<void> {
           s.recorded = true;
           stores.history.append(summarizeRun(state, today()));
         }
-        stores.snapshot.clear();
-      } else {
+        if (canSave) stores.snapshot.clear();
+        if (s.role === 'host') stores.hostRoom.clear();
+        if (s.role === 'peer') stores.peerRoom.clear();
+      } else if (canSave) {
         stores.snapshot.save(state);
         s.lastSaveMs = now;
       }
-    } else if (state.phase === 'day' && now - s.lastSaveMs > 10_000) {
+    } else if (canSave && state.phase === 'day' && now - s.lastSaveMs > 10_000) {
       stores.snapshot.save(state);
       s.lastSaveMs = now;
     }
@@ -194,12 +369,27 @@ async function main(): Promise<void> {
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Escape' && session?.next) {
       e.preventDefault();
-      pause.render({ pace: session.next.settings.pace, dayLengthSec: session.next.settings.dayLengthSec, isHost: session.me === session.next.hostId });
+      const s = session;
+      pause.render({
+        pace: s.next!.settings.pace,
+        dayLengthSec: s.next!.settings.dayLengthSec,
+        isHost: s.me === s.next!.hostId,
+        room: s.code ? { code: s.code, members: s.members.map((m) => m.name) } : undefined,
+      });
       pause.toggle();
     }
   });
 
   function frame(): void {
+    requestAnimationFrame(frame); // re-arm first so a bad frame can never stop rendering for good
+    try {
+      drawAndSend();
+    } catch (err) {
+      console.error('Frame error:', err);
+    }
+  }
+
+  function drawAndSend(): void {
     const s = session;
     if (s?.next) {
       const alpha = (performance.now() - s.nextArrivedAt) / SNAPSHOT_INTERVAL_MS;
@@ -213,7 +403,6 @@ async function main(): Promise<void> {
         interactPending = false;
       }
     }
-    requestAnimationFrame(frame);
   }
 
   showTitle();

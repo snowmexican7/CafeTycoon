@@ -15,19 +15,30 @@ const PACE_NAMES = ['Chill', 'Relaxed', 'Normal', 'Busy', 'Chaos'];
 
 export function createTitle(
   container: HTMLElement,
-  handlers: { onStart(choice: StartChoice): void; onResume(): void },
+  handlers: {
+    onStart(choice: StartChoice): void;
+    onHost(choice: StartChoice): void;
+    onJoin(code: string, name: string): void;
+    onResume(): void;
+    onRejoin(code: string): void;
+  },
 ): { render(vm: TitleVM, settings: LocalSettings, notice?: string): void; show(): void; hide(): void } {
-  onAction(container, (action) => {
-    if (action === 'resume') return handlers.onResume();
-    if (action !== 'start') return;
-    const q = <T extends HTMLInputElement | HTMLSelectElement>(sel: string) => container.querySelector<T>(sel)!;
+  const q = <T extends HTMLInputElement | HTMLSelectElement>(sel: string) => container.querySelector<T>(sel)!;
+  const readChoice = (): StartChoice => {
     const seedRaw = q<HTMLInputElement>('[name=seed]').value.trim();
-    handlers.onStart({
+    return {
       name: q<HTMLInputElement>('[name=name]').value.trim() || 'Barista',
       seed: seedRaw === '' || Number.isNaN(Number(seedRaw)) ? null : Math.floor(Number(seedRaw)),
       pace: Number(q<HTMLSelectElement>('[name=pace]').value) as Pace,
       dayLengthSec: Number(q<HTMLSelectElement>('[name=dayLength]').value),
-    });
+    };
+  };
+  onAction(container, (action, el) => {
+    if (action === 'resume') handlers.onResume();
+    else if (action === 'start') handlers.onStart(readChoice());
+    else if (action === 'host') handlers.onHost(readChoice());
+    else if (action === 'join') handlers.onJoin(q<HTMLInputElement>('[name=code]').value, readChoice().name);
+    else if (action === 'rejoin') handlers.onRejoin(el.dataset.code!);
   });
 
   return {
@@ -51,8 +62,14 @@ export function createTitle(
             <label>Day length <select name="dayLength">${dayOptions}</select></label>
           </div>
           <div class="row">
-            <button class="primary" data-action="start">Start solo run</button>
+            <button class="primary" data-action="host">Host a co-op run</button>
+            <button data-action="start">Start solo run</button>
             ${vm.canResume ? '<button data-action="resume">Resume run</button>' : ''}
+          </div>
+          <div class="row join-row">
+            <input name="code" placeholder="Room code" maxlength="5" autocapitalize="characters" spellcheck="false">
+            <button data-action="join">Join a room</button>
+            ${vm.rejoinCode ? `<button data-action="rejoin" data-code="${esc(vm.rejoinCode)}">Rejoin room ${esc(vm.rejoinCode)}</button>` : ''}
           </div>
           <h2>Past runs</h2>
           ${history}
