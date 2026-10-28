@@ -27,8 +27,10 @@ MIT. Re-check before upgrading: the API changed in 0.23, 0.24, 0.25 and 0.26.
 
 ## Sending and receiving
 
-- **Since 0.25.0** `room.makeAction<T>(name)` returns `{ send, onMessage, onReceiveProgress }`
-  (tuple destructuring fails). `send(data, { target })` where `target` is a peer id, an
+- **Since 0.25.0** `room.makeAction<T>(name)` returns `{ send, onMessage, onReceiveProgress, onReceive }`
+  (tuple destructuring fails). `onMessage` is an assignable property, not a subscribe call:
+  `action.onMessage = (data, context) => …` where `context.peerId` names the sender (checked
+  against the shipped `types.d.mts`; the README summary that implied `(data, peerId)` is out of date). `send(data, { target })` where `target` is a peer id, an
   array, or omitted for broadcast; it resolves when local sending finishes, not on delivery.
 - Payloads: any JSON value, or `Blob` / `ArrayBuffer` / typed array. Action names are 1–32
   UTF-8 bytes. Frames are 16 KiB; larger payloads are chunked; a few-KB snapshot is one frame.
