@@ -15,3 +15,17 @@ describe('room store', () => {
     expect(store.load()).toBeNull();
   });
 });
+
+describe('room store keys', () => {
+  it('keeps host and peer records apart when given separate keys', () => {
+    const st = memoryStorage();
+    const host = createRoomStore(st, 'cafetycoon.room.host');
+    const peer = createRoomStore(st, 'cafetycoon.room.peer');
+    host.save({ code: 'AAAAA', role: 'host' });
+    peer.save({ code: 'BBBBB', role: 'peer' });
+    expect(host.load()).toEqual({ code: 'AAAAA', role: 'host' });
+    expect(peer.load()).toEqual({ code: 'BBBBB', role: 'peer' });
+    peer.clear();
+    expect(host.load()).not.toBeNull();
+  });
+});

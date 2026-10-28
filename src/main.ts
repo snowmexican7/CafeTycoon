@@ -16,6 +16,7 @@ import { summarizeRun } from './sim/score';
 import type { CreateRunOptions, GameState, Phase, PlayerId, PlayerInput } from './sim/types';
 import { createHistoryStore } from './storage/historyStore';
 import { createRoomStore } from './storage/roomStore';
+import { memoryStorage, type StorageLike } from './storage/storageLike';
 import { createSettingsStore } from './storage/settingsStore';
 import { createSnapshotStore } from './storage/snapshotStore';
 import { createClosing } from './ui/closing';
@@ -28,11 +29,25 @@ import { closingViewModel, hudViewModel, lobbyViewModel, nightViewModel, titleVi
 import { createWeekEnd } from './ui/weekEnd';
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
+
+/** Per-tab storage, or an in-memory stand-in where the browser blocks it. */
+function tabStorage(): StorageLike {
+  try {
+    sessionStorage.getItem('probe');
+    return sessionStorage;
+  } catch {
+    return memoryStorage();
+  }
+}
+const perTab = tabStorage();
+
 const stores = {
   snapshot: createSnapshotStore(localStorage),
   history: createHistoryStore(localStorage),
   settings: createSettingsStore(localStorage, () => crypto.randomUUID()),
-  room: createRoomStore(localStorage),
+  // The host's room belongs with the run save (per browser); a peer's room belongs with the tab's identity.
+  hostRoom: createRoomStore(localStorage, 'cafetycoon.room.host'),
+  peerRoom: createRoomStore(perTab, 'cafetycoon.room.peer'),
 };
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -42,10 +57,10 @@ const today = () => new Date().toISOString().slice(0, 10);
  */
 function tabIdentity(): PlayerId {
   try {
-    const existing = sessionStorage.getItem('cafetycoon.tab');
+    const existing = perTab.getItem('cafetycoon.tab');
     if (existing) return existing;
     const fresh = crypto.randomUUID();
-    sessionStorage.setItem('cafetycoon.tab', fresh);
+    perTab.setItem('cafetycoon.tab', fresh);
     return fresh;
   } catch {
     return stores.settings.get().playerToken;
@@ -112,13 +127,14 @@ async function main(): Promise<void> {
   const lobby = createLobby($('#lobby'), {
     onStart: () => startHostedRun(),
     onLeave: () => {
-      stores.room.clear();
+      if (session?.role === 'host') stores.hostRoom.clear();
+      else stores.peerRoom.clear();
       endSession();
     },
   });
 
   function showTitle(notice?: string): void {
-    title.render(titleViewModel(stores.history.list(), stores.snapshot.load(), stores.room.load()), stores.settings.get(), notice);
+    title.render(titleViewModel(stores.history.list(), stores.snapshot.load(), stores.peerRoom.load()), stores.settings.get(), notice);
     title.show();
     for (const o of [hud, night, closing, weekEnd, pause, lobby]) o.hide();
   }
@@ -159,7 +175,7 @@ async function main(): Promise<void> {
     s.unsubscribers.push(
       transport.onError((message) => {
         console.error('Transport error:', message);
-        if (s.role === 'peer') stores.room.clear();
+        if (s.role === 'peer') stores.peerRoom.clear();
         abandonSession(s, s.role === 'peer' ? message : 'The run hit an error and had to be discarded. Sorry about that.');
       }),
     );
@@ -203,7 +219,7 @@ async function main(): Promise<void> {
   function startHost(choice: StartChoice): void {
     const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec });
     const code = makeRoomCode(Math.random);
-    stores.room.save({ code, role: 'host' });
+    stores.hostRoom.save({ code, role: 'host' });
     const local = createLocalTransport();
     const id = tabIdentity();
     const s = createSession('host', code, local, id);
@@ -227,7 +243,7 @@ async function main(): Promise<void> {
       return;
     }
     const settings = stores.settings.set({ playerName: name.trim() || 'Barista' });
-    stores.room.save({ code, role: 'peer' });
+    stores.peerRoom.save({ code, role: 'peer' });
     const id = tabIdentity();
     const transport = createPeerTransport(code, id, settings.playerName);
     const s = createSession('peer', code, transport, id);
@@ -254,7 +270,7 @@ async function main(): Promise<void> {
   function resume(): void {
     const saved = stores.snapshot.load();
     if (!saved) return showTitle();
-    const room = stores.room.load();
+    const room = stores.hostRoom.load();
     const local = createLocalTransport();
     if (room?.role === 'host') {
       const s = createSession('host', room.code, local, saved.hostId);
@@ -336,7 +352,8 @@ async function main(): Promise<void> {
           stores.history.append(summarizeRun(state, today()));
         }
         if (canSave) stores.snapshot.clear();
-        stores.room.clear();
+        if (s.role === 'host') stores.hostRoom.clear();
+        if (s.role === 'peer') stores.peerRoom.clear();
       } else if (canSave) {
         stores.snapshot.save(state);
         s.lastSaveMs = now;

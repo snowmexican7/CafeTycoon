@@ -20,7 +20,14 @@ keep going into harder weeks until the café can't make rent.
 - **Pause and settings:** Esc
 - The seed shown in the HUD replays the same week: enter it on the title screen.
 
-Phase one is solo. Online co-op for two to four friends is next.
+## Playing together
+
+One of you presses **Host a co-op run** and reads out the five-letter room code. The others
+type it under **Join a room**. The host presses **Start the run** once everyone is in; friends
+can still join later. The host's browser runs the game, so the host keeps that tab open. If
+anyone refreshes, the title screen offers **Rejoin room** or **Resume run** and the game
+carries on. Connections are direct browser-to-browser with no server; a few home or campus
+networks block that, in which case a phone hotspot on the affected side usually works.
 
 ## Working on it
 
@@ -40,6 +47,8 @@ npm run build    # type-check and build into dist/
 - Items and scenarios are data in `src/data`. Adding an item means adding a record.
 - The simulation runs in a Web Worker (`src/host`); the page renders snapshots with
   PixiJS (`src/render`) and plain HTML overlays (`src/ui`).
+- Co-op is peer-to-peer. `src/net/roomLink.ts` is the only file that touches the networking
+  library; the host bridge and the peer transport are unit-tested against a fake room.
 - Never commit secrets or assets we don't have the right to share. The repo and the game
   are public.
 
@@ -48,5 +57,6 @@ npm run build    # type-check and build into dist/
 - **Design and roadmap:** [`docs/superpowers/specs/2026-10-28-cafetycoon-design.md`](docs/superpowers/specs/2026-10-28-cafetycoon-design.md)
 - **Phase 1a plan:** [`docs/superpowers/plans/2026-10-28-phase-1a-solo-cafe.md`](docs/superpowers/plans/2026-10-28-phase-1a-solo-cafe.md)
 - **Playtest checklist:** [`docs/playtest-checklist.md`](docs/playtest-checklist.md)
+- **Co-op playtest checklist:** [`docs/playtest-checklist-coop.md`](docs/playtest-checklist-coop.md)
 - **Reference:** [`docs/reference/`](docs/reference/) holds the original build prompt and
   the stack research with verified versions and free-tier limits.

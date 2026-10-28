@@ -30,3 +30,5 @@ line asks whether it stayed clean.
 - [x] Finish with **See score & stop** (or go bankrupt). The run appears at the top of past runs.
 - [x] Start a new run with no seed: the scenario or the first hand differs from the seeded run. *(covered by unit tests; not yet played on the live site)*
 - [x] The browser console shows no errors for the whole session.
+
+Co-op has its own list: [`docs/playtest-checklist-coop.md`](playtest-checklist-coop.md).
