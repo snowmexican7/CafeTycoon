@@ -13,3 +13,12 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# Plan execution scratch (ledgers, briefs, review packages)
+.superpowers/
+
+# TypeScript incremental state
+*.tsbuildinfo
+
+# Local app config
+.claude/
