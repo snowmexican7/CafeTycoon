@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createPeerSession, HOST_TIMEOUT_MESSAGE, VERSION_MISMATCH_MESSAGE, type PeerStatus } from './peerSession';
+import { PROTOCOL_VERSION } from './protocol';
 import { createFakeLink } from './testing/fakeLink';
 import type { HostToClient } from './transport';
 
@@ -36,7 +37,7 @@ const setup = () => {
   peer.onSnapshot((s) => snaps.push(s));
   return { link, t, peer, statuses, errors, snaps };
 };
-const hello = (hostToken = 'H') => ({ t: 'hello', protocol: 1, hostToken });
+const hello = (hostToken = 'H') => ({ t: 'hello', protocol: PROTOCOL_VERSION, hostToken });
 
 describe('PeerSession', () => {
   it("joins when greeted and relays only the host's snapshots", () => {
@@ -44,7 +45,7 @@ describe('PeerSession', () => {
     const { link, peer, statuses, snaps } = setup();
     expect(peer.status()).toBe('connecting');
     link.receive('hello', hello(), 'hostPeer');
-    expect(link.sent.at(-1)).toMatchObject({ kind: 'join', target: 'hostPeer', data: { t: 'join', protocol: 1, token: 'T1', name: 'Sam' } });
+    expect(link.sent.at(-1)).toMatchObject({ kind: 'join', target: 'hostPeer', data: { t: 'join', protocol: PROTOCOL_VERSION, token: 'T1', name: 'Sam' } });
     expect(statuses).toEqual(['connected']);
     link.receive('snap', { t: 'snap', state: { phase: 'night' }, sentAt: 7 }, 'hostPeer');
     link.receive('snap', { t: 'snap', state: { phase: 'day' }, sentAt: 8 }, 'impostor');

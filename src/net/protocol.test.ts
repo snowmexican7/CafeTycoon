@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { parseHello, parseInput, parseJoin, parseLobby, parseSnap, PROTOCOL_VERSION } from './protocol';
 
 describe('protocol parsers', () => {
+  it('is on version 2', () => {
+    expect(PROTOCOL_VERSION).toBe(2);
+  });
+
   it('parses well-formed messages and rejects junk', () => {
     expect(parseHello({ t: 'hello', protocol: PROTOCOL_VERSION, hostToken: 'h' })).toEqual({ t: 'hello', protocol: PROTOCOL_VERSION, hostToken: 'h' });
     expect(parseHello({ t: 'hello', protocol: 1, hostToken: 'h', reject: 'version' })!.reject).toBe('version');

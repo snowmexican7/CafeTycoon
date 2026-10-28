@@ -40,6 +40,10 @@ describe('stores', () => {
 });
 
 describe('snapshot versioning', () => {
+  it('is on version 2', () => {
+    expect(SNAPSHOT_VERSION).toBe(2);
+  });
+
   it('stamps saves with the schema version and refuses other versions', () => {
     const st = memoryStorage();
     const store = createSnapshotStore(st);

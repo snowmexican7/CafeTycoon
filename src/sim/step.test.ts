@@ -30,6 +30,16 @@ describe('step', () => {
     expect(s.hand).toHaveLength(5);
   });
 
+  it('counts idle ticks for still players', () => {
+    let s = createRun(opts);
+    s = ticks(s, 60 * 60);
+    expect(s.phase).toBe('day');
+    const move: PlayerInput = { kind: 'move', playerId: 'p1', x: 1, y: 0, interact: false };
+    s = ticks(s, 60, [move]);
+    expect(s.players[0].idleTicks).toBe(0);
+    expect(s.players[1].idleTicks).toBe(60);
+  });
+
   it('closing clears stations and hands, pays rent, moves reputation, and can bankrupt', () => {
     let s = createRun(opts);
     s = ticks(s, 60 * 60);
