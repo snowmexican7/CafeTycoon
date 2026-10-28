@@ -6,7 +6,7 @@ import type { GameState, Station, Vec2 } from './types';
 const HALF = ECONOMY.baristaHalfWidth;
 
 /** True when a barista centred at `pos` overlaps a wall or any station's unit square. */
-function blocked(pos: Vec2, stations: Station[]): boolean {
+export function blocked(pos: Vec2, stations: Station[]): boolean {
   if (pos.x < HALF || pos.y < HALF || pos.x > LAYOUT.width - HALF || pos.y > LAYOUT.height - HALF) return true;
   for (const s of stations) {
     if (Math.abs(pos.x - s.pos.x) < 0.5 + HALF && Math.abs(pos.y - s.pos.y) < 0.5 + HALF) return true;
