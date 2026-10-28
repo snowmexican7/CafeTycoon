@@ -1,6 +1,7 @@
-import type { Pace, PlayerInput, Settings, SupplyId } from './types';
+import type { DrinkId, Pace, PlayerInput, Settings, SupplyId } from './types';
 
 const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate'];
+const DRINK_IDS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
 const MIN_PHASE_SEC = 30;
 const MAX_PHASE_SEC = 600;
 const MAX_PACKS = 100;
@@ -37,6 +38,10 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
     case 'ready':
     case 'leave':
       return { kind: input.kind, playerId: input.playerId };
+    case 'menu':
+      return DRINK_IDS.includes(input.drink) && typeof input.on === 'boolean'
+        ? { kind: 'menu', playerId: input.playerId, drink: input.drink, on: input.on }
+        : null;
     case 'weekEnd':
       return input.choice === 'stop' || input.choice === 'continue' ? { kind: 'weekEnd', playerId: input.playerId, choice: input.choice } : null;
     case 'settings':
