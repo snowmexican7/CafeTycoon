@@ -2,6 +2,7 @@ import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from './constants';
 import type { GameState, Station, Vec2 } from './types';
+import { botSpeed } from './bots/roster';
 
 const HALF = ECONOMY.baristaHalfWidth;
 
@@ -14,15 +15,16 @@ export function blocked(pos: Vec2, stations: Station[]): boolean {
   return false;
 }
 
-/** Advance every connected barista along its moveDir, axis by axis, stopping at walls and stations. */
+/** Advance every connected barista along its moveDir, axis by axis, stopping at walls and stations. Bots walk at their own pace. */
 export function applyMovement(state: GameState, moveSpeedMul: number): GameState {
   const speed = (ECONOMY.moveSpeedTilesPerSecond * moveSpeedMul) / TICK_RATE;
   for (const p of state.players) {
     if (!p.connected) continue;
     const len = Math.hypot(p.moveDir.x, p.moveDir.y);
     if (len === 0) continue;
-    const dx = (p.moveDir.x / len) * speed;
-    const dy = (p.moveDir.y / len) * speed;
+    const mine = p.bot ? speed * botSpeed(state, p.bot) : speed;
+    const dx = (p.moveDir.x / len) * mine;
+    const dy = (p.moveDir.y / len) * mine;
     const next = { x: p.pos.x + dx, y: p.pos.y };
     if (!blocked(next, state.stations)) p.pos.x = next.x;
     next.x = p.pos.x;
