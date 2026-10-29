@@ -26,7 +26,7 @@ export const STATION_NAME: Record<StationKind, string> = {
   counter: 'Pick-up counter',
   trash: 'Trash',
 };
-export const SUPPLY_NAME: Record<SupplyId, string> = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours' };
+export const SUPPLY_NAME: Record<SupplyId, string> = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours', pastry: 'Pastries' };
 /** The steps on an order ticket, in the order a barista does them. */
 export const DRINK_STEPS: Record<DrinkId, string[]> = {
   espresso: ['Grind', 'Pull', 'Hand off'],

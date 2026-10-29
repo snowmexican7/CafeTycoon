@@ -12,6 +12,7 @@ import { tallyDrink } from './tally';
 import { BASE_DRINKS, DRINK_IDS, DRINK_INFO } from '../data/drinks';
 import { clearNameMixOnServe, maybeNameMix, maybeSpawnCamper, secretServeBonus } from './eggs';
 import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, SimEvent } from './types';
+import { sellPastry } from './spoilage';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
 
@@ -208,6 +209,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   const kindTip =
     customer.kind === 'impatient' ? ECONOMY.customers.impatient.tip : customer.kind === 'regular' ? ECONOMY.customers.regular.tip * (reg ? regularTipFactor(state, reg) : 1) : 1;
   if (reg) noteRegularServed(state, reg);
+  const pastry = sellPastry(state, by);
   const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) + roleCraft(state, by));
   state.cash = round2(state.cash + price + tip);
   state.today.sales = round2(state.today.sales + price);
@@ -226,6 +228,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     perfect,
     left: customer.extra?.length ?? 0,
   };
+  if (pastry) served.pastry = pastry;
   if (customer.name !== undefined) served.name = customer.name;
   emitLog(state, 'served', served);
   clearNameMixOnServe(customer);

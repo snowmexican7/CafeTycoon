@@ -6,7 +6,7 @@ import type { CrewStats } from './stats';
 
 export type PlayerId = string;
 export type DrinkId = 'espresso' | 'latte' | 'coldBrew' | 'icedLatte' | 'mocha' | 'matcha' | 'special';
-export type SupplyId = 'beans' | 'milk' | 'concentrate' | 'flavour';
+export type SupplyId = 'beans' | 'milk' | 'concentrate' | 'flavour' | 'pastry';
 export type ItemKind = 'grounds' | DrinkId;
 export type StationKind = 'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'counter' | 'trash';
 export type Phase = 'night' | 'day' | 'closing' | 'weekEnd' | 'ended';
@@ -179,6 +179,8 @@ export type Effect =
   | { kind: 'tipRate'; add: number }
   | { kind: 'orderBias'; drink: DrinkId; mul: number }
   | { kind: 'supplyCost'; supply: SupplyId; mul: number }
+  /** P3 B4: fresh stock spoils at this multiple of the usual share overnight. */
+  | { kind: 'spoil'; mul: number }
   | { kind: 'gamble'; chance: number; win: Effect[]; lose: Effect[] }
   /** Neighbourhood days: tilt every hot or every iced drink at once (src/data/drinks.ts). */
   | { kind: 'orderTag'; tag: 'hot' | 'iced'; mul: number }
@@ -272,6 +274,11 @@ export interface DayStats {
   bonus?: number;
   botMistakes?: number;
   lostRegulars?: number;
+  /** P3 B4: fresh stock thrown out at closing, and what it had cost. */
+  spoiled?: Partial<Record<SupplyId, number>>;
+  spoiledValue?: number;
+  /** P3 B4: pastries sold on the side. */
+  pastries?: number;
   inspection?: 'pass' | 'fail' | null;
   events?: EventKind[];
   drinks?: Record<DrinkId, number>;

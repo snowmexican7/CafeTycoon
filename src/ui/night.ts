@@ -12,7 +12,7 @@ import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM,
 import type { RegularVM } from '../sim/regulars';
 import { isRole, type RoleId } from '../sim/roles';
 
-const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours' } as const;
+const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours', pastry: 'Pastries' } as const;
 const LOW_AT = 5;
 const RING = 2 * Math.PI * 14;
 const parseMoney = (s: string) => Number(s.replace(/[^0-9.-]/g, '')) || 0;
@@ -288,6 +288,8 @@ export function createNight(
            <div class="line"><span>Tips</span><span>${esc(t.tips)}</span></div>
            <div class="line"><span>Rent</span><span class="neg">−${esc(t.rent)}</span></div>
            ${t.bonus ? `<div class="line"><span>Bonuses</span><span class="pos">+${esc(t.bonus)}</span></div>` : ''}
+           ${t.pastries ? `<div class="line"><span>Pastries sold (in sales)</span><span>${t.pastries}</span></div>` : ''}
+           ${t.spoiled ? `<div class="line spoil"><span>Went off: ${esc(t.spoiledWhat ?? '')}</span><span class="neg">${esc(t.spoiled)} wasted</span></div>` : ''}
            ${t.fines ? `<div class="line"><span>Fines</span><span class="neg">−${esc(t.fines)}</span></div>` : ''}
            ${t.tabPaid ? `<div class="line"><span>Hospital tab paid</span><span class="neg">−${esc(t.tabPaid)}</span></div>` : ''}
            ${t.ambulance ? `<div class="line ambulance"><span>Ambulance ride. Worth it?</span><span class="neg">−${esc(t.ambulance)}</span></div>` : ''}
@@ -301,8 +303,8 @@ export function createNight(
       const warned = new Map(vm.warnings.filter((w) => w.supply).map((w) => [w.supply!, w]));
       const restock = vm.restock
         .map(
-          (r) => `<div class="restock ${r.count < LOW_AT || warned.has(r.supply) ? 'low' : ''} ${warned.has(r.supply) ? `warned ${warned.get(r.supply)!.level}` : ''}" data-supply="${r.supply}">${jar(Math.min(1, r.count / 30), SUPPLY_COLOR[r.supply], 26)}
-            <div class="lab">${SUPPLY_LABEL[r.supply]}<small>${r.count} left${r.count <= 0 && warned.has(r.supply) ? ' · out!' : r.count < LOW_AT || warned.has(r.supply) ? ' · low!' : ''}</small></div>
+          (r) => `<div class="restock ${r.spoilPct ? 'fresh' : ''} ${(r.supply !== 'pastry' && r.count < LOW_AT) || warned.has(r.supply) ? 'low' : ''} ${warned.has(r.supply) ? `warned ${warned.get(r.supply)!.level}` : ''}" data-supply="${r.supply}">${jar(Math.min(1, r.count / 30), SUPPLY_COLOR[r.supply], 26)}
+            <div class="lab">${SUPPLY_LABEL[r.supply]}<small>${r.count} left${r.count <= 0 && warned.has(r.supply) ? ' · out!' : (r.supply !== 'pastry' && r.count < LOW_AT) || warned.has(r.supply) ? ' · low!' : ''}</small>${r.spoilPct ? `<small class="spoil-note" title="Fresh stock: this share of what is left at closing goes off">${r.spoiled ? `<b>${r.spoiled} went off</b> · ` : ''}${r.spoilPct}% goes off at close</small>` : ''}</div>
             <button class="btn" data-action="restock" data-supply="${r.supply}" ${r.affordable ? '' : 'disabled'}>+${r.packSize} for ${esc(r.packCost)}</button></div>`,
         )
         .join('');

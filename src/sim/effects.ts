@@ -19,6 +19,8 @@ export interface Modifiers {
   tipRate: number;
   orderBias: Record<DrinkId, number>;
   supplyCost: Record<SupplyId, number>;
+  /** P3 B4: multiplier on overnight spoilage of fresh stock. */
+  spoil: number;
   /** Weights on the customer mix's non-normal kinds. */
   mix: Record<'impatient' | 'group' | 'regular', number>;
   eventOdds: Record<EventKind, number>;
@@ -50,7 +52,8 @@ export function baseModifiers(): Modifiers {
     patience: 1,
     tipRate: 0,
     orderBias: ones(),
-    supplyCost: { beans: 1, milk: 1, concentrate: 1, flavour: 1 },
+    supplyCost: { beans: 1, milk: 1, concentrate: 1, flavour: 1, pastry: 1 },
+    spoil: 1,
     mix: { impatient: 1, group: 1, regular: 1 },
     eventOdds: { rushHour: 1, powerFlicker: 1, influencerVisit: 1, healthInspector: 1 },
     queue: 0,
@@ -88,6 +91,9 @@ export function itemModifiers(effects: Effect[]): Modifiers {
         break;
       case 'supplyCost':
         m.supplyCost[e.supply] *= e.mul;
+        break;
+      case 'spoil':
+        m.spoil *= e.mul;
         break;
       case 'orderTag':
         for (const d of DRINKS) if (DRINK_TEMP[d] === e.tag) m.orderBias[d] *= e.mul;

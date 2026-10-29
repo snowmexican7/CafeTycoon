@@ -20,7 +20,7 @@ export interface NightWarning {
   supply?: SupplyId;
 }
 
-const NAME: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'cold brew', flavour: 'flavours' };
+const NAME: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'cold brew', flavour: 'flavours', pastry: 'pastries' };
 const DRINK_PLURAL: Record<DrinkId, string> = {
   espresso: 'Espressos', latte: 'Lattes', coldBrew: 'Cold brews', icedLatte: 'Iced lattes', mocha: 'Mochas', matcha: 'Matchas', special: 'Maple foams',
 };
@@ -43,7 +43,7 @@ export function expectedUse(state: GameState): Record<SupplyId, number> {
   const menu = menuDrinks(state);
   const w = (d: DrinkId) => m.orderBias[d] * DRINK_INFO[d].bias;
   const total = menu.reduce((s, d) => s + w(d), 0) || 1;
-  const use: Record<SupplyId, number> = { beans: 0, milk: 0, concentrate: 0, flavour: 0 };
+  const use: Record<SupplyId, number> = { beans: 0, milk: 0, concentrate: 0, flavour: 0, pastry: 0 };
   for (const d of menu) for (const s of ECONOMY.drinkSupplies[d]) use[s] += (arrivals * w(d)) / total;
   for (const s of SUPPLY_IDS) use[s] = Math.ceil(use[s]);
   return use;

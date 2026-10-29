@@ -2,7 +2,7 @@ import { BASE_DRINKS, DRINK_IDS, dayUnlocks } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
 import type { DrinkId, GameState, SupplyId } from './types';
 
-export const SUPPLY_IDS: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour'];
+export const SUPPLY_IDS: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour', 'pastry'];
 
 const needsFlavour = (d: DrinkId) => ECONOMY.drinkSupplies[d].includes('flavour');
 

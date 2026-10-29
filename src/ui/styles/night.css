@@ -239,3 +239,7 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .paper-strip em { margin-left: auto; font-style: normal; font-weight: 600; font-size: 13px; color: #b46a2a; } #night .ps-ic { font-size: 20px; }
 @media (max-width: 1400px) { #night .ntab { font-size: 13px; padding: 7px 9px; } #night .ntab small { display: none; } #night .ntab.alert small { display: inline; } }
 #night .menu-pane .mb-total, #night .menu-pane .sec, #night .regs-pane .sec, #night .crew-pane .sec { grid-column: 1 / -1; }
+
+/* P3 B4: fresh stock */
+#night .restock .spoil-note { display: block; color: #9a6a3a; font-size: 11px; } #night .restock .spoil-note b { color: #b4472f; }
+#night .restock.fresh { border-left: 4px solid #8cc7a8; } #night .line.spoil span:first-child { color: #8a5a3a; }

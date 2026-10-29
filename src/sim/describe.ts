@@ -15,7 +15,7 @@ const STATION_NAMES: Record<StationKind, string> = {
   counter: 'counter',
   trash: 'trash',
 };
-const SUPPLY_NAMES: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'concentrate', flavour: 'flavours' };
+const SUPPLY_NAMES: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'concentrate', flavour: 'flavours', pastry: 'pastries' };
 
 const EVENT_NAMES: Record<EventKind, string> = {
   rushHour: 'rush hour', powerFlicker: 'power flicker', influencerVisit: 'influencer', healthInspector: 'inspector',
@@ -78,6 +78,10 @@ function describeOne(e: Effect): string {
       const n = Math.round(Math.abs(1 - e.mul) * 100);
       return `${SUPPLY_NAMES[e.supply]} ${n}% ${e.mul < 1 ? 'cheaper' : 'dearer'}`;
     }
+    case 'spoil': {
+      const n = Math.round(Math.abs(1 - e.mul) * 100);
+      return `milk and pastries spoil ${n}% ${e.mul < 1 ? 'less' : 'more'}`;
+    }
     case 'gamble':
       return 'a gamble';
     case 'orderTag':
@@ -109,6 +113,7 @@ export function isDownside(e: Effect): boolean {
     case 'patience':
       return e.mul < 1;
     case 'supplyCost':
+    case 'spoil':
       return e.mul > 1;
     case 'tipRate':
     case 'quality':
