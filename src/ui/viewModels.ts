@@ -2,6 +2,7 @@ import { catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
 import { TICK_RATE, secondsToTicks } from '../sim/constants';
+import { botsFor } from '../sim/bots/roster';
 import { availableDrinks } from '../sim/customers';
 import { describeEffects } from '../sim/describe';
 import { EVENT_LABELS } from '../sim/events';
@@ -10,7 +11,7 @@ import { restockCost } from '../sim/night';
 import { scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
-import type { Member } from '../net/protocol';
+import type { BotsChoice, Member } from '../net/protocol';
 import type { DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 
@@ -66,6 +67,8 @@ export interface HudVM {
   stuns?: { playerId: string; secondsLeft: number }[];
   cleaning?: { playerId: string; secondsLeft: number }[];
   rogue?: { stage: RogueStage; drink: DrinkId; x: number; y: number; secondsLeft: number; name?: string };
+  /** Doors locked: customers still inside (queue plus a rogue). Present only while closing; patched in place. */
+  closing?: { left: number };
 }
 
 /** The floor: messes, cleanliness, the mop, who is stunned and who is cleaning (seconds rounded up). */
@@ -100,6 +103,7 @@ export function hudViewModel(state: GameState): HudVM {
     events: state.events.map((e) => ({ kind: e.kind, label: EVENT_LABELS[e.kind], secondsLeft: Math.ceil(e.ticksLeft / 60) })),
     ...floorHud(state),
     ...rogueHud(state),
+    ...(state.phase === 'closing' ? { closing: { left: state.customers.length + (state.rogue ? 1 : 0) } } : {}),
   };
 }
 
@@ -273,7 +277,7 @@ export function nightStructureKey(vm: NightVM): string {
 
 /** Everything about the HUD except the clock and cash. */
 export function hudStructureKey(vm: HudVM): string {
-  const { clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, ...rest } = vm;
+  const { clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, closing, ...rest } = vm;
   // per-tick values are patched, not rebuilt: the pass keys on its items only
   return JSON.stringify({
     ...rest,
@@ -284,6 +288,7 @@ export function hudStructureKey(vm: HudVM): string {
     stuns: stuns?.map((x) => x.playerId),
     cleaning: cleaning?.map((x) => x.playerId),
     rogue: rogue && { stage: rogue.stage, drink: rogue.drink, name: rogue.name },
+    closing: closing !== undefined, // the banner is structure; its count is patched
   });
 }
 
@@ -293,9 +298,29 @@ export interface LobbyVM {
   isHost: boolean;
   canStart: boolean;
   statusText: string;
+  /** The bots run setting: Off (0) or 1–3. Host edits it before the start; everyone else just sees it. */
+  bots?: LobbyBotsVM;
 }
 
-export function lobbyViewModel(input: { code: string; members: Member[]; isHost: boolean; status: PeerStatus | 'hosting'; started: boolean }): LobbyVM {
+export interface LobbyBotsVM {
+  /** 0 = Off. For 'auto' this is how many bots fill the empty seats right now. */
+  count: number;
+  /** How many actually clock in with this crew (bots never take a fourth human's spot). */
+  clocking: number;
+  auto: boolean;
+  picked: boolean;
+  editable: boolean;
+}
+
+
+export function lobbyViewModel(input: {
+  code: string;
+  members: Member[];
+  isHost: boolean;
+  status: PeerStatus | 'hosting';
+  started: boolean;
+  bots?: { bots: BotsChoice; picked: boolean };
+}): LobbyVM {
   const { status, started } = input;
   let statusText = '';
   if (status === 'hosting') statusText = started ? 'Room open. Friends can still join.' : 'Share the code. Start when everyone is in.';
@@ -303,6 +328,7 @@ export function lobbyViewModel(input: { code: string; members: Member[]; isHost:
   else if (status === 'connected') statusText = started ? '' : 'Waiting for the host to start…';
   else if (status === 'hostAway') statusText = 'Waiting for the host to come back…';
   else if (status === 'rejected') statusText = 'Version mismatch. Both of you reload.';
+  else if (status === 'full') statusText = 'The café is full (four baristas). Could not join.';
   else if (status === 'failed') statusText = 'Could not connect.';
   return {
     code: input.code,
@@ -310,6 +336,17 @@ export function lobbyViewModel(input: { code: string; members: Member[]; isHost:
     isHost: input.isHost,
     canStart: input.isHost && !started,
     statusText,
+    ...(input.bots
+      ? {
+          bots: {
+            count: input.bots.bots === 'auto' ? botsFor('auto', input.members.length) : input.bots.bots,
+            clocking: botsFor(input.bots.bots, input.members.length),
+            auto: input.bots.bots === 'auto',
+            picked: input.bots.picked,
+            editable: input.isHost && !started,
+          },
+        }
+      : {}),
   };
 }
 

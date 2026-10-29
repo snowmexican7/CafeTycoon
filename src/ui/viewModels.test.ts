@@ -125,6 +125,22 @@ describe('overlay structure keys', () => {
     s.supplies.milk = 0;
     expect(hudStructureKey(hudViewModel(s))).not.toBe(a);
   });
+
+  it('shows the doors-locked banner while closing: presence is structure, the count is patched', () => {
+    const s = run();
+    s.phase = 'day';
+    expect(hudViewModel(s).closing).toBeUndefined();
+    const open = hudStructureKey(hudViewModel(s));
+    s.phase = 'closing';
+    s.customers = [1, 2, 3].map((id) => ({ id, drink: 'latte' as const, patienceLeft: 100, patienceMax: 100 }));
+    const vm = hudViewModel(s);
+    expect(vm.closing).toEqual({ left: 3 });
+    const closing = hudStructureKey(vm);
+    expect(closing).not.toBe(open);
+    s.customers.pop();
+    expect(hudViewModel(s).closing).toEqual({ left: 2 });
+    expect(hudStructureKey(hudViewModel(s))).toBe(closing);
+  });
 });
 
 describe('lobby view model', () => {
@@ -149,6 +165,19 @@ describe('lobby view model', () => {
     expect(lobbyViewModel({ ...base, status: 'connected', started: true }).statusText).toBe('');
     expect(lobbyViewModel({ ...base, status: 'hostAway', started: true }).statusText).toBe('Waiting for the host to come back…');
     expect(lobbyViewModel({ ...base, status: 'failed' }).canStart).toBe(false);
+    expect(lobbyViewModel({ ...base, status: 'full' }).statusText).toMatch(/full/);
+  });
+  it('shows the bots setting: host edits before the start, peers read it', () => {
+    const host = lobbyViewModel({ code: 'ABCDE', members, isHost: true, status: 'hosting', started: false, bots: { bots: 0, picked: false } });
+    expect(host.bots).toEqual({ count: 0, clocking: 0, auto: false, picked: false, editable: true });
+    const solo = lobbyViewModel({ code: 'ABCDE', members: members.slice(0, 1), isHost: true, status: 'hosting', started: false, bots: { bots: 'auto', picked: false } });
+    expect(solo.bots).toEqual({ count: 2, clocking: 2, auto: true, picked: false, editable: true });
+    const peer = lobbyViewModel({ code: 'ABCDE', members, isHost: false, status: 'connected', started: false, bots: { bots: 3, picked: true } });
+    expect(peer.bots).toEqual({ count: 3, clocking: 2, auto: false, picked: true, editable: false });
+    // Four humans fill every spot behind the counter: the pick stands, but no bot fits.
+    const four = [...members, { token: 'T2', name: 'Kim' }, { token: 'T3', name: 'Lou' }];
+    expect(lobbyViewModel({ code: 'ABCDE', members: four, isHost: true, status: 'hosting', started: false, bots: { bots: 2, picked: true } }).bots).toMatchObject({ count: 2, clocking: 0 });
+    expect(lobbyViewModel({ code: 'ABCDE', members, isHost: true, status: 'hosting', started: true, bots: { bots: 1, picked: true } }).bots!.editable).toBe(false);
   });
   it('offers rejoin on the title when the room store says peer', () => {
     expect(titleViewModel([], null, { code: 'ABCDE', role: 'peer' }).rejoinCode).toBe('ABCDE');

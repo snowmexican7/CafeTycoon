@@ -166,4 +166,109 @@ describe('HostRoom', () => {
     expect(kinds(local.inputs, 'join')).toHaveLength(1);
     expect(kinds(local.inputs, 'move')).toHaveLength(1);
   });
+
+  describe('seats', () => {
+    const started = (players: { id: string; name: string }[]): HostToClient => ({
+      t: 'snapshot',
+      state: createRun({ seed: 1, hostId: 'H', players, settings: { bots: 0 } }),
+      sentAt: 1,
+    });
+    const crew = [
+      { id: 'H', name: 'Host' },
+      { id: 'T1', name: 'Sam' },
+      { id: 'T2', name: 'Kim' },
+    ];
+
+    it('a closed tab coming back with a new tab token reclaims its away seat by prev, and is told so', () => {
+      const link = createFakeLink();
+      const local = fakeLocal();
+      createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+      local.emit(started(crew));
+      link.peerJoins('p1');
+      link.receive('join', join('T1', 'Sam'), 'p1');
+      link.peerJoins('p2');
+      link.receive('join', join('T2', 'Kim'), 'p2');
+      link.peerLeaves('p2');
+      link.peerJoins('p3');
+      link.receive('join', { ...join('FRESH', 'Kim'), prev: 'T2' }, 'p3');
+      expect(link.sent.find((x) => x.kind === 'seat' && x.target === 'p3')?.data).toEqual({ t: 'seat', token: 'T2' });
+      expect(kinds(local.inputs, 'join').at(-1)).toEqual({ kind: 'join', playerId: 'T2', name: 'Kim' });
+      // inputs now come in as the reclaimed seat
+      link.receive('input', { t: 'input', input: { kind: 'move', playerId: 'T2', x: 1, y: 0, interact: false } }, 'p3');
+      expect(kinds(local.inputs, 'move')).toHaveLength(1);
+      link.receive('input', { t: 'input', input: { kind: 'move', playerId: 'FRESH', x: 1, y: 0, interact: false } }, 'p3');
+      expect(kinds(local.inputs, 'move')).toHaveLength(1);
+    });
+
+    it('matches an away seat by name when the browser lost its storage', () => {
+      const link = createFakeLink();
+      const local = fakeLocal();
+      createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+      local.emit(started(crew));
+      link.peerJoins('p1');
+      link.receive('join', join('T1', 'Sam'), 'p1');
+      link.peerJoins('p9');
+      link.receive('join', join('OTHER', 'KIM'), 'p9');
+      expect(link.sent.find((x) => x.kind === 'seat' && x.target === 'p9')?.data).toEqual({ t: 'seat', token: 'T2' });
+    });
+
+    it('never gives one seat to two live connections', () => {
+      const link = createFakeLink();
+      const local = fakeLocal();
+      createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+      local.emit(started(crew));
+      link.peerJoins('p1');
+      link.receive('join', join('T1', 'Sam'), 'p1');
+      link.peerJoins('p2');
+      link.receive('join', { ...join('NEW', 'Sam'), prev: 'T1' }, 'p2');
+      expect(link.sent.some((x) => x.kind === 'seat' && x.target === 'p2')).toBe(false);
+      expect(kinds(local.inputs, 'join').at(-1)).toEqual({ kind: 'join', playerId: 'NEW', name: 'Sam' });
+    });
+
+    it('turns a fifth person away politely, before and after the start', () => {
+      const link = createFakeLink();
+      const local = fakeLocal();
+      createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+      for (const p of ['p1', 'p2', 'p3']) {
+        link.peerJoins(p);
+        link.receive('join', join(`T-${p}`, p), p);
+      }
+      link.peerJoins('p4');
+      link.receive('join', join('T-p4', 'p4'), 'p4');
+      expect(link.sent.at(-1)).toMatchObject({ kind: 'hello', target: 'p4', data: { reject: 'full' } });
+      expect(kinds(local.inputs, 'join')).toHaveLength(3);
+    });
+  });
+
+  describe('bots setting', () => {
+    const lobbyMsgs = (link: ReturnType<typeof createFakeLink>) => link.sent.filter((x) => x.kind === 'lobby').map((x) => x.data as Record<string, unknown>);
+
+    it('defaults to auto for a lone host and Off once a friend joins, until the host picks', () => {
+      const link = createFakeLink();
+      const local = fakeLocal();
+      const room = createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+      expect(room.bots()).toEqual({ bots: 'auto', picked: false });
+      link.peerJoins('p1');
+      link.receive('join', join('T1', 'Sam'), 'p1');
+      expect(room.bots()).toEqual({ bots: 0, picked: false });
+      expect(lobbyMsgs(link).at(-1)).toMatchObject({ bots: 0, botsPicked: false });
+      room.setBots(2);
+      expect(room.bots()).toEqual({ bots: 2, picked: true });
+      expect(lobbyMsgs(link).at(-1)).toMatchObject({ bots: 2, botsPicked: true });
+      room.setBots(7 as never);
+      expect(room.bots()).toEqual({ bots: 0, picked: false });
+    });
+
+    it('after the start it reports the run setting and ignores lobby edits', () => {
+      const link = createFakeLink();
+      const local = fakeLocal();
+      const room = createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+      room.setBots(1);
+      local.emit({ t: 'snapshot', state: createRun({ seed: 1, hostId: 'H', players: [{ id: 'H', name: 'Host' }], settings: { bots: 1 } }), sentAt: 1 });
+      expect(room.bots()).toEqual({ bots: 1, picked: true });
+      room.setBots(3);
+      expect(room.bots()).toEqual({ bots: 1, picked: true });
+      expect(lobbyMsgs(link).at(-1)).toMatchObject({ started: true, bots: 1 });
+    });
+  });
 });

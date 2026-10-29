@@ -1,10 +1,32 @@
 import { describe, it, expect } from 'vitest';
 import { RESERVED_TELE_KINDS } from '../host/telemetry';
-import { parseHello, parseInput, parseJoin, parseLobby, parseSnap, parseTele, PROTOCOL_VERSION } from './protocol';
+import { ACTIONS, parseHello, parseInput, parseJoin, parseLobby, parseSeat, parseSnap, parseTele, PROTOCOL_VERSION } from './protocol';
 
 describe('protocol parsers', () => {
-  it('is on version 3', () => {
-    expect(PROTOCOL_VERSION).toBe(3);
+  it('is on version 4 (seat reclaim, room cap, lobby bots)', () => {
+    expect(PROTOCOL_VERSION).toBe(4);
+    expect(ACTIONS).toContain('seat');
+    for (const a of ACTIONS) expect(new TextEncoder().encode(a).length).toBeLessThanOrEqual(12); // trystero action names
+  });
+
+  it('parses the seat-reclaim fields', () => {
+    expect(parseHello({ t: 'hello', protocol: 4, hostToken: 'h', reject: 'full' })!.reject).toBe('full');
+    expect(parseJoin({ t: 'join', protocol: 4, token: 'a', name: 'Sam', prev: 'b' })).toEqual({ t: 'join', protocol: 4, token: 'a', name: 'Sam', prev: 'b' });
+    expect(parseJoin({ t: 'join', protocol: 4, token: 'a', name: 'Sam', prev: 'a' })!.prev).toBeUndefined();
+    expect(parseJoin({ t: 'join', protocol: 4, token: 'a', name: 'Sam', prev: 7 })!.prev).toBeUndefined();
+    expect(parseJoin({ t: 'join', protocol: 4, token: 'a', name: 'Sam', prev: 'x'.repeat(65) })!.prev).toBeUndefined();
+    expect(parseSeat({ t: 'seat', token: 'b' })).toEqual({ t: 'seat', token: 'b' });
+    expect(parseSeat({ t: 'seat', token: '' })).toBeNull();
+    expect(parseSeat({ t: 'seat' })).toBeNull();
+  });
+
+  it('parses the lobby bots setting leniently', () => {
+    const base = { t: 'lobby', members: [], started: false };
+    expect(parseLobby({ ...base, bots: 2, botsPicked: true })).toEqual({ ...base, bots: 2, botsPicked: true });
+    expect(parseLobby({ ...base, bots: 'auto' })).toEqual({ ...base, bots: 'auto', botsPicked: false });
+    expect(parseLobby({ ...base, bots: 9 })).toEqual(base);
+    expect(parseLobby({ ...base, bots: 1.5 })).toEqual(base);
+    expect(parseLobby(base)).toEqual(base);
   });
 
   it('parses well-formed messages and rejects junk', () => {

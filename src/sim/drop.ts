@@ -1,3 +1,4 @@
+import { secondsToTicks } from './constants';
 import { ECONOMY } from '../data/economy';
 import { dropTile, placeMess } from './floor';
 import { emitLog } from './log';
@@ -31,7 +32,7 @@ function resolveDrop(state: GameState, p: Player): void {
       emitLog(state, 'drop', { item, station: station.id });
     } else if (station.kind === 'counter') {
       if (item !== 'grounds' && state.pass.length < ECONOMY.pass.slots) {
-        state.pass.push({ item, ticksLeft: ECONOMY.pass.staleSeconds[item] * 60 });
+        state.pass.push({ item, ticksLeft: secondsToTicks(ECONOMY.pass.staleSeconds[item]) });
         p.holding = null;
         emitLog(state, 'drop', { item, station: station.id });
       }

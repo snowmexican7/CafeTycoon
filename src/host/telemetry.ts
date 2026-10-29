@@ -33,7 +33,11 @@ export interface Telemetry {
 
 declare global {
   interface Window {
-    cafetycoon?: { telemetry: { download(): void; rows(): TelemetryRow[] } };
+    cafetycoon?: {
+      telemetry: { download(): void; rows(): TelemetryRow[] };
+      /** Read-only peek for playtests and smoke scripts: the latest snapshot and who this tab plays. */
+      peek?: { state(): unknown; me(): string | null };
+    };
   }
 }
 

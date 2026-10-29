@@ -104,3 +104,10 @@
 .money-split b { font: 700 22px var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; }
 .money-split b.neg { color: var(--bad); } .money-split b.pos { color: var(--good); }
 .money-split em { font: italic 600 11.5px var(--font-body); color: var(--ink-soft); }
+
+/* Bots run setting in the lobby: a little paper card under the seats */
+.botscard { background: #fffaf1; border: 2px dashed #e6d3b3; border-radius: 14px; padding: 8px 10px 6px; display: grid; gap: 6px; transform: rotate(-.4deg); }
+.botscard .bots-hd { display: flex; align-items: center; gap: 8px; }
+.botscard .lbl { font: 600 12.5px var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+.botscard .chip { margin-left: auto; background: var(--latte); color: var(--ink-soft); font-size: 10.5px; padding: 2px 8px; }
+.botscard .bots-note { margin: 0; font: 500 13px var(--font-body); color: #8a6c4d; }

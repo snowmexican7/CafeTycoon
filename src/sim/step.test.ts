@@ -26,7 +26,7 @@ describe('step', () => {
     expect(s.morningNotes[0]).toBe(scenarioById[s.scenario].note);
     s = ticks(s, 150 * 60);
     expect(s.phase).toBe('closing');
-    s = ticks(s, 10 * 60);
+    s = ticks(s, ECONOMY.closingGraceSeconds * 60);
     expect(s.phase).toBe('night');
     expect(s.day).toBe(2);
     expect(s.days).toHaveLength(1);

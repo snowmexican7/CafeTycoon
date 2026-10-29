@@ -88,6 +88,14 @@
   background: var(--foam); color: var(--ink); padding: 10px 18px; border-radius: 20px; font: 600 15px var(--font-display); box-shadow: var(--sh-2);
   animation: hud-drop .3s ease-out; }
 
+/* Doors locked at 0:00: a cozy paper sign while the last customers are served. */
+#hud .hud-closing { position: absolute; top: calc(var(--topbar) + 10px); left: 50%; transform: translateX(-50%) rotate(-1.5deg);
+  display: flex; align-items: center; gap: 10px; background: var(--crema); color: var(--ink); padding: 8px 18px 8px 12px; border-radius: 14px;
+  font: 600 16px var(--font-display); box-shadow: var(--sh-2); border: 2px dashed #d9c3a0; animation: hud-sign .35s ease-out; pointer-events: none; }
+#hud .hud-closing b { background: var(--cherry); color: #fff; border-radius: 8px; padding: 2px 8px; font-size: 13px; letter-spacing: .05em; text-transform: uppercase; }
+#hud .hud-closing .n { font-style: normal; color: var(--caramel-dk); }
+#hud .hud-closing:not([hidden]) ~ .toast { top: calc(var(--topbar) + 62px); }
+@keyframes hud-sign { from { transform: translateX(-50%) translateY(-10px) rotate(4deg); opacity: 0; } }
 @keyframes hud-pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes hud-drop { from { transform: translateY(-8px) rotate(var(--r, 0deg)); opacity: 0; } }
 @keyframes hud-nudge { 0%, 100% { transform: rotate(var(--r, 0deg)); } 50% { transform: rotate(var(--r, 0deg)) translateX(2px); } }
