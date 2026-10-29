@@ -130,6 +130,22 @@ Nothing yet.
   "Checkout fees" line, and there's a morning note on the first day with a new checkout. The old
   Digital kiosk and Squarely terminal cards are gone from the shop; saves that owned them get the
   matching checkout instead. Save v21 (migration), protocol v24.
+- **Growth path (P3 B13).** A new run now starts tiny: a ⛱️ kerbside stand on a corner of the
+  lot, with plywood hoarding and a FOR LEASE sign where the rest of the café will be. At night the
+  🏪 Shopfront tab has a "Grow the shop" path: stand → 🛺 coffee cart ($80) → ☕ the café ($150).
+  Each tier changes the game:
+  - Stand: 8 tiles of floor, a grinder, an espresso machine and a cold-brew tap (no steamer, so
+    no lattes, mochas or matcha yet). The line holds 3, rent is $10 a day, and the crowd is
+    commuters in a hurry: more impatient walk-ins, no groups, fewer regulars.
+  - Cart: 10 tiles, adds the milk steamer, a line of 5, $17 rent, some groups and more regulars.
+  - Café: the full floor, a line of 6, $25 rent, everyone. This is the game as it was.
+
+  Growing is for good. The new floor is set up that night: the hoarding moves back, the awning
+  changes colour, and the next morning opens with a "Grand re-opening" burst of confetti and a
+  milestone note. The Shopfront card shows a milestone banner the night you grow. Drinks the
+  shop can't make yet wait on the menu with a note saying why. Growth spend counts towards
+  the week's fittings value. Saves and games from before this change count as the café and play
+  exactly as before. Save v22 (migration), protocol v25.
 
 ## 2.0.1 — 2026-10-29
 
