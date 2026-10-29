@@ -93,6 +93,8 @@ describe('floor messes', () => {
     expect(s.messes).toEqual([{ id: 1, kind: 'spill', x: 5, y: 4, amount: 1 }]);
     const slip = s.log.filter((e) => e.kind === 'slip').at(-1)!;
     expect(slip.data).toMatchObject({ player: 'p1', x: 5, y: 4, item: 'grounds' });
+    // every slip counts toward the receipt's pratfalls line
+    expect(s.today.slips).toBe(s.log.filter((e) => e.kind === 'slip').length);
   });
 
   // Review Focus 1

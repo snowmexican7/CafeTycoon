@@ -3,7 +3,7 @@ import type { DrinkId } from '../sim/types';
 import { esc, hide, show } from './dom';
 import { coin, itemIcon, jar, logoCup, pauseGlyph, speakerGlyph, stars, sun, SUPPLY_COLOR } from './icons';
 import { crewKey, DRINK_STEPS, handKey, ITEM_LABEL, ordersKey, type HudLive } from './live';
-import { hudStructureKey, type HudVM } from './viewModels';
+import { cleanMeter, hudStructureKey, type HudVM } from './viewModels';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew' } as const;
 const SUPPLY_UNIT = { beans: 'shots', milk: 'steams', concentrate: 'pours' } as const;
@@ -48,6 +48,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     </aside>
     <aside class="hud-side right">
       <div class="h">Pantry</div><div class="card pantry"></div>
+      <div class="card hud-clean" role="meter" aria-label="Floor cleanliness" aria-valuemin="0" aria-valuemax="100" hidden><svg class="spark" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M10 1.5l2 6.5 6.5 2-6.5 2-2 6.5-2-6.5L1.5 10 8 8z" fill="currentColor"/></svg><div class="lab">Floor<small class="cword"></small></div><span class="cbar"><i></i></span><span class="cpct num"></span></div>
       <div class="h">Menu</div><div class="card chalk menu"></div>
       <div class="card note" hidden></div>
     </aside>
@@ -81,6 +82,10 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     toast: $('.toast'),
     closing: $('.hud-closing'),
     closingN: $('.hud-closing .n'),
+    clean: $('.hud-clean'),
+    cleanBar: $('.hud-clean .cbar i'),
+    cleanPct: $('.hud-clean .cpct'),
+    cleanWord: $('.hud-clean .cword'),
   };
   $('[data-action=pause]').addEventListener('click', (ev) => {
     (ev.currentTarget as HTMLElement).blur();
@@ -100,6 +105,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
   let lastCrew = '';
   let lastHand = '';
   let lastCash: number | null = null;
+  let lastClean = '';
   let notes: string[] = [];
   let prices: Partial<Record<DrinkId, string>> = {};
 
@@ -209,6 +215,28 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     lastCash = n;
   }
 
+  /** The cleanliness meter is patched in place (never part of the structure key). */
+  function patchClean(vm: HudVM): void {
+    const open = vm.phase === 'day' || vm.phase === 'closing';
+    if (vm.cleanliness === undefined || !open) {
+      el.clean.hidden = true;
+      lastClean = '';
+      return;
+    }
+    const m = cleanMeter(vm.cleanliness);
+    const key = `${m.pct}|${m.tone}`;
+    if (key === lastClean) return;
+    lastClean = key;
+    el.clean.hidden = false;
+    el.clean.dataset.tone = m.tone;
+    el.cleanBar.style.width = `${m.pct}%`;
+    el.cleanPct.textContent = `${m.pct}%`;
+    el.cleanWord.textContent = m.word;
+    el.clean.title = `Floor: ${m.word} (${m.pct}%)`;
+    el.clean.setAttribute('aria-valuenow', String(m.pct));
+    el.clean.setAttribute('aria-valuetext', `${m.word}, ${m.pct}%`);
+  }
+
   return {
     render(vm, live) {
       const key = hudStructureKey(vm);
@@ -223,6 +251,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
         if (el.closingN.textContent !== n) el.closingN.textContent = n;
       }
       patchCash(vm);
+      patchClean(vm);
       if (live) {
         el.bar.style.width = `${(live.progress * 100).toFixed(1)}%`;
         renderOrders(live);

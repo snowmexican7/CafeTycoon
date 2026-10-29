@@ -114,7 +114,7 @@ The data exists; the visuals are the UI agent's.
 
 ## Needs UI (chaos pack: floor)
 
-The sim data exists; the visuals are the UI agent's.
+Shipped in Block 1 (`src/render/layers/chaos.ts`, `src/render/chaosModel.ts`), except where noted.
 
 - piles and puddles from `HudVM.messes` (amount scales the size)
 - the slip animation from `HudVM.stuns`
@@ -194,7 +194,7 @@ Open items:
 
 ## Needs UI (chaos pack: rogue)
 
-The data exists; the visuals are the UI agent's.
+Shipped in Block 1 (the review in the morning notes was already there).
 
 - the angry bubble on an upset customer (`Customer.upset`)
 - the rogue walking behind the counter and out the door (`HudVM.rogue`)
@@ -265,3 +265,35 @@ Decisions:
   input with `bots` and applies it next morning; only the UI row is missing).
 - **Dev hook:** `window.cafetycoon.peek` (`state()`, `me()`) is a read-only copy of the latest
   snapshot for smoke scripts and playtests.
+
+## Block 1 reflection (chaos pack visuals)
+
+Shipped: grounds heaps and lumpy puddles (cold brew/espresso darker) that grow in, ripple when
+they spread and shrink away when mopped; THUD! + dust + swirly eyes, orbiting stars and a wobble on
+a slip; the mop bucket in its corner, a carry pose and a scrub swing, a wet-floor sign that hops to
+whoever is mopping, a scrub progress ring; the Floor meter card (patched in place, never in the
+structure key); the rogue (anger vein and steam, a sneaking crouch, "Move it! 4s", OCCUPIED tape on
+their station, "Two stars." on the way out, speed lines and SLAM! with a swinging door and a small
+screen jolt); the upset customer's red shaking bubble; receipt lines for wasted drinks, pratfalls
+and rogues; 12 new cues (slide-whistle thud, splosh, scatter, mop clack/squeak, sneaky pizzicato,
+smug ta-da, door slam). A dev-only fixtures page (`fixtures.html?f=floor|rogue|slam|receipt`,
+served by `vite`, not in the build) drives screenshots.
+
+What could be better:
+- A puddle is often hidden under the barista standing on it; a thin highlight ring around messes
+  near a player would help. Messes on the rug read a little less well than on planks.
+- The rogue mostly walks up the screen, so we see their back: the anger vein carries it, but a side
+  view would sell the sneak better.
+- The comic texts use `Math.random` for tilt (visual only, but two clients tilt differently).
+- The door slam draws a temporary door: the room has no real front door yet (B6 decor could add one).
+
+What's missing (deferred):
+- Blame: "Cleo slipped on Ben's latte!" needs the mess's owner in the sim (`Mess.by`). Small sim
+  change; parked for B10 (awards) where it pays off most.
+- Grounds footprints when someone walks through a heap (purely visual trail).
+
+Co-op fun:
+- Folded in now: the name tag reads "Ben · mop" so the crew knows who to shout for, and the
+  receipt counts the day's **pratfalls** (`DayStats.slips`, a tally only).
+- Next: a "Butterfingers" / "Pratfall champion" award at the week end (B10); letting a player
+  carry the wet-floor sign to fence off a puddle for the bots (B5 bots already path round spills).

@@ -88,6 +88,33 @@ export const RECIPES: Record<CueId, Layer[]> = {
     { synth: 'siren', gain: 1, delay: 0.9 },
   ],
   click: [{ sample: 'click', gain: 0.3, rate: [0.97, 1.03] }],
+  slip: [{ synth: 'slip', gain: 1 }],
+  splash: [{ synth: 'splash', gain: 1 }],
+  scatter: [{ synth: 'scatter', gain: 1 }],
+  mopGrab: [{ synth: 'clack', gain: 1 }],
+  mopDown: [
+    { synth: 'clack', gain: 0.8 },
+    { sample: 'box', gain: 0.25, delay: 0.05, rate: [1.2, 1.3] },
+  ],
+  squeak: [
+    { synth: 'squeak', gain: 1 },
+    { synth: 'sparkle', gain: 0.6, delay: 0.3 },
+  ],
+  rogueSneak: [{ synth: 'sneak', gain: 1 }],
+  rogueUpset: [
+    { sample: 'clink', gain: 0.3, rate: [0.7, 0.75] },
+    { synth: 'hmph', gain: 1, delay: 0.1 },
+  ],
+  rogueSaved: [
+    { synth: 'ching', gain: 0.8 },
+    { synth: 'sparkle', gain: 0.7, delay: 0.1 },
+  ],
+  rogueMade: [{ synth: 'smug', gain: 1 }],
+  rogueStorm: [
+    { synth: 'hmph', gain: 1 },
+    { synth: 'hmph', gain: 0.8, delay: 0.3 },
+  ],
+  doorSlam: [{ sample: 'doorSlam', gain: 0.65, rate: [0.92, 1] }],
 };
 
 /** Seconds a cue will sound for, used to hold its voice slot in the gate. */

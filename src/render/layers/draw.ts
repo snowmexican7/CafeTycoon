@@ -115,3 +115,36 @@ export function drawItem(g: Graphics, kind: ItemKind, x: number, y: number, k = 
     g.poly([X(2), Y(-21), X(4.6), Y(-20.5), X(4.2), Y(-7), X(1.6), Y(-7.5)]).fill(PALETTE.mint);
   }
 }
+
+/** A chunky five-point star centred on (x, y). */
+export function drawStar(g: Graphics, x: number, y: number, r: number, color: number, rot = 0): Graphics {
+  const pts: number[] = [];
+  for (let i = 0; i < 10; i++) {
+    const a = rot - Math.PI / 2 + (Math.PI * i) / 5;
+    const rr = i % 2 === 0 ? r : r * 0.45;
+    pts.push(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  return g.poly(pts).fill(color);
+}
+
+/** A cartoon heart centred on (x, y). */
+export function drawHeart(g: Graphics, x: number, y: number, r: number, color: number): void {
+  g.circle(x - r * 0.5, y, r * 0.55).fill(color);
+  g.circle(x + r * 0.5, y, r * 0.55).fill(color);
+  g.poly([x - r * 1.02, y + r * 0.15, x + r * 1.02, y + r * 0.15, x, y + r * 1.25]).fill(color);
+}
+
+/** A comic speech-bubble label: rounded white box with a tail, text centred at (0, 0) of `t`. */
+export function bubbleBox(g: Graphics, w: number, h: number, fill = 0xffffff, stroke = 0x3a2418): void {
+  g.roundRect(-w / 2, -h / 2, w, h, h / 2).fill(fill).stroke({ width: 2, color: stroke });
+  g.poly([-5, h / 2 - 1, 5, h / 2 - 1, 0, h / 2 + 7]).fill(fill);
+  g.moveTo(-5, h / 2).lineTo(0, h / 2 + 7).lineTo(5, h / 2).stroke({ width: 2, color: stroke, join: 'round' });
+}
+
+/** A mop: handle from the floor up and to the right, head at (hx, hy). */
+export function drawMop(g: Graphics, hx: number, hy: number, tx: number, ty: number): void {
+  g.moveTo(hx, hy).lineTo(tx, ty).stroke({ width: 4, color: 0xa0703f, cap: 'round' });
+  g.moveTo(hx, hy).lineTo(tx, ty).stroke({ width: 1.5, color: 0xd7a874, cap: 'round' });
+  g.roundRect(hx - 9, hy - 3, 18, 6, 3).fill(0x4c8fd6);
+  for (let i = -3; i <= 3; i++) g.moveTo(hx + i * 2.6, hy + 2).quadraticCurveTo(hx + i * 3.6, hy + 9, hx + i * 4, hy + 12).stroke({ width: 2.6, color: 0xf1ece4, cap: 'round' });
+}

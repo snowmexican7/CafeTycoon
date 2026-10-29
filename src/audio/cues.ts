@@ -35,7 +35,19 @@ export type CueId =
   | 'gulp'
   | 'heartbeat'
   | 'collapse'
-  | 'click';
+  | 'click'
+  | 'slip'
+  | 'splash'
+  | 'scatter'
+  | 'mopGrab'
+  | 'mopDown'
+  | 'squeak'
+  | 'rogueSneak'
+  | 'rogueUpset'
+  | 'rogueSaved'
+  | 'rogueMade'
+  | 'rogueStorm'
+  | 'doorSlam';
 
 export interface Cue {
   id: CueId;
@@ -112,15 +124,31 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'influencer': if (e.data.result === 'served') cues.push({ id: 'influencerServed' }); break;
       case 'espresso.shot': cues.push({ id: 'gulp', mine }); break;
       case 'espresso.collapse': cues.push({ id: 'collapse', mine }); break;
+      case 'slip': cues.push({ id: 'slip', mine: e.data.player === me }); break;
+      case 'drop':
+        if (e.data.item === 'mop') cues.push({ id: 'mopDown' });
+        else if (e.data.x !== undefined) cues.push({ id: e.data.item === 'grounds' ? 'scatter' : 'splash' });
+        break;
+      case 'clean': cues.push({ id: 'squeak', mine: e.data.player === me }); break;
+      case 'rogue.upset': cues.push({ id: 'rogueUpset' }); break;
+      case 'rogue.remade': cues.push({ id: 'rogueSaved' }); break;
+      case 'rogue.made': cues.push({ id: 'rogueMade' }); break;
+      case 'rogue.stormed': cues.push({ id: 'rogueStorm' }); break;
       default: break;
     }
   }
 
   const sameDay = prev.day === next.day && prev.phase !== 'night';
+  // chaos pack state changes: the mop picked up, a rogue appearing, the door slamming behind them
+  if (prev.mop && next.mop && prev.mop.heldBy === null && next.mop.heldBy !== null) cues.push({ id: 'mopGrab', mine: next.mop.heldBy === me });
+  const rogueStarted = !prev.rogue && !!next.rogue;
+  if (rogueStarted) cues.push({ id: 'rogueSneak' });
+  if (prev.rogue && !next.rogue && (prev.rogue.stage === 'leaving' || prev.rogue.stage === 'stormingOut')) cues.push({ id: 'doorSlam' });
   if (next.phase === 'day' || next.phase === 'closing') {
     const known = new Set(prev.customers.map((c) => c.id));
     if (next.customers.some((c) => !known.has(c.id))) cues.push({ id: 'doorBell' });
-    if (sameDay && next.today.lost > prev.today.lost) cues.push({ id: 'stormOut' });
+    // a customer going rogue counts as lost, but they don't storm out: they sneak in (rogueSneak)
+    if (sameDay && next.today.lost > prev.today.lost && !rogueStarted) cues.push({ id: 'stormOut' });
     if (sameDay && next.today.turnedAway > prev.today.turnedAway) cues.push({ id: 'turnedAway' });
   }
 
