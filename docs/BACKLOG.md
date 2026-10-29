@@ -82,6 +82,29 @@ playtest complains about it.
   legacy dark-panel CSS in `src/style.css` is gone, and every screen now uses
   `src/ui/styles/*.css`.
 
+## Kennedy's design notes, 2026-10-29 (for the Video Game Designer agent and FB1)
+
+Written down from a voice note after the Phase 3 playtest. Only the first item is in FB1 scope
+(package 3, station slots); the rest is brainstorming to pick up later, saved so it is not lost.
+
+- **Stations are things you buy, place and remove, from the very start.** A stations tab where the
+  crew buys each station (grinder, espresso machine, steamer, cold-brew tap) and then places it
+  where they want; stations can be taken out again or moved. The bin and the mop bucket are
+  purchases too. No mop bucket means spills stay on the floor all day; no bin means a dropped item
+  is a floor mess. The strategy is throughput against mess risk: more machines pump out more
+  coffee, but a crowded floor spills more. FB1 package 3 builds the sim side (slots, equipment,
+  a `slot` night input, second machines, no-bin drops); Phase 3 Block 14 (layout editor) is the
+  same idea from the roadmap side.
+- **Collisions should cause spills.** Once player collisions exist, a bump while someone carries a
+  drink should have a decent chance of a spill (Kennedy's first guess: around 60%), so the mop
+  actually matters and the floor feels like Overcooked. Not in FB1; needs collisions first.
+- **Tune a station during the day.** Hold E on a station to open its settings and adjust the
+  coffee: espresso has temperature and shot time, the grinder has fine/coarse and grams, cold brew
+  is prepped overnight so in the moment it is mostly ice and dilution. Customers give feedback
+  lines through the day ("espresso is bitter", "cold brew needs more ice") that tell you which
+  knob to turn. This pairs with recipe accuracy (P3 B5) and the taste map (P3 B6). Brainstorm
+  only; nothing designed yet.
+
 ## main.ts hook-ins (phase 2)
 
 Telemetry hook-ins in `src/main.ts` (slice 7); the UI agent should expect these when merging the title wiring.
