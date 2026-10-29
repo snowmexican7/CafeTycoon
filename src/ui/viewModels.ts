@@ -66,6 +66,8 @@ export interface HudVM {
   stuns?: { playerId: string; secondsLeft: number }[];
   cleaning?: { playerId: string; secondsLeft: number }[];
   rogue?: { stage: RogueStage; drink: DrinkId; x: number; y: number; secondsLeft: number; name?: string };
+  /** Doors locked: customers still inside (queue plus a rogue). Present only while closing; patched in place. */
+  closing?: { left: number };
 }
 
 /** The floor: messes, cleanliness, the mop, who is stunned and who is cleaning (seconds rounded up). */
@@ -100,6 +102,7 @@ export function hudViewModel(state: GameState): HudVM {
     events: state.events.map((e) => ({ kind: e.kind, label: EVENT_LABELS[e.kind], secondsLeft: Math.ceil(e.ticksLeft / 60) })),
     ...floorHud(state),
     ...rogueHud(state),
+    ...(state.phase === 'closing' ? { closing: { left: state.customers.length + (state.rogue ? 1 : 0) } } : {}),
   };
 }
 
@@ -273,7 +276,7 @@ export function nightStructureKey(vm: NightVM): string {
 
 /** Everything about the HUD except the clock and cash. */
 export function hudStructureKey(vm: HudVM): string {
-  const { clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, ...rest } = vm;
+  const { clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, closing, ...rest } = vm;
   // per-tick values are patched, not rebuilt: the pass keys on its items only
   return JSON.stringify({
     ...rest,
@@ -284,6 +287,7 @@ export function hudStructureKey(vm: HudVM): string {
     stuns: stuns?.map((x) => x.playerId),
     cleaning: cleaning?.map((x) => x.playerId),
     rogue: rogue && { stage: rogue.stage, drink: rogue.drink, name: rogue.name },
+    closing: closing !== undefined, // the banner is structure; its count is patched
   });
 }
 

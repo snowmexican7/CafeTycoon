@@ -21,6 +21,7 @@ import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
 import { stepCleaning } from './mop';
 import { stepRogue } from './rogue';
+import { pruneLog } from './log';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -29,7 +30,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
   switch (input.kind) {
     case 'join': {
       if (existing) existing.connected = true;
-      else {
+      else if (s.players.filter((p) => !p.bot).length < ECONOMY.maxHumans) {
         const firstBot = s.players.findIndex((p) => p.bot);
         s.players.splice(firstBot === -1 ? s.players.length : firstBot, 0, {
           id: input.playerId,
@@ -143,6 +144,19 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   }
 }
 
+/** Doors locked and nobody left inside (queue or rogue), after the short minimum closing beat. */
+export function shopEmpty(s: GameState): boolean {
+  return s.customers.length === 0 && s.rogue === null;
+}
+
+function stepClosing(s: GameState): void {
+  // phaseTicksLeft hits 0 on the grace timer: stepDay finishes the day and leftovers storm out
+  stepDay(s, false);
+  if (s.phase !== 'closing') return;
+  const elapsed = secondsToTicks(ECONOMY.closingGraceSeconds) - s.phaseTicksLeft;
+  if (elapsed >= secondsToTicks(ECONOMY.closingMinSeconds) && shopEmpty(s)) finishDay(s);
+}
+
 /** Advance the game by one tick. Pure: the input state is never modified. */
 export function step(state: GameState, inputs: PlayerInput[]): GameState {
   const s = structuredClone(state);
@@ -159,11 +173,12 @@ export function step(state: GameState, inputs: PlayerInput[]): GameState {
       stepDay(s, true);
       break;
     case 'closing':
-      stepDay(s, false);
+      stepClosing(s);
       break;
     case 'weekEnd':
     case 'ended':
       break;
   }
+  pruneLog(s);
   return s;
 }

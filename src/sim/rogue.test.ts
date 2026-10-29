@@ -176,9 +176,12 @@ const goRogue = (s: GameState, drink: DrinkId = 'latte'): GameState => {
   return step(s, []);
 };
 
+/** Log kinds seen by runUntil (the sim prunes its log every tick, so tests collect as they go). */
+const seen = new Set<string>();
 const runUntil = (s: GameState, done: (t: GameState) => boolean, max = 5000): GameState => {
   let t = s;
   for (let i = 0; i < max; i++) {
+    for (const e of t.log) seen.add(e.kind);
     if (done(t)) return t;
     t = step(t, []);
   }
@@ -230,11 +233,12 @@ describe('the rogue entity', () => {
     expect(station(s, 'steamer').busyTicksLeft).toBe(600);
     expect(s.rogue!.ticksLeft).toBe(600);
     expect(s.supplies).toEqual({ beans: beans - 1, milk: milk - 1, concentrate });
+    seen.clear();
     s = runUntil(s, (t) => t.rogue === null);
     expect(station(s, 'steamer').output).toBeNull();
     expect(station(s, 'steamer').occupiedBy).toBeNull();
-    expect(s.log.some((e) => e.kind === 'rogue.made')).toBe(true);
-    expect(s.log.some((e) => e.kind === 'rogue.stormed')).toBe(false);
+    expect(seen.has('rogue.made')).toBe(true);
+    expect(seen.has('rogue.stormed')).toBe(false);
   });
 
   it('out of milk: makes it anyway', () => {
@@ -532,6 +536,7 @@ describe('bots and the rogue', () => {
   });
 
   it('a day with a rogue is deterministic and JSON-safe', () => {
+    const kinds = new Set<string>();
     const script = (): GameState => {
       let s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1 } });
       s.scenario = 'normal';
@@ -543,12 +548,13 @@ describe('bots and the rogue', () => {
           s.customers[0].upset = { ticksLeft: 60 };
         }
         s = step(s, []);
+        for (const e of s.log) kinds.add(e.kind);
       }
       return s;
     };
     const a = script();
     expect(a.today.rogues).toBe(1);
-    expect(a.log.some((e) => e.kind === 'rogue.made' || e.kind === 'rogue.stormed')).toBe(true);
+    expect(kinds.has('rogue.made') || kinds.has('rogue.stormed')).toBe(true);
     expect(script()).toEqual(a);
     const round = JSON.parse(JSON.stringify(a)) as GameState;
     let x = a;

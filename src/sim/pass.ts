@@ -1,3 +1,4 @@
+import { secondsToTicks } from './constants';
 import { ECONOMY } from '../data/economy';
 import { emitLog } from './log';
 import { serveCustomer, serveTarget } from './customers';
@@ -15,7 +16,7 @@ export function counterInteract(state: GameState, playerId: PlayerId): GameState
       serveCustomer(state, mostImpatient(state, (c) => c.drink === drink), drink);
       player.holding = null;
     } else if (state.pass.length < ECONOMY.pass.slots) {
-      state.pass.push({ item: drink, ticksLeft: ECONOMY.pass.staleSeconds[drink] * 60 });
+      state.pass.push({ item: drink, ticksLeft: secondsToTicks(ECONOMY.pass.staleSeconds[drink]) });
       player.holding = null;
       emitLog(state, 'pass.put', { item: drink, by: playerId });
     }

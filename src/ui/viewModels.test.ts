@@ -125,6 +125,22 @@ describe('overlay structure keys', () => {
     s.supplies.milk = 0;
     expect(hudStructureKey(hudViewModel(s))).not.toBe(a);
   });
+
+  it('shows the doors-locked banner while closing: presence is structure, the count is patched', () => {
+    const s = run();
+    s.phase = 'day';
+    expect(hudViewModel(s).closing).toBeUndefined();
+    const open = hudStructureKey(hudViewModel(s));
+    s.phase = 'closing';
+    s.customers = [1, 2, 3].map((id) => ({ id, drink: 'latte' as const, patienceLeft: 100, patienceMax: 100 }));
+    const vm = hudViewModel(s);
+    expect(vm.closing).toEqual({ left: 3 });
+    const closing = hudStructureKey(vm);
+    expect(closing).not.toBe(open);
+    s.customers.pop();
+    expect(hudViewModel(s).closing).toEqual({ left: 2 });
+    expect(hudStructureKey(hudViewModel(s))).toBe(closing);
+  });
 });
 
 describe('lobby view model', () => {

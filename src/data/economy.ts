@@ -20,7 +20,12 @@ export const ECONOMY = {
   maxTipRate: 0.35,
   baseArrivalsPerSecond: 1 / 6,
   queueCapacity: 6,
-  closingGraceSeconds: 10,
+  /** Doors lock at 0:00; whoever is inside can still be served for up to this long. */
+  closingGraceSeconds: 30,
+  /** The closing beat lasts at least this long, even when the shop is already empty. */
+  closingMinSeconds: 1,
+  /** Most human baristas in one room (one spawn point each). */
+  maxHumans: 4,
   reputation: { threshold: 0.7, delta: 0.2, min: 0.5, max: 5 },
   trafficFromReputation: { base: 0.7, perStar: 0.12 },
   pace: {
