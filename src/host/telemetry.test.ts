@@ -147,6 +147,22 @@ describe('telemetry', () => {
     expect(parsed[0].kind).toBe('meta');
   });
 
+  it('records a summary on entering weekEnd and again on ended, once per transition', () => {
+    const { tele } = setup();
+    const s = run();
+    tele.snapshot(s);
+    s.phase = 'weekEnd';
+    tele.snapshot(s);
+    tele.snapshot(s);
+    const summaries = () => tele.rows().filter((r) => r.kind === 'summary');
+    expect(summaries()).toHaveLength(1);
+    s.phase = 'ended';
+    tele.snapshot(s);
+    tele.snapshot(s);
+    expect(summaries()).toHaveLength(2);
+    expect(tele.rows().at(-1)!.kind).toBe('summary');
+  });
+
   it('counts the day in progress in the summary', () => {
     const { tele } = setup();
     const s = startDay(run());
