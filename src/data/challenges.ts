@@ -63,7 +63,7 @@ export const DAY_CURVE: ReadonlyArray<{ traffic: number; patience: number; event
   { traffic: 1.05, patience: 0.96, eventBias: 0.06 }, // Thu
   { traffic: 1.1, patience: 0.92, eventBias: 0.1 }, // Fri
   { traffic: 1.16, patience: 0.88, eventBias: 0.16 }, // Sat
-  { traffic: 1.24, patience: 0.82, eventBias: 0.22 }, // Sun / day 7 finale
+  { traffic: 1.3, patience: 0.8, eventBias: 0.22 }, // Sun / day 7 finale
 ];
 
 /** Day-of-week index 0..6 for a 1-based day number (repeats in unlimited mode). */

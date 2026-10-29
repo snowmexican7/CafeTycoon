@@ -54,9 +54,10 @@ export function createWeekEnd(
         <div class="paper menu weekend ${vm.bankrupt ? 'broke' : ''}" role="dialog" aria-modal="true" aria-labelledby="we-h">
           <div class="we-cols"><div class="we-main">
           <div class="menu-hd"><span class="badge-ic">${logoCup(30)}</span><div><h2 id="we-h">${heading}</h2><p>${sub}</p></div></div>
-          <div class="score ${vm.score.startsWith('-') ? 'loss' : ''}">${coin(40)}<span>${vm.score.startsWith('-') ? '' : '+'}${esc(vm.score)}</span><small>Profit vs. start</small></div>
+          <div class="score ${vm.score.startsWith('-') ? 'loss' : ''}">${coin(40)}<span>${vm.score.startsWith('-') ? '' : '+'}${esc(vm.score)}</span><small>${vm.fittings ? 'Profit vs. start, fittings at half price' : 'Profit vs. start'}</small></div>
           <div class="money-split">
             <div><small>CASH IN THE TILL</small><b class="${vm.cash.startsWith('-') ? 'neg' : ''}">${esc(vm.cash)}</b></div>
+            ${vm.fittings ? `<div title="What your permanent upgrades would sell for: half their price"><small>FITTINGS</small><b>+${esc(vm.fittings)}</b></div>` : ''}
             <div><small>STARTED WITH</small><b>${esc(vm.startingCash)}</b></div>
           </div>
           ${vm.tab ? `<div class="receipt-lines"><div class="line tab"><span>Hospital tab still owed</span><span>${esc(vm.tab)}</span></div></div>` : ''}

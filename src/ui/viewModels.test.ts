@@ -75,8 +75,9 @@ describe('view models', () => {
     expect(awards.length).toBeGreaterThan(0);
     expect(awardsText).toContain('CafeTycoon');
     expect(w).toEqual({
-      score: '$60.00',
+      score: '$67.50', // $60 profit + street sign at half price
       cash: '$160.00',
+      fittings: '$7.50',
       startingCash: '$100.00',
       daysCompleted: 2,
       customersServed: 16,
