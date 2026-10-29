@@ -344,3 +344,8 @@ Commands (50 weeks each, seeds 1 to 50, deterministic):
 Every target is met, so no knob was changed and `src/data/economy.ts` is untouched. The human
 loss rate sits near the top of the band (31%); if a playtest finds it too harsh, ease
 patience or traffic first.
+
+After the final-review fix that makes bots count a human's drink in progress as coverage, a
+20-week re-measure of the two-humans table (seed 1, same settings) gave 20/20 finished, 20/20
+above the start, loss rate 0.317 and mean final cash $313.1 (the same 20 weeks before the fix:
+0.298 and $341.1). Still inside every target; `economy.ts` unchanged.

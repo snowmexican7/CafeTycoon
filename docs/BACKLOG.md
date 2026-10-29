@@ -120,3 +120,5 @@ The data exists; the visuals are the UI agent's.
 - A human standing idle within reach of a machine holding a finished drink blocks bots from collecting it; add an idle grace.
 - After a host resume, bots added before friends rejoin can give a six-barista day until the next morning; trim on join.
 - `tele` batches have no host-side rate limit.
+- `frame.long` still logs one row covering the whole hidden period on the first frame after a tab returns (animation frames stop while hidden); add a `visibilitychange` listener in `main.ts` that resets the previous-frame timestamp. Until then, drop `frame.long` rows over a few seconds when analysing.
+- Grounds abandoned as the grinder's output count as a pending drink for bot coverage, so a single espresso or latte order reads as covered until someone takes them; extend the orphan rule so a bot picks up abandoned grounds and continues the chain when an espresso/latte order is uncovered.
