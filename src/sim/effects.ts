@@ -8,7 +8,7 @@ import { rngNext } from './rng';
 import { applyAd } from './ads';
 import { applyPitch } from './pitch';
 import { applyCheckout } from './checkout';
-import { tierInfo } from './growth';
+import { applyGrowth, tierInfo } from './growth';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
 import { dayProgress, forecastOf, shapeAt } from './forecast';
 import type { CardSetId, DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
@@ -191,6 +191,7 @@ export function computeModifiers(state: GameState): Modifiers {
   applyAd(state, m);
   applyPitch(state, m);
   applyCheckout(state, m);
+  applyGrowth(state, m);
   return m;
 }
 

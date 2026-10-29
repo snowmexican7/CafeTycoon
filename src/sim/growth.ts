@@ -13,6 +13,7 @@
  */
 import { ECONOMY } from '../data/economy';
 import { layoutFor } from '../data/layout';
+import type { Modifiers } from './effects';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
 export interface TierInfo {
@@ -26,6 +27,9 @@ export interface TierInfo {
   rentPerDay: number;
   /** Who walks in: multipliers on the base mix weights. */
   mix: { impatient: number; group: number; regular: number };
+  /** What a shop this size can charge (× every price) and how many people pass by (× traffic). */
+  price: number;
+  traffic: number;
   crowd: string;
   blurb: string;
   /** The morning-after line. */
@@ -43,7 +47,9 @@ export const TIERS: Record<TierId, TierInfo> = {
     queue: 3,
     rentPerDay: 10,
     mix: { impatient: 1.4, group: 0, regular: 0.6 },
-    crowd: 'Commuters in a hurry, no groups',
+    price: 0.75,
+    traffic: 0.65,
+    crowd: 'Commuters in a hurry, no groups. Fewer passers-by, and nobody pays café prices at a folding table (−25%)',
     blurb: 'A folding table, one grinder, one machine and a cold-brew keg. Everyone is late for something.',
     milestone: '',
   },
@@ -55,7 +61,9 @@ export const TIERS: Record<TierId, TierInfo> = {
     queue: 5,
     rentPerDay: 17,
     mix: { impatient: 1.15, group: 0.5, regular: 0.85 },
-    crowd: 'Some friends in pairs, more regulars',
+    price: 0.9,
+    traffic: 0.85,
+    crowd: 'Some friends in pairs, more regulars. Busier, prices −10%',
     blurb: 'A proper cart with a striped awning and a milk steamer. Lattes are back on the board.',
     milestone: 'Somebody asked if we do oat milk. We are a real business now.',
   },
@@ -67,6 +75,8 @@ export const TIERS: Record<TierId, TierInfo> = {
     queue: ECONOMY.queueCapacity,
     rentPerDay: ECONOMY.rentPerDay,
     mix: { impatient: 1, group: 1, regular: 1 },
+    price: 1,
+    traffic: 1,
     crowd: 'Everyone: groups, regulars, the lot',
     blurb: 'Four walls, a window seat and a doormat that says HELLO. The whole floor is ours.',
     milestone: 'We started with a folding table. Look at us now.',
@@ -156,4 +166,11 @@ export function growthMorning(state: GameState): string | null {
   const t = TIERS[g.tier];
   const w = layoutFor(g.tier).width;
   return `🎉 Grand re-opening: we're ${g.tier === 'cafe' ? 'a café' : `a ${t.short}`} now (grown by ${g.by})! The floor is ${w} tiles wide and the line holds ${t.queue}. ${t.milestone}`;
+}
+
+/** A smaller shop charges less and has fewer people walking past (the café is unchanged). */
+export function applyGrowth(state: GameState, m: Modifiers): void {
+  const t = tierInfo(state);
+  if (t.traffic !== 1) m.traffic *= t.traffic;
+  if (t.price !== 1) for (const d of Object.keys(m.price) as DrinkId[]) m.price[d] *= t.price;
 }

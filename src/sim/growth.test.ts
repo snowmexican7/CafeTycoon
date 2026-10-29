@@ -83,6 +83,11 @@ describe('growth path (P3 B13)', () => {
     expect(queueCapacity(m, TIERS.cart.queue)).toBe(5);
     expect(queueCapacity(m)).toBe(TIERS.cafe.queue);
     expect(rentForDay(run('stand'))).toBeLessThan(rentForDay(run()));
+    const st = computeModifiers(run('stand'));
+    expect(st.traffic).toBeCloseTo(m.traffic * TIERS.stand.traffic, 6);
+    expect(st.price.espresso).toBeCloseTo(m.price.espresso * TIERS.stand.price, 6);
+    expect(TIERS.cafe.price).toBe(1);
+    expect(TIERS.cafe.traffic).toBe(1);
   });
 
   it('grows stand → cart → café in order, at night, by a human with the cash; the new floor is set up', () => {
