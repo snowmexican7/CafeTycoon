@@ -20,6 +20,10 @@ when a build goes out, the line moves under its version with the date.
 - A sold-out board no longer makes the street empty: people still walk up, read the board and walk away, and the morning paper counts them.
 - **Longer, gentler nights.** Nights last two minutes now, and a relaxed night has no clock at all: the doors open when everyone is ready, with a 30-second last call once most of the crew is.
 - **A night screen that tells you what matters.** Yesterday's profit, one headline, and a few alerts with a one-tap fix.
+- **The back bar has slots now:** four on the stand, five on the cart, six in the café. Any station can be lifted out or moved at night, and a small stations shop sells a second espresso machine ($45), a second grinder ($30), a steamer ($40), a cold-brew tap ($35) and a bin ($15). Take the steamer out and the lattes come off the board until it is back.
+- No bin? Then whatever you drop lands on the floor. The mop matters.
+- Growing keeps what you own: the stations you bought come along to the bigger shop, and the new shop's own gear is a gift on top.
+- Bots know about spare machines: with two espresso machines they use whichever is free, and with no bin they drop grounds on the floor (or run them through the espresso machine when the floor is already full of mess).
 
 ## 2.1.0 — 2026-10-29 · Phase 3 preview
 
