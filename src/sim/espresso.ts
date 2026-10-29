@@ -6,7 +6,7 @@ import { syncBots } from './bots/roster';
 import type { GameState, Player, PlayerId, Vec2 } from './types';
 
 /**
- * Easter egg: a barista can knock back a shot of espresso (Q, near the espresso machine).
+ * Easter egg: a barista can knock back a shot of espresso (Q with an espresso in hand, or Q near the espresso machine).
  * Each shot today is stronger than the last; one too many and an ambulance comes for them.
  * Self-contained on purpose: everything lives on the optional `Player.espresso` and
  * `GameState.debt` fields, and the sim calls in through four small hooks
@@ -63,6 +63,8 @@ export function collapseAge(state: GameState, p: Player): number | null {
 export function canDrinkEspresso(state: GameState, p: Player): boolean {
   if (p.bot || !p.connected || isOut(p)) return false;
   if (state.phase !== 'day' && state.phase !== 'closing') return false;
+  // Holding a finished espresso: just drink it, anywhere.
+  if (p.holding === 'espresso') return true;
   if (state.supplies.beans < ESPRESSO.beansPerShot) return false;
   const machine = state.stations.find((s) => s.kind === 'espresso');
   return !!machine && Math.hypot(p.pos.x - machine.pos.x, p.pos.y - machine.pos.y) <= ECONOMY.interactRangeTiles;
@@ -73,7 +75,8 @@ export function drinkEspresso(state: GameState, playerId: PlayerId): GameState {
   const p = state.players.find((x) => x.id === playerId);
   if (!p || !canDrinkEspresso(state, p)) return state;
   const e = (p.espresso ??= fresh());
-  state.supplies.beans -= ESPRESSO.beansPerShot;
+  if (p.holding === 'espresso') p.holding = null; // drank the one in hand
+  else state.supplies.beans -= ESPRESSO.beansPerShot;
   e.shots += 1;
   if (e.shots <= ESPRESSO.boosts.length) {
     e.mul = 1 + ESPRESSO.boosts[e.shots - 1];

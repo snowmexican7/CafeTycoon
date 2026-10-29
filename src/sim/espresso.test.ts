@@ -45,6 +45,18 @@ describe('espresso easter egg', () => {
     expect(step(bot, [{ kind: 'espresso', playerId: b.id }]).players.find((p) => p.bot)!.espresso).toBeUndefined();
   });
 
+  it('drinks a held espresso anywhere, using the cup instead of beans', () => {
+    let s = atMachine();
+    p1(s).pos = { ...LAYOUT.spawnPoints[0] };
+    p1(s).holding = 'espresso';
+    const beans = s.supplies.beans;
+    expect(canDrinkEspresso(s, p1(s))).toBe(true);
+    s = step(s, [shot]);
+    expect(p1(s).holding).toBeNull();
+    expect(s.supplies.beans).toBe(beans);
+    expect(Math.round((espressoSpeed(p1(s)) - 1) * 100)).toBe(30);
+  });
+
   it('costs a bean and each shot today is stronger: 30, 35, 40, 45, 50%', () => {
     let s = atMachine();
     const beans = s.supplies.beans;
