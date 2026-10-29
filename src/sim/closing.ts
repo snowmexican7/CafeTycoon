@@ -47,7 +47,8 @@ export function finishDay(state: GameState): GameState {
   const ratio = served + lost === 0 ? 1 : served / (served + weighted);
   const r = ECONOMY.reputation;
   const bonus = state.today.inspection === 'pass' ? ECONOMY.events.inspector.reputationBonus : 0;
-  const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus;
+  const rogueHit = ECONOMY.rogue.repHit * (state.today.rogues ?? 0);
+  const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus - rogueHit;
   state.reputation = round2(Math.min(r.max, Math.max(r.min, next)));
 
   state.days.push(state.today);
