@@ -2,6 +2,7 @@ name: Test, build, deploy
 
 on:
   push:
+    branches: ['**']   # every branch; tags (vX.Y.Z) point at commits that already ran
 
 jobs:
   test:
