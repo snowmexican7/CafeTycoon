@@ -357,7 +357,17 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
     checkout, slot, equip (with `equipLog`), menu (never the last drink); the rival advice is a price or signature input and goes
     through the same code. Nothing it cannot pay for or the sim would refuse is applied. Card buys still come from
     `smartNightInputs(state, 'smart', stage)` after stage 0 (stage 0's smart restock is skipped: the planner already restocked).
-  - *Hurried personality:* see the D1 addendum below.
+  - *Hurried personality.* `Personality` gains `'hurried'` (`ECONOMY.bots.personalities.hurried`:
+    speed 1.15, reaction 0.85, mistake 0.08, no cold-brew prep) and the roster grows to four bots
+    (`BOT_IDS` ×4, `BOT_PERSONALITIES = ['steady', 'hurried', 'rookie', 'veteran']`), so any game with
+    two or more bots has a hurried one. In `act` for a `take` step, a hurried bot whose machine is in
+    the last 40% of its run (`ACCURACY.earlyShare`) with `ECONOMY.bots.hurriedQueue` (3) or more
+    customers queued presses use: the existing early pull takes the cup one star down and logs
+    `cup.early`. `ECONOMY.bots.autoCrew = 3` keeps `bots: 'auto'` at three bots; the lobby cap stays
+    at spawn points − 1 and the tester accepts `--bots 0..4`. Runs with `bots: 0` or one bot keep the
+    base RNG stream (goldens); two- and three-bot runs change by design (the roster is the feature).
+    Open: the render's `botLook` gives hurried the steady look (UI lane); no `cup.early` showed up in
+    the seed-5 900-tick runs, so telemetry from a game night should confirm hurried bots do rush.
 - **Suite.** 86 files / 596 tests before FB1; after this branch 92 files / 779 tests. `tsc` and `npm run build` clean.
 - **Balance (40 weeks, seed 1, humans 2, bots 1, skill 3, pace 3, scenario random, day 150 s).**
 
