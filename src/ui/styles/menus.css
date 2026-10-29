@@ -116,3 +116,6 @@
 .receipt-lines .line.chaos span:last-child { color: var(--caramel-dk); }
 .receipt-lines .line.rogue span:first-child { color: var(--cherry); font-style: italic; }
 .receipt-lines .line.rogue span:last-child { color: var(--honey); letter-spacing: .08em; text-shadow: 0 1px 0 #0002; }
+.receipt-lines .line.inspection span:last-child { letter-spacing: .08em; }
+.receipt-lines .line.inspection.pass span:last-child, .receipt-lines .pos { color: var(--good); }
+.receipt-lines .line.inspection.fail span:last-child { color: var(--bad); }

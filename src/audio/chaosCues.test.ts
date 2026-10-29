@@ -71,3 +71,33 @@ describe('chaos pack sounds', () => {
     }
   });
 });
+
+describe('event sounds (Block 2)', () => {
+  it('buzzes on and off while the power is out, never otherwise', async () => {
+    const { BUZZ_TICKS } = await import('./cues');
+    const a = run();
+    a.phase = 'day';
+    a.events = [{ kind: 'powerFlicker', ticksLeft: 200 }];
+    let buzzes = 0;
+    let prev = a;
+    for (let i = 0; i < BUZZ_TICKS * 4; i += 3) {
+      const n = clone(prev);
+      n.tick += 3;
+      if (ids(diffCues(prev, n, 'p1', logCursor(prev))).includes('buzz')) buzzes++;
+      prev = n;
+    }
+    expect(buzzes).toBe(4);
+    const off = clone(a);
+    off.events = [];
+    const off2 = clone(off);
+    off2.tick += BUZZ_TICKS;
+    expect(ids(diffCues(off, off2, 'p1', logCursor(off)))).not.toContain('buzz');
+  });
+
+  it('gives every event a sting layered on its sound', () => {
+    expect(RECIPES.rushHour.some((l) => 'synth' in l && l.synth === 'rushSting')).toBe(true);
+    expect(RECIPES.inspector.some((l) => 'synth' in l && l.synth === 'inspectorSting')).toBe(true);
+    expect(RECIPES.influencer.some((l) => 'synth' in l && l.synth === 'glitter')).toBe(true);
+    expect(RECIPES.powerFlicker.some((l) => 'synth' in l && l.synth === 'buzz')).toBe(true);
+  });
+});

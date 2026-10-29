@@ -6,6 +6,7 @@
 import '../style.css';
 import { LAYOUT } from '../data/layout';
 import { createRenderer } from '../render/app';
+import { EVENT_FORESHADOW } from '../sim/describe';
 import { createRun, startDay } from '../sim/run';
 import type { GameState, SimEvent } from '../sim/types';
 import { createClosing } from '../ui/closing';
@@ -94,11 +95,62 @@ const FIXTURES: Record<string, Fixture> = {
       [1.0, (s) => (s.rogue = null)],
     ],
   },
+  /** Block 2: rush hour starts (intro card, board by the door), with a foreshadow morning note. */
+  rush: {
+    setup(s) {
+      s.morningNotes = [EVENT_FORESHADOW.rushHour];
+      for (let i = 0; i < 3; i++) s.customers.push({ id: 30 + i, drink: i % 2 ? 'latte' : 'espresso', patienceLeft: 800, patienceMax: 1000 });
+    },
+    timeline: [[0.3, (s) => s.events.push({ kind: 'rushHour', ticksLeft: 1800 })]],
+  },
+  /** Block 2: the lights dim and stutter; busy machines spark. */
+  power: {
+    setup(s) {
+      for (const id of ['grinder', 'espresso', 'steamer']) {
+        const st = s.stations.find((x) => x.id === id);
+        if (st) st.busyTicksLeft = 200;
+      }
+    },
+    timeline: [[0.3, (s) => s.events.push({ kind: 'powerFlicker', ticksLeft: 240 })]],
+  },
+  /** Block 2: the inspector patrols with a clipboard; the scrutiny meter is risky. */
+  inspector: {
+    setup(s) {
+      s.messes = [{ id: 1, kind: 'spill', x: 4, y: 3, amount: 1 }];
+      s.cleanliness = 68;
+      s.today.wasted = 2;
+    },
+    timeline: [[0.3, (s) => s.events.push({ kind: 'healthInspector', ticksLeft: 1200 })]],
+  },
+  /** Block 2: the inspector's verdict stamp. */
+  stamp: {
+    setup(s) {
+      s.events.push({ kind: 'healthInspector', ticksLeft: 10 });
+    },
+    timeline: [[0.6, (s) => { s.events = []; s.today.inspection = 'pass'; }]],
+  },
+  stampFail: {
+    setup(s) {
+      s.events.push({ kind: 'healthInspector', ticksLeft: 10 });
+      s.cleanliness = 40;
+    },
+    timeline: [[0.6, (s) => { s.events = []; s.today.inspection = 'fail'; }]],
+  },
+  /** Block 2: the influencer in line with a ring light, then the follower bump when served. */
+  influencer: {
+    setup(s) {
+      s.customers.splice(1, 0, { id: 40, drink: 'latte', patienceLeft: 1500, patienceMax: 1800, kind: 'influencer' });
+    },
+    timeline: [
+      [0.3, (s) => s.events.push({ kind: 'influencerVisit', ticksLeft: 1500, customerId: 40 })],
+      [4.0, (s) => { s.customers = s.customers.filter((c) => c.id !== 40); s.events = []; s.today.influencer = 'served'; }],
+    ],
+  },
   /** Block 1: the closing receipt with the chaos lines. */
   receipt: {
     closing: true,
     setup(s) {
-      s.today = { ...s.today, served: 18, lost: 2, sales: 96, tips: 14.5, rent: 40, wasted: 3, rogues: 1, slips: 2 };
+      s.today = { ...s.today, served: 18, lost: 2, sales: 96, tips: 14.5, rent: 40, wasted: 3, rogues: 1, slips: 2, events: ['rushHour', 'healthInspector'], inspection: 'fail', fines: 15 };
     },
     timeline: [],
   },

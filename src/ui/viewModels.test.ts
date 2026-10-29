@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
 import type { RunRecord } from '../sim/types';
-import { cleanMeter, closingViewModel, hudStructureKey, hudViewModel, lobbyViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
+import { cleanMeter, EVENT_INTRO, followerBump, scrutinyFor, closingViewModel, hudStructureKey, hudViewModel, lobbyViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 
@@ -232,5 +232,72 @@ describe('chaos pack view models (Block 1)', () => {
     const vm = closingViewModel(before, quiet);
     expect('rogues' in vm).toBe(false);
     expect('wasted' in vm).toBe(false);
+  });
+});
+
+describe('event view models (Block 2)', () => {
+  const day = () => {
+    const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
+    s.phase = 'day';
+    return s;
+  };
+
+  it('has an intro card for every event', () => {
+    for (const k of ['rushHour', 'powerFlicker', 'healthInspector', 'influencerVisit'] as const) {
+      expect(EVENT_INTRO[k].title.length).toBeGreaterThan(3);
+      expect(EVENT_INTRO[k].line.length).toBeGreaterThan(10);
+    }
+  });
+
+  it("reads the inspector's scrutiny only while they are in", () => {
+    const s = day();
+    expect(scrutinyFor(s)).toBeUndefined();
+    expect(hudViewModel(s).scrutiny).toBeUndefined();
+    s.events = [{ kind: 'healthInspector', ticksLeft: 600 }];
+    expect(scrutinyFor(s)).toMatchObject({ wasted: 0, wastedLimit: 4, clean: 100, cleanMin: 60, verdict: 'ok' });
+    s.today.wasted = 3;
+    expect(scrutinyFor(s)?.verdict).toBe('risky');
+    s.today.wasted = 0;
+    s.cleanliness = 65;
+    expect(scrutinyFor(s)?.verdict).toBe('risky');
+    s.cleanliness = 59;
+    expect(scrutinyFor(s)?.verdict).toBe('fail');
+    s.cleanliness = 100;
+    s.today.wasted = 4;
+    expect(scrutinyFor(s)?.verdict).toBe('fail');
+  });
+
+  it("patches the scrutiny numbers and outcomes in place (only the meter's presence is structure)", () => {
+    const s = day();
+    s.events = [{ kind: 'healthInspector', ticksLeft: 600 }];
+    const k = hudStructureKey(hudViewModel(s));
+    s.today.wasted = 2;
+    s.cleanliness = 70;
+    s.today.inspection = 'pass';
+    expect(hudStructureKey(hudViewModel(s))).toBe(k);
+    s.events = [];
+    expect(hudStructureKey(hudViewModel(s))).not.toBe(k);
+  });
+
+  it('reports outcomes and a stable follower bump', () => {
+    const s = day();
+    expect(hudViewModel(s).results).toMatchObject({ inspection: null, influencer: null });
+    s.today.influencer = 'served';
+    expect(hudViewModel(s).results?.influencer).toBe('served');
+    expect(followerBump(3, 2)).toBe(followerBump(3, 2));
+    expect(followerBump(3, 2)).toMatch(/^\+\d/);
+  });
+});
+
+describe('event receipt lines (Block 2)', () => {
+  it('lists the day\'s events, the inspection verdict, fines and the influencer bonus only when they happened', () => {
+    const before = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
+    const after = structuredClone(before);
+    after.days.push({ ...before.today, events: ['rushHour', 'healthInspector'], inspection: 'fail', fines: 15, bonus: 10 });
+    expect(closingViewModel(before, after)).toMatchObject({ events: ['Rush hour', 'Health inspector'], inspection: 'fail', fines: '$15.00', bonus: '$10.00' });
+    const quiet = structuredClone(before);
+    quiet.days.push({ ...before.today, events: [], inspection: null });
+    const vm = closingViewModel(before, quiet);
+    for (const k of ['events', 'inspection', 'fines', 'bonus']) expect(k in vm, k).toBe(false);
   });
 });

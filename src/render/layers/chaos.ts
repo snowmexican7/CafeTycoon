@@ -145,7 +145,7 @@ export class Chaos {
   private readonly bucket = new Container();
   private readonly restingMop = new Graphics();
   private readonly sign = new Container();
-  private signX = sx(LAYOUT.mopHome.x) - 30;
+  private signX = sx(LAYOUT.mopHome.x) + 34;
   private signY = sy(LAYOUT.mopHome.y) + 20;
   private signPop = 1;
   private rogue: RogueSprite | null = null;
@@ -252,7 +252,7 @@ export class Chaos {
     // The wet-floor sign follows whoever is mopping; otherwise it waits folded by the bucket.
     const cleaner = state.players.find((p) => p.cleaningTicksLeft > 0 && p.cleaningMess !== null);
     const mess = cleaner ? state.messes.find((m) => m.id === cleaner.cleaningMess) : undefined;
-    const tx = mess ? sx(mess.x) + 30 : sx(LAYOUT.mopHome.x) - 34;
+    const tx = mess ? sx(mess.x) + 30 : sx(LAYOUT.mopHome.x) + 34;
     const ty = mess ? sy(mess.y) + 4 : sy(LAYOUT.mopHome.y) + 22;
     if (Math.abs(tx - this.signX) > 1 || Math.abs(ty - this.signY) > 1) {
       if (Math.hypot(tx - this.signX, ty - this.signY) > TILE * 0.6) this.signPop = 0;

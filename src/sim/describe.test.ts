@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { catalogueById } from '../data/catalogue';
-import { ROGUE_REVIEW, describeEffects, morningNotes } from './describe';
+import { EVENT_FORESHADOW, ROGUE_REVIEW, describeEffects, morningNotes } from './describe';
 import { createRun } from './run';
 
 describe('describe', () => {
@@ -44,5 +44,33 @@ describe('describe', () => {
     expect(morningNotes(s).filter((n) => n === ROGUE_REVIEW)).toHaveLength(1);
     s.days = [{ ...s.today, rogues: 2 }, { ...s.today }];
     expect(morningNotes(s)).not.toContain(ROGUE_REVIEW);
+  });
+});
+
+describe('event foreshadowing (Block 2)', () => {
+  it("adds a rumour for each of today's scheduled events, once per kind, without the time", () => {
+    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+    s.day = 3;
+    s.eventSchedule = [
+      { kind: 'healthInspector', startTick: 900 },
+      { kind: 'rushHour', startTick: 2000 },
+    ];
+    const notes = morningNotes(s);
+    expect(notes).toContain(EVENT_FORESHADOW.healthInspector);
+    expect(notes).toContain(EVENT_FORESHADOW.rushHour);
+    expect(notes).not.toContain(EVENT_FORESHADOW.powerFlicker);
+    s.eventSchedule = [];
+    expect(morningNotes(s).some((n) => Object.values(EVENT_FORESHADOW).includes(n))).toBe(false);
+  });
+
+  it('is what startDay shows when the dice drew an event', async () => {
+    const { startDay } = await import('./run');
+    for (let seed = 1; seed < 40; seed++) {
+      let s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+      s.day = 2;
+      s = startDay(s);
+      const kinds = new Set(s.eventSchedule.map((e) => e.kind));
+      expect(s.morningNotes.filter((n) => Object.values(EVENT_FORESHADOW).includes(n))).toHaveLength(kinds.size);
+    }
   });
 });

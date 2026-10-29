@@ -389,3 +389,60 @@ export const smug: Synth = (ctx, out, t) => {
   bell(ctx, out, t, 784, 0.06, 0.4);
   return bell(ctx, out, t + 0.12, 1175, 0.07, 0.8) - t;
 };
+
+/* ---- Event stings (Block 2) ---- */
+
+/** Rush hour: a quick brassy run up the scale. */
+export const rushSting: Synth = (ctx, out, t) => {
+  [523.3, 659.3, 784, 1046.5].forEach((hz, i) => {
+    const at = t + i * 0.075;
+    const o = osc(ctx, 'sawtooth', hz, at, at + (i === 3 ? 0.4 : 0.1));
+    const g = gain(ctx);
+    if (i === 3) ahr(g.gain, at, 0.01, 0.07, 0.22, 0.15);
+    else perc(g.gain, at, 0.07, 0.04, 0.003);
+    o.connect(filter(ctx, 'lowpass', 2600, 1.2)).connect(g).connect(out);
+  });
+  return 0.8;
+};
+
+/** Health inspector: "dun, dun, dunnn". */
+export const inspectorSting: Synth = (ctx, out, t) => {
+  const notes: [number, number, number][] = [[146.8, 0, 0.16], [146.8, 0.24, 0.16], [110, 0.5, 0.8]];
+  for (const [hz, dt, len] of notes) {
+    const at = t + dt;
+    const o = osc(ctx, 'triangle', hz, at, at + len + 0.2);
+    const o2 = osc(ctx, 'sawtooth', hz / 2, at, at + len + 0.2);
+    const g = gain(ctx);
+    ahr(g.gain, at, 0.01, 0.16, len, 0.2);
+    o.connect(g);
+    o2.connect(filter(ctx, 'lowpass', 400, 1)).connect(gain(ctx, 0.5)).connect(g);
+    g.connect(out);
+  }
+  return 1.6;
+};
+
+/** Influencer: a glittery upward glissando. */
+export const glitter: Synth = (ctx, out, t) => {
+  for (let i = 0; i < 8; i++) bell(ctx, out, t + i * 0.035, 1046.5 * 2 ** (i / 6), 0.03, 0.4);
+  return 0.8;
+};
+
+/** Power trouble: a mains buzz with a crackle, chopped like a failing ballast. */
+export const buzz: Synth = (ctx, out, t, _dur, rnd) => {
+  const o = osc(ctx, 'sawtooth', 60, t, t + 0.4);
+  const o2 = osc(ctx, 'square', 120, t, t + 0.4);
+  const g = gain(ctx);
+  g.gain.setValueAtTime(0, t);
+  let at = t;
+  while (at < t + 0.35) {
+    const on = 0.02 + rnd() * 0.06;
+    g.gain.setValueAtTime(0.04 + rnd() * 0.03, at);
+    g.gain.setValueAtTime(0.005, at + on);
+    at += on + 0.01 + rnd() * 0.03;
+  }
+  g.gain.setValueAtTime(0, t + 0.38);
+  o.connect(filter(ctx, 'bandpass', 900, 0.7)).connect(g);
+  o2.connect(filter(ctx, 'bandpass', 2400, 1.5)).connect(gain(ctx, 0.5)).connect(g);
+  g.connect(out);
+  return 0.45;
+};

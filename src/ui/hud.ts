@@ -3,13 +3,22 @@ import type { DrinkId } from '../sim/types';
 import { esc, hide, show } from './dom';
 import { coin, itemIcon, jar, logoCup, pauseGlyph, speakerGlyph, stars, sun, SUPPLY_COLOR } from './icons';
 import { crewKey, DRINK_STEPS, handKey, ITEM_LABEL, ordersKey, type HudLive } from './live';
-import { cleanMeter, hudStructureKey, type HudVM } from './viewModels';
+import { cleanMeter, EVENT_INTRO, hudStructureKey, type HudVM } from './viewModels';
+import type { EventKind } from '../sim/types';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew' } as const;
 const SUPPLY_UNIT = { beans: 'shots', milk: 'steams', concentrate: 'pours' } as const;
 const DRINK_LABEL = { espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew' } as const;
 const LOW_AT = 5;
 const URGENT = 0.28;
+
+/** Small inline icons for the event chips and cards. */
+const EVENT_ICON: Record<EventKind, string> = {
+  rushHour: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-6 1-9z" fill="#e0564a"/><path d="M12 13c.6 1.6 2 2 2 3.6a2 2 0 0 1-4 0c0-.9.5-1.4 1-1.8 0 .8.4 1.2 1 1.2-.2-1.2 0-2.2 0-3z" fill="#f6c35b"/></svg>',
+  powerFlicker: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="#f6c35b" stroke="#3a2418" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  healthInspector: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="5" y="4" width="14" height="18" rx="2" fill="#c98d62"/><rect x="7" y="7" width="10" height="13" rx="1" fill="#fffaf2"/><rect x="9" y="2.5" width="6" height="3.5" rx="1" fill="#6b4430"/><path d="M8.5 11h7M8.5 14h7M8.5 17h4" stroke="#9a8a7a" stroke-width="1.3"/></svg>',
+  influencerVisit: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5" fill="#33294a"/><rect x="8.5" y="4.5" width="7" height="13" rx="1" fill="#e98aa6"/><circle cx="12" cy="11" r="2.6" fill="#fffaf2"/><circle cx="12" cy="19.6" r="1" fill="#efe7ff"/></svg>',
+};
 
 const parseMoney = (s: string) => Number(s.replace(/[^0-9.-]/g, '')) || 0;
 const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a' : '#e0564a');
@@ -58,6 +67,8 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
       <div class="spacer"></div>
       <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">R</span> drop <span class="key">Q</span> drinks an espresso (in hand or at the machine) <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
     </div>
+    <div class="hud-events" aria-live="polite"></div>
+    <div class="hud-eventcard" role="status" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
     <div class="toast" role="status" hidden></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(sel: string) => container.querySelector<T>(sel)!;
@@ -86,6 +97,8 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     cleanBar: $('.hud-clean .cbar i'),
     cleanPct: $('.hud-clean .cpct'),
     cleanWord: $('.hud-clean .cword'),
+    events: $('.hud-events'),
+    eventCard: $('.hud-eventcard'),
   };
   $('[data-action=pause]').addEventListener('click', (ev) => {
     (ev.currentTarget as HTMLElement).blur();
@@ -106,6 +119,9 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
   let lastHand = '';
   let lastCash: number | null = null;
   let lastClean = '';
+  let knownEvents = new Set<EventKind>();
+  let lastResults = '';
+  let cardTimer: ReturnType<typeof setTimeout> | null = null;
   let notes: string[] = [];
   let prices: Partial<Record<DrinkId, string>> = {};
 
@@ -135,6 +151,16 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     el.note.innerHTML = vm.notes.length ? `<b>MORNING NOTE</b>${vm.notes.map((n) => `<p>${esc(n)}</p>`).join('')}` : '';
     el.note.hidden = vm.notes.length === 0;
     el.seed.textContent = `· seed ${vm.seed}`;
+    el.events.innerHTML = (vm.events ?? [])
+      .map((e) => {
+        const intro = EVENT_INTRO[e.kind];
+        const meter =
+          e.kind === 'healthInspector' && vm.scrutiny
+            ? `<span class="scrutiny"><span class="sw">Wasted <b class="sw-n"></b></span><span class="sf">Floor <b class="sf-n"></b></span><span class="verdict"></span></span>`
+            : '';
+        return `<div class="ev-chip tone-${intro.tone}" data-kind="${e.kind}">${EVENT_ICON[e.kind]}<b>${esc(e.label)}</b>${e.kind === 'influencerVisit' ? '' : '<span class="secs"></span>'}${meter}</div>`;
+      })
+      .join('');
     el.room.hidden = !roomCode;
     el.room.innerHTML = roomCode ? `<small>ROOM</small><b>${esc(roomCode)}</b>` : '';
   }
@@ -215,6 +241,63 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     lastCash = n;
   }
 
+  /** A big card for a moment: an event's intro, or the inspector's stamp, or the influencer's post. */
+  function showCard(html: string, tone: string, ms = 3400): void {
+    el.eventCard.className = `hud-eventcard tone-${tone}`;
+    el.eventCard.innerHTML = html;
+    el.eventCard.hidden = false;
+    // restart the pop-in animation
+    void el.eventCard.offsetWidth;
+    el.eventCard.classList.add('in');
+    if (cardTimer) clearTimeout(cardTimer);
+    cardTimer = setTimeout(() => (el.eventCard.hidden = true), ms);
+  }
+
+  /** Event chips' seconds and the inspector's meter (patched), new-event intro cards and outcome stamps. */
+  function patchEvents(vm: HudVM): void {
+    const open = vm.phase === 'day' || vm.phase === 'closing';
+    const active = new Set((vm.events ?? []).map((e) => e.kind));
+    if (open) {
+      for (const k of active) {
+        if (knownEvents.has(k)) continue;
+        const intro = EVENT_INTRO[k];
+        showCard(`<div class="ic">${EVENT_ICON[k]}</div><div><b>${esc(intro.title)}</b><p>${esc(intro.line)}</p></div>`, intro.tone);
+      }
+    }
+    knownEvents = active;
+    for (const e of vm.events ?? []) {
+      const chip = el.events.querySelector<HTMLElement>(`.ev-chip[data-kind=${e.kind}]`);
+      const secs = chip?.querySelector<HTMLElement>('.secs');
+      if (secs) {
+        const t = `${e.secondsLeft}s`;
+        if (secs.textContent !== t) secs.textContent = t;
+      }
+    }
+    const sc = vm.scrutiny;
+    const chip = el.events.querySelector<HTMLElement>('.ev-chip[data-kind=healthInspector]');
+    if (sc && chip) {
+      chip.dataset.verdict = sc.verdict;
+      const w = chip.querySelector<HTMLElement>('.sw-n');
+      const f = chip.querySelector<HTMLElement>('.sf-n');
+      const v = chip.querySelector<HTMLElement>('.verdict');
+      if (w) w.textContent = `${sc.wasted}/${sc.wastedLimit}`;
+      if (f) f.textContent = `${sc.clean}%`;
+      if (v) v.textContent = sc.verdict === 'ok' ? 'looking good' : sc.verdict === 'risky' ? 'hmm\u2026' : 'would fail!';
+    }
+    const r = vm.results;
+    const key = r ? `${vm.dayLabel}|${r.inspection}|${r.influencer}` : '';
+    if (r && lastResults && key !== lastResults && lastResults.startsWith(`${vm.dayLabel}|`)) {
+      const [, wasInsp, wasInfl] = lastResults.split('|');
+      if (r.inspection && wasInsp === 'null') {
+        const pass = r.inspection === 'pass';
+        showCard(`<div class="stamp ${pass ? 'pass' : 'fail'}">${pass ? 'PASSED' : 'FAILED'}</div><div><b>${pass ? 'Inspection passed' : 'Inspection failed'}</b><p>${pass ? 'A gold star for the crew. Reputation up a little.' : 'Too messy or too wasteful. That\u2019s a fine on tonight\u2019s receipt.'}</p></div>`, pass ? 'pass' : 'fail', 3800);
+      } else if (r.influencer === 'served' && wasInfl === 'null') {
+        showCard(`<div class="ic">${EVENT_ICON.influencerVisit}</div><div><b>Posted! ${esc(r.followers)} followers</b><p>Their fans are on the way: more customers for the rest of the day.</p></div>`, 'influencer', 3800);
+      }
+    }
+    lastResults = key;
+  }
+
   /** The cleanliness meter is patched in place (never part of the structure key). */
   function patchClean(vm: HudVM): void {
     const open = vm.phase === 'day' || vm.phase === 'closing';
@@ -252,6 +335,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
       }
       patchCash(vm);
       patchClean(vm);
+      patchEvents(vm);
       if (live) {
         el.bar.style.width = `${(live.progress * 100).toFixed(1)}%`;
         renderOrders(live);

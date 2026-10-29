@@ -4,7 +4,8 @@ import type { Customer, DrinkId, ItemKind, Player, PlayerId, Vec2 } from '../../
 import { ECONOMY } from '../../data/economy';
 import { TICK_RATE } from '../../sim/constants';
 import { type Facing, PALETTE, TILE, baristaLook, customerLook, nextFacing, patienceColor, sx, sy } from '../theme';
-import { dashedEllipse, drawItem, drawMop, drawStar, halfDome, label } from './draw';
+import { dashedEllipse, drawHeart, drawItem, drawMop, drawStar, halfDome, label } from './draw';
+import { flashOn } from '../eventsModel';
 import { jitterPx, type CollapsePose } from '../espressoPose';
 
 /** Feet sit a little below the sim centre so a barista reads as standing on its tile. */
@@ -98,6 +99,26 @@ export function drawOrderBubble(g: Graphics, x: number, y: number, drink: DrinkI
   drawItem(g, drink, x, y + 2, 1.05);
 }
 
+/** The influencer's tell: a selfie stick with a ring light (it flashes) and likes floating up. */
+function drawInfluencer(g: Graphics, t: number): void {
+  const on = flashOn(t);
+  g.moveTo(16, -20).lineTo(30, -104).stroke({ width: 2.5, color: 0x2b2b30, cap: 'round' });
+  if (on) g.circle(31, -112, 26).fill({ color: 0xffffff, alpha: 0.35 });
+  g.circle(31, -112, 11).stroke({ width: 5, color: on ? 0xffffff : 0xf3eefa });
+  g.roundRect(26, -119, 10, 15, 2).fill(0x33294a);
+  g.roundRect(27.5, -117, 7, 10, 1).fill(on ? 0xffffff : 0xe98aa6);
+  if (on) {
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      g.moveTo(31 + Math.cos(a) * 15, -112 + Math.sin(a) * 15).lineTo(31 + Math.cos(a) * 24, -112 + Math.sin(a) * 24).stroke({ width: 2, color: 0xfff6c9, cap: 'round' });
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    const k = (t * 0.6 + i / 3) % 1;
+    drawHeart(g, -26 + Math.sin(k * 7 + i) * 4, -60 - k * 50, 5 * (1 - k * 0.3), PALETTE.cherry);
+  }
+}
+
 interface PlayerSprite {
   root: Container;
   body: Graphics;
@@ -119,6 +140,8 @@ interface CustomerSprite {
   root: Container;
   body: Graphics;
   bubble: Graphics;
+  /** Per-kind tells drawn each frame (the influencer's ring light; B3 kinds). */
+  extra: Graphics;
   x: number;
 }
 
@@ -235,6 +258,8 @@ export class Actors {
         sprite.bubble.rect(22.8, -125, 2.4, 8).fill(0xffffff);
         sprite.bubble.circle(24, -114, 1.5).fill(0xffffff);
       } else drawOrderBubble(sprite.bubble, 0, -96, c.drink, c.patienceLeft / c.patienceMax);
+      sprite.extra.clear();
+      if (c.kind === 'influencer') drawInfluencer(sprite.extra, timeSec);
     });
     for (const [id, sprite] of this.customers) {
       if (!seenC.has(id)) {
@@ -336,9 +361,10 @@ export class Actors {
     drawPerson(body, { ...look, facing: 'up' });
     body.scale.set(0.92);
     const bubble = new Graphics();
-    root.addChild(body, bubble);
+    const extra = new Graphics();
+    root.addChild(body, extra, bubble);
     this.depthLayer.addChild(root);
-    const sprite: CustomerSprite = { root, body, bubble, x: startX };
+    const sprite: CustomerSprite = { root, body, bubble, extra, x: startX };
     this.customers.set(c.id, sprite);
     return sprite;
   }

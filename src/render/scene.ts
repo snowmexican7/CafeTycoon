@@ -8,6 +8,7 @@ import type { GameState, PlayerId } from '../sim/types';
 import type { RenderView } from './interpolate';
 import { Actors } from './layers/actors';
 import { Chaos } from './layers/chaos';
+import { EventVisuals } from './layers/events';
 import { buildDecor } from './layers/decor';
 import { EspressoGags, fellAtScreen, shakePx } from './layers/espresso';
 import { Effects } from './layers/fx';
@@ -42,6 +43,7 @@ export class Scene {
   private readonly actors: Actors;
   private readonly gags: EspressoGags;
   private readonly chaos: Chaos;
+  private readonly eventFx: EventVisuals;
   /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
   private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
@@ -56,8 +58,9 @@ export class Scene {
     this.actors = new Actors(this.depth, this.tags);
     this.gags = new EspressoGags(this.depth);
     this.chaos = new Chaos(this.depth);
+    this.eventFx = new EventVisuals(this.depth, this.chaos.overlay, SCENE_WIDTH, SCENE_HEIGHT);
     this.overlay.addChild(this.stationOverlay.root, this.tags, this.chaos.overlay);
-    this.root.addChild(this.wall.root, buildLamps(), floor, this.chaos.floor, this.depth, this.lighting.root, this.overlay, this.fx.root);
+    this.root.addChild(this.wall.root, buildLamps(), floor, this.chaos.floor, this.depth, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
 
   /** Which barista is "me" (gets the ring and the station focus). Unset = the only player, if there's exactly one. */
@@ -101,6 +104,7 @@ export class Scene {
     const poses = this.gags.update(state.players, simAge, now, (p) => fellAtScreen(p.espresso?.fellAt ?? p.pos));
     this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses);
     this.chaos.update(state, now, dt);
+    this.eventFx.update(state, now);
     this.espressoPops(state.players, view.baristaPositions);
 
     // espresso tell: the local barista's screen shakes from the 4th shot, and jolts when they hit the floor

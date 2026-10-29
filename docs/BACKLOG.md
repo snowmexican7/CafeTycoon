@@ -297,3 +297,40 @@ Co-op fun:
   receipt counts the day's **pratfalls** (`DayStats.slips`, a tally only).
 - Next: a "Butterfingers" / "Pratfall champion" award at the week end (B10); letting a player
   carry the wet-floor sign to fence off a puddle for the bots (B5 bots already path round spills).
+
+## Block 2 reflection (event visuals)
+
+Shipped: an intro card per event (title, one line of crew advice, tone colour) over the back wall,
+and a chip per active event under the top bar (seconds patched in place); power flicker dims and
+stutters the whole room (`flickerDarkness`), busy machines spark, a ballast buzz repeats every
+`BUZZ_TICKS` while it lasts; the inspector walks a fixed patrol with a clipboard, scribbles at
+stops, mutters (or "Tsk tsk." near a mess), and the chip carries a scrutiny meter (wasted n/4,
+floor %, "looking good / hmm… / would fail!"), then a PASSED/FAILED stamp card; the influencer has
+a selfie-stick ring light that flashes the room, floating likes, and a "Posted! +2.5k followers"
+card when served; rush hour lights a marquee board by the door. Stings: brassy run, "dun dun
+dunnn", glitter gliss, ballast buzz, layered on the existing samples. Morning notes foreshadow
+the day's drawn events (`EVENT_FORESHADOW`, sim/describe). Receipt: today's events, inspection
+verdict with the fine, influencer bonus.
+
+What could be better:
+- The receipt's "today's profit" is sales + tips − rent, so a FAILED −$15 line or a +$10 bonus
+  doesn't add up on the card. For Claude (economy): show profit net of fines and bonus, or label it.
+- The inspector is render-only: they walk through baristas and the sim has no body for them.
+- The intro card briefly covers the menu chalkboard; fine for 3 s, but a smaller card on narrow
+  screens would help.
+- Night-screen forecast for *tomorrow* isn't possible without the sim drawing the schedule a day
+  early (it rolls at `startDay`, after night inputs). Kept to the morning note so the RNG order is
+  unchanged. A forecast item ("Weather radio": see tomorrow's events) could be a night-shop card.
+
+What's missing (deferred):
+- The influencer's order ticket isn't marked in the Orders list yet (moved to B3 with the other
+  customer kinds).
+- A rush-hour "line out the door" visual when the queue is full.
+
+Co-op fun:
+- Shipped: the intro cards tell the crew how to split up ("one grinds, one steams, one serves"),
+  and the inspector's "Tsk tsk." at a mess is a cue for whoever has the mop.
+- Folded into B3: when the influencer is served, the whole crew strikes a pose for the photo
+  (flash, sparkles over every barista, "Say latte!").
+- Later: a "Weather radio" night card that reveals tomorrow's events, so planning becomes a team
+  decision at the shop.

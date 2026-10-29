@@ -1,6 +1,6 @@
 import { catalogueById } from '../data/catalogue';
 import { scenarioById } from '../data/scenarios';
-import type { DrinkId, Effect, GameState, StationKind, SupplyId } from './types';
+import type { DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
 
 const DRINK_NAMES: Record<DrinkId, string> = { espresso: 'espresso', latte: 'latte', coldBrew: 'cold brew' };
 const STATION_NAMES: Record<StationKind, string> = {
@@ -57,6 +57,17 @@ export function describeEffects(effects: Effect[]): string {
 /** Yesterday's one-line review when a customer went rogue. */
 export const ROGUE_REVIEW = 'Had to make it myself. Two stars. Good beans though.';
 
+/**
+ * A heads-up for each event the sim already drew for today (scheduleEvents runs before the notes),
+ * as a rumour: what's coming, never exactly when.
+ */
+export const EVENT_FORESHADOW: Record<EventKind, string> = {
+  rushHour: 'The radio says a tour bus is due today. Brace for a rush: split the jobs up.',
+  powerFlicker: 'The lights blinked while we set up. The old wiring might act up today.',
+  healthInspector: 'Word is the health inspector is doing rounds on our street today. Keep the floor spotless.',
+  influencerVisit: 'Someone with a ring light just followed us. An influencer might drop by today.',
+};
+
 /** What the day opens with: the scenario on day one, then everything bought last night. */
 export function morningNotes(state: GameState): string[] {
   const notes: string[] = [];
@@ -69,5 +80,6 @@ export function morningNotes(state: GameState): string[] {
     if (item && item.duration === 'permanent') notes.push(`${item.name} installed`);
   }
   if ((state.days.at(-1)?.rogues ?? 0) > 0) notes.push(ROGUE_REVIEW);
+  for (const kind of new Set(state.eventSchedule.map((e) => e.kind))) notes.push(EVENT_FORESHADOW[kind]);
   return notes;
 }

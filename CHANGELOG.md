@@ -16,6 +16,13 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Events you can feel.** Each event opens with a card and its own sting: rush hour lights up a
+  marquee board by the door, a power flicker really dims and stutters the lights (with a buzzing
+  ballast and sparks off busy machines), the health inspector patrols the floor with a clipboard
+  muttering "Hmm." (or "Tsk tsk." at a mess) while a meter shows wasted drinks and floor against
+  their rules, then stamps PASSED or FAILED, and the influencer's ring light flashes the room until
+  you serve them for a follower bump. The morning note now tips you off about the day's events,
+  and the receipt lists them with the inspection result, fines and bonuses.
 - **Messy floors you can see.** Spilled grounds pile up in little heaps and dropped drinks
   spread into puddles (cold brew ones are darker). Slipping gets a THUD!, dizzy stars and a wobble;
   the mop has a bucket in the corner, a carry pose and a wet-floor sign that follows whoever is
