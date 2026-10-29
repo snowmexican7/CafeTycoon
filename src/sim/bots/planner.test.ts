@@ -5,7 +5,7 @@ import { computeModifiers, rentForDay } from '../effects';
 import { restockCost } from '../night';
 import { priceForecast } from '../pricing';
 import { sigPrice } from '../rival';
-import { addStandIns, syncBots } from './roster';
+import { addStandIns, BOT_IDS, syncBots } from './roster';
 import { crewTips, planNight, PLAN_PRIORITY, RESTOCK_MARGIN } from './planner';
 import type { Advice } from './planner';
 import { CHECKOUT } from '../checkout';
@@ -444,6 +444,20 @@ describe('crewTips', () => {
     s.cash = 200;
     expect(crewTips(s)).toEqual([]);
     addStandIns(s, 2);
+    expect(crewTips(s)).toEqual([]);
+  });
+
+  it('on the opening night (no bot clocked in yet) voices the tips as the bots the roster will spawn', () => {
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 'auto' } });
+    expect(s.players.some((p) => p.bot)).toBe(false);
+    s.supplies.beans = 0;
+    s.cash = 200;
+    expect(planNight(s).length).toBeGreaterThan(0);
+    const tips = crewTips(s);
+    expect(tips.length).toBe(2);
+    expect(tips.map((t) => t.by)).toEqual(['bot-1', 'bot-2']);
+    for (const t of tips) expect(BOT_IDS).toContain(t.by);
+    s.settings = { ...s.settings, bots: 0 };
     expect(crewTips(s)).toEqual([]);
   });
 

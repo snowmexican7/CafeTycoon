@@ -17,7 +17,7 @@
  *                        // twist 40; signature 35; equip 30; scout 20; menu 10
  *   }
  *   planNight(state): Advice[]                                   // priority desc, then id asc
- *   crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots
+ *   crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots (before they clock in: the ids the roster spawns)
  *
  * Opening night is for stocking up: grow, checkout and equip advice wait for a finished day (as
  * `nightBrief` does). A drink with no station is only taken off the board when nothing in this plan
@@ -47,6 +47,7 @@ import { defaultSlots, reasonOff, slotCount } from '../slots';
 import { knownStars, TWIST_INFO, TWISTS, twistFor } from '../taste';
 import type { TwistId } from '../taste';
 import { menuDrinks, SUPPLY_IDS } from '../unlocks';
+import { BOT_IDS, botsFor, humanCount } from './roster';
 import type { CheckoutId, DrinkId, GameState, PlayerId, StationKind, SupplyId } from '../types';
 
 export type AdviceKind = 'restock' | 'price' | 'twist' | 'signature' | 'scout' | 'rival' | 'grow' | 'checkout' | 'slot' | 'equip' | 'menu';
@@ -428,9 +429,11 @@ export function planNight(state: GameState): Advice[] {
 
 /** The top `max` advice, voiced by the connected bot crewmates in players order, round-robin. */
 export function crewTips(state: GameState, max = 2): (Advice & { by: PlayerId })[] {
-  const bots = state.players.filter((p) => p.connected && p.bot && p.bot.personality !== 'human');
+  const present = state.players.filter((p) => p.connected && p.bot && p.bot.personality !== 'human').map((p) => p.id);
+  // bots only clock in at startDay: before that (the opening night) name the ones the roster will spawn
+  const bots = present.length > 0 ? present : BOT_IDS.slice(0, botsFor(state.settings.bots, humanCount(state)));
   if (bots.length === 0 || max <= 0) return [];
   return planNight(state)
     .slice(0, max)
-    .map((a, i) => ({ ...a, by: bots[i % bots.length].id }));
+    .map((a, i) => ({ ...a, by: bots[i % bots.length] }));
 }
