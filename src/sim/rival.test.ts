@@ -34,6 +34,11 @@ describe('rival Starbuck$ (P3 B9)', () => {
     applyScoutInput(d, { kind: 'scout', playerId: 'p1' });
     expect(d.rival).toBeUndefined(); // day: no
     expect(validateInput({ kind: 'scout', playerId: 'p1' })).toEqual({ kind: 'scout', playerId: 'p1' });
+    const b = run();
+    b.phase = 'night';
+    b.players[0].bot = {} as never; // a bot seat
+    applyScoutInput(b, { kind: 'scout', playerId: 'p1' });
+    expect(b.rival).toBeUndefined(); // bots can't scout
   });
 
   it('copies a signature after a few days, undercuts, and halves the asks', () => {

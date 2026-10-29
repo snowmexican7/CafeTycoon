@@ -1068,7 +1068,7 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
 - **Checks.**
   - Four new tests (569 total): menu determinism and price bands; the copy timing, undercut and
     floor; the ask factor, matching, and a new recipe dropping the copy; scout rules (night only,
-    once, cost; the humans-only guard is in code but untested). A game with no signature has an identical state and RNG stream.
+    once, cost, bots refused). A game with no signature has an identical state and RNG stream.
   - Default balance is unchanged at 291.28 / 319.53 / 25.4%.
   - The taste bot, which re-picks its best combo as the signature whenever the best combo changes
     and so counters by accident, scores 289.08 / 323.58 / loss 28.6%. B8 was 287.30 / 321.80 /
