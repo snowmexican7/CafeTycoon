@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { ECONOMY } from '../../data/economy';
-import { LAYOUT } from '../../data/layout';
+import { LAYOUT, layoutFor } from '../../data/layout';
 import { TICK_RATE, secondsToTicks } from '../../sim/constants';
 import type { DrinkId, GameState, Mess, Rogue } from '../../sim/types';
 import { approach, chaosBursts, hash32, messRadius, rogueLine, roguePose, type Burst } from '../chaosModel';
@@ -177,7 +177,18 @@ export class Chaos {
     this.overlay.addChild(this.tape, this.particlesG);
   }
 
+  /** P3 B13: the mop corner moves with the shop's size. */
+  private home = { ...LAYOUT.mopHome };
+  private placeHome(state: GameState): void {
+    const h = layoutFor(state.tier).mopHome;
+    if (h.x === this.home.x && h.y === this.home.y) return;
+    this.home = { ...h };
+    this.bucket.position.set(sx(h.x), sy(h.y) + 18);
+    this.bucket.zIndex = this.bucket.y;
+  }
+
   update(state: GameState, now: number, dt: number): void {
+    this.placeHome(state);
     if (state !== this.prevState) {
       const { bursts, lastSeq } = chaosBursts(this.prevState, state, this.lastSeq);
       this.lastSeq = lastSeq;
@@ -261,8 +272,8 @@ export class Chaos {
     // The wet-floor sign follows whoever is mopping; otherwise it waits folded by the bucket.
     const cleaner = state.players.find((p) => p.cleaningTicksLeft > 0 && p.cleaningMess !== null);
     const mess = cleaner ? state.messes.find((m) => m.id === cleaner.cleaningMess) : undefined;
-    const tx = mess ? sx(mess.x) + 30 : sx(LAYOUT.mopHome.x) + 34;
-    const ty = mess ? sy(mess.y) + 4 : sy(LAYOUT.mopHome.y) + 22;
+    const tx = mess ? sx(mess.x) + 30 : sx(this.home.x) + 34;
+    const ty = mess ? sy(mess.y) + 4 : sy(this.home.y) + 22;
     if (Math.abs(tx - this.signX) > 1 || Math.abs(ty - this.signY) > 1) {
       if (Math.hypot(tx - this.signX, ty - this.signY) > TILE * 0.6) this.signPop = 0;
       this.signX = tx;

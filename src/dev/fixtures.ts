@@ -6,12 +6,13 @@ import { comboStars } from '../sim/taste';
  * Playwright smoke can screenshot chaos, events and personalities without waiting for the dice.
  */
 import '../style.css';
-import { LAYOUT } from '../data/layout';
+import { LAYOUT, layoutFor } from '../data/layout';
 import { createRenderer } from '../render/app';
 import { EVENT_FORESHADOW } from '../sim/describe';
 import { createRun, startDay, startNight } from '../sim/run';
 import { createNight } from '../ui/night';
-import type { GameState, SimEvent } from '../sim/types';
+import type { GameState, SimEvent, TierId } from '../sim/types';
+import { stationsFor } from '../sim/growth';
 import { createClosing } from '../ui/closing';
 import { createHud } from '../ui/hud';
 import { hudLive } from '../ui/live';
@@ -31,6 +32,17 @@ function counterLine(s: GameState, active: 'register' | 'kiosk' | 'squarely', n:
   s.checkout = { owned: active === 'register' ? ['register'] : active === 'kiosk' ? ['register', 'kiosk'] : ['register', 'kiosk', 'squarely'], active };
   const drinks = ['latte', 'espresso', 'coldBrew', 'latte', 'espresso', 'coldBrew', 'latte'] as const;
   for (let i = 0; i < n; i++) s.customers.push({ id: 60 + i, drink: drinks[i], patienceLeft: 1400 - i * 120, patienceMax: 1800 });
+}
+
+/** P3 B13: the shop at a tier, the crew inside its floor and a line as long as it allows. */
+function atTier(s: GameState, tier: TierId, n: number): void {
+  s.tier = tier;
+  s.stations = stationsFor(tier);
+  s.mop = { pos: { ...layoutFor(tier).mopHome }, heldBy: null };
+  const spots = tier === 'stand' ? [{ x: 1.4, y: 2.2 }, { x: 3, y: 2.3 }, { x: 5, y: 2.2 }, { x: 6.6, y: 4.6 }] : tier === 'cart' ? [{ x: 2, y: 2.3 }, { x: 4, y: 2.3 }, { x: 7, y: 2.4 }, { x: 6.5, y: 4.7 }] : [{ x: 2, y: 2.3 }, { x: 5, y: 2.3 }, { x: 8.5, y: 2.4 }, { x: 6.5, y: 4.7 }];
+  s.players.forEach((p, i) => (p.pos = { ...spots[i] }));
+  const drinks = tier === 'stand' ? (['espresso', 'coldBrew', 'icedLatte', 'espresso'] as const) : (['latte', 'espresso', 'coldBrew', 'mocha', 'latte', 'icedLatte', 'espresso'] as const);
+  s.customers = Array.from({ length: n }, (_, i) => ({ id: 70 + i, drink: drinks[i % drinks.length], patienceLeft: 1300 - i * 110, patienceMax: 1600, ...(i === 1 && tier !== 'stand' ? { kind: 'group' as const } : {}) }));
 }
 
 function base(): GameState {
@@ -261,6 +273,36 @@ const FIXTURES: Record<string, Fixture> = {
       s.day = 2;
       s.checkout = { owned: ['register', 'kiosk'], active: 'kiosk', since: 1, by: 'Ben' };
       s.today = { day: 1, served: 30, lost: 1, turnedAway: 0, sales: 162.4, tips: 14.2, rent: 25, checkoutFees: 2 };
+    },
+    timeline: [],
+  },
+  /** P3 B13: each tier of the growth path on day 3, a full line waiting. */
+  standDay: { setup: (s) => atTier(s, 'stand', 3), timeline: [] },
+  cartDay: { setup: (s) => atTier(s, 'cart', 5), timeline: [] },
+  cafeDay: { setup: (s) => atTier(s, 'cafe', 6), timeline: [] },
+  /** P3 B13: the first morning in the cart: the grand re-opening burst. */
+  grownDay: { setup: (s) => { atTier(s, 'cart', 4); s.tierLog = [{ tier: 'cart', day: s.day, by: 'Ben' }]; }, timeline: [] },
+  /** P3 B13: the Shopfront tab at the stand with the cart affordable, and the night Ben grew into the cart. */
+  growStand: {
+    night: true,
+    setup(s) {
+      s.cash = 128;
+      s.day = 3;
+      s.tier = 'stand';
+      s.stations = stationsFor('stand');
+      s.today = { day: 2, served: 22, lost: 3, turnedAway: 4, sales: 98.5, tips: 9.1, rent: 10 };
+    },
+    timeline: [],
+  },
+  growCart: {
+    night: true,
+    setup(s) {
+      s.cash = 61;
+      s.day = 3;
+      s.tier = 'cart';
+      s.stations = stationsFor('cart');
+      s.tierLog = [{ tier: 'cart', day: 3, by: 'Ben' }];
+      s.today = { day: 2, served: 24, lost: 2, turnedAway: 5, sales: 104.2, tips: 10.4, rent: 10 };
     },
     timeline: [],
   },
