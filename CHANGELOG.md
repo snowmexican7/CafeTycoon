@@ -18,7 +18,7 @@ when a build goes out, the line moves under its version with the date.
 
 Nothing yet.
 
-## Unreleased (Phase 3, on the phase3 branch)
+## 2.1.0 — 2026-10-29 · Phase 3 preview
 
 - **Barista roles (P3 B1).** At night each barista can take one of four roles (kept until they change it on a later night),
   one barista per role. Chef: machines run 25% faster, but half tips on drinks they hand over.
