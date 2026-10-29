@@ -134,6 +134,21 @@ describe('health inspector', () => {
   });
 });
 
+describe('day end with an event still running', () => {
+  it('logs event.end for a rush hour still active when the day finishes', () => {
+    let s = dayTwo(1);
+    s.eventSchedule = [];
+    s.events = [{ kind: 'rushHour', ticksLeft: 900 }];
+    s.phase = 'closing';
+    s.phaseTicksLeft = 1;
+    const seq = s.log.at(-1)?.seq ?? 0;
+    s = step(s, []);
+    expect(s.events).toEqual([]);
+    const ends = s.log.filter((e) => e.seq > seq && e.kind === 'event.end');
+    expect(ends.map((e) => e.data)).toEqual([{ kind: 'rushHour' }]);
+  });
+});
+
 describe('influencer visit', () => {
   it('jumps a full queue, pays a bonus and boosts traffic', () => {
     let s = dayTwo(1);

@@ -2,6 +2,7 @@ import { ECONOMY } from '../data/economy';
 import { loseCustomer } from './customers';
 import { rentForDay } from './effects';
 import { eventActive, judgeInspection } from './events';
+import { emitLog } from './log';
 import { startNight } from './run';
 import { resetBotsForNight } from './bots/roster';
 import type { GameState } from './types';
@@ -16,6 +17,7 @@ export function finishDay(state: GameState): GameState {
   for (const c of state.customers) loseCustomer(state, c);
   state.customers = [];
   state.pass = [];
+  for (const e of state.events) emitLog(state, 'event.end', { kind: e.kind });
   state.events = [];
   state.eventSchedule = [];
   for (const s of state.stations) {
