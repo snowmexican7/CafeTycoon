@@ -17,7 +17,8 @@ export function isBotId(id: string): boolean {
 
 /** Connected people, plus tester stand-ins (bots with the 'human' personality). */
 export function humanCount(state: GameState): number {
-  return state.players.filter((p) => (p.bot ? p.bot.personality === 'human' : p.connected)).length;
+  // people who collapsed from too much espresso are out for the day (src/sim/espresso.ts)
+  return state.players.filter((p) => (p.bot ? p.bot.personality === 'human' : p.connected && !p.espresso?.out)).length;
 }
 
 /** 'auto' tops the crew up to three; a number is a request, capped at four baristas in all. */

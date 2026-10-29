@@ -143,3 +143,33 @@ so it cannot affect the sim, co-op sync or the seed. Settings live in `localStor
 - **No per-customer-kind sounds** (regulars, VIPs) and no menu/tab switch sounds on the night screen
   beyond the generic UI click.
 - **No volume ducking for stingers**: the day/night music keeps playing under event jingles.
+
+## Espresso Easter egg (stage 2): sim touchpoints, tuning, open items
+
+The logic is all in `src/sim/espresso.ts` (plus `espresso.test.ts`). **Claude, heads up: these are
+the only lines touched in your areas**, each a one-line call into that file:
+
+- `types.ts`: optional `Player.espresso`, `GameState.debt`, `DayStats.ambulance` / `debtPaid`; input
+  kind `{ kind: 'espresso', playerId }`; log kinds `espresso.shot` / `espresso.collapse`.
+- `validate.ts`: `'espresso'` added to the playerId-only case list.
+- `step.ts`: `case 'espresso': drinkEspresso(...)` in `applyInput`; `stepEspresso(s)` first in `stepDay`
+  (counts the boost down, freezes a collapsed player, moves them to the door once wheeled out).
+- `movement.ts`: per-player speed `* espressoSpeed(p)` (1 unless boosted).
+- `closing.ts`: `settleEspresso(state)` right after rent (bill goes on the tab, tab is repaid).
+- `run.ts`: `espressoMorning(state)` at the end of `startDay` (collapsed player back, counters reset).
+- `bots/roster.ts`: `humanCount` skips `p.espresso?.out`, so `syncBots` adds a cover bot mid-day when
+  the crew has room and drops it next morning.
+- Client: `KeyQ` sends the `espresso` input (src/render/keys.ts, keyboard.ts, main.ts). Old hosts
+  ignore the unknown kind, so no protocol bump.
+
+Tuning (all in `ESPRESSO`): Q within interact range of the espresso machine, day or closing, costs
+1 bean (no beans, no shot). Shots 1-5 today give +30/35/40/45/50% speed for 15 s; re-drinking
+refreshes the timer. Shot 6 collapses: out for the day, held item dropped, $150 ambulance bill.
+The bill goes on a hospital tab (`state.debt`) at close; from the next close on, half of each
+day's positive profit pays it down, never more than the cash in the till (so it can't bankrupt
+anyone). No RNG involved. Bots never drink.
+
+Open items:
+- Unpaid hospital debt is not subtracted from the week score (`scoreRun` is cash-based).
+- If a collapsed player disconnects and rejoins, they stay out until morning (intended).
+- The cover bot only appears if the crew is under the bot cap (`bots: 'auto'` or a free bot slot).

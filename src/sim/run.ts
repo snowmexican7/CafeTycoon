@@ -7,6 +7,7 @@ import { scheduleEvents } from './events';
 import { morningNotes } from './describe';
 import { dealHand } from './night';
 import { syncBots } from './bots/roster';
+import { espressoMorning } from './espresso';
 import type { CreateRunOptions, DayStats, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
@@ -110,5 +111,6 @@ export function startDay(state: GameState): GameState {
   syncBots(state);
   scheduleEvents(state);
   state.morningNotes = morningNotes(state);
+  espressoMorning(state);
   return state;
 }

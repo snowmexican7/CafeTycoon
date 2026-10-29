@@ -6,6 +6,7 @@ import { emitLog } from './log';
 import { startNight } from './run';
 import { resetBotsForNight } from './bots/roster';
 import type { GameState } from './types';
+import { settleEspresso } from './espresso';
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -30,6 +31,7 @@ export function finishDay(state: GameState): GameState {
   const rent = rentForDay(state);
   state.today.rent = rent;
   state.cash = round2(state.cash - rent);
+  settleEspresso(state);
 
   const { served, lost } = state.today;
   const weighted = lost + (state.today.lostRegulars ?? 0) * (ECONOMY.customers.regular.lostWeight - 1);

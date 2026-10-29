@@ -15,6 +15,7 @@ import type { GameState, PlayerInput } from './types';
 import { validateInput } from './validate';
 import { isBotId } from './bots/roster';
 import { afterBotInteract, stepBots } from './bots/brain';
+import { drinkEspresso, stepEspresso } from './espresso';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -67,6 +68,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'menu':
       applyMenuInput(s, input);
       break;
+    case 'espresso':
+      drinkEspresso(s, input.playerId);
+      break;
     case 'weekEnd':
       if (isHost && s.phase === 'weekEnd') {
         if (input.choice === 'stop') s.phase = 'ended';
@@ -81,6 +85,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
 }
 
 function stepDay(s: GameState, doorsOpen: boolean): void {
+  stepEspresso(s);
   stepEvents(s, doorsOpen);
   const m = computeModifiers(s);
   stepBots(s, m);

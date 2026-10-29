@@ -3,6 +3,7 @@ import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from './constants';
 import type { GameState, Station, Vec2 } from './types';
 import { botSpeed } from './bots/roster';
+import { espressoSpeed } from './espresso';
 
 const HALF = ECONOMY.baristaHalfWidth;
 
@@ -22,7 +23,7 @@ export function applyMovement(state: GameState, moveSpeedMul: number): GameState
     if (!p.connected) continue;
     const len = Math.hypot(p.moveDir.x, p.moveDir.y);
     if (len === 0) continue;
-    const mine = p.bot ? speed * botSpeed(state, p.bot) : speed;
+    const mine = (p.bot ? speed * botSpeed(state, p.bot) : speed) * espressoSpeed(p);
     const dx = (p.moveDir.x / len) * mine;
     const dy = (p.moveDir.y / len) * mine;
     const next = { x: p.pos.x + dx, y: p.pos.y };

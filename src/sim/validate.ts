@@ -42,6 +42,7 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return { kind: 'restock', playerId: input.playerId, supply: input.supply, packs: input.packs };
     case 'ready':
     case 'leave':
+    case 'espresso':
       return { kind: input.kind, playerId: input.playerId };
     case 'menu':
       return DRINK_IDS.includes(input.drink) && typeof input.on === 'boolean'

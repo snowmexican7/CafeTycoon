@@ -1,3 +1,5 @@
+import type { EspressoState } from './espresso';
+
 export type PlayerId = string;
 export type DrinkId = 'espresso' | 'latte' | 'coldBrew';
 export type SupplyId = 'beans' | 'milk' | 'concentrate';
@@ -72,7 +74,9 @@ export type SimEventKind =
   | 'event.start'
   | 'event.end'
   | 'inspection'
-  | 'influencer';
+  | 'influencer'
+  | 'espresso.shot'
+  | 'espresso.collapse';
 
 export interface SimEvent {
   seq: number;
@@ -91,6 +95,8 @@ export interface Player {
   connected: boolean;
   bot?: BotState;
   idleTicks: number;
+  /** Espresso Easter egg (src/sim/espresso.ts); absent until they drink a shot today. */
+  espresso?: EspressoState;
 }
 
 export interface Station {
@@ -172,6 +178,9 @@ export interface DayStats {
   events?: EventKind[];
   drinks?: Record<DrinkId, number>;
   influencer?: 'served' | 'lost' | null;
+  /** Espresso Easter egg: ambulance bill run up today, and hospital tab paid off from today's profit. */
+  ambulance?: number;
+  debtPaid?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -210,6 +219,8 @@ export interface GameState {
   regulars: Regular[];
   log: SimEvent[];
   nextLogSeq: number;
+  /** Espresso Easter egg: unpaid hospital tab, paid off from future profits. Absent = 0. */
+  debt?: number;
 }
 
 export type PlayerInput =
@@ -220,6 +231,7 @@ export type PlayerInput =
   | { kind: 'weekEnd'; playerId: PlayerId; choice: 'stop' | 'continue' }
   | { kind: 'menu'; playerId: PlayerId; drink: DrinkId; on: boolean }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
+  | { kind: 'espresso'; playerId: PlayerId }
   | { kind: 'join'; playerId: PlayerId; name: string }
   | { kind: 'leave'; playerId: PlayerId };
 
