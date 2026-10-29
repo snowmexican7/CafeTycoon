@@ -4,9 +4,10 @@ import { scenarioById } from '../data/scenarios';
 import { TICK_RATE, secondsToTicks } from '../sim/constants';
 import { botsFor } from '../sim/bots/roster';
 import { availableDrinks } from '../sim/customers';
-import { describeEffects, radioLine, splitEffects } from '../sim/describe';
+import { challengePaperLine, describeEffects, radioLine, splitEffects } from '../sim/describe';
 import { CARD_SETS } from '../data/cardSets';
 import { EVENT_LABELS } from '../sim/events';
+import { challengeChipText } from '../sim/challenges';
 import { activeSets, computeModifiers, setCounts, weekOf } from '../sim/effects';
 import { rerollCost, restockCost } from '../sim/night';
 import { scoreRun } from '../sim/score';
@@ -79,6 +80,8 @@ export interface HudVM {
   forecast?: { icon: string; name: string; blurb: string };
   /** Today's event outcomes so far, for the PASSED/FAILED stamp and the follower bump (patched). */
   results?: { inspection: 'pass' | 'fail' | null; influencer: 'served' | 'lost' | null; followers: string };
+  /** Optional daily challenges (B7): chip text + done/failed for the HUD. */
+  challenges?: { id: string; text: string; done: boolean; failed: boolean; reward: number }[];
 }
 
 export interface Scrutiny {
@@ -171,6 +174,13 @@ export function hudViewModel(state: GameState): HudVM {
     ...(state.phase === 'closing' ? { closing: { left: state.customers.length + (state.rogue ? 1 : 0) } } : {}),
     ...(scrutinyFor(state) ? { scrutiny: scrutinyFor(state) } : {}),
     results: { inspection: state.today.inspection ?? null, influencer: state.today.influencer ?? null, followers: followerBump(state.seed, state.day) },
+    challenges: (state.challenges ?? []).map((c) => ({
+      id: c.id,
+      text: challengeChipText(c),
+      done: c.done,
+      failed: c.failed,
+      reward: c.reward,
+    })),
   };
 }
 
@@ -284,6 +294,8 @@ export interface ForecastVM {
   later: { icon: string; name: string };
   /** Weather radio (B6): exactly which events tomorrow brings, and roughly when. */
   radio?: string;
+  /** Optional daily challenges for tomorrow (B7). */
+  challenges?: string;
 }
 
 /** Tomorrow's paper. At night `state.day` is already tomorrow. */
@@ -308,6 +320,7 @@ export function forecastViewModel(state: GameState): ForecastVM {
     hotPct: Math.round((hot / total) * 100),
     later: { icon: next.icon, name: forecastName(next, state.day + 1) },
     ...(radioLine(state) ? { radio: radioLine(state) } : {}),
+    ...(challengePaperLine(state) ? { challenges: challengePaperLine(state) } : {}),
   };
 }
 
@@ -370,11 +383,14 @@ export interface ClosingVM {
   inspection?: 'pass' | 'fail';
   fines?: string;
   bonus?: string;
+  /** Challenges won today (B7): label and tip. */
+  challenges?: { label: string; reward: string }[];
 }
 
 /** `before` is the last snapshot of the closing phase; `after` is the first of the next phase. */
 export function closingViewModel(before: GameState, after: GameState): ClosingVM {
   const d = after.days[after.days.length - 1] ?? before.today;
+  const won = (before.challenges ?? []).filter((c) => c.done && !c.failed);
   return {
     dayLabel: dayLabelFor(d.day),
     served: d.served,
@@ -393,7 +409,12 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     ...(d.events?.length ? { events: d.events.map((k) => EVENT_LABELS[k]) } : {}),
     ...(d.inspection ? { inspection: d.inspection } : {}),
     ...(d.fines ? { fines: money(d.fines) } : {}),
-    ...(d.bonus ? { bonus: money(d.bonus) } : {}),
+    ...(won.length ? { challenges: won.map((c) => ({ label: c.label, reward: money(c.reward) })) } : {}),
+    ...(() => {
+      const challengeSum = won.reduce((n, c) => n + c.reward, 0);
+      const influ = Math.round(((d.bonus ?? 0) - challengeSum) * 100) / 100;
+      return influ > 0 ? { bonus: money(influ) } : {};
+    })(),
     ...(after.debt ? { tab: money(after.debt) } : {}),
     cash: money(after.cash),
     profitVsStart: money(scoreRun(after)),
@@ -465,7 +486,7 @@ export function nightStructureKey(vm: NightVM): string {
 
 /** Everything about the HUD except the clock and cash. */
 export function hudStructureKey(vm: HudVM): string {
-  const { clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, closing, scrutiny, results: _results, ...rest } = vm;
+  const { clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, closing, scrutiny, results: _results, challenges, ...rest } = vm;
   // per-tick values are patched, not rebuilt: the pass keys on its items only
   return JSON.stringify({
     ...rest,
@@ -478,6 +499,8 @@ export function hudStructureKey(vm: HudVM): string {
     rogue: rogue && { stage: rogue.stage, drink: rogue.drink, name: rogue.name },
     closing: closing !== undefined, // the banner is structure; its count is patched
     scrutiny: scrutiny !== undefined, // the inspector's meter is patched
+    // challenge text/have is patched; rebuild only when one completes or fails
+    challenges: challenges?.map((c) => `${c.id}:${c.done ? 1 : 0}${c.failed ? 'x' : ''}`),
   });
 }
 

@@ -182,3 +182,25 @@
 #hud .hud-crew .av.bot::after { content: ''; position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 50%;
   background: #fffaf2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='3.2' fill='none' stroke='%233a2418' stroke-width='1.6' stroke-dasharray='2 1.2'/%3E%3Ccircle cx='6' cy='6' r='1.1' fill='%233a2418'/%3E%3C/svg%3E") center/10px no-repeat; }
 #hud .hud-crew .av { position: relative; }
+
+
+/* B7: optional daily challenge chips */
+#hud .hud-challenges {
+  position: absolute; top: 58px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; z-index: 6; pointer-events: none;
+}
+#hud .ch-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 4px 12px 4px 10px; border-radius: 999px;
+  background: #fff8ee; border: 1.5px solid #e2c9a0;
+  box-shadow: 0 2px 0 #e2c9a0; font: 600 13px var(--font-display); color: var(--ink);
+}
+#hud .ch-chip small { font: 600 11px var(--font-ui); color: #7a5a30; }
+#hud .ch-chip.done { background: #e7f6ea; border-color: #8bc49a; box-shadow: 0 2px 0 #8bc49a; color: #2f6b3c; }
+#hud .ch-chip.failed { background: #f8e8e4; border-color: #e0a090; box-shadow: 0 2px 0 #e0a090; color: #8a4030; opacity: 0.85; }
+
+#hud .pn-challenge, .paper-news .pn-challenge {
+  margin-top: 6px; padding: 6px 10px; border-radius: 8px;
+  background: #fff3d6; color: #6a4a18; font: 600 13px var(--font-ui);
+}
+.receipt-lines .line.challenge span:first-child { color: #2f6b3c; }

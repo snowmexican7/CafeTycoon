@@ -1,6 +1,7 @@
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { finishDay } from './closing';
+import { markBeforeGrace, tickChallenges } from './challenges';
 import { secondsToTicks } from './constants';
 import { spawnCustomers, stepCustomers } from './customers';
 import { stepEvents } from './events';
@@ -135,9 +136,11 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   if (doorsOpen) spawnCustomers(s);
   stepCustomers(s);
   stepRogue(s);
+  if (doorsOpen) tickChallenges(s);
   s.phaseTicksLeft -= 1;
   if (s.phaseTicksLeft > 0) return;
   if (doorsOpen) {
+    markBeforeGrace(s);
     s.phase = 'closing';
     s.phaseTicksLeft = secondsToTicks(ECONOMY.closingGraceSeconds);
   } else {

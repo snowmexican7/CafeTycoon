@@ -69,6 +69,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
       <div class="spacer"></div>
       <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">R</span> drop <span class="key">Q</span> drinks an espresso (in hand or at the machine) <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
     </div>
+    <div class="hud-challenges" aria-live="polite" hidden></div>
     <div class="hud-events" aria-live="polite"></div>
     <div class="hud-eventcard" role="status" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
@@ -95,6 +96,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     toast: $('.toast'),
     closing: $('.hud-closing'),
     closingN: $('.hud-closing .n'),
+    challenges: $('.hud-challenges'),
     clean: $('.hud-clean'),
     cleanBar: $('.hud-clean .cbar i'),
     cleanPct: $('.hud-clean .cpct'),
@@ -121,6 +123,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
   let lastHand = '';
   let lastCash: number | null = null;
   let lastClean = '';
+  let lastChallenges = '';
   let knownEvents = new Set<EventKind>();
   let lastResults = '';
   let cardTimer: ReturnType<typeof setTimeout> | null = null;
@@ -304,6 +307,54 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     lastResults = key;
   }
 
+  /** Challenge chips: rebuild when one completes/fails (structure key); patch the progress text every tick. */
+  function renderChallenges(vm: HudVM): void {
+    const list = vm.challenges ?? [];
+    const open = vm.phase === 'day' || vm.phase === 'closing';
+    if (!open || !list.length) {
+      el.challenges.hidden = true;
+      el.challenges.innerHTML = '';
+      lastChallenges = '';
+      return;
+    }
+    el.challenges.hidden = false;
+    el.challenges.innerHTML = list
+      .map(
+        (c) =>
+          `<div class="ch-chip ${c.done ? 'done' : ''} ${c.failed ? 'failed' : ''}" data-id="${esc(c.id)}" title="+$${c.reward}"><span class="ch-text">${esc(c.text)}</span><small>+$${c.reward}</small></div>`,
+      )
+      .join('');
+    lastChallenges = list.map((c) => c.text).join('|');
+  }
+
+  function patchChallenges(vm: HudVM): void {
+    const list = vm.challenges ?? [];
+    const open = vm.phase === 'day' || vm.phase === 'closing';
+    if (!open || !list.length) {
+      if (!el.challenges.hidden) {
+        el.challenges.hidden = true;
+        el.challenges.innerHTML = '';
+        lastChallenges = '';
+      }
+      return;
+    }
+    if (el.challenges.hidden || el.challenges.childElementCount !== list.length) {
+      renderChallenges(vm);
+      return;
+    }
+    const key = list.map((c) => c.text).join('|');
+    if (key === lastChallenges) return;
+    lastChallenges = key;
+    for (const c of list) {
+      const node = el.challenges.querySelector<HTMLElement>(`[data-id="${c.id}"]`);
+      if (!node) continue;
+      node.classList.toggle('done', c.done);
+      node.classList.toggle('failed', c.failed);
+      const t = node.querySelector('.ch-text');
+      if (t) t.textContent = c.text;
+    }
+  }
+
   /** The cleanliness meter is patched in place (never part of the structure key). */
   function patchClean(vm: HudVM): void {
     const open = vm.phase === 'day' || vm.phase === 'closing';
@@ -332,6 +383,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
       if (key !== lastKey) {
         lastKey = key;
         renderStructure(vm);
+        renderChallenges(vm);
       }
       renderWeek(vm, live);
       el.clock.textContent = vm.clock;
@@ -342,6 +394,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
       patchCash(vm);
       patchClean(vm);
       patchEvents(vm);
+      patchChallenges(vm);
       if (live) {
         el.bar.style.width = `${(live.progress * 100).toFixed(1)}%`;
         renderOrders(live);

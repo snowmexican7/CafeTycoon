@@ -1,4 +1,5 @@
 import { ECONOMY } from '../data/economy';
+import { dayCurveFor } from '../data/challenges';
 import { scenarioById } from '../data/scenarios';
 import { catalogueById } from '../data/catalogue';
 import { CARD_SETS } from '../data/cardSets';
@@ -154,6 +155,10 @@ export function computeModifiers(state: GameState): Modifiers {
   const ramp = weekOf(state.day) - 1;
   m.traffic *= (rep.base + rep.perStar * state.reputation) * ECONOMY.pace.arrival[paceIndex] * ECONOMY.weekRamp.traffic ** ramp;
   m.patience *= ECONOMY.pace.patience[paceIndex] * ECONOMY.weekRamp.patience ** ramp;
+  // B7: soft day-of-week curve (warm-up → finale) on top of the week ramp.
+  const curve = dayCurveFor(state.day);
+  m.traffic *= curve.traffic;
+  m.patience *= curve.patience;
   if (state.phase === 'day') m.traffic *= shapeAt(forecast.shape, dayProgress(state));
   if (eventActive(state, 'rushHour')) {
     m.traffic *= ECONOMY.events.rushHour.traffic;

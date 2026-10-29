@@ -9,6 +9,7 @@ import { resetBotsForNight } from './bots/roster';
 import { clearFloorFields } from './tiles';
 import type { GameState } from './types';
 import { settleEspresso } from './espresso';
+import { settleChallenges } from './challenges';
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -38,6 +39,7 @@ export function finishDay(state: GameState): GameState {
   }
   resetBotsForNight(state);
 
+  settleChallenges(state);
   const rent = rentForDay(state);
   state.today.rent = rent;
   state.cash = round2(state.cash - rent);

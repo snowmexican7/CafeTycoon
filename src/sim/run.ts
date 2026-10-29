@@ -14,6 +14,7 @@ import { floorFields, tileOf } from './tiles';
 import { BASE_DRINKS, DRINK_IDS } from '../data/drinks';
 import { zeroDrinks } from './tally';
 import { unlockForDay } from './unlocks';
+import { dealChallenges, pruneChallenges } from './challenges';
 import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
@@ -121,6 +122,8 @@ export function startNight(state: GameState): GameState {
   dealHand(state);
   // Weather radio (B6): tomorrow's events are drawn now, so the paper can report them tonight.
   if (computeModifiers(state).reveal) tuneRadio(state);
+  // B7: tonight's paper shows tomorrow's optional goals (state.day is the coming day).
+  state.challenges = dealChallenges(state);
   return state;
 }
 
@@ -139,6 +142,7 @@ export function startDay(state: GameState): GameState {
   syncBots(state);
   for (const p of state.players) p.tile = tileOf(p.pos);
   scheduleEvents(state);
+  pruneChallenges(state);
   state.morningNotes = morningNotes(state);
   espressoMorning(state);
   return state;

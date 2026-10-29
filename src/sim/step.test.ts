@@ -73,6 +73,7 @@ describe('step', () => {
     s.stations[1].output = 'espresso';
     s.today = { ...s.today, served: 7, lost: 3 };
     s.cash = 30;
+    s.challenges = []; // skip optional tips — this test jumps straight to closing
     s.phase = 'closing';
     s.phaseTicksLeft = 1;
     s = step(s, []);
@@ -82,6 +83,7 @@ describe('step', () => {
     expect(s.stations[1].output).toBeNull();
     expect(s.phase).toBe('night');
     s.today = { ...s.today, served: 1, lost: 9 };
+    s.challenges = [];
     s.phase = 'closing';
     s.phaseTicksLeft = 1;
     s = step(s, []);
@@ -162,7 +164,7 @@ describe('step', () => {
     s = step(s, [{ kind: 'settings', playerId: 'p1', settings: { pace: 5 } }]);
     expect(s.settings.pace).toBe(5);
     expect(s.customers[0].patienceMax).toBe(1500);
-    expect(computeModifiers(s).patience).toBeCloseTo(0.7);
+    expect(computeModifiers(s).patience).toBeCloseTo(0.7 * 1.12); // day-1 curve (B7)
     expect(step(s, [{ kind: 'settings', playerId: 'p2', settings: { pace: 1 } }]).settings.pace).toBe(5); // not the host
   });
 

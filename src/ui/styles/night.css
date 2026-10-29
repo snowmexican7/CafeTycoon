@@ -177,3 +177,10 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .sets-on { display: flex; gap: 6px; flex-wrap: wrap; } #night .sets-on span { font: 700 11.5px var(--font-display); padding: 4px 9px; border-radius: 99px; background: #e3f4ea; color: var(--mint-dk); }
 #night .pn-radio { font: 700 12.5px/1.3 var(--font-body); background: #2b211a; color: #f7f1e3; padding: 5px 8px; border-radius: 6px; }
 @media (max-height: 760px) { #night .icard .rib { top: 70px; } }
+
+
+/* B7: challenge line on the paper */
+.paper-news .pn-challenge {
+  margin-top: 6px; padding: 6px 10px; border-radius: 8px;
+  background: #fff3d6; color: #6a4a18; font: 600 13px var(--font-ui);
+}

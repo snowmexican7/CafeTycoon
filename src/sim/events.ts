@@ -5,6 +5,7 @@ import { emitLog } from './log';
 import { tally } from './tally';
 import { rngNext } from './rng';
 import { computeModifiers } from './effects';
+import { scheduleWeightsForDay } from './challenges';
 import type { ActiveEvent, EventKind, GameState, RadioReport } from './types';
 
 export const EVENT_LABELS: Record<EventKind, string> = {
@@ -35,7 +36,7 @@ function durationTicks(kind: EventKind): number {
 export function drawEvents(state: GameState): RadioReport['events'] {
   const out: RadioReport['events'] = [];
   if (state.day < 2) return out;
-  const [w0, w1] = ECONOMY.events.scheduleWeights;
+  const [w0, w1] = scheduleWeightsForDay(state.day);
   const r = rngNext(state);
   const count = r < w0 ? 0 : r < w0 + w1 ? 1 : 2;
   const remaining = [...ALL_KINDS];
