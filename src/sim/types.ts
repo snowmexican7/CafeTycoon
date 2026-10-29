@@ -214,6 +214,9 @@ export interface PitchResult {
   boost: number;
 }
 
+/** P3 B13: the growth path, smallest first. */
+export type TierId = 'stand' | 'cart' | 'cafe';
+
 /** P3 B12: the checkout path. */
 export type CheckoutId = 'register' | 'kiosk' | 'squarely';
 /** Owned checkouts (always the register) and the one in use; `since` is the day the latest was installed. */
@@ -428,6 +431,10 @@ export interface GameState {
   ad?: AdCampaign;
   /** P3 B12: the checkout path (absent = the register only). */
   checkout?: CheckoutState;
+  /** P3 B13: how big the shop is (absent = the café, as every run before B13). */
+  tier?: TierId;
+  /** P3 B13: each time the crew grew the shop this run (the tier grown into, the coming day, who did it). */
+  tierLog?: { tier: TierId; day: number; by: string }[];
   /** P3 B11: the latest pitch to the panel (it applies on its `day` when green-lit). */
   pitch?: PitchResult;
   eventSchedule: ScheduledEvent[];
@@ -475,6 +482,7 @@ export type PlayerInput =
   | { kind: 'scout'; playerId: PlayerId }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
+  | { kind: 'grow'; playerId: PlayerId; tier: TierId }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
@@ -491,6 +499,8 @@ export interface CreateRunOptions {
   hostId: PlayerId;
   players: { id: PlayerId; name: string }[];
   settings?: Partial<Settings>;
+  /** P3 B13: the size the run opens at (absent = the café; new games from the title start at the stand). */
+  tier?: TierId;
 }
 
 export interface RunRecord {

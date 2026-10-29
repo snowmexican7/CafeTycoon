@@ -1,5 +1,6 @@
 import { ECONOMY } from '../data/economy';
-import { LAYOUT } from '../data/layout';
+import { LAYOUT, layoutFor } from '../data/layout';
+import { canMake, growthMorning, stationsFor } from './growth';
 import { secondsToTicks } from './constants';
 import { rngInt, seedRng } from './rng';
 import { SCENARIOS } from '../data/scenarios';
@@ -90,7 +91,8 @@ export function createRun(opts: CreateRunOptions): GameState {
     boughtTonight: [],
     ready: [],
     players,
-    stations: LAYOUT.stations.map((s) => ({ id: s.id, kind: s.kind, pos: { ...s.pos }, busyTicksLeft: 0, output: null, occupiedBy: null })),
+    stations: stationsFor(opts.tier),
+    ...(opts.tier && opts.tier !== 'cafe' ? { tier: opts.tier } : {}),
     customers: [],
     nextCustomerId: 1,
     today: freshDayStats(1),
@@ -107,7 +109,7 @@ export function createRun(opts: CreateRunOptions): GameState {
     messes: [],
     nextMessId: 1,
     cleanliness: 100,
-    mop: { pos: { ...LAYOUT.mopHome }, heldBy: null },
+    mop: { pos: { ...layoutFor(opts.tier).mopHome }, heldBy: null },
     rogue: null,
     forecast: forecastFor(opts.seed, 1),
     unlocked: [...BASE_DRINKS],
@@ -123,7 +125,7 @@ export function startNight(state: GameState): GameState {
   state.ready = [];
   state.boughtTonight = [];
   state.forecast = forecastFor(state.seed, state.day);
-  state.freshDrinks = unlockForDay(state);
+  state.freshDrinks = unlockForDay(state).filter((d) => canMake(state, d));
   state.rerolls = 0;
   dealHand(state);
   // Weather radio (B6): tomorrow's events are drawn now, so the paper can report them tonight.
@@ -143,7 +145,7 @@ export function startDay(state: GameState): GameState {
   state.eventSchedule = [];
   state.messes = [];
   state.cleanliness = 100;
-  state.mop = { pos: { ...LAYOUT.mopHome }, heldBy: null };
+  state.mop = { pos: { ...layoutFor(state.tier).mopHome }, heldBy: null };
   state.rogue = null;
   syncBots(state);
   for (const p of state.players) p.tile = tileOf(p.pos);
@@ -157,6 +159,8 @@ export function startDay(state: GameState): GameState {
   if (adNote) state.morningNotes.push(adNote);
   const checkoutNote = checkoutMorning(state);
   if (checkoutNote) state.morningNotes.push(checkoutNote);
+  const growthNote = growthMorning(state);
+  if (growthNote) state.morningNotes.push(growthNote);
   const pitchNote = pitchMorning(state);
   if (pitchNote) state.morningNotes.push(pitchNote);
   espressoMorning(state);

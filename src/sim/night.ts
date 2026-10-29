@@ -1,3 +1,4 @@
+import { canMake, hasStation } from './growth';
 import { roleSupplyCost } from './roles';
 import { CATALOGUE, catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
@@ -20,7 +21,16 @@ export function eligibleItems(state: GameState, pool: CatalogueItem[] = CATALOGU
       !(item.duration === 'permanent' && ownedIds.has(item.id)) &&
       (item.requires ?? []).every((id) => ownedIds.has(id)) &&
       !(item.excludes ?? []).some((id) => ownedIds.has(id)) &&
-      !teachesNothing(state, item),
+      !teachesNothing(state, item) &&
+      !uselessAtTier(state, item),
+  );
+}
+
+/** P3 B13: a card that only speeds up a station the shop does not have, or only teaches drinks it cannot make yet (never at the café). */
+function uselessAtTier(state: GameState, item: CatalogueItem): boolean {
+  if (state.tier === undefined || state.tier === 'cafe' || item.effects.length === 0) return false;
+  return item.effects.every(
+    (e) => (e.kind === 'stationSpeed' && !hasStation(state, e.station)) || (e.kind === 'unlock' && !canMake(state, e.drink)),
   );
 }
 

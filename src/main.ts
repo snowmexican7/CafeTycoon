@@ -182,6 +182,7 @@ async function main(): Promise<void> {
     onScout: () => send({ kind: 'scout', playerId: me() }),
     onAd: (ad) => send({ kind: 'ad', playerId: me(), ad }),
     onCheckout: (checkout) => send({ kind: 'checkout', playerId: me(), checkout }),
+    onGrow: (tier) => send({ kind: 'grow', playerId: me(), tier }),
     onPitch: (pitchKind, text) => send({ kind: 'pitch', playerId: me(), pitchKind, text }),
     onRole: (role) => send({ kind: 'role', playerId: me(), role }),
     onReroll: () => send({ kind: 'reroll', playerId: me() }),
@@ -229,6 +230,8 @@ async function main(): Promise<void> {
       hostId,
       players: players.map((m) => ({ id: m.token, name: m.name })),
       settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec, bots },
+      // P3 B13: every new run opens as a kerbside stand and grows from there.
+      tier: 'stand',
     };
   }
 

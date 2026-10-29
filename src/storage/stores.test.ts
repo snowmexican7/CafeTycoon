@@ -41,7 +41,7 @@ describe('stores', () => {
 
 describe('snapshot versioning', () => {
   it('is on version 9', () => {
-    expect(SNAPSHOT_VERSION).toBe(21);
+    expect(SNAPSHOT_VERSION).toBe(22);
   });
 
   it('migrates a version-4 save (three drinks, no flavours) to the B5 menu', () => {
@@ -63,6 +63,18 @@ describe('snapshot versioning', () => {
     expect(got.today.drinks?.mocha).toBe(0);
   });
 
+  it('migrates a version-21 save (P3 B13): the run counts as the full café, stations untouched', () => {
+    const st = memoryStorage();
+    const store = createSnapshotStore(st);
+    const s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+    const old = JSON.parse(JSON.stringify(s));
+    st.setItem('cafetycoon.run', JSON.stringify({ version: 21, state: old }));
+    const back = store.load()!;
+    expect(back.tier).toBe('cafe');
+    expect(back.stations).toEqual(s.stations);
+    expect(back.stations.map((x) => x.kind)).toContain('steamer');
+  });
+
   it('migrates a version-3 save (no forecast) instead of dropping it', () => {
     const st = memoryStorage();
     const store = createSnapshotStore(st);
@@ -70,7 +82,7 @@ describe('snapshot versioning', () => {
     const old = JSON.parse(JSON.stringify(s));
     delete old.forecast;
     st.setItem('cafetycoon.run', JSON.stringify({ version: 3, state: old }));
-    expect(store.load()).toEqual(s);
+    expect(store.load()).toEqual({ ...s, tier: 'cafe' }); // P3 B13: every old run is the café
     st.setItem('cafetycoon.run', JSON.stringify({ version: 2, state: old }));
     expect(store.load()).toBeNull();
     st.setItem('cafetycoon.run', JSON.stringify({ version: SNAPSHOT_VERSION + 1, state: s }));

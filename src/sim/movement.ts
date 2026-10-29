@@ -1,6 +1,7 @@
 import { roleWalk } from './roles';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
+import { floorWidth } from './growth';
 import { TICK_RATE } from './constants';
 import type { GameState, Station, Vec2 } from './types';
 import { botSpeed } from './bots/roster';
@@ -9,8 +10,8 @@ import { espressoSpeed } from './espresso';
 const HALF = ECONOMY.baristaHalfWidth;
 
 /** True when a barista centred at `pos` overlaps a wall or any station's unit square. */
-export function blocked(pos: Vec2, stations: Station[]): boolean {
-  if (pos.x < HALF || pos.y < HALF || pos.x > LAYOUT.width - HALF || pos.y > LAYOUT.height - HALF) return true;
+export function blocked(pos: Vec2, stations: Station[], width: number = LAYOUT.width): boolean {
+  if (pos.x < HALF || pos.y < HALF || pos.x > width - HALF || pos.y > LAYOUT.height - HALF) return true;
   for (const s of stations) {
     if (Math.abs(pos.x - s.pos.x) < 0.5 + HALF && Math.abs(pos.y - s.pos.y) < 0.5 + HALF) return true;
   }
@@ -20,6 +21,7 @@ export function blocked(pos: Vec2, stations: Station[]): boolean {
 /** Advance every connected barista along its moveDir, axis by axis, stopping at walls and stations. Bots walk at their own pace. */
 export function applyMovement(state: GameState, moveSpeedMul: number): GameState {
   const speed = (ECONOMY.moveSpeedTilesPerSecond * moveSpeedMul) / TICK_RATE;
+  const w = floorWidth(state);
   for (const p of state.players) {
     if (!p.connected) continue;
     const len = Math.hypot(p.moveDir.x, p.moveDir.y);
@@ -28,10 +30,10 @@ export function applyMovement(state: GameState, moveSpeedMul: number): GameState
     const dx = (p.moveDir.x / len) * mine;
     const dy = (p.moveDir.y / len) * mine;
     const next = { x: p.pos.x + dx, y: p.pos.y };
-    if (!blocked(next, state.stations)) p.pos.x = next.x;
+    if (!blocked(next, state.stations, w)) p.pos.x = next.x;
     next.x = p.pos.x;
     next.y = p.pos.y + dy;
-    if (!blocked(next, state.stations)) p.pos.y = next.y;
+    if (!blocked(next, state.stations, w)) p.pos.y = next.y;
   }
   return state;
 }
