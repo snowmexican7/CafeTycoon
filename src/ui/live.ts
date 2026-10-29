@@ -1,3 +1,4 @@
+import { ROLES } from '../sim/roles';
 /**
  * Presentational helpers for the restyled overlays. They read GameState directly for the things
  * the view models do not carry (order tickets, crew, what you hold, the day bar), and never change
@@ -156,7 +157,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     }),
     crew: crewOf(state, me),
     holding: player?.holding ?? null,
-    meName: player?.name ?? '',
+    meName: player?.role ? `${ROLES[player.role].icon} ${player.name} the ${ROLES[player.role].name}` : (player?.name ?? ''),
     hint: handHint(state, me),
   };
 }

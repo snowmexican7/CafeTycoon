@@ -1,3 +1,4 @@
+import { applyRoleInput } from './roles';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { finishDay } from './closing';
@@ -99,6 +100,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'menu':
       applyMenuInput(s, input);
+      break;
+    case 'role':
+      applyRoleInput(s, input);
       break;
     case 'espresso':
       drinkEspresso(s, input.playerId);

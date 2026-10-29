@@ -1,3 +1,4 @@
+import { isRole } from './roles';
 import { ECONOMY } from '../data/economy';
 import { DRINK_IDS } from '../data/drinks';
 import type { BotSkill, Pace, PlayerInput, Settings, SupplyId } from './types';
@@ -49,6 +50,8 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return DRINK_IDS.includes(input.drink) && typeof input.on === 'boolean'
         ? { kind: 'menu', playerId: input.playerId, drink: input.drink, on: input.on }
         : null;
+    case 'role':
+      return input.role === null || isRole(input.role) ? { kind: 'role', playerId: input.playerId, role: input.role } : null;
     case 'weekEnd':
       return input.choice === 'stop' || input.choice === 'continue' ? { kind: 'weekEnd', playerId: input.playerId, choice: input.choice } : null;
     case 'settings':

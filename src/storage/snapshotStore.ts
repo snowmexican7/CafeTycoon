@@ -9,7 +9,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 9;
+export const SNAPSHOT_VERSION = 10;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -40,6 +40,8 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   8: (s) => {
     s.crew ??= { seen: 0, players: [] };
   },
+  // v10 (Phase 3 B1): barista roles. Optional per player; absent = no role, so nothing to fill.
+  9: () => {},
 };
 
 /** Bring a saved state up to SNAPSHOT_VERSION, or null when no migration path exists. */

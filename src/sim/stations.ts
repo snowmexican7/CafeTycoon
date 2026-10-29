@@ -1,3 +1,4 @@
+import { roleMachineTime } from './roles';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import { computeModifiers } from './effects';
@@ -100,7 +101,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     station.making = recipe.gives;
     const speed = computeModifiers(state).stationSpeed[station.kind];
     const seconds = recipe.seconds ?? ECONOMY.stationSeconds[station.kind as RecipeStation];
-    station.busyTicksLeft = Math.round((seconds / speed) * TICK_RATE);
+    station.busyTicksLeft = Math.round(((seconds * roleMachineTime(state, playerId)) / speed) * TICK_RATE);
   }
   return state;
 }

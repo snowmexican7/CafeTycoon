@@ -1,3 +1,4 @@
+import { roleSupplyCost } from './roles';
 import { CATALOGUE, catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
 import { computeModifiers, resolveGamble } from './effects';
@@ -76,7 +77,7 @@ export function dealHand(state: GameState, pool: CatalogueItem[] = CATALOGUE, sk
 
 /** Price of `packs` packs of a supply tonight, after supply-cost modifiers. */
 export function restockCost(state: GameState, supply: SupplyId, packs: number): number {
-  return round2(packs * ECONOMY.packs[supply].cost * computeModifiers(state).supplyCost[supply]);
+  return round2(packs * ECONOMY.packs[supply].cost * computeModifiers(state).supplyCost[supply] * roleSupplyCost(state));
 }
 
 function buy(state: GameState, itemId: string): void {
