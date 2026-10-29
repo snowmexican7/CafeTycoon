@@ -31,7 +31,7 @@
 #night .ready { display: flex; gap: 8px; flex-wrap: wrap; }
 #night .rp { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 99px; padding: 4px 12px 4px 4px; font: 600 var(--fs-s) var(--font-display); box-shadow: var(--sh-1); }
 #night .rp em { font-style: normal; color: var(--ink-soft); font-size: var(--fs-xs); }
-#night .rp .av { border: 0; } #night .rp .ok { color: var(--good); } #night .rp .wait { color: #9a7d5c; }
+#night .rp .av { border: 0; font-size: var(--fs-xs); } #night .rp .ok { color: var(--good); } #night .rp .wait { color: #9a7d5c; }
 #night .rl-badge { font-size: var(--fs-s); }
 #night .foot-note { font: 700 var(--fs-xs) var(--font-body); color: var(--ink-soft); }
 #night .foot .btn.big { font-size: var(--fs-l); padding: 12px 26px; border-radius: 18px; white-space: nowrap; }
