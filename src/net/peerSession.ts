@@ -1,5 +1,7 @@
 import type { TeleEvent } from '../host/telemetry';
-import { parseHello, parseLobby, parseSeat, parseSnap, PROTOCOL_VERSION, type LobbyMsg } from './protocol';
+import type { GameState } from '../sim/types';
+import { applyPatch } from './delta';
+import { parseHello, parseLobby, parseSeat, parseSnap, parseSnapDelta, PROTOCOL_VERSION, type LobbyMsg } from './protocol';
 import type { RoomLink } from './roomLink';
 import type { HostToClient, Transport } from './transport';
 
@@ -45,6 +47,20 @@ export function createPeerSession(link: RoomLink, opts: PeerSessionOptions): Pee
   let hostPeerId: string | null = null;
   let hostToken: string | null = null;
   let lastPhase: string | null = null;
+  // The state the host's deltas build on, and the delta seq at which we last asked for a keyframe.
+  let held: { state: GameState; seq: number } | null = null;
+  let resyncAsked: number | null = null;
+  const emit = (state: GameState, sentAt: number) => {
+    lastPhase = state.phase;
+    const snap: HostToClient = { t: 'snapshot', state, sentAt };
+    for (const h of snapshotHandlers) h(snap);
+  };
+  // Ask once, and again only if a second of deltas goes by without the keyframe arriving.
+  const askResync = (peerId: string, seq: number) => {
+    if (resyncAsked !== null && seq - resyncAsked < 20) return;
+    resyncAsked = seq;
+    link.send('resync', { t: 'resync' }, peerId);
+  };
   let timer: unknown = opts.setTimer(() => {
     timer = null;
     fail(HOST_TIMEOUT_MESSAGE);
@@ -92,9 +108,31 @@ export function createPeerSession(link: RoomLink, opts: PeerSessionOptions): Pee
     if (peerId !== hostPeerId) return;
     const msg = parseSnap(data);
     if (!msg) return;
-    lastPhase = msg.state.phase;
-    const snap: HostToClient = { t: 'snapshot', state: msg.state, sentAt: msg.sentAt };
-    for (const h of snapshotHandlers) h(snap);
+    held = { state: msg.state, seq: msg.seq };
+    resyncAsked = null;
+    emit(msg.state, msg.sentAt);
+  });
+
+  link.onMessage('snapd', (data, peerId) => {
+    if (peerId !== hostPeerId) return;
+    const msg = parseSnapDelta(data);
+    if (!msg) return;
+    if (!held || msg.seq !== held.seq + 1) {
+      askResync(peerId, msg.seq);
+      return;
+    }
+    let state = held.state;
+    if (msg.patch) {
+      try {
+        state = applyPatch(held.state, msg.patch) as GameState;
+      } catch {
+        held = null;
+        askResync(peerId, msg.seq);
+        return;
+      }
+    }
+    held = { state, seq: msg.seq };
+    emit(state, msg.sentAt);
   });
 
   link.onMessage('lobby', (data, peerId) => {
