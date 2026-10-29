@@ -16,6 +16,34 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+Nothing yet.
+
+## 2.0.0 — 2026-10-29
+
+**Phase 2, "Busy season", is done.** The café is busier, messier and different every day: bot
+baristas, day events, forecasts and a local paper, a bigger menu, 52 night cards in sets, daily
+challenges, Easter eggs, an awards ceremony and café records.
+
+### What's new in 2.0.0, in a minute
+
+- **Bots** fill empty spots (Off, 1, 2 or 3 in the lobby) and feel human: they hesitate, botch and
+  remake drinks, mop when it's quiet and step around you.
+- **Every day is different:** neighbourhood forecasts in *The Daily Grind*, rush hour, power
+  flickers, the health inspector, influencers, a rogue customer, messes and the mop.
+- **Night is a card shop:** 52 cards on three paths (⚡ Speed, ★ Quality, 📣 Reach), sets with pair
+  and full-set bonuses, spicy cards, the weather radio, a temp to hire, and re-rolls.
+- **Bigger menu:** iced latte, mocha, matcha and maple cold foam, plus flavour pumps.
+- **Goals and glory:** daily challenges, combo streaks and a crew vibe meter, then an end-of-week
+  awards ceremony and café records on the title screen.
+- **Balanced:** cheaper upgrades, a gentle Monday and a hard Sunday, and your score counts what you
+  built.
+- **Your old save still works.** A run saved by 1.1.0 loads and carries on. Everyone in a room needs
+  2.0.0 to play together, so refresh if a friend can't join.
+- The version now shows at the bottom of **Past runs & controls** on the title screen. The controls
+  list includes **R** (drop).
+
+### Everything in 2.0.0
+
 - **Balance pass.** Upgrades are about 20% cheaper, customers are a little more patient, and the
   hire-a-temp card is $30. The week now opens gently and day 7 is a proper finale. Your **score**
   counts permanent upgrades at half price, so investing isn't just spending. The week-end screen
