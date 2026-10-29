@@ -880,3 +880,26 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
     intended, but it's worth saying so in the PLAYTEST_GUIDE.
   - The night left column now has Restock, Roles, Regulars and Menu board. It needs the
     two-column or tabbed layout soon (noted under B2).
+
+## P3 Block 04 reflection (tabbed night board, supplies that spoil)
+
+- **What shipped.**
+  - The night board is tabbed: Shop / Menu & prices / Crew & roles / Regulars / Paper. The tab
+    state lives in the UI only (no sim or protocol change) and survives rebuilds.
+  - `src/sim/spoilage.ts`: milk 30% and pastries 50% of leftovers go off at closing (floors, no
+    RNG); a Manager ×0.5; a `spoil` effect and the Walk-in fridge card ×0.4.
+  - Pastries are a new supply sold on the side with a served drink (seeded 35% roll, only when
+    the case is not empty, so runs without pastries keep the exact same RNG stream).
+  - The night board shows what went off and the share per fresh row. Save v13, protocol v16.
+- **Checks.** Six new tests (spoil shares; Manager and fridge; pastry sales deterministic and
+  capped by stock; RNG untouched with no pastries; night VM; v12→v13 migration): 545 in total.
+  Balance over 10 seeds: mean final cash 283.62 → 288.48, loss rate 27.5% → 25.6%, 0 bankruptcies.
+  Pastry sales roughly pay for the extra milk waste, so it's within noise.
+- **What went well.** The tabs fixed the overlong left column without touching the sim, and the
+  fresh-stock trade-off is visible right on the restock row where the decision is made.
+- **What to watch / deferred.**
+  - The weather-radio test assumed the deal consumed a fixed amount of RNG. A new card broke
+    that, so the test now holds the deck equal. Dealing from its own seeded stream would make
+    this robust; that's a candidate for the integration block.
+  - Pastries have no station or art beyond the jar colour; a counter case sprite would help.
+  - There's no over-order warning yet. The night warnings only flag running out.
