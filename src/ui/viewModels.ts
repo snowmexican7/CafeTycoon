@@ -22,7 +22,7 @@ import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { EVENT_LABELS } from '../sim/events';
 import { challengeChipText } from '../sim/challenges';
 import { activeSets, fullSets, computeModifiers, setCounts, weekOf } from '../sim/effects';
-import { rerollCost, restockCost } from '../sim/night';
+import { nightClock, rerollCost, restockCost } from '../sim/night';
 import { spoilRate } from '../sim/spoilage';
 import { profitOf } from '../sim/profit';
 import { fittingsValue, scoreRun } from '../sim/score';
@@ -997,50 +997,54 @@ export function rogueHud(state: GameState): Pick<HudVM, 'rogue'> {
 // ---------------------------------------------------------------------------------------------
 // FB1 WP1 (UI lane): the night brief and the night timer.
 //
-// TODO(fb1 WP1-sim, Claude): when `nightBrief(state)` lands in src/sim, build `brief.alerts` from
-// its NightAlert[] (kind, severity, text, fix?: Input) and keep this file's fallback only for old
-// builds. Likewise read the sim's relaxed / last-call fields instead of guessing from the clock.
+// The clock now reads the sim's `nightClock` (relaxed mode, last call). The brief is still built
+// here from the night VM (icons and one-tap UI actions); TODO(fb1, UI): map the sim's
+// `nightBrief(state).alerts` (src/sim/brief.ts) in when its fixes can drive the same buttons.
 // ---------------------------------------------------------------------------------------------
 
 /** What the night length picker offers; 0 = Relaxed (no clock: the doors open when everyone is ready). */
 export const NIGHT_LENGTHS = [60, 120, 180, 0] as const;
 /** FB1: the new default night (Claude's WP1-sim moves ECONOMY.nightLengthSec to match). */
 export const DEFAULT_NIGHT_LENGTH = 120;
-/** The sim's longest night; a Relaxed night runs on it until the sim accepts nightLengthSec 0. */
+/** The old stand-in for Relaxed (the longest timed night), sent before the sim accepted 0. */
 export const RELAXED_FALLBACK_SEC = 600;
-/** Seconds of "last call" once a Relaxed night starts closing. */
-export const LAST_CALL_SEC = 30;
-/**
- * TODO(fb1 WP1-sim): flip to true when validate.ts accepts nightLengthSec 0. Until then a Relaxed
- * night is sent as the longest timed night, and ready-up still opens the doors early.
- */
-export const SIM_ACCEPTS_RELAXED = false;
+/** The sim accepts nightLengthSec 0 (fb1 WP1-sim): Relaxed is sent as 0. */
+export const SIM_ACCEPTS_RELAXED = true;
 
 /** The night length to put in the run settings for a picker value. */
 export function nightLengthForSim(sec: number): number {
   return sec === 0 && !SIM_ACCEPTS_RELAXED ? RELAXED_FALLBACK_SEC : sec;
 }
 
-/** The picker value for a stored or live night length (the fallback reads back as Relaxed). */
-/** One-time settings migration (main.ts): the old 60 s default becomes the new 120 s default. */
-export function migrateNightLength(stored: number): number {
-  return stored === 60 ? DEFAULT_NIGHT_LENGTH : stored;
+/**
+ * One-time settings migration (main.ts), by the version already applied: from 0, the old 60 s
+ * default becomes 120 s; from 0 or 1, the old Relaxed stand-in (600 s) becomes a real Relaxed (0).
+ */
+export function migrateNightLength(stored: number, from = 0): number {
+  if (from < 1 && stored === 60) return DEFAULT_NIGHT_LENGTH;
+  if (from < 2 && stored === RELAXED_FALLBACK_SEC) return 0;
+  return stored;
 }
+export const NIGHT_LENGTH_MIGRATION = 2;
 
+/** The picker value for a stored or live night length. */
 export function nightLengthChoice(sec: number): number {
-  return sec === 0 || sec >= RELAXED_FALLBACK_SEC ? 0 : sec;
+  return sec === 0 ? 0 : sec;
 }
 
 export interface NightTimerVM {
   relaxed: boolean;
-  /** Relaxed nights only: the 30 s last call is running (patched, not structure). */
+  /** Relaxed nights only: the sim's last call is running (patched, not structure). */
   lastCall: boolean;
+  /** The last-call countdown, m:ss, while it runs. */
+  lastCallClock?: string;
 }
 
 export function nightTimerVM(state: GameState): NightTimerVM {
-  const relaxed = nightLengthChoice(state.settings.nightLengthSec) === 0;
-  const left = state.phaseTicksLeft / TICK_RATE;
-  return { relaxed, lastCall: relaxed && left > 0 && left <= LAST_CALL_SEC };
+  const c = nightClock(state);
+  const relaxed = c.mode === 'relaxed';
+  const left = relaxed ? c.lastCallSecondsLeft : null;
+  return left === null ? { relaxed, lastCall: false } : { relaxed, lastCall: true, lastCallClock: clockFor(left * TICK_RATE) };
 }
 
 export type BriefSeverity = 'danger' | 'warn' | 'good';

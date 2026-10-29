@@ -560,7 +560,7 @@ export function createNight(
 
   function patch(vm: NightVM, extras?: NightExtras): void {
     const clock = container.querySelector('.night-head .clock');
-    if (clock) clock.textContent = vm.timer.relaxed ? (vm.timer.lastCall ? `Last call ${vm.clock}` : 'Relaxed') : vm.clock;
+    if (clock) clock.textContent = vm.timer.relaxed ? (vm.timer.lastCall ? `Last call ${vm.timer.lastCallClock ?? vm.clock}` : 'Relaxed') : vm.clock;
     container.querySelector('.night-head .timer')?.classList.toggle('last-call', vm.timer.lastCall);
     const cashEl = container.querySelector('.night-head .cash');
     if (cashEl) cashEl.textContent = vm.cash;
