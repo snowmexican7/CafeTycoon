@@ -49,11 +49,12 @@ game night. Phase 1's "first game night" goal carries over the same way.
 barista roles, per-item pricing, regulars with favourites, supplies that spoil, recipe accuracy,
 the hidden taste map, the signature drink, taste seasons, the rival Starbuck$ (scouting, copying,
 undercutting), parody ads, "Pitch an idea", the checkout path and the growth path. Still to come:
-- **Feedback round 1** (from Kennedy's first playtest; plan in `docs/FEEDBACK_PLAN_1.md`, branch
-  `fb1`): a readable night screen (fewer tabs, big drink cards, larger type, longer or relaxed
-  nights), bigger order tickets, close the day early, sold-out walk-ups (v2.2.0); station slots
-  with extra grinders and espresso machines, replacing the layout editor, and bots that use the new
-  systems (v2.3.0).
+- **Feedback round 1**: *delivered in v2.2.0 (2026-10-29, release candidate `v2.2.0-rc1` on `fb1`;
+  goes live when Kennedy merges it).* From Kennedy's first playtest (plan in `docs/FEEDBACK_PLAN_1.md`):
+  a readable night screen (three tabs, big drink cards, larger type, two-minute or relaxed nights, one
+  Heads up list from the sim's night brief), bigger order tickets, close the day early, sold-out
+  walk-ups, station slots with extra grinders and espresso machines (replacing the layout editor),
+  and bot crew tips with personalities.
 - **B15** bots become hired staff with wages · **B16** saves and unlocks carried between runs ·
   **B17** integration and **v3.0.0**.
 - Moved: seasons across game nights and rival escalation to Phase 4; the mobile night layout to

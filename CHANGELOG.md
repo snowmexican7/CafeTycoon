@@ -16,12 +16,17 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+## 2.2.0 — 2026-10-29 · Feedback round 1 (game-night build)
+
+Everything from Kennedy's first playtest notes, in one build: readable nights, bigger tickets, close early, sold out, station slots and crew tips.
+
 - Everyone can vote to close early when the day is dead: once every barista agrees, the doors lock and whoever is inside gets served.
 - **Close early button.** Hold the button by the clock (or hold C) for a second to vote. It shows how many of the crew have voted, a second tap takes your vote back, and it pulses when you're sold out or the shop has been empty for a while.
 - **Sold out.** a SOLD OUT sign on the menu board and the wall chalkboard, a "Sold out?!" puff when a customer walks away, and the rush-hour banner reads "Rush hour, but you're sold out". The right rail fits at 1280x800.
 - **Stations.** A new Spend › Stations card: big tiles for each back-bar slot (tap one to swap in a spare or empty it, free), a shop with fixed prices (grinder $30, espresso $45, steamer $40, cold-brew tap $35, bin $15) and a one-line trade-off such as "No bin: trash hits the floor". The shop floor draws what you placed: a numbered badge on a second machine, a dashed plinth in an empty slot, and a "No bin!" puff when something lands on the floor. The Menu tab says which drink waits for a missing station.
 - **Crew tips.** Your bot crewmates now chip in on the Tonight tab: up to two tips, each a big tap-to-apply chip with who said it ("Lu: Cut the Espresso to $2.50 · Do it"). Tips the Heads up list already covers (restock, grow, checkout) are left out, and a chip disappears once it is done. The hurried bot wears a red sweatband and flashes a stopwatch.
 - **One Heads up list.** The Tonight alerts now come straight from the game's own night brief, so the money, stock, sold-out, spoilage, grow and checkout notes match what the sim checks, and a stock alert's button buys the packs it suggests. Grow and checkout nudges wait until you have played a day. The night clock pill shows how many people are ready ("✓ 1/2 ready") and turns green when everyone is.
+- The day menu board says "off menu" for a drink the crew turned off, instead of "sold out".
 - A sold-out board no longer makes the street empty: people still walk up, read the board and walk away, and the morning paper counts them.
 - **Longer, gentler nights.** Nights last two minutes now, and a relaxed night has no clock at all: the doors open when everyone is ready, with a 30-second last call once most of the crew is.
 - **A night screen that tells you what matters.** Yesterday's profit, one headline, and a few alerts with a one-tap fix.
