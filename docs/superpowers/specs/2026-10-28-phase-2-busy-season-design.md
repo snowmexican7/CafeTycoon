@@ -323,3 +323,24 @@ regulars' name list; test fixtures; how the tester formats its tables.
 - Baristas are capped at four, bots included.
 - The tester's stand-in humans are perfect bots, so its "human" table is a ceiling, not a
   prediction of real friends.
+
+### Balance pass (2026-10-28)
+
+Commands (50 weeks each, seeds 1 to 50, deterministic):
+
+- `npx tsx scripts/balance.ts --weeks 50 --seed 1 --pace 3 --skill 3 --menu all --json` (two humans + one bot)
+- `npx tsx scripts/balance.ts --weeks 50 --seed 1 --humans 0 --bots 3 --json` (three bots alone)
+
+| Measure | Two humans + one bot | Three bots | Target |
+| --- | --- | --- | --- |
+| Weeks finished (seven days, no bankruptcy) | 50/50 | 50/50 | humans ≥ 95%, bots ≥ 60% |
+| Weeks ending above the $100 start | 50/50 | not checked | ≥ 80% |
+| Loss rate, lost / (served + lost) | 0.313 | 0.364 | humans in [0.15, 0.35] |
+| Mean final cash | $297.2 | $229.9 | bots never above humans |
+| Served / lost drinks | 7730 / 3527 | not recorded | |
+| Bot mistakes | 197 | 786 | |
+| Wasted drinks | 457 | 876 | |
+
+Every target is met, so no knob was changed and `src/data/economy.ts` is untouched. The human
+loss rate sits near the top of the band (31%); if a playtest finds it too harsh, ease
+patience or traffic first.

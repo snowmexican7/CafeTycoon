@@ -61,6 +61,7 @@ playtest complains about it.
   `public/roadmap.json` in `src/ui/roadmapModel.ts`.
 
 ## Decisions not recorded elsewhere
+- 2026-10-28: The first balance pass met every spec §11 target, so `economy.ts` is unchanged. Re-run the two commands in spec §16 ("Balance pass") after any sim change.
 - 2026-10-28: Telemetry is a phase 2 goal. The roadmap rewrite had dropped it; Kennedy wants
   it. Host-recorded, downloaded as a file, no new accounts; see design spec §13.
 - 2026-10-28: Saves and unlocks carried between game nights are a nice-to-have, not phase 1;
