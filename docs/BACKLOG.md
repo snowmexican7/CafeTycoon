@@ -80,3 +80,17 @@ playtest complains about it.
   disclosure). The pause menu shows the roadmap read-only, with no Suggestions tab. The
   legacy dark-panel CSS in `src/style.css` is gone, and every screen now uses
   `src/ui/styles/*.css`.
+
+## main.ts hook-ins (phase 2)
+
+Telemetry hook-ins in `src/main.ts` (slice 7); the UI agent should expect these when merging the title wiring.
+
+- Imports: `createTelemetry`, `withTelemetry`, `createUiBuffer`, `setUiTelemetrySink`, `uiTelemetry`, `Telemetry` from `./host/telemetry`; `PROTOCOL_VERSION` from `./net/protocol`.
+- `Session` gains `telemetry` and `teleTimer`, both initialised `null` in `createSession`.
+- `main()` scope: `newTelemetry(host)`, `attachTelemetry(s, tele)`, `downloadTelemetry()`, `telemetryRows()` and `lastFrameAt` helpers sit beside `interactPending`.
+- `startSolo`, `startHost`, `resume`: the local transport is wrapped with `withTelemetry`, and `attachTelemetry` runs right after `createSession` (sets `s.telemetry` and the UI sink).
+- `openHostRoom`: `createHostRoom` gets a fifth `hooks` argument forwarding peer tele events to `s.telemetry?.peerEvents`.
+- `startPeer`: a `createUiBuffer()` feeds the UI sink, and a 2000 ms interval (`s.teleTimer`) sends `transport.sendTele(buffer.drain())`.
+- `frame()`: tracks the previous frame time and records `frame.long { ms }` through `uiTelemetry.ui` when the gap exceeds 250 ms (first frame skipped).
+- End of `main()`: `window.cafetycoon = { telemetry: { download, rows } }`; wire `downloadTelemetry` / `telemetryRows` to UI buttons if wanted.
+- `endSession`: clears `teleTimer` and calls `setUiTelemetrySink(null)`.

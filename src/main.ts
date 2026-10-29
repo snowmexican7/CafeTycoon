@@ -1,11 +1,12 @@
 import './style.css';
 import { SNAPSHOT_INTERVAL_MS } from './host/loop';
+import { createTelemetry, withTelemetry, createUiBuffer, setUiTelemetrySink, uiTelemetry, type Telemetry } from './host/telemetry';
 import { createHostRoom, type HostRoom } from './net/hostRoom';
 import { markPeersAway } from './net/hostResume';
 import { createLocalTransport } from './net/localTransport';
 import type { PeerStatus } from './net/peerSession';
 import { createPeerTransport } from './net/peerTransport';
-import type { Member } from './net/protocol';
+import { PROTOCOL_VERSION, type Member } from './net/protocol';
 import { makeRoomCode, normalizeRoomCode } from './net/roomCode';
 import { createTrysteroLink } from './net/roomLink';
 import { createSendGate } from './net/sendGate';
@@ -79,6 +80,8 @@ interface Session {
   room: HostRoom | null;
   unsubscribers: (() => void)[];
   watchdog: ReturnType<typeof setTimeout> | null;
+  telemetry: Telemetry | null;
+  teleTimer: ReturnType<typeof setInterval> | null;
   me: PlayerId;
   prev: GameState | null;
   next: GameState | null;
@@ -100,6 +103,17 @@ async function main(): Promise<void> {
   let session: Session | null = null;
   let lastSent = { x: 0, y: 0 };
   let interactPending = false;
+  let lastFrameAt: number | null = null;
+
+  function newTelemetry(host: string): Telemetry {
+    return createTelemetry({ host, build: new Date(document.lastModified).toISOString(), protocol: PROTOCOL_VERSION });
+  }
+  function attachTelemetry(s: Session, tele: Telemetry): void {
+    s.telemetry = tele;
+    setUiTelemetrySink((k, d) => tele.ui(k, d));
+  }
+  const downloadTelemetry = () => session?.telemetry?.download();
+  const telemetryRows = () => session?.telemetry?.rows() ?? [];
 
   const send = (input: PlayerInput) => session?.transport.sendInput(input);
   const me = () => session?.me ?? '';
@@ -162,6 +176,8 @@ async function main(): Promise<void> {
       room: null,
       unsubscribers: [],
       watchdog: null,
+      telemetry: null,
+      teleTimer: null,
       me: playerId,
       prev: null,
       next: null,
@@ -204,9 +220,11 @@ async function main(): Promise<void> {
   function startSolo(choice: StartChoice): void {
     const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec });
     stores.hostRoom.clear(); // a solo run never reopens an old room
-    const local = createLocalTransport();
+    const tele = newTelemetry(settings.playerName);
+    const local = withTelemetry(createLocalTransport(), tele);
     const id = tabIdentity();
     const s = createSession('solo', null, local, id);
+    attachTelemetry(s, tele);
     armWatchdog(s);
     local.start(runOptions(choice, id, [{ token: id, name: settings.playerName }]));
   }
@@ -216,7 +234,7 @@ async function main(): Promise<void> {
     s.room = createHostRoom(link, local, hostMember, (members) => {
       s.members = members;
       renderLobby(s);
-    });
+    }, { onTele: (token, events) => s.telemetry?.peerEvents(token, events) });
     s.members = s.room.members();
     s.peerStatus = 'hosting';
     renderLobby(s);
@@ -226,9 +244,11 @@ async function main(): Promise<void> {
     const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec });
     const code = makeRoomCode(Math.random);
     stores.hostRoom.save({ code, role: 'host' });
-    const local = createLocalTransport();
+    const tele = newTelemetry(settings.playerName);
+    const local = withTelemetry(createLocalTransport(), tele);
     const id = tabIdentity();
     const s = createSession('host', code, local, id);
+    attachTelemetry(s, tele);
     s.pendingStart = choice;
     openHostRoom(s, local, code, { token: id, name: settings.playerName });
     lobby.show();
@@ -254,6 +274,9 @@ async function main(): Promise<void> {
     const transport = createPeerTransport(code, id, settings.playerName);
     const s = createSession('peer', code, transport, id);
     s.peerStatus = 'connecting';
+    const buffer = createUiBuffer();
+    setUiTelemetrySink(buffer.push);
+    s.teleTimer = setInterval(() => transport.sendTele(buffer.drain()), 2000);
     s.unsubscribers.push(
       transport.onStatus((status) => {
         s.peerStatus = status;
@@ -277,16 +300,19 @@ async function main(): Promise<void> {
     const saved = stores.snapshot.load();
     if (!saved) return showTitle();
     const room = stores.hostRoom.load();
-    const local = createLocalTransport();
+    const hostName = saved.players.find((p) => p.id === saved.hostId)?.name ?? stores.settings.get().playerName;
+    const tele = newTelemetry(hostName);
+    const local = withTelemetry(createLocalTransport(), tele);
     if (room?.role === 'host') {
       const s = createSession('host', room.code, local, saved.hostId);
-      const settings = stores.settings.get();
-      openHostRoom(s, local, room.code, { token: saved.hostId, name: saved.players.find((p) => p.id === saved.hostId)?.name ?? settings.playerName });
+      attachTelemetry(s, tele);
+      openHostRoom(s, local, room.code, { token: saved.hostId, name: hostName });
       armWatchdog(s);
       local.resume(markPeersAway(saved, saved.hostId));
       return;
     }
     const s = createSession('solo', null, local, saved.hostId);
+    attachTelemetry(s, tele);
     armWatchdog(s);
     local.resume(saved);
   }
@@ -303,11 +329,13 @@ async function main(): Promise<void> {
     const s = session;
     if (s) {
       if (s.watchdog) clearTimeout(s.watchdog);
+      if (s.teleTimer) clearInterval(s.teleTimer);
       for (const u of s.unsubscribers) u();
       s.room?.close();
       s.transport.close();
     }
     session = null;
+    setUiTelemetrySink(null);
     hud.setRoom(null);
     renderer.setLocalPlayer(null);
     lobby.hide();
@@ -387,6 +415,9 @@ async function main(): Promise<void> {
 
   function frame(): void {
     requestAnimationFrame(frame); // re-arm first so a bad frame can never stop rendering for good
+    const now = performance.now();
+    if (lastFrameAt !== null && now - lastFrameAt > 250) uiTelemetry.ui('frame.long', { ms: Math.round(now - lastFrameAt) });
+    lastFrameAt = now;
     try {
       drawAndSend();
     } catch (err) {
@@ -410,6 +441,7 @@ async function main(): Promise<void> {
     }
   }
 
+  window.cafetycoon = { telemetry: { download: downloadTelemetry, rows: telemetryRows } };
   showTitle();
   requestAnimationFrame(frame);
 }
