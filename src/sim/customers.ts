@@ -14,6 +14,7 @@ import { clearNameMixOnServe, maybeNameMix, maybeSpawnCamper, secretServeBonus }
 import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, SimEvent } from './types';
 import { sellPastry } from './spoilage';
 import { accuracyTip, noteCup, starsFor } from './accuracy';
+import { comboTip, serveCombo, TASTE } from './taste';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
 
@@ -213,8 +214,9 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   const pastry = sellPastry(state, by);
   const stars = starsFor(slips);
   noteCup(state.today, stars);
-  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) + roleCraft(state, by));
-  state.cash = round2(state.cash + price + tip);
+  const combo = serveCombo(state, drink, state.today);
+  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) + roleCraft(state, by));
+  state.cash = round2(state.cash + price + tip - (combo ? TASTE.cost : 0));
   state.today.sales = round2(state.today.sales + price);
   state.today.tips = round2(state.today.tips + tip);
   state.today.served += 1;
@@ -232,6 +234,11 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     left: customer.extra?.length ?? 0,
     stars,
   };
+  if (combo) {
+    served.twist = combo.twist;
+    served.combo = combo.stars;
+    if (combo.found) served.found = true;
+  }
   if (pastry) served.pastry = pastry;
   if (customer.name !== undefined) served.name = customer.name;
   emitLog(state, 'served', served);

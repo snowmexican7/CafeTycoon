@@ -177,6 +177,7 @@ async function main(): Promise<void> {
     onReady: () => send({ kind: 'ready', playerId: me() }),
     onMenu: (drink, on) => send({ kind: 'menu', playerId: me(), drink, on }),
     onPrice: (drink, step) => send({ kind: 'price', playerId: me(), drink, step }),
+    onTwist: (drink, twist) => send({ kind: 'twist', playerId: me(), drink, twist }),
     onRole: (role) => send({ kind: 'role', playerId: me(), role }),
     onReroll: () => send({ kind: 'reroll', playerId: me() }),
   });

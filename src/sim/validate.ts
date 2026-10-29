@@ -1,3 +1,4 @@
+import { TWISTS } from './taste';
 import { isRole } from './roles';
 import { ECONOMY } from '../data/economy';
 import { DRINK_IDS } from '../data/drinks';
@@ -49,6 +50,10 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
     case 'price':
       return DRINK_IDS.includes(input.drink) && Number.isInteger(input.step) && Math.abs(input.step) <= 20
         ? { kind: 'price', playerId: input.playerId, drink: input.drink, step: input.step }
+        : null;
+    case 'twist':
+      return DRINK_IDS.includes(input.drink) && (input.twist === null || TWISTS.includes(input.twist))
+        ? { kind: 'twist', playerId: input.playerId, drink: input.drink, twist: input.twist }
         : null;
     case 'menu':
       return DRINK_IDS.includes(input.drink) && typeof input.on === 'boolean'

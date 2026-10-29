@@ -1,3 +1,4 @@
+import { TASTE, TWIST_INFO, type TwistId } from '../sim/taste';
 import { catalogueById } from '../data/catalogue';
 import { describeEffects } from '../sim/describe';
 import { DRINK_INFO } from '../data/drinks';
@@ -103,6 +104,22 @@ function freshBanner(fresh: FreshDrinkVM[] | undefined): string {
 }
 
 /** The menu board: every known drink, its ticket, and an on/off switch. */
+function starRow(n: number): string {
+  return '★'.repeat(n) + '☆'.repeat(5 - n);
+}
+
+/** P3 B6: the drink's house twist picker, doubling as its taste notebook (stars once served, ? until then). */
+function twistChips(m: MenuLineVM): string {
+  const chip = (twist: TwistId | null, label: string, stars: string, title: string) =>
+    `<button class="tw-chip ${(m.twist ?? null) === twist ? 'on' : ''}" data-action="twist" data-drink="${m.drink}" data-twist="${twist ?? ''}" title="${esc(title)}" aria-pressed="${(m.twist ?? null) === twist}">${label}${stars ? `<small>${stars}</small>` : ''}</button>`;
+  return `<div class="tw-row">${chip(null, 'Plain', '', 'No twist')}${m.book
+    .map((b) => {
+      const info = TWIST_INFO[b.twist];
+      return chip(b.twist, `${info.icon} ${esc(info.name)}`, b.stars === null ? '?' : starRow(b.stars), b.stars === null ? `${info.name}: not tried yet` : `${info.name}: ${b.stars} of 5 stars`);
+    })
+    .join('')}</div>`;
+}
+
 function menuBoard(menu: MenuLineVM[] | undefined): string {
   if (!menu?.length) return '';
   const onCount = menu.filter((m) => m.on).length;
@@ -115,7 +132,7 @@ function menuBoard(menu: MenuLineVM[] | undefined): string {
       const fc = m.orders === undefined
         ? `<span class="mb-fc off">not on the menu${m.fans ? ` · <em class="down">${esc(m.fans.join(', '))} will miss it</em>` : ''}</span>`
         : `<span class="mb-fc">~${m.orders} orders${m.demandPct ? ` <em class="${m.demandPct > 0 ? 'up' : 'down'}">${m.demandPct > 0 ? '+' : ''}${m.demandPct}%</em>` : ''} · <b>$${m.profit!.toFixed(0)}</b> profit${m.fans ? ` · <span class="mb-fan">♥ ${esc(m.fans.join(', '))}</span>` : ''}</span>`;
-      return `<div class="mb-row ${m.on ? '' : 'off'}" data-drink-row="${m.drink}">${itemIcon(m.drink, 26)}<div class="mb-txt"><b>${esc(info.name)}</b>${ticketChips(info.ticket)}</div>
+      return `<div class="mb-row ${m.on ? '' : 'off'}" data-drink-row="${m.drink}">${itemIcon(m.drink, 26)}<div class="mb-txt"><b>${esc(info.name)}</b>${ticketChips(info.ticket)}${twistChips(m)}</div>
         <div class="mb-pricer">
           <button class="btn mini pr-btn" data-action="price" data-drink="${m.drink}" data-step="${m.step - 1}" ${m.canDown ? '' : 'disabled'} aria-label="Lower the ${esc(info.name)} price">−</button>
           <span class="mb-price">$${m.price.toFixed(2)}${delta}</span>
@@ -124,6 +141,7 @@ function menuBoard(menu: MenuLineVM[] | undefined): string {
         <button class="btn mini" data-action="menu" data-drink="${m.drink}" data-on="${m.on ? '0' : '1'}" ${last ? 'disabled title="Keep at least one drink on"' : ''} aria-pressed="${m.on}">${m.on ? 'On' : 'Off'}</button>${fc}</div>`;
     })
     .join('')}</div>
+    <div class="mb-total tw-note">House twists: each cup with a twist costs $${TASTE.cost.toFixed(2)}. Every drink has one ★★★★★ twist and one ★ flop, different every run, and you only find out by serving it. Great combos tip up to +40%; flops tip less and cost a little rating.</div>
     <div class="mb-total">Tomorrow at these prices: <b>~${sum.orders} orders</b>, about <b>$${sum.profit.toFixed(0)}</b> profit before tips and rent. Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</div>`;
 }
 
@@ -201,7 +219,7 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -209,6 +227,7 @@ export function createNight(
     else if (action === 'restock') handlers.onRestock(el.dataset.supply as SupplyId);
     else if (action === 'ready') handlers.onReady();
     else if (action === 'menu') handlers.onMenu?.(el.dataset.drink as DrinkId, el.dataset.on === '1');
+    else if (action === 'twist') handlers.onTwist?.(el.dataset.drink as DrinkId, (el.dataset.twist || null) as TwistId | null);
     else if (action === 'price') handlers.onPrice?.(el.dataset.drink as DrinkId, Number(el.dataset.step));
     else if (action === 'role') handlers.onRole?.(isRole(el.dataset.role) ? el.dataset.role : null);
     else if (action === 'tab') selectTab(el.dataset.tab as NightTab);
@@ -288,6 +307,8 @@ export function createNight(
            <div class="line"><span>Tips</span><span>${esc(t.tips)}</span></div>
            <div class="line"><span>Rent</span><span class="neg">−${esc(t.rent)}</span></div>
            ${t.bonus ? `<div class="line"><span>Bonuses</span><span class="pos">+${esc(t.bonus)}</span></div>` : ''}
+           ${t.combos ? t.combos.map((c) => `<div class="line combo"><span>New combo: ${TWIST_INFO[c.twist].icon} ${esc(TWIST_INFO[c.twist].name)} ${esc(DRINK_INFO[c.drink].short.toLowerCase())}</span><span class="stars">${starRow(c.stars)}</span></div>`).join('') : ''}
+           ${t.twists ? `<div class="line"><span>Twists</span><span class="neg">−${esc(t.twists)}</span></div>` : ''}
            ${t.cupStars ? `<div class="line cups" title="Each cup starts at 3 stars; pulling it early, leaving it sitting, or taking it to the wrong station costs one. Stars scale the tip."><span>Cups ★${esc(t.cupStars)} avg · ${t.cupsPerfect} perfect</span><span>${t.cupsRating ? `<span class="neg">${esc(t.cupsRating)} rating</span>` : '★★★ keeps the rating'}</span></div>` : ''}
            ${t.pastries ? `<div class="line"><span>Pastries sold (in sales)</span><span>${t.pastries}</span></div>` : ''}
            ${t.spoiled ? `<div class="line spoil"><span>Went off: ${esc(t.spoiledWhat ?? '')}</span><span class="neg">${esc(t.spoiled)} wasted</span></div>` : ''}

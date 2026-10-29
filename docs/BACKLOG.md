@@ -932,3 +932,41 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
     sitting happen at all in 3–4 player crews.
   - There's no star mark on the held cup sprite yet; the hint and toast carry it for now.
 
+## P3 Block 06 reflection (taste map)
+
+- **What shipped.**
+  - `src/sim/taste.ts`: five twists, with `comboStars(seed, drink, twist)` as a pure integer
+    hash that shuffles the ladder [5,4,3,2,1] per drink. It makes no RNG draws, so runs without
+    twists are byte-identical to before (there's a test for that), and peers agree without syncing
+    the map.
+  - New state: `GameState.twists` (the night choice per drink) and `GameState.tasteBook`
+    (discovered stars, keyed `drink:twist`). New input: `{kind:'twist'}`, night-only, humans only,
+    and validated.
+  - At serve, `serveCombo` records a discovery (`today.combosFound`), adds stars − 3 to
+    `today.comboStarSum`, and charges $0.20 (`today.twistCost`, now subtracted in `profitOf`).
+    The tip is ×`TASTE.tip[stars]`, and closing adds the capped `comboRating`.
+  - UI: twist chips under each menu-board row (icon and name, with ★★★★☆ or "?"), an explainer
+    line, receipt lines ("New combo: 🌼 Vanilla latte ★★★★★", "Twists −$2.80"), and the toast
+    suffix.
+  - Save v15 (no-op migration from 14), protocol v18.
+- **Checks.** Five new tests: the ladder is a permutation and pure, and differs across seeds; the
+  input is night-only and validated; first-serve discovery, tip and cost; the rating cap, the
+  notebook and the receipt; no-twist determinism. 557 in total. Balance over 10 seeds is
+  unchanged at 291.28 / 25.4% / 0 bankrupt, because bots never set twists. That confirms the
+  plain path didn't move.
+- **The economics by hand** (average tip about $0.90 a cup):
+  - A 5★ combo nets about +$0.16 a cup, plus up to +0.25 rating a day.
+  - A 1★ flop nets about −$0.47 a cup, and some rating.
+  - Picking blind averages about −$0.17 a cup.
+  - So exploring has a real price and finding the hit pays back over a run. That's the "plan,
+    don't grind" choice the phase is after: test one twist on a low-volume drink, or commit a hit
+    to your best seller.
+- **What to watch / deferred.**
+  - Bots don't use twists. A night-planner bot could adopt the best-known combo for solo runs.
+  - Cash gains are small next to the rating lever. If playtests shrug, try a 5★ tip of ×1.6 or a
+    regulars' "favourite combo" hook.
+  - The chips are dense at 1280×800 (six per drink). A collapsed "notebook" popover might read
+    better once more drinks unlock.
+  - There's no hint on the day screen showing which twist is on. The toast is the only in-shift
+    cue.
+

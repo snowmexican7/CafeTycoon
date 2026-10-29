@@ -1,3 +1,4 @@
+import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
 import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
@@ -104,6 +105,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'price':
       applyPriceInput(s, input);
+      break;
+    case 'twist':
+      applyTwistInput(s, input);
       break;
     case 'role':
       applyRoleInput(s, input);

@@ -1,3 +1,4 @@
+import { TWIST_INFO, type TwistId } from '../sim/taste';
 import type { DrinkId, GameState, Personality } from '../sim/types';
 
 /**
@@ -19,6 +20,13 @@ export function starText(stars: unknown): string {
   if (typeof stars !== 'number') return '';
   const n = Math.max(0, Math.min(3, Math.round(stars)));
   return ' ' + '★'.repeat(n) + '☆'.repeat(3 - n);
+}
+
+/** P3 B6: the cup's twist and, the first time, the discovered combo stars. */
+export function comboText(d: Record<string, unknown>): string {
+  if (typeof d.twist !== 'string' || typeof d.combo !== 'number') return '';
+  const name = TWIST_INFO[d.twist as TwistId]?.name.toLowerCase() ?? d.twist;
+  return d.found === true ? ` · new: ${name} ${'★'.repeat(d.combo)}` : ` · ${name}`;
 }
 
 export type CrewBurst =
@@ -89,7 +97,7 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       const name = playerIndex >= 0 ? next.players[playerIndex].name : 'Someone';
       bursts.push({
         kind: 'serve',
-        text: toastText(name, e.data.item as DrinkId, Number(e.data.amount) || 0) + starText(e.data.stars),
+        text: toastText(name, e.data.item as DrinkId, Number(e.data.amount) || 0) + starText(e.data.stars) + comboText(e.data),
         by,
         playerIndex,
         perfect: e.data.perfect === true,
