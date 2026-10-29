@@ -1,3 +1,4 @@
+import { comboStars } from '../sim/taste';
 /**
  * Dev-only visual fixtures (served by `vite` at /CafeTycoon/fixtures.html?f=<name>; never in the build).
  * Each fixture fakes a GameState and replays a small timeline into the real Scene and HUD, so the
@@ -139,6 +140,23 @@ const FIXTURES: Record<string, Fixture> = {
       s.cash = 170;
       s.day = 2;
       s.today = { day: 1, served: 22, lost: 2, turnedAway: 0, sales: 116, tips: 17.4, rent: 25, cups: 22, cupStars: 53, perfectCups: 12 };
+    },
+    timeline: [],
+  },
+  /** P3 B6: the taste notebook mid-run, a few combos found last night, twists set for tomorrow. */
+  taste: {
+    night: true,
+    setup(s) {
+      s.cash = 190;
+      s.day = 2;
+      s.tasteBook = {
+        [`latte:vanilla`]: comboStars(s.seed, 'latte', 'vanilla'),
+        [`latte:cinnamon`]: comboStars(s.seed, 'latte', 'cinnamon'),
+        [`espresso:seaSalt`]: comboStars(s.seed, 'espresso', 'seaSalt'),
+        [`coldBrew:honey`]: comboStars(s.seed, 'coldBrew', 'honey'),
+      };
+      s.twists = { latte: 'vanilla', espresso: 'honey' };
+      s.today = { day: 1, served: 24, lost: 2, turnedAway: 0, sales: 124, tips: 21.3, rent: 25, combosFound: ['latte:cinnamon', 'coldBrew:honey'], comboStarSum: 3, twistCost: 2.8 };
     },
     timeline: [],
   },
