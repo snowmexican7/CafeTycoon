@@ -767,3 +767,19 @@ Deferred:
   lever if game night shows lag.
 - A real-network smoke test from a machine without the WebRTC policy.
 - Phase 2's game night and the telemetry review carry over (see ROADMAP).
+
+Playtests (built game, Playwright, `/workspace/overnight/b12/`):
+- **Host + 3 peers** (4 tabs, `?link=local`, 60 s days, every tab mashing keys). Peers stayed 0–12
+  ticks behind the host and there were no page errors. Four random key-mashers serve nobody, so
+  the café missed rent after day 2. The missed-rent screen, the awards (all joke awards) and
+  Records showed correctly on every tab (`week-4p/`).
+- **Solo with 2 bots** (60 s days). A full week reached the week-end ceremony with no page errors.
+  Days served/lost: 9/0, 10/4, 6/2, 6/4, 7/5, 2/14, 3/6. The bots served 43 between them. The
+  harness didn't keep milk and cold brew stocked, so day 6 ran dry (`week-solo/`).
+- **Bug found and fixed:** after the last day or a missed rent, the day's receipt ("On to the night
+  shop") was stacked under the week-end screen. It now only shows when night follows.
+- **Harness lesson:** every tab gets the closing receipt each night and has to dismiss it. In the
+  first runs, the blocked clicks looked like hangs.
+- **Layout:** 1280x800 and 1920x1080 (`layout/`) show no overflow. The title shows v2.0.0.
+  - At 1920x1080 the right column leaves a gap between Floor and the Menu board. That's cosmetic
+    and deferred.

@@ -39,6 +39,7 @@ challenges, Easter eggs, an awards ceremony and café records.
   built.
 - **Your old save still works.** A run saved by 1.1.0 loads and carries on. Everyone in a room needs
   2.0.0 to play together, so refresh if a friend can't join.
+- Fixed: the day's receipt no longer hides under the week-end screen after the last day or a missed rent.
 - The version now shows at the bottom of **Past runs & controls** on the title screen. The controls
   list includes **R** (drop).
 
