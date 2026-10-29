@@ -32,6 +32,14 @@ when a build goes out, the line moves under its version with the date.
   out. You're out for the rest of the day (a bot covers if there's room) and back the next
   morning with a $150 ambulance bill on the crew's tab, paid off from half of each day's profit.
   Bots don't drink.
+- Press R to drop what you're holding: next to a machine it goes in the machine, at the counter
+  it goes on the pass, at the bin it's binned, anywhere else it hits the floor.
+- Floors get messy: grounds piles spread when walked through, spills can make you slip for a few
+  seconds, and a dirty café makes customers less patient and can fail the health inspection.
+  Grab the mop in the corner (E to pick up, E next to a mess to clean, R to put it back). Bots
+  mop when it's quiet.
+- Now and then (from day 2) a customer handed a drink gets upset. Remake it within 15 seconds or
+  they walk behind the counter and make it themselves, without paying.
 
 ## 1.0.0 — 2026-10-28
 

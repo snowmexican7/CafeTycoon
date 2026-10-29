@@ -17,6 +17,7 @@ keep going into harder weeks until the café can't make rent.
 
 - **Move:** WASD or the arrow keys
 - **Use a station:** E or Space (stand next to it)
+- **Drop:** R (into a machine, onto the pass, in the bin, or on the floor; puts the mop back)
 - **Pause and settings:** Esc
 - The seed shown in the HUD replays the same week: enter it on the title screen.
 - **The pass:** the little shelf on the counter. Press E with a drink nobody wants and it sits
@@ -28,6 +29,11 @@ keep going into harder weeks until the café can't make rent.
   friend who joins mid-week replaces a bot the next morning. Bots take a moment to react,
   sometimes botch a drink and remake it, and step around you.
 - **Day events** (from day 2): rush hour, power flicker, health inspector, influencer visit.
+- **Messes and the mop:** grounds piles spread when walked through and spills can make you slip.
+  A dirty café makes customers less patient and can fail the health inspection. The mop lives in
+  the corner: E picks it up, E next to a mess cleans it, R puts it back. Bots mop when it's quiet.
+- **The rogue customer** (from day 2): now and then a customer handed a drink gets upset. Remake
+  it within 15 seconds or they walk behind the counter and make it themselves, without paying.
 - **Customers:** impatient tippers, groups ordering two or three drinks, and three named
   regulars who come back.
 - **Night menu switch:** the sim supports it, but the toggle is still being built on the
