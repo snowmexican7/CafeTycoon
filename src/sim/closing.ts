@@ -10,7 +10,7 @@ import { activeCheckout } from './checkout';
 import { eventActive, judgeInspection } from './events';
 import { emitLog } from './log';
 import { startNight } from './run';
-import { LAYOUT } from '../data/layout';
+import { layoutFor } from '../data/layout';
 import { resetBotsForNight } from './bots/roster';
 import { clearFloorFields } from './tiles';
 import type { GameState } from './types';
@@ -28,7 +28,7 @@ export function finishDay(state: GameState): GameState {
   state.customers = [];
   state.messes = [];
   state.rogue = null;
-  state.mop = { pos: { ...LAYOUT.mopHome }, heldBy: null };
+  state.mop = { pos: { ...layoutFor(state.tier).mopHome }, heldBy: null };
   state.pass = [];
   for (const e of state.events) emitLog(state, 'event.end', { kind: e.kind });
   state.events = [];

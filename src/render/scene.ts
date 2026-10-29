@@ -4,7 +4,7 @@ import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
-import type { CheckoutId, GameState, PlayerId } from '../sim/types';
+import type { CheckoutId, GameState, PlayerId, TierId } from '../sim/types';
 import type { RenderView } from './interpolate';
 import { Actors } from './layers/actors';
 import { Chaos } from './layers/chaos';
@@ -18,6 +18,8 @@ import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
 import { StationOverlay, buildStation, type StationOverlayState } from './layers/stations';
 import { buildWall } from './layers/wall';
+import { buildLot } from './layers/lot';
+import { layoutFor } from '../data/layout';
 import { FRONT, MAT, PLAYER_COLORS, TILE as THEME_TILE, WALL, isNightLook, sx, sy } from './theme';
 
 export const TILE = THEME_TILE;
@@ -57,25 +59,51 @@ export class Scene {
     const floor = buildFloor(SCENE_WIDTH, SCENE_HEIGHT, LAYOUT.door);
     floor.cacheAsTexture(true);
     this.depth.sortableChildren = true;
-    this.buildStations('register');
+    this.buildStations('register', undefined);
     for (const d of buildDecor(SCENE_WIDTH, LAYOUT.height)) this.depth.addChild(d);
     this.actors = new Actors(this.depth, this.tags);
     this.gags = new EspressoGags(this.depth);
     this.chaos = new Chaos(this.depth);
     this.eventFx = new EventVisuals(this.depth, this.chaos.overlay, SCENE_WIDTH, SCENE_HEIGHT);
     this.overlay.addChild(this.stationOverlay.root, this.tags, this.chaos.overlay);
-    this.root.addChild(this.wall.root, buildLamps(), floor, this.chaos.floor, this.depth, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
+    this.root.addChild(this.wall.root, buildLamps(), floor, this.chaos.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
 
   /** P3 B12: the station art, rebuilt when the checkout on the counter changes. */
   private stationArt: Container[] = [];
   private stationKey = '';
-  private buildStations(checkout: CheckoutId): void {
-    if (checkout === this.stationKey) return;
-    this.stationKey = checkout;
+  /** P3 B13: the hoarding and awning, rebuilt (with the stations and the line) when the shop grows. */
+  private readonly lot = new Container();
+  private buildStations(checkout: CheckoutId, tier: TierId | undefined): void {
+    const key = `${tier ?? 'cafe'}:${checkout}`;
+    if (key === this.stationKey) return;
+    this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
-    this.stationArt = LAYOUT.stations.map((s) => buildStation(s.kind, s.pos, checkout));
+    const lay = layoutFor(tier);
+    this.stationArt = lay.stations.map((s) => buildStation(s.kind, s.pos, checkout));
     for (const c of this.stationArt) this.depth.addChild(c);
+    for (const c of this.lot.removeChildren()) c.destroy({ children: true });
+    this.lot.addChild(buildLot(tier));
+    if (this.actors) this.actors.queueSlots = lay.queueSlots;
+  }
+
+  /** P3 B13: the milestone moment in the scene, once, when the bigger floor first appears. */
+  private celebrated = '';
+  private maybeCelebrate(state: GameState): void {
+    if (state.phase !== 'day') return;
+    const last = state.tierLog?.[state.tierLog.length - 1];
+    if (!last || last.day !== state.day) return;
+    const key = `${state.seed}:${state.day}`;
+    if (key === this.celebrated) return;
+    this.celebrated = key;
+    this.celebrate(last.tier);
+  }
+  private celebrate(tier: TierId): void {
+    const w = sx(layoutFor(tier).width);
+    const cy = sy(3);
+    this.fx.spawn(tier === 'cafe' ? 'Grand opening: the café!' : 'Grand re-opening: the cart!', w / 2, cy - 40, 0xf6c35b, 24);
+    for (let i = 0; i < 5; i++) this.fx.confetti((w * (i + 0.5)) / 5, cy - 80, 22);
+    this.fx.sparkles(w / 2, cy, 12);
   }
 
   /** Which barista is "me" (gets the ring and the station focus). Unset = the only player, if there's exactly one. */
@@ -85,7 +113,8 @@ export class Scene {
 
   update(view: RenderView): void {
     const { state } = view;
-    this.buildStations(state.checkout?.active ?? 'register');
+    this.buildStations(state.checkout?.active ?? 'register', state.tier);
+    this.maybeCelebrate(state);
     const now = performance.now() / 1000;
     const dt = Math.min(0.1, Math.max(0, now - this.lastTime));
     this.lastTime = now;
@@ -158,7 +187,7 @@ export class Scene {
         this.fx.spawn('Perfect!', cx + 70, cy - 50, 0x7fcfb4, 15);
       }
       if (b.customerKind === 'regular') {
-        this.fx.hearts(cx, sy(LAYOUT.queueSlots[0].y) - 70);
+        this.fx.hearts(cx, sy(layoutFor(state.tier).queueSlots[0].y) - 70);
         if (b.regular) this.fx.spawn(`${b.regular}'s usual!`, cx - 78, cy - 36, 0xffd6e2, 14);
       }
     } else if (b.kind === 'teamwork') {

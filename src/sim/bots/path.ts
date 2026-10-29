@@ -1,5 +1,6 @@
 import { ECONOMY } from '../../data/economy';
 import { LAYOUT } from '../../data/layout';
+import { floorWidth } from '../growth';
 import { blocked, nearestStation } from '../movement';
 import type { GameState, Player, Station, Vec2 } from '../types';
 
@@ -11,15 +12,16 @@ const NEIGHBOURS: Vec2[] = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x
 /** True for an integer tile centre inside the floor that a barista can stand on. */
 export function isWalkable(state: GameState, node: Vec2): boolean {
   if (!Number.isInteger(node.x) || !Number.isInteger(node.y)) return false;
-  if (node.x < 1 || node.y < 1 || node.x > LAYOUT.width - 1 || node.y > LAYOUT.height - 1) return false;
-  return !blocked(node, state.stations);
+  const w = floorWidth(state);
+  if (node.x < 1 || node.y < 1 || node.x > w - 1 || node.y > LAYOUT.height - 1) return false;
+  return !blocked(node, state.stations, w);
 }
 
 /** Every walkable node, in row-major order (y, then x). */
 export function walkableNodes(state: GameState): Vec2[] {
   const out: Vec2[] = [];
   for (let y = 1; y <= LAYOUT.height - 1; y++) {
-    for (let x = 1; x <= LAYOUT.width - 1; x++) if (isWalkable(state, { x, y })) out.push({ x, y });
+    for (let x = 1, w = floorWidth(state); x <= w - 1; x++) if (isWalkable(state, { x, y })) out.push({ x, y });
   }
   return out;
 }

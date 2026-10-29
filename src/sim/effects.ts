@@ -8,6 +8,7 @@ import { rngNext } from './rng';
 import { applyAd } from './ads';
 import { applyPitch } from './pitch';
 import { applyCheckout } from './checkout';
+import { applyGrowth, tierInfo } from './growth';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
 import { dayProgress, forecastOf, shapeAt } from './forecast';
 import type { CardSetId, DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
@@ -190,12 +191,13 @@ export function computeModifiers(state: GameState): Modifiers {
   applyAd(state, m);
   applyPitch(state, m);
   applyCheckout(state, m);
+  applyGrowth(state, m);
   return m;
 }
 
 /** Rent due at today's closing, ramping each week in unlimited mode. */
 export function rentForDay(state: GameState): number {
-  return round2(ECONOMY.rentPerDay * ECONOMY.weekRamp.rent ** (weekOf(state.day) - 1));
+  return round2(tierInfo(state).rentPerDay * ECONOMY.weekRamp.rent ** (weekOf(state.day) - 1));
 }
 
 /** Turn a gamble into its outcome using the run's rng; any other effect passes through. */

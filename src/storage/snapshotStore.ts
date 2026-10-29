@@ -9,7 +9,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 21;
+export const SNAPSHOT_VERSION = 22;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -80,6 +80,10 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
     s.owned = (s.owned ?? []).filter((o) => !gone(o.itemId));
     s.hand = (s.hand ?? []).filter((id) => !gone(id));
     s.boughtTonight = (s.boughtTonight ?? []).filter((id) => !gone(id));
+  },
+  // P3 B13: the growth path. Every run before it was the full café (its stations and floor already match).
+  21: (s) => {
+    s.tier ??= 'cafe';
   },
 };
 

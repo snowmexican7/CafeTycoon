@@ -18,6 +18,8 @@ import { sellPastry } from './spoilage';
 import { accuracyTip, noteCup, starsFor } from './accuracy';
 import { comboTip, serveCombo, TASTE } from './taste';
 import { checkoutFee } from './checkout';
+import { tierInfo } from './growth';
+import { unlockedDrinks } from './unlocks';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
 
@@ -27,13 +29,13 @@ function round2(n: number): number {
 
 /** Drinks the café can still make: unlocked, on the menu, and every supply the recipe needs has at least one unit. */
 export function availableDrinks(state: GameState): DrinkId[] {
-  const unlocked = state.unlocked ?? BASE_DRINKS;
+  const unlocked = unlockedDrinks(state);
   return DRINKS.filter((d) => unlocked.includes(d) && state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => (state.supplies[s] ?? 0) >= 1));
 }
 
 /** Spots in the queue today: the layout's six (plus the kiosk's spot), less any a forecast takes (never below three). */
-export function queueCapacity(m: Modifiers): number {
-  return Math.max(3, Math.min(ECONOMY.queueCapacity + m.queueRoom, ECONOMY.queueCapacity + m.queue));
+export function queueCapacity(m: Modifiers, cap: number = ECONOMY.queueCapacity): number {
+  return Math.max(Math.min(3, cap), Math.min(cap + m.queueRoom, cap + m.queue));
 }
 
 /** One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. */
@@ -43,7 +45,7 @@ export function spawnCustomers(state: GameState): GameState {
   const m = computeModifiers(state);
   const p = (ECONOMY.baseArrivalsPerSecond * m.traffic * priceTraffic(state, menu, m)) / TICK_RATE;
   if (rngNext(state) >= p) return state;
-  if (state.customers.length >= queueCapacity(m)) {
+  if (state.customers.length >= queueCapacity(m, tierInfo(state).queue)) {
     state.today.turnedAway += 1;
     return state;
   }
@@ -70,7 +72,8 @@ export function rollKind(state: GameState): Exclude<CustomerKind, 'influencer'> 
     state.day === 1 ? ECONOMY.customers.mixDay1 : ECONOMY.customers.mix;
   const w = computeModifiers(state).mix;
   const kinds = ['normal', 'impatient', 'group', 'regular'] as const;
-  const weights = kinds.map((k) => (base[k] ?? 0) * (k === 'normal' ? 1 : w[k]));
+  const t = tierInfo(state).mix;
+  const weights = kinds.map((k) => (base[k] ?? 0) * (k === 'normal' ? 1 : w[k] * t[k]));
   let roll = rngNext(state) * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < kinds.length; i++) {
     roll -= weights[i];
@@ -144,7 +147,7 @@ export function loseCustomer(state: GameState, c: Customer): void {
 /** The influencer joins even a full queue (never past capacity + 1) and orders the café's most favoured drink. */
 export function spawnInfluencer(state: GameState): Customer | null {
   const menu = availableDrinks(state);
-  if (menu.length === 0 || state.customers.length > ECONOMY.queueCapacity) return null;
+  if (menu.length === 0 || state.customers.length > tierInfo(state).queue) return null;
   const m = computeModifiers(state);
   const top = Math.max(...menu.map((d) => m.orderBias[d]));
   const tied = menu.filter((d) => m.orderBias[d] === top);
