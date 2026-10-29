@@ -66,8 +66,10 @@ export function canDrinkEspresso(state: GameState, p: Player): boolean {
   // Holding a finished espresso: just drink it, anywhere.
   if (p.holding === 'espresso') return true;
   if (state.supplies.beans < ESPRESSO.beansPerShot) return false;
-  const machine = state.stations.find((s) => s.kind === 'espresso');
-  return !!machine && Math.hypot(p.pos.x - machine.pos.x, p.pos.y - machine.pos.y) <= ECONOMY.interactRangeTiles;
+  // Any espresso machine within reach (a shop may have two, or none).
+  return state.stations.some(
+    (s) => s.kind === 'espresso' && Math.hypot(p.pos.x - s.pos.x, p.pos.y - s.pos.y) <= ECONOMY.interactRangeTiles,
+  );
 }
 
 /** Hook: the `espresso` input. Bots never drink (step ignores bot inputs; this checks again). */

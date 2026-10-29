@@ -4,11 +4,14 @@ import { LAYOUT } from '../../data/layout';
 import { createRun, startDay } from '../run';
 import { nearestStation } from '../movement';
 import { step } from '../step';
-import type { GameState, Personality, Player } from '../types';
-import { chainFor, reactionDelay, think, uncoveredOrder } from './brain';
-import { findPath, isWalkable, targetNodes } from './path';
+import type { GameState, Personality, Player, Vec2 } from '../types';
+import { chainFor, dropPlan, reactionDelay, think, uncoveredOrder } from './brain';
+import { findPath, floorDropNode, isWalkable, targetNodes } from './path';
 import { addStandIns, botSpeed, makeBotState } from './roster';
 import { floorFields } from '../tiles';
+import { stationsFromSlots, type SlotContent } from '../slots';
+import { tierOf } from '../growth';
+import { spillTiles } from '../floor';
 
 /** One human p1 who never moves, `bots` bot baristas, no arrivals, and a long day. */
 function cafe(bots: number): GameState {
@@ -32,8 +35,9 @@ const huge = { patienceLeft: 10_000, patienceMax: 10_000 };
 
 describe('bot brain', () => {
   it('chains each drink through its stations, finishing at the counter', () => {
-    const ids = (d: Parameters<typeof chainFor>[0], f: 'serve' | 'put') =>
-      chainFor(d, f).map((x) => (x.kind === 'use' ? `${x.station}:${x.action}` : 'idle'));
+    const st = cafe(1);
+    const ids = (d: Parameters<typeof chainFor>[2], f: 'serve' | 'put') =>
+      chainFor(st, bot(st), d, f).map((x) => (x.kind === 'use' ? `${x.station}:${x.action}` : 'idle'));
     expect(ids('espresso', 'serve')).toEqual(['grinder:insert', 'grinder:take', 'espresso:insert', 'espresso:take', 'counter:serve']);
     expect(ids('latte', 'serve')).toEqual([
       'grinder:insert', 'grinder:take', 'espresso:insert', 'espresso:take', 'steamer:insert', 'steamer:take', 'counter:serve',
@@ -725,4 +729,171 @@ describe('bots on a messy floor', () => {
     expect(s.today.wasted ?? 0).toBe(at.wasted + 1);
     expect(nearestStation(s, bot(s).pos)?.kind).toBe('trash');
   });
+});
+
+/** A café with its slots edited (stations rebuilt from them), `bots` bots, one parked human, no arrivals. */
+function cafeSlots(bots: number, edit: (slots: SlotContent[]) => void): GameState {
+  const s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots, dayLengthSec: 600 } });
+  s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
+  edit(s.slots!);
+  s.stations = stationsFromSlots(tierOf(s), s.slots!);
+  return startDay(s);
+}
+const TWIN_ESPRESSO = (sl: SlotContent[]) => { sl[5] = 'espresso'; };
+const NO_TRASH = (sl: SlotContent[]) => { sl[sl.indexOf('trash')] = null; };
+const NO_GRINDER = (sl: SlotContent[]) => { sl[sl.indexOf('grinder')] = null; };
+const useSteps = (p: Player) => p.bot!.plan.filter((x) => x.kind === 'use');
+const insertAt = (p: Player, kind: string) =>
+  useSteps(p).filter((x) => x.kind === 'use' && x.action === 'insert' && x.station.startsWith(kind)).map((x) => (x.kind === 'use' ? x.station : ''));
+/** Every 'use' step of every bot names a station that exists. */
+const plansValid = (s: GameState) =>
+  s.players.every((p) => !p.bot || p.bot.plan.every((x) => x.kind !== 'use' || s.stations.some((st) => st.id === x.station)));
+
+describe('bots with duplicate or missing stations', () => {
+  it('two espresso machines, two bots on two espressos: each plan targets a different machine', () => {
+    let s = cafeSlots(2, TWIN_ESPRESSO);
+    expect(s.stations.map((st) => st.id)).toContain('espresso-2');
+    s.customers = [{ id: 920, drink: 'espresso', ...huge }, { id: 921, drink: 'espresso', ...huge }];
+    for (let i = 0; i < 12; i++) s = step(s, []);
+    const a = insertAt(bot(s, 'bot-1'), 'espresso');
+    const b = insertAt(bot(s, 'bot-2'), 'espresso');
+    expect(a).toHaveLength(1);
+    expect(b).toHaveLength(1);
+    expect(a[0]).not.toBe(b[0]);
+    // Each insert/take pair keeps one machine.
+    for (const p of [bot(s, 'bot-1'), bot(s, 'bot-2')]) {
+      const plan = p.bot!.plan;
+      for (let i = 0; i < plan.length - 1; i++) {
+        const x = plan[i];
+        const y = plan[i + 1];
+        if (x.kind === 'use' && x.action === 'insert') expect(y).toEqual({ kind: 'use', station: x.station, action: 'take' });
+      }
+    }
+    s = runUntil(s, (x) => x.customers.length === 0, 60 * 60);
+    expect(s.today.drinks!.espresso).toBe(2);
+  });
+
+  it('a bot whose machine turns busy before it inserts moves to the idle duplicate', () => {
+    let s = cafeSlots(1, TWIN_ESPRESSO);
+    s.customers = [{ id: 930, drink: 'espresso', ...huge }];
+    const atEspresso = (x: GameState) => {
+      const st = bot(x).bot!.plan[0];
+      return bot(x).holding === 'grounds' && st?.kind === 'use' && st.action === 'insert' && st.station === 'espresso';
+    };
+    s = runUntil(s, atEspresso, 60 * 30);
+    const esp = s.stations.find((st) => st.id === 'espresso')!;
+    esp.busyTicksLeft = 2000;
+    esp.making = 'espresso';
+    s = runUntil(s, (x) => { const st = bot(x).bot!.plan[0]; return st?.kind === 'use' && st.station === 'espresso-2'; }, 60 * 30);
+    expect(bot(s).bot!.plan.slice(0, 2)).toEqual([
+      { kind: 'use', station: 'espresso-2', action: 'insert' },
+      { kind: 'use', station: 'espresso-2', action: 'take' },
+    ]);
+    const served = s.today.served;
+    s = runUntil(s, (x) => x.customers.length === 0, 60 * 30);
+    expect(s.today.served).toBe(served + 1);
+  });
+
+  it('Review Focus 4: no bin and no grinder, a bot holding grounds drops them on the floor and does not loop', () => {
+    let s = cafeSlots(1, (sl) => { NO_TRASH(sl); NO_GRINDER(sl); });
+    expect(s.stations.some((st) => st.kind === 'trash' || st.kind === 'grinder')).toBe(false);
+    const b = bot(s);
+    b.holding = 'grounds';
+    b.bot!.plan = [{ kind: 'use', station: 'grinder', action: 'take' }]; // a stale step for a machine that is gone
+    for (let i = 0; i < 300 && !s.messes.some((m) => m.kind === 'grounds'); i++) {
+      s = step(s, []);
+      expect(plansValid(s)).toBe(true);
+    }
+    expect(s.messes.some((m) => m.kind === 'grounds')).toBe(true);
+    expect(bot(s).holding).toBeNull();
+    expect(bot(s).bot!.plan.some((x) => x.kind === 'use' && x.action === 'trash')).toBe(false);
+  });
+
+  it('Review Focus 4: no grinder but a bin, a bot holding grounds bins them', () => {
+    let s = cafeSlots(1, NO_GRINDER);
+    const b = bot(s);
+    b.holding = 'grounds';
+    b.bot!.plan = [{ kind: 'use', station: 'grinder', action: 'take' }];
+    s = runUntil(s, (x) => bot(x).holding === null, 300);
+    expect(s.messes.some((m) => m.kind === 'grounds')).toBe(false);
+    expect(nearestStation(s, bot(s).pos)?.kind).toBe('trash');
+  });
+
+  it('no bin: dropPlan walks to a floor node out of every station\'s reach', () => {
+    const s = cafeSlots(1, NO_TRASH);
+    const b = bot(s);
+    b.holding = 'grounds';
+    const plan = dropPlan(s, b);
+    expect(plan).toHaveLength(1);
+    expect(plan[0]).toMatchObject({ kind: 'floor', action: 'drop' });
+    const node = (plan[0] as { node: Vec2 }).node;
+    expect(node).toEqual(floorDropNode(s, b.pos));
+    expect(isWalkable(s, node)).toBe(true);
+    expect(nearestStation(s, node)).toBeNull();
+    // With a bin, the bin.
+    const withBin = cafe(1);
+    bot(withBin).holding = 'grounds';
+    expect(dropPlan(withBin, bot(withBin))).toEqual([{ kind: 'use', station: 'trash', action: 'trash' }]);
+  });
+
+  it('floorDropNode avoids spills and falls back to the bot\'s own node', () => {
+    const s = cafeSlots(1, NO_TRASH);
+    const from = bot(s).pos;
+    const first = floorDropNode(s, from);
+    s.messes.push({ id: 999, kind: 'spill', x: first.x, y: first.y, amount: 1 });
+    const second = floorDropNode(s, from);
+    expect(second).not.toEqual(first);
+    expect(spillTiles(s).some((t) => t.x === second.x && t.y === second.y)).toBe(false);
+  });
+
+  it('a botched drink with no bin ends on the floor as a spill', () => {
+    let s = cafeSlots(1, NO_TRASH);
+    const b = bot(s);
+    b.holding = 'latte';
+    b.bot!.noticeTicksLeft = 4;
+    s = runUntil(s, (x) => bot(x).holding === null, 300);
+    expect(s.messes.some((m) => m.kind === 'spill')).toBe(true);
+    expect(plansValid(s)).toBe(true);
+  });
+
+  it('a botched drink with no bin, the roll missing: the plan is a floor drop, never a trash step', () => {
+    // At the mess cap spillHeld fails whatever the roll, so the plan decides.
+    let s = cafeSlots(1, NO_TRASH);
+    for (let i = 0; i < ECONOMY.mess.max; i++) s.messes.push({ id: 500 + i, kind: 'spill', x: 1 + (i % 10), y: i < 10 ? 4 : 5, amount: 1 });
+    const b = bot(s);
+    b.holding = 'latte';
+    b.bot!.noticeTicksLeft = 4;
+    for (let i = 0; i < 4; i++) s = step(s, []);
+    expect(bot(s).bot!.plan[0]).toMatchObject({ kind: 'floor', action: 'drop' });
+  });
+});
+
+describe('default café determinism (station resolution must not change the default choice)', () => {
+  const fnv = (str: string): number => {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+    return h >>> 0;
+  };
+  // Measured on fb1 @ e503518 / fb1-sim-slots @ da09025 (rng, JSON length, FNV-1a of JSON.stringify).
+  const golden: [number, number, number, number][] = [
+    [0, 1798888878, 3227, 2905389040],
+    [1, -1928183945, 4348, 3243538846],
+    [2, -1360289472, 5200, 1819755783],
+    [3, -2056066339, 6038, 3097927026],
+  ];
+  for (const [bots, rng, len, hash] of golden) {
+    it(`seed 5, ${bots} bot(s), 900 ticks: identical state`, () => {
+      let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots } });
+      s.scenario = 'normal';
+      s = startDay(s);
+      for (let i = 0; i < 900; i++) s = step(s, []);
+      expect(s.rng).toBe(rng);
+      const j = JSON.stringify(s);
+      expect(j.length).toBe(len);
+      expect(fnv(j)).toBe(hash);
+    });
+  }
 });

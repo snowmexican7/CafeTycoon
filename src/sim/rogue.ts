@@ -4,10 +4,10 @@ import { findPath, nodeOf, targetNodes } from './bots/path';
 import { TICK_RATE, secondsToTicks } from './constants';
 import { emitLog } from './log';
 import { STATION_RECIPES } from './stations';
-import type { Customer, DrinkId, GameState, Rogue, Station, Vec2 } from './types';
+import type { Customer, DrinkId, GameState, Rogue, Station, StationKind, Vec2 } from './types';
 
-/** The station a rogue heads for first, by drink. */
-export const ROGUE_STATION: Record<DrinkId, string> = {
+/** The kind of station a rogue heads for first, by drink (the first of a kind has the kind as its id). */
+export const ROGUE_STATION: Record<DrinkId, StationKind> = {
   espresso: 'espresso', latte: 'steamer', coldBrew: 'coldBrewTap', icedLatte: 'coldBrewTap', mocha: 'steamer', matcha: 'steamer', special: 'steamer',
 };
 
@@ -35,16 +35,19 @@ export function isFreeForRogue(state: GameState, st: Station, from: Vec2): boole
   );
 }
 
-/** The drink's own station if free (and not excluded); else the nearest free recipe station, ties layout order. */
+/**
+ * The nearest free station of the drink's own kind (not excluded); else the nearest free recipe
+ * station. Ties go to the lower array index, which within a kind is the fixed id (`espresso` before
+ * `espresso-2`). With one station per kind this is the drink's own station whenever it is free.
+ */
 export function pickStation(state: GameState, from: Vec2, drink: DrinkId, exclude: string | null): Station | null {
-  const own = state.stations.find((st) => st.id === ROGUE_STATION[drink]);
-  if (own && own.id !== exclude && isFreeForRogue(state, own, from)) return own;
-  let best: Station | null = null;
-  for (const st of state.stations) {
-    if (st.id === exclude || !isFreeForRogue(state, st, from)) continue;
-    if (best === null || dist(st.pos, from) < dist(best.pos, from)) best = st;
-  }
-  return best;
+  const free = state.stations.filter((st) => st.id !== exclude && isFreeForRogue(state, st, from));
+  const nearest = (list: Station[]): Station | null => {
+    let best: Station | null = null;
+    for (const st of list) if (best === null || dist(st.pos, from) < dist(best.pos, from)) best = st;
+    return best;
+  };
+  return nearest(free.filter((st) => st.kind === ROGUE_STATION[drink])) ?? nearest(free);
 }
 
 /** No station for them: they head for the door and leave. */

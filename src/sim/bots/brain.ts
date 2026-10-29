@@ -1,5 +1,4 @@
 import { ECONOMY } from '../../data/economy';
-import { LAYOUT } from '../../data/layout';
 import { availableDrinks } from '../customers';
 import { eventActive } from '../events';
 import type { Modifiers } from '../effects';
@@ -11,7 +10,7 @@ import { RECIPES, recipeChain, usesShot } from '../../data/drinks';
 import { zeroDrinks } from '../tally';
 import { tally } from '../tally';
 import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Mess, Player, Station, StationKind, Vec2 } from '../types';
-import { byDistance, findPath, idleNode, nodeOf, targetNodes, walkableNodes } from './path';
+import { byDistance, findPath, floorDropNode, idleNode, nodeOf, targetNodes, walkableNodes } from './path';
 import { spillHeld, spillTiles } from '../floor';
 import { nearestMess, returnMop } from '../mop';
 import { rogueNear, rogueTiles } from '../rogue';
@@ -25,25 +24,68 @@ const dist = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 const isDrink = (item: ItemKind | null): item is DrinkId => item !== null && item !== 'grounds';
 const isRecipeKind = (kind: StationKind): kind is RecipeKind => kind in STATION_RECIPES;
 
-function stationId(kind: StationKind): string {
-  return LAYOUT.stations.find((s) => s.kind === kind)!.id;
+const isIdle = (st: Station): boolean => st.busyTicksLeft === 0 && st.output === null && st.occupiedBy === null;
+
+/** Another bot's plan already has a step at `st` (it is on its way there, or will be). */
+function plannedByOther(state: GameState, self: Player, st: Station): boolean {
+  return state.players.some((o) => o !== self && o.bot?.plan.some((x) => x.kind === 'use' && x.station === st.id));
 }
 
-function use(kind: StationKind, action: BotAction): BotStep {
-  return { kind: 'use', station: stationId(kind), action };
+/**
+ * The nearest station of `kind` that is idle and no other bot plans to use, ties to the lower array
+ * index, excluding `skip`; null when there is none.
+ */
+function idleOfKind(state: GameState, p: Player, kind: StationKind, skip: Station | null = null): Station | null {
+  let best: Station | null = null;
+  for (const st of state.stations) {
+    if (st.kind !== kind || st === skip || !isIdle(st) || plannedByOther(state, p, st)) continue;
+    if (best === null || dist(st.pos, p.pos) < dist(best.pos, p.pos)) best = st;
+  }
+  return best;
 }
 
-/** The steps to make `drink` from scratch and hand it over (`serve`) or park it on the pass (`put`). */
-export function chainFor(drink: DrinkId, finish: 'serve' | 'put'): BotStep[] {
+/**
+ * Station resolution: a step names a concrete station id, fixed when the plan is made. Among the
+ * shop's stations of `kind` (read from `state.stations`, so any slot layout works): the idle one
+ * (not busy, no output, no rogue) that no other bot's plan already uses, nearest the bot (ties: the
+ * lower array index); else the first of the kind; null when the shop has none of that kind, and the
+ * caller then emits no step for it. With one station per kind (every default layout) this is always
+ * that station, so default runs plan exactly as before. `act` may still move an insert/take pair to
+ * an idle twin when the machine turns out busy (see `retarget`).
+ */
+function use(state: GameState, p: Player, kind: StationKind, action: BotAction): BotStep | null {
+  const ofKind = state.stations.filter((st) => st.kind === kind);
+  if (ofKind.length === 0) return null;
+  const st = ofKind.length === 1 ? ofKind[0] : (idleOfKind(state, p, kind) ?? ofKind[0]);
+  return { kind: 'use', station: st.id, action };
+}
+
+/** Put what is in hand in the bin; with no bin in the shop, on the floor away from every station. */
+function binStep(state: GameState, p: Player): BotStep {
+  return use(state, p, 'trash', 'trash') ?? { kind: 'floor', node: floorDropNode(state, p.pos), action: 'drop' };
+}
+
+/**
+ * The steps to make `drink` from scratch and hand it over (`serve`) or park it on the pass (`put`).
+ * Each insert/take pair keeps one resolved station. [] when the shop lacks a station the drink needs.
+ */
+export function chainFor(state: GameState, p: Player, drink: DrinkId, finish: 'serve' | 'put'): BotStep[] {
   // Every station on the drink's recipe ticket, in order (a mocha visits the steamer twice).
-  const prep = recipeChain(drink).flatMap(({ station }): BotStep[] => [use(station, 'insert'), use(station, 'take')]);
-  return [...prep, use('counter', finish)];
+  const steps: BotStep[] = [];
+  for (const { station } of recipeChain(drink)) {
+    const insert = use(state, p, station, 'insert');
+    if (insert === null || insert.kind !== 'use') return [];
+    steps.push(insert, { kind: 'use', station: insert.station, action: 'take' });
+  }
+  const last = use(state, p, 'counter', finish);
+  return last === null ? [] : [...steps, last];
 }
 
-/** What to do with whatever is in hand when the plan falls through: park a drink, bin anything else. */
-export function dropPlan(_state: GameState, p: Player): BotStep[] {
+/** What to do with whatever is in hand when the plan falls through: park a drink, bin anything else (floor if no bin). */
+export function dropPlan(state: GameState, p: Player): BotStep[] {
   if (p.holding === null) return [];
-  return isDrink(p.holding) ? [use('counter', 'put')] : [use('trash', 'trash')];
+  const put = isDrink(p.holding) ? use(state, p, 'counter', 'put') : null;
+  return [put ?? binStep(state, p)];
 }
 
 function claimedByOther(state: GameState, self: Player, customerId: number): boolean {
@@ -184,7 +226,7 @@ function shouldMop(state: GameState, p: Player): boolean {
     state.mop.heldBy === null &&
     state.messes.length > 0 &&
     (state.cleanliness < MESS.botMopBelow || state.messes.length >= MESS.botMopMesses) &&
-    !state.players.some((o) => o !== p && o.bot?.plan.some((st) => st.kind === 'floor'))
+    !state.players.some((o) => o !== p && o.bot?.plan.some(isMopStep))
   );
 }
 
@@ -195,28 +237,31 @@ export function think(state: GameState, p: Player): BotStep[] {
   b.claimDrink = null;
   // 0. Deal with whatever is in hand (the mop goes back first: it fills the hands).
   if (p.tool === 'mop') return [{ kind: 'floor', node: nodeOf(state, p.pos), action: 'returnMop' }];
-  if (p.holding === 'grounds') return [use('trash', 'trash')];
+  if (p.holding === 'grounds') return [binStep(state, p)];
   if (isDrink(p.holding)) {
     const drink = p.holding;
-    if (state.customers.some((c) => c.drink === drink)) return [use('counter', 'serve')];
-    if (state.pass.length < ECONOMY.pass.slots) return [use('counter', 'put')];
-    return [use('trash', 'trash')];
+    const serve = state.customers.some((c) => c.drink === drink) ? use(state, p, 'counter', 'serve') : null;
+    const put = state.pass.length < ECONOMY.pass.slots ? use(state, p, 'counter', 'put') : null;
+    return [serve ?? put ?? binStep(state, p)];
   }
   // 0b. Collect a drink left in a machine (e.g. its customer left mid-chain), or stray grounds; rule 0 then places or bins it.
   const orphan = orphanedDrink(state, p);
   if (orphan) return [{ kind: 'use', station: orphan.id, action: 'take' }];
   // 1. A drink on the pass that a customer (not another bot's) is waiting for.
   const onPass = new Set(state.pass.map((i) => i.item));
-  if (state.customers.some((c) => !claimedByOther(state, p, c.id) && onPass.has(c.drink))) return [use('counter', 'serve')];
+  const serve = use(state, p, 'counter', 'serve');
+  if (serve && state.customers.some((c) => !claimedByOther(state, p, c.id) && onPass.has(c.drink))) return [serve];
   // 2. An order nobody is covering: claim it and make it.
   const order = uncoveredOrder(state, p);
-  if (order) {
+  const chain = order ? chainFor(state, p, order.drink, 'serve') : [];
+  if (order && chain.length > 0) {
     b.claim = order.id;
     b.claimDrink = order.drink;
-    return chainFor(order.drink, 'serve');
+    return chain;
   }
   // 3. Prep cold brew for the pass.
-  if (shouldPrep(state, p)) return chainFor('coldBrew', 'put');
+  const prep = shouldPrep(state, p) ? chainFor(state, p, 'coldBrew', 'put') : [];
+  if (prep.length > 0) return prep;
   // 3b. Nothing waiting: mop a dirty floor.
   if (shouldMop(state, p)) return mopPlan(state, p);
   // 4. Wait near the counter.
@@ -312,6 +357,17 @@ function isTakeAt(s: BotStep | undefined, station: Station): boolean {
   return s?.kind === 'use' && s.station === station.id && s.action === 'take';
 }
 
+/** The machine is busy and `twin` (same kind) is idle: move this insert and its take there. */
+function retarget(b: BotState, from: Station, twin: Station): void {
+  if (isTakeAt(b.plan[1], from)) b.plan[1] = { kind: 'use', station: twin.id, action: 'take' };
+  b.plan[0] = { kind: 'use', station: twin.id, action: 'insert' };
+  b.path = [];
+  b.yields = 0;
+  b.nodeRank = 0;
+  b.target = null;
+  b.waitTicks = 0;
+}
+
 /** At the station: press "use" when the step can happen, wait while the machine is busy, else give up. */
 function act(state: GameState, p: Player, action: BotAction, st: Station): void {
   const b = p.bot!;
@@ -332,7 +388,10 @@ function act(state: GameState, p: Player, action: BotAction, st: Station): void 
         if (isTakeAt(b.plan[0], st)) b.plan.shift();
         return;
       }
-      if (st.busyTicksLeft > 0 || st.output !== null) return wait(state, p);
+      if (st.busyTicksLeft > 0 || st.output !== null) {
+        const twin = idleOfKind(state, p, kind, st);
+        return twin ? retarget(b, st, twin) : wait(state, p);
+      }
       return abandon(state, p);
     }
     case 'take':
@@ -404,14 +463,18 @@ function planPath(state: GameState, p: Player, node: Vec2): Vec2[] | null {
   return findPath(state, p.pos, node);
 }
 
+/** A step of a mop plan (a floor drop is not one). */
+const isMopStep = (step: BotStep | undefined): boolean => step?.kind === 'floor' && step.action !== 'drop';
+
 /** A clean or returnMop step with no mop in hand (it was taken or sent home): the rest of the plan is moot. */
 const mopGone = (p: Player, step: BotStep): boolean =>
-  step.kind === 'floor' && step.action !== 'takeMop' && p.tool !== 'mop';
+  step.kind === 'floor' && (step.action === 'clean' || step.action === 'returnMop') && p.tool !== 'mop';
 
 /**
  * A floor step on arrival. takeMop: press "use" when the mop is free, in range and the hands are
  * empty, else drop the plan. clean: press "use" when a mess is in range. returnMop: press R. Without
- * the mop, clean and returnMop drop the plan; with it they pop either way.
+ * the mop, clean and returnMop drop the plan; with it they pop either way. drop: press R (no station
+ * is in reach of the node, so what is in hand lands on the floor; resolveDrops does the rest).
  */
 export function stepFloor(state: GameState, p: Player, step: Extract<BotStep, { kind: 'floor' }>): void {
   const b = p.bot!;
@@ -429,6 +492,9 @@ export function stepFloor(state: GameState, p: Player, step: Extract<BotStep, { 
       return pop(b);
     case 'returnMop':
       if (mopGone(p, step)) return setPlan(b, []);
+      p.dropQueued = true;
+      return pop(b);
+    case 'drop':
       p.dropQueued = true;
       return pop(b);
   }
@@ -459,18 +525,20 @@ function stepBot(state: GameState, p: Player): void {
     b.claimDrink = null;
     setPlan(b, dropPlan(state, p)); // Review Focus 1
   }
+  // A step at a station the shop no longer has (slots changed under the plan): the plan is moot.
+  if (b.plan.some((x) => x.kind === 'use' && !state.stations.some((st) => st.id === x.station))) abandon(state, p);
   if (b.noticeTicksLeft > 0) {
     b.noticeTicksLeft -= 1;
     if (b.noticeTicksLeft === 0) {
       // Noticed the botched drink in hand: half the time it hits the floor where the bot stands (not at
       // the cap), else bin it; then remake the claimed order (if still on one).
-      const remake = b.claimDrink && b.claim !== null ? chainFor(b.claimDrink, 'serve') : [];
+      const remake = b.claimDrink && b.claim !== null ? chainFor(state, p, b.claimDrink, 'serve') : [];
       const spilled = isDrink(p.holding) && rngNext(state) < MESS.botSpillChance && spillHeld(state, p);
-      setPlan(b, spilled ? remake : [use('trash', 'trash'), ...remake]);
+      setPlan(b, spilled ? remake : [binStep(state, p), ...remake]);
     }
   }
   // Orders come first: an uncovered order interrupts any floor step, a clean in progress included.
-  if ((b.plan[0]?.kind === 'floor' || p.cleaningTicksLeft > 0) && uncoveredOrder(state, p) !== null) {
+  if ((isMopStep(b.plan[0]) || p.cleaningTicksLeft > 0) && uncoveredOrder(state, p) !== null) {
     p.cleaningTicksLeft = 0;
     p.cleaningMess = null;
     if (p.tool === 'mop') returnMop(state, p);
