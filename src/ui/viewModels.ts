@@ -493,7 +493,7 @@ export function growthVM(state: GameState): GrowthVM {
         id, name: t.name, icon: t.icon, blurb: t.blurb, width: lay.width,
         stations: kinds.filter((k) => STATION_ICON[k]).map((k) => STATION_ICON[k]),
         drinks, queue: t.queue, rent: money(t.rentPerDay), crowd: t.crowd, cost: money(t.cost),
-        current: id === now, past: i < at, next: id === nxt, locked: i > at && id !== nxt, affordable: state.cash >= t.cost,
+        current: id === now, past: i < at, next: id === nxt, locked: i > at && id !== nxt, affordable: id === nxt && state.cash >= t.cost,
       };
     }),
     current: { id: now, name: TIERS[now].name, icon: TIERS[now].icon },
