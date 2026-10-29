@@ -16,7 +16,7 @@ export type Rarity = 'common' | 'uncommon' | 'rare';
 export type Pace = 1 | 2 | 3 | 4 | 5;
 export type EventKind = 'rushHour' | 'powerFlicker' | 'influencerVisit' | 'healthInspector';
 export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer';
-export type Personality = 'rookie' | 'steady' | 'veteran' | 'human'; // 'human' = tester stand-in
+export type Personality = 'rookie' | 'steady' | 'veteran' | 'hurried' | 'human'; // 'human' = tester stand-in
 export type BotSkill = 1 | 2 | 3 | 4 | 5;
 export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash';
 

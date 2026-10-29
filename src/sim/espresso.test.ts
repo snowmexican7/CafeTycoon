@@ -128,7 +128,7 @@ describe('espresso easter egg', () => {
   it('a bot covers the station when the crew has room', () => {
     let s = drinks(atMachine({ bots: 'auto' }), 6);
     const bots = s.players.filter((p) => p.bot).length;
-    expect(bots).toBe(ECONOMY.bots.names.length - 1); // two humans, one out
+    expect(bots).toBe(ECONOMY.bots.autoCrew - 1); // two humans, one out
     s = ticks(s, s.phaseTicksLeft + ECONOMY.closingGraceSeconds * TICK_RATE + 2);
     expect(s.phase).toBe('night');
     s = ticks(s, s.phaseTicksLeft);

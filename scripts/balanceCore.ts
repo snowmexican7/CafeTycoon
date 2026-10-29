@@ -69,7 +69,7 @@ export const USAGE = `Usage: npm run balance -- [options]
   --weeks N          weeks to play, each an independent run (1-1000, default 10)
   --seed N           seed of the first week; week i uses seed+i (default 1)
   --humans N         stand-in human baristas (0-4, default 2)
-  --bots N           ordinary bots (0-3, default 1); humans + bots <= 4
+  --bots N           ordinary bots (0-4, default 1); humans + bots <= 4
   --skill N          bot skill 1-5 (default 3)
   --pace N           pace 1-5 (default 3)
   --scenario ID      random | ${SCENARIO_IDS.join(' | ')} (default random)
