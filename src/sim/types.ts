@@ -179,6 +179,17 @@ export interface Customer {
   egg?: 'camper' | 'nameMix';
   /** Name printed on the cup when `egg === 'nameMix'`. */
   wrongName?: string;
+  /** P3 B7: asked for the signature drink by name. */
+  sig?: true;
+}
+
+/** P3 B7: the crew's signature drink. `premium` is in $0.50 steps; `since` is the day the recipe was set. */
+export interface Signature {
+  name: string;
+  drink: DrinkId;
+  twist: TwistId;
+  premium: number;
+  since: number;
 }
 
 export type Effect =
@@ -310,6 +321,10 @@ export interface DayStats {
   combosFound?: string[];
   comboStarSum?: number;
   twistCost?: number;
+  /** P3 B7: signature serves, their summed (stars − 3), and the bonus they earned. */
+  sigServed?: number;
+  sigStarSum?: number;
+  sigBonus?: number;
   /** Challenge tip paid at closing (folded into bonus too). */
   challengeBonus?: number;
   /** Challenge ids won today. */
@@ -352,6 +367,8 @@ export interface GameState {
   /** P3 B6: tonight's house twist per drink, and the combos discovered so far ("drink:twist" -> stars). */
   twists?: Partial<Record<DrinkId, TwistId>>;
   tasteBook?: Record<string, number>;
+  /** P3 B7: the signature drink, if the crew has designed one. */
+  signature?: Signature;
   eventSchedule: ScheduledEvent[];
   events: ActiveEvent[];
   regulars: Regular[];
@@ -394,6 +411,7 @@ export type PlayerInput =
   | { kind: 'menu'; playerId: PlayerId; drink: DrinkId; on: boolean }
   | { kind: 'price'; playerId: PlayerId; drink: DrinkId; step: number }
   | { kind: 'twist'; playerId: PlayerId; drink: DrinkId; twist: TwistId | null }
+  | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
   | { kind: 'espresso'; playerId: PlayerId }

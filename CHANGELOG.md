@@ -66,6 +66,15 @@ Nothing yet.
   the tip (1★ ×0.7 … 5★ ×1.4) and nudge the closing rating (±0.004 per cup per star from 3, capped at
   ±0.25 a day). The served toast names the twist ("· new: vanilla ★★★★★"), and the receipt lists
   new combos and the twist spend, which profit now includes. Save v15 (migration), protocol v18.
+- **Signature drink (P3 B7).** A signature card on the night menu tab lets the crew name a drink
+  (up to 20 characters), pick a base and a twist from the taste map (known stars shown), and set a
+  premium in $0.50 steps up to $3. About one walk-in in five then asks for it by name (each premium
+  step trims that share by a tenth). Signature cups sell at the premium, use the signature twist,
+  and earn a star bonus: +$0.75 a cup at 4★, +$1.50 at 5★. A 2★ or worse signature costs rating
+  instead (capped). The receipt shows "Signature: N sold +$X bonus", and crew cards show the name.
+  Changing the base or twist makes it a new recipe; Retire takes it off the board. The 1★ twist
+  risk is sharper: a flop now tips ×0.55 (was ×0.7), and a 5★ hit ×1.45 (was ×1.4).
+  Save v16 (migration), protocol v19.
 
 ## 2.0.1 — 2026-10-29
 

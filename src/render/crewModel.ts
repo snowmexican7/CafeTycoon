@@ -29,6 +29,12 @@ export function comboText(d: Record<string, unknown>): string {
   return d.found === true ? ` · new: ${name} ${'★'.repeat(d.combo)}` : ` · ${name}`;
 }
 
+/** P3 B7: a signature serve names the drink, and its bonus if it earned one. */
+export function sigText(d: Record<string, unknown>): string {
+  if (typeof d.sig !== 'string') return '';
+  return ` · “${d.sig}”${typeof d.sigBonus === 'number' && d.sigBonus > 0 ? ` +$${d.sigBonus.toFixed(2)}` : ''}`;
+}
+
 export type CrewBurst =
   | { kind: 'serve'; text: string; by: string; playerIndex: number; perfect: boolean; customerKind: string; regular?: string; cid: number }
   | { kind: 'oops'; playerIndex: number; by: string }
@@ -97,7 +103,7 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       const name = playerIndex >= 0 ? next.players[playerIndex].name : 'Someone';
       bursts.push({
         kind: 'serve',
-        text: toastText(name, e.data.item as DrinkId, Number(e.data.amount) || 0) + starText(e.data.stars) + comboText(e.data),
+        text: toastText(name, e.data.item as DrinkId, Number(e.data.amount) || 0) + starText(e.data.stars) + comboText(e.data) + sigText(e.data),
         by,
         playerIndex,
         perfect: e.data.perfect === true,

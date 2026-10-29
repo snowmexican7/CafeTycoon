@@ -1,3 +1,4 @@
+import { SIG, sigShare } from '../sim/signature';
 import { knownStars, TWISTS, type TwistId } from '../sim/taste';
 import { accuracyRating } from '../sim/accuracy';
 import { PRICING, menuPrice, priceForecast, priceTraffic } from '../sim/pricing';
@@ -248,7 +249,7 @@ export function handCardViewModel(state: GameState, item: CatalogueItem): HandCa
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[] } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[] } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -261,6 +262,7 @@ export interface NightVM {
   regulars?: RegularVM[];
   meReady: boolean;
   menu?: MenuLineVM[];
+  signature?: SignatureVM;
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
@@ -362,6 +364,37 @@ export interface MenuLineVM {
   book: { twist: TwistId; stars: number | null }[];
 }
 
+/** P3 B7: the signature designer's options and the current signature. */
+export interface SignatureVM {
+  current?: { name: string; drink: DrinkId; twist: TwistId; premium: number; stars: number | null; since: number; onMenu: boolean };
+  drinks: DrinkId[];
+  /** Per drink: each twist's known stars (null = not tried). */
+  book: Record<string, { twist: TwistId; stars: number | null }[]>;
+  /** Expected signature asks tomorrow at the current premium (0 without a signature). */
+  asks: number;
+  premiumStep: number;
+  maxPremium: number;
+}
+
+export function signatureVM(state: GameState): SignatureVM {
+  const drinks = unlockedDrinks(state);
+  const book: SignatureVM['book'] = {};
+  for (const d of drinks) book[d] = TWISTS.map((twist) => ({ twist, stars: knownStars(state, d, twist) }));
+  const sig = state.signature;
+  const m = computeModifiers(state);
+  const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
+  return {
+    ...(sig
+      ? { current: { name: sig.name, drink: sig.drink, twist: sig.twist, premium: sig.premium, stars: knownStars(state, sig.drink, sig.twist), since: sig.since, onMenu: menuDrinks(state).includes(sig.drink) } }
+      : {}),
+    drinks,
+    book,
+    asks: sig && menuDrinks(state).includes(sig.drink) ? Math.round(walkIns * sigShare(sig) * 0.8) : 0,
+    premiumStep: SIG.premiumStep,
+    maxPremium: SIG.maxPremium,
+  };
+}
+
 export function menuLines(state: GameState): MenuLineVM[] {
   const m = computeModifiers(state);
   const on = menuDrinks(state);
@@ -425,6 +458,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           ...(last.spoiledValue ? { spoiled: money(last.spoiledValue), spoiledWhat: spoiledWhat(last.spoiled) } : {}),
           ...(last.pastries ? { pastries: last.pastries } : {}),
           ...(last.twistCost ? { twists: money(last.twistCost) } : {}),
+          ...(last.sigServed ? { sigSold: last.sigServed, sigBonus: money(last.sigBonus ?? 0) } : {}),
           ...(last.combosFound?.length ? {
             combos: last.combosFound.map((k) => {
               const [drink, twist] = k.split(':') as [DrinkId, TwistId];
@@ -460,6 +494,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     ...(state.regulars.length ? { regulars: regularsViewModel(state) } : {}),
     meReady: state.ready.includes(me),
     menu: menuLines(state),
+    signature: signatureVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),
     forecast: forecastViewModel(state),

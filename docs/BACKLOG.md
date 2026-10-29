@@ -970,3 +970,44 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
   - There's no hint on the day screen showing which twist is on. The toast is the only in-shift
     cue.
 
+
+## P3 Block 07 reflection (signature drink)
+
+- **What shipped.**
+  - `src/sim/signature.ts`: the `SIG` tuning table, plus draft cleaning, the ask share, the
+    premium, `applySignatureInput` (night-only, humans only, unlocked drinks; `since` resets only
+    when the base or twist changes), `signatureServed` and a capped `sigRating`.
+  - New state: `GameState.signature {name, drink, twist, premium, since}`. New input:
+    `{kind:'signature'}` (null retires it), validated. New day stats: `sigServed`,
+    `sigStarSum`, `sigBonus`.
+  - Customers: a single non-regular walk-in draws one extra RNG value, but only while a
+    signature exists and its drink is on the menu. On a hit, the first drink becomes the
+    signature and the customer is tagged `sig`. With no signature the RNG stream is untouched.
+  - Serving a signature cup charges the premium, forces the signature twist (`serveCombo`
+    override, so the house twist on that drink is independent), and adds the star bonus to cash
+    and to `today.bonus`.
+  - UI: the signature card at the top of the menu tab (name, base, twist with known stars,
+    premium −/+, Save/Update, Retire, and "~N asks tomorrow"). The draft lives in the closure, so
+    re-renders don't eat typing. Also a receipt line and the name on crew cards.
+  - The 1★ risk lever: tips are now [–, ×0.55, ×0.85, ×1, ×1.2, ×1.45].
+  - Save v16 (no-op migration), protocol v19.
+- **Checks.** Four new tests (561 total): the design input, the asks share, the sale with bonus
+  and receipt, and the rating cap.
+  - Default balance is unchanged at 291.28 / 25.4% / 0 bankrupt (bots don't touch signatures).
+  - A new `--policy taste` balance bot explores one untried twist per night, keeps a known 4–5★
+    one, and makes the best known ≥4★ combo a "House special" at a +$1 premium. Over 10 seeds it
+    gets mean cash 294.35, score 334.35 vs 319.53, and a 28.1% loss rate vs 25.4%. So the taste
+    and signature layer pays a little, and early exploring costs a few days. That's the intended
+    shape.
+- **Deferred.**
+  - **Hurried bot personality: not done.** The cheap route is a `settings.hurriedBots` toggle,
+    so personality assignment isn't touched. In `brain.ts` `take`, the bot pulls a cup early under
+    pressure once `busyTicksLeft ≤ busyTotal × ACCURACY.earlyShare`, which costs it a star. It's
+    left for a quiet block because it needs sanitizeSettings and a settings UI row.
+  - Only one signature at a time and one twist per signature. "Twist(s)" stacking would need a
+    combo ladder over pairs.
+  - The fixture harness renders night with no `extras`, so the header always says "Opening
+    night · Day 0". That's cosmetic and only happens in the dev harness.
+  - Mobile (390 wide): the night tabs become a narrow side rail and the menu board is squeezed
+    into it. That predates B7, but the signature card makes it worse. It needs a stacked mobile
+    night layout.
