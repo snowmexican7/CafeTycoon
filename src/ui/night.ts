@@ -6,7 +6,7 @@ import { esc, hide, onAction, show } from './dom';
 import { coin, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
-import { nightStructureKey, type HandCardVM, type NightVM } from './viewModels';
+import { nightStructureKey, type ForecastVM, type HandCardVM, type NightVM } from './viewModels';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew' } as const;
 const LOW_AT = 5;
@@ -31,6 +31,27 @@ function handCard(c: HandCardVM, i: number, cash: number): string {
     ${c.affordable ? '' : `<span class="need">${needText(cost, cash)}</span>`}
     ${c.affordable && c.cutsRent ? '<span class="rent-risk" title="Buying this leaves less than tomorrow\'s rent">Cuts into rent</span>' : ''}
   </button>`;
+}
+
+/** Tomorrow's neighbourhood forecast as a folded local paper across the top of the hand. */
+function newspaper(f: ForecastVM | undefined): string {
+  if (!f) return '';
+  const iced = 100 - f.hotPct;
+  return `<article class="paper-news" aria-label="Tomorrow's forecast: ${esc(f.name)}">
+    <header class="pn-mast"><span>THE DAILY GRIND</span><small>${esc(f.edition)} edition · neighbourhood forecast</small></header>
+    <h2 class="pn-head">${esc(f.headline)}</h2>
+    <div class="pn-cols">
+      <div class="pn-story"><div class="pn-name"><span class="pn-ic" aria-hidden="true">${f.icon}</span>${esc(f.name)}</div>
+        <p>${esc(f.blurb)}</p><p class="pn-plan"><b>Crew tip:</b> ${esc(f.plan)}</p></div>
+      <div class="pn-facts">
+        <div class="pn-row"><b>~${f.customers}</b><small>walk-ins expected</small></div>
+        <div class="pn-split" title="Hot vs iced orders tomorrow"><span class="hot" style="flex:${f.hotPct}">${f.hotPct >= 18 ? `☕ ${f.hotPct}%` : ''}</span><span class="iced" style="flex:${iced}">${iced >= 18 ? `🧊 ${iced}%` : ''}</span></div>
+        ${f.effects ? `<div class="pn-eff">${esc(f.effects)}</div>` : ''}
+        ${f.eventNote ? `<div class="pn-ev">⚠ ${esc(f.eventNote)}</div>` : ''}
+        <div class="pn-later">Day after: ${f.later.icon} ${esc(f.later.name)} <small>(rumour)</small></div>
+      </div>
+    </div>
+  </article>`;
 }
 
 /** The heads-up card above the receipt: a friendly paper note, never a blocker. */
@@ -153,7 +174,7 @@ export function createNight(
       const bought = extras?.bought ?? [];
       const cards =
         vm.hand.map((c, i) => handCard(c, i, cash)).join('') + bought.map((b, i) => boughtCard(b.itemId, vm.hand.length + i)).join('');
-      const hand = cards || '<p class="empty">Nothing left to buy tonight. Restock, then open up.</p>';
+      const hand = newspaper(vm.forecast) + (cards || '<p class="empty">Nothing left to buy tonight. Restock, then open up.</p>');
       const colors = new Map((extras?.crew ?? []).map((c) => [c.id, c]));
       const ready = vm.ready
         .map((p) => {

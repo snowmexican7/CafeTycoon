@@ -120,3 +120,22 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .icard .rent-risk { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 700 11.5px var(--font-body);
   background: var(--warn); color: #4a2c06; padding: 3px 9px; border-radius: 99px; }
 @media (prefers-reduced-motion: reduce) { #night .flash { animation: none; } }
+
+/* Phase 2 B4: tomorrow's neighbourhood forecast, a folded local paper across the top of the hand. */
+#night .paper-news { grid-column: 1 / -1; background: #f7f1e3; color: #2b211a; border-radius: 4px; padding: 10px 16px 12px; transform: rotate(-.4deg);
+  box-shadow: 0 0 0 1px #d8ccb4, 0 6px 0 #e2d4ba, 0 14px 24px rgba(58, 36, 24, .16); font-family: Georgia, 'Times New Roman', serif; }
+#night .pn-mast { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 3px double #2b211a; padding-bottom: 3px; }
+#night .pn-mast span { font: 900 17px Georgia, serif; letter-spacing: .18em; } #night .pn-mast small { font: italic 12px Georgia, serif; color: #6b5a48; }
+#night .pn-head { margin: 6px 0 8px; font: 900 22px/1.1 Georgia, serif; letter-spacing: .01em; text-transform: uppercase; }
+#night .pn-cols { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; border-top: 1px solid #cdbfa5; padding-top: 8px; }
+#night .pn-name { font: 700 17px var(--font-display); display: flex; align-items: center; gap: 8px; } #night .pn-ic { font-size: 26px; }
+#night .pn-story p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.35; } #night .pn-plan { color: #4a3a2c; }
+#night .pn-facts { border-left: 1px solid #cdbfa5; padding-left: 14px; display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; }
+#night .pn-row b { font: 700 22px var(--font-display); margin-right: 6px; } #night .pn-row small { color: #6b5a48; }
+#night .pn-split { display: flex; height: 18px; border-radius: 9px; overflow: hidden; font: 700 11px var(--font-body); color: #fff; }
+#night .pn-split span { display: flex; align-items: center; justify-content: center; min-width: 0; white-space: nowrap; }
+#night .pn-split .hot { background: #b0623a; } #night .pn-split .iced { background: #4f8fb8; }
+#night .pn-eff { font-family: var(--font-body); font-weight: 600; color: #4a3a2c; }
+#night .pn-ev { font-family: var(--font-body); font-weight: 700; color: #a04a1c; }
+#night .pn-later { font-style: italic; color: #6b5a48; } #night .pn-later small { font-size: 11px; }
+@media (max-width: 1100px) { #night .pn-cols { grid-template-columns: 1fr; } #night .pn-facts { border-left: 0; padding-left: 0; } }

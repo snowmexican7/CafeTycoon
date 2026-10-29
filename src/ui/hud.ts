@@ -166,13 +166,16 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
   }
 
   function renderWeek(vm: HudVM, live?: HudLive): void {
-    const key = `${vm.dayLabel}|${live?.dayInWeek ?? -1}`;
+    const key = `${vm.dayLabel}|${live?.dayInWeek ?? -1}|${vm.forecast?.name ?? ''}`;
     if (key === lastWeekKey) return;
     lastWeekKey = key;
     const dots = live
       ? `<span class="week" aria-hidden="true">${Array.from({ length: 7 }, (_, i) => `<i class="${i < live.dayInWeek ? 'on' : i === live.dayInWeek ? 'now' : ''}"></i>`).join('')}</span>`
       : '';
-    el.day.innerHTML = `<span>${esc(vm.dayLabel)}</span>${dots}`;
+    const fc = vm.forecast
+      ? `<span class="fc-chip" title="${esc(vm.forecast.blurb)}"><span aria-hidden="true">${vm.forecast.icon}</span>${esc(vm.forecast.name)}</span>`
+      : '';
+    el.day.innerHTML = `<span>${esc(vm.dayLabel)}</span>${dots}${fc}`;
   }
 
   function renderOrders(live: HudLive): void {
