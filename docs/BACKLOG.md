@@ -1173,3 +1173,59 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
     would fit the awards screen.
   - The judges aren't seasonal. Rotating a guest judge (Starbuck$'s regional manager?) per
     season would keep it fresh.
+
+## P3 Block 12 reflection (checkout path)
+
+- **What shipped.**
+  - `src/sim/checkout.ts` defines a three-step path: register (free) → OrderBot kiosk ($40,
+    $2/day licence, patience ×1.12, line +1, tips −0.04, prices ×1.04) → "Squarely" tap
+    terminal ($75, 3% of price + tip, patience ×1.05, tips +0.08). It's pure arithmetic with no
+    RNG, so a run that stays on the register keeps an identical stream (tested).
+  - The night input `checkout` installs the next step (in order, humans only, with enough cash)
+    or switches back to any owned checkout for free. Install spend counts as fittings.
+  - "Line holds one more" needed a new `Modifiers.queueRoom`. The queue cap was
+    `min(6, 6 + queue)`, so a +1 could never raise it. There's also a 7th queue slot left of the
+    counter, where the kiosk stands.
+  - UI: a 🏪 Shopfront tab with a three-card path (pros/cons, install / switch / locked / "On the
+    counter"), a "Checkout fees" receipt line, and a morning note.
+  - Render: the counter art is rebuilt when the active checkout changes. The register is a beige
+    till, the kiosk is a card reader plus an "ORDER HERE" totem, and Squarely is a white swivel
+    screen with tip buttons. The rebuild (`Scene.buildStations(key)`) is generic, so B13 tiers
+    reuse it.
+  - The old `digitalKiosk` / `squarelyTerminal` shop cards are removed. The v20→v21 migration
+    turns owned copies into the matching checkout and strips them from hand and bought-tonight.
+    Save v21, protocol v24.
+- **Balance (40 weeks, seed 1).**
+
+  | Policy | Cash | Score | Loss |
+  |---|---|---|---|
+  | Baseline smart | 266.17 | 277.11 | 26.7% |
+  | B12 smart | 260.53 | 276.53 | 26.4% |
+  | Kiosk (smart + kiosk once there's $60 spare) | 269.91 | 290.03 | 26.2% |
+  | Squarely (smart + kiosk, then Squarely) | 246.90 | 269.97 | 26.3% |
+  | Baseline taste | 272.58 | 283.52 | 28.6% |
+  | B12 taste | 274.88 | 288.19 | 28.1% |
+
+  - The kiosk is a modest win (+$13.5). Squarely is roughly break-even inside a week (−$6.6):
+    the 3% cut eats most of the tip jump on cheap drinks. That's the intended "is it worth it?"
+    trade-off, and it pays more on pricier menus and with a Host.
+  - Removing the two cards shifted the deal pool slightly. Smart is unchanged within noise.
+- **Checks.**
+  - Six checkout tests (584 total). They cover path order and costs, free switching, refusals
+    (poor / bot / day), validation, modifiers, the Squarely fee per sale, the kiosk licence at
+    close, profit and VM, the morning note, fittings, the v20 migration, and an identical stream
+    on the register.
+  - Screenshots are in p3/b12: every night tab at 1280×800 and 1920×1080, plus the three
+    counters.
+  - The 4-tab week sync, with a peer installing the kiosk, is logged in p3/b12/week.log.
+- **Bug caught.** The first balance/week run was done with six 40-week balance runs hogging the
+  CPU. The night timer ran out before the week script could click, which looked like a UI
+  regression. It wasn't: a rerun on a quiet box is clean. Don't run the browser sync alongside
+  heavy batch jobs.
+- **Deferred / watch.**
+  - Bots never touch the checkout. A crew of bots stays on the register forever.
+  - There's no queue-speed difference yet. "Tap and go" is modelled as patience, not as faster
+    serving. A real per-sale pay time (register slow, Squarely instant) would make the speed
+    trade-off visible, but it would change the serve loop.
+  - Night fixtures show "YESTERDAY · DAY 0" on the receipt because the harness passes no
+    `extras.day`. This is cosmetic and harness-only.
