@@ -41,6 +41,28 @@ describe('step', () => {
     expect(s.players[1].idleTicks).toBe(60);
   });
 
+  it('idle ticks are a running total: still, move, still adds both still stretches; bots stay at 0', () => {
+    let s = createRun({ ...opts, settings: { bots: 1 } });
+    s = ticks(s, 60 * 60);
+    expect(s.phase).toBe('day');
+    const p1 = (x: GameState) => x.players.find((p) => p.id === 'p1')!;
+    const base = p1(s).idleTicks;
+    s = ticks(s, 60);
+    s = ticks(s, 60, [{ kind: 'move', playerId: 'p1', x: 1, y: 0, interact: false }]);
+    s = ticks(s, 60, [{ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: false }]);
+    expect(p1(s).idleTicks - base).toBe(120);
+    expect(s.players.find((p) => p.bot)!.idleTicks).toBe(0);
+  });
+
+  it('a still tick with an interact is not idle; a disconnected player is not counted', () => {
+    let s = createRun(opts);
+    s = ticks(s, 60 * 60);
+    const before = s.players.map((p) => p.idleTicks);
+    s = step(s, [{ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: true }, { kind: 'leave', playerId: 'p2' }]);
+    expect(s.players[0].idleTicks).toBe(before[0]);
+    expect(s.players[1].idleTicks).toBe(before[1]);
+  });
+
   it('closing clears stations and hands, pays rent, moves reputation, and can bankrupt', () => {
     let s = createRun(opts);
     s = ticks(s, 60 * 60);
