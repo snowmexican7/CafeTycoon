@@ -1,8 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { applyLayout, cardValue, main, summarize, type BalanceReport, type Layout, type WeekResult } from '../scripts/balanceCore';
+import { applyAdvice, applyLayout, cardValue, main, summarize, type BalanceReport, type Layout, type WeekResult } from '../scripts/balanceCore';
 import { catalogueById } from './data/catalogue';
 import { zeroDrinks } from './sim/tally';
 import { createRun } from './sim/run';
+import { ECONOMY } from './data/economy';
+import { DRINK_IDS } from './data/drinks';
+import { nextTier } from './sim/growth';
+import { restockCost } from './sim/night';
 
 describe('balance tester', () => {
   it('runs one short week through the tester entry point, deterministically', () => {
@@ -40,6 +44,48 @@ describe('balance tester', () => {
     expect(main(['--weeks', '1', '--layout', 'nope']).code).toBe(2);
     expect(main(['--layout']).code).toBe(2);
   }, 60_000);
+  it('--policy planner plays a week from the stand, applying the planner advice (FB1 WP6)', () => {
+    const args = ['--weeks', '1', '--seed', '3', '--day', '30', '--humans', '1', '--bots', '1', '--policy', 'planner', '--summary'];
+    const r = main(args);
+    expect(r.code).toBe(0);
+    expect(r.output).toContain('planner');
+    expect(main(args).output).toBe(r.output);
+    expect(main(['--help']).output).toContain('planner');
+  }, 60_000);
+  it('applyAdvice mirrors the sim: restock, price, twist, grow, slot, menu', () => {
+    const s = createRun({ seed: 1, hostId: 'tester', players: [], tier: 'stand' });
+    s.phase = 'night';
+    s.cash = 400;
+    const beans = s.supplies.beans;
+    const cost = restockCost(s, 'beans', 2);
+    expect(applyAdvice(s, { id: 'restock:beans', kind: 'restock', text: '', input: { kind: 'restock', supply: 'beans', packs: 2 }, priority: 1 })).toBe(true);
+    expect(s.supplies.beans).toBe(beans + 2 * ECONOMY.packs.beans.size);
+    expect(s.cash).toBe(Math.round((400 - cost) * 100) / 100);
+    applyAdvice(s, { id: 'price:espresso', kind: 'price', text: '', input: { kind: 'price', drink: 'espresso', step: -2 }, priority: 1 });
+    expect(s.priceSteps).toEqual({ espresso: -2 });
+    applyAdvice(s, { id: 'price:espresso', kind: 'price', text: '', input: { kind: 'price', drink: 'espresso', step: 0 }, priority: 1 });
+    expect(s.priceSteps).toBeUndefined();
+    applyAdvice(s, { id: 'twist:latte', kind: 'twist', text: '', input: { kind: 'twist', drink: 'latte', twist: 'honey' }, priority: 1 });
+    expect(s.twists).toEqual({ latte: 'honey' });
+    s.cash = 5;
+    expect(applyAdvice(s, { id: 'grow:cart', kind: 'grow', text: '', input: { kind: 'grow', tier: 'cart' }, priority: 1 })).toBe(false);
+    s.cash = 900;
+    const next = nextTier(s)!;
+    expect(applyAdvice(s, { id: `grow:${next}`, kind: 'grow', text: '', input: { kind: 'grow', tier: next }, priority: 1 })).toBe(true);
+    expect(s.tier).toBe(next);
+    expect(s.tierLog?.at(-1)).toMatchObject({ tier: next, day: s.day, by: 'tester' });
+    // the back bar: free a slot, then place the unplaced station again
+    const idx = s.slots!.indexOf('steamer');
+    s.slots![idx] = null;
+    s.equipment = ['steamer'];
+    expect(applyAdvice(s, { id: `slot:${idx}`, kind: 'slot', text: '', input: { kind: 'slot', index: idx, station: 'steamer' }, priority: 1 })).toBe(true);
+    expect(s.slots![idx]).toBe('steamer');
+    expect(s.equipment).toEqual([]);
+    // the last drink on the board never goes off
+    for (const d of DRINK_IDS) s.menu[d] = d === 'espresso';
+    expect(applyAdvice(s, { id: 'menu:espresso', kind: 'menu', text: '', input: { kind: 'menu', drink: 'espresso', on: false }, priority: 1 })).toBe(false);
+    expect(s.menu.espresso).toBe(true);
+  });
   it('applyLayout rearranges the opening slots', () => {
     const open = (layout: Layout) => {
       const s = createRun({ seed: 1, hostId: 'tester', players: [] });

@@ -320,6 +320,82 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
   - Tuning for later: with a bin gone the floor should punish (grounds piles and spills mop-cost more, or slow walkers); today the tester says it does not.
   - A `slot` input can put any kind into any slot, including a steamer on the stand, so a kerbside stand can sell lattes once it owns one (tested).
 
+## FB1 WP6 reflection
+
+- **What shipped (branch fb1-sim-bots, sim side of FB1 package 6, the planner half).**
+  - *The night planner* (`src/sim/bots/planner.ts`, pure and RNG-free, reads only what the crew can see: never `comboStars`,
+    `adOutcome` or `rivalMenu`). Final shapes:
+    ```ts
+    interface Advice {
+      id: string;   // restock:<supply> | price:<drink> | twist:<drink> | signature | scout | rival |
+                    // grow:<tier> | checkout:<id> | slot:<index> | equip:espresso | menu:<drink>
+      kind: 'restock' | 'price' | 'twist' | 'signature' | 'scout' | 'rival' | 'grow' | 'checkout' | 'slot' | 'equip' | 'menu';
+      text: string;
+      input: NightFix;   // the input without its playerId
+      priority: number;  // restock out 100, low 90; rival 80; grow 70; checkout 60; slot 55; price 50;
+                         // twist 40; signature 35; equip 30; scout 20; menu 10
+    }
+    planNight(state): Advice[]                                   // priority desc, then id asc
+    crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots
+    restockAdvice(state, budget?): Advice[]                      // exported for the tester
+    ```
+  - *Rules.* Restock every supply a menu drink needs to the day's expected use x 1.25 (out of stock first). Price: one pass over
+    the menu, each drink at the step in -2..+4 that maximises the `priceForecast` profit summed over the whole menu (see the
+    balance note below); the signature drink is left to the rival rule while the knock-off is live. Twists: set a known 4-5 star
+    twist, drop a known 2-star-or-worse one, otherwise try the first untried twist on yesterday's best seller (and wait while one is
+    being explored). Signature: propose the best known 4-star-plus combo at premium 2 when none exists. Rival: when the copy
+    undercuts, cut the signature drink's menu step just enough, else lower the premium. Grow when cash after tonight's restock and
+    rent covers the tier; otherwise the next checkout; place unplaced equipment into the first empty slot; buy a second espresso
+    machine when yesterday lost more than it served at a one-machine bar; scout from day 2 when $20 is spare; switch off a drink the
+    bar has no station for, unless the plan grows, the station sits unplaced in equipment, or it would leave the board empty.
+    Opening night is for stocking: grow, checkout and equip wait for a finished day. One day's rent is held back and every spending
+    advice draws on the rest in priority order, so applying the whole list never overdraws the till.
+  - *`--policy planner`* (`scripts/balanceCore.ts`): opens as the stand (like `grow`), and at night stage 0 `plannerNight` applies
+    every advice from `planNight(state)` in list order with `applyAdvice`, `grow` last, then re-plans once (growing resets the
+    slots) and applies what the bigger shop calls for. `applyAdvice` mirrors the sim's apply functions by direct mutation, as
+    `tasteNight`/`growNight` do (the tester has no human player): restock, price, twist, signature, scout, grow (`growSlots`),
+    checkout, slot, equip (with `equipLog`), menu (never the last drink); the rival advice is a price or signature input and goes
+    through the same code. Nothing it cannot pay for or the sim would refuse is applied. Card buys still come from
+    `smartNightInputs(state, 'smart', stage)` after stage 0 (stage 0's smart restock is skipped: the planner already restocked).
+  - *Hurried personality:* see the D1 addendum below.
+- **Suite.** 86 files / 596 tests before FB1; after this branch 92 files / 779 tests. `tsc` and `npm run build` clean.
+- **Balance (40 weeks, seed 1, humans 2, bots 1, skill 3, pace 3, scenario random, day 150 s).**
+
+  | policy | start | mean cash | score | loss | profitable | bankrupt |
+  |---|---|---|---|---|---|---|
+  | smart | cafe | 260.53 | 276.53 | 26.4% | 97.5% | 0% |
+  | taste | cafe | 274.88 | 288.19 | 28.1% | 100% | 0% |
+  | grow | stand | 186.10 | 173.42 | 17.9% | 100% | 0% |
+  | planner | stand | 183.37 | 222.87 | 15.9% | 100% | 0% |
+
+  smart and taste reproduce the pre-FB1 baselines to the cent. `grow` at 40 weeks is 186.10 / 173.42 (the 20-week figure in the
+  C1 report, 194.08 / 185.21, is the same code on fewer seeds). Logs: `.superpowers/sdd/2026-10-29-fb1-sim/balance-D-*.log`.
+- **Growth days (stand start, 40 weeks).** planner: cart in 38 of 40 weeks at a mean of day 2.68, café in 10 of 40 at day 6.30;
+  weeks end as 28 cart, 10 café, 2 stand. grow: cart in 35 of 40 at day 4.71, café in 6 of 40 at day 6.67; 29 cart, 6 café, 5 stand.
+  The planner grows two days sooner because it spends only what is above the rent reserve and its own restock, not "price + $60".
+- **Reading.** The planner is a bit behind `grow` on cash (-2.73) and well ahead on score (+49.45), which counts fittings at
+  resale value: it turns cash into stations and tiers (a café in a quarter of its weeks, against 15%) and loses fewer customers (15.9%
+  against 17.9%, and a flatter loss curve: 3/9/15/15/19/27/18 against 4/3/13/16/23/31/24 by day). It is far below the café-start
+  policies in cash (260-275), but those start with the full bar and a bigger room, so the fair comparison is `grow`, and there it
+  is level on cash and clearly better on score. What it does badly: it cuts the drinks to -2 (at the three openings I checked; the forecast says that is
+  where profit peaks, and it never tests the crowd's actual reaction), and it explores twists one drink a night, so a short week
+  may not find a signature (not measured; the telemetry would say how often it did). Its card buying is smart's, but it starts
+  poorer, so it rerolls rarely (0.3 a week against 2.7 for smart).
+  *Pricing rule check:* the D2 concern was that the per-drink profit rule cut most drinks to -2. The brief called for a menu-total
+  objective if the planner trailed `grow` on cash, which it does by 2.73, so the rule was changed to the one-pass menu-total
+  version above. The two rules give the same steps at the stand, cart and café openings and the same 40-week result to the cent
+  (183.37 both times; the first run is `balance-D-planner-perdrink.log`), so the forecast's share model makes the per-drink
+  optimum the menu optimum here. The menu-total form is kept because it is the principled one, but it is not what moved the numbers.
+  A real fix for the -2 habit would need elasticity measured from the day's actual walk-aways, not the forecast: not tried.
+- **Open questions for the UI lane.**
+  - Show `crewTips(state, 2)` as chips on Tonight (attributed to the bot in `by`; `[]` with no connected bot). The UI applies an
+    advice by sending `{ ...advice.input, playerId: me() }`; the sim re-checks everything, so a stale chip is a no-op.
+  - Advice is suggestions only until P3 B15 (the planner never spends a real player's money). Should a chip vanish once its input
+    has been applied (planNight will stop listing it) or stay as "done"?
+  - The planner proposes grow and checkout from the first finished day; the nightBrief alerts also say so. Pick one place to show
+    them, or dedupe by `id` (`grow:<tier>` against the brief's `grow` alert).
+  - `crewTips` text uses the café's own words ("walked out to ... served"); the UI may want to shorten it for a chip.
+
 ## main.ts hook-ins (phase 2)
 
 Telemetry hook-ins in `src/main.ts` (slice 7); the UI agent should expect these when merging the title wiring.
