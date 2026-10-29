@@ -439,6 +439,8 @@ export interface GameState {
   slots?: (StationKind | null)[];
   /** FB1 WP5: stations the crew owns but has not placed (absent = none). */
   equipment?: StationKind[];
+  /** FB1 WP5: each station bought from the stations shop (what, the coming day, who bought it). */
+  equipLog?: { station: StationKind; day: number; by: string }[];
   /** P3 B11: the latest pitch to the panel (it applies on its `day` when green-lit). */
   pitch?: PitchResult;
   eventSchedule: ScheduledEvent[];
@@ -487,6 +489,8 @@ export type PlayerInput =
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
   | { kind: 'grow'; playerId: PlayerId; tier: TierId }
+  | { kind: 'slot'; playerId: PlayerId; index: number; station: StationKind | null }
+  | { kind: 'equip'; playerId: PlayerId; station: StationKind }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
