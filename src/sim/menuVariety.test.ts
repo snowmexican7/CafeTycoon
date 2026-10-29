@@ -152,7 +152,8 @@ describe('menu variety: unlocks', () => {
 
 describe('menu variety: bots and determinism', () => {
   it('chains a mocha through the steamer twice', () => {
-    const ids = chainFor('mocha', 'serve').map((x) => (x.kind === 'use' ? `${x.station}:${x.action}` : 'idle'));
+    const st = solo();
+    const ids = chainFor(st, st.players[0], 'mocha', 'serve').map((x) => (x.kind === 'use' ? `${x.station}:${x.action}` : 'idle'));
     expect(ids).toEqual([
       'grinder:insert', 'grinder:take', 'espresso:insert', 'espresso:take',
       'steamer:insert', 'steamer:take', 'steamer:insert', 'steamer:take', 'counter:serve',

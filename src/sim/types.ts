@@ -33,7 +33,8 @@ export interface Rogue {
   customerId: number; name?: string; drink: DrinkId; stage: RogueStage;
   pos: Vec2; path: Vec2[]; station: string | null; ticksLeft: number; waitTicks: number;
 }
-export type FloorAction = 'takeMop' | 'clean' | 'returnMop';
+/** Mop steps (takeMop, clean, returnMop), and `drop`: put what is in hand on the floor (no bin in the shop). */
+export type FloorAction = 'takeMop' | 'clean' | 'returnMop' | 'drop';
 export type BotStep = { kind: 'use'; station: string; action: BotAction } | { kind: 'idle'; node: Vec2 }
   | { kind: 'floor'; node: Vec2; action: FloorAction };
 

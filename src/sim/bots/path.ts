@@ -2,6 +2,7 @@ import { ECONOMY } from '../../data/economy';
 import { LAYOUT } from '../../data/layout';
 import { floorWidth } from '../growth';
 import { blocked, nearestStation } from '../movement';
+import { spillTiles } from '../floor';
 import type { GameState, Player, Station, Vec2 } from '../types';
 
 const key = (n: Vec2): string => `${n.x},${n.y}`;
@@ -113,6 +114,17 @@ export function targetNodes(state: GameState, station: Station, from: Vec2): Vec
       (station.kind !== 'counter' || n.y <= station.pos.y),
   );
   return byDistance(candidates, from);
+}
+
+/**
+ * Where a bot drops what it holds when the shop has no bin: the walkable node nearest `from` (ties
+ * lower y, then x) with no station within reach (so the drop lands on the floor, not in a machine)
+ * and no spill on it; else the node `from` stands on.
+ */
+export function floorDropNode(state: GameState, from: Vec2): Vec2 {
+  const wet = new Set(spillTiles(state).map(key));
+  const clear = walkableNodes(state).filter((n) => nearestStation(state, n) === null && !wet.has(key(n)));
+  return byDistance(clear, from)[0] ?? nodeOf(state, from);
 }
 
 /** A free node on the barista side within 2 tiles of the counter, nearest to `self`; else self's own node. */
