@@ -457,7 +457,9 @@ async function main(): Promise<void> {
     if (state.phase !== s.lastPhase) {
       const from = s.lastPhase;
       s.lastPhase = state.phase;
-      if (from === 'closing' && s.lastClosing) {
+      // The day's receipt leads into the night shop; after the last day (or a missed rent) the
+      // week-end screen sums up instead, so the receipt ("On to the night shop") stays hidden.
+      if (from === 'closing' && s.lastClosing && state.phase === 'night') {
         closing.render(closingViewModel(s.lastClosing, state));
         closing.show();
       } else if (from !== null) {
