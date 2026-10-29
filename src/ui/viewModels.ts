@@ -6,12 +6,12 @@ import { TICK_RATE, secondsToTicks } from '../sim/constants';
 import { botsFor } from '../sim/bots/roster';
 import { availableDrinks } from '../sim/customers';
 import { challengePaperLine, describeEffects, radioLine, splitEffects } from '../sim/describe';
-import { CARD_SETS } from '../data/cardSets';
+import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { EVENT_LABELS } from '../sim/events';
 import { challengeChipText } from '../sim/challenges';
-import { activeSets, computeModifiers, setCounts, weekOf } from '../sim/effects';
+import { activeSets, fullSets, computeModifiers, setCounts, weekOf } from '../sim/effects';
 import { rerollCost, restockCost } from '../sim/night';
-import { scoreRun } from '../sim/score';
+import { fittingsValue, scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
 import type { BotsChoice, Member } from '../net/protocol';
@@ -203,7 +203,7 @@ export interface HandCardVM {
   ups: string;
   downs: string;
   /** Its set: how many the café owns, how many switch it on, the bonus, and whether this card completes it. */
-  set?: { name: string; have: number; need: number; bonus: string; active: boolean; completes: boolean };
+  set?: { name: string; have: number; need: number; bonus: string; active: boolean; completes: boolean; full: string; fullNext: boolean; isFull: boolean };
 }
 
 /** One hand card's view: price, effects split up and down, and its set progress. */
@@ -228,7 +228,13 @@ export function handCardViewModel(state: GameState, item: CatalogueItem): HandCa
     ups: split.ups,
     downs: split.downs,
     ...(set
-      ? { set: { name: set.name, have, need: set.need, bonus: describeEffects(set.bonus), active: active.includes(set.id), completes: !active.includes(set.id) && have + 1 >= set.need } }
+      ? {
+          set: {
+            name: set.name, have, need: set.need, bonus: describeEffects(set.bonus), active: active.includes(set.id),
+            completes: !active.includes(set.id) && have + 1 >= set.need,
+            full: describeEffects(set.tier3), fullNext: active.includes(set.id) && have + 1 === FULL_SET, isFull: have >= FULL_SET,
+          },
+        }
       : {}),
   };
 }
@@ -341,7 +347,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     ...(state.debt ? { tab: money(state.debt) } : {}),
     hand: state.hand.map((id) => handCardViewModel(state, catalogueById[id])),
     reroll: { cost: money(rerollCost(state)), affordable: state.cash >= rerollCost(state) && state.hand.length > 0, count: state.rerolls ?? 0 },
-    sets: activeSets(state).map((id) => CARD_SETS[id].name),
+    sets: activeSets(state).map((id) => (fullSets(state).includes(id) ? `${CARD_SETS[id].name} (full)` : CARD_SETS[id].name)),
     restock: neededSupplies(state).map((supply) => {
       const cost = restockCost(state, supply, 1);
       return { supply, count: state.supplies[supply] ?? 0, packSize: ECONOMY.packs[supply].size, packCost: money(cost), affordable: state.cash >= cost };
@@ -428,6 +434,8 @@ export interface WeekEndVM {
   score: string;
   /** Cash in the till, the same number the HUD shows. */
   cash: string;
+  /** B11: permanent fittings at half price, counted in the score. */
+  fittings?: string;
   startingCash: string;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
@@ -455,6 +463,7 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
   return {
     score: money(scoreRun(state)),
     cash: money(state.cash),
+    ...(fittingsValue(state) > 0 ? { fittings: money(fittingsValue(state)) } : {}),
     startingCash: money(state.startingCash),
     ...(state.debt ? { tab: money(state.debt) } : {}),
     daysCompleted: state.days.length,

@@ -42,7 +42,7 @@
 #night .tab.locked { background: transparent; border: 2px dashed #d9c3a0; color: #9a7d5c; cursor: default; }
 #night .tab.locked .chip { background: #efe2cc; color: #85694a; font-size: 10px; padding: 2px 7px; }
 
-#night .hand { grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px 16px; align-content: start; align-items: stretch;
+#night .hand { grid-column: 2; grid-row: 2; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px 16px; align-content: start; align-items: stretch; grid-auto-rows: max-content;
   padding: 12px 12px 18px 4px; margin: -4px -12px 0 -4px; overflow: auto; min-height: 0; }
 #night .hand .empty { grid-column: 1 / -1; font: 600 18px var(--font-display); color: var(--ink-soft); text-align: center; padding: 60px 0; }
 #night .icard { all: unset; box-sizing: border-box; background: #fff; border-radius: 18px; box-shadow: 0 5px 0 #e2cfb2, 0 14px 26px rgba(58, 36, 24, .18); padding: 0 0 14px; position: relative;
@@ -55,7 +55,7 @@
 #night .icard .cat { position: absolute; top: 10px; left: 10px; font: 700 10.5px var(--font-display); letter-spacing: .1em; padding: 3px 8px; border-radius: 99px; background: #ffffffcc; color: var(--ink); }
 #night .icard .price { position: absolute; top: -10px; right: -10px; width: 62px; height: 62px; border-radius: 50%; background: var(--honey); display: grid; place-items: center;
   font: 700 18px var(--font-display); color: #5c3c0c; box-shadow: 0 3px 0 #c9902a, 0 8px 14px rgba(0, 0, 0, .18); transform: rotate(10deg); border: 3px dashed #fff3c4; }
-#night .icard .body { padding: 12px 14px 0; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+#night .icard .body { padding: 12px 14px 0; display: flex; flex-direction: column; gap: 8px; flex: 1 0 auto; }
 #night .icard h4 { margin: 0; font: 600 17px/1.15 var(--font-display); }
 #night .eff { font: 800 13px/1.3 var(--font-body); color: #2f8a5c; background: #e3f4ea; padding: 6px 9px; border-radius: 10px; }
 #night .flav { font: italic 600 12.5px/1.35 var(--font-body); color: var(--ink-soft); flex: 1; }
@@ -184,3 +184,12 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
   margin-top: 6px; padding: 6px 10px; border-radius: 8px;
   background: #fff3d6; color: #6a4a18; font: 600 13px var(--font-ui);
 }
+/* B11: card faces at ~800 px tall. Clamp flavour to two lines, and drop it when a set box needs the room (full text stays in the tooltip). */
+@media (max-height: 820px) {
+  #night .icard .flav { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: none; font-size: 12px; }
+  #night .icard:has(.set) .flav { display: none; }
+  #night .icard .set { padding: 4px 7px; font-size: 11px; }
+  #night .icard .eff { padding: 5px 8px; font-size: 12.5px; }
+  #night .icard .art { height: 100px; } #night .icard .rib { top: 80px; } #night .icard .body { gap: 6px; padding-top: 10px; }
+}
+@media (max-height: 760px) { #night .icard .art { height: 92px; } #night .icard .rib { top: 70px; } }

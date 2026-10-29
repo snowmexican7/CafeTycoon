@@ -2,7 +2,7 @@ import { ECONOMY } from '../data/economy';
 import { dayCurveFor } from '../data/challenges';
 import { scenarioById } from '../data/scenarios';
 import { catalogueById } from '../data/catalogue';
-import { CARD_SETS } from '../data/cardSets';
+import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { eventActive } from './events';
 import { rngNext } from './rng';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
@@ -134,6 +134,12 @@ export function activeSets(state: GameState): CardSetId[] {
   return (Object.keys(CARD_SETS) as CardSetId[]).filter((id) => (counts[id] ?? 0) >= CARD_SETS[id].need);
 }
 
+/** B11: sets with three cards owned, whose second tier is on as well, in a fixed order. */
+export function fullSets(state: GameState): CardSetId[] {
+  const counts = setCounts(state);
+  return (Object.keys(CARD_SETS) as CardSetId[]).filter((id) => (counts[id] ?? 0) >= FULL_SET);
+}
+
 /** Which café week a day belongs to: days 1–7 are week 1. */
 export function weekOf(day: number): number {
   return Math.ceil(day / ECONOMY.scoredWeekDays);
@@ -148,6 +154,7 @@ export function computeModifiers(state: GameState): Modifiers {
     ...state.owned.flatMap((o) => o.effects),
     ...state.activeTomorrow.flatMap((o) => o.effects),
     ...activeSets(state).flatMap((id) => CARD_SETS[id].bonus),
+    ...fullSets(state).flatMap((id) => CARD_SETS[id].tier3),
   ];
   const m = itemModifiers(effects);
   const rep = ECONOMY.trafficFromReputation;

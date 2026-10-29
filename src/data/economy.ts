@@ -4,6 +4,8 @@ import { DRINK_IDS, suppliesFor } from './drinks';
 /** Every tunable number in one place. Balance lives here, rules live in src/sim. */
 export const ECONOMY = {
   startingCash: 100,
+  /** B11: at the week's end, permanent fittings count toward the score at this share of their price (the café's worth). */
+  fittingsResale: 0.5,
   startingReputation: 2.5,
   rentPerDay: 25,
   startingSupplies: { beans: 20, milk: 10, concentrate: 15, flavour: 0 } as Record<SupplyId, number>,
@@ -18,7 +20,7 @@ export const ECONOMY = {
     Exclude<StationKind, 'counter' | 'trash'>,
     number
   >,
-  patienceSeconds: 25,
+  patienceSeconds: 33,
   maxTipRate: 0.35,
   baseArrivalsPerSecond: 1 / 6,
   queueCapacity: 6,

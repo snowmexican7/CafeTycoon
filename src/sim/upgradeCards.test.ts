@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { CATALOGUE, catalogueById } from '../data/catalogue';
-import { CARD_SETS } from '../data/cardSets';
+import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { ECONOMY } from '../data/economy';
-import { activeSets, computeModifiers } from './effects';
+import { activeSets, computeModifiers, fullSets } from './effects';
+import { fittingsValue, scoreRun } from './score';
 import { drawEvents, scheduleEvents } from './events';
 import { applyNightInput, dealHand, rerollCost } from './night';
 import { createRun, startDay, startNight } from './run';
@@ -191,7 +192,7 @@ describe('upgrade cards: the weather radio', () => {
     applyNightInput(s, { kind: 'buy', playerId: 'p1', itemId: 'weatherRadio' });
     expect(s.radio?.day).toBe(3);
     s.radio = { day: 3, events: [] };
-    expect(forecastViewModel(s).radio).toMatch(/quiet day/);
+    expect(forecastViewModel(s).radio).toMatch(/no surprises|no events/i);
     s.radio = { day: 3, events: [{ kind: 'rushHour', offset: 30000 }] }; // 600 s day = 36000 ticks
     expect(forecastViewModel(s).radio).toBe('rush hour in the afternoon');
   });
@@ -245,5 +246,47 @@ describe('upgrade cards: saves', () => {
     delete s.rerolls;
     const m = migrateSnapshot(5, s)!;
     expect(m.rerolls).toBe(0);
+  });
+});
+
+describe('upgrade cards: B11 balance', () => {
+  it('every set has at least three cards and a third-card bonus on top of the pair', () => {
+    for (const set of Object.values(CARD_SETS)) {
+      expect(CATALOGUE.filter((c) => c.set === set.id).length, set.id).toBeGreaterThanOrEqual(FULL_SET);
+      expect(set.tier3.length, set.id).toBeGreaterThan(0);
+    }
+    const ids = CATALOGUE.filter((c) => c.set === 'espressoBar').map((c) => c.id);
+    const two = own(solo(), ...ids.slice(0, 2));
+    const three = own(solo(), ...ids.slice(0, 3));
+    expect(fullSets(two)).toEqual([]);
+    expect(fullSets(three)).toEqual(['espressoBar']);
+    const third = catalogueById[ids[2]];
+    const solo3 = own(solo(), ids[2]);
+    const alone = computeModifiers(solo3).stationSpeed.espresso / computeModifiers(solo()).stationSpeed.espresso;
+    expect(computeModifiers(three).stationSpeed.espresso / computeModifiers(two).stationSpeed.espresso).toBeCloseTo(alone * 1.08, 5);
+    expect(third).toBeDefined();
+  });
+
+  it('scores permanent fittings at half price, not tomorrow-only cards', () => {
+    const s = solo();
+    const perm = CATALOGUE.find((c) => c.duration === 'permanent' && c.cost > 0)!;
+    const temp = CATALOGUE.find((c) => c.duration !== 'permanent' && c.cost > 0)!;
+    own(s, perm.id, temp.id);
+    expect(fittingsValue(s)).toBe(perm.cost * ECONOMY.fittingsResale);
+    s.cash = s.startingCash - 10;
+    expect(scoreRun(s)).toBeCloseTo(-10 + perm.cost * ECONOMY.fittingsResale);
+  });
+
+  it('the hire-a-temp card costs $30 (B6 note)', () => {
+    expect(CATALOGUE.find((c) => c.effects.some((e) => e.kind === 'temp'))!.cost).toBe(30);
+  });
+
+  it('lets the host re-roll even when it is not seated, but not a stranger', () => {
+    const s = startNight(createRun({ seed: 4, hostId: 'tester', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 } }));
+    s.cash = 500;
+    applyNightInput(s, { kind: 'reroll', playerId: 'stranger' });
+    expect(s.rerolls ?? 0).toBe(0);
+    applyNightInput(s, { kind: 'reroll', playerId: 'tester' });
+    expect(s.rerolls).toBe(1);
   });
 });

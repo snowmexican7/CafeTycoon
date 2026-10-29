@@ -179,7 +179,7 @@ describe('step', () => {
       scenario: s.scenario,
       players: ['K', 'S'],
       daysCompleted: 1,
-      score: 40,
+      score: 47.5, // $40 cash profit + street sign at half price (B11 fittings)
       itemsBought: ['streetSign'],
     });
   });

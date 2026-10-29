@@ -16,6 +16,16 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Balance pass.** Upgrades are about 20% cheaper, customers are a little more patient, and the
+  hire-a-temp card is $30. The week now opens gently and day 7 is a proper finale. Your **score**
+  counts permanent upgrades at half price, so investing isn't just spending. The week-end screen
+  shows them as "Fittings".
+- **Full sets.** Owning three cards of a set adds an extra bonus on top of the pair bonus. Cards
+  tell you when they'd fill a set.
+- **Tidier cards on small screens.** Card text no longer spills out of tall cards, and at about
+  800 px tall the flavour text shortens so effects and set info stay readable.
+- **Chattier radio.** A quiet day on the weather radio now gets its own line, including one for
+  opening day.
 - **End-of-week awards.** The week-end screen now holds an awards ceremony. One person is crowned
   Crew MVP, then trophies go out like Slip King, Mop Hero, Caffeine Gremlin, Hand-off Hero, Speed
   Demon, Cat Whisperer and Frequent Flyer (ambulance rides). Anyone left over gets a deadpan joke

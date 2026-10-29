@@ -181,7 +181,7 @@ describe('influencer visit', () => {
     const inf = s.customers.find((c) => c.kind === 'influencer')!;
     expect(s.customers).toHaveLength(7);
     expect(inf.drink).toBe('latte');
-    expect(inf.patienceMax).toBe(Math.round(25 * computeModifiers(s).patience * 1.5 * 60));
+    expect(inf.patienceMax).toBe(Math.round(ECONOMY.patienceSeconds * computeModifiers(s).patience * 1.5 * 60));
     expect(s.events).toEqual([{ kind: 'influencerVisit', ticksLeft: inf.patienceMax - 1, customerId: inf.id }]);
 
     const before = computeModifiers(s).traffic;

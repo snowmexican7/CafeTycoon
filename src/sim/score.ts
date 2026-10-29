@@ -1,8 +1,20 @@
+import { catalogueById } from '../data/catalogue';
+import { ECONOMY } from '../data/economy';
 import type { GameState, RunRecord } from './types';
 
-/** The week's score: net profit over the run. */
+/** B11: what the café's permanent fittings are worth at the week's end (half their price), so upgrades are not pure cost. */
+export function fittingsValue(state: GameState): number {
+  let total = 0;
+  for (const o of state.owned) {
+    const item = catalogueById[o.itemId];
+    if (item?.duration === 'permanent') total += item.cost;
+  }
+  return Math.round(total * ECONOMY.fittingsResale * 100) / 100;
+}
+
+/** The week's score: net profit over the run, plus the fittings' resale value (B11). */
 export function scoreRun(state: GameState): number {
-  return Math.round((state.cash - state.startingCash) * 100) / 100;
+  return Math.round((state.cash - state.startingCash + fittingsValue(state)) * 100) / 100;
 }
 
 /** One line for the run history. The caller supplies today's date; the sim has no clock. */

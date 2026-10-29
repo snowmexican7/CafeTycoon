@@ -128,7 +128,7 @@ export function applyNightInput(state: GameState, input: PlayerInput): GameState
       restock(state, input.supply, input.packs);
       break;
     case 'reroll':
-      if (state.players.some((p) => p.id === input.playerId)) reroll(state);
+      if (input.playerId === state.hostId || state.players.some((p) => p.id === input.playerId)) reroll(state);
       break;
     case 'ready':
       if (state.players.some((p) => p.id === input.playerId) && !state.ready.includes(input.playerId)) {
