@@ -160,6 +160,24 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B7: a named signature on the board, last night's sales and star bonus on the receipt. */
+  signature: {
+    night: true,
+    setup(s) {
+      s.cash = 214;
+      s.day = 2;
+      s.tasteBook = {
+        [`latte:vanilla`]: comboStars(s.seed, 'latte', 'vanilla'),
+        [`latte:cinnamon`]: comboStars(s.seed, 'latte', 'cinnamon'),
+        [`espresso:seaSalt`]: comboStars(s.seed, 'espresso', 'seaSalt'),
+        [`coldBrew:honey`]: comboStars(s.seed, 'coldBrew', 'honey'),
+      };
+      s.twists = { latte: 'vanilla' };
+      s.signature = { name: 'Midnight Cinnamon', drink: 'latte', twist: 'cinnamon', premium: 3, since: 1 };
+      s.today = { day: 1, served: 26, lost: 1, turnedAway: 0, sales: 141, tips: 24.6, rent: 25, combosFound: ['latte:cinnamon'], comboStarSum: 4, twistCost: 3.2, sigServed: 6, sigStarSum: 24, sigBonus: 4.5 };
+    },
+    timeline: [],
+  },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */
