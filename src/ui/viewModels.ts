@@ -1,5 +1,6 @@
 import { SIG, sigShare } from '../sim/signature';
 import { AD_IDS, ADS } from '../sim/ads';
+import { JUDGES, PITCH } from '../sim/pitch';
 import { copyIsLive, daysToCopy, RIVAL, rivalAskFactor, rivalMenu, sigPrice } from '../sim/rival';
 import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
 import { accuracyRating } from '../sim/accuracy';
@@ -24,7 +25,7 @@ import { fittingsValue, scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
 import type { BotsChoice, Member } from '../net/protocol';
-import type { AdId, AdOutcome, CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
+import type { AdId, AdOutcome, PitchKind, PitchTier, CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 import { BASE_DRINKS, DRINK_IDS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
 import { menuDrinks, neededSupplies, unlockedDrinks } from '../sim/unlocks';
@@ -269,6 +270,7 @@ export interface NightVM {
   rival: RivalVM;
   /** P3 B10: parody ad campaigns for tomorrow. */
   ads: AdsVM;
+  pitch: PitchVM;
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
@@ -443,6 +445,38 @@ export function adsVM(state: GameState): AdsVM {
   };
 }
 
+/** P3 B11: the pitch panel. `result` is tonight's scored pitch; until then the form is open. */
+export interface PitchVM {
+  judges: { name: string; icon: string; likes: string }[];
+  maxLen: number;
+  greenlit: number;
+  ovation: number;
+  result?: {
+    by: string; kind: PitchKind; text: string; total: number; tier: PitchTier; panel: string; notes: string[];
+    scores: { name: string; icon: string; score: number; verdict: string }[];
+    /** What it does tomorrow, or '' when it didn't make it. */
+    boost: string;
+  };
+}
+
+export function pitchVM(state: GameState): PitchVM {
+  const p = state.pitch && state.pitch.day === state.day ? state.pitch : undefined;
+  const lit = p && (p.tier === 'greenlit' || p.tier === 'ovation');
+  return {
+    judges: JUDGES.map((j) => ({ name: j.name, icon: j.icon, likes: j.likes })),
+    maxLen: PITCH.maxLen,
+    greenlit: PITCH.greenlit,
+    ovation: PITCH.ovation,
+    ...(p ? {
+      result: {
+        by: p.by, kind: p.kind, text: p.text, total: p.total, tier: p.tier, panel: p.panel, notes: p.notes,
+        scores: JUDGES.map((j, i) => ({ name: j.name, icon: j.icon, score: p.scores[i] ?? 0, verdict: p.verdicts[i] ?? '' })),
+        boost: !lit ? '' : p.kind === 'promo' ? `+${Math.round((p.boost - 1) * 100)}% walk-ins tomorrow` : `+${Math.round(p.boost * 100)}% tips tomorrow`,
+      },
+    } : {}),
+  };
+}
+
 export function rivalVM(state: GameState): RivalVM {
   const scouted = state.rival?.scouted === state.day;
   const m = computeModifiers(state);
@@ -588,6 +622,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     signature: signatureVM(state),
     rival: rivalVM(state),
     ads: adsVM(state),
+    pitch: pitchVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),
     forecast: forecastViewModel(state),

@@ -6,6 +6,7 @@ import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { eventActive } from './events';
 import { rngNext } from './rng';
 import { applyAd } from './ads';
+import { applyPitch } from './pitch';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
 import { dayProgress, forecastOf, shapeAt } from './forecast';
 import type { CardSetId, DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
@@ -183,6 +184,7 @@ export function computeModifiers(state: GameState): Modifiers {
   const { patienceFloor } = ECONOMY.mess;
   m.patience *= patienceFloor + ((1 - patienceFloor) * state.cleanliness) / 100;
   applyAd(state, m);
+  applyPitch(state, m);
   return m;
 }
 

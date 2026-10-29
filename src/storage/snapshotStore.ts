@@ -9,7 +9,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 19;
+export const SNAPSHOT_VERSION = 20;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -65,6 +65,8 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   17: () => {},
   // P3 B10: ad campaigns. No campaign booked is "absent".
   18: () => {},
+  // P3 B11: pitch an idea. No pitch yet is "absent".
+  19: () => {},
 };
 
 /** Bring a saved state up to SNAPSHOT_VERSION, or null when no migration path exists. */

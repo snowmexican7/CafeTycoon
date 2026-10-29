@@ -41,7 +41,7 @@ describe('stores', () => {
 
 describe('snapshot versioning', () => {
   it('is on version 9', () => {
-    expect(SNAPSHOT_VERSION).toBe(19);
+    expect(SNAPSHOT_VERSION).toBe(20);
   });
 
   it('migrates a version-4 save (three drinks, no flavours) to the B5 menu', () => {

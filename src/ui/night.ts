@@ -3,13 +3,13 @@ import { catalogueById } from '../data/catalogue';
 import { describeEffects } from '../sim/describe';
 import { DRINK_INFO } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
-import type { AdId, DrinkId, SupplyId } from '../sim/types';
+import type { AdId, DrinkId, PitchKind, SupplyId } from '../sim/types';
 import { cardArt, CATEGORY_LABEL, CATEGORY_TINT } from './cardArt';
 import { esc, hide, onAction, show } from './dom';
 import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
-import { nightStructureKey, type AdsVM, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM } from './viewModels';
+import { nightStructureKey, type AdsVM, type PitchVM, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
 import { isRole, type RoleId } from '../sim/roles';
 
@@ -191,7 +191,7 @@ export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
   { id: 'crew', label: 'Crew & roles', icon: '🧑‍🍳' },
   { id: 'regulars', label: 'Regulars', icon: '♥' },
   { id: 'paper', label: 'Paper', icon: '📰' },
-  { id: 'ads', label: 'Ads', icon: '📣' },
+  { id: 'ads', label: 'Ads & pitch', icon: '📣' },
 ];
 
 /** P3 B10: the Ads tab: one parody campaign for tomorrow, results hidden until the doors open. */
@@ -213,6 +213,28 @@ function adsBoard(a: AdsVM | undefined): string {
     )
     .join('');
   return `<div class="ads-board">${last}${head}<div class="ad-grid">${cards}</div></div>`;
+}
+
+/** P3 B11: the pitch panel. The draft (kind + text) lives in the night closure. */
+export interface PitchDraft { kind: PitchKind; text: string }
+function pitchCard(p: PitchVM | undefined, d: PitchDraft): string {
+  if (!p) return '';
+  const judges = p.judges.map((j) => `<span class="pj">${j.icon} <b>${esc(j.name)}</b> <small>${esc(j.likes)}</small></span>`).join('');
+  if (p.result) {
+    const r = p.result;
+    const rows = r.scores.map((s) => `<div class="pr-row"><span class="pj-ic" aria-hidden="true">${s.icon}</span><b>${esc(s.name)}</b><span class="pr-score s${s.score >= 7 ? 'hi' : s.score >= 4 ? 'mid' : 'lo'}">${s.score}/10</span><em>“${esc(s.verdict)}”</em></div>`).join('');
+    return `<div class="pitch-card done ${r.tier}"><div class="pc-head">🎤 Pitch an idea <small>one a night · scored by the panel</small></div>
+      <blockquote class="pr-text"><small>${r.kind === 'promo' ? 'Promo' : 'New item'} by ${esc(r.by)}</small>${esc(r.text)}</blockquote>
+      ${rows}
+      <div class="pr-total"><b>${r.total}/30</b> ${esc(r.panel)}${r.boost ? ` <span class="pr-boost">${esc(r.boost)}</span>` : ''}</div>
+      ${r.notes.length ? `<div class="pr-notes">${r.notes.map((n) => esc(n)).join(' · ')}</div>` : ''}</div>`;
+  }
+  const kind = (k: PitchKind, label: string) => `<button class="btn mini pk ${d.kind === k ? 'on' : ''}" data-action="pitch-kind" data-kind="${k}" aria-pressed="${d.kind === k}">${label}</button>`;
+  return `<div class="pitch-card"><div class="pc-head">🎤 Pitch an idea <small>one a night · scored by the panel</small></div>
+    <div class="pj-list">${judges}</div>
+    <div class="pc-kinds">${kind('promo', '📢 A promo')}${kind('item', '🍰 A new item')}</div>
+    <textarea class="pitch-text" maxlength="${p.maxLen}" rows="2" placeholder="${d.kind === 'promo' ? 'e.g. Cozy rainy-day deal: bring a friend, second latte free' : 'e.g. Fresh house-made honey oat latte, slow-poured with real crema'}">${esc(d.text)}</textarea>
+    <div class="pc-foot"><small>${p.greenlit}+ is green-lit (a small boost tomorrow), ${p.ovation}+ is a standing ovation. Name the menu; skip the buzzwords.</small><button class="btn mini" data-action="pitch" ${d.text.trim() ? '' : 'disabled'}>Pitch it</button></div></div>`;
 }
 
 /** P3 B9: Starbuck$ down the street, under the paper: its knock-off (public) and a paid scouting peek. */
@@ -292,7 +314,7 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -315,6 +337,10 @@ export function createNight(
     }
     else if (action === 'scout') handlers.onScout?.();
     else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);
+    else if (action === 'pitch-kind') {
+      pitch = { ...pitch, kind: el.dataset.kind === 'item' ? 'item' : 'promo' };
+      redrawPitch();
+    } else if (action === 'pitch' && pitch.text.trim()) handlers.onPitch?.(pitch.kind, pitch.text);
     else if (action === 'jump-restock') jumpToRestock();
     else if (action === 'jump-warn') flash(container.querySelector<HTMLElement>('.warn-card'));
   });
@@ -343,6 +369,13 @@ export function createNight(
   // P3 B7: the designer's draft lives here, so a re-render (someone else bought a card) keeps it.
   let draft: SigDraft | null = null;
   let sigVm: SignatureVM | undefined;
+  // P3 B11: the pitch draft, kept across re-renders.
+  let pitch: PitchDraft = { kind: 'promo', text: '' };
+  let pitchVm: PitchVM | undefined;
+  function redrawPitch(): void {
+    const el = container.querySelector('.pitch-card');
+    if (el) el.outerHTML = pitchCard(pitchVm, pitch);
+  }
   let lastSig = '';
   const draftOr = (vm: SignatureVM): SigDraft => draft ?? { name: '', drink: vm.drinks[0], twist: TWISTS[0], premium: 2 };
   function syncDraft(vm: SignatureVM | undefined): SigDraft | null {
@@ -361,6 +394,12 @@ export function createNight(
   }
   container.addEventListener('input', (e) => {
     const t = e.target as HTMLInputElement | HTMLSelectElement;
+    if (t.classList?.contains('pitch-text')) {
+      pitch = { ...pitch, text: t.value };
+      const go = container.querySelector<HTMLButtonElement>('[data-action="pitch"]');
+      if (go) go.disabled = !t.value.trim();
+      return;
+    }
     if (!sigVm || !t.closest?.('.sig-card')) return;
     const d = draftOr(sigVm);
     if (t.classList.contains('sig-name')) {
@@ -411,6 +450,8 @@ export function createNight(
 
   return {
     render(vm, extras, room) {
+      pitchVm = vm.pitch;
+      if (vm.pitch?.result) pitch = { ...pitch, text: '' };
       const key = `${nightStructureKey(vm)}#${extras ? nightExtrasKey(extras) : ''}#${room ?? ''}`;
       if (key === lastKey) return patch(vm, extras);
       lastKey = key;
@@ -463,7 +504,7 @@ export function createNight(
         crew: vm.roles?.length ? `${freeRoles} free` : '',
         regulars: regWarn ? `${regWarn} !` : `${vm.regulars?.length ?? 0}`,
         paper: vm.forecast ? `~${vm.forecast.customers}` : '',
-        ads: vm.ads?.booked ? '1 booked' : '',
+        ads: [vm.ads?.booked ? '1 booked' : '', vm.pitch?.result ? `${vm.pitch.result.total}/30` : ''].filter(Boolean).join(' · '),
       };
       const tabs = NIGHT_TABS.filter((t) => t.id !== 'regulars' || vm.regulars?.length)
         .map((t) => `<button class="tab ntab ${t.id === 'regulars' && regWarn ? 'alert' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="false">${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}</button>`)
@@ -504,7 +545,7 @@ export function createNight(
           <div class="pane crew-pane" data-pane="crew" role="tabpanel">${rolesBoard(vm.roles)}</div>
           <div class="pane regs-pane" data-pane="regulars" role="tabpanel">${regularsBoard(vm.regulars)}</div>
           <div class="pane paper-pane" data-pane="paper" role="tabpanel">${newspaper(vm.forecast)}${rivalCard(vm.rival)}</div>
-          <div class="pane ads-pane" data-pane="ads" role="tabpanel">${adsBoard(vm.ads)}</div>
+          <div class="pane ads-pane" data-pane="ads" role="tabpanel">${pitchCard(vm.pitch, pitch)}${adsBoard(vm.ads)}</div>
           <div class="foot">
             <div class="ready">${ready}</div>
             <div class="spacer"></div>

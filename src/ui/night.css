@@ -1,0 +1,20 @@
+
+/* P3 B11: pitch an idea */
+.pitch-card { background: #fff8ec; border: 2px solid #e8cfa6; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.pitch-card.greenlit { border-color: #5aa469; background: #f1faf2; }
+.pitch-card.ovation { border-color: #d9a400; background: #fffbe6; box-shadow: 0 0 0 3px #ffe58a66; }
+.pitch-card .pc-head { font-weight: 700; }
+.pitch-card .pc-head small, .pitch-card small { font-weight: 400; opacity: 0.75; }
+.pj-list { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
+.pc-kinds { display: flex; gap: 6px; }
+.pc-kinds .pk.on { background: #4a2c1a; color: #fff; }
+.pitch-text { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; border: 1.5px solid #d8c3a0; border-radius: 8px; padding: 6px 8px; resize: vertical; background: #fff; }
+.pc-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.pr-text { margin: 0; padding: 6px 10px; border-left: 3px solid #c79a5b; background: #fff; border-radius: 6px; font-style: italic; }
+.pr-text small { display: block; font-style: normal; }
+.pr-row { display: grid; grid-template-columns: 22px 160px 52px 1fr; align-items: baseline; gap: 6px; font-size: 13px; }
+.pr-score { font-weight: 700; text-align: right; }
+.pr-score.shi { color: #2f7d3b; } .pr-score.smid { color: #9a6b00; } .pr-score.slo { color: #b33a2b; }
+.pr-total { font-size: 14px; }
+.pr-boost { background: #5aa469; color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 12px; margin-left: 4px; }
+.pr-notes { font-size: 12px; opacity: 0.75; }

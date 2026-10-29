@@ -1,4 +1,5 @@
 import { cleanDraft } from './signature';
+import { cleanPitch, isPitchKind } from './pitch';
 import { isAdId } from './ads';
 import { TWISTS } from './taste';
 import { isRole } from './roles';
@@ -60,6 +61,10 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
         : null;
     case 'ad':
       return input.ad === null || isAdId(input.ad) ? { kind: 'ad', playerId: input.playerId, ad: input.ad } : null;
+    case 'pitch':
+      return isPitchKind(input.pitchKind) && typeof input.text === 'string' && input.text.length <= 400 && cleanPitch(input.text)
+        ? { kind: 'pitch', playerId: input.playerId, pitchKind: input.pitchKind, text: cleanPitch(input.text) }
+        : null;
     case 'signature': {
       if (input.sig === null) return { kind: 'signature', playerId: input.playerId, sig: null };
       const sig = cleanDraft(input.sig);

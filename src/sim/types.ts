@@ -194,6 +194,26 @@ export interface Rival {
 export type AdId = 'palmbook' | 'nextdoorish' | 'linkedout' | 'glimpse' | 'tiktak';
 export type AdOutcome = 'flop' | 'ok' | 'viral';
 /** A campaign booked at night for `day`; `outcome` is filled in when the doors open. */
+/** P3 B11: what a pitch is for. */
+export type PitchKind = 'promo' | 'item';
+export type PitchTier = 'passed' | 'meh' | 'greenlit' | 'ovation';
+/** P3 B11: a scored pitch for `day` (the coming day when pitched at night). */
+export interface PitchResult {
+  day: number;
+  by: string;
+  kind: PitchKind;
+  text: string;
+  /** One score (0-10) and one verdict line per judge. */
+  scores: number[];
+  verdicts: string[];
+  total: number;
+  tier: PitchTier;
+  panel: string;
+  notes: string[];
+  /** Promo: traffic multiplier. Item: tip rate added. */
+  boost: number;
+}
+
 export interface AdCampaign {
   id: AdId;
   day: number;
@@ -394,6 +414,8 @@ export interface GameState {
   rival?: Rival;
   /** P3 B10: the ad campaign booked for tomorrow (or running today). */
   ad?: AdCampaign;
+  /** P3 B11: the latest pitch to the panel (it applies on its `day` when green-lit). */
+  pitch?: PitchResult;
   eventSchedule: ScheduledEvent[];
   events: ActiveEvent[];
   regulars: Regular[];
@@ -438,6 +460,7 @@ export type PlayerInput =
   | { kind: 'twist'; playerId: PlayerId; drink: DrinkId; twist: TwistId | null }
   | { kind: 'scout'; playerId: PlayerId }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
+  | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
