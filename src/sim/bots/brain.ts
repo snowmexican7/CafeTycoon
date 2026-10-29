@@ -52,37 +52,49 @@ function claimedAtStation(state: GameState, st: Station): boolean {
   return state.players.some((p) => p.bot?.claim != null && isTakeAt(p.bot.plan[0], st));
 }
 
+/** Finished drinks already on their way, plus `pending`: shots-to-be that will end up as an espresso or a latte. */
+interface Coverage { drinks: Record<DrinkId, number>; pending: number }
+
 /**
  * Drinks already on their way: held by non-claiming players, waiting or brewing at stations (unless a
- * claiming bot is about to take them), or on the pass.
+ * claiming bot is about to take them), or on the pass. A person's chain in progress counts as pending:
+ * grounds they hold or in/at the grinder, and a shot they hold or in/at the espresso machine.
  */
-function coveragePool(state: GameState): Record<DrinkId, number> {
-  const pool: Record<DrinkId, number> = { espresso: 0, latte: 0, coldBrew: 0 };
+function coveragePool(state: GameState): Coverage {
+  const drinks: Record<DrinkId, number> = { espresso: 0, latte: 0, coldBrew: 0 };
+  let pending = 0;
   for (const p of state.players) {
     if (p.bot?.claim != null) continue;
-    if (isDrink(p.holding)) pool[p.holding] += 1;
+    if (!p.bot && (p.holding === 'grounds' || p.holding === 'espresso')) pending += 1;
+    else if (isDrink(p.holding)) drinks[p.holding] += 1;
   }
   for (const st of state.stations) {
     if (claimedAtStation(state, st)) continue;
-    if (isDrink(st.output)) pool[st.output] += 1;
-    if (st.busyTicksLeft > 0 && isRecipeKind(st.kind)) {
-      const gives = STATION_RECIPES[st.kind].gives;
-      if (isDrink(gives)) pool[gives] += 1;
+    const brewing = st.busyTicksLeft > 0 && isRecipeKind(st.kind) ? STATION_RECIPES[st.kind].gives : null;
+    for (const item of [st.output, brewing]) {
+      if (item === null) continue;
+      if (st.kind === 'grinder' || st.kind === 'espresso') pending += 1;
+      else if (isDrink(item)) drinks[item] += 1;
     }
   }
-  for (const item of state.pass) pool[item.item] += 1;
-  return pool;
+  for (const item of state.pass) drinks[item.item] += 1;
+  return { drinks, pending };
 }
 
 /** The first customer in queue order that no other bot claimed, is on the menu, and no drink in flight covers. */
 export function uncoveredOrder(state: GameState, self: Player): Customer | null {
-  const pool = coveragePool(state);
+  const { drinks, pending } = coveragePool(state);
+  let shots = pending;
   const menu = availableDrinks(state);
   for (const c of state.customers) {
     if (claimedByOther(state, self, c.id)) continue;
     if (!menu.includes(c.drink)) continue;
-    if (pool[c.drink] > 0) {
-      pool[c.drink] -= 1;
+    if (drinks[c.drink] > 0) {
+      drinks[c.drink] -= 1;
+      continue;
+    }
+    if (c.drink !== 'coldBrew' && shots > 0) {
+      shots -= 1;
       continue;
     }
     return c;

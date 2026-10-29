@@ -444,3 +444,50 @@ describe('bot feel: yielding', () => {
     expect(think(s, bot(s))).toEqual([{ kind: 'use', station: 'espresso', action: 'take' }]);
   });
 });
+
+describe("coverage counts a person's chain in progress", () => {
+  const human = (s: GameState): Player => s.players.find((p) => p.id === 'p1')!;
+  const station = (s: GameState, id: string) => s.stations.find((st) => st.id === id)!;
+
+  it('one latte customer and a person holding grounds: nothing is uncovered', () => {
+    const s = cafe(1);
+    s.customers = [{ id: 950, drink: 'latte', ...huge }];
+    human(s).holding = 'grounds';
+    expect(uncoveredOrder(s, bot(s))).toBeNull();
+  });
+
+  it("one latte customer and the person's shot brewing in the espresso machine: nothing is uncovered", () => {
+    const s = cafe(1);
+    s.customers = [{ id: 951, drink: 'latte', ...huge }];
+    station(s, 'espresso').busyTicksLeft = 100;
+    expect(uncoveredOrder(s, bot(s))).toBeNull();
+  });
+
+  it('two latte customers and a person holding grounds: the bot gets the second', () => {
+    const s = cafe(1);
+    s.customers = [{ id: 952, drink: 'latte', ...huge }, { id: 953, drink: 'latte', ...huge }];
+    human(s).holding = 'grounds';
+    expect(uncoveredOrder(s, bot(s))?.id).toBe(953);
+  });
+
+  it('a cold brew customer is not covered by grounds in hand', () => {
+    const s = cafe(1);
+    s.customers = [{ id: 954, drink: 'coldBrew', ...huge }];
+    human(s).holding = 'grounds';
+    expect(uncoveredOrder(s, bot(s))?.id).toBe(954);
+  });
+
+  it('a person carrying a shot by the counter for the one latte: the bot does not start a latte', () => {
+    let s = cafe(1);
+    s.customers = [{ id: 955, drink: 'latte', ...huge }];
+    human(s).holding = 'espresso';
+    human(s).pos = { x: 4.5, y: 5 };
+    const beans = s.supplies.beans;
+    for (let i = 0; i < 600; i++) {
+      s = step(s, []);
+      expect(bot(s).bot!.claim).not.toBe(955);
+    }
+    expect(s.supplies.beans).toBe(beans);
+    expect(station(s, 'grinder').busyTicksLeft).toBe(0);
+  });
+});
