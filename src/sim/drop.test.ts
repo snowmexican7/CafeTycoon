@@ -84,6 +84,20 @@ describe('drop key', () => {
     expect(s.messes).toEqual([]);
   });
 
+  it('a drop onto a station or the pass is logged', () => {
+    let s = chaosCafe();
+    p1(s).pos = { x: 3, y: 2 };
+    p1(s).holding = 'grounds';
+    s = drop(s);
+    p1(s).pos = { x: 6, y: 5 };
+    p1(s).holding = 'latte';
+    s = drop(s);
+    expect(s.log.filter((e) => e.kind === 'drop').map((e) => e.data)).toEqual([
+      { item: 'grounds', station: 'espresso' },
+      { item: 'latte', station: 'counter' },
+    ]);
+  });
+
   it('floor drop lands on the tile in front', () => {
     let s = chaosCafe();
     p1(s).pos = { x: 6, y: 4 };

@@ -95,6 +95,9 @@ export function computeModifiers(state: GameState): Modifiers {
     m.patience *= ECONOMY.events.rushHour.patience;
   }
   if (state.today.influencer === 'served') m.traffic *= ECONOMY.events.influencer.trafficAfter;
+  // A dirty floor wears on patience; read once when a customer arrives, so waiting ones keep theirs.
+  const { patienceFloor } = ECONOMY.mess;
+  m.patience *= patienceFloor + ((1 - patienceFloor) * state.cleanliness) / 100;
   return m;
 }
 

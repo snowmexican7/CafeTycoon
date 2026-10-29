@@ -115,6 +115,15 @@ describe('floor messes', () => {
     expect(s.today.wasted ?? 0).toBe(0);
   });
 
+  it('a collapsed barista entering a mess triggers nothing', () => {
+    const s = chaosCafe();
+    addMess(s, 'spill', 5, 4);
+    p1(s).espresso = { shots: 6, boostTicksLeft: 0, mul: 1, collapsedAt: 0, fellAt: null, out: true };
+    const rng = s.rng;
+    for (let i = 0; i < 200; i++) enter(s, { x: 4, y: 4 }, { x: 5, y: 4 });
+    expect([s.rng, p1(s).stunTicksLeft, s.log.some((e) => e.kind === 'slip')]).toEqual([rng, 0, false]);
+  });
+
   it('a slipped player does not interact this tick', () => {
     let found = false;
     for (let seed = 1; seed <= 2000 && !found; seed++) {

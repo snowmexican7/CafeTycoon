@@ -1,6 +1,7 @@
 import { ECONOMY } from '../data/economy';
 import { dropTile, placeMess } from './floor';
 import { emitLog } from './log';
+import { returnMop } from './mop';
 import { nearestStation } from './movement';
 import { STATION_RECIPES } from './stations';
 import { tally } from './tally';
@@ -14,7 +15,10 @@ export function resolveDrops(state: GameState): void {
 }
 
 function resolveDrop(state: GameState, p: Player): void {
-  if (p.tool === 'mop') return; // Task 3: returnMop
+  if (p.tool === 'mop') {
+    returnMop(state, p);
+    return;
+  }
   const item = p.holding;
   if (item === null) return;
   const station = nearestStation(state, p.pos);
@@ -29,11 +33,13 @@ function resolveDrop(state: GameState, p: Player): void {
       if (item !== 'grounds' && state.pass.length < ECONOMY.pass.slots) {
         state.pass.push({ item, ticksLeft: ECONOMY.pass.staleSeconds[item] * 60 });
         p.holding = null;
+        emitLog(state, 'drop', { item, station: station.id });
       }
     } else if (station.kind in STATION_RECIPES) {
       if (station.busyTicksLeft === 0 && station.output === null && station.occupiedBy === null) {
         station.output = item;
         p.holding = null;
+        emitLog(state, 'drop', { item, station: station.id });
       }
     }
     return;

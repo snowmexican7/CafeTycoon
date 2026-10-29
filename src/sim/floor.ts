@@ -1,4 +1,5 @@
 import { ECONOMY } from '../data/economy';
+import { isOut } from './espresso';
 import { emitLog } from './log';
 import { rngInt, rngNext } from './rng';
 import { tally } from './tally';
@@ -41,9 +42,10 @@ export function dropTile(state: GameState, p: Player): Vec2 {
   return isWalkable(state, front) ? front : ownTile(state, p);
 }
 
-/** Grounds spread and slips when a player enters a tile, in `entered` order. */
+/** Grounds spread and slips when a player enters a tile, in `entered` order (not a collapsed barista). */
 export function onTileEntry(state: GameState, entered: Player[]): void {
   for (const p of entered) {
+    if (isOut(p)) continue;
     const mess = messAt(state, p.tile);
     if (!mess) continue;
     if (mess.kind === 'grounds') spread(state, mess);
