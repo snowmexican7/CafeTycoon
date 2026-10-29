@@ -4,6 +4,8 @@ import { addCustomer, availableDrinks, rollKind, spawnCustomers, stepCustomers }
 import { counterInteract } from './pass';
 import { createRun, startDay } from './run';
 import { interact } from './stations';
+import { step } from './step';
+import { ECONOMY } from '../data/economy';
 
 const day = () => {
   const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
@@ -191,5 +193,66 @@ describe('served log (Block 3)', () => {
     s.players[0].holding = 'espresso';
     counterInteract(s, 'p1');
     expect(s.log.filter((x) => x.kind === 'served').at(-1)!.data).toMatchObject({ cid: 51, perfect: false, kind: 'normal' });
+  });
+});
+
+describe('sold-out walk-ups (FB1 WP4)', () => {
+  const empty = { beans: 0, milk: 0, concentrate: 0, flavour: 0, pastry: 0 };
+  const run = (s: ReturnType<typeof day>, ticks: number) => {
+    for (let i = 0; i < ticks; i++) s = spawnCustomers(s);
+    return s;
+  };
+
+  it('with the menu on and zero stock, people walk away and nothing is lost or turned away', () => {
+    let s = day();
+    s.supplies = { ...empty };
+    s = run(s, 3600);
+    expect(s.customers).toHaveLength(0);
+    expect(s.today.soldOutWalkouts).toBeGreaterThan(0);
+    expect(s.today.lost).toBe(0);
+    expect(s.today.turnedAway).toBe(0);
+    expect(typeof s.today.soldOutAt).toBe('number');
+    expect(s.log.filter((e) => e.kind === 'walkout').every((e) => e.data.reason === 'soldOut')).toBe(true);
+    expect(s.log.some((e) => e.kind === 'walkout')).toBe(true);
+  });
+
+  it('with every drink switched off nobody comes', () => {
+    let s = day();
+    s.supplies = { ...empty };
+    for (const d of Object.keys(s.menu)) s.menu[d as keyof typeof s.menu] = false;
+    const rng = s.rng;
+    s = run(s, 3600);
+    expect(s.today.soldOutWalkouts).toBeUndefined();
+    expect(s.rng).toBe(rng);
+  });
+
+  it('rush hour brings more walkers over the same ticks', () => {
+    const base = day();
+    base.supplies = { ...empty };
+    const rush = structuredClone(base);
+    rush.events = [{ kind: 'rushHour', ticksLeft: 99999 }];
+    expect(run(rush, 3600).today.soldOutWalkouts ?? 0).toBeGreaterThan(run(base, 3600).today.soldOutWalkouts ?? 0);
+  });
+
+  it('with stock nothing changes: identical runs, no walkouts', () => {
+    let a = day();
+    let b = day();
+    for (let i = 0; i < 900; i++) {
+      a = step(a, []);
+      b = step(b, []);
+    }
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    expect(a.today.soldOutWalkouts).toBeUndefined();
+    expect(a.today.soldOutAt).toBeUndefined();
+  });
+
+  it('the morning note counts yesterday\'s walkers', () => {
+    let s = day();
+    s.supplies = { ...empty };
+    s = run(s, 3600);
+    const n = s.today.soldOutWalkouts!;
+    s = finishDay(s);
+    s.supplies = { ...ECONOMY.startingSupplies };
+    expect(startDay(s).morningNotes).toContain(`${n === 1 ? '1 person' : `${n} people`} walked away from a sold-out board yesterday.`);
   });
 });
