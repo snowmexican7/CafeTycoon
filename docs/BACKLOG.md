@@ -491,3 +491,38 @@ Co-op fun:
   crew a shared plan across nights ("we need one more Cold bar card").
 - The temp is a fun surprise: a fourth body at the counter for one hectic day, then gone.
 
+## Block 7 reflection (daily challenges + day curve)
+
+Shipped: 15 optional daily goals in `src/data/challenges.ts` (perfect serves, floor %, no
+storm-outs / spills, serve N, sell N of a drink, clear before grace, serve the influencer). Dealt
+1–2 per night onto the paper (`dealChallenges` at `startNight`, pruned after events at `startDay`),
+tracked live on HUD chips, settled at closing for a tip + `challenge.won` log / cheer. A soft
+day-of-week curve (`DAY_CURVE`) multiplies traffic and patience and shifts 0/1/2-event schedule
+weights so Mon is a warm-up and Sun is the finale, stacked on the existing week ramp. Challenge
+deals use a derived RNG (seed ⊕ day) so they never perturb event / radio / customer draws. Snapshot
+v7 (`challenges: []` migration) / protocol v8. 481 tests (+12).
+
+Balance (20 weeks): mean final cash **$338.38**, loss rate **36.9 %**, 0/20 bankrupt (B6: $293.55 /
+34.3 %). Cash up ~15 % (challenge tips + slightly softer early-week traffic), loss rate up ~2.6 pp
+from the late-week squeeze. Day 1 cash in the sample weeks is healthier; day 7 still pays without
+bankrupting the bot. Left as is — the curve is doing what it should.
+
+What could be better:
+- Challenge pool on day 1 is only three goals; a couple more warm-up goals (e.g. "serve 6", "buy
+  one supply") would keep the paper from feeling samey across opening weeks.
+- Floor challenges start `have` at 100 and watermark down; a day that never ticks (test shortcuts)
+  can free-win at settle. Fine in real play; worth a "touched" flag if we ever skip days.
+- HUD chips don't celebrate the win with the B3 cheer / confetti yet — just a ✓. Wire into the
+  juice pass (B9).
+- The balance bot ignores challenges (never steers toward them), so the tip income is a lower bound
+  of what a crew chasing goals would earn.
+
+Deferred:
+- Multi-day / weekly meta-challenges ("hit 3 daily goals this week").
+- Player-picked challenge from a larger offered set.
+- Difficulty options that scale or disable the day curve.
+
+Co-op fun:
+- Optional goals give the crew a shared plan for the day without punishing a miss, and the receipt
+  tick is a nice group high-five. The Sunday finale curve makes "we survived the week" land.
+

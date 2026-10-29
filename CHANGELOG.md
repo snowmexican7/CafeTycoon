@@ -16,6 +16,14 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Daily challenges.** Each morning the paper deals 1–2 optional goals for the day ("Serve 8
+  perfect drinks", "Keep the floor above 80%", "No storm-outs", "Sell 5 matchas", "Clear before
+  close", …). Hit one and the receipt ticks it with a tip; a small chip on the HUD tracks progress
+  live.
+- **Week difficulty curve.** Day 1 is a warm-up and day 7 is the finale: traffic, patience and how
+  many events show up ramp gently across the week on top of the existing week-to-week ramp, so the
+  first day teaches and Sunday squeezes without feeling unfair.
+
 - **A real card shop.** 52 night cards now (33 new), each on a path: **⚡ Speed**, **★ Quality** or
   **📣 Reach**, with a rarity ribbon (common, uncommon, rare). Each night you're offered **4 cards**,
   always from at least two paths and always with one cheap card.
