@@ -19,6 +19,7 @@ keep going into harder weeks until the café can't make rent.
 - **Use a station:** E or Space (stand next to it)
 - **Drop:** R (into a machine, onto the pass, in the bin, or on the floor; puts the mop back)
 - **Drink an espresso:** Q at the machine or with a shot in hand (a speed boost; the sixth shot of a day sends you to hospital)
+- **Close early:** hold C (or hold the Close early button by the clock) for a second. In co-op everyone has to vote; tap again to take your vote back
 - **Mute:** M
 - **Pause and settings:** Esc
 - The seed shown in the HUD replays the same week: enter it on the title screen.
