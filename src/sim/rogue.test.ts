@@ -4,13 +4,14 @@ import { LAYOUT } from '../data/layout';
 import { finishDay } from './closing';
 import { serveCustomer, stepCustomers } from './customers';
 import { ROGUE_REVIEW } from './describe';
+import { findPath, nodeOf, targetNodes } from './bots/path';
 import { isFreeForRogue } from './rogue';
 import { createRun, startDay } from './run';
 import { step } from './step';
-import type { Customer, DrinkId, GameState } from './types';
+import type { Customer, DrinkId, GameState, Player, Vec2 } from './types';
 
-const rogueCafe = (dayNo = 2): GameState => {
-  const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const rogueCafe = (dayNo = 2, bots = 0): GameState => {
+  const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots } });
   s.scenario = 'normal';
   startDay(s);
   s.day = dayNo;
@@ -158,8 +159,8 @@ describe('rogue trigger', () => {
 });
 
 /** A day-2 café with the doors already shut (no spawns, no events) and a long closing phase. */
-const quietCafe = (): GameState => {
-  const s = rogueCafe(2);
+const quietCafe = (bots = 0): GameState => {
+  const s = rogueCafe(2, bots);
   s.phase = 'closing';
   s.phaseTicksLeft = 100000;
   s.events = [];
@@ -354,5 +355,162 @@ describe('the rogue entity', () => {
     expect(rough.morningNotes.filter((n) => n === ROGUE_REVIEW)).toHaveLength(1);
     startDay(calm);
     expect(calm.morningNotes).not.toContain(ROGUE_REVIEW);
+  });
+});
+
+/** quietCafe with one bot (bot-1); p1 parked out of everyone's way at (11,5). */
+const botCafe = (): GameState => {
+  const s = quietCafe(1);
+  s.players.find((p) => p.id === 'p1')!.pos = { x: 11, y: 5 };
+  return s;
+};
+const botOf = (s: GameState): Player => s.players.find((p) => p.id === 'bot-1')!;
+const huge = { patienceLeft: 100000, patienceMax: 100000 };
+const sameTile = (a: Vec2, b: Vec2): boolean => a.x === b.x && a.y === b.y;
+
+describe('bots and the rogue', () => {
+  it('only people block a rogue: a bot parked at the steamer neither makes it unfree nor keeps a rogue waiting', () => {
+    let s = goRogue(botCafe(), 'latte');
+    expect(s.rogue?.station).toBe('steamer');
+    const b = botOf(s);
+    b.pos = { x: 5, y: 2 }; // within interact range of the steamer
+    b.bot!.reactionTicksLeft = 100000; // parked: it stands still all test
+    expect(dist(b.pos, station(s, 'steamer').pos)).toBeLessThanOrEqual(ECONOMY.interactRangeTiles);
+    expect(isFreeForRogue(s, station(s, 'steamer'), LAYOUT.rogueStart)).toBe(true);
+    s = runUntil(s, (t) => t.rogue?.stage !== 'walking');
+    expect(s.rogue?.stage).toBe('making');
+    expect(s.rogue?.station).toBe('steamer');
+    expect(botOf(s).pos).toEqual({ x: 5, y: 2 });
+  });
+
+  it('a bot yields to a rogue on its waypoint and paths around it', () => {
+    let s = botCafe();
+    s.menu.coldBrew = false; // no prepping: the bot keeps the plan it is given
+    const b = botOf(s);
+    b.pos = { x: 6, y: 4 };
+    b.bot!.plan = [{ kind: 'use', station: 'grinder', action: 'insert' }];
+    b.bot!.path = [];
+    const grinder = station(s, 'grinder');
+    const waypoint = findPath(s, b.pos, targetNodes(s, grinder, b.pos)[0])![0];
+    // A rogue frozen by p1 at the tap, standing on the bot's next waypoint.
+    s.players.find((p) => p.id === 'p1')!.pos = { x: 8, y: 2 };
+    s.rogue = { customerId: 77, drink: 'coldBrew', stage: 'waiting', pos: { ...waypoint }, path: [], station: 'coldBrewTap', ticksLeft: 0, waitTicks: 0 };
+    const rogueTile = nodeOf(s, waypoint);
+    const start = { ...b.pos };
+    s = step(s, []);
+    expect(botOf(s).bot!.yields).toBe(1);
+    expect(botOf(s).bot!.yieldTicksLeft).toBeGreaterThan(0);
+    expect(botOf(s).pos).toEqual(start);
+    s = runUntil(s, (t) => botOf(t).bot!.path.length > 0, 120);
+    expect(s.rogue?.stage).toBe('waiting');
+    expect(s.rogue?.pos).toEqual(waypoint);
+    expect(botOf(s).bot!.path.some((n) => sameTile(n, rogueTile))).toBe(false);
+    // And it gets round: closer to the grinder, never through the rogue's tile.
+    const before = dist(botOf(s).pos, grinder.pos);
+    for (let i = 0; i < 60; i++) {
+      s = step(s, []);
+      expect(botOf(s).bot!.path.some((n) => sameTile(n, rogueTile))).toBe(false);
+      expect(dist(botOf(s).pos, waypoint)).toBeGreaterThan(ECONOMY.bots.yieldRadius);
+    }
+    expect(dist(botOf(s).pos, grinder.pos)).toBeLessThan(before);
+  });
+
+  it('a bot treats an occupied station as busy and carries on after', () => {
+    let s = botCafe();
+    s.menu.coldBrew = false;
+    const esp = station(s, 'espresso');
+    esp.busyTicksLeft = 600;
+    esp.occupiedBy = 77;
+    s.rogue = { customerId: 77, drink: 'espresso', stage: 'making', pos: { x: 3, y: 2 }, path: [], station: 'espresso', ticksLeft: 600, waitTicks: 0 };
+    s.customers = [fresh('espresso', { id: 900, ...huge })];
+    const served = s.today.served;
+    let waited = false;
+    const limit = 600 + ECONOMY.bots.maxWaitTicks;
+    for (let i = 0; i < limit && s.customers.some((c) => c.id === 900); i++) {
+      const held = botOf(s).holding;
+      const occupied = station(s, 'espresso').occupiedBy !== null;
+      s = step(s, []);
+      const e = station(s, 'espresso');
+      if (occupied && e.occupiedBy !== null) {
+        // No insert while the rogue is at the machine, and the grounds stay in hand.
+        if (held === 'grounds') expect(botOf(s).holding).toBe('grounds');
+        expect(e.output).toBeNull();
+        if (botOf(s).bot!.waitTicks > 0) waited = true;
+      }
+      expect(botOf(s).bot!.waitTicks).toBeLessThanOrEqual(ECONOMY.bots.maxWaitTicks);
+    }
+    expect(waited).toBe(true);
+    expect(s.log.some((e) => e.kind === 'trash')).toBe(false);
+    expect(s.customers.some((c) => c.id === 900)).toBe(false);
+    expect(s.today.served).toBe(served + 1);
+    expect(station(s, 'espresso').occupiedBy).toBeNull();
+  });
+
+  // Review Focus 3
+  it('the only free station, a bot walking to it: no deadlock', () => {
+    let s = botCafe();
+    for (const id of ['grinder', 'espresso', 'steamer']) station(s, id).busyTicksLeft = 5000;
+    // The bot's cold brew order first, then the customer about to go rogue for a cold brew.
+    s.customers = [fresh('coldBrew', { id: 900, ...huge }), fresh('coldBrew', { upset: { ticksLeft: 1 } })];
+    s = step(s, []);
+    expect(s.rogue).toMatchObject({ drink: 'coldBrew', station: 'coldBrewTap', stage: 'walking' });
+    expect(botOf(s).bot!.claim).toBe(900);
+    // A second's hesitation: the rogue reaches the tap first, with the bot a step away and still walking to it.
+    botOf(s).bot!.reactionTicksLeft = 60;
+    const served = s.today.served;
+    let arrived = false;
+    let done = false;
+    for (let i = 0; i < 1500; i++) {
+      const walking = s.rogue?.stage === 'walking';
+      s = step(s, []);
+      const tap = station(s, 'coldBrewTap');
+      if (walking && s.rogue && s.rogue.stage !== 'walking') {
+        arrived = true;
+        expect(dist(botOf(s).pos, tap.pos)).toBeLessThanOrEqual(ECONOMY.interactRangeTiles);
+        expect(botOf(s).bot!.plan[0]).toEqual({ kind: 'use', station: 'coldBrewTap', action: 'insert' });
+      }
+      expect(s.rogue?.stage).not.toBe('waiting'); // a bot never holds a rogue up
+      if (tap.occupiedBy !== null) expect(s.rogue).not.toBeNull();
+      expect(botOf(s).bot!.waitTicks).toBeLessThanOrEqual(ECONOMY.bots.maxWaitTicks);
+      if (s.rogue === null || s.rogue.stage === 'leaving' || s.rogue.stage === 'stormingOut') {
+        done = true;
+        break;
+      }
+    }
+    expect(arrived).toBe(true);
+    expect(done).toBe(true);
+    // The bot carries on with its order once the tap is free.
+    s = runUntil(s, (t) => !t.customers.some((c) => c.id === 900), 900);
+    expect(s.today.served).toBe(served + 1);
+    expect(station(s, 'coldBrewTap').occupiedBy).toBeNull();
+  });
+
+  it('a day with a rogue is deterministic and JSON-safe', () => {
+    const script = (): GameState => {
+      let s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1 } });
+      s.scenario = 'normal';
+      startDay(s);
+      s.day = 2; // traffic on, rogues allowed
+      for (let i = 0; i < 3000; i++) {
+        if (s.tick === 300) {
+          expect(s.customers.length).toBeGreaterThan(0);
+          s.customers[0].upset = { ticksLeft: 60 };
+        }
+        s = step(s, []);
+      }
+      return s;
+    };
+    const a = script();
+    expect(a.today.rogues).toBe(1);
+    expect(a.log.some((e) => e.kind === 'rogue.made' || e.kind === 'rogue.stormed')).toBe(true);
+    expect(script()).toEqual(a);
+    const round = JSON.parse(JSON.stringify(a)) as GameState;
+    let x = a;
+    let y = round;
+    for (let i = 0; i < 300; i++) {
+      x = step(x, []);
+      y = step(y, []);
+    }
+    expect(y).toEqual(x);
   });
 });

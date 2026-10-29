@@ -1,7 +1,7 @@
 import { catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
-import { TICK_RATE } from '../sim/constants';
+import { TICK_RATE, secondsToTicks } from '../sim/constants';
 import { availableDrinks } from '../sim/customers';
 import { describeEffects } from '../sim/describe';
 import { EVENT_LABELS } from '../sim/events';
@@ -286,6 +286,7 @@ export interface ReceiptVM {
   events: string[];
   botMistakes: number;
   lostRegulars: number;
+  rogues: number;
   drinks: { drink: DrinkId; count: number }[];
 }
 
@@ -299,11 +300,19 @@ export function receiptViewModel(d: DayStats): ReceiptVM {
     events: (d.events ?? []).map((k) => EVENT_LABELS[k]),
     botMistakes: d.botMistakes ?? 0,
     lostRegulars: d.lostRegulars ?? 0,
+    rogues: d.rogues ?? 0,
     drinks: DRINKS.map((drink) => ({ drink, count: d.drinks?.[drink] ?? 0 })),
   };
 }
 
-/** Track B fills this: the rogue customer. */
-export function rogueHud(_state: GameState): Pick<HudVM, 'rogue'> {
-  return {};
+/** The rogue customer on the floor: where they are, and seconds left making (or waiting for a player to move). */
+export function rogueHud(state: GameState): Pick<HudVM, 'rogue'> {
+  const r = state.rogue;
+  if (!r) return {};
+  let secondsLeft = 0;
+  if (r.stage === 'making') secondsLeft = Math.ceil(r.ticksLeft / TICK_RATE);
+  else if (r.stage === 'waiting') secondsLeft = Math.ceil((secondsToTicks(ECONOMY.rogue.waitSeconds) - r.waitTicks) / TICK_RATE);
+  return {
+    rogue: { stage: r.stage, drink: r.drink, x: r.pos.x, y: r.pos.y, secondsLeft, ...(r.name !== undefined ? { name: r.name } : {}) },
+  };
 }

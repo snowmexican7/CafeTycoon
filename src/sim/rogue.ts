@@ -16,11 +16,12 @@ export function rogueActive(state: GameState): boolean {
   return state.rogue !== null || state.customers.some((c) => c.upset);
 }
 
+/** A connected person (not a bot) within interact range of `st`. Bots never block a rogue: they yield to it. */
 function playerNear(state: GameState, st: Station): boolean {
-  return state.players.some((p) => p.connected && dist(p.pos, st.pos) <= ECONOMY.interactRangeTiles);
+  return state.players.some((p) => !p.bot && p.connected && dist(p.pos, st.pos) <= ECONOMY.interactRangeTiles);
 }
 
-/** Idle, empty and unoccupied, not a player's station: an idle recipe station a rogue can reach. */
+/** Idle, empty and unoccupied, not a person's station: an idle recipe station a rogue can reach. */
 export function isFreeForRogue(state: GameState, st: Station, from: Vec2): boolean {
   return (
     st.kind in STATION_RECIPES &&

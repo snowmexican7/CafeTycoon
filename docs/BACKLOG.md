@@ -173,3 +173,13 @@ Open items:
 - Unpaid hospital debt is not subtracted from the week score (`scoreRun` is cash-based).
 - If a collapsed player disconnects and rejoins, they stay out until morning (intended).
 - The cover bot only appears if the crew is under the bot cap (`bots: 'auto'` or a free bot slot).
+
+## Needs UI (chaos pack: rogue)
+
+The data exists; the visuals are the UI agent's.
+
+- the angry bubble on an upset customer (`Customer.upset`)
+- the rogue walking behind the counter and out the door (`HudVM.rogue`)
+- the occupied-station tell (`Station.occupiedBy`)
+- the review in the morning notes
+- the receipt's `rogues` line
