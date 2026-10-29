@@ -1,4 +1,4 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from '../sim/constants';
@@ -20,6 +20,9 @@ import { StationOverlay, buildStation, type StationOverlayState } from './layers
 import { buildWall } from './layers/wall';
 import { buildLot } from './layers/lot';
 import { layoutFor } from '../data/layout';
+import { availableDrinks } from '../sim/customers';
+import { menuDrinks } from '../sim/unlocks';
+import { label } from './layers/draw';
 import { FRONT, MAT, PLAYER_COLORS, TILE as THEME_TILE, WALL, isNightLook, sx, sy } from './theme';
 
 export const TILE = THEME_TILE;
@@ -66,8 +69,11 @@ export class Scene {
     this.chaos = new Chaos(this.depth);
     this.eventFx = new EventVisuals(this.depth, this.chaos.overlay, SCENE_WIDTH, SCENE_HEIGHT);
     this.overlay.addChild(this.stationOverlay.root, this.tags, this.chaos.overlay);
-    this.root.addChild(this.wall.root, buildLamps(), floor, this.chaos.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
+    this.root.addChild(this.wall.root, this.soldOutSign, buildLamps(), floor, this.chaos.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
+
+  /** FB1 WP4: a red "SOLD OUT" strip hung across the chalkboard menu while nothing can be made. */
+  private readonly soldOutSign = buildSoldOutSign();
 
   /** P3 B12: the station art, rebuilt when the checkout on the counter changes. */
   private stationArt: Container[] = [];
@@ -119,6 +125,7 @@ export class Scene {
     const dt = Math.min(0.1, Math.max(0, now - this.lastTime));
     this.lastTime = now;
 
+    this.soldOutSign.visible = (state.phase === 'day' || state.phase === 'closing') && menuDrinks(state).length > 0 && availableDrinks(state).length === 0;
     const night = isNightLook(state.phase);
     this.wall.setNight(night);
     this.lighting.setNight(night);
@@ -255,4 +262,18 @@ export class Scene {
     return { vibe: v, combo: this.crewMem.streak, label: lab.text, tone: lab.tone };
   }
 
+}
+
+/** The sold-out strip over the wall chalkboard (wall.ts draws the board at x 378..476, y 18..88). */
+function buildSoldOutSign(): Container {
+  const c = new Container();
+  const g = new Graphics();
+  g.roundRect(-56, -14, 112, 28, 5).fill(0xe0564a).stroke({ width: 2, color: 0xb8413a });
+  const t = label('SOLD OUT', 15, 0xffffff, '800');
+  t.anchor.set(0.5);
+  c.addChild(g, t);
+  c.position.set(427, 56);
+  c.rotation = -0.12;
+  c.visible = false;
+  return c;
 }

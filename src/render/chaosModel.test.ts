@@ -74,3 +74,16 @@ describe('chaos visuals model', () => {
     expect(chaosBursts(a, b, a.nextLogSeq - 1).bursts).toEqual([]);
   });
 });
+
+describe('sold-out walkouts (FB1 WP4)', () => {
+  it('puffs once per snapshot at the front of the line, whatever the count', () => {
+    const a = run();
+    const b = withLog(a, { kind: 'walkout', data: { reason: 'soldOut' } }, { kind: 'walkout', data: { reason: 'soldOut' } });
+    const { bursts } = chaosBursts(a, b, a.nextLogSeq - 1);
+    const w = bursts.filter((x) => x.kind === 'walkout');
+    expect(w).toHaveLength(1);
+    expect(w[0]!.at).toEqual({ x: LAYOUT.queueSlots[0]!.x, y: LAYOUT.queueSlots[0]!.y });
+    // the same entries never fire twice
+    expect(chaosBursts(b, b, b.nextLogSeq - 1).bursts).toHaveLength(0);
+  });
+});

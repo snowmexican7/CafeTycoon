@@ -6,7 +6,7 @@ import { crewKey, handKey, ITEM_LABEL, ordersKey, type HudLive } from './live';
 import { loadRecipeHints, MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, URGENT as TICKET_URGENT, type RecipeHints, type TicketOpts } from './tickets';
 import { DRINK_LABEL } from './tickets';
 import { mountCloseEarly } from './closeEarly';
-import { cleanMeter, EVENT_INTRO, hudStructureKey, type HudVM } from './viewModels';
+import { cleanMeter, EVENT_INTRO, hudStructureKey, SOLD_OUT_RUSH, type HudVM } from './viewModels';
 import type { EventKind } from '../sim/types';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours', pastry: 'Pastries' } as const;
@@ -160,7 +160,8 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
         return `<div class="supply ${low ? 'low' : ''}">${jar(fill, SUPPLY_COLOR[s.id])}<div class="lab">${SUPPLY_LABEL[s.id]}<small>${sub}</small></div><div class="num">${s.count}</div></div>`;
       })
       .join('');
-    el.menu.innerHTML = vm.menu
+    el.menu.classList.toggle('sold-out', !!vm.soldOut);
+    el.menu.innerHTML = (vm.soldOut ? `<div class="soldout-sign" role="status"><b>SOLD OUT</b><small>Nothing left to make today</small></div>` : '') + vm.menu
       .map((m) => `<div class="row ${m.available ? '' : 'off'}"><span class="d">${itemIcon(m.id, 24)}${DRINK_LABEL[m.id]}</span><b>${m.available ? esc(m.price) : 'sold out'}</b></div>`)
       .join('');
     notes = vm.notes;
@@ -294,7 +295,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     if (open) {
       for (const k of active) {
         if (knownEvents.has(k)) continue;
-        const intro = EVENT_INTRO[k];
+        const intro = k === 'rushHour' && vm.soldOut ? { ...EVENT_INTRO[k], title: SOLD_OUT_RUSH.label, line: SOLD_OUT_RUSH.line } : EVENT_INTRO[k];
         showCard(`<div class="ic">${EVENT_ICON[k]}</div><div><b>${esc(intro.title)}</b><p>${esc(intro.line)}</p></div>`, intro.tone);
       }
     }

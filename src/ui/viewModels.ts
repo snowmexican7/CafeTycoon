@@ -73,6 +73,8 @@ export interface HudVM {
   reputation: string;
   supplies: { id: SupplyId; count: number }[];
   menu: { id: DrinkId; price: string; available: boolean }[];
+  /** FB1 WP4: the doors are open and nothing on the menu can be made. */
+  soldOut?: boolean;
   notes: string[];
   phase: Phase;
   seed: number;
@@ -162,11 +164,16 @@ export function cleanMeter(cleanliness: number): CleanMeter {
   return { pct, tone: 'bad', word: 'Grimy! Inspector would fail' };
 }
 
+/** FB1 WP4: what the rush-hour chip and card say while the board is sold out. */
+export const SOLD_OUT_RUSH = { label: "Rush hour, but you're sold out", line: 'A crowd is coming and there is nothing to sell. Close early, or restock tonight.' } as const;
+
 export function hudViewModel(state: GameState): HudVM {
   const mods = computeModifiers(state);
   const available = availableDrinks(state);
+  const soldOut = (state.phase === 'day' || state.phase === 'closing') && menuDrinks(state).length > 0 && available.length === 0;
   return {
     dayLabel: dayLabelFor(state.day),
+    ...(soldOut ? { soldOut: true } : {}),
     forecast: (() => {
       const f = forecastOf(state);
       return { icon: f.icon, name: forecastName(f, state.day), blurb: f.blurb };
@@ -180,7 +187,7 @@ export function hudViewModel(state: GameState): HudVM {
     phase: state.phase,
     seed: state.seed,
     pass: state.pass.map((i) => ({ item: i.item, secondsLeft: Math.ceil(i.ticksLeft / 60) })),
-    events: state.events.map((e) => ({ kind: e.kind, label: EVENT_LABELS[e.kind], secondsLeft: Math.ceil(e.ticksLeft / 60) })),
+    events: state.events.map((e) => ({ kind: e.kind, label: soldOut && e.kind === 'rushHour' ? SOLD_OUT_RUSH.label : EVENT_LABELS[e.kind], secondsLeft: Math.ceil(e.ticksLeft / 60) })),
     ...floorHud(state),
     ...rogueHud(state),
     ...(state.phase === 'closing' ? { closing: { left: state.customers.length + (state.rogue ? 1 : 0) } } : {}),

@@ -467,6 +467,10 @@ export class Chaos {
       case 'review':
         this.comic(b.text, x, y - 110, 0xd9ad80, false);
         break;
+      case 'walkout':
+        this.comic(b.text, x, y - 96, PALETTE.cherry, false);
+        this.puffs(x, y + 10, 0xf3e6d3, 8, 'puff');
+        break;
       case 'secret':
         this.comic(b.text, x, y - 90, PALETTE.mint, true);
         this.puffs(x, y - 20, 0xfff6c9, 10, 'star');

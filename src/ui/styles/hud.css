@@ -68,14 +68,28 @@
 #hud .card { background: var(--foam); border-radius: 16px; padding: 12px 14px; box-shadow: var(--sh-1); border: 0; min-height: 0; }
 #hud .supply { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
 #hud .supply .lab { flex: 1; font: 600 15px var(--font-display); }
-#hud .supply .lab small { display: block; font: 700 11px var(--font-body); color: var(--ink-soft); }
+#hud .supply .lab small { display: block; font: 700 13px var(--font-body); color: var(--ink-soft); }
 #hud .supply .num { font: 700 20px var(--font-display); font-variant-numeric: tabular-nums; }
 #hud .supply.low .num, #hud .supply.low small { color: #c23d32; }
 #hud .chalk { background: #2f3b36; color: #f1ebdf; border: 6px solid #8b5a3a; }
 #hud .chalk .row { display: flex; justify-content: space-between; align-items: center; font: 700 14px var(--font-body); padding: 3px 0; margin: 0; }
 #hud .chalk .row b { color: var(--honey); font-family: var(--font-display); }
 #hud .chalk .row .d { display: flex; align-items: center; gap: 6px; }
-#hud .chalk .row.off { opacity: .55; } #hud .chalk .row.off b { color: #f1ebdf; font-size: 12px; }
+#hud .chalk .row.off { opacity: .55; } #hud .chalk .row.off b { color: #f1ebdf; font-size: 13px; }
+/* FB1 WP4: the sold-out sign hung on the menu card */
+#hud .chalk .soldout-sign { display: flex; flex-direction: column; align-items: center; margin: -2px -4px 8px; padding: 6px 8px; border-radius: 8px;
+  background: #e0564a; color: #fff; transform: rotate(-2.5deg); box-shadow: 0 3px 0 #b8413a; }
+#hud .chalk .soldout-sign b { font: 800 22px var(--font-display); letter-spacing: .12em; }
+#hud .chalk .soldout-sign small { font: 600 13px var(--font-body); opacity: .95; }
+/* Short screens (1280x800): the right rail has to fit pantry, floor, menu and the morning note without clipping. */
+@media (max-height: 860px) {
+  #hud .hud-side.right { gap: 8px; }
+  #hud .hud-side.right .card { padding: 9px 12px; }
+  #hud .supply { padding: 1px 0; }
+  #hud .supply .lab small { display: none; }
+  #hud .chalk.sold-out .row { display: none; }
+  #hud .chalk .soldout-sign { margin-bottom: 2px; }
+}
 #hud .note { background: #fff1b8; transform: rotate(1.5deg); font-size: 13.5px; line-height: 1.35; overflow: auto; }
 #hud .note b { font: 600 13px var(--font-display); display: block; letter-spacing: .08em; color: #7a5c0e; margin-bottom: 2px; }
 #hud .note p { margin: 0 0 4px; }
