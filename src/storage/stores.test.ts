@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
 import { createHistoryStore } from './historyStore';
 import { createSettingsStore } from './settingsStore';
-import { SNAPSHOT_VERSION, createSnapshotStore } from './snapshotStore';
+import { SNAPSHOT_VERSION, createSnapshotStore, migrateSnapshot } from './snapshotStore';
 import { memoryStorage } from './storageLike';
 
 describe('stores', () => {
@@ -32,7 +32,7 @@ describe('stores', () => {
     const st = memoryStorage();
     let n = 0;
     const s = createSettingsStore(st, () => `tok${++n}`);
-    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 60 });
+    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120 });
     expect(createSettingsStore(st, () => 'other').get().playerToken).toBe('tok1');
     expect(s.set({ playerName: 'Ken' }).playerName).toBe('Ken');
     expect(s.get().pace).toBe(3);
@@ -41,7 +41,23 @@ describe('stores', () => {
 
 describe('snapshot versioning', () => {
   it('is on version 9', () => {
-    expect(SNAPSHOT_VERSION).toBe(23);
+    expect(SNAPSHOT_VERSION).toBe(24);
+  });
+
+  it('migrates a version-23 save: lastCall stays absent', () => {
+    const old = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const out = migrateSnapshot(23, old)!;
+    expect(out).not.toBeNull();
+    expect(out.lastCall).toBeUndefined();
+  });
+
+  it('migrates a version-22 save through 22 -> 23 -> 24: walkouts at 0, lastCall absent', () => {
+    const old = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    delete (old.today as { soldOutWalkouts?: number }).soldOutWalkouts;
+    const out = migrateSnapshot(22, old)!;
+    expect(out).not.toBeNull();
+    expect(out.today.soldOutWalkouts).toBe(0);
+    expect(out.lastCall).toBeUndefined();
   });
 
   it('migrates a version-4 save (three drinks, no flavours) to the B5 menu', () => {

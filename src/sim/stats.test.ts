@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { ECONOMY } from '../data/economy';
 import { createRun } from './run';
 import { step } from './step';
 import { crewRows, tallyStats } from './stats';
@@ -35,8 +36,8 @@ describe('crew stats', () => {
   });
 
   it('is deterministic over a played day, and serves add up to the day total', () => {
-    const a = ticks(run(42), 60 * 60 + 150 * 60 + 600);
-    const b = ticks(run(42), 60 * 60 + 150 * 60 + 600);
+    const a = ticks(run(42), ECONOMY.nightLengthSec * 60 + 150 * 60 + 600);
+    const b = ticks(run(42), ECONOMY.nightLengthSec * 60 + 150 * 60 + 600);
     expect(a.crew).toEqual(b.crew);
     const served = crewRows(a).reduce((n, r) => n + r.serves, 0);
     expect(served).toBe(a.days[0]?.served ?? a.today.served);

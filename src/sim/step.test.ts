@@ -20,7 +20,7 @@ const ticks = (s: GameState, n: number, inputs: PlayerInput[] = []) => {
 describe('step', () => {
   it('runs night -> day -> closing -> night with the right timers', () => {
     let s = createRun(opts);
-    s = ticks(s, 60 * 60);
+    s = ticks(s, ECONOMY.nightLengthSec * 60);
     expect(s.phase).toBe('day');
     expect(s.day).toBe(1);
     expect(s.morningNotes[0]).toBe(scenarioById[s.scenario].note);
@@ -36,7 +36,7 @@ describe('step', () => {
 
   it('counts idle ticks for still players', () => {
     let s = createRun(opts);
-    s = ticks(s, 60 * 60);
+    s = ticks(s, ECONOMY.nightLengthSec * 60);
     expect(s.phase).toBe('day');
     const move: PlayerInput = { kind: 'move', playerId: 'p1', x: 1, y: 0, interact: false };
     s = ticks(s, 60, [move]);
@@ -46,7 +46,7 @@ describe('step', () => {
 
   it('idle ticks are a running total: still, move, still adds both still stretches; bots stay at 0', () => {
     let s = createRun({ ...opts, settings: { bots: 1 } });
-    s = ticks(s, 60 * 60);
+    s = ticks(s, ECONOMY.nightLengthSec * 60);
     expect(s.phase).toBe('day');
     const p1 = (x: GameState) => x.players.find((p) => p.id === 'p1')!;
     const base = p1(s).idleTicks;
@@ -59,7 +59,7 @@ describe('step', () => {
 
   it('a still tick with an interact is not idle; a disconnected player is not counted', () => {
     let s = createRun(opts);
-    s = ticks(s, 60 * 60);
+    s = ticks(s, ECONOMY.nightLengthSec * 60);
     const before = s.players.map((p) => p.idleTicks);
     s = step(s, [{ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: true }, { kind: 'leave', playerId: 'p2' }]);
     expect(s.players[0].idleTicks).toBe(before[0]);
@@ -68,7 +68,7 @@ describe('step', () => {
 
   it('closing clears stations and hands, pays rent, moves reputation, and can bankrupt', () => {
     let s = createRun(opts);
-    s = ticks(s, 60 * 60);
+    s = ticks(s, ECONOMY.nightLengthSec * 60);
     s.players[0].holding = 'latte';
     s.stations[1].output = 'espresso';
     s.today = { ...s.today, served: 7, lost: 3 };
@@ -138,7 +138,7 @@ describe('step', () => {
   it('handles join and leave mid-day', () => {
     // Review Focus 4
     let s = createRun(opts);
-    s = ticks(s, 60 * 60);
+    s = ticks(s, ECONOMY.nightLengthSec * 60);
     s.players[1].holding = 'latte';
     s = step(s, [
       { kind: 'leave', playerId: 'p2' },
@@ -158,7 +158,7 @@ describe('step', () => {
     // Review Focus 5
     let s = createRun(opts);
     s.scenario = 'normal'; // seed 11 rolls rainyWeek, which also scales patience
-    s = ticks(s, 60 * 60);
+    s = ticks(s, ECONOMY.nightLengthSec * 60);
     s.forecast = 'ordinary'; // so is the opening day's forecast
     s.customers = [{ id: 1, drink: 'espresso', patienceLeft: 1500, patienceMax: 1500 }];
     s = step(s, [{ kind: 'settings', playerId: 'p1', settings: { pace: 5 } }]);
@@ -186,7 +186,7 @@ describe('step', () => {
 });
 
 describe('input validation', () => {
-  const day = () => ticks(createRun(opts), 60 * 60);
+  const day = () => ticks(createRun(opts), ECONOMY.nightLengthSec * 60);
   it('clamps settings into range and ignores non-numbers', () => {
     let s = step(day(), [{ kind: 'settings', playerId: 'p1', settings: { pace: 9 as never } }]);
     expect(s.settings.pace).toBe(5);

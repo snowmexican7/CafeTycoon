@@ -144,6 +144,69 @@ Written down from a voice note after the Phase 3 playtest. Only the first item i
   resync does not reset it. A sold-out board now consumes one `rngNext` per tick, so seeds replay differently
   from before only on days that sold out with the menu on.
 
+## FB1 WP1-sim reflection
+
+- **What shipped (night side of FB1 work package 1, sim only).**
+  - A relaxed night: `settings.nightLengthSec === 0` never counts down. The doors open when every connected
+    human is ready, or when the 30 s last call runs out. The last call starts once more than half the
+    connected humans are ready (or at once when none is connected), and keeps running if the ready share drops.
+    Only connected humans count, so someone who readied and then left does not start it. A timed night is unchanged.
+  - `nightClock(state)` for the UI, and the default night is now 120 s (`ECONOMY`).
+  - `nightBrief(state)` in `src/sim/brief.ts`, with `dayClock`, `expectedUse` and `runOutFraction`. A restock
+    fix is left off an alert when the till cannot pay for it (the alert stays).
+  - `profitOf` moved into the sim (`src/sim/profit.ts`); `viewModels.ts` re-exports it.
+  - Save version 24 (migration 23 is a no-op; 22 is a placeholder owned by fb1-sim-day, replaced at rebase),
+    network protocol 27.
+- **Final shapes.**
+
+  ```
+  nightClock(state): {
+    mode: 'timed' | 'relaxed';          // relaxed when settings.nightLengthSec === 0
+    secondsLeft: number | null;         // ceil(phaseTicksLeft / TICK_RATE) when timed, null when relaxed
+    lastCallSecondsLeft: number | null; // ceil(lastCall / TICK_RATE) once a relaxed last call runs, else null
+    ready: PlayerId[];                  // connected humans who have readied up tonight
+    needed: number;                     // connected humans (the ready count that opens the shop)
+  }
+  type NightFix = DistributiveOmit<PlayerInput, 'playerId'>
+  interface NightAlert {
+    id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | signature
+    kind: 'cash' | 'stock' | 'soldOut' | 'spoil' | 'grow' | 'checkout' | 'rival' | 'signature';
+    severity: 'info' | 'warn' | 'danger';
+    text: string;
+    fix?: NightFix;   // restock fixes are left off when state.cash < restockCost(state, supply, packs)
+  }
+  nightBrief(state): { profit: number | null; headline: string; alerts: NightAlert[] }
+    // profit = profitOf(days.at(-1)) or null on the first night; alerts sorted danger, warn, info,
+    // then in the order cash, stock (pantry order), soldOut, spoil, grow, checkout, rival, signature.
+  dayClock(fraction: number): string                    // 0..1 -> "8:00 AM".."6:00 PM", ten-minute steps
+  expectedUse(state): Record<SupplyId, number>          // supplies a normal day should use
+  runOutFraction(state, supply): number | null          // have / expectedUse clamped 0..1, null when unused
+  ```
+
+  `GameState.lastCall?: number` (ticks left; absent = no last call). `DayStats` gains optional
+  `soldOutWalkouts?` and `soldOutAt?` (filled by Track A; until it lands the soldOut alert only fires from test setup).
+- **Checks.** 596 tests before this package, 630 after (87 files); `tsc` and `npm run build` clean.
+- **Balance, before and after** (40 weeks, seed 1, 2 humans + 1 bot, 150 s days). The balance script passes its own
+  30 s night to the sim, so the 120 s default and the relaxed night cannot move it; the numbers are identical, as intended.
+
+  | policy | mean cash | score | loss | profitable weeks |
+  | ------ | --------- | ----- | ---- | ---------------- |
+  | smart, before | 260.53 | 276.53 | 26.4% | 97.5% |
+  | smart, after  | 260.53 | 276.53 | 26.4% | 97.5% |
+  | taste, before | 274.88 | 288.19 | 28.1% | 100% |
+  | taste, after  | 274.88 | 288.19 | 28.1% | 100% |
+
+  Logs: `.superpowers/sdd/2026-10-29-fb1-sim/balance-B-smart.log` and `balance-B-taste.log`.
+- **Open questions for the UI lane.**
+  - The UI view models still show 0:00 on a relaxed night (`viewModels.ts` `clockFor(phaseTicksLeft)`, `live.ts`
+    `nightExtras.left`); they should read `nightClock`, and show ready as `ready.length / needed`.
+  - `src/ui/nightWarnings.ts` duplicates `expectedUse` (and the low-stock threshold) from `brief.ts`. Nothing pins the
+    two together; the night screen should move to `nightBrief` and delete its copy.
+  - Stored browser settings keep `nightLengthSec: 60` until the lobby offers a night-length choice (including 0 for relaxed).
+  - `viewModels.ts` now imports `profitOf` from the sim (re-export kept for old imports).
+  - Changing `nightLengthSec` from 0 to a timed value mid-night leaves `phaseTicksLeft` at 0 and opens the day at once;
+    only reachable if the UI exposes the setting during a night.
+
 ## main.ts hook-ins (phase 2)
 
 Telemetry hook-ins in `src/main.ts` (slice 7); the UI agent should expect these when merging the title wiring.

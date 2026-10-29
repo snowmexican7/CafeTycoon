@@ -123,6 +123,7 @@ export function startNight(state: GameState): GameState {
   state.phase = 'night';
   state.phaseTicksLeft = secondsToTicks(state.settings.nightLengthSec);
   state.ready = [];
+  delete state.lastCall;
   delete state.closeVotes;
   delete state.emptySince;
   state.boughtTonight = [];
@@ -140,6 +141,7 @@ export function startNight(state: GameState): GameState {
 /** Open the doors for `state.day`. */
 export function startDay(state: GameState): GameState {
   state.phase = 'day';
+  delete state.lastCall;
   state.phaseTicksLeft = secondsToTicks(state.settings.dayLengthSec);
   state.customers = [];
   delete state.closeVotes;

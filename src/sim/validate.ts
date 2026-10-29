@@ -25,7 +25,10 @@ export function sanitizeSettings(raw: Partial<Settings>): Partial<Settings> {
   const out: Partial<Settings> = {};
   if (finite(raw.pace)) out.pace = clamp(Math.round(raw.pace), 1, 5) as Pace;
   if (finite(raw.dayLengthSec)) out.dayLengthSec = clamp(Math.round(raw.dayLengthSec), MIN_PHASE_SEC, MAX_PHASE_SEC);
-  if (finite(raw.nightLengthSec)) out.nightLengthSec = clamp(Math.round(raw.nightLengthSec), MIN_PHASE_SEC, MAX_PHASE_SEC);
+  // 0 means a relaxed (untimed) night; anything else clamps like the day length.
+  if (finite(raw.nightLengthSec)) {
+    out.nightLengthSec = raw.nightLengthSec === 0 ? 0 : clamp(Math.round(raw.nightLengthSec), MIN_PHASE_SEC, MAX_PHASE_SEC);
+  }
   if (raw.bots === 'auto') out.bots = 'auto';
   else if (finite(raw.bots)) out.bots = clamp(Math.round(raw.bots), 0, MAX_BOTS);
   if (finite(raw.botSkill)) out.botSkill = clamp(Math.round(raw.botSkill), 1, 5) as BotSkill;

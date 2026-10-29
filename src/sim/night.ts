@@ -6,8 +6,12 @@ import { computeModifiers, resolveGamble } from './effects';
 import { rngNext } from './rng';
 import { tuneRadio } from './events';
 import { startDay } from './run';
+import { TICK_RATE, secondsToTicks } from './constants';
 import { unlockDrink } from './unlocks';
-import type { CatalogueItem, Effect, GameState, OwnedItem, PlayerInput, SupplyId } from './types';
+import type { CatalogueItem, Effect, GameState, OwnedItem, PlayerId, PlayerInput, SupplyId } from './types';
+
+/** Relaxed night: seconds the last call runs once enough of the room is ready. */
+const LAST_CALL_SECONDS = 30;
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -150,11 +154,55 @@ export function applyNightInput(state: GameState, input: PlayerInput): GameState
   return state;
 }
 
-/** One tick of night: count down, and open the doors when time is up or everyone connected is ready. */
+/**
+ * One tick of night. A timed night counts down and opens the doors when time is up or everyone connected
+ * is ready. A relaxed night (`nightLengthSec === 0`) never counts down: it opens when everyone connected is
+ * ready, or when the last call runs out. The last call (30 s) starts once more than half the connected
+ * humans are ready, or at once when no human is connected; once started it runs even if the share drops.
+ */
 export function stepNight(state: GameState): GameState {
-  state.phaseTicksLeft -= 1;
   const connected = state.players.filter((p) => p.connected && !p.bot);
-  const everyoneReady = connected.length > 0 && connected.every((p) => state.ready.includes(p.id));
+  const readyConnected = connected.filter((p) => state.ready.includes(p.id)).length;
+  const everyoneReady = connected.length > 0 && readyConnected === connected.length;
+  if (state.settings.nightLengthSec === 0) {
+    if (everyoneReady) return startDay(state);
+    if (state.lastCall === undefined && (connected.length === 0 || readyConnected * 2 > connected.length)) {
+      state.lastCall = secondsToTicks(LAST_CALL_SECONDS);
+    }
+    if (state.lastCall !== undefined) {
+      state.lastCall -= 1;
+      if (state.lastCall <= 0) return startDay(state);
+    }
+    return state;
+  }
+  state.phaseTicksLeft -= 1;
   if (state.phaseTicksLeft <= 0 || everyoneReady) return startDay(state);
   return state;
+}
+
+/**
+ * Final shape of the selector (spec §3):
+ *   nightClock(state): {
+ *     mode: 'timed' | 'relaxed';          // relaxed when settings.nightLengthSec === 0
+ *     secondsLeft: number | null;         // ceil(phaseTicksLeft / TICK_RATE) when timed, null when relaxed
+ *     lastCallSecondsLeft: number | null; // ceil(lastCall / TICK_RATE) once a relaxed last call runs, else null
+ *     ready: PlayerId[];                  // connected humans who have readied up tonight
+ *     needed: number;                     // connected humans (the ready count that opens the shop)
+ *   }
+ */
+export function nightClock(state: GameState): {
+  mode: 'timed' | 'relaxed';
+  secondsLeft: number | null;
+  lastCallSecondsLeft: number | null;
+  ready: PlayerId[];
+  needed: number;
+} {
+  const relaxed = state.settings.nightLengthSec === 0;
+  return {
+    mode: relaxed ? 'relaxed' : 'timed',
+    secondsLeft: relaxed ? null : Math.ceil(state.phaseTicksLeft / TICK_RATE),
+    lastCallSecondsLeft: state.lastCall === undefined ? null : Math.ceil(state.lastCall / TICK_RATE),
+    ready: state.ready.filter((id) => state.players.some((p) => p.id === id && p.connected && !p.bot)),
+    needed: state.players.filter((p) => p.connected && !p.bot).length,
+  };
 }
