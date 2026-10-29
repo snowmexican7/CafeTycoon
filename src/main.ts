@@ -11,6 +11,7 @@ import { createPeerTransport } from './net/peerTransport';
 import { PROTOCOL_VERSION, type BotsChoice, type Member } from './net/protocol';
 import { makeRoomCode, normalizeRoomCode } from './net/roomCode';
 import { createTrysteroLink } from './net/roomLink';
+import { roomLinkFor } from './net/localLink';
 import { createSendGate } from './net/sendGate';
 import type { HostToClient, Transport } from './net/transport';
 import { createRenderer } from './render/app';
@@ -27,6 +28,7 @@ import { createSeatStore } from './storage/seatStore';
 import { memoryStorage, type StorageLike } from './storage/storageLike';
 import { createSettingsStore } from './storage/settingsStore';
 import { createSnapshotStore } from './storage/snapshotStore';
+import { APP_VERSION } from './version';
 import { createClosing } from './ui/closing';
 import { createHud } from './ui/hud';
 import { hudLive, nightExtras } from './ui/live';
@@ -290,7 +292,7 @@ async function main(): Promise<void> {
   }
 
   function openHostRoom(s: Session, local: Transport, code: string, hostMember: Member): void {
-    const link = createTrysteroLink(code);
+    const link = roomLinkFor(code, createTrysteroLink);
     s.room = createHostRoom(link, local, hostMember, (members) => {
       s.members = members;
       renderLobby(s);
@@ -455,7 +457,9 @@ async function main(): Promise<void> {
     if (state.phase !== s.lastPhase) {
       const from = s.lastPhase;
       s.lastPhase = state.phase;
-      if (from === 'closing' && s.lastClosing) {
+      // The day's receipt leads into the night shop; after the last day (or a missed rent) the
+      // week-end screen sums up instead, so the receipt ("On to the night shop") stays hidden.
+      if (from === 'closing' && s.lastClosing && state.phase === 'night') {
         closing.render(closingViewModel(s.lastClosing, state));
         closing.show();
       } else if (from !== null) {
@@ -556,6 +560,7 @@ async function main(): Promise<void> {
 
   syncMute();
   window.cafetycoon = {
+    version: APP_VERSION,
     telemetry: { download: downloadTelemetry, rows: telemetryRows },
     peek: { state: () => (session?.next ? structuredClone(session.next) : null), me: () => session?.me ?? null },
   };

@@ -18,6 +18,8 @@ keep going into harder weeks until the café can't make rent.
 - **Move:** WASD or the arrow keys
 - **Use a station:** E or Space (stand next to it)
 - **Drop:** R (into a machine, onto the pass, in the bin, or on the floor; puts the mop back)
+- **Drink an espresso:** Q at the machine or with a shot in hand (a speed boost; the sixth shot of a day sends you to hospital)
+- **Mute:** M
 - **Pause and settings:** Esc
 - The seed shown in the HUD replays the same week: enter it on the title screen.
 - **The pass:** the little shelf on the counter. Press E with a drink nobody wants and it sits
@@ -36,8 +38,17 @@ keep going into harder weeks until the café can't make rent.
   it within 15 seconds or they walk behind the counter and make it themselves, without paying.
 - **Customers:** impatient tippers, groups ordering two or three drinks, and three named
   regulars who come back.
-- **Night menu switch:** the sim supports it, but the toggle is still being built on the
-  screen side.
+- **Night menu:** the menu board at night lists each drink with its recipe and an On/Off switch.
+  New drinks (iced latte, mocha, matcha, maple cold foam) join through the week or from cards.
+- **Night cards:** 52 cards on three paths (⚡ Speed, ★ Quality, 📣 Reach). Two cards of a set
+  give a pair bonus and three give a full-set bonus. 🌶 spicy cards come with a catch. 🎲 Re-roll
+  the hand for $5, then $10, and so on; the price resets each night.
+- **Forecasts and challenges:** each night *The Daily Grind* forecasts tomorrow, with its crowd,
+  hot-vs-iced split and likely event. Each morning deals one or two optional daily challenges for
+  a tip.
+- **Score:** profit since the start of the week, plus permanent upgrades ("fittings") at half
+  what you paid. The week ends with an awards ceremony. Your best weeks and lifetime totals are
+  under 🏆 Records on the title screen, kept in this browser.
 - **Telemetry:** the host's browser records the run and nothing is uploaded. In the browser
   console, `cafetycoon.telemetry.download()` saves an `.ndjson` file and
   `cafetycoon.telemetry.rows()` shows the rows.
@@ -65,7 +76,8 @@ npm run balance -- --weeks 10   # headless balance tester
 ```
 
 Balance tester options: `--seed`, `--humans`, `--bots`, `--skill`, `--pace`, `--scenario`,
-`--menu`, `--compare menus`, `--day`, `--json`. To capture JSON without npm's banner line, run
+`--menu`, `--compare menus`, `--policy smart|simple|speed|quality|reach|none`,
+`--compare policies`, `--summary`, `--day`, `--json`. To capture JSON without npm's banner line, run
 `npx tsx scripts/balance.ts … --json` directly.
 
 - Everyone commits to `main` and pulls before pushing. Pushing to `main` runs the tests,
@@ -75,6 +87,12 @@ Balance tester options: `--seed`, `--humans`, `--bots`, `--skill`, `--pace`, `--
 - Items and scenarios are data in `src/data`. Adding an item means adding a record.
 - The simulation runs in a Web Worker (`src/host`); the page renders snapshots with
   PixiJS (`src/render`) and plain HTML overlays (`src/ui`).
+- **Local multi-tab rooms:** add `?link=local` to the URL (for example
+  `http://localhost:5173/CafeTycoon/?link=local`) and tabs of one browser host and join each
+  other over `BroadcastChannel` instead of WebRTC. It's for testing on one machine, including
+  automated browser tests where WebRTC is blocked. Real rooms never use it.
+- **Version:** `package.json` is the source of truth. It's baked into the build, shown on the
+  title screen under "Past runs & controls", and exposed as `window.cafetycoon.version`.
 - Co-op is peer-to-peer. `src/net/roomLink.ts` is the only file that touches the networking
   library; the host bridge and the peer transport are unit-tested against a fake room.
 - Never commit secrets or assets we don't have the right to share. The repo and the game

@@ -1,9 +1,10 @@
 import { createPeerSession, type PeerTransport } from './peerSession';
 import { createTrysteroLink } from './roomLink';
+import { roomLinkFor } from './localLink';
 
 /** Join a friend's room by code. The returned Transport drives the page exactly like the local one does for a host. */
 export function createPeerTransport(code: string, token: string, name: string, prev?: string): PeerTransport {
-  return createPeerSession(createTrysteroLink(code), {
+  return createPeerSession(roomLinkFor(code, createTrysteroLink), {
     token,
     name,
     prev,

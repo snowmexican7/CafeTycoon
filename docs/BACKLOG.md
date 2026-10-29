@@ -726,3 +726,60 @@ Final-code check (8 seeds per policy, `/workspace/overnight/b11/bal/r5.txt`): sm
 simple 356.70 / 27.9%, speed 318.87 / 24.4%, quality 422.88 / 24.1%, reach 307.18 / 29.8%, none
 361.03 / 30.7%. Quality leads on a small sample (370 vs 348 for none over 56 seeds). Watch it in
 playtests; a nerf of Quality's reputation cards is the first lever if it holds.
+
+## Block 12 reflection (Phase 2 integration, 2.0.0)
+
+Shipped:
+- **Version 2.0.0**, baked into the build from `package.json` (`__APP_VERSION__`). It shows at
+  the bottom of *Past runs & controls* and as `window.cafetycoon.version`.
+- **A real Phase 1 save fixture** (`src/storage/phase1-save.fixture.json`, a v3 envelope from
+  `phase1-final`). A test loads it, plays night → day → night, scores the run and re-saves it at the
+  current snapshot version.
+- **`?link=local`** (`src/net/localLink.ts`): a dev-only BroadcastChannel room link, so several
+  tabs of one browser can play a real room without WebRTC. The default is still Trystero/nostr.
+- **A perf probe** (`scripts/perf4.ts`, `npx tsx scripts/perf4.ts`): a week with four stand-in
+  baristas, timing `step()` and measuring snapshot size.
+- Docs: a "What's new" section in the CHANGELOG, README, ROADMAP (Phase 1 and Phase 2 done, Phase
+  3 next) and `public/roadmap.json`. R (drop) is in the controls help.
+
+Review findings:
+- **Determinism:** there's no `Math.random`, `Date.now` or `performance.now` in `src/sim` or
+  `src/data`. Every draw goes through the seeded RNG.
+- **localStorage keys:** all of them are `cafetycoon.*` (audio, history, records, roadmap.seen,
+  room, room.host, room.peer, run, seat.*, settings, tab). They don't conflict.
+- **Sync:** four local-link tabs stay within about 12 ticks (≈0.2 s at 60 Hz) of the host.
+- **Perf** (4 baristas, a 120 s day, a whole week): `step()` takes p50 0.10 ms, p99 0.26 ms and at
+  most 6.6 ms. Snapshots average 8.5 KB and peak at 11.3 KB of JSON. There are at most 6 customers
+  on screen.
+- **Bandwidth:** 20 Hz × 3 peers × about 8.5 KB comes to about 510–680 KB/s (4–5 Mbit/s) of host
+  upload. That's fine on home broadband but heavy on a phone hotspot.
+
+Decisions:
+- **This box's Chrome has a managed policy** (`WebRtcIPHandling: disable_non_proxied_udp`). WebRTC
+  gathers no ICE candidates, so real-network rooms can't connect here. I didn't override the
+  policy. Instead I added the local link, which uses the same sim and messages with a different
+  transport. Real-network play is left for the human game night.
+- The multi-tab playtest caps animation frames in the harness, because software GL can't draw four
+  Pixi canvases. That's a test-only change; the game itself is unchanged.
+
+Deferred:
+- Delta or binary snapshots, or a lower peer snapshot rate, to cut host upload. This is the first
+  lever if game night shows lag.
+- A real-network smoke test from a machine without the WebRTC policy.
+- Phase 2's game night and the telemetry review carry over (see ROADMAP).
+
+Playtests (built game, Playwright, `/workspace/overnight/b12/`):
+- **Host + 3 peers** (4 tabs, `?link=local`, 60 s days, every tab mashing keys). Peers stayed 0–12
+  ticks behind the host and there were no page errors. Four random key-mashers serve nobody, so
+  the café missed rent after day 2. The missed-rent screen, the awards (all joke awards) and
+  Records showed correctly on every tab (`week-4p/`).
+- **Solo with 2 bots** (60 s days). A full week reached the week-end ceremony with no page errors.
+  Days served/lost: 9/0, 10/4, 6/2, 6/4, 7/5, 2/14, 3/6. The bots served 43 between them. The
+  harness didn't keep milk and cold brew stocked, so day 6 ran dry (`week-solo/`).
+- **Bug found and fixed:** after the last day or a missed rent, the day's receipt ("On to the night
+  shop") was stacked under the week-end screen. It now only shows when night follows.
+- **Harness lesson:** every tab gets the closing receipt each night and has to dismiss it. In the
+  first runs, the blocked clicks looked like hangs.
+- **Layout:** 1280x800 and 1920x1080 (`layout/`) show no overflow. The title shows v2.0.0.
+  - At 1920x1080 the right column leaves a gap between Floor and the Menu board. That's cosmetic
+    and deferred.

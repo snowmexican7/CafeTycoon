@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-28",
+  "updated": "2026-10-29",
   "repo": "snowmexican7/CafeTycoon",
   "draft": true,
   "order": "Phases go from easiest and lowest risk to hardest and riskiest. main stays the stable, playable build while risky work for the next phase happens on a branch.",
@@ -8,22 +8,44 @@
     "Each finished phase gets a git tag (v1, v2, ...).",
     "Risky phase work happens on branches and merges into main only when green and playtested."
   ],
-  "moodReactions": { "happy": "laugh", "neutral": "eyes", "unhappy": "confused" },
+  "moodReactions": {
+    "happy": "laugh",
+    "neutral": "eyes",
+    "unhappy": "confused"
+  },
   "phases": [
     {
       "id": 1,
       "name": "Open the doors",
       "tagline": "playable co-op",
-      "status": "now",
+      "status": "done",
       "suggested": false,
       "aim": "A game that runs, looks decent, and friends can playtest together.",
       "goals": [
-        { "text": "Direct peer-to-peer co-op with room codes (1–4 players)", "state": "done" },
-        { "text": "Cozy look, group A: café diorama scene", "state": "done" },
-        { "text": "Cozy look, group B: HUD, night screen, title, menus and lobby", "state": "todo" },
-        { "text": "Roadmap drawer on the title screen + suggestion flow", "state": "todo" },
-        { "text": "Deployed on GitHub Pages; join with a link and a room code", "state": "doing" },
-        { "text": "First game night: 4 friends finish a week", "state": "todo" }
+        {
+          "text": "Direct peer-to-peer co-op with room codes (1–4 players)",
+          "state": "done"
+        },
+        {
+          "text": "Cozy look, group A: café diorama scene",
+          "state": "done"
+        },
+        {
+          "text": "Cozy look, group B: HUD, night screen, title, menus and lobby",
+          "state": "done"
+        },
+        {
+          "text": "Roadmap drawer on the title screen + suggestion flow",
+          "state": "done"
+        },
+        {
+          "text": "Deployed on GitHub Pages; join with a link and a room code",
+          "state": "done"
+        },
+        {
+          "text": "First game night: 4 friends finish a week (carried over to the next game night)",
+          "state": "todo"
+        }
       ],
       "doneWhen": "4 friends in 4 homes finish a full 7-day week with no crash or desync, and 3+ say it looks like a real game.",
       "feedbackIssue": null
@@ -32,22 +54,66 @@
       "id": 2,
       "name": "Busy season",
       "tagline": "gameplay dynamics + station bots",
-      "status": "next",
+      "status": "done",
       "suggested": false,
       "aim": "Make the rush fun, chaotic and replayable, in the Overcooked spirit, and let bots fill empty stations. Lowest risk: new content on systems that already work.",
       "goals": [
-        { "text": "Day events: rush hour, health inspector, power flicker, influencer visit", "state": "done" },
-        { "text": "40+ cards with combos and synergies", "state": "todo" },
-        { "text": "Better customers: impatient regulars, big group orders", "state": "done" },
-        { "text": "Difficulty pacing across the week", "state": "todo" },
-        { "text": "Sound and juice: dings, steam, coin pops, spill shake", "state": "todo" },
-        { "text": "Scripted station bots (no AI model) fill empty stations", "state": "done" },
-        { "text": "Bots feel human: random 0.5–2 s reaction delay, 5–10% mistakes they notice and remake", "state": "done" },
-        { "text": "Bots path around players and stations, and sometimes hesitate or yield when a player is in their way (no new player-to-player collision for humans; revisit after playtests)", "state": "done" },
-        { "text": "Bot personalities (speed, accuracy, focus); more mistakes under rush pressure", "state": "done" },
-        { "text": "One bot-skill difficulty dial, from clumsy to sharp", "state": "done" },
-        { "text": "Telemetry: the host records the run (seed, inputs, snapshots) plus peers' UI events, and downloads one JSON-lines file at run end for the design-analysis agent (no new accounts)", "state": "done" },
-        { "text": "Balance pass", "state": "doing" }
+        {
+          "text": "Day events: rush hour, health inspector, power flicker, influencer visit",
+          "state": "done"
+        },
+        {
+          "text": "40+ cards with combos and synergies (52 cards, 8 sets with pair and full-set bonuses)",
+          "state": "done"
+        },
+        {
+          "text": "Better customers: impatient regulars, big group orders",
+          "state": "done"
+        },
+        {
+          "text": "Difficulty pacing across the week",
+          "state": "done"
+        },
+        {
+          "text": "Sound and juice: dings, steam, coin pops, spill shake",
+          "state": "done"
+        },
+        {
+          "text": "Scripted station bots (no AI model) fill empty stations",
+          "state": "done"
+        },
+        {
+          "text": "Bots feel human: random 0.5–2 s reaction delay, 5–10% mistakes they notice and remake",
+          "state": "done"
+        },
+        {
+          "text": "Bots path around players and stations, and sometimes hesitate or yield when a player is in their way (no new player-to-player collision for humans; revisit after playtests)",
+          "state": "done"
+        },
+        {
+          "text": "Bot personalities (speed, accuracy, focus); more mistakes under rush pressure",
+          "state": "done"
+        },
+        {
+          "text": "One bot-skill difficulty dial, from clumsy to sharp",
+          "state": "done"
+        },
+        {
+          "text": "Telemetry: the host records the run (seed, inputs, snapshots) plus peers' UI events, and downloads one JSON-lines file at run end for the design-analysis agent (no new accounts)",
+          "state": "done"
+        },
+        {
+          "text": "Balance pass",
+          "state": "done"
+        },
+        {
+          "text": "End-of-week awards ceremony, crew stats and lifetime café records",
+          "state": "done"
+        },
+        {
+          "text": "Daily challenges, week difficulty curve and two Easter egg packs",
+          "state": "done"
+        }
       ],
       "doneWhen": "The crew asks to play a second week unprompted, weeks feel different from each other, and 2 players plus 1 bot can finish a week with the bot feeling helpful but not perfect. The first game night's telemetry file has been reviewed by the analysis agent.",
       "feedbackIssue": null
@@ -56,16 +122,34 @@
       "id": 3,
       "name": "Real-life growth",
       "tagline": "stand → cart → café",
-      "status": "planned",
+      "status": "next",
       "suggested": false,
       "aim": "A progression that feels like running a real café, with saves that carry over.",
       "goals": [
-        { "text": "Upgrade path: stand → cart → café", "state": "todo" },
-        { "text": "Checkout path: register → kiosk → Squarely tap terminal", "state": "todo" },
-        { "text": "Parody ads tab (Palm Book and friends)", "state": "todo" },
-        { "text": "\"Pitch an idea\" with a scripted keyword judge (no AI)", "state": "todo" },
-        { "text": "Layout editor: move stations between nights", "state": "todo" },
-        { "text": "Saves and unlocks carried between runs", "state": "todo" }
+        {
+          "text": "Upgrade path: stand → cart → café",
+          "state": "todo"
+        },
+        {
+          "text": "Checkout path: register → kiosk → Squarely tap terminal",
+          "state": "todo"
+        },
+        {
+          "text": "Parody ads tab (Palm Book and friends)",
+          "state": "todo"
+        },
+        {
+          "text": "\"Pitch an idea\" with a scripted keyword judge (no AI)",
+          "state": "todo"
+        },
+        {
+          "text": "Layout editor: move stations between nights",
+          "state": "todo"
+        },
+        {
+          "text": "Saves and unlocks carried between runs",
+          "state": "todo"
+        }
       ],
       "doneWhen": "A run feels like \"we started tiny and built something\", every locked night tab is live, and saves survive a refresh and a new game night with no lost progress.",
       "feedbackIssue": null
@@ -78,11 +162,26 @@
       "suggested": false,
       "aim": "Bigger games across several cafés and game nights. Big new systems, but still predictable code we can test.",
       "goals": [
-        { "text": "Campus franchise of several cafés", "state": "todo" },
-        { "text": "Manager mode: assign crews, read reports", "state": "todo" },
-        { "text": "Phone calls and travel between sites", "state": "todo" },
-        { "text": "2v2 rival chains on a shared street, competing for the same customers", "state": "todo" },
-        { "text": "Seasons that carry across game nights", "state": "todo" }
+        {
+          "text": "Campus franchise of several cafés",
+          "state": "todo"
+        },
+        {
+          "text": "Manager mode: assign crews, read reports",
+          "state": "todo"
+        },
+        {
+          "text": "Phone calls and travel between sites",
+          "state": "todo"
+        },
+        {
+          "text": "2v2 rival chains on a shared street, competing for the same customers",
+          "state": "todo"
+        },
+        {
+          "text": "Seasons that carry across game nights",
+          "state": "todo"
+        }
       ],
       "doneWhen": "4 players finish a 2v2 match with a results screen, and the crew plays one season across 2+ game nights without a save problem.",
       "feedbackIssue": null
@@ -95,13 +194,34 @@
       "suggested": false,
       "aim": "AI makes the café feel alive, as an option and never required. Hardest phase: outside services, real costs, unpredictable answers.",
       "goals": [
-        { "text": "AI modes: Off / Lite / Full", "state": "todo" },
-        { "text": "LLM dialogue: customers, staff and bot personalities that talk", "state": "todo" },
-        { "text": "AI pitch judge, with the scripted judge as fallback", "state": "todo" },
-        { "text": "Creative out-of-scope player actions, bounded by the rules", "state": "todo" },
-        { "text": "Server-side backend that keeps API keys safe, capped per room per day", "state": "todo" },
-        { "text": "Scripted bots still make the drinks; the LLM never does split-second station work", "state": "todo" },
-        { "text": "AI never blocks play: scripted fallbacks everywhere", "state": "todo" }
+        {
+          "text": "AI modes: Off / Lite / Full",
+          "state": "todo"
+        },
+        {
+          "text": "LLM dialogue: customers, staff and bot personalities that talk",
+          "state": "todo"
+        },
+        {
+          "text": "AI pitch judge, with the scripted judge as fallback",
+          "state": "todo"
+        },
+        {
+          "text": "Creative out-of-scope player actions, bounded by the rules",
+          "state": "todo"
+        },
+        {
+          "text": "Server-side backend that keeps API keys safe, capped per room per day",
+          "state": "todo"
+        },
+        {
+          "text": "Scripted bots still make the drinks; the LLM never does split-second station work",
+          "state": "todo"
+        },
+        {
+          "text": "AI never blocks play: scripted fallbacks everywhere",
+          "state": "todo"
+        }
       ],
       "doneWhen": "1 human plus 3 AI teammates finish a week under budget (< $20/month total), and switching AI off changes nothing else.",
       "feedbackIssue": null
@@ -114,21 +234,63 @@
       "suggested": false,
       "aim": "Make everything we built solid and smooth.",
       "goals": [
-        { "text": "Bug-fix pass from the playtest backlog", "state": "todo" },
-        { "text": "Visual passes", "state": "todo" },
-        { "text": "Performance on older laptops", "state": "todo" },
-        { "text": "Save cleanup and migration", "state": "todo" }
+        {
+          "text": "Bug-fix pass from the playtest backlog",
+          "state": "todo"
+        },
+        {
+          "text": "Visual passes",
+          "state": "todo"
+        },
+        {
+          "text": "Performance on older laptops",
+          "state": "todo"
+        },
+        {
+          "text": "Save cleanup and migration",
+          "state": "todo"
+        }
       ],
       "doneWhen": "A full game night runs on the stable build with zero known crash bugs, steady frame rate on every friend's machine, and old saves still load.",
       "feedbackIssue": null
     }
   ],
   "changelog": [
-    { "date": "2026-10-28", "text": "Phase 1b peer-to-peer co-op merged" },
-    { "date": "2026-10-28", "text": "UI overhaul round 1: cozy diorama café scene" },
-    { "date": "2026-10-28", "text": "Roadmap reordered into 6 phases by difficulty; scripted station bots moved to Phase 2" },
-    { "date": "2026-10-28", "text": "Telemetry restored to Phase 2: host-recorded run log and peer UI events, downloaded as a file; no new accounts" },
-    { "date": "2026-10-28", "text": "Phase 2 sim side: pass, menu switch, day events, customer kinds, scripted bots, telemetry, balance tester" },
-    { "date": "2026-10-28", "text": "Chaos pack sim side: drop key, floor messes, mop and cleanliness, rogue customer" }
+    {
+      "date": "2026-10-28",
+      "text": "Phase 1b peer-to-peer co-op merged"
+    },
+    {
+      "date": "2026-10-28",
+      "text": "UI overhaul round 1: cozy diorama café scene"
+    },
+    {
+      "date": "2026-10-28",
+      "text": "Roadmap reordered into 6 phases by difficulty; scripted station bots moved to Phase 2"
+    },
+    {
+      "date": "2026-10-28",
+      "text": "Telemetry restored to Phase 2: host-recorded run log and peer UI events, downloaded as a file; no new accounts"
+    },
+    {
+      "date": "2026-10-28",
+      "text": "Phase 2 sim side: pass, menu switch, day events, customer kinds, scripted bots, telemetry, balance tester"
+    },
+    {
+      "date": "2026-10-28",
+      "text": "Chaos pack sim side: drop key, floor messes, mop and cleanliness, rogue customer"
+    },
+    {
+      "date": "2026-10-29",
+      "text": "Awards ceremony, crew stats and café records"
+    },
+    {
+      "date": "2026-10-29",
+      "text": "Balance pass: cheaper upgrades, full card sets, fittings count in your score"
+    },
+    {
+      "date": "2026-10-29",
+      "text": "Version 2.0.0: Phase 2 \"Busy season\" is done"
+    }
   ]
 }

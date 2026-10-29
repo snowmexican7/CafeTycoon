@@ -46,6 +46,8 @@ export interface Telemetry {
 declare global {
   interface Window {
     cafetycoon?: {
+      /** Build version from package.json. */
+      version?: string;
       telemetry: { download(): void; rows(): TelemetryRow[] };
       /** Read-only peek for playtests and smoke scripts: the latest snapshot and who this tab plays. */
       peek?: { state(): unknown; me(): string | null };

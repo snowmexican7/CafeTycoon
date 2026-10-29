@@ -10,7 +10,7 @@
 
 ## Phases
 
-### Phase 1: Open the doors *(in progress)*
+### Phase 1: Open the doors *(done, tag `phase1-final`, v1.1.0)*
 - **Aim:** a game that runs, looks decent, and that friends can actually playtest together. Big because it's the first phase, but it builds on a playable base.
 - **Goals:**
   - Direct peer-to-peer co-op with room codes for 1–4 players. *(done, on main)*
@@ -19,7 +19,7 @@
   - Deployed on GitHub Pages; anyone with the link and a room code can join.
 - **Done when:** 4 friends in 4 homes finish a full 7-day week to the score screen with no crash or desync, and at least 3 of them say it "looks like a real game."
 
-### Phase 2: Busy season *(next)*: gameplay dynamics + station bots
+### Phase 2: Busy season *(done, v2.0.0, 2026-10-29)*: gameplay dynamics + station bots
 - **Why here:** lowest risk. Mostly new content on systems that already work.
 - **Goals:** day events (rush hour, health inspector, a power flicker, an influencer visit) · 40+ cards with combos and synergies · better customer behaviours (impatient regulars, big group orders) · difficulty pacing across the week · sound and juice (dings, steam, coin pops, screen shake on a spill) · balance pass.
 - **Telemetry (no new accounts):** the host records the run (seed, scenario, every player's inputs, a snapshot at each phase boundary) and each peer's UI events (cards hovered but not bought, button mashing, frames over 250 ms, disconnects), sent over the same peer-to-peer channel as inputs. At run end the host downloads one newline-delimited JSON file that Kennedy drops where the design-analysis agent can read it. First analysis review after the first Phase 2 game night. Details: design spec §13.
@@ -32,7 +32,15 @@
   - **Difficulty dial:** one bot-skill setting nudges all of the above, from clumsy to sharp.
 - **Done when:** the crew asks to play a second week unprompted, weeks feel different from each other, and 2 players plus 1 bot finish a week with the bot feeling helpful but not perfect. The first game night's telemetry file has been reviewed by the analysis agent.
 
-### Phase 3: Real-life growth
+**Phase 2 status (2026-10-29, v2.0.0).** Every goal shipped: day events, 52 cards in 8 sets with
+pair and full-set bonuses, customer kinds, a week difficulty curve, sound and juice, scripted bots
+with personalities and a skill dial, telemetry, and a balance pass. Later blocks
+added forecasts, a bigger menu, daily challenges, Easter eggs, awards and records. The "done when" line still
+needs people: a real game night (2 players plus 1 bot finishing a week, and the crew asking for a
+second) and the analysis agent reading that night's telemetry file. Both carry over to the next
+game night. Phase 1's "first game night" goal carries over the same way.
+
+### Phase 3: Real-life growth *(next)*
 - **Why here:** saves that carry across nights are where bugs start to matter.
 - **Goals:** upgrade path stand → cart → café · checkout path register → kiosk → "Squarely" tap terminal · parody ads tab (Palm Book and friends) · "Pitch an idea", scripted with a keyword judge and no AI · a layout editor to move stations between nights · saves and unlocks carried between runs.
 - **Done when:** a run feels like "we started tiny and built something", every night tab that shows as locked today is live, and saves survive a refresh and a new game night with no lost progress.

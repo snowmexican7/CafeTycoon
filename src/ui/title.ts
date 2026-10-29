@@ -6,6 +6,7 @@ import { logoCup } from './icons';
 import { roadmapIcon, type RoadmapDrawer } from './roadmap';
 import { storefrontSVG } from './storefront';
 import type { TitleVM } from './viewModels';
+import { APP_VERSION } from '../version';
 
 export interface StartChoice {
   name: string;
@@ -114,7 +115,8 @@ export function createTitle(
             <label class="seedfld">Seed <input name="seed" placeholder="random" inputmode="numeric" aria-label="Seed (optional)"></label></div>
           <details class="more"><summary>Past runs &amp; controls</summary>
             ${history}
-            <p class="keys-help"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> or arrows move · <span class="key">E</span> or <span class="key">Space</span> uses a station · <span class="key">Q</span> drinks an espresso (in hand or at the machine) · <span class="key">Esc</span> pauses · <span class="key">M</span> mutes sound</p>
+            <p class="keys-help"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> or arrows move · <span class="key">E</span> or <span class="key">Space</span> uses a station · <span class="key">Q</span> drinks an espresso (in hand or at the machine) · <span class="key">R</span> drops what you hold · <span class="key">Esc</span> pauses · <span class="key">M</span> mutes sound</p>
+            <p class="ver">CafeTycoon v${esc(APP_VERSION)}</p>
           </details>
         </main>
         <button class="btn recbtn" data-action="records" aria-haspopup="dialog">🏆 Records</button>
