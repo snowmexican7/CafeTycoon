@@ -97,7 +97,7 @@ export function createPause(
             <button class="btn primary big block" data-action="resume">Back to the café</button>
             <div class="two"><button class="btn" data-action="roadmap">${roadmapIcon}Roadmap</button><button class="btn ghost danger" data-action="quit">Quit to title</button></div>
           </div>
-          <p class="hint"><span class="key">Esc</span> closes this menu · <span class="key">M</span> mutes</p>
+          <p class="hint controls"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move · <span class="key">E</span> use · <span class="key">Q</span> drinks an espresso (in hand or at the machine) · <span class="key">M</span> mutes · <span class="key">Esc</span> closes this menu</p>
         </div>`;
       if (!container.hidden) focusResume();
     },

@@ -55,7 +55,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
       <div class="hold hand"></div>
       <div class="hold hint"></div>
       <div class="spacer"></div>
-      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">Q</span> espresso <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
+      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">Q</span> drinks an espresso (in hand or at the machine) <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
     </div>
     <div class="toast" role="status" hidden></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(sel: string) => container.querySelector<T>(sel)!;

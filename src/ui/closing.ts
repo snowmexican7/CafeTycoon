@@ -18,7 +18,7 @@ export function createClosing(container: HTMLElement): { render(vm: ClosingVM): 
       container.innerHTML = `
         <div class="paper menu results" role="dialog" aria-modal="true" aria-labelledby="res-h">
           <div class="menu-hd"><span class="badge-ic night">${moon(26)}</span><div><h2 id="res-h">${esc(vm.dayLabel)} closed</h2><p>Lights off, chairs up. Here's how it went.</p></div></div>
-          <div class="profit ${loss ? 'loss' : ''}">${coin(34)}<span>${loss ? '' : '+'}${esc(vm.profit)}</span><small>profit</small></div>
+          <div class="profit ${loss ? 'loss' : ''}">${coin(34)}<span>${loss ? '' : '+'}${esc(vm.profit)}</span><small>today's profit</small></div>
           <div class="tiles">
             <div><b>${vm.served}</b><small>SERVED</small></div>
             <div class="${vm.lost ? 'bad' : ''}"><b>${vm.lost}</b><small>STORMED OUT</small></div>
@@ -31,6 +31,10 @@ export function createClosing(container: HTMLElement): { render(vm: ClosingVM): 
             ${vm.tabPaid ? `<div class="line"><span>Hospital tab paid</span><span class="neg">−${esc(vm.tabPaid)}</span></div>` : ''}
             ${vm.ambulance ? `<div class="line ambulance"><span>Ambulance ride: −${esc(vm.ambulance)}. Worth it?</span><span class="neg">on the tab</span></div>` : ''}
             ${vm.tab ? `<div class="line tab"><span>Hospital tab left</span><span>${esc(vm.tab)}</span></div>` : ''}
+          </div>
+          <div class="money-split">
+            <div><small>CASH IN THE TILL</small><b class="${vm.cash.startsWith('-') ? 'neg' : ''}">${esc(vm.cash)}</b></div>
+            <div><small>PROFIT VS. START</small><b class="${vm.profitVsStart.startsWith('-') ? 'neg' : 'pos'}">${vm.profitVsStart.startsWith('-') ? '' : '+'}${esc(vm.profitVsStart)}</b><em>started with ${esc(vm.startingCash)}</em></div>
           </div>
           <div class="rep ${repTrend}"><span class="lbl">Reputation</span><span class="st">${stars(before)}</span><span class="arrow">→</span><span class="st">${stars(after)}</span>
             <b>${esc(vm.reputationAfter)}</b></div>

@@ -1,3 +1,4 @@
+import { ECONOMY } from '../data/economy';
 import type { Pace } from '../sim/types';
 import type { LocalSettings } from '../storage/settingsStore';
 import { esc, hide, onAction, show } from './dom';
@@ -14,6 +15,9 @@ export interface StartChoice {
 }
 
 const DAY_LENGTHS = [60, 90, 120, 150, 180, 240, 300];
+/** The real default day length (ECONOMY.dayLengthSec), so the label can never drift from the sim. */
+export const DEFAULT_DAY_LENGTH = ECONOMY.dayLengthSec;
+const dayLengthChoices = () => (DAY_LENGTHS.includes(DEFAULT_DAY_LENGTH) ? DAY_LENGTHS : [...DAY_LENGTHS, DEFAULT_DAY_LENGTH].sort((a, b) => a - b));
 export const PACE_NAMES = ['Chill', 'Relaxed', 'Normal', 'Busy', 'Chaos'];
 
 /** The pace picker from the mockup: five radio segments with little rising bars. */
@@ -25,7 +29,9 @@ export function paceSeg(current: number, disabled = false): string {
 }
 
 export const dayOptions = (current: number) =>
-  DAY_LENGTHS.map((s) => `<option value="${s}" ${current === s ? 'selected' : ''}>${s} s${s === 120 ? ' · default' : ''}</option>`).join('');
+  dayLengthChoices()
+    .map((s) => `<option value="${s}" ${current === s ? 'selected' : ''}>${s} s${s === DEFAULT_DAY_LENGTH ? ' · default' : ''}</option>`)
+    .join('');
 
 export function createTitle(
   container: HTMLElement,
@@ -106,7 +112,7 @@ export function createTitle(
             <label class="seedfld">Seed <input name="seed" placeholder="random" inputmode="numeric" aria-label="Seed (optional)"></label></div>
           <details class="more"><summary>Past runs &amp; controls</summary>
             ${history}
-            <p class="keys-help"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> or arrows move · <span class="key">E</span> or <span class="key">Space</span> uses a station · <span class="key">Q</span> at the espresso machine drinks a shot (careful) · <span class="key">Esc</span> pauses · <span class="key">M</span> mutes sound</p>
+            <p class="keys-help"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> or arrows move · <span class="key">E</span> or <span class="key">Space</span> uses a station · <span class="key">Q</span> drinks an espresso (in hand or at the machine) · <span class="key">Esc</span> pauses · <span class="key">M</span> mutes sound</p>
           </details>
         </main>
         <button class="btn rmbtn" data-action="roadmap" aria-haspopup="dialog"><span class="dot" hidden></span>${roadmapIcon}Roadmap <span class="badge" hidden></span></button>`;

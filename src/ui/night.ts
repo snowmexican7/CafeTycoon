@@ -5,6 +5,7 @@ import { cardArt, CATEGORY_LABEL, CATEGORY_TINT } from './cardArt';
 import { esc, hide, onAction, show } from './dom';
 import { coin, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
+import type { NightWarning } from './nightWarnings';
 import { nightStructureKey, type HandCardVM, type NightVM } from './viewModels';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew' } as const;
@@ -28,7 +29,23 @@ function handCard(c: HandCardVM, i: number, cash: number): string {
     <span class="body"><h4>${esc(c.name)}</h4><span class="eff">${esc(c.effect)}</span><span class="flav">${esc(c.flavor)}</span>
       <span class="dur ${c.duration === 'permanent' ? 'perm' : 'tmrw'}">${c.duration === 'permanent' ? 'PERMANENT' : 'TOMORROW ONLY'}</span></span>
     ${c.affordable ? '' : `<span class="need">${needText(cost, cash)}</span>`}
+    ${c.affordable && c.cutsRent ? '<span class="rent-risk" title="Buying this leaves less than tomorrow\'s rent">Cuts into rent</span>' : ''}
   </button>`;
+}
+
+/** The heads-up card above the receipt: a friendly paper note, never a blocker. */
+function warningCard(ws: NightWarning[]): string {
+  if (ws.length === 0) return '';
+  const danger = ws.some((w) => w.level === 'danger');
+  const anySupply = ws.some((w) => w.kind === 'supply');
+  const items = ws
+    .map((w) => `<li class="${w.level}" data-wid="${esc(w.id)}"><b>${esc(w.title)}</b><span>${esc(w.detail)}</span></li>`)
+    .join('');
+  return `<div class="warn-card ${danger ? 'danger' : 'low'}" role="status" aria-live="polite">
+    <div class="wc-hd"><span class="wc-ic" aria-hidden="true">!</span>Heads up before you open</div>
+    <ul>${items}</ul>
+    ${anySupply ? '<button class="btn wc-jump" data-action="jump-restock">Go to restock ↓</button>' : ''}
+  </div>`;
 }
 
 function boughtCard(itemId: string, i: number): string {
@@ -54,7 +71,29 @@ export function createNight(
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
     else if (action === 'restock') handlers.onRestock(el.dataset.supply as SupplyId);
     else if (action === 'ready') handlers.onReady();
+    else if (action === 'jump-restock') jumpToRestock();
+    else if (action === 'jump-warn') flash(container.querySelector<HTMLElement>('.warn-card'));
   });
+  function flash(el: HTMLElement | null): void {
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    el.classList.remove('flash');
+    void el.offsetWidth; // restart the animation
+    el.classList.add('flash');
+  }
+  function jumpToRestock(): void {
+    const sec = container.querySelector<HTMLElement>('.restocks');
+    if (!sec) return;
+    sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const flagged = container.querySelectorAll<HTMLElement>('.restock.warned');
+    flagged.forEach((el) => {
+      el.classList.remove('flash');
+      void el.offsetWidth; // restart the animation
+      el.classList.add('flash');
+    });
+    if (flagged.length === 0) return;
+    (flagged[0]?.querySelector<HTMLButtonElement>('button:not(:disabled)') ?? null)?.focus({ preventScroll: true });
+  }
   let lastKey = '';
 
   function patch(vm: NightVM, extras?: NightExtras): void {
@@ -62,6 +101,14 @@ export function createNight(
     container.querySelector('.night-head .cash')!.textContent = vm.cash;
     const ring = container.querySelector<SVGCircleElement>('.night-head .ring .arc');
     if (ring && extras) ring.setAttribute('stroke-dasharray', `${(extras.left * RING).toFixed(1)} ${RING.toFixed(1)}`);
+    for (const w of vm.warnings) {
+      const li = container.querySelector<HTMLElement>(`.warn-card li[data-wid="${w.id}"]`);
+      if (!li) continue;
+      li.querySelector('b')!.textContent = w.title;
+      li.querySelector('span')!.textContent = w.detail;
+    }
+    const fw = container.querySelector('.foot-warn .fw-t');
+    if (fw && vm.warnings[0]) fw.textContent = vm.warnings[0].title;
     const cash = parseMoney(vm.cash);
     container.querySelectorAll<HTMLElement>('.icard.poor').forEach((card) => {
       const need = card.querySelector('.need');
@@ -93,10 +140,11 @@ export function createNight(
       const stats = extras
         ? `<div class="stats"><div>${extras.served}<small>SERVED</small></div><div class="${extras.lost ? 'neg' : ''}">${extras.lost}<small>WALKED</small></div><div>${extras.reputation.toFixed(1)}★<small>RATING</small></div></div>`
         : '';
+      const warned = new Map(vm.warnings.filter((w) => w.supply).map((w) => [w.supply!, w]));
       const restock = vm.restock
         .map(
-          (r) => `<div class="restock ${r.count < LOW_AT ? 'low' : ''}">${jar(Math.min(1, r.count / 30), SUPPLY_COLOR[r.supply], 26)}
-            <div class="lab">${SUPPLY_LABEL[r.supply]}<small>${r.count} left${r.count < LOW_AT ? ' · low!' : ''}</small></div>
+          (r) => `<div class="restock ${r.count < LOW_AT || warned.has(r.supply) ? 'low' : ''} ${warned.has(r.supply) ? `warned ${warned.get(r.supply)!.level}` : ''}" data-supply="${r.supply}">${jar(Math.min(1, r.count / 30), SUPPLY_COLOR[r.supply], 26)}
+            <div class="lab">${SUPPLY_LABEL[r.supply]}<small>${r.count} left${r.count <= 0 && warned.has(r.supply) ? ' · out!' : r.count < LOW_AT || warned.has(r.supply) ? ' · low!' : ''}</small></div>
             <button class="btn" data-action="restock" data-supply="${r.supply}" ${r.affordable ? '' : 'disabled'}>+${r.packSize} for ${esc(r.packCost)}</button></div>`,
         )
         .join('');
@@ -113,6 +161,10 @@ export function createNight(
         })
         .join('');
       const solo = vm.ready.length <= 1;
+      const w0 = vm.warnings[0];
+      const footWarn = w0
+        ? `<button class="foot-warn ${vm.warnings.some((w) => w.level === 'danger') ? 'danger' : 'low'}" data-action="${vm.warnings.some((w) => w.kind === 'supply') ? 'jump-restock' : 'jump-warn'}" title="${esc(vm.warnings.map((w) => w.title).join(' · '))}"><span aria-hidden="true">⚠</span> <span class="fw-t">${esc(w0.title)}</span>${vm.warnings.length > 1 ? ` <small>+${vm.warnings.length - 1} more</small>` : ''}</button>`
+        : '';
       container.innerHTML = `
         <div class="night-shade"></div>
         <div class="night-head">${moon(36)}<h1>${title} <small>${esc(sub)}</small></h1><div class="spacer"></div>
@@ -122,6 +174,7 @@ export function createNight(
         </div>
         <div class="board">
           <div class="receipt">
+            ${warningCard(vm.warnings)}
             <div class="paper">${receipt}${stats}</div>
             <div class="sec">Restock</div>
             <div class="restocks">${restock}</div>
@@ -133,6 +186,7 @@ export function createNight(
           <div class="foot">
             <div class="ready">${ready}</div>
             <div class="spacer"></div>
+            ${footWarn}
             <span class="foot-note">${solo ? 'The shop opens when you are ready, or when the timer ends' : 'Shop opens when everyone is ready, or when the timer ends'}</span>
             <button class="btn primary big" data-action="ready" ${vm.meReady ? 'disabled' : ''}>${vm.meReady ? 'Ready ✓ waiting for the crew' : `${sun(24).replaceAll('#f6c35b', '#fff4e2')}Open the shop`}</button>
           </div>

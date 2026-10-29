@@ -8,6 +8,7 @@ import { EVENT_LABELS } from '../sim/events';
 import { computeModifiers, weekOf } from '../sim/effects';
 import { restockCost } from '../sim/night';
 import { scoreRun } from '../sim/score';
+import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
 import type { Member } from '../net/protocol';
 import type { DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
@@ -100,6 +101,8 @@ export interface HandCardVM {
   flavor: string;
   affordable: boolean;
   duration: 'permanent' | 'tomorrow';
+  /** Affordable, but buying it leaves less than tomorrow's rent in the till. */
+  cutsRent?: boolean;
 }
 
 export interface NightVM {
@@ -113,6 +116,8 @@ export interface NightVM {
   ready: { id: PlayerId; name: string; ready: boolean }[];
   meReady: boolean;
   menu?: { drink: DrinkId; on: boolean }[];
+  /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
+  warnings: NightWarning[];
 }
 
 export function nightViewModel(state: GameState, me: PlayerId): NightVM {
@@ -136,6 +141,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
         flavor: item.flavor,
         affordable: state.cash >= item.cost,
         duration: item.duration,
+        ...(cutsIntoRent(state, item.cost) ? { cutsRent: true } : {}),
       };
     }),
     restock: SUPPLIES.map((supply) => {
@@ -145,6 +151,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
     meReady: state.ready.includes(me),
     menu: DRINKS.map((drink) => ({ drink, on: state.menu[drink] })),
+    warnings: nightWarnings(state),
   };
 }
 
@@ -163,6 +170,11 @@ export interface ClosingVM {
   ambulance?: string;
   tabPaid?: string;
   tab?: string;
+  /** Cash in the till after closing (matches the HUD). */
+  cash: string;
+  /** The run score so far: cash minus starting cash. */
+  profitVsStart: string;
+  startingCash: string;
 }
 
 /** `before` is the last snapshot of the closing phase; `after` is the first of the next phase. */
@@ -181,11 +193,20 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     reputationAfter: stars(after.reputation),
     ...espressoLines(d),
     ...(after.debt ? { tab: money(after.debt) } : {}),
+    cash: money(after.cash),
+    profitVsStart: money(scoreRun(after)),
+    startingCash: money(after.startingCash),
   };
 }
 
 export interface WeekEndVM {
+  /** Profit vs. start (cash minus starting cash): the run's score. */
   score: string;
+  /** Cash in the till, the same number the HUD shows. */
+  cash: string;
+  startingCash: string;
+  /** Espresso Easter egg: unpaid hospital tab, if any. */
+  tab?: string;
   daysCompleted: number;
   customersServed: number;
   bestDay: { day: number; profit: string } | null;
@@ -200,6 +221,9 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
   for (const d of state.days) if (best === null || profitOf(d) > profitOf(best)) best = d;
   return {
     score: money(scoreRun(state)),
+    cash: money(state.cash),
+    startingCash: money(state.startingCash),
+    ...(state.debt ? { tab: money(state.debt) } : {}),
     daysCompleted: state.days.length,
     customersServed: state.days.reduce((sum, d) => sum + d.served, 0),
     bestDay: best ? { day: best.day, profit: money(profitOf(best)) } : null,
@@ -232,8 +256,9 @@ export function titleViewModel(history: RunRecord[], snapshot: GameState | null,
 
 /** Everything about the night screen except the two values that change every snapshot. */
 export function nightStructureKey(vm: NightVM): string {
-  const { clock: _clock, cash: _cash, ...rest } = vm;
-  return JSON.stringify(rest);
+  const { clock: _clock, cash: _cash, warnings, ...rest } = vm;
+  // warning text carries dollar amounts that move with cash; it is patched, so only ids and levels key a rebuild
+  return JSON.stringify({ ...rest, warnings: warnings.map((w) => `${w.id}:${w.level}`) });
 }
 
 /** Everything about the HUD except the clock and cash. */

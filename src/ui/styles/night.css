@@ -95,3 +95,28 @@
 body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .line.ambulance span:first-child { color: var(--bad); font-style: italic; }
 #night .line.tab { font-size: 13px; }
+
+/* Night heads-up (phase 1 polish): a friendly paper note above the receipt. Warns, never blocks Ready. */
+#night .warn-card { background: #fff8e6; border-radius: 14px; padding: 12px 14px 12px; box-shadow: 0 0 0 2.5px var(--warn), var(--sh-1); transform: rotate(.8deg); position: relative; flex: none; }
+#night .warn-card.danger { background: #fff1ee; box-shadow: 0 0 0 2.5px var(--bad), var(--sh-1); }
+#night .warn-card::before { content: ''; position: absolute; top: -9px; left: 50%; width: 54px; height: 18px; transform: translateX(-50%) rotate(-3deg); background: #f3dfa9cc; border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+#night .warn-card .wc-hd { display: flex; align-items: center; gap: 8px; font: 600 15px var(--font-display); color: var(--ink); margin-bottom: 6px; }
+#night .warn-card .wc-ic { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--warn); color: #fff; font: 700 14px var(--font-display); flex: none; }
+#night .warn-card.danger .wc-ic { background: var(--bad); }
+#night .warn-card ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#night .warn-card li { display: flex; flex-direction: column; gap: 1px; padding-left: 10px; border-left: 3px solid var(--warn); }
+#night .warn-card li.danger { border-left-color: var(--bad); }
+#night .warn-card li b { font: 600 15px/1.2 var(--font-display); color: #9a5b10; }
+#night .warn-card li.danger b { color: #b8322a; }
+#night .warn-card li span { font: 600 12.5px/1.35 var(--font-body); color: var(--ink-soft); }
+#night .warn-card .wc-jump { margin-top: 10px; font-size: 13.5px; padding: 6px 12px; min-height: 34px; }
+#night .restock.warned.danger { box-shadow: 0 0 0 2.5px var(--bad), var(--sh-1); } #night .restock.warned.danger small { color: #b8322a; }
+#night .flash { animation: night-flash 1.1s ease 2; }
+@keyframes night-flash { 0%, 100% { transform: none; } 30% { transform: scale(1.04); filter: brightness(1.06); } }
+#night .foot-warn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font: 600 14px var(--font-display); padding: 7px 12px; border-radius: 99px; background: #fff3d6; color: #9a5b10; box-shadow: 0 0 0 2px var(--warn); max-width: 340px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#night .foot-warn.danger { background: #ffe9e5; color: #b8322a; box-shadow: 0 0 0 2px var(--bad); }
+#night .foot-warn small { font: 700 11.5px var(--font-body); opacity: .8; }
+#night .foot-warn:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
+#night .icard .rent-risk { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 700 11.5px var(--font-body);
+  background: var(--warn); color: #4a2c06; padding: 3px 9px; border-radius: 99px; }
+@media (prefers-reduced-motion: reduce) { #night .flash { animation: none; } }

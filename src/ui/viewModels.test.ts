@@ -63,6 +63,9 @@ describe('view models', () => {
       profit: '$10.00',
       reputationBefore: '2.5★',
       reputationAfter: '2.7★',
+      cash: '$100.00',
+      profitVsStart: '$0.00',
+      startingCash: '$100.00',
     });
     after.cash = 160;
     after.days.push({ day: 2, served: 9, lost: 1, turnedAway: 0, sales: 40, tips: 8, rent: 25 });
@@ -70,6 +73,8 @@ describe('view models', () => {
     const w = weekEndViewModel(after, 'p2');
     expect(w).toEqual({
       score: '$60.00',
+      cash: '$160.00',
+      startingCash: '$100.00',
       daysCompleted: 2,
       customersServed: 16,
       bestDay: { day: 2, profit: '$23.00' },
@@ -95,15 +100,15 @@ describe('view models', () => {
 describe('overlay structure keys', () => {
   it('ignores clock and cash but notices hand, affordability, ready, and takings changes', () => {
     const s = run();
-    s.cash = 50;
+    s.cash = 80; // comfortably above rent, so no night warning flips between 80 and 79
     s.hand = ['dualBoiler', 'streetSign'];
     const a = nightStructureKey(nightViewModel(s, 'p1'));
     s.phaseTicksLeft -= 60;
-    s.cash = 49;
+    s.cash = 79;
     expect(nightStructureKey(nightViewModel(s, 'p1'))).toBe(a);
     s.cash = 10; // streetSign no longer affordable
     expect(nightStructureKey(nightViewModel(s, 'p1'))).not.toBe(a);
-    s.cash = 50;
+    s.cash = 80;
     s.ready = ['p2'];
     expect(nightStructureKey(nightViewModel(s, 'p1'))).not.toBe(a);
     s.ready = [];
@@ -149,5 +154,24 @@ describe('lobby view model', () => {
     expect(titleViewModel([], null, { code: 'ABCDE', role: 'peer' }).rejoinCode).toBe('ABCDE');
     expect(titleViewModel([], null, { code: 'ABCDE', role: 'host' }).rejoinCode).toBeNull();
     expect(titleViewModel([], null, null).rejoinCode).toBeNull();
+  });
+});
+
+describe('phase 1 polish: cash vs score', () => {
+  it('closing and week-end screens show cash and profit vs. start separately', () => {
+    const before = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+    const after = structuredClone(before);
+    after.cash = -10.22;
+    after.days.push({ ...after.today, sales: 10, tips: 0, rent: 25 });
+    const c = closingViewModel(before, after);
+    expect(c.cash).toBe('-$10.22');
+    expect(c.profitVsStart).toBe('-$110.22');
+    expect(c.startingCash).toBe('$100.00');
+    const w = weekEndViewModel(after, 'p1');
+    expect(w.cash).toBe(hudViewModel(after).cash);
+    expect(w.score).toBe('-$110.22');
+    expect(w.tab).toBeUndefined();
+    after.debt = 75;
+    expect(weekEndViewModel(after, 'p1').tab).toBe('$75.00');
   });
 });
