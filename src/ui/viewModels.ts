@@ -68,9 +68,19 @@ export interface HudVM {
   rogue?: { stage: RogueStage; drink: DrinkId; x: number; y: number; secondsLeft: number; name?: string };
 }
 
-/** Track A fills this: messes, cleanliness, the mop, stuns and cleaning. */
-export function floorHud(_state: GameState): Pick<HudVM, 'messes' | 'cleanliness' | 'mop' | 'stuns' | 'cleaning'> {
-  return {};
+/** The floor: messes, cleanliness, the mop, who is stunned and who is cleaning (seconds rounded up). */
+export function floorHud(state: GameState): Pick<HudVM, 'messes' | 'cleanliness' | 'mop' | 'stuns' | 'cleaning'> {
+  return {
+    messes: state.messes.map((m) => ({ id: m.id, kind: m.kind, x: m.x, y: m.y, amount: m.amount })),
+    cleanliness: Math.round(state.cleanliness),
+    mop: { x: state.mop.pos.x, y: state.mop.pos.y, heldBy: state.mop.heldBy },
+    stuns: state.players
+      .filter((p) => p.stunTicksLeft > 0)
+      .map((p) => ({ playerId: p.id, secondsLeft: Math.ceil(p.stunTicksLeft / 60) })),
+    cleaning: state.players
+      .filter((p) => p.cleaningTicksLeft > 0)
+      .map((p) => ({ playerId: p.id, secondsLeft: Math.ceil(p.cleaningTicksLeft / 60) })),
+  };
 }
 
 export function hudViewModel(state: GameState): HudVM {

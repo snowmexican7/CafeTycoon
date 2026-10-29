@@ -16,7 +16,7 @@ export function isWalkable(state: GameState, node: Vec2): boolean {
 }
 
 /** Every walkable node, in row-major order (y, then x). */
-function walkableNodes(state: GameState): Vec2[] {
+export function walkableNodes(state: GameState): Vec2[] {
   const out: Vec2[] = [];
   for (let y = 1; y <= LAYOUT.height - 1; y++) {
     for (let x = 1; x <= LAYOUT.width - 1; x++) if (isWalkable(state, { x, y })) out.push({ x, y });
@@ -25,7 +25,7 @@ function walkableNodes(state: GameState): Vec2[] {
 }
 
 /** Nodes sorted by distance to `from`, ties lower y then lower x. */
-function byDistance(nodes: Vec2[], from: Vec2): Vec2[] {
+export function byDistance(nodes: Vec2[], from: Vec2): Vec2[] {
   return nodes
     .map((n) => ({ n, d: dist(n, from) }))
     .sort((a, b) => a.d - b.d || a.n.y - b.n.y || a.n.x - b.n.x)

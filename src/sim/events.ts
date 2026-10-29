@@ -49,10 +49,10 @@ export function scheduleEvents(state: GameState): GameState {
   return state;
 }
 
-/** The inspector's verdict: four or more drinks thrown away today is a fine, anything less a pass. */
+/** The inspector's verdict: four or more drinks thrown away today, or a dirty floor, is one fine. */
 export function judgeInspection(state: GameState): void {
   const { wastedLimit, fine } = ECONOMY.events.inspector;
-  const failed = (state.today.wasted ?? 0) >= wastedLimit;
+  const failed = (state.today.wasted ?? 0) >= wastedLimit || state.cleanliness < ECONOMY.mess.inspectorMin;
   if (failed) {
     tally(state.today, 'fines', fine);
     state.cash = Math.round((state.cash - fine) * 100) / 100;

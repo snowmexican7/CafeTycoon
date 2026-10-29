@@ -112,6 +112,18 @@ The data exists; the visuals are the UI agent's.
 - `nightViewModel.ready` now omits bots; `hudStructureKey` ignores per-tick `secondsLeft` fields (pass, events).
 - Show the version from `package.json` (e.g. `v1.0.0`) on the title screen, and have the Roadmap drawer's Changelog tab read `CHANGELOG.md` (or a generated copy) instead of the short `changelog` array in `roadmap.json`.
 
+## Needs UI (chaos pack: floor)
+
+The sim data exists; the visuals are the UI agent's.
+
+- piles and puddles from `HudVM.messes` (amount scales the size)
+- the slip animation from `HudVM.stuns`
+- the mop in its corner and in hand from `HudVM.mop`
+- the cleaning progress from `HudVM.cleaning`
+- a cleanliness meter from `HudVM.cleanliness`
+- 4-way facing from `Player.facing`
+- the R key in the controls hint
+
 ## Deferred (phase 2)
 
 - Syrups and a flavour picker wait for Group B (sketch: a syrup station, number keys 1 to 9 to pick a flavour, flavoured orders on tickets).

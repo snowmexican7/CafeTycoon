@@ -112,6 +112,22 @@ describe('health inspector', () => {
     expect(t.reputation).toBeCloseTo(2.8);
   });
 
+  it('the inspector fails a dirty café with one fine', () => {
+    const inspect = (cleanliness: number, wasted: number): GameState => {
+      const s = dayTwo(1);
+      s.eventSchedule = [];
+      s.today.wasted = wasted;
+      s.cleanliness = cleanliness;
+      s.events = [{ kind: 'healthInspector', ticksLeft: 1 }];
+      return step(s, []);
+    };
+    const a = inspect(59, 0);
+    expect(a.today.inspection).toBe('fail');
+    expect(a.today.fines).toBe(15);
+    expect(inspect(59, 4).today.fines).toBe(15);
+    expect(inspect(60, 0).today.inspection).toBe('pass');
+  });
+
   it('Review Focus 5: day end with an active inspector and drinks on the pass', () => {
     let s = dayTwo(1);
     s.eventSchedule = [];

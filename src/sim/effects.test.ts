@@ -35,6 +35,14 @@ describe('effects', () => {
     expect(rentForDay(s)).toBeCloseTo(31.25);
   });
 
+  it('a dirty café makes new customers less patient', () => {
+    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+    s.cleanliness = 100;
+    const clean = computeModifiers(s).patience;
+    s.cleanliness = 50;
+    expect(computeModifiers(s).patience / clean).toBeCloseTo(0.9);
+  });
+
   it('resolves gambles with the state rng', () => {
     const g: Effect = { kind: 'gamble', chance: 1, win: [{ kind: 'traffic', mul: 2 }], lose: [] };
     expect(resolveGamble(g, { rng: seedRng(1) } as GameState)).toEqual([{ kind: 'traffic', mul: 2 }]);

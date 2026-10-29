@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { ECONOMY } from '../../data/economy';
+import { LAYOUT } from '../../data/layout';
 import { createRun, startDay } from '../run';
 import { nearestStation } from '../movement';
 import { step } from '../step';
 import type { GameState, Personality, Player } from '../types';
 import { chainFor, reactionDelay, think, uncoveredOrder } from './brain';
-import { findPath, targetNodes } from './path';
+import { findPath, isWalkable, targetNodes } from './path';
 import { addStandIns, botSpeed, makeBotState } from './roster';
 import { floorFields } from '../tiles';
 
@@ -273,7 +274,7 @@ describe('bot feel: mistakes, noticing and remaking', () => {
     s.settings.botSkill = 1;
     const served = s.today.served;
     const run = busyEspressoDay(s, 60 * 120);
-    // let any botch still in hand be noticed and binned
+    // let any botch still in hand be noticed and binned (a spilled botch leaves no trash step)
     s = runUntil(run.s, (x) => {
       const b = bot(x).bot!;
       const first = b.plan[0];
@@ -300,7 +301,13 @@ describe('bot feel: mistakes, noticing and remaking', () => {
     expect(s.today.served).toBe(served);
     expect(bot(s).holding).toBe('espresso');
     expect(nearestStation(s, bot(s).pos)?.kind).toBe('counter'); // waiting at the counter, drink in hand
-    s = runUntil(s, (x) => (x.today.wasted ?? 0) > wasted, 60 * 10); // noticed: binned
+    s = runUntil(s, (x) => bot(x).bot!.noticeTicksLeft === 0, 60 * 10); // noticed
+    // Binned (a trash step first) or spilled where it stands (a drop log on the bot's tile); the remake follows either way.
+    const first = bot(s).bot!.plan[0];
+    const tile = bot(s).tile;
+    const spilled = s.log.some((e) => e.kind === 'drop' && e.data.item === 'espresso' && e.data.x === tile.x && e.data.y === tile.y);
+    expect(spilled || (first?.kind === 'use' && first.action === 'trash')).toBe(true);
+    s = runUntil(s, (x) => (x.today.wasted ?? 0) > wasted, 60 * 10); // binned or spilled: wasted either way
     expect(s.today.served).toBe(served);
     expect(bot(s).bot!.claim).toBe(900); // still on the order
     s = runUntil(s, (x) => x.today.served > served, 60 * 60); // and remade
@@ -499,5 +506,178 @@ describe("coverage counts a person's chain in progress", () => {
     }
     expect(s.supplies.beans).toBe(beans);
     expect(station(s, 'grinder').busyTicksLeft).toBe(0);
+  });
+});
+
+describe('bots on a messy floor', () => {
+  const spill = (s: GameState, x: number, y: number) => s.messes.push({ id: s.nextMessId++, kind: 'spill', x, y, amount: 1 });
+  const parkHuman = (s: GameState) => {
+    s.players.find((p) => p.id === 'p1')!.pos = { x: 11, y: 5 };
+  };
+  const NEIGHBOURS = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
+
+  it('a bot avoids a spill when a dry route exists', () => {
+    let s = cafe(1);
+    parkHuman(s);
+    bot(s).pos = { x: 8, y: 4 };
+    spill(s, 7, 4);
+    s.customers = [{ id: 900, drink: 'espresso', ...huge }];
+    // The plain route west to the grinder runs straight through the spill.
+    const grinder = s.stations.find((st) => st.id === 'grinder')!;
+    const plain = findPath(s, bot(s).pos, targetNodes(s, grinder, bot(s).pos)[0])!;
+    expect(plain).toContainEqual({ x: 7, y: 4 });
+    const tiles: { x: number; y: number }[] = [];
+    s = runUntil(s, (x) => {
+      tiles.push({ ...bot(x).tile });
+      return x.today.served === 1;
+    }, 3000);
+    expect(tiles).not.toContainEqual({ x: 7, y: 4 });
+  });
+
+  // Review Focus 5
+  it('spills on every approach to the counter: the bot walks through and still serves', () => {
+    let s = cafe(1);
+    parkHuman(s);
+    const counter = s.stations.find((st) => st.id === 'counter')!;
+    const node = targetNodes(s, counter, bot(s).pos)[0];
+    for (const d of NEIGHBOURS) {
+      const t = { x: node.x + d.x, y: node.y + d.y };
+      if (isWalkable(s, t)) spill(s, t.x, t.y);
+    }
+    expect(s.messes.length).toBeGreaterThan(0);
+    s.customers = [{ id: 900, drink: 'espresso', ...huge }];
+    let stunStreak = 0;
+    let wet = false;
+    s = runUntil(s, (x) => {
+      const b = bot(x);
+      stunStreak = b.stunTicksLeft > 0 ? stunStreak + 1 : 0;
+      expect(stunStreak).toBeLessThanOrEqual(300);
+      if (x.messes.some((m) => m.kind === 'spill' && m.x === b.tile.x && m.y === b.tile.y)) wet = true;
+      return x.today.served === 1;
+    }, 3000);
+    expect(s.today.served).toBe(1);
+    expect(wet).toBe(true); // it did walk through a spill
+  });
+
+  it('a forced bot can slip and keeps its plan', () => {
+    /** bot-1 boxed in by spills at (6,3) with a latte for the pass; p1 parked out of the way. */
+    function forced(seed: number): GameState {
+      const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 600 } });
+      s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
+      startDay(s);
+      parkHuman(s);
+      const b = bot(s);
+      b.pos = { x: 6, y: 3 };
+      b.tile = { x: 6, y: 3 };
+      b.holding = 'latte';
+      b.bot!.plan = [{ kind: 'use', station: 'counter', action: 'put' }];
+      for (const d of NEIGHBOURS) spill(s, 6 + d.x, 3 + d.y);
+      return s;
+    }
+    const slipped = (x: GameState) => x.log.some((e) => e.kind === 'slip' && e.data.player === 'bot-1');
+    let s: GameState | null = null;
+    for (let seed = 1; seed <= 500 && s === null; seed++) {
+      let t = forced(seed);
+      for (let i = 0; i < 120 && !slipped(t); i++) t = step(t, []);
+      if (slipped(t)) s = t;
+    }
+    expect(s).not.toBeNull();
+    let x = s!;
+    expect(bot(x).stunTicksLeft).toBeGreaterThan(0);
+    const plan = structuredClone(bot(x).bot!.plan);
+    expect(plan).toEqual([{ kind: 'use', station: 'counter', action: 'put' }]);
+    const pos = { ...bot(x).pos };
+    while (bot(x).stunTicksLeft > 0) {
+      x = step(x, []);
+      expect(bot(x).bot!.plan).toEqual(plan);
+      if (bot(x).stunTicksLeft > 0) expect(bot(x).pos).toEqual(pos); // the tick the stun runs out the bot acts again
+    }
+    x = runUntil(x, (y) => bot(y).pos.x !== pos.x || bot(y).pos.y !== pos.y, 10);
+    x = runUntil(x, (y) => {
+      const first = bot(y).bot!.plan[0];
+      return first?.kind !== 'use' || first.station !== 'counter';
+    }, 600); // reached the counter and did the put
+  });
+
+  it('a bot mops when idle and the floor is dirty', () => {
+    let s = cafe(1);
+    parkHuman(s);
+    spill(s, 3, 4);
+    spill(s, 8, 3);
+    spill(s, 9, 5);
+    let held = false;
+    s = runUntil(s, (x) => {
+      if (x.mop.heldBy === 'bot-1') held = true;
+      return x.messes.length === 0;
+    }, 3000);
+    expect(held).toBe(true);
+    s = step(s, []);
+    expect(s.mop).toEqual({ pos: LAYOUT.mopHome, heldBy: null });
+    expect(bot(s).tool).toBeNull();
+  });
+
+  it('a bot does not mop a clean-enough floor', () => {
+    let s = cafe(1);
+    parkHuman(s);
+    spill(s, 3, 4);
+    s.cleanliness = 90;
+    for (let i = 0; i < 600; i++) {
+      s = step(s, []);
+      expect(s.mop.heldBy).toBeNull();
+    }
+  });
+
+  // Review Focus 4
+  it('an order interrupts a mop plan', () => {
+    let s = cafe(1);
+    parkHuman(s);
+    spill(s, 3, 4);
+    spill(s, 8, 3);
+    spill(s, 9, 5);
+    s = runUntil(s, (x) => bot(x).cleaningTicksLeft > 0, 3000);
+    expect(bot(s).tool).toBe('mop');
+    s.customers = [{ id: 900, drink: 'espresso', ...huge }];
+    s = runUntil(s, (x) => x.mop.heldBy === null && bot(x).bot!.claim === 900, ECONOMY.bots.thinkTicks + 2);
+    expect(bot(s).tool).toBeNull();
+    s = runUntil(s, (x) => {
+      const b = bot(x);
+      expect(b.tool === 'mop' && b.holding !== null).toBe(false);
+      return x.today.served === 1;
+    }, 3000);
+  });
+
+  // Review Focus 1
+  it('a botched drink at the cap is binned, not spilled', () => {
+    /** bot-1 holding an unchecked latte that it notices after 4 ticks (seed 2: the spill roll hits), `messes` spills down. */
+    const notice = (messes: number) => {
+      let s = cafe(1);
+      parkHuman(s);
+      for (let i = 0; i < messes; i++) spill(s, i < 11 ? 1 + i : 1, i < 11 ? 3 : 4);
+      const b = bot(s);
+      b.holding = 'latte';
+      b.bot!.noticeTicksLeft = 4;
+      const wasted = s.today.wasted ?? 0;
+      for (let i = 0; i < 4; i++) s = step(s, []);
+      expect(bot(s).bot!.noticeTicksLeft).toBe(0);
+      return { s, wasted };
+    };
+    // Control, one below the cap: the roll hits, the latte hits the floor where the bot stands.
+    const below = notice(ECONOMY.mess.max - 1);
+    const tile = bot(below.s).tile;
+    expect(below.s.messes.length).toBe(ECONOMY.mess.max);
+    expect(below.s.messes.at(-1)).toMatchObject({ kind: 'spill', x: tile.x, y: tile.y });
+    expect(bot(below.s).holding).toBeNull();
+    expect(below.s.today.wasted ?? 0).toBe(below.wasted + 1);
+    expect(bot(below.s).bot!.plan.some((st) => st.kind === 'use' && st.action === 'trash')).toBe(false); // nothing left to bin
+    // At the cap the same roll hits, but nothing lands: the drink stays in hand and goes in the bin.
+    const at = notice(ECONOMY.mess.max);
+    expect(at.s.messes.length).toBe(ECONOMY.mess.max);
+    expect(bot(at.s).holding).toBe('latte');
+    expect(at.s.today.wasted ?? 0).toBe(at.wasted); // nothing wasted on the floor
+    expect(bot(at.s).bot!.plan[0]).toEqual({ kind: 'use', station: 'trash', action: 'trash' });
+    const s = runUntil(at.s, (x) => bot(x).holding === null, 60 * 10); // binned at the trash
+    expect(s.messes.length).toBe(ECONOMY.mess.max);
+    expect(s.today.wasted ?? 0).toBe(at.wasted + 1);
+    expect(nearestStation(s, bot(s).pos)?.kind).toBe('trash');
   });
 });
