@@ -449,3 +449,45 @@ Co-op fun:
 - Mocha is a natural hand-off drink (one player pulls the latte, the other does cocoa), and the
   menu board lets the crew argue about turning the slow mocha off on a Market Saturday.
 - Next: a "signature drink" vote at night where each player picks one to push (tips bonus).
+
+## Block 6 reflection (upgrade cards)
+
+Shipped: the catalogue grew from 19 to 52 cards, all data in `src/data/catalogue.ts`, each with a
+`path` (speed / quality / reach), rarity and an optional `set`. 33 new cards across the three paths,
+including a Second steam wand for the B5 steamer bottleneck, Roaster partner (rare), Pop-up stall
+(rare, one day), and seven spicy cards whose downsides render in red (`splitEffects`). Eight sets in
+`src/data/cardSets.ts`, each "own 2 → bonus", folded into `computeModifiers` after owned/tomorrow
+cards; the card shows have/need, the bonus, and "Completes …" when buying it would finish the set.
+New effect kinds: `quality` (reputation per day), `temp` (one-day rookie barista "Robin (temp)",
+via `syncTemp`, removed at night, never past 4 players) and `reveal` (Weather radio). The radio
+pre-rolls tomorrow's events with `drawEvents` (same RNG draws as `scheduleEvents`, so owning the
+radio never changes what happens, proven over seeds 1–12) and the paper prints a radio line. Hand is
+4 cards, at least two paths, cheap-card guarantee kept; paid re-roll ($5 + $5 per re-roll that
+night, seeded, never re-deals the current hand or tonight's buys). Save v6 (migration: rerolls 0),
+protocol v7. 469 tests (+22).
+
+Balance (20 weeks): mean final cash **$293.55**, loss rate **34.3 %**, 0/20 bankrupt (B5: $310.22 /
+32.5 %). About 5 % less cash; not a cliff. Checked the obvious suspect: a tester that skips spicy
+cards does *no* better ($280.50 / 33.2 %), so the spicy cards are fair trades; the dip comes from the
+smaller, wider hand (4 of 52 instead of 5 of 19, so the tester's "cheapest permanent" rule lands on
+weaker Reach/Quality cards more often). Real players pick; left as is.
+
+What could be better:
+- The balance bot buys blindly (cheapest permanent). A path- and set-aware buyer would measure the
+  real ceiling; it should also try re-rolls and the radio.
+- Hire-a-temp at $35 competes with re-rolls on early nights; in Playwright, four re-rolls left too
+  little cash to hire. Consider $30 or a re-roll cap note.
+- The radio's day-1 report is always "a quiet day" (the grand opening has no events) — true but dull.
+- Card faces are dense at 800 px tall: set box + flavour text can clip. A hover/expand view would help.
+- Synergy is only pairs. Three-of-a-set tiers would make long runs more interesting.
+
+Deferred:
+- Selling or scrapping owned cards; card upgrades (level 2); a "locked" card you can hold to next night.
+- Per-player hands / voting on buys (everyone currently shares one hand).
+- Radio accuracy upgrades (exact times) and a rumour-busting card.
+
+Co-op fun:
+- Re-rolls are a group argument ("one more roll!") with a visible, rising price, and sets give the
+  crew a shared plan across nights ("we need one more Cold bar card").
+- The temp is a fun surprise: a fourth body at the counter for one hectic day, then gone.
+

@@ -6,11 +6,12 @@ import { createRun } from './run';
 const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
 
 describe('night phase', () => {
-  it('deals five distinct eligible ids with a cheap option', () => {
+  it('deals four distinct eligible ids with a cheap option and two paths', () => {
     const s = run();
-    expect(s.hand).toHaveLength(5);
-    expect(new Set(s.hand).size).toBe(5);
+    expect(s.hand).toHaveLength(4);
+    expect(new Set(s.hand).size).toBe(4);
     expect(s.hand.some((id) => catalogueById[id].cost < 30)).toBe(true);
+    expect(new Set(s.hand.map((id) => catalogueById[id].path)).size).toBeGreaterThanOrEqual(2);
     expect(s.hand).not.toContain('laMazzoccaPro'); // requires dualBoiler
   });
 

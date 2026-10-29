@@ -159,3 +159,21 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .mb-txt b { font: 600 14px var(--font-display); } #night .mb-price { font: 700 13px var(--font-display); color: #4a3a2c; }
 #night .btn.mini { font-size: 12px; padding: 4px 10px; min-height: 30px; }
 @keyframes fm-pop { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Phase 2 B6: upgrade cards. Rarity ribbon, path badge, spicy tag, downsides in red, set progress, re-roll. */
+#night .icard .rib { position: absolute; top: 96px; left: 0; font: 700 9.5px var(--font-display); letter-spacing: .12em; padding: 3px 9px 3px 10px; border-radius: 0 99px 99px 0; color: #fff; }
+#night .icard .rib.common { background: #9a8a76; } #night .icard .rib.uncommon { background: #3d8fc4; } #night .icard .rib.rare { background: linear-gradient(90deg, #b07a12, #e2b23c); box-shadow: 0 0 10px #e2b23c88; }
+#night .icard:has(.rib.rare) { box-shadow: 0 5px 0 #e2c27a, 0 0 0 2.5px #e2b23c, 0 14px 26px rgba(58, 36, 24, .2); }
+#night .icard .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+#night .icard .path { font: 700 10.5px var(--font-display); padding: 2px 8px; border-radius: 99px; }
+#night .icard .path.speed { background: #fff0cf; color: #8a5a00; } #night .icard .path.quality { background: #f3e6ff; color: #6b3d99; } #night .icard .path.reach { background: #e1f1ff; color: #1f5d8c; }
+#night .icard .spicy { font: 700 10.5px var(--font-display); padding: 2px 8px; border-radius: 99px; background: #ffe3dc; color: #b8322a; }
+#night .eff.down { color: #b8322a; background: #ffece8; }
+#night .icard .set { display: flex; flex-direction: column; gap: 1px; padding: 5px 8px; border-radius: 10px; border: 2px dashed #d9c3a0; font: 600 11.5px/1.3 var(--font-body); color: var(--ink-soft); }
+#night .icard .set b { font: 700 12px var(--font-display); color: var(--ink); }
+#night .icard .set.completes { border-color: var(--honey); background: #fff6dc; } #night .icard .set.completes b { color: #8a5a00; }
+#night .icard .set.on { border-style: solid; border-color: var(--mint-dk); background: #e3f4ea; }
+#night .tabs .reroll { font-size: 14px; padding: 7px 12px; min-height: 0; }
+#night .sets-on { display: flex; gap: 6px; flex-wrap: wrap; } #night .sets-on span { font: 700 11.5px var(--font-display); padding: 4px 9px; border-radius: 99px; background: #e3f4ea; color: var(--mint-dk); }
+#night .pn-radio { font: 700 12.5px/1.3 var(--font-body); background: #2b211a; color: #f7f1e3; padding: 5px 8px; border-radius: 6px; }
+@media (max-height: 760px) { #night .icard .rib { top: 70px; } }

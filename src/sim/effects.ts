@@ -1,10 +1,12 @@
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
+import { catalogueById } from '../data/catalogue';
+import { CARD_SETS } from '../data/cardSets';
 import { eventActive } from './events';
 import { rngNext } from './rng';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
 import { dayProgress, forecastOf, shapeAt } from './forecast';
-import type { DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
+import type { CardSetId, DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
 
 /** Every multiplier the simulation reads, already combined. */
 export interface Modifiers {
@@ -21,6 +23,12 @@ export interface Modifiers {
   eventOdds: Record<EventKind, number>;
   /** Added to the queue's capacity. */
   queue: number;
+  /** Stars added to the rating at closing (upgrade cards, B6). */
+  quality: number;
+  /** Temp baristas hired for today. */
+  temps: number;
+  /** Whether the weather radio is on the shelf. */
+  reveal: boolean;
 }
 
 const DRINKS: DrinkId[] = DRINK_IDS;
@@ -45,6 +53,9 @@ export function baseModifiers(): Modifiers {
     mix: { impatient: 1, group: 1, regular: 1 },
     eventOdds: { rushHour: 1, powerFlicker: 1, influencerVisit: 1, healthInspector: 1 },
     queue: 0,
+    quality: 0,
+    temps: 0,
+    reveal: false,
   };
 }
 
@@ -89,12 +100,37 @@ export function itemModifiers(effects: Effect[]): Modifiers {
       case 'queue':
         m.queue += e.add;
         break;
+      case 'quality':
+        m.quality += e.add;
+        break;
+      case 'temp':
+        m.temps += 1;
+        break;
+      case 'reveal':
+        m.reveal = true;
+        break;
       case 'gamble':
       case 'unlock':
         break;
     }
   }
   return m;
+}
+
+/** How many owned permanent cards share each set. */
+export function setCounts(state: GameState): Partial<Record<CardSetId, number>> {
+  const counts: Partial<Record<CardSetId, number>> = {};
+  for (const o of state.owned) {
+    const set = catalogueById[o.itemId]?.set;
+    if (set) counts[set] = (counts[set] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/** Sets with enough cards owned to switch their bonus on, in a fixed order. */
+export function activeSets(state: GameState): CardSetId[] {
+  const counts = setCounts(state);
+  return (Object.keys(CARD_SETS) as CardSetId[]).filter((id) => (counts[id] ?? 0) >= CARD_SETS[id].need);
 }
 
 /** Which café week a day belongs to: days 1–7 are week 1. */
@@ -110,6 +146,7 @@ export function computeModifiers(state: GameState): Modifiers {
     ...forecast.effects,
     ...state.owned.flatMap((o) => o.effects),
     ...state.activeTomorrow.flatMap((o) => o.effects),
+    ...activeSets(state).flatMap((id) => CARD_SETS[id].bonus),
   ];
   const m = itemModifiers(effects);
   const rep = ECONOMY.trafficFromReputation;

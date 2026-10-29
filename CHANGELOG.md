@@ -16,6 +16,20 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **A real card shop.** 52 night cards now (33 new), each on a path: **⚡ Speed**, **★ Quality** or
+  **📣 Reach**, with a rarity ribbon (common, uncommon, rare). Each night you're offered **4 cards**,
+  always from at least two paths and always with one cheap card.
+- **Card sets.** Many cards belong to a set (Espresso bar, Milk lab, Cold bar, Cosy corner, Kerb
+  appeal, Craft, Crew kit, Full menu). Own two of a set and its bonus kicks in. The card shows your
+  progress and says when buying it would complete the set; active sets show as chips in the shop.
+- **Spicy cards 🌶.** Cheap or powerful cards with a catch, written in red: Watered-down milk, Cheap
+  beans, Surge pricing, a Turbo grinder that's fast but rough, a Delivery app, Two-for-one and more.
+- **Weather radio.** A $40 card that tunes in each night and tells you on the paper what tomorrow's
+  surprises will be and roughly when ("rush hour around midday").
+- **Hire a temp.** A $35 one-day card: Robin (temp) joins your crew as a rookie barista tomorrow
+  and leaves at closing (only if there's room).
+- **Re-roll.** Don't like the hand? 🎲 Re-roll it for $5, then $10, $15… The price resets every night.
+
 - **A bigger menu.** Four new drinks made from the stations you already have: the **iced
   latte** (a shot over cold milk at the tap, joins the menu on day 3), the **mocha** (a latte back
   on the steamer for a pump of cocoa, day 5), the **matcha latte** (one whisk at the steamer) and

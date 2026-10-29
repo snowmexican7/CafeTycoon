@@ -2,6 +2,7 @@ import { CATALOGUE, catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
 import { computeModifiers, resolveGamble } from './effects';
 import { rngNext } from './rng';
+import { tuneRadio } from './events';
 import { startDay } from './run';
 import { unlockDrink } from './unlocks';
 import type { CatalogueItem, Effect, GameState, OwnedItem, PlayerInput, SupplyId } from './types';
@@ -41,15 +42,33 @@ function drawWeighted(state: GameState, items: CatalogueItem[]): CatalogueItem {
   return items.splice(items.length - 1, 1)[0];
 }
 
-/** Deal tonight's hand: up to handSize eligible items, with at least one cheap option when one exists. */
-export function dealHand(state: GameState, pool: CatalogueItem[] = CATALOGUE): GameState {
-  const candidates = eligibleItems(state, pool);
+/**
+ * Deal tonight's hand: up to handSize eligible items, with at least one cheap option and at least two
+ * upgrade paths when the pool allows. `skip` keeps cards out (a re-roll never re-deals the same hand).
+ */
+export function dealHand(state: GameState, pool: CatalogueItem[] = CATALOGUE, skip: string[] = []): GameState {
+  let candidates = eligibleItems(state, pool).filter((i) => !skip.includes(i.id));
+  // A re-roll late in a run can run the pool dry; then the skipped cards come back.
+  if (candidates.length < ECONOMY.handSize) candidates = eligibleItems(state, pool).filter((i) => !state.boughtTonight.includes(i.id));
   const hand: CatalogueItem[] = [];
   while (hand.length < ECONOMY.handSize && candidates.length > 0) hand.push(drawWeighted(state, candidates));
   const isCheap = (i: CatalogueItem) => i.cost < ECONOMY.cheapThreshold;
   if (hand.length > 0 && !hand.some(isCheap)) {
     const cheap = candidates.filter(isCheap);
-    if (cheap.length > 0) hand[hand.length - 1] = drawWeighted(state, cheap);
+    if (cheap.length > 0) {
+      const pick = drawWeighted(state, cheap);
+      candidates.splice(candidates.indexOf(pick), 1);
+      hand[hand.length - 1] = pick;
+    }
+  }
+  if (hand.length > 1 && hand.every((i) => i.path === hand[0].path)) {
+    const other = candidates.filter((i) => i.path !== hand[0].path);
+    // Swap the first card for another path, unless that would lose the only cheap option.
+    if (other.length > 0) {
+      const pick = drawWeighted(state, other);
+      const onlyCheap = isCheap(hand[0]) && !hand.slice(1).some(isCheap);
+      if (!onlyCheap || isCheap(pick)) hand[0] = pick;
+    }
   }
   state.hand = hand.map((i) => i.id);
   return state;
@@ -72,6 +91,22 @@ function buy(state: GameState, itemId: string): void {
   }
   state.hand = state.hand.filter((id) => id !== itemId);
   state.boughtTonight.push(itemId);
+  // The weather radio crackles on the moment it is bought.
+  if (effects.some((e) => e.kind === 'reveal')) tuneRadio(state);
+}
+
+/** What the next re-roll of tonight's hand costs. */
+export function rerollCost(state: GameState): number {
+  return ECONOMY.reroll.base + ECONOMY.reroll.step * (state.rerolls ?? 0);
+}
+
+/** Pay to swap tonight's unbought cards for a fresh deal (never the same cards, when the pool allows). */
+function reroll(state: GameState): void {
+  const cost = rerollCost(state);
+  if (state.cash < cost || state.hand.length === 0) return;
+  state.cash = round2(state.cash - cost);
+  state.rerolls = (state.rerolls ?? 0) + 1;
+  dealHand(state, CATALOGUE, [...state.hand, ...state.boughtTonight]);
 }
 
 function restock(state: GameState, supply: SupplyId, packs: number): void {
@@ -91,6 +126,9 @@ export function applyNightInput(state: GameState, input: PlayerInput): GameState
       break;
     case 'restock':
       restock(state, input.supply, input.packs);
+      break;
+    case 'reroll':
+      if (state.players.some((p) => p.id === input.playerId)) reroll(state);
       break;
     case 'ready':
       if (state.players.some((p) => p.id === input.playerId) && !state.ready.includes(input.playerId)) {

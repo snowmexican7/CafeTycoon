@@ -4,15 +4,16 @@ import { scenarioById } from '../data/scenarios';
 import { TICK_RATE, secondsToTicks } from '../sim/constants';
 import { botsFor } from '../sim/bots/roster';
 import { availableDrinks } from '../sim/customers';
-import { describeEffects } from '../sim/describe';
+import { describeEffects, radioLine, splitEffects } from '../sim/describe';
+import { CARD_SETS } from '../data/cardSets';
 import { EVENT_LABELS } from '../sim/events';
-import { computeModifiers, weekOf } from '../sim/effects';
-import { restockCost } from '../sim/night';
+import { activeSets, computeModifiers, setCounts, weekOf } from '../sim/effects';
+import { rerollCost, restockCost } from '../sim/night';
 import { scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
 import type { BotsChoice, Member } from '../net/protocol';
-import type { DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
+import type { CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 import { BASE_DRINKS, DRINK_IDS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
 import { menuDrinks, neededSupplies, unlockedDrinks } from '../sim/unlocks';
@@ -183,6 +184,42 @@ export interface HandCardVM {
   duration: 'permanent' | 'tomorrow';
   /** Affordable, but buying it leaves less than tomorrow's rent in the till. */
   cutsRent?: boolean;
+  rarity: Rarity;
+  path: CardPath;
+  /** A card with a real downside. */
+  spicy?: boolean;
+  /** Upsides and downsides in plain words (`effect` is both, for screen readers and logs). */
+  ups: string;
+  downs: string;
+  /** Its set: how many the café owns, how many switch it on, the bonus, and whether this card completes it. */
+  set?: { name: string; have: number; need: number; bonus: string; active: boolean; completes: boolean };
+}
+
+/** One hand card's view: price, effects split up and down, and its set progress. */
+export function handCardViewModel(state: GameState, item: CatalogueItem): HandCardVM {
+  const counts = setCounts(state);
+  const active = activeSets(state);
+  const split = splitEffects(item.effects);
+  const set = item.set && item.duration === 'permanent' ? CARD_SETS[item.set] : undefined;
+  const have = set ? (counts[set.id] ?? 0) : 0;
+  return {
+    itemId: item.id,
+    name: item.name,
+    cost: money(item.cost),
+    effect: describeEffects(item.effects),
+    flavor: item.flavor,
+    affordable: state.cash >= item.cost,
+    duration: item.duration,
+    ...(cutsIntoRent(state, item.cost) ? { cutsRent: true } : {}),
+    rarity: item.rarity,
+    path: item.path,
+    ...(item.spicy ? { spicy: true } : {}),
+    ups: split.ups,
+    downs: split.downs,
+    ...(set
+      ? { set: { name: set.name, have, need: set.need, bonus: describeEffects(set.bonus), active: active.includes(set.id), completes: !active.includes(set.id) && have + 1 >= set.need } }
+      : {}),
+  };
 }
 
 export interface NightVM {
@@ -202,6 +239,10 @@ export interface NightVM {
   forecast?: ForecastVM;
   /** "New on the menu": drinks that joined tonight, with their recipe ticket. */
   fresh?: FreshDrinkVM[];
+  /** Re-roll tonight's unbought cards (B6): its price and whether the till covers it. */
+  reroll: { cost: string; affordable: boolean; count: number };
+  /** Card sets switched on, for the hand's header. */
+  sets: string[];
 }
 
 export interface FreshDrinkVM {
@@ -241,6 +282,8 @@ export interface ForecastVM {
   hotPct: number;
   /** The day after: a one-line rumour, so the crew can plan two days out. */
   later: { icon: string; name: string };
+  /** Weather radio (B6): exactly which events tomorrow brings, and roughly when. */
+  radio?: string;
 }
 
 /** Tomorrow's paper. At night `state.day` is already tomorrow. */
@@ -264,6 +307,7 @@ export function forecastViewModel(state: GameState): ForecastVM {
     customers: Math.round(ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic),
     hotPct: Math.round((hot / total) * 100),
     later: { icon: next.icon, name: forecastName(next, state.day + 1) },
+    ...(radioLine(state) ? { radio: radioLine(state) } : {}),
   };
 }
 
@@ -281,19 +325,9 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     cash: money(state.cash),
     takings,
     ...(state.debt ? { tab: money(state.debt) } : {}),
-    hand: state.hand.map((id) => {
-      const item = catalogueById[id];
-      return {
-        itemId: id,
-        name: item.name,
-        cost: money(item.cost),
-        effect: describeEffects(item.effects),
-        flavor: item.flavor,
-        affordable: state.cash >= item.cost,
-        duration: item.duration,
-        ...(cutsIntoRent(state, item.cost) ? { cutsRent: true } : {}),
-      };
-    }),
+    hand: state.hand.map((id) => handCardViewModel(state, catalogueById[id])),
+    reroll: { cost: money(rerollCost(state)), affordable: state.cash >= rerollCost(state) && state.hand.length > 0, count: state.rerolls ?? 0 },
+    sets: activeSets(state).map((id) => CARD_SETS[id].name),
     restock: neededSupplies(state).map((supply) => {
       const cost = restockCost(state, supply, 1);
       return { supply, count: state.supplies[supply] ?? 0, packSize: ECONOMY.packs[supply].size, packCost: money(cost), affordable: state.cash >= cost };

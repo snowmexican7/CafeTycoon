@@ -1,6 +1,7 @@
 import { catalogueById } from '../data/catalogue';
 import { scenarioById } from '../data/scenarios';
 import { forecastName, forecastOf } from './forecast';
+import { secondsToTicks } from './constants';
 import type { DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
 
 const DRINK_NAMES: Record<DrinkId, string> = {
@@ -27,6 +28,20 @@ function pct(mul: number): string {
 
 function times(mul: number): string {
   return `×${Number.isInteger(mul) ? mul : mul.toFixed(1)}`;
+}
+
+const RADIO_WHEN = (frac: number) => (frac < 0.33 ? 'in the morning' : frac < 0.6 ? 'around midday' : 'in the afternoon');
+
+/** The weather radio's report on tomorrow, if it was heard tonight. */
+export function radioLine(state: GameState): string | undefined {
+  if (state.radio?.day !== state.day) return undefined;
+  if (state.radio.events.length === 0) return 'A quiet day: no surprises on the wire.';
+  const dayTicks = secondsToTicks(state.settings.dayLengthSec);
+  return state.radio.events
+    .slice()
+    .sort((a, b) => a.offset - b.offset)
+    .map((e) => `${EVENT_NAMES[e.kind]} ${RADIO_WHEN(e.offset / dayTicks)}`)
+    .join(', then ');
 }
 
 function describeOne(e: Effect): string {
@@ -63,7 +78,38 @@ function describeOne(e: Effect): string {
       return `${e.add > 0 ? '+' : '−'}${Math.abs(e.add)} queue spot${Math.abs(e.add) === 1 ? '' : 's'}`;
     case 'unlock':
       return `adds ${DRINK_NAMES[e.drink]} to the menu`;
+    case 'quality':
+      return `${e.add >= 0 ? '+' : '−'}${Math.abs(e.add).toFixed(2)}★ rating a day`;
+    case 'temp':
+      return 'a temp barista for the day';
+    case 'reveal':
+      return "hear tomorrow's events each night";
   }
+}
+
+/** Whether an effect hurts: slower, fewer, cheaper prices, dearer supplies, lower tips or rating, fewer queue spots. */
+export function isDownside(e: Effect): boolean {
+  switch (e.kind) {
+    case 'stationSpeed':
+    case 'moveSpeed':
+    case 'price':
+    case 'traffic':
+    case 'patience':
+      return e.mul < 1;
+    case 'supplyCost':
+      return e.mul > 1;
+    case 'tipRate':
+    case 'quality':
+    case 'queue':
+      return e.add < 0;
+    default:
+      return false;
+  }
+}
+
+/** A card's effects split into upsides and downsides, each in plain words (downsides shown in red). */
+export function splitEffects(effects: Effect[]): { ups: string; downs: string } {
+  return { ups: describeEffects(effects.filter((e) => !isDownside(e))), downs: describeEffects(effects.filter(isDownside)) };
 }
 
 /** Plain-words summary of a list of effects, for cards and morning notes. */

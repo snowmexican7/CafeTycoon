@@ -9,7 +9,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 5;
+export const SNAPSHOT_VERSION = 6;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -23,6 +23,10 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
     for (const d of DRINK_IDS) if (s.menu[d] === undefined) s.menu[d] = true;
     s.supplies.flavour ??= 0;
     for (const d of [...s.days, s.today]) if (d?.drinks) for (const k of DRINK_IDS) d.drinks[k] ??= 0;
+  },
+  // v6 (Phase 2 B6): upgrade cards. A night's re-roll count (the radio report stays absent until heard).
+  5: (s) => {
+    s.rerolls ??= 0;
   },
 };
 

@@ -81,6 +81,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
     }
     case 'buy':
     case 'restock':
+    case 'reroll':
     case 'ready':
       applyNightInput(s, input);
       break;

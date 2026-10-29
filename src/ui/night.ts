@@ -21,6 +21,15 @@ function needText(cost: number, cash: number): string {
   return need > 0 ? `Need $${need.toFixed(2)} more` : '';
 }
 
+const PATH_LABEL = { speed: '⚡ Speed', quality: '★ Quality', reach: '📣 Reach' } as const;
+
+/** A card's set: owned / needed, the bonus, and a nudge when this card would complete it. */
+function setLine(s: NonNullable<HandCardVM['set']>): string {
+  const state = s.active ? 'on' : s.completes ? 'completes' : '';
+  const head = s.active ? `${s.name} ✓ bonus on` : s.completes ? `Completes ${s.name}!` : `${s.name} set ${s.have}/${s.need}`;
+  return `<span class="set ${state}" title="Own ${s.need} ${s.name} cards: ${esc(s.bonus)}"><b>${esc(head)}</b><small>${s.need} owned: ${esc(s.bonus)}</small></span>`;
+}
+
 function handCard(c: HandCardVM, i: number, cash: number): string {
   const cat = categoryOf(c.itemId);
   const cost = parseMoney(c.cost);
@@ -28,7 +37,10 @@ function handCard(c: HandCardVM, i: number, cash: number): string {
       ${c.affordable ? '' : 'disabled'} aria-label="Buy ${esc(c.name)} for ${esc(c.cost)}">
     <span class="art" style="background:${CATEGORY_TINT[cat]}">${cardArt(cat)}<span class="cat">${CATEGORY_LABEL[cat]}</span></span>
     <span class="price">${esc(c.cost.replace('.00', ''))}</span>
-    <span class="body"><h4>${esc(c.name)}</h4><span class="eff">${esc(c.effect)}</span><span class="flav">${esc(c.flavor)}</span>
+    <span class="rib ${c.rarity}">${c.rarity.toUpperCase()}</span>
+    <span class="body"><span class="tags"><span class="path ${c.path}">${PATH_LABEL[c.path]}</span>${c.spicy ? '<span class="spicy" title="Spicy: a real downside">🌶 Spicy</span>' : ''}</span>
+      <h4>${esc(c.name)}</h4>${c.ups ? `<span class="eff">${esc(c.ups)}</span>` : ''}${c.downs ? `<span class="eff down">▼ ${esc(c.downs)}</span>` : ''}
+      ${c.set ? setLine(c.set) : ''}<span class="flav">${esc(c.flavor)}</span>
       <span class="dur ${c.duration === 'permanent' ? 'perm' : 'tmrw'}">${c.duration === 'permanent' ? 'PERMANENT' : 'TOMORROW ONLY'}</span></span>
     ${c.affordable ? '' : `<span class="need">${needText(cost, cash)}</span>`}
     ${c.affordable && c.cutsRent ? '<span class="rent-risk" title="Buying this leaves less than tomorrow\'s rent">Cuts into rent</span>' : ''}
@@ -50,6 +62,7 @@ function newspaper(f: ForecastVM | undefined): string {
         <div class="pn-split" title="Hot vs iced orders tomorrow"><span class="hot" style="flex:${f.hotPct}">${f.hotPct >= 18 ? `☕ ${f.hotPct}%` : ''}</span><span class="iced" style="flex:${iced}">${iced >= 18 ? `🧊 ${iced}%` : ''}</span></div>
         ${f.effects ? `<div class="pn-eff">${esc(f.effects)}</div>` : ''}
         ${f.eventNote ? `<div class="pn-ev">⚠ ${esc(f.eventNote)}</div>` : ''}
+        ${f.radio ? `<div class="pn-radio" title="Weather radio: tomorrow's events">📻 <b>Radio:</b> ${esc(f.radio)}</div>` : ''}
         <div class="pn-later">Day after: ${f.later.icon} ${esc(f.later.name)} <small>(rumour)</small></div>
       </div>
     </div>
@@ -123,10 +136,11 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
+    else if (action === 'reroll') handlers.onReroll?.();
     else if (action === 'restock') handlers.onRestock(el.dataset.supply as SupplyId);
     else if (action === 'ready') handlers.onReady();
     else if (action === 'menu') handlers.onMenu?.(el.dataset.drink as DrinkId, el.dataset.on === '1');
@@ -242,8 +256,8 @@ export function createNight(
             ${menuBoard(vm.menu)}
           </div>
           <div class="tabs" role="tablist"><span class="tab on" role="tab" aria-selected="true">Tonight's hand · ${vm.hand.length}</span>
-            <span class="tab locked" title="Coming in a later phase">Upgrades <span class="chip">Soon</span></span>
-            <span class="tab locked" title="Coming in a later phase">Ads <span class="chip">Soon</span></span></div>
+            <button class="btn reroll" data-action="reroll" ${vm.reroll.affordable ? '' : 'disabled'} title="Swap the cards on the table for a fresh deal">🎲 Re-roll · ${esc(vm.reroll.cost.replace('.00', ''))}</button>
+            ${vm.sets.length ? `<span class="sets-on" title="Set bonuses switched on">${vm.sets.map((n) => `<span>✓ ${esc(n)}</span>`).join('')}</span>` : ''}</div>
           <div class="hand">${hand}</div>
           <div class="foot">
             <div class="ready">${ready}</div>

@@ -3,7 +3,8 @@ import { LAYOUT } from '../data/layout';
 import { secondsToTicks } from './constants';
 import { rngInt, seedRng } from './rng';
 import { SCENARIOS } from '../data/scenarios';
-import { scheduleEvents } from './events';
+import { scheduleEvents, tuneRadio } from './events';
+import { computeModifiers } from './effects';
 import { morningNotes } from './describe';
 import { dealHand } from './night';
 import { forecastFor } from './forecast';
@@ -116,7 +117,11 @@ export function startNight(state: GameState): GameState {
   state.boughtTonight = [];
   state.forecast = forecastFor(state.seed, state.day);
   state.freshDrinks = unlockForDay(state);
-  return dealHand(state);
+  state.rerolls = 0;
+  dealHand(state);
+  // Weather radio (B6): tomorrow's events are drawn now, so the paper can report them tonight.
+  if (computeModifiers(state).reveal) tuneRadio(state);
+  return state;
 }
 
 /** Open the doors for `state.day`. */
