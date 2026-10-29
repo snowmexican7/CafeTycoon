@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { CATALOGUE, catalogueById } from '../data/catalogue';
-import { applyNightInput, dealHand, eligibleItems, restockCost, stepNight } from './night';
+import { ECONOMY } from '../data/economy';
+import { applyNightInput, dealHand, eligibleItems, nightClock, restockCost, stepNight } from './night';
 import { createRun } from './run';
+import { secondsToTicks } from './constants';
+import { sanitizeSettings } from './validate';
+import { step } from './step';
+import type { GameState } from './types';
 
 const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
 
@@ -85,5 +90,146 @@ describe('night phase', () => {
     v.players[1].connected = false;
     v = applyNightInput(v, { kind: 'ready', playerId: 'p1' });
     expect(stepNight(v).phase).toBe('day');
+  });
+});
+
+const relaxed = (humans = 3): GameState =>
+  createRun({
+    seed: 3,
+    hostId: 'p1',
+    players: Array.from({ length: humans }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` })),
+    settings: { bots: 0, nightLengthSec: 0 },
+  });
+const ready = (s: GameState, ...ids: string[]) => {
+  for (const id of ids) applyNightInput(s, { kind: 'ready', playerId: id });
+};
+
+describe('relaxed night', () => {
+  it('sanitizeSettings keeps 0 and still clamps other lengths to 30..600', () => {
+    expect(sanitizeSettings({ nightLengthSec: 0 }).nightLengthSec).toBe(0);
+    expect(sanitizeSettings({ nightLengthSec: 10 }).nightLengthSec).toBe(30);
+    expect(sanitizeSettings({ nightLengthSec: 10_000 }).nightLengthSec).toBe(600);
+  });
+
+  it('defaults to a 120 s timed night', () => {
+    expect(ECONOMY.nightLengthSec).toBe(120);
+    expect(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }).settings.nightLengthSec).toBe(120);
+  });
+
+  it('starts with no clock and no last call', () => {
+    const s = relaxed();
+    expect(s.phaseTicksLeft).toBe(0);
+    expect(s.lastCall).toBeUndefined();
+  });
+
+  it('never opens after 10 000 ticks with nobody ready', () => {
+    let s = relaxed();
+    for (let i = 0; i < 10_000; i++) s = stepNight(s);
+    expect(s.phase).toBe('night');
+    expect(s.phaseTicksLeft).toBe(0);
+    expect(s.lastCall).toBeUndefined();
+  });
+
+  it('opens the tick after every connected human is ready', () => {
+    let s = relaxed(2);
+    ready(s, 'p1');
+    s = stepNight(s);
+    expect(s.phase).toBe('night');
+    ready(s, 'p2');
+    s = stepNight(s);
+    expect(s.phase).toBe('day');
+    expect(s.lastCall).toBeUndefined();
+  });
+
+  it('with 3 humans and 2 ready the last call starts and opens the day 30 s later', () => {
+    let s = relaxed(3);
+    ready(s, 'p1', 'p2');
+    s = stepNight(s);
+    expect(s.lastCall).toBe(secondsToTicks(30) - 1);
+    for (let i = 0; i < secondsToTicks(30) - 2; i++) s = stepNight(s);
+    expect(s.phase).toBe('night');
+    s = stepNight(s);
+    expect(s.phase).toBe('day');
+    expect(s.lastCall).toBeUndefined();
+  });
+
+  it('a human who readied and then left does not count toward the last call or nightClock.ready', () => {
+    let s = relaxed(2);
+    ready(s, 'p1');
+    s = step(s, [{ kind: 'leave', playerId: 'p1' }]);
+    for (let i = 0; i < 2000; i++) s = stepNight(s);
+    expect(s.phase).toBe('night');
+    expect(s.lastCall).toBeUndefined();
+    expect(nightClock(s).ready).toEqual([]);
+    expect(nightClock(s).needed).toBe(1);
+  });
+
+  it('with 2 humans and 1 ready (not more than half) there is no last call', () => {
+    let s = relaxed(2);
+    ready(s, 'p1');
+    for (let i = 0; i < 2000; i++) s = stepNight(s);
+    expect(s.phase).toBe('night');
+    expect(s.lastCall).toBeUndefined();
+  });
+
+  it('a started last call keeps running when the ready share drops', () => {
+    let s = relaxed(3);
+    ready(s, 'p1', 'p2');
+    s = stepNight(s);
+    s.ready = [];
+    s = stepNight(s);
+    expect(s.lastCall).toBe(secondsToTicks(30) - 2);
+  });
+
+  it('Review Focus 2: with every human disconnected the last call starts at once', () => {
+    let s = relaxed(2);
+    for (const p of s.players) p.connected = false;
+    s = stepNight(s);
+    expect(s.lastCall).toBe(secondsToTicks(30) - 1);
+    for (let i = 0; i < secondsToTicks(30) - 1; i++) s = stepNight(s);
+    expect(s.phase).toBe('day');
+  });
+
+  it('works through step() end to end', () => {
+    let s = relaxed(1);
+    s = step(s, [{ kind: 'ready', playerId: 'p1' }]);
+    s = step(s, []);
+    expect(s.phase).toBe('day');
+  });
+
+  it('a timed night is unchanged: counts down, no last call, identical across runs', () => {
+    const play = () => {
+      let s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, nightLengthSec: 30, dayLengthSec: 30 } });
+      for (let i = 0; i < 30 * 60 + 900; i++) s = step(s, []);
+      return s;
+    };
+    const a = play();
+    expect(a.phase).toBe('day');
+    expect(a.lastCall).toBeUndefined();
+    expect(JSON.stringify(a)).toBe(JSON.stringify(play()));
+    expect(JSON.stringify(a)).not.toContain('lastCall');
+  });
+});
+
+describe('nightClock', () => {
+  it('timed shape', () => {
+    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
+    ready(s, 'p2');
+    expect(nightClock(s)).toEqual({ mode: 'timed', secondsLeft: 120, lastCallSecondsLeft: null, ready: ['p2'], needed: 2 });
+    s.phaseTicksLeft = 61;
+    expect(nightClock(s).secondsLeft).toBe(2);
+  });
+
+  it('relaxed shape, before and during a last call; bots are not counted', () => {
+    let s = createRun({
+      seed: 1,
+      hostId: 'p1',
+      players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }, { id: 'p3', name: 'T' }],
+      settings: { bots: 1, nightLengthSec: 0 },
+    });
+    expect(nightClock(s)).toEqual({ mode: 'relaxed', secondsLeft: null, lastCallSecondsLeft: null, ready: [], needed: 3 });
+    ready(s, 'p1', 'p2');
+    s = stepNight(s);
+    expect(nightClock(s)).toEqual({ mode: 'relaxed', secondsLeft: null, lastCallSecondsLeft: 30, ready: ['p1', 'p2'], needed: 3 });
   });
 });

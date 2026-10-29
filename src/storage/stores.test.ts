@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
+import { defaultSlots } from '../sim/slots';
 import { createHistoryStore } from './historyStore';
 import { createSettingsStore } from './settingsStore';
-import { SNAPSHOT_VERSION, createSnapshotStore } from './snapshotStore';
+import { SNAPSHOT_VERSION, createSnapshotStore, migrateSnapshot } from './snapshotStore';
 import { memoryStorage } from './storageLike';
 
 describe('stores', () => {
@@ -32,7 +33,7 @@ describe('stores', () => {
     const st = memoryStorage();
     let n = 0;
     const s = createSettingsStore(st, () => `tok${++n}`);
-    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 60 });
+    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120 });
     expect(createSettingsStore(st, () => 'other').get().playerToken).toBe('tok1');
     expect(s.set({ playerName: 'Ken' }).playerName).toBe('Ken');
     expect(s.get().pace).toBe(3);
@@ -42,6 +43,26 @@ describe('stores', () => {
 describe('snapshot versioning', () => {
   it('is on version 9', () => {
     expect(SNAPSHOT_VERSION).toBe(25);
+  });
+
+  it('migrates a version-23 save: lastCall stays absent', () => {
+    const old = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const out = migrateSnapshot(23, old)!;
+    expect(out).not.toBeNull();
+    expect(out.lastCall).toBeUndefined();
+  });
+
+  it('migrates a version-22 save through 22 -> 23 -> 24 -> 25: walkouts at 0, lastCall absent', () => {
+    const old = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    delete (old.today as { soldOutWalkouts?: number }).soldOutWalkouts;
+    delete (old as { slots?: unknown }).slots;
+    delete (old as { equipment?: unknown }).equipment;
+    const out = migrateSnapshot(22, old)!;
+    expect(out).not.toBeNull();
+    expect(out.today.soldOutWalkouts).toBe(0);
+    expect(out.lastCall).toBeUndefined();
+    expect(out.slots).toEqual(defaultSlots('cafe'));
+    expect(out.equipment).toEqual([]);
   });
 
   it('migrates a version-4 save (three drinks, no flavours) to the B5 menu', () => {
@@ -82,7 +103,7 @@ describe('snapshot versioning', () => {
     const old = JSON.parse(JSON.stringify(s));
     delete old.forecast;
     st.setItem('cafetycoon.run', JSON.stringify({ version: 3, state: old }));
-    expect(store.load()).toEqual({ ...s, tier: 'cafe' }); // P3 B13: every old run is the café
+    expect(store.load()).toEqual({ ...s, tier: 'cafe', today: { ...s.today, soldOutWalkouts: 0 } }); // P3 B13: every old run is the café; FB1 WP4: walkouts start at 0
     st.setItem('cafetycoon.run', JSON.stringify({ version: 2, state: old }));
     expect(store.load()).toBeNull();
     st.setItem('cafetycoon.run', JSON.stringify({ version: SNAPSHOT_VERSION + 1, state: s }));

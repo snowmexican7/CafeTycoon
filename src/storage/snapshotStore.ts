@@ -86,9 +86,11 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   21: (s) => {
     s.tier ??= 'cafe';
   },
-  // filled by fb1-sim-day / fb1-sim-night; replaced at rebase
-  22: () => {},
-  // filled by fb1-sim-day / fb1-sim-night; replaced at rebase
+  // FB1 WP4: sold-out walk-ups are counted per day; earlier days saw none.
+  22: (s) => {
+    for (const d of [...(s.days ?? []), s.today]) if (d) d.soldOutWalkouts ??= 0;
+  },
+  // FB1 WP1-sim: lastCall is optional (absent = no last call); nothing to migrate.
   23: () => {},
   // FB1 WP5: station slots. Every older run has its tier's default stations, so its slots are the defaults and nothing is spare.
   24: (s) => {

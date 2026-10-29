@@ -105,6 +105,131 @@ Written down from a voice note after the Phase 3 playtest. Only the first item i
   knob to turn. This pairs with recipe accuracy (P3 B5) and the taste map (P3 B6). Brainstorm
   only; nothing designed yet.
 
+## FB1 WP3+4 reflection
+
+- **What shipped (branch fb1-sim-day).** *Close early:* input `{ kind: 'closeEarly'; playerId; on: boolean }`
+  (a connected human, day phase, at least 15 s in; anything else is ignored). State `closeVotes?: PlayerId[]`
+  (absent = nobody; cleared in `startDay` and `startNight`; a `leave` removes the vote) and `emptySince?: number`
+  (tick stamp, set in `stepDay` when the queue empties, deleted when someone is queued). `stepDay` checks
+  unanimity every tick while the doors are open and at least one connected human exists, before the clock
+  decrements, so a vote that becomes unanimous because a partner left still closes the shop. Both that path and the
+  timer call the exported `enterClosing(state)` in `step.ts`; `finishDay` is untouched. `today.closedEarly` = whole
+  seconds left on the clock; log `closedEarly { votes, left }`; morning note "You closed early yesterday with M:SS
+  still on the clock." *Sold-out walk-ups:* with the menu on but nothing makeable, `spawnCustomers` rolls one arrival
+  per tick (`baseArrivalsPerSecond x m.traffic / TICK_RATE`, so rush hour counts); a hit tallies
+  `today.soldOutWalkouts`, logs `walkout { reason: 'soldOut' }` and sets `today.soldOutAt` (seconds into the day).
+  No customer, no `lost`, no `turnedAway`, so the rating is untouched. Menu all off: nobody comes, as before.
+  Morning note "N people walked away from a sold-out board yesterday."
+- **Final shapes.**
+  `closeEarlyState(state): { votes: number; needed: number; voted: PlayerId[]; open: boolean; hint: 'soldOut' | 'empty' | null }`
+  in `src/sim/closeEarly.ts` (`needed` = connected humans; `open` = day phase and the 15 s gate passed; `hint`
+  `'soldOut'` = menu on, nothing makeable; `'empty'` = no customer, no rogue, and nothing on the menu or the queue
+  empty for 10 s; `'soldOut'` wins). `enterClosing(state: GameState): void`. `DayStats.closedEarly?: number`,
+  `soldOutWalkouts?: number`, `soldOutAt?: number`. `GameState.closeVotes?: PlayerId[]`, `emptySince?: number`.
+  `SimEventKind` gains `'closedEarly'` and `'walkout'`.
+  Snapshot 22 to 23 (`soldOutWalkouts ??= 0` on `today` and every `days[]` entry), protocol 25 to 26.
+- **Numbers (40 weeks, seed 1, humans 2, bots 1, skill 3, pace 3).** Baseline (main e276359) vs after:
+  smart mean cash 260.53 / score 276.53 / loss 26.4% / profit 97.5% -> 260.53 / 276.53 / 26.4% / 97.5%;
+  taste 274.88 / 288.19 / 28.1% / 100% -> 274.88 / 288.19 / 28.1% / 100%. Unchanged to the cent: the balance bots
+  never vote, and the policies never sell out with the menu on, so the new RNG draw never fires. Suite: 86 files / 596 tests
+  on the baseline, now 87 files / 621 tests.
+- **`emptySince`.** The queue-empty tick stamp is set on every day run (it feeds the `'empty'` hint), so the whole-state
+  JSON of a day differs from a pre-FB1 save; accepted, the rule is that the RNG stream is unchanged, and the golden
+  `rng` tests pin it against e503518.
+- **Needs UI.** A "close early" button for the HUD (the open flag and the vote count are in `closeEarlyState`; show
+  the hint as a nudge when `hint` is not null), and a sold-out sign or a "walked away" puff driven by the `walkout`
+  log entries. The README controls list gets a line once the button has a key.
+- **What to watch.** The bots never vote, so a solo run with two bots closes on the human's single vote, and a
+  full-bot tester never closes early (use the input directly). `emptySince` is a plain tick stamp: a pause or a
+  resync does not reset it. A sold-out board now consumes one `rngNext` per tick, so seeds replay differently
+  from before only on days that sold out with the menu on.
+
+## FB1 WP1-sim reflection
+
+- **What shipped (night side of FB1 work package 1, sim only).**
+  - A relaxed night: `settings.nightLengthSec === 0` never counts down. The doors open when every connected
+    human is ready, or when the 30 s last call runs out. The last call starts once more than half the
+    connected humans are ready (or at once when none is connected), and keeps running if the ready share drops.
+    Only connected humans count, so someone who readied and then left does not start it. A timed night is unchanged.
+  - `nightClock(state)` for the UI, and the default night is now 120 s (`ECONOMY`).
+  - `nightBrief(state)` in `src/sim/brief.ts`, with `dayClock`, `expectedUse` and `runOutFraction`. A restock
+    fix is left off an alert when the till cannot pay for it (the alert stays).
+  - `profitOf` moved into the sim (`src/sim/profit.ts`); `viewModels.ts` re-exports it.
+  - Save version 24 (migration 23 is a no-op; 22 is a placeholder owned by fb1-sim-day, replaced at rebase),
+    network protocol 27.
+- **Final shapes.**
+
+  ```
+  nightClock(state): {
+    mode: 'timed' | 'relaxed';          // relaxed when settings.nightLengthSec === 0
+    secondsLeft: number | null;         // ceil(phaseTicksLeft / TICK_RATE) when timed, null when relaxed
+    lastCallSecondsLeft: number | null; // ceil(lastCall / TICK_RATE) once a relaxed last call runs, else null
+    ready: PlayerId[];                  // connected humans who have readied up tonight
+    needed: number;                     // connected humans (the ready count that opens the shop)
+  }
+  type NightFix = DistributiveOmit<PlayerInput, 'playerId'>
+  interface NightAlert {
+    id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | signature
+    kind: 'cash' | 'stock' | 'soldOut' | 'spoil' | 'grow' | 'checkout' | 'rival' | 'signature';
+    severity: 'info' | 'warn' | 'danger';
+    text: string;
+    fix?: NightFix;   // restock fixes are left off when state.cash < restockCost(state, supply, packs)
+  }
+  nightBrief(state): { profit: number | null; headline: string; alerts: NightAlert[] }
+    // profit = profitOf(days.at(-1)) or null on the first night; alerts sorted danger, warn, info,
+    // then in the order cash, stock (pantry order), soldOut, spoil, grow, checkout, rival, signature.
+  dayClock(fraction: number): string                    // 0..1 -> "8:00 AM".."6:00 PM", ten-minute steps
+  expectedUse(state): Record<SupplyId, number>          // supplies a normal day should use
+  runOutFraction(state, supply): number | null          // have / expectedUse clamped 0..1, null when unused
+  ```
+
+  `GameState.lastCall?: number` (ticks left; absent = no last call). `DayStats` gains optional
+  `soldOutWalkouts?` and `soldOutAt?` (filled by Track A; until it lands the soldOut alert only fires from test setup).
+- **Checks.** 596 tests before this package, 630 after (87 files); `tsc` and `npm run build` clean.
+- **Balance, before and after** (40 weeks, seed 1, 2 humans + 1 bot, 150 s days). The balance script passes its own
+  30 s night to the sim, so the 120 s default and the relaxed night cannot move it; the numbers are identical, as intended.
+
+  | policy | mean cash | score | loss | profitable weeks |
+  | ------ | --------- | ----- | ---- | ---------------- |
+  | smart, before | 260.53 | 276.53 | 26.4% | 97.5% |
+  | smart, after  | 260.53 | 276.53 | 26.4% | 97.5% |
+  | taste, before | 274.88 | 288.19 | 28.1% | 100% |
+  | taste, after  | 274.88 | 288.19 | 28.1% | 100% |
+
+  Logs: `.superpowers/sdd/2026-10-29-fb1-sim/balance-B-smart.log` and `balance-B-taste.log`.
+- **Open questions for the UI lane.**
+  - The UI view models still show 0:00 on a relaxed night (`viewModels.ts` `clockFor(phaseTicksLeft)`, `live.ts`
+    `nightExtras.left`); they should read `nightClock`, and show ready as `ready.length / needed`.
+  - `src/ui/nightWarnings.ts` duplicates `expectedUse` (and the low-stock threshold) from `brief.ts`. Nothing pins the
+    two together; the night screen should move to `nightBrief` and delete its copy.
+  - Stored browser settings keep `nightLengthSec: 60` until the lobby offers a night-length choice (including 0 for relaxed).
+  - `viewModels.ts` now imports `profitOf` from the sim (re-export kept for old imports).
+  - Changing `nightLengthSec` from 0 to a timed value mid-night leaves `phaseTicksLeft` at 0 and opens the day at once;
+    only reachable if the UI exposes the setting during a night.
+## FB1 WP1 (UI lane): needs from Claude (sim lane)
+
+The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin adapters in
+`src/ui/viewModels.ts` (search `TODO(fb1 WP1-sim, Claude)`). When these land, swap the adapters:
+- **Relaxed nights:** `validate.ts` clamps `nightLengthSec` to 30..600, so the UI sends 600 s
+  for Relaxed (`RELAXED_FALLBACK_SEC`) and reads ≥600 back as Relaxed. Please accept
+  `nightLengthSec: 0` as "untimed, ends on ready-up", then flip `SIM_ACCEPTS_RELAXED` to true.
+- **Last call:** the UI shows "Last call m:ss" in the final 30 s (`LAST_CALL_SEC`) of a relaxed
+  night. Once the sim has a real last-call trigger (e.g. 30 s once most of the crew is ready),
+  expose it on state (e.g. `state.lastCallTicksLeft`) and `nightTimerVM` will read it.
+- **Default length:** `ECONOMY.nightLengthSec` is still 60. The UI default is 120 and a one-time
+  settings migration in `main.ts` (flag `cafetycoon.fb1.nightLength`) moves a stored 60 to
+  120. Please move the ECONOMY default to 120 too (and update `stores.test.ts`).
+- **nightBrief selector:** `nightBriefVM` builds the Tonight alerts (top 3, worst first) from
+  the existing night VM. If a sim-side `nightBrief(state)` lands, map it into `NightBriefVM`.
+- **Branch names:** a branch called `fb1` exists, so git can't create `fb1/...` refs (a
+  directory/file clash). UI branches use dashes: `fb1-ui-night`, `fb1-ui-tickets` (the sim
+  lane already does the same).
+- The planned sim shapes (`nightClock`, `state.lastCall`, `nightBrief` in the fb1 sim spec §3)
+  fit these adapters: on merge, `nightTimerVM` reads `nightClock().mode`/`lastCallSecondsLeft`
+  and `nightBriefVM` maps `nightBrief().alerts`.
+- **Check only:** a kerbside stand should never list a latte. `unlockedDrinks` already filters
+  by `canMake` for non-café tiers, so this is probably fine; worth a quick test in the sim lane.
+
 ## main.ts hook-ins (phase 2)
 
 Telemetry hook-ins in `src/main.ts` (slice 7); the UI agent should expect these when merging the title wiring.
