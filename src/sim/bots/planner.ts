@@ -19,6 +19,10 @@
  *   planNight(state): Advice[]                                   // priority desc, then id asc
  *   crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots
  *
+ * Opening night is for stocking up: grow, checkout and equip advice wait for a finished day (as
+ * `nightBrief` does). A drink with no station is only taken off the board when nothing in this plan
+ * or in `state.equipment` could bring that station back (no grow advice, the kind not unplaced).
+ *
  * Money: one day's rent is held back, and every advice that spends (restock, grow, checkout, equip,
  * scout) draws on what is left in priority order, so applying the whole list never overdraws the
  * till or eats tomorrow's rent.
@@ -287,7 +291,7 @@ function rivalAdvice(state: GameState): Advice[] {
 
 function growAdvice(state: GameState, budget: Budget): Advice[] {
   const tier = nextTier(state);
-  if (!tier) return [];
+  if (!tier || state.days.length === 0) return [];
   const cost = TIERS[tier].cost;
   if (budget.left < cost) return [];
   budget.left = round2(budget.left - cost);
@@ -296,7 +300,7 @@ function growAdvice(state: GameState, budget: Budget): Advice[] {
 
 function checkoutAdvice(state: GameState, budget: Budget): Advice[] {
   const co = nextCheckout(state);
-  if (!co) return [];
+  if (!co || state.days.length === 0) return [];
   const cost = CHECKOUT[co].cost;
   if (budget.left < cost) return [];
   budget.left = round2(budget.left - cost);
@@ -339,8 +343,9 @@ function freeableSlot(state: GameState, slots: (StationKind | null)[]): boolean 
 }
 
 function equipAdvice(state: GameState, budget: Budget, slotTaken: boolean): Advice[] {
-  const last = state.days.at(-1);
-  if (!last || last.lost <= last.served) return [];
+  if (state.days.length === 0) return [];
+  const last = state.days.at(-1)!;
+  if (last.lost <= last.served) return [];
   const slots = slotsOf(state);
   const owned = slots.filter((k) => k === 'espresso').length + (state.equipment ?? []).filter((k) => k === 'espresso').length;
   if (owned !== 1) return [];
@@ -367,15 +372,23 @@ function scoutAdvice(state: GameState, budget: Budget): Advice[] {
   return [{ id: 'scout', kind: 'scout', text: `Scout ${RIVAL.name} for ${dollars(RIVAL.scoutCost)}`, input: { kind: 'scout' }, priority: PLAN_PRIORITY.scout }];
 }
 
-/** Switch off drinks the bar has no station for, as long as more than one drink stays on. */
-function menuAdvice(state: GameState): Advice[] {
+/**
+ * Switch off drinks the bar has no station for, as long as more than one drink stays on. Not while the
+ * plan grows (the new tier may bring the station) or a missing station sits unplaced in equipment (the
+ * slot advice, or the crew, can put it back).
+ */
+function menuAdvice(state: GameState, growing: boolean): Advice[] {
+  if (growing) return [];
+  const unplaced = state.equipment ?? [];
   const on = (state.unlocked ?? BASE_DRINKS).filter((d) => state.menu[d]);
   let stays = on.length;
   const advice: Advice[] = [];
   for (const d of on) {
     if (reasonOff(state, d) !== 'noStation' || stays - 1 <= 1) continue;
+    const absent = DRINK_STATIONS[d].filter((k) => !state.stations.some((s) => s.kind === k));
+    if (absent.some((k) => unplaced.includes(k))) continue;
     stays -= 1;
-    const missing = DRINK_STATIONS[d].find((k) => !state.stations.some((s) => s.kind === k));
+    const missing = absent[0];
     advice.push({
       id: `menu:${d}`,
       kind: 'menu',
@@ -408,7 +421,7 @@ export function planNight(state: GameState): Advice[] {
     ...signatureAdvice(state),
     ...equip,
     ...scout,
-    ...menuAdvice(state),
+    ...menuAdvice(state, grow.length > 0),
   ];
   return all.sort((a, b) => b.priority - a.priority || byId(a, b));
 }

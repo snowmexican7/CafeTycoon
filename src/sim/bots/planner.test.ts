@@ -269,6 +269,8 @@ describe('planNight: grow and checkout', () => {
   it('grows when cash covers the cost plus rent', () => {
     const s = run('stand');
     s.supplies = { ...FULL };
+    s.day = 2;
+    s.days.push(dayStats({ rent: 10 }));
     s.cash = TIERS.cart.cost + rentForDay(s);
     expect(find(s, 'grow:cart')).toMatchObject({ kind: 'grow', input: { kind: 'grow', tier: 'cart' }, priority: PLAN_PRIORITY.grow });
     expect(planNight(s).some((a) => a.kind === 'checkout')).toBe(false);
@@ -278,6 +280,9 @@ describe('planNight: grow and checkout', () => {
 
   it('otherwise buys the next checkout when affordable', () => {
     const s = quiet();
+    s.day = 2;
+    s.days.push(dayStats());
+    s.rival = { scouted: 2 };
     s.cash = CHECKOUT.kiosk.cost + rentForDay(s);
     expect(find(s, 'checkout:kiosk')).toMatchObject({ input: { kind: 'checkout', checkout: 'kiosk' }, priority: PLAN_PRIORITY.checkout });
     s.cash -= 0.01;
@@ -285,6 +290,22 @@ describe('planNight: grow and checkout', () => {
     s.checkout = { owned: ['register', 'kiosk', 'squarely'], active: 'squarely' };
     s.cash = 500;
     expect(planNight(s).some((a) => a.kind === 'checkout')).toBe(false);
+  });
+});
+
+describe('planNight: opening night', () => {
+  it('no grow, checkout or equip advice before a finished day', () => {
+    const s = run('stand');
+    s.supplies = { ...FULL };
+    s.cash = 500;
+    s.equipment = [];
+    const kinds = planNight(s).map((a) => a.kind);
+    expect(kinds).not.toContain('grow');
+    expect(kinds).not.toContain('checkout');
+    expect(kinds).not.toContain('equip');
+    s.days.push(dayStats({ rent: 10, served: 5, lost: 9 }));
+    s.day = 2;
+    expect(planNight(s).map((a) => a.kind)).toContain('grow');
   });
 });
 
@@ -338,6 +359,40 @@ describe('planNight: back bar', () => {
     expect(find(s, 'menu:latte')).toMatchObject({ kind: 'menu', input: { kind: 'menu', drink: 'latte', on: false }, priority: PLAN_PRIORITY.menu });
     s.menu.coldBrew = false;
     expect(find(s, 'menu:latte')).toBeUndefined();
+  });
+
+  it('keeps a drink on when its missing station is unplaced: the slot advice brings it back', () => {
+    const s = run('stand');
+    s.supplies = { ...FULL };
+    s.cash = rentForDay(s);
+    s.slots = ['grinder', 'espresso', null, 'trash'];
+    s.equipment = ['steamer', 'coldBrewTap'];
+    s.stations = s.stations.filter((x) => x.kind !== 'coldBrewTap');
+    const plan = planNight(s);
+    expect(plan.find((a) => a.kind === 'slot')?.input).toEqual({ kind: 'slot', index: 2, station: 'steamer' });
+    expect(plan.some((a) => a.kind === 'menu')).toBe(false);
+    // The same stand with nothing unplaced: the board is made honest as before.
+    s.equipment = [];
+    expect(planNight(s).filter((a) => a.kind === 'menu').map((a) => a.id)).toEqual(['menu:latte']);
+  });
+
+  it('keeps it on when the steamer is unplaced on a full stand', () => {
+    const s = run('stand');
+    s.supplies = { ...FULL };
+    s.cash = rentForDay(s);
+    s.equipment = ['steamer'];
+    expect(planNight(s).some((a) => a.kind === 'menu')).toBe(false);
+  });
+
+  it('keeps it on while the plan grows to a tier that may add the station', () => {
+    const s = run('stand');
+    s.supplies = { ...FULL };
+    s.day = 2;
+    s.days.push(dayStats({ rent: 10 }));
+    s.cash = TIERS.cart.cost + rentForDay(s);
+    const plan = planNight(s);
+    expect(plan.some((a) => a.kind === 'grow')).toBe(true);
+    expect(plan.some((a) => a.kind === 'menu')).toBe(false);
   });
 });
 
