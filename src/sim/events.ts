@@ -5,7 +5,7 @@ import { emitLog } from './log';
 import { tally } from './tally';
 import { rngNext } from './rng';
 import { computeModifiers } from './effects';
-import type { ActiveEvent, EventKind, GameState } from './types';
+import type { ActiveEvent, EventKind, GameState, RadioReport } from './types';
 
 export const EVENT_LABELS: Record<EventKind, string> = {
   rushHour: 'Rush hour',
@@ -31,10 +31,10 @@ function durationTicks(kind: EventKind): number {
   }
 }
 
-/** Draw today's events (day 2 onward): a count, then a kind and a start tick for each. */
-export function scheduleEvents(state: GameState): GameState {
-  state.eventSchedule = [];
-  if (state.day < 2) return state;
+/** Draw a day's events (day 2 onward): a count, then a kind and an offset from opening for each. */
+export function drawEvents(state: GameState): RadioReport['events'] {
+  const out: RadioReport['events'] = [];
+  if (state.day < 2) return out;
   const [w0, w1] = ECONOMY.events.scheduleWeights;
   const r = rngNext(state);
   const count = r < w0 ? 0 : r < w0 + w1 ? 1 : 2;
@@ -55,9 +55,24 @@ export function scheduleEvents(state: GameState): GameState {
       }
     }
     const kind = remaining.splice(at, 1)[0];
-    const startTick = state.tick + Math.round(dayTicks * (windowStart + rngNext(state) * (windowEnd - windowStart)));
-    state.eventSchedule.push({ kind, startTick });
+    out.push({ kind, offset: Math.round(dayTicks * (windowStart + rngNext(state) * (windowEnd - windowStart))) });
   }
+  return out;
+}
+
+/** Weather radio (B6): draw tomorrow's events tonight so the paper can report them. Idempotent per night. */
+export function tuneRadio(state: GameState): GameState {
+  if (state.phase !== 'night' || state.radio?.day === state.day) return state;
+  state.radio = { day: state.day, events: drawEvents(state) };
+  return state;
+}
+
+/** Schedule today's events: the radio's report if one was heard last night, else a fresh draw. */
+export function scheduleEvents(state: GameState): GameState {
+  const heard = state.radio?.day === state.day ? state.radio.events : null;
+  state.radio = undefined;
+  const events = heard ?? drawEvents(state);
+  state.eventSchedule = events.map((e) => ({ kind: e.kind, startTick: state.tick + e.offset }));
   state.eventSchedule.sort((a, b) => a.startTick - b.startTick);
   return state;
 }

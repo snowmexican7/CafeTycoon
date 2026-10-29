@@ -1,6 +1,6 @@
 import { ECONOMY } from '../data/economy';
 import { loseCustomer } from './customers';
-import { rentForDay } from './effects';
+import { computeModifiers, rentForDay } from './effects';
 import { eventActive, judgeInspection } from './events';
 import { emitLog } from './log';
 import { startNight } from './run';
@@ -49,7 +49,7 @@ export function finishDay(state: GameState): GameState {
   const r = ECONOMY.reputation;
   const bonus = state.today.inspection === 'pass' ? ECONOMY.events.inspector.reputationBonus : 0;
   const rogueHit = ECONOMY.rogue.repHit * (state.today.rogues ?? 0);
-  const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus - rogueHit;
+  const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus - rogueHit + computeModifiers(state).quality;
   state.reputation = round2(Math.min(r.max, Math.max(r.min, next)));
 
   state.days.push(state.today);

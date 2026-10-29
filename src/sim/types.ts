@@ -171,7 +171,24 @@ export type Effect =
   /** Spots in the queue (campers take tables, so the line fills sooner). */
   | { kind: 'queue'; add: number }
   /** Menu variety (B5): put a drink on the menu for good, from the night it is bought. */
-  | { kind: 'unlock'; drink: DrinkId };
+  | { kind: 'unlock'; drink: DrinkId }
+  /** Upgrade cards (B6): stars added to (or taken off) the rating at each closing. */
+  | { kind: 'quality'; add: number }
+  /** A temp barista (a rookie bot) clocks in for the day, if a spot is free. */
+  | { kind: 'temp' }
+  /** Weather radio: tomorrow's events are drawn at night and shown on the paper. */
+  | { kind: 'reveal' };
+
+/** Upgrade paths (B6): faster hands, better cups, more people through the door. */
+export type CardPath = 'speed' | 'quality' | 'reach';
+/** Card sets (B6): owning two cards of a set switches on its bonus (src/data/cardSets.ts). */
+export type CardSetId = 'espressoBar' | 'milkLab' | 'coldBar' | 'cosyCorner' | 'kerbAppeal' | 'craft' | 'crewKit' | 'fullMenu';
+
+/** Tomorrow's events as heard on the weather radio: kinds and ticks after opening. */
+export interface RadioReport {
+  day: number;
+  events: { kind: EventKind; offset: number }[];
+}
 
 export interface CatalogueItem {
   id: string;
@@ -184,6 +201,12 @@ export interface CatalogueItem {
   requires?: string[];
   excludes?: string[];
   flavor: string;
+  /** B6: which upgrade path the card belongs to. */
+  path: CardPath;
+  /** B6: owning two of a set switches on the set bonus (permanent cards only). */
+  set?: CardSetId;
+  /** B6: a spicy card has a real downside next to its upside. */
+  spicy?: boolean;
 }
 
 export interface OwnedItem {
@@ -280,11 +303,16 @@ export interface GameState {
   unlocked: DrinkId[];
   /** Drinks that joined the menu tonight (day unlocks and cards), for the night banner. */
   freshDrinks?: DrinkId[];
+  /** Re-rolls of the hand tonight (B6); each costs more. Absent = 0. */
+  rerolls?: number;
+  /** Weather radio (B6): tomorrow's events, drawn at night. */
+  radio?: RadioReport;
 }
 
 export type PlayerInput =
   | { kind: 'move'; playerId: PlayerId; x: number; y: number; interact: boolean }
   | { kind: 'buy'; playerId: PlayerId; itemId: string }
+  | { kind: 'reroll'; playerId: PlayerId }
   | { kind: 'restock'; playerId: PlayerId; supply: SupplyId; packs: number }
   | { kind: 'ready'; playerId: PlayerId }
   | { kind: 'weekEnd'; playerId: PlayerId; choice: 'stop' | 'continue' }

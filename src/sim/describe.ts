@@ -63,6 +63,12 @@ function describeOne(e: Effect): string {
       return `${e.add > 0 ? '+' : '−'}${Math.abs(e.add)} queue spot${Math.abs(e.add) === 1 ? '' : 's'}`;
     case 'unlock':
       return `adds ${DRINK_NAMES[e.drink]} to the menu`;
+    case 'quality':
+      return `${e.add >= 0 ? '+' : '−'}${Math.abs(e.add).toFixed(2)}★ rating a day`;
+    case 'temp':
+      return 'a temp barista for the day';
+    case 'reveal':
+      return "hear tomorrow's events each night";
   }
 }
 
