@@ -61,6 +61,10 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
     }
     case 'drop':
       return { kind: 'drop', playerId: input.playerId };
+    case 'secret': {
+      const code = typeof input.code === 'string' ? input.code.trim().slice(0, 16) : '';
+      return code ? { kind: 'secret', playerId: input.playerId, code } : null;
+    }
     default:
       return null;
   }

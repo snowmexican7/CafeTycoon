@@ -8,6 +8,7 @@ import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
 import { BASE_DRINKS, RECIPES, type Recipe, type RecipeStation } from '../data/drinks';
+import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
 import type { GameState, ItemKind, PlayerId, StationKind, SupplyId } from './types';
 
 /** Each working station's first (classic) recipe: what it takes, gives back and uses up. See RECIPES for all of them. */
@@ -49,6 +50,7 @@ export function stepStations(state: GameState): GameState {
       else if (s.busyTicksLeft === 0 && isRecipeStation(s.kind)) {
         s.output = s.making ?? STATION_RECIPES[s.kind].gives;
         s.making = null;
+        if (s.output) onStationFinished(state, s, s.output);
       }
     }
   }
@@ -63,12 +65,15 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     mopInteract(state, player);
     return state;
   }
+  // B8: pet the cat / dump a burnt shot before normal station use.
+  if (tryShooCat(state, playerId) || tryClearSmoke(state, playerId)) return state;
   const station = nearestStation(state, player.pos);
   if (!station) {
     if (player.holding === null) mopInteract(state, player);
     return state;
   }
   if (station.occupiedBy !== null) return state;
+  if (catBlocking(state, station.id)) return state;
 
   if (station.kind === 'trash') {
     if (player.holding !== null && player.holding !== 'grounds') {
