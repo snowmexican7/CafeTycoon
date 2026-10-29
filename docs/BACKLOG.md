@@ -1011,3 +1011,38 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
   - Mobile (390 wide): the night tabs become a narrow side rail and the menu board is squeezed
     into it. That predates B7, but the signature card makes it worse. It needs a stacked mobile
     night layout.
+
+## P3 Block 08 reflection (taste seasons)
+
+- **What shipped.**
+  - `taste.ts`: `seasonOf(day)` (3-day seasons) and `seasonStarts(day)`. `comboStars` now takes a
+    `day` (default 1, so season 0 and every B6 test are unchanged).
+  - The season ladder is built from the base ladder. For each season k it swaps the reigning 5★
+    with a hash-chosen 4★ or 3★. Everything is a pure integer hash with no RNG, so peers agree
+    without syncing it and runs without twists are untouched.
+  - `risingTwist` names the new hit. `knownStale` compares `GameState.tasteSeason[key]` (absent
+    means season 0) with tomorrow's season.
+  - On serve, a stale entry is re-learned: new stars and season, and it's listed in
+    `combosFound` again.
+  - UI: a grey `~` on stale chips with a "last season" tooltip, "(last season)" in the signature
+    twist picker, a taste column in the paper (two nights out, then the night before with one
+    drink's riser named), and an updated explainer line.
+  - Save v17 (no-op migration: old entries read as season 0, which is correct), protocol v20.
+- **Checks.**
+  - Four new tests (565 total): the season maths; the ladder invariants over seeds (a
+    permutation each season, the 5★ moves every season, the riser is named correctly, the flop
+    stays put, day 1 equals B6, the old hit only slips to 3–4★); stale marking and re-learning; the
+    paper line timing.
+  - Default balance is unchanged at 291.28 / 25.4%.
+  - The taste bot, which keeps a stale 4–5★ until it re-learns, drops from 294.35 / score 334.35 (B7)
+    to 287.30 / 321.80, with loss 28.8%. Seasons cost a complacent crew about 12 score points
+    over a week, and the layer still edges the smart bot (319.53). That's the size of nudge
+    intended: worth reading the paper, not a punishment.
+- **Deferred / watch.**
+  - The bot doesn't read the paper. A smarter planner would switch to the named riser on turn
+    night.
+  - Seasons are fixed at 3 days. A "short seasons" difficulty or event card ("Food blogger: tastes
+    turn tonight") would be easy to add.
+  - The signature isn't warned specifically when its combo goes stale. A receipt line ("Your
+    signature tasted ★★★ this season") would make the cause and effect clearer. B9's rival
+    pressure makes this more relevant.

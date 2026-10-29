@@ -75,6 +75,13 @@ Nothing yet.
   Changing the base or twist makes it a new recipe; Retire takes it off the board. The 1★ twist
   risk is sharper: a flop now tips ×0.55 (was ×0.7), and a 5★ hit ×1.45 (was ×1.4).
   Save v16 (migration), protocol v19.
+- **Taste seasons (P3 B8).** Tastes drift every three days (days 1–3, 4–6, 7–9). When a new season
+  starts, each drink's 5★ twist slips to 4★ or 3★ and a former 4★ or 3★ twist becomes the new hit;
+  the 1★ flop stays put, so a run is never a full reshuffle. The paper's new taste column warns two
+  nights ahead ("Tastes turn the day after tomorrow") and, the night before, names one drink's rising
+  twist. Notebook stars from an earlier season show as ~★★★★★ in grey (and "(last season)" in the
+  signature picker) until someone serves that combo again, which re-learns it and lists it on the
+  receipt. Save v17 (migration), protocol v20.
 
 ## 2.0.1 — 2026-10-29
 
