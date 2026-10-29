@@ -122,28 +122,80 @@
       "id": 3,
       "name": "Real-life growth",
       "tagline": "stand → cart → café",
-      "status": "next",
+      "status": "now",
       "suggested": false,
       "aim": "A progression that feels like running a real café, with saves that carry over.",
       "goals": [
         {
-          "text": "Upgrade path: stand → cart → café",
-          "state": "todo"
+          "text": "Barista roles: Chef, Creator, Host, Manager",
+          "state": "done"
         },
         {
-          "text": "Checkout path: register → kiosk → Squarely tap terminal",
-          "state": "todo"
+          "text": "Per-item pricing with demand that reacts to price",
+          "state": "done"
+        },
+        {
+          "text": "Regulars with favourite drinks",
+          "state": "done"
+        },
+        {
+          "text": "Supplies that spoil (milk, pastries)",
+          "state": "done"
+        },
+        {
+          "text": "Recipe-accuracy stars",
+          "state": "done"
+        },
+        {
+          "text": "Hidden taste map: discover star combos by serving",
+          "state": "done"
+        },
+        {
+          "text": "Signature drink designer",
+          "state": "done"
+        },
+        {
+          "text": "Taste seasons that drift every three days",
+          "state": "done"
+        },
+        {
+          "text": "Rival Starbuck$: scout them; they copy and undercut you",
+          "state": "done"
         },
         {
           "text": "Parody ads tab (Palm Book and friends)",
-          "state": "todo"
+          "state": "done"
         },
         {
           "text": "\"Pitch an idea\" with a scripted keyword judge (no AI)",
+          "state": "done"
+        },
+        {
+          "text": "Checkout path: register → kiosk → Squarely tap terminal",
+          "state": "done"
+        },
+        {
+          "text": "Upgrade path: stand → cart → café",
+          "state": "done"
+        },
+        {
+          "text": "Feedback round 1: readable nights, longer or relaxed nights, bigger order tickets",
+          "state": "doing"
+        },
+        {
+          "text": "Feedback round 1: close the day early, sold-out walk-ups, rush hour fix",
           "state": "todo"
         },
         {
-          "text": "Layout editor: move stations between nights",
+          "text": "Station slots: swap stations, extra grinders and espresso machines (replaces the layout editor)",
+          "state": "todo"
+        },
+        {
+          "text": "Bots that use the new systems (hurried bots, night tips)",
+          "state": "todo"
+        },
+        {
+          "text": "Bots become hired staff with wages",
           "state": "todo"
         },
         {
@@ -291,6 +343,14 @@
     {
       "date": "2026-10-29",
       "text": "Version 2.0.0: Phase 2 \"Busy season\" is done"
+    },
+    {
+      "date": "2026-10-29",
+      "text": "Version 2.1.0: Phase 3 preview is live (roles, pricing, taste map, signature, rival, ads, pitch, checkout, growth)"
+    },
+    {
+      "date": "2026-10-29",
+      "text": "Feedback round 1 planned from Kennedy's first Phase 3 playtest"
     }
   ]
 }

@@ -40,10 +40,24 @@ needs people: a real game night (2 players plus 1 bot finishing a week, and the 
 second) and the analysis agent reading that night's telemetry file. Both carry over to the next
 game night. Phase 1's "first game night" goal carries over the same way.
 
-### Phase 3: Real-life growth *(next)*
+### Phase 3: Real-life growth *(in progress, v2.1.0 preview live)*
 - **Why here:** saves that carry across nights are where bugs start to matter.
 - **Goals:** upgrade path stand → cart → café · checkout path register → kiosk → "Squarely" tap terminal · parody ads tab (Palm Book and friends) · "Pitch an idea", scripted with a keyword judge and no AI · a layout editor to move stations between nights · saves and unlocks carried between runs.
 - **Done when:** a run feels like "we started tiny and built something", every night tab that shows as locked today is live, and saves survive a refresh and a new game night with no lost progress.
+
+**Phase 3 status (2026-10-29, v2.1.0 "Phase 3 preview").** Blocks B1–B13 shipped and are live:
+barista roles, per-item pricing, regulars with favourites, supplies that spoil, recipe accuracy,
+the hidden taste map, the signature drink, taste seasons, the rival Starbuck$ (scouting, copying,
+undercutting), parody ads, "Pitch an idea", the checkout path and the growth path. Still to come:
+- **Feedback round 1** (from Kennedy's first playtest; plan in `docs/FEEDBACK_PLAN_1.md`, branch
+  `fb1`): a readable night screen (fewer tabs, big drink cards, larger type, longer or relaxed
+  nights), bigger order tickets, close the day early, sold-out walk-ups (v2.2.0); station slots
+  with extra grinders and espresso machines, replacing the layout editor, and bots that use the new
+  systems (v2.3.0).
+- **B15** bots become hired staff with wages · **B16** saves and unlocks carried between runs ·
+  **B17** integration and **v3.0.0**.
+- Moved: seasons across game nights and rival escalation to Phase 4; the mobile night layout to
+  Phase 6.
 
 ### Phase 4: Franchise & rivals
 - **Why here:** big new systems, but still deterministic code we can test.
