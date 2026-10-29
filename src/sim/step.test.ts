@@ -242,3 +242,45 @@ describe('closing', () => {
     expect(t.players[0]).toMatchObject({ tool: null, stunTicksLeft: 0, cleaningTicksLeft: 0, cleaningMess: null, dropQueued: false });
   });
 });
+
+describe('floor day', () => {
+  it('a floor day with drops, a slip and a mop plan is deterministic and JSON-safe', () => {
+    /** 1 human + 1 bot, traffic on: p1 drops a latte, paces a row of spills for 600 ticks pressing R now and then, then stands. */
+    const floorDay = (seed: number) => {
+      let s = startDay(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 600 } }));
+      const p1 = s.players.find((p) => p.id === 'p1')!;
+      p1.pos = { x: 3, y: 4 };
+      p1.tile = { x: 3, y: 4 };
+      p1.holding = 'latte';
+      s.menu.coldBrew = false; // no pass prep: an idle bot turns to the floor before the first customer
+      for (let x = 4; x <= 9; x++) s.messes.push({ id: s.nextMessId++, kind: 'spill', x, y: 4, amount: 1 });
+      s = step(s, [{ kind: 'drop', playerId: 'p1' }]);
+      const seen = { drop: false, slip: false, mop: false };
+      for (let i = 0; i < 1200; i++) {
+        const inputs: PlayerInput[] = [];
+        if (i < 600 && i % 120 === 0) inputs.push({ kind: 'move', playerId: 'p1', x: i % 240 === 0 ? 1 : -1, y: 0, interact: false });
+        if (i === 600) inputs.push({ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: false });
+        if (i % 90 === 45) inputs.push({ kind: 'drop', playerId: 'p1' });
+        s = step(s, inputs);
+        for (const e of s.log) {
+          if (e.kind === 'drop' && e.data.item === 'latte') seen.drop = true;
+          if (e.kind === 'slip') seen.slip = true;
+        }
+        if (s.players.some((p) => p.bot?.plan.some((st) => st.kind === 'floor'))) seen.mop = true;
+      }
+      return { s, seen };
+    };
+    const a = floorDay(5);
+    expect(a.seen).toEqual({ drop: true, slip: true, mop: true });
+    expect(floorDay(5).s).toEqual(a.s);
+    const round = JSON.parse(JSON.stringify(a.s)) as GameState;
+    let x = a.s;
+    let y = round;
+    for (let i = 0; i < 300; i++) {
+      x = step(x, []);
+      y = step(y, []);
+    }
+    expect(y).toEqual(x);
+    expect(floorDay(6).s).not.toEqual(a.s);
+  });
+});

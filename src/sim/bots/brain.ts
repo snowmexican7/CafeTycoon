@@ -8,12 +8,14 @@ import { emitLog } from '../log';
 import { rngInt, rngNext } from '../rng';
 import { STATION_RECIPES } from '../stations';
 import { tally } from '../tally';
-import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Player, Station, StationKind, Vec2 } from '../types';
-import { findPath, idleNode, nodeOf, targetNodes } from './path';
-import { spillTiles } from '../floor';
+import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Mess, Player, Station, StationKind, Vec2 } from '../types';
+import { byDistance, findPath, idleNode, nodeOf, targetNodes, walkableNodes } from './path';
+import { spillHeld, spillTiles } from '../floor';
+import { nearestMess, returnMop } from '../mop';
 import { rogueNear, rogueTiles } from '../rogue';
 
 const BOTS = ECONOMY.bots;
+const MESS = ECONOMY.mess;
 
 type RecipeKind = keyof typeof STATION_RECIPES;
 
@@ -137,12 +139,54 @@ function shouldPrep(state: GameState, p: Player): boolean {
   );
 }
 
+/**
+ * Where a bot stands to clean `mess`: the walkable node within interact range of it with no spill on
+ * it, nearest `from` (ties lower y, then x); else the mess tile itself.
+ */
+export function cleanNode(state: GameState, mess: Mess, from: Vec2): Vec2 {
+  const wet = new Set(spillTiles(state).map((t) => `${t.x},${t.y}`));
+  const dry = walkableNodes(state).filter(
+    (n) => dist(n, mess) <= ECONOMY.interactRangeTiles && !wet.has(`${n.x},${n.y}`),
+  );
+  return byDistance(dry, from)[0] ?? { x: mess.x, y: mess.y };
+}
+
+/**
+ * Take the mop, clean up to botMopMax messes (greedy: the nearest to the previous node next, ties to
+ * the lower `messes` index), then put the mop back from the last clean node.
+ */
+export function mopPlan(state: GameState, _p: Player): BotStep[] {
+  let at = nodeOf(state, state.mop.pos);
+  const plan: BotStep[] = [{ kind: 'floor', node: at, action: 'takeMop' }];
+  const left = [...state.messes];
+  for (let i = 0; i < MESS.botMopMax && left.length > 0; i++) {
+    let best = 0;
+    for (let j = 1; j < left.length; j++) if (dist(left[j], at) < dist(left[best], at)) best = j;
+    const [mess] = left.splice(best, 1);
+    at = cleanNode(state, mess, at);
+    plan.push({ kind: 'floor', node: at, action: 'clean' });
+  }
+  plan.push({ kind: 'floor', node: at, action: 'returnMop' });
+  return plan;
+}
+
+/** The mop is free, the floor is dirty enough, and no other bot is already on a mop plan. */
+function shouldMop(state: GameState, p: Player): boolean {
+  return (
+    state.mop.heldBy === null &&
+    state.messes.length > 0 &&
+    (state.cleanliness < MESS.botMopBelow || state.messes.length >= MESS.botMopMesses) &&
+    !state.players.some((o) => o !== p && o.bot?.plan.some((st) => st.kind === 'floor'))
+  );
+}
+
 /** Pick the next job. First match wins. A thinking bot has nothing in progress, so it starts unclaimed. */
 export function think(state: GameState, p: Player): BotStep[] {
   const b = p.bot!;
   b.claim = null;
   b.claimDrink = null;
-  // 0. Deal with whatever is in hand.
+  // 0. Deal with whatever is in hand (the mop goes back first: it fills the hands).
+  if (p.tool === 'mop') return [{ kind: 'floor', node: nodeOf(state, p.pos), action: 'returnMop' }];
   if (p.holding === 'grounds') return [use('trash', 'trash')];
   if (isDrink(p.holding)) {
     const drink = p.holding;
@@ -165,6 +209,8 @@ export function think(state: GameState, p: Player): BotStep[] {
   }
   // 3. Prep cold brew for the pass.
   if (shouldPrep(state, p)) return chainFor('coldBrew', 'put');
+  // 3b. Nothing waiting: mop a dirty floor.
+  if (shouldMop(state, p)) return mopPlan(state, p);
   // 4. Wait near the counter.
   return [{ kind: 'idle', node: idleNode(state, p) }];
 }
@@ -347,9 +393,28 @@ function planPath(state: GameState, p: Player, node: Vec2): Vec2[] | null {
   return findPath(state, p.pos, node);
 }
 
-/** Track A: a floor step on arrival (take the mop, clean, return it). Until then it just pops. */
-export function stepFloor(_state: GameState, p: Player, _step: Extract<BotStep, { kind: 'floor' }>): void {
-  pop(p.bot!);
+/**
+ * A floor step on arrival. takeMop: press "use" when the mop is free, in range and the hands are
+ * empty, else drop the plan. clean: press "use" when a mess is in range (with the mop in hand).
+ * returnMop: press R (with the mop in hand). clean and returnMop pop either way.
+ */
+export function stepFloor(state: GameState, p: Player, step: Extract<BotStep, { kind: 'floor' }>): void {
+  const b = p.bot!;
+  switch (step.action) {
+    case 'takeMop': {
+      const free = state.mop.heldBy === null;
+      const inRange = dist(p.pos, state.mop.pos) <= ECONOMY.interactRangeTiles;
+      if (free && inRange && p.holding === null && p.tool === null) return execute(p);
+      return setPlan(b, []);
+    }
+    case 'clean':
+      // Without the mop, "use" could take a station's output instead.
+      if (p.tool === 'mop' && nearestMess(state, p.pos) !== null) p.interactQueued = true;
+      return pop(b);
+    case 'returnMop':
+      if (p.tool === 'mop') p.dropQueued = true; // with empty hands R does nothing else
+      return pop(b);
+  }
 }
 
 /** Head for `node` along a fresh A* path, one tile centre at a time. */
@@ -380,11 +445,23 @@ function stepBot(state: GameState, p: Player): void {
   if (b.noticeTicksLeft > 0) {
     b.noticeTicksLeft -= 1;
     if (b.noticeTicksLeft === 0) {
-      // Noticed the botched drink in hand: bin it, then remake the claimed order (if still on one).
+      // Noticed the botched drink in hand: half the time it hits the floor where the bot stands (not at
+      // the cap), else bin it; then remake the claimed order (if still on one).
       const remake = b.claimDrink && b.claim !== null ? chainFor(b.claimDrink, 'serve') : [];
-      setPlan(b, [use('trash', 'trash'), ...remake]);
+      const spilled = isDrink(p.holding) && rngNext(state) < MESS.botSpillChance && spillHeld(state, p);
+      setPlan(b, spilled ? remake : [use('trash', 'trash'), ...remake]);
     }
   }
+  // Orders come first: an uncovered order interrupts any floor step, a clean in progress included.
+  if ((b.plan[0]?.kind === 'floor' || p.cleaningTicksLeft > 0) && uncoveredOrder(state, p) !== null) {
+    p.cleaningTicksLeft = 0;
+    p.cleaningMess = null;
+    if (p.tool === 'mop') returnMop(state, p);
+    setPlan(b, []);
+    b.thinkTicksLeft = 0; // think this tick: it claims the order
+  }
+  // Cleaning: keep still until the clean is done (moving would cancel it).
+  if (p.cleaningTicksLeft > 0) return;
   if (b.reactionTicksLeft > 0) {
     b.reactionTicksLeft -= 1;
     return;
@@ -399,7 +476,7 @@ function stepBot(state: GameState, p: Player): void {
     if (b.thinkTicksLeft <= 0) {
       b.thinkTicksLeft = BOTS.thinkTicks;
       const next = think(state, p);
-      if (next.length > 0 && next[0].kind === 'use') {
+      if (next.length > 0 && next[0].kind !== 'idle') {
         setPlan(b, next);
         b.reactionTicksLeft = reactionDelay(state, b);
         if (b.reactionTicksLeft > 0) return; // a moment to react before moving off
