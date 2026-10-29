@@ -17,6 +17,7 @@ import { validateInput } from './validate';
 import { isBotId } from './bots/roster';
 import { afterBotInteract, stepBots } from './bots/brain';
 import { drinkEspresso, stepEspresso } from './espresso';
+import { stepEggs, unlockSecret } from './eggs';
 import { clearFloorFields, floorFields, stepStuns, trackTiles } from './tiles';
 import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
@@ -80,6 +81,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       if (p && (s.phase === 'day' || s.phase === 'closing')) p.dropQueued = true;
       break;
     }
+    case 'secret':
+      if (s.phase === 'day' || s.phase === 'closing' || s.phase === 'night') unlockSecret(s, input.playerId, input.code);
+      break;
     case 'buy':
     case 'restock':
     case 'reroll':
@@ -136,6 +140,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   if (doorsOpen) spawnCustomers(s);
   stepCustomers(s);
   stepRogue(s);
+  stepEggs(s);
   if (doorsOpen) tickChallenges(s);
   s.phaseTicksLeft -= 1;
   if (s.phaseTicksLeft > 0) return;

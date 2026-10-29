@@ -2,6 +2,7 @@ import { secondsToTicks } from './constants';
 import { ECONOMY } from '../data/economy';
 import { emitLog } from './log';
 import { serveCustomer, serveTarget } from './customers';
+import { tryCorrectName, tryKickCamper } from './eggs';
 import { tally } from './tally';
 import type { GameState, PlayerId } from './types';
 
@@ -10,10 +11,15 @@ export function counterInteract(state: GameState, playerId: PlayerId): GameState
   const player = state.players.find((p) => p.id === playerId);
   if (!player || player.holding === 'grounds') return state;
 
+  // B8: empty hands at the counter can politely kick a Wi-Fi camper or fix a name mix-up.
+  if (player.holding === null) {
+    if (tryKickCamper(state, playerId) || tryCorrectName(state, playerId)) return state;
+  }
+
   if (player.holding !== null) {
     const drink = player.holding;
-    if (state.customers.some((c) => c.drink === drink)) {
-      serveCustomer(state, mostImpatient(state, (c) => c.drink === drink), drink, playerId);
+    if (state.customers.some((c) => c.egg !== 'camper' && c.drink === drink)) {
+      serveCustomer(state, mostImpatient(state, (c) => c.egg !== 'camper' && c.drink === drink), drink, playerId);
       player.holding = null;
     } else if (state.pass.length < ECONOMY.pass.slots) {
       state.pass.push({ item: drink, ticksLeft: secondsToTicks(ECONOMY.pass.staleSeconds[drink]) });
@@ -24,9 +30,10 @@ export function counterInteract(state: GameState, playerId: PlayerId): GameState
   }
 
   const onPass = new Set(state.pass.map((i) => i.item));
-  const wanting = state.customers.some((c) => onPass.has(c.drink));
+  // Skip Wi-Fi campers — they never order (B8).
+  const wanting = state.customers.some((c) => c.egg !== 'camper' && onPass.has(c.drink));
   if (wanting) {
-    const customer = mostImpatient(state, (c) => onPass.has(c.drink));
+    const customer = mostImpatient(state, (c) => c.egg !== 'camper' && onPass.has(c.drink));
     const index = stalestIndex(state, customer.drink);
     const [item] = state.pass.splice(index, 1);
     serveCustomer(state, customer, item.item, playerId);

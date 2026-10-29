@@ -526,3 +526,36 @@ Co-op fun:
 - Optional goals give the crew a shared plan for the day without punishing a miss, and the receipt
   tick is a nice group high-five. The Sunday finale curve makes "we survived the week" land.
 
+## Block 8 reflection (Easter egg pack 2)
+
+Shipped all six approved gags in `src/data/eggs.ts` + `src/sim/eggs.ts`:
+- **Shop cat** — rare nap on espresso/steamer after a brew; blocks the station; pet/shoo or wait.
+- **Name mix-ups** — rare mangled cup name on a regular; they refuse the first serve until remade
+  or you correct the name at the counter (empty hands).
+- **Wi-Fi camper** — rare day≥2 arrival who takes a seat, never orders; quiet leave or polite kick.
+- **Burnt beans / smoke** — espresso left on the machine too long → soft alarm + smoke puff; dump
+  the shot to clear (one waste).
+- **Latte art fail** — rare steamed drink gets a floating 2★ review card and a tiny tip joke.
+- **Secret menu** — type FOAM or UUDDLRLRBA to unlock today's special as "🦄 Unicorn foam"; first
+  serve pays a small bonus tip.
+
+Egg rolls use a derived RNG (seed ⊕ day ⊕ tick ⊕ salt) so they never perturb customers / events /
+bots — same pattern as B7 challenges. Snapshot v8 / protocol v9. Light visuals (cat loaf, smoke
+puffs, laptop bubble, wrong-name tag, comic bursts) and cue ids wired to existing synths. 493 tests.
+
+What could be better:
+- Cat / smoke / camper are one-shot per day; a second gentle roll late-day could keep long days
+  funny without stacking pressure.
+- Secret menu forces `special` onto the unlocked list for the day — fine mechanically, but the
+  silly label is only in the log/burst today; HUD drink name still says "Special".
+- Latte-art tip is paid even when the drink later goes stale on the pass (the gag fires at finish).
+- No dedicated meow / smoke synth yet — reused oops/buzz/hmph.
+
+Deferred / didn't fit cleanly:
+- A "pet the cat" happiness buff (kept shoo-only so the gag stays optional).
+- Camper ordering after being ignored long enough (kept never-orders).
+- Multiplayer-only secret codes per seat.
+
+Co-op fun:
+- Catching the cat, correcting "Kennedee", and kicking the camper are great shared bits; the secret
+  code is a table-side whisper. None of them punish a busy crew hard enough to sink the day.

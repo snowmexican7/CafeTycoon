@@ -19,4 +19,27 @@ describe('createKeyboard', () => {
     expect(kb.takeInteract()).toBe(false);
     kb.dispose();
   });
+
+  it('FOAM letter sequence unlocks a secret code pending', () => {
+    const t = new EventTarget();
+    const kb = createKeyboard(t);
+    expect(kb.takeSecret()).toBeNull();
+    for (const c of ['KeyF', 'KeyO', 'KeyA', 'KeyM']) t.dispatchEvent(key('keydown', c));
+    expect(kb.takeSecret()).toBe('FOAM');
+    expect(kb.takeSecret()).toBeNull();
+    kb.dispose();
+  });
+
+  it('Konami arrow sequence unlocks UUDDLRLRBA', () => {
+    const t = new EventTarget();
+    const kb = createKeyboard(t);
+    const seq = [
+      'ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown',
+      'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight',
+      'KeyB', 'KeyA',
+    ];
+    for (const c of seq) t.dispatchEvent(key('keydown', c));
+    expect(kb.takeSecret()).toBe('UUDDLRLRBA');
+    kb.dispose();
+  });
 });

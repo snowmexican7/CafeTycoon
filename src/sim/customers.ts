@@ -7,6 +7,7 @@ import { rogueActive, startRogue } from './rogue';
 import { tally } from './tally';
 import { tallyDrink } from './tally';
 import { BASE_DRINKS, DRINK_IDS, DRINK_INFO } from '../data/drinks';
+import { clearNameMixOnServe, maybeNameMix, maybeSpawnCamper, secretServeBonus } from './eggs';
 import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, SimEvent } from './types';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
@@ -37,6 +38,8 @@ export function spawnCustomers(state: GameState): GameState {
     state.today.turnedAway += 1;
     return state;
   }
+  // B8: rare Wi-Fi camper takes a seat instead of ordering.
+  if (maybeSpawnCamper(state)) return state;
   addCustomer(state, rollKind(state));
   return state;
 }
@@ -104,6 +107,7 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
     regular.visits += 1;
     customer.kind = 'regular';
     customer.name = regular.name;
+    maybeNameMix(state, customer);
   }
   state.customers.push(customer);
   return customer;
@@ -148,7 +152,12 @@ export function stepCustomers(state: GameState): GameState {
     }
     c.patienceLeft -= 1;
     if (c.patienceLeft <= 0) {
-      loseCustomer(state, c);
+      if (c.egg === 'camper') {
+        // Quiet exit — not a storm-out, just packed up the laptop.
+        emitLog(state, 'egg.camper', { id: c.id, left: 1 });
+      } else {
+        loseCustomer(state, c);
+      }
     } else remaining.push(c);
   }
   state.customers = remaining;
@@ -172,6 +181,12 @@ export const PERFECT_PATIENCE = 0.75;
 
 /** Pay out one served customer: price, patience-scaled tip, cash, stats, and leave the queue. */
 export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId): void {
+  if (customer.egg === 'nameMix' && !customer.upset) {
+    // Wrong name on the cup — they refuse until remade or the name is corrected.
+    customer.upset = { ticksLeft: secondsToTicks(ECONOMY.rogue.remakeSeconds) };
+    emitLog(state, 'egg.nameMix', { id: customer.id, refuse: 1, wrong: customer.wrongName ?? '' });
+    return;
+  }
   if (customer.upset) {
     delete customer.upset;
     emitLog(state, 'rogue.remade', { drink });
@@ -204,6 +219,8 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   };
   if (customer.name !== undefined) served.name = customer.name;
   emitLog(state, 'served', served);
+  clearNameMixOnServe(customer);
+  secretServeBonus(state, drink);
   if (customer.kind === 'influencer') {
     tally(state.today, 'bonus', ECONOMY.events.influencer.bonus);
     state.cash = round2(state.cash + ECONOMY.events.influencer.bonus);
@@ -225,6 +242,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
 export function serveTarget(state: GameState, match: (c: Customer) => boolean): Customer | null {
   let best: Customer | null = null;
   for (const c of state.customers) {
+    if (c.egg === 'camper') continue; // Wi-Fi campers never order
     if (!match(c)) continue;
     if (best === null || (c.upset && !best.upset) || (!!c.upset === !!best.upset && c.patienceLeft < best.patienceLeft)) best = c;
   }

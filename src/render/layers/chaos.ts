@@ -440,6 +440,21 @@ export class Chaos {
       case 'hmph':
         this.comic(b.text, x, y - 100, PALETTE.cherry, false);
         break;
+      case 'meow':
+        this.comic('mrrp', x, y - 56, PALETTE.honey, false);
+        this.puffs(x, y - 10, 0xf2ebe6, 6, 'puff');
+        break;
+      case 'smoke':
+        this.comic('beep!', x, y - 70, PALETTE.cherry, false);
+        this.puffs(x, y - 20, 0x9a9a9a, 10, 'puff');
+        break;
+      case 'review':
+        this.comic(b.text, x, y - 110, 0xd9ad80, false);
+        break;
+      case 'secret':
+        this.comic(b.text, x, y - 90, PALETTE.mint, true);
+        this.puffs(x, y - 20, 0xfff6c9, 10, 'star');
+        break;
     }
   }
 

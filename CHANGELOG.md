@@ -16,6 +16,11 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Easter egg pack 2.** Rare, funny gags that never sink a day: the shop cat naps on a warm station
+  (pet to shoo), a regular's cup gets the wrong name (correct at the counter), a Wi-Fi camper sits
+  without ordering (kick politely), burnt espresso puffs smoke (dump the shot), a latte-art fail
+  floats a 2★ review card, and typing **FOAM** (or the Konami-ish arrow code) unlocks a silly
+  unicorn-foam special for the day.
 - **Daily challenges.** Each morning the paper deals 1–2 optional goals for the day ("Serve 8
   perfect drinks", "Keep the floor above 80%", "No storm-outs", "Sell 5 matchas", "Clear before
   close", …). Hit one and the receipt ticks it with a tip; a small chip on the HUD tracks progress

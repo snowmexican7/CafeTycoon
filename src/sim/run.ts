@@ -15,6 +15,7 @@ import { BASE_DRINKS, DRINK_IDS } from '../data/drinks';
 import { zeroDrinks } from './tally';
 import { unlockForDay } from './unlocks';
 import { dealChallenges, pruneChallenges } from './challenges';
+import { eggsMorning } from './eggs';
 import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
@@ -143,6 +144,7 @@ export function startDay(state: GameState): GameState {
   for (const p of state.players) p.tile = tileOf(p.pos);
   scheduleEvents(state);
   pruneChallenges(state);
+  eggsMorning(state);
   state.morningNotes = morningNotes(state);
   espressoMorning(state);
   return state;

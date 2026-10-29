@@ -302,6 +302,13 @@ export class Actors {
       sprite.root.position.set(sprite.x, feet + (shuffling ? -Math.abs(Math.sin(timeSec * 12)) * 2 : 0));
       sprite.root.zIndex = feet;
       sprite.bubble.clear();
+      if (c.egg === 'camper') {
+        // B8: Wi-Fi camper — laptop bubble, no order.
+        const bob = Math.sin(timeSec * 3) * 1;
+        sprite.bubble.roundRect(-18, -110 + bob, 36, 24, 4).fill(0x2a2a32).stroke({ width: 2, color: 0x111116 });
+        sprite.bubble.roundRect(-14, -106 + bob, 28, 16, 2).fill(0x6fb6e6);
+        sprite.bubble.rect(-10, -86 + bob, 20, 3).fill(0x44444c);
+      } else {
       const upset = c.upset ? Math.min(1, c.upset.ticksLeft / (ECONOMY.rogue.remakeSeconds * TICK_RATE)) : null;
       if (upset !== null) {
         // wrong drink: a shaking red bubble and angry steam while the remake window drains
@@ -316,6 +323,7 @@ export class Actors {
         sprite.bubble.rect(22.8, -125, 2.4, 8).fill(0xffffff);
         sprite.bubble.circle(24, -114, 1.5).fill(0xffffff);
       } else drawOrderBubble(sprite.bubble, 0, -96, c.drink, c.patienceLeft / c.patienceMax);
+      }
       sprite.extra.clear();
       if (c.kind === 'influencer') drawInfluencer(sprite.extra, timeSec);
       const frac = c.patienceLeft / c.patienceMax;
@@ -493,7 +501,8 @@ export class Actors {
     let nameTag: Container | null = null;
     if (c.kind === 'regular' && c.name) {
       nameTag = new Container();
-      const t = label(c.name, 11, 0xb34a6b, '700');
+      const shown = c.egg === 'nameMix' && c.wrongName ? c.wrongName : c.name;
+      const t = label(shown, 11, c.egg === 'nameMix' ? 0xc0392b : 0xb34a6b, '700');
       const w = t.width + 26;
       const bg = new Graphics();
       bg.roundRect(-w / 2, -9, w, 18, 4).fill(0xfffaf2).stroke({ width: 2, color: 0xe98aa6 });
