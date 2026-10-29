@@ -1,3 +1,7 @@
+import { roundFloats } from './delta';
+import { createPeerSession } from './peerSession';
+import { step } from '../sim/step';
+import type { GameState } from '../sim/types';
 import { describe, it, expect } from 'vitest';
 import { createTelemetry, withTelemetry, type TeleEvent } from '../host/telemetry';
 import { createRun } from '../sim/run';
@@ -56,7 +60,46 @@ describe('HostRoom', () => {
     createHostRoom(link, local.t, { token: 'H', name: 'Host' });
     local.emit(snap());
     local.emit(snap());
-    expect(link.sent.filter((s) => s.kind === 'snap' && s.target === undefined)).toHaveLength(2);
+    // 2.0.1: a keyframe first, then only what changed (here nothing).
+    expect(link.sent.filter((s) => s.kind === 'snap' && s.target === undefined)).toHaveLength(1);
+    expect(link.sent.filter((s) => s.kind === 'snapd' && s.target === undefined)).toEqual([{ kind: 'snapd', data: { t: 'snapd', seq: 2, patch: null, sentAt: 1 } }]);
+  });
+
+  it('keeps a joined peer in step through deltas, keyframes and a resync (2.0.1)', () => {
+    const hostLink = createFakeLink('host');
+    const local = fakeLocal();
+    createHostRoom(hostLink, local.t, { token: 'H', name: 'Host' });
+    const peerLink = createFakeLink('peer');
+    const peer = createPeerSession(peerLink, { token: 'P1', name: 'Pat', timeoutMs: 1000, setTimer: () => 0, clearTimer: () => {} });
+    const seen: GameState[] = [];
+    peer.onSnapshot((s) => seen.push(s.state));
+    let hostSent = 0, peerSent = 0;
+    const pump = (drop = false) => {
+      for (; hostSent < hostLink.sent.length; hostSent++) {
+        const m = hostLink.sent[hostSent]!;
+        if (m.target !== undefined && m.target !== 'peer') continue;
+        if (drop && m.kind === 'snapd') { drop = false; continue; }
+        peerLink.receive(m.kind, JSON.parse(JSON.stringify(m.data)), 'host');
+      }
+      for (; peerSent < peerLink.sent.length; peerSent++) {
+        const m = peerLink.sent[peerSent]!;
+        hostLink.receive(m.kind, JSON.parse(JSON.stringify(m.data)), 'peer');
+      }
+    };
+    let state = createRun({ seed: 3, hostId: 'H', players: [{ id: 'H', name: 'Host' }], settings: { bots: 2 } });
+    local.emit({ t: 'snapshot', state, sentAt: 0 });
+    hostLink.peerJoins('peer');
+    pump(); pump();
+    for (let i = 0; i < 400; i++) {
+      state = step(state, i === 0 ? [{ kind: 'ready', playerId: 'H' }] : []);
+      if (i % 3) continue;
+      local.emit({ t: 'snapshot', state, sentAt: i });
+      pump(i === 150); // lose one delta mid-day: the peer must heal
+      pump();
+      if (i > 160 || i < 150) expect(seen.at(-1)).toEqual(roundFloats(state));
+    }
+    expect(hostLink.sent.filter((m) => m.kind === 'snap' && m.target === undefined).length).toBeGreaterThanOrEqual(2); // periodic keyframe
+    expect(hostLink.sent.filter((m) => m.kind === 'snap' && m.target === 'peer').length).toBe(2); // join + resync
   });
 
   it('rejects a different protocol version', () => {

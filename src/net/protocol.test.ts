@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { RESERVED_TELE_KINDS } from '../host/telemetry';
-import { ACTIONS, parseHello, parseInput, parseJoin, parseLobby, parseSeat, parseSnap, parseTele, PROTOCOL_VERSION } from './protocol';
+import { ACTIONS, parseHello, parseInput, parseJoin, parseLobby, parseSeat, parseResync, parseSnap, parseSnapDelta, parseTele, PROTOCOL_VERSION } from './protocol';
 
 describe('protocol parsers', () => {
-  it('is on version 11 (seat reclaim, room cap, lobby bots, forecasts, re-roll, challenges, eggs, crew stats, B11 balance)', () => {
-    expect(PROTOCOL_VERSION).toBe(11);
+  it('is on version 12 (seat reclaim, room cap, lobby bots, forecasts, re-roll, challenges, eggs, crew stats, B11 balance, 2.0.1 deltas)', () => {
+    expect(PROTOCOL_VERSION).toBe(12);
+    expect(ACTIONS).toContain('snapd');
+    expect(ACTIONS).toContain('resync');
     expect(ACTIONS).toContain('seat');
     for (const a of ACTIONS) expect(new TextEncoder().encode(a).length).toBeLessThanOrEqual(12); // trystero action names
   });
@@ -41,7 +43,13 @@ describe('protocol parsers', () => {
     expect(parseJoin({ t: 'join', protocol: 1, token: '', name: 'Sam' })).toBeNull();
     expect(parseInput({ t: 'input', input: { kind: 'ready', playerId: 'abc' } })).toEqual({ t: 'input', input: { kind: 'ready', playerId: 'abc' } });
     expect(parseInput({ t: 'input', input: 'ready' })).toBeNull();
-    expect(parseSnap({ t: 'snap', state: { phase: 'night' }, sentAt: 5 })).toEqual({ t: 'snap', state: { phase: 'night' }, sentAt: 5 });
+    expect(parseSnap({ t: 'snap', state: { phase: 'night' }, sentAt: 5, seq: 1 })).toEqual({ t: 'snap', state: { phase: 'night' }, sentAt: 5, seq: 1 });
+    expect(parseSnap({ t: 'snap', state: { phase: 'night' }, sentAt: 5 })).toBeNull(); // protocol 11 had no seq
+    expect(parseSnapDelta({ t: 'snapd', seq: 2, patch: ['o', { tick: ['r', 3] }], sentAt: 6 })).toEqual({ t: 'snapd', seq: 2, patch: ['o', { tick: ['r', 3] }], sentAt: 6 });
+    expect(parseSnapDelta({ t: 'snapd', seq: 2, patch: null, sentAt: 6 })).toMatchObject({ patch: null });
+    expect(parseSnapDelta({ t: 'snapd', seq: 2, patch: 'x', sentAt: 6 })).toBeNull();
+    expect(parseResync({ t: 'resync' })).toEqual({ t: 'resync' });
+    expect(parseResync({ t: 'nope' })).toBeNull();
     expect(parseSnap({ t: 'snap', state: 'nope', sentAt: 5 })).toBeNull();
     expect(parseLobby({ t: 'lobby', members: [{ token: 'a', name: 'A' }], started: false })!.members).toHaveLength(1);
     expect(parseLobby({ t: 'lobby', members: [{ token: 1 }], started: false })).toBeNull();

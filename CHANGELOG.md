@@ -18,6 +18,13 @@ when a build goes out, the line moves under its version with the date.
 
 Nothing yet.
 
+## 2.0.1 — 2026-10-29
+
+- **Lighter network updates.** The host now sends a full picture of the café every 5 seconds and,
+  in between, only what changed. With four baristas the host's upload drops from about 4.2 to about
+  0.4 Mbit/s, so rooms on slow or shared connections stay smooth. Gameplay is unchanged.
+- Everyone in a room needs 2.0.1: reload the page on both sides if the game says the versions differ.
+
 ## 2.0.0 — 2026-10-29
 
 **Phase 2, "Busy season", is done.** The café is busier, messier and different every day: bot

@@ -1,11 +1,12 @@
+import type { Patch } from './delta';
 import { RESERVED_TELE_KINDS, type TeleEvent } from '../host/telemetry';
 import type { GameState, PlayerInput } from '../sim/types';
 
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
 export const APP_ID = 'cafetycoon-v1';
 /** Bump when any message below changes shape; mismatched builds refuse each other politely. */
-export const PROTOCOL_VERSION = 11;
-export const ACTIONS = ['hello', 'join', 'input', 'snap', 'lobby', 'tele', 'seat'] as const;
+export const PROTOCOL_VERSION = 12;
+export const ACTIONS = ['hello', 'join', 'input', 'snap', 'lobby', 'tele', 'seat', 'snapd', 'resync'] as const;
 export type ActionKind = (typeof ACTIONS)[number];
 
 export interface Member {
@@ -42,6 +43,19 @@ export interface SnapMsg {
   t: 'snap';
   state: GameState;
   sentAt: number;
+  /** Protocol 12: the keyframe's sequence number; deltas that follow name it as their base. */
+  seq: number;
+}
+/** Protocol 12: only what changed since snapshot `seq - 1` (null when nothing did). */
+export interface SnapDeltaMsg {
+  t: 'snapd';
+  seq: number;
+  patch: Patch | null;
+  sentAt: number;
+}
+/** Protocol 12: a peer that missed its base asks the host for a fresh keyframe. */
+export interface ResyncMsg {
+  t: 'resync';
 }
 export interface LobbyMsg {
   t: 'lobby';
@@ -109,7 +123,18 @@ export function parseInput(data: unknown): InputMsg | null {
 
 export function parseSnap(data: unknown): SnapMsg | null {
   if (!isObj(data) || data.t !== 'snap' || !isObj(data.state) || !str(data.state.phase) || !finite(data.sentAt)) return null;
-  return { t: 'snap', state: data.state as unknown as GameState, sentAt: data.sentAt };
+  if (!finite(data.seq)) return null;
+  return { t: 'snap', state: data.state as unknown as GameState, sentAt: data.sentAt, seq: data.seq };
+}
+
+export function parseSnapDelta(data: unknown): SnapDeltaMsg | null {
+  if (!isObj(data) || data.t !== 'snapd' || !finite(data.seq) || !finite(data.sentAt)) return null;
+  if (data.patch !== null && !Array.isArray(data.patch)) return null;
+  return { t: 'snapd', seq: data.seq, patch: data.patch as Patch | null, sentAt: data.sentAt };
+}
+
+export function parseResync(data: unknown): ResyncMsg | null {
+  return isObj(data) && data.t === 'resync' ? { t: 'resync' } : null;
 }
 
 export function parseLobby(data: unknown): LobbyMsg | null {

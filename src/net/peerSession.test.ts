@@ -47,8 +47,8 @@ describe('PeerSession', () => {
     link.receive('hello', hello(), 'hostPeer');
     expect(link.sent.at(-1)).toMatchObject({ kind: 'join', target: 'hostPeer', data: { t: 'join', protocol: PROTOCOL_VERSION, token: 'T1', name: 'Sam' } });
     expect(statuses).toEqual(['connected']);
-    link.receive('snap', { t: 'snap', state: { phase: 'night' }, sentAt: 7 }, 'hostPeer');
-    link.receive('snap', { t: 'snap', state: { phase: 'day' }, sentAt: 8 }, 'impostor');
+    link.receive('snap', { t: 'snap', state: { phase: 'night' }, sentAt: 7, seq: 1 }, 'hostPeer');
+    link.receive('snap', { t: 'snap', state: { phase: 'day' }, sentAt: 8, seq: 1 }, 'impostor');
     expect(snaps).toEqual([{ t: 'snapshot', state: { phase: 'night' }, sentAt: 7 }]);
     peer.sendInput({ kind: 'ready', playerId: 'T1' });
     expect(link.sent.at(-1)).toMatchObject({ kind: 'input', target: 'hostPeer', data: { t: 'input', input: { kind: 'ready', playerId: 'T1' } } });
@@ -109,7 +109,7 @@ describe('PeerSession', () => {
   it('does not report the host away once the run has ended', () => {
     const { link, peer, statuses } = setup();
     link.receive('hello', hello(), 'hostPeer');
-    link.receive('snap', { t: 'snap', state: { phase: 'ended' }, sentAt: 9 }, 'hostPeer');
+    link.receive('snap', { t: 'snap', state: { phase: 'ended' }, sentAt: 9, seq: 1 }, 'hostPeer');
     link.peerLeaves('hostPeer');
     expect(peer.status()).toBe('connected');
     expect(statuses).toEqual(['connected']);
@@ -120,7 +120,7 @@ describe('PeerSession', () => {
     link.receive('hello', hello('H'), 'hostA');
     link.receive('hello', hello('X'), 'rogue');
     expect(link.sent.filter((s) => s.kind === 'join' && s.target === 'rogue')).toHaveLength(0);
-    link.receive('snap', { t: 'snap', state: { phase: 'day' }, sentAt: 1 }, 'rogue');
+    link.receive('snap', { t: 'snap', state: { phase: 'day' }, sentAt: 1, seq: 1 }, 'rogue');
     expect(snaps).toEqual([]);
     link.peerLeaves('hostA');
     link.receive('hello', hello('X'), 'rogue2');
@@ -183,5 +183,26 @@ describe('PeerSession', () => {
       expect(statuses.at(-1)).toBe('full');
       expect(errors.at(-1)).toBe(ROOM_FULL_MESSAGE);
     });
+  });
+
+  it('builds on keyframes with deltas and asks for a keyframe when one is missing (2.0.1)', () => {
+    const { link, snaps } = setup();
+    link.receive('hello', hello(), 'hostPeer');
+    link.receive('snap', { t: 'snap', state: { phase: 'day', tick: 1, cash: 5 }, sentAt: 1, seq: 4 }, 'hostPeer');
+    link.receive('snapd', { t: 'snapd', seq: 5, patch: ['o', { tick: ['r', 2] }], sentAt: 2 }, 'hostPeer');
+    link.receive('snapd', { t: 'snapd', seq: 6, patch: null, sentAt: 3 }, 'hostPeer');
+    expect(snaps.map((s) => s.state)).toEqual([{ phase: 'day', tick: 1, cash: 5 }, { phase: 'day', tick: 2, cash: 5 }, { phase: 'day', tick: 2, cash: 5 }]);
+    expect(snaps[0]!.state).toEqual({ phase: 'day', tick: 1, cash: 5 }); // the base is never mutated
+    // A gap: seq 7 lost. Nothing is shown, one resync is asked, and repeats are held back.
+    link.receive('snapd', { t: 'snapd', seq: 8, patch: ['o', { tick: ['r', 4] }], sentAt: 4 }, 'hostPeer');
+    link.receive('snapd', { t: 'snapd', seq: 9, patch: ['o', { tick: ['r', 5] }], sentAt: 5 }, 'hostPeer');
+    expect(snaps).toHaveLength(3);
+    expect(link.sent.filter((s) => s.kind === 'resync')).toEqual([{ kind: 'resync', data: { t: 'resync' }, target: 'hostPeer' }]);
+    link.receive('snap', { t: 'snap', state: { phase: 'day', tick: 9, cash: 6 }, sentAt: 6, seq: 9 }, 'hostPeer');
+    link.receive('snapd', { t: 'snapd', seq: 10, patch: ['o', { cash: ['r', 7] }], sentAt: 7 }, 'hostPeer');
+    expect(snaps.at(-1)!.state).toEqual({ phase: 'day', tick: 9, cash: 7 });
+    // A malformed patch drops the base and asks again instead of throwing.
+    link.receive('snapd', { t: 'snapd', seq: 11, patch: ['a', [], 1], sentAt: 8 }, 'hostPeer');
+    expect(link.sent.filter((s) => s.kind === 'resync')).toHaveLength(2);
   });
 });

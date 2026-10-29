@@ -1,5 +1,7 @@
+import type { GameState } from '../sim/types';
 import type { TeleEvent } from '../host/telemetry';
-import { parseBots, parseInput, parseJoin, parseTele, PROTOCOL_VERSION, type BotsChoice, type Member } from './protocol';
+import { applyPatch, diff, roundFloats } from './delta';
+import { parseBots, parseInput, parseJoin, parseResync, parseTele, PROTOCOL_VERSION, type BotsChoice, type Member } from './protocol';
 import { assignSeat } from './seats';
 import type { RoomLink } from './roomLink';
 import type { HostToClient, Transport } from './transport';
@@ -18,6 +20,9 @@ export interface HostRoom {
 /** Off once two or more baristas are in; a lone host gets bots filling the empty seats. */
 export const defaultBots = (humans: number): BotsChoice => (humans >= 2 ? 0 : 'auto');
 
+/** A full snapshot every this many sends (5 s at 20 Hz), so a dropped delta heals on its own. */
+export const KEYFRAME_EVERY = 100;
+
 export interface HostRoomHooks {
   onTele?(token: string, events: TeleEvent[]): void;
 }
@@ -34,6 +39,12 @@ export function createHostRoom(
   let started = false;
   let closed = false;
   let botsChoice: BotsChoice | null = null;
+  // What every peer holds after the last broadcast (floats rounded), and its sequence number.
+  let wire: { state: GameState; seq: number; sentAt: number } | null = null;
+  const sendKeyframe = (peerId?: string) => {
+    if (!wire) return;
+    link.send('snap', { t: 'snap', state: wire.state, sentAt: wire.sentAt, seq: wire.seq }, peerId);
+  };
 
   const members = (): Member[] => [host, ...byPeer.values()];
   const bots = (): { bots: BotsChoice; picked: boolean } => {
@@ -50,7 +61,15 @@ export function createHostRoom(
   const unsubscribe = local.onSnapshot((snap) => {
     if (closed) return;
     latest = snap;
-    link.send('snap', { t: 'snap', state: snap.state, sentAt: snap.sentAt });
+    const seq = (wire?.seq ?? 0) + 1;
+    if (!wire || seq % KEYFRAME_EVERY === 0) {
+      wire = { state: roundFloats(snap.state), seq, sentAt: snap.sentAt };
+      sendKeyframe();
+    } else {
+      const patch = diff(wire.state, snap.state);
+      wire = { state: patch ? (applyPatch(wire.state, patch) as GameState) : wire.state, seq, sentAt: snap.sentAt };
+      link.send('snapd', { t: 'snapd', seq, patch, sentAt: snap.sentAt });
+    }
     if (!started) {
       started = true;
       broadcastLobby();
@@ -84,7 +103,7 @@ export function createHostRoom(
     if (seat !== msg.token) link.send('seat', { t: 'seat', token: seat }, peerId);
     byPeer.set(peerId, { token: seat, name: msg.name });
     local.sendInput({ kind: 'join', playerId: seat, name: msg.name });
-    if (latest) link.send('snap', { t: 'snap', state: latest.state, sentAt: latest.sentAt }, peerId);
+    sendKeyframe(peerId);
     broadcastLobby();
   });
 
@@ -94,6 +113,11 @@ export function createHostRoom(
     const member = byPeer.get(peerId);
     if (!msg || !member || msg.input.playerId !== member.token) return;
     local.sendInput(msg.input);
+  });
+
+  link.onMessage('resync', (data, peerId) => {
+    if (closed || !parseResync(data) || !byPeer.has(peerId)) return;
+    sendKeyframe(peerId);
   });
 
   link.onMessage('tele', (data, peerId) => {
