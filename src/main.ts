@@ -181,6 +181,7 @@ async function main(): Promise<void> {
     onSignature: (sig) => send({ kind: 'signature', playerId: me(), sig }),
     onScout: () => send({ kind: 'scout', playerId: me() }),
     onAd: (ad) => send({ kind: 'ad', playerId: me(), ad }),
+    onPitch: (pitchKind, text) => send({ kind: 'pitch', playerId: me(), pitchKind, text }),
     onRole: (role) => send({ kind: 'role', playerId: me(), role }),
     onReroll: () => send({ kind: 'reroll', playerId: me() }),
   });

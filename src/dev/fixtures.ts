@@ -1,3 +1,4 @@
+import { judgePitch } from '../sim/pitch';
 import { comboStars } from '../sim/taste';
 /**
  * Dev-only visual fixtures (served by `vite` at /CafeTycoon/fixtures.html?f=<name>; never in the build).
@@ -231,6 +232,18 @@ const FIXTURES: Record<string, Fixture> = {
       s.day = 2;
       s.ad = { id: 'palmbook', day: 2, by: 'Ana' };
       s.today = { day: 1, served: 31, lost: 3, turnedAway: 1, sales: 151, tips: 24.6, rent: 25, ad: { id: 'tiktak', outcome: 'viral' } };
+    },
+    timeline: [],
+  },
+  /** P3 B11: the pitch panel after a standing ovation, on the Ads & pitch tab. */
+  pitch: {
+    night: true,
+    setup(s) {
+      s.cash = 188;
+      s.day = 2;
+      s.today = { day: 1, served: 27, lost: 2, turnedAway: 0, sales: 139, tips: 22.1, rent: 25 };
+      const text = 'Cozy rainy morning deal: bring a friend and family, fresh latte with vanilla, loyalty card double stamps';
+      s.pitch = { day: 2, by: 'Cleo', ...judgePitch(s, 'promo', text) };
     },
     timeline: [],
   },

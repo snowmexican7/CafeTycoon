@@ -98,6 +98,23 @@ Nothing yet.
   puts people off a little), a fine run brings a few more of that crowd, and a viral one brings a
   lot more, plus a small traffic bump. The morning note and the next night's receipt say how it
   landed. Save v19 (migration), protocol v22.
+- **Pitch an idea (P3 B11).** The Ads tab is now "Ads & pitch". Once a night one barista can type a
+  pitch for tomorrow (up to 140 characters), either a promo or a new item, and a three-judge panel
+  scores it on the spot:
+  - 👨‍🍳 Gordon Grind wants craft and quality.
+  - 👵 Auntie Foam wants cozy, family and local.
+  - 😎 Chad from Marketing wants deals, hype and loyalty.
+
+  Each judge gives a score out of 10 and a one-line verdict. Naming your twists, drinks or
+  signature earns bonus points. Buzzwords (crypto, NFT, synergy…) make the panel groan, though
+  Chad secretly loves them. ALL CAPS, very short pitches, and repeating last night's pitch all
+  cost points. 18/30 is green-lit and gives a small boost tomorrow: a promo brings about 4% more
+  walk-ins and an item about 2% more tips. 24/30 or more is a standing ovation and doubles that.
+  The judging is scripted keyword matching with no AI, so the same pitch always gets the same
+  verdict. Save v20 (migration), protocol v23.
+- **Ads tune (P3 B11).** Ads were a money sink, because a busy café can't serve the extra crowd.
+  Campaigns are now about 40% cheaper: Palm Book $8, Nextdoorish $6, LinkedOut $7, Glimpse $10,
+  Tik Tak $9. A fine or viral run also puts people in a tipping mood: +1.5 or +3 tip points.
 
 ## 2.0.1 — 2026-10-29
 
