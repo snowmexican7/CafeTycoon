@@ -6,6 +6,7 @@ import { serveCustomer, stepCustomers } from './customers';
 import { ROGUE_REVIEW } from './describe';
 import { findPath, nodeOf, targetNodes } from './bots/path';
 import { isFreeForRogue } from './rogue';
+import { secondsToTicks } from './constants';
 import { createRun, startDay } from './run';
 import { step } from './step';
 import type { Customer, DrinkId, GameState, Player, Vec2 } from './types';
@@ -425,6 +426,7 @@ describe('bots and the rogue', () => {
     s.customers = [fresh('espresso', { id: 900, ...huge })];
     const served = s.today.served;
     let waited = false;
+    let claimed = false;
     const limit = 600 + ECONOMY.bots.maxWaitTicks;
     for (let i = 0; i < limit && s.customers.some((c) => c.id === 900); i++) {
       const held = botOf(s).holding;
@@ -436,9 +438,11 @@ describe('bots and the rogue', () => {
         if (held === 'grounds') expect(botOf(s).holding).toBe('grounds');
         expect(e.output).toBeNull();
         if (botOf(s).bot!.waitTicks > 0) waited = true;
+        if (claimed) expect(botOf(s).bot!.claim).toBe(900); // the claim survives the whole occupancy
       }
-      expect(botOf(s).bot!.waitTicks).toBeLessThanOrEqual(ECONOMY.bots.maxWaitTicks);
+      if (botOf(s).bot!.claim === 900) claimed = true;
     }
+    expect(claimed).toBe(true);
     expect(waited).toBe(true);
     expect(s.log.some((e) => e.kind === 'trash')).toBe(false);
     expect(s.customers.some((c) => c.id === 900)).toBe(false);
@@ -470,8 +474,10 @@ describe('bots and the rogue', () => {
         expect(botOf(s).bot!.plan[0]).toEqual({ kind: 'use', station: 'coldBrewTap', action: 'insert' });
       }
       expect(s.rogue?.stage).not.toBe('waiting'); // a bot never holds a rogue up
-      if (tap.occupiedBy !== null) expect(s.rogue).not.toBeNull();
-      expect(botOf(s).bot!.waitTicks).toBeLessThanOrEqual(ECONOMY.bots.maxWaitTicks);
+      if (tap.occupiedBy !== null) {
+        expect(s.rogue).not.toBeNull();
+        expect(botOf(s).bot!.claim).toBe(900); // the claim survives the whole occupancy
+      }
       if (s.rogue === null || s.rogue.stage === 'leaving' || s.rogue.stage === 'stormingOut') {
         done = true;
         break;
@@ -483,6 +489,46 @@ describe('bots and the rogue', () => {
     s = runUntil(s, (t) => !t.customers.some((c) => c.id === 900), 900);
     expect(s.today.served).toBe(served + 1);
     expect(station(s, 'coldBrewTap').occupiedBy).toBeNull();
+  });
+
+  it("a bot's wait cap outlasts a rogue's make", () => {
+    expect(secondsToTicks(ECONOMY.rogue.makeSeconds)).toBeLessThan(ECONOMY.bots.maxWaitTicks);
+  });
+
+  it('a bot at the machine with grounds outwaits a whole rogue make plus a power flicker', () => {
+    let s = botCafe();
+    s.menu.coldBrew = false;
+    const esp = station(s, 'espresso');
+    const make = secondsToTicks(ECONOMY.rogue.makeSeconds);
+    esp.busyTicksLeft = make;
+    esp.occupiedBy = 77;
+    s.rogue = { customerId: 77, drink: 'espresso', stage: 'making', pos: { x: 3, y: 2 }, path: [], station: 'espresso', ticksLeft: make, waitTicks: 0 };
+    s.events = [{ kind: 'powerFlicker', ticksLeft: secondsToTicks(ECONOMY.events.powerFlicker.seconds) }];
+    s.customers = [fresh('espresso', { id: 900, ...huge })];
+    // The bot has just arrived at the espresso machine with its grounds, as the rogue starts making.
+    const b = botOf(s);
+    b.pos = { ...targetNodes(s, esp, b.pos)[0] };
+    b.holding = 'grounds';
+    b.bot!.claim = 900;
+    b.bot!.claimDrink = 'espresso';
+    b.bot!.plan = [
+      { kind: 'use', station: 'espresso', action: 'insert' },
+      { kind: 'use', station: 'espresso', action: 'take' },
+      { kind: 'use', station: 'counter', action: 'serve' },
+    ];
+    let occupiedTicks = 0;
+    while (station(s, 'espresso').occupiedBy !== null) {
+      s = step(s, []);
+      occupiedTicks += 1;
+      expect(occupiedTicks).toBeLessThan(ECONOMY.bots.maxWaitTicks + 60);
+      expect(botOf(s).bot!.claim).toBe(900);
+      expect(botOf(s).holding).toBe('grounds');
+    }
+    expect(occupiedTicks).toBeGreaterThan(make); // the flicker stretched the occupancy past the make
+    const served = s.today.served;
+    s = runUntil(s, (t) => !t.customers.some((c) => c.id === 900), 900);
+    expect(s.today.served).toBe(served + 1);
+    expect(s.log.some((e) => e.kind === 'trash')).toBe(false);
   });
 
   it('a day with a rogue is deterministic and JSON-safe', () => {

@@ -164,7 +164,7 @@ describe('bot brain', () => {
         const atEspresso = first?.kind === 'use' && first.station === 'espresso' && first.action === 'insert';
         return b.holding === null && b.bot!.plan.length > 0 && !atEspresso && b.bot!.waitTicks === 0;
       },
-      60 * 15,
+      ECONOMY.bots.maxWaitTicks + 60 * 5, // the wait cap, then the walk to the trash
     );
     expect(bot(s).holding).toBeNull();
     expect(bot(s).bot!.plan[0]).toEqual({ kind: 'use', station: 'espresso', action: 'take' }); // now collects the leftover
