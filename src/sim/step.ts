@@ -5,13 +5,14 @@ import { applyCheckoutInput } from './checkout';
 import { applyScoutInput } from './rival';
 import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
+import { applyCloseEarly, closeVoteUnanimous, dropCloseVote } from './closeEarly';
 import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
 import { applyGrowInput } from './growth';
 import { finishDay } from './closing';
 import { markBeforeGrace, tickChallenges } from './challenges';
-import { secondsToTicks } from './constants';
+import { TICK_RATE, secondsToTicks } from './constants';
 import { spawnCustomers, stepCustomers } from './customers';
 import { stepEvents } from './events';
 import { computeModifiers } from './effects';
@@ -32,7 +33,7 @@ import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
 import { stepCleaning } from './mop';
 import { stepRogue } from './rogue';
-import { pruneLog } from './log';
+import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
 
 function applyInput(s: GameState, input: PlayerInput): void {
@@ -66,6 +67,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
         p.moveDir = { x: 0, y: 0 };
         p.heldDir = { x: 0, y: 0 };
         p.interactQueued = false;
+        dropCloseVote(s, p.id);
         clearFloorFields(p);
         if (s.mop.heldBy === p.id) {
           s.mop.heldBy = null;
@@ -139,6 +141,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'espresso':
       drinkEspresso(s, input.playerId);
       break;
+    case 'closeEarly':
+      applyCloseEarly(s, input);
+      break;
     case 'weekEnd':
       if (isHost && s.phase === 'weekEnd') {
         if (input.choice === 'stop') s.phase = 'ended';
@@ -150,6 +155,13 @@ function applyInput(s: GameState, input: PlayerInput): void {
       }
       break;
   }
+}
+
+/** Doors lock: score the beforeGrace goals, enter the closing phase and start its grace timer. */
+export function enterClosing(s: GameState): void {
+  markBeforeGrace(s);
+  s.phase = 'closing';
+  s.phaseTicksLeft = secondsToTicks(ECONOMY.closingGraceSeconds);
 }
 
 function stepDay(s: GameState, doorsOpen: boolean): void {
@@ -185,12 +197,23 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepRogue(s);
   stepEggs(s);
   if (doorsOpen) tickChallenges(s);
+  if (doorsOpen) {
+    // FB1 WP3: queue-empty stamp for the close-early hint; set when the queue empties, cleared when someone is queued.
+    if (s.customers.length > 0) delete s.emptySince;
+    else s.emptySince ??= s.tick;
+    // Checked every tick, so a vote that becomes unanimous because someone left still closes the shop.
+    if (closeVoteUnanimous(s)) {
+      const left = Math.round(s.phaseTicksLeft / TICK_RATE);
+      emitLog(s, 'closedEarly', { votes: s.closeVotes?.length ?? 0, left });
+      s.today.closedEarly = left;
+      enterClosing(s);
+      return;
+    }
+  }
   s.phaseTicksLeft -= 1;
   if (s.phaseTicksLeft > 0) return;
   if (doorsOpen) {
-    markBeforeGrace(s);
-    s.phase = 'closing';
-    s.phaseTicksLeft = secondsToTicks(ECONOMY.closingGraceSeconds);
+    enterClosing(s);
   } else {
     finishDay(s);
   }

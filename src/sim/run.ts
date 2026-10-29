@@ -123,6 +123,8 @@ export function startNight(state: GameState): GameState {
   state.phase = 'night';
   state.phaseTicksLeft = secondsToTicks(state.settings.nightLengthSec);
   state.ready = [];
+  delete state.closeVotes;
+  delete state.emptySince;
   state.boughtTonight = [];
   state.forecast = forecastFor(state.seed, state.day);
   state.freshDrinks = unlockForDay(state).filter((d) => canMake(state, d));
@@ -140,6 +142,8 @@ export function startDay(state: GameState): GameState {
   state.phase = 'day';
   state.phaseTicksLeft = secondsToTicks(state.settings.dayLengthSec);
   state.customers = [];
+  delete state.closeVotes;
+  delete state.emptySince;
   state.today = freshDayStats(state.day);
   state.events = [];
   state.eventSchedule = [];

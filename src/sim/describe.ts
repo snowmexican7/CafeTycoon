@@ -162,6 +162,8 @@ export function morningNotes(state: GameState): string[] {
     if (item && item.duration === 'permanent') notes.push(`${item.name} installed`);
   }
   if ((state.days.at(-1)?.rogues ?? 0) > 0) notes.push(ROGUE_REVIEW);
+  const early = state.days.at(-1)?.closedEarly;
+  if (early !== undefined) notes.push(`You closed early yesterday with ${Math.floor(early / 60)}:${String(early % 60).padStart(2, '0')} still on the clock.`);
   for (const kind of new Set(state.eventSchedule.map((e) => e.kind))) notes.push(EVENT_FORESHADOW[kind]);
   for (const ch of state.challenges ?? []) notes.push(`🎯 Challenge: ${ch.blurb} (+$${ch.reward})`);
   return notes;
