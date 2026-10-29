@@ -648,3 +648,76 @@ Deferred:
 Co-op fun:
 - The ceremony is the screenshot moment. It's built so everyone gets named, the clumsy friend is
   crowned Slip King, and the copy button drops the whole list into the group chat.
+
+## Block 11 reflection (balance pass + telemetry)
+
+Shipped:
+- **A smarter balance tester** (`scripts/balanceCore.ts`, `npm run balance -- --policy smart`).
+  Night policies: `smart` (default), `simple` (the old cheapest-permanent buyer), `speed`,
+  `quality`, `reach` and `none`.
+  - Smart follows the path it already owns most of and values set completions and the third card of
+    a set. It hires the temp from day 4 and buys the radio early.
+  - It re-rolls when the hand is weak and there's spare cash, keeps a rent reserve, and scales
+    restocks by the forecast's traffic.
+  - `--compare policies` runs every policy on the same seeds. `--summary` prints a per-policy table
+    (score, loss %, loss by day 1..7, re-rolls, challenges won) and a card ownership vs score table.
+    `scripts/balanceSummary.ts` merges JSON reports from parallel runs.
+- **Three-of-a-set tier** (B6 note). Every set has a third-card bonus on top of the pair, for
+  example Espresso bar gives espresso a further ×1.08. Card faces say "Fills the X set!", "X ✓ full
+  set" and name the bonus.
+- **Fittings count in the score.** The week's score is now cash profit plus the permanent cards at
+  half price (`ECONOMY.fittingsResale`). The week-end money split shows a FITTINGS column.
+- **Economy tuning:**
+  - Permanent cards costing $20 or more are 20% cheaper (rounded to $5).
+  - Hire-a-temp costs $30 (B6 note).
+  - Base patience is 33 s (was 25).
+  - The day-7 finale curve is traffic ×1.3, patience ×0.8 and event bias 0.22.
+- **Radio** (B6 note). A quiet report now has character: an opening-day line, or one of three lines
+  that rotate by day (deterministic).
+- **Card faces at 800 px tall** (B6 note):
+  - The hand grid rows now size to their content, which fixes text spilling out of tall spicy
+    cards. That was a real bug.
+  - Below 820 px tall, flavour text is clamped to two lines and hidden when a set box needs the
+    room. The full text stays in a tooltip.
+  - The art is slightly shorter.
+- **Telemetry summary:** forecasts per day, challenges dealt and won, re-rolls per night, egg
+  counts, awards with winners, and the score. Snapshot rows no longer carry the sim log (it's
+  already recorded row by row), which keeps files small.
+- Protocol v11, because rules and costs changed and mixed builds would disagree. The snapshot
+  shape didn't change, so it stays at v9.
+
+Balance numbers (56 seeds; 2 humans, 1 bot, skill 3, pace 3; `/workspace/overnight/b11/r4*.txt`):
+
+| policy  | score  | mean cash | loss  | profitable | loss by day 1..7     |
+|---------|--------|-----------|-------|------------|----------------------|
+| smart   | 291.10 | $272.26   | 27.7% | 100%       | 12/19/24/30/30/37/33 |
+| simple  | 347.90 | $386.20   | 28.4% |            |                      |
+| quality | 370.10 | $362.37   | 24.2% |            |                      |
+| reach   | 313.67 | $347.02   | 30.5% |            |                      |
+| none    | 347.07 | $447.07   | 31.0% |            |                      |
+
+- Three bots alone (smart): score 191, loss 35.8%, profitable in 96% of weeks.
+- Hard settings (skill 2, pace 4): score 276, loss 37.3%.
+- Before tuning: smart lost 35% of customers and buying nothing lost 38.8%. Buying nothing also
+  out-scored smart by about $200.
+- B7 baseline: $338 and 36.9% lost.
+
+Decisions:
+- **Buying nothing was the dominant strategy.** Fixed with fittings resale, cheaper cards and
+  higher patience. "None" still banks the most *cash*, but it now loses more customers than any
+  buyer, and quality and simple out-score it.
+- The day curve now reads as a warm-up (12% lost on day 1) and a finale (33–37% on days 6–7).
+- **No dominant card:** ownership lifts are within about ±$90 and confounded (rich runs buy more).
+- Smart re-rolls 2.9 times a week. Its score trails simple and quality because it spends more on
+  re-rolls and temps, which aren't resold. That's acceptable: the targets are "winnable but tight"
+  and "no dominant strategy", not "the tester maximises".
+
+What could be better:
+- Bot crews aren't station-limited, so speed cards barely help them. The sim undervalues the speed
+  path, and human playtests should judge it.
+- The tester doesn't react to events mid-day, or use the radio beyond buying it.
+- Card lift analysis needs a controlled experiment (force-own one card) rather than correlation.
+
+Deferred:
+- A force-own `--card X` A/B mode in the balance CLI.
+- Hover or expand to read full card text at small heights.
