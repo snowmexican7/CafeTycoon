@@ -1,5 +1,6 @@
 import { catalogueById } from '../data/catalogue';
 import { scenarioById } from '../data/scenarios';
+import { forecastName, forecastOf } from './forecast';
 import type { DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
 
 const DRINK_NAMES: Record<DrinkId, string> = { espresso: 'espresso', latte: 'latte', coldBrew: 'cold brew' };
@@ -12,6 +13,10 @@ const STATION_NAMES: Record<StationKind, string> = {
   trash: 'trash',
 };
 const SUPPLY_NAMES: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'concentrate' };
+
+const EVENT_NAMES: Record<EventKind, string> = {
+  rushHour: 'rush hour', powerFlicker: 'power flicker', influencerVisit: 'influencer', healthInspector: 'inspector',
+};
 
 function pct(mul: number): string {
   const n = Math.round((mul - 1) * 100);
@@ -46,6 +51,14 @@ function describeOne(e: Effect): string {
     }
     case 'gamble':
       return 'a gamble';
+    case 'orderTag':
+      return `${e.tag} drinks ${times(e.mul)}`;
+    case 'customerMix':
+      return `${e.customer === 'group' ? 'groups' : e.customer === 'regular' ? 'regulars' : 'impatient customers'} ${times(e.mul)}`;
+    case 'eventOdds':
+      return `${EVENT_NAMES[e.event]} ${e.mul >= 1 ? 'likelier' : 'rarer'} (${times(e.mul)})`;
+    case 'queue':
+      return `${e.add > 0 ? '+' : '−'}${Math.abs(e.add)} queue spot${Math.abs(e.add) === 1 ? '' : 's'}`;
   }
 }
 
@@ -72,6 +85,8 @@ export const EVENT_FORESHADOW: Record<EventKind, string> = {
 export function morningNotes(state: GameState): string[] {
   const notes: string[] = [];
   if (state.day === 1) notes.push(scenarioById[state.scenario].note);
+  const f = forecastOf(state);
+  notes.push(`${f.icon} ${forecastName(f, state.day)}: ${f.blurb}`);
   for (const o of state.activeTomorrow) {
     notes.push(`${catalogueById[o.itemId].name} is live: ${describeEffects(o.effects)}`);
   }

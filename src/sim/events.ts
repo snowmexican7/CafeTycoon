@@ -3,7 +3,8 @@ import { secondsToTicks } from './constants';
 import { spawnInfluencer } from './customers';
 import { emitLog } from './log';
 import { tally } from './tally';
-import { rngInt, rngNext } from './rng';
+import { rngNext } from './rng';
+import { computeModifiers } from './effects';
 import type { ActiveEvent, EventKind, GameState } from './types';
 
 export const EVENT_LABELS: Record<EventKind, string> = {
@@ -40,8 +41,20 @@ export function scheduleEvents(state: GameState): GameState {
   const remaining = [...ALL_KINDS];
   const dayTicks = secondsToTicks(state.settings.dayLengthSec);
   const { windowStart, windowEnd } = ECONOMY.events;
+  const odds = computeModifiers(state).eventOdds;
   for (let i = 0; i < count; i++) {
-    const kind = remaining.splice(rngInt(state, remaining.length), 1)[0];
+    // Weighted by the forecast's event odds; with even odds this is exactly a uniform pick (one rngNext).
+    const total = remaining.reduce((s, k) => s + odds[k], 0);
+    let roll = rngNext(state) * total;
+    let at = remaining.length - 1;
+    for (let j = 0; j < remaining.length; j++) {
+      roll -= odds[remaining[j]];
+      if (roll < 0) {
+        at = j;
+        break;
+      }
+    }
+    const kind = remaining.splice(at, 1)[0];
     const startTick = state.tick + Math.round(dayTicks * (windowStart + rngNext(state) * (windowEnd - windowStart)));
     state.eventSchedule.push({ kind, startTick });
   }

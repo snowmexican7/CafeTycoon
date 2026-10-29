@@ -1,4 +1,5 @@
 import type { EspressoState } from './espresso';
+import type { ForecastId } from '../data/forecasts';
 
 export type PlayerId = string;
 export type DrinkId = 'espresso' | 'latte' | 'coldBrew';
@@ -158,7 +159,15 @@ export type Effect =
   | { kind: 'tipRate'; add: number }
   | { kind: 'orderBias'; drink: DrinkId; mul: number }
   | { kind: 'supplyCost'; supply: SupplyId; mul: number }
-  | { kind: 'gamble'; chance: number; win: Effect[]; lose: Effect[] };
+  | { kind: 'gamble'; chance: number; win: Effect[]; lose: Effect[] }
+  /** Neighbourhood days: tilt every hot or every iced drink at once (src/data/drinks.ts). */
+  | { kind: 'orderTag'; tag: 'hot' | 'iced'; mul: number }
+  /** Reweight one kind of walk-in in the customer mix. */
+  | { kind: 'customerMix'; customer: 'impatient' | 'group' | 'regular'; mul: number }
+  /** Make one event likelier (or rarer) when today's events are drawn. */
+  | { kind: 'eventOdds'; event: EventKind; mul: number }
+  /** Spots in the queue (campers take tables, so the line fills sooner). */
+  | { kind: 'queue'; add: number };
 
 export interface CatalogueItem {
   id: string;
@@ -261,6 +270,8 @@ export interface GameState {
   cleanliness: number;
   mop: Mop;
   rogue: Rogue | null;
+  /** Neighbourhood forecast for state.day (at night: the coming day), from src/sim/forecast.ts. */
+  forecast: ForecastId;
 }
 
 export type PlayerInput =

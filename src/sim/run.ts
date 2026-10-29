@@ -6,6 +6,7 @@ import { SCENARIOS } from '../data/scenarios';
 import { scheduleEvents } from './events';
 import { morningNotes } from './describe';
 import { dealHand } from './night';
+import { forecastFor } from './forecast';
 import { syncBots } from './bots/roster';
 import { espressoMorning } from './espresso';
 import { floorFields, tileOf } from './tiles';
@@ -97,6 +98,7 @@ export function createRun(opts: CreateRunOptions): GameState {
     cleanliness: 100,
     mop: { pos: { ...LAYOUT.mopHome }, heldBy: null },
     rogue: null,
+    forecast: forecastFor(opts.seed, 1),
   };
   state.scenario = SCENARIOS[rngInt(state, SCENARIOS.length)].id;
   return startNight(state);
@@ -108,6 +110,7 @@ export function startNight(state: GameState): GameState {
   state.phaseTicksLeft = secondsToTicks(state.settings.nightLengthSec);
   state.ready = [];
   state.boughtTonight = [];
+  state.forecast = forecastFor(state.seed, state.day);
   return dealHand(state);
 }
 

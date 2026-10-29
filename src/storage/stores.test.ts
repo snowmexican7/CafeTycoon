@@ -40,8 +40,22 @@ describe('stores', () => {
 });
 
 describe('snapshot versioning', () => {
-  it('is on version 3', () => {
-    expect(SNAPSHOT_VERSION).toBe(3);
+  it('is on version 4', () => {
+    expect(SNAPSHOT_VERSION).toBe(4);
+  });
+
+  it('migrates a version-3 save (no forecast) instead of dropping it', () => {
+    const st = memoryStorage();
+    const store = createSnapshotStore(st);
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+    const old = JSON.parse(JSON.stringify(s));
+    delete old.forecast;
+    st.setItem('cafetycoon.run', JSON.stringify({ version: 3, state: old }));
+    expect(store.load()).toEqual(s);
+    st.setItem('cafetycoon.run', JSON.stringify({ version: 2, state: old }));
+    expect(store.load()).toBeNull();
+    st.setItem('cafetycoon.run', JSON.stringify({ version: SNAPSHOT_VERSION + 1, state: s }));
+    expect(store.load()).toBeNull();
   });
 
   it('stamps saves with the schema version and refuses other versions', () => {
@@ -50,7 +64,7 @@ describe('snapshot versioning', () => {
     const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     store.save(s);
     expect(JSON.parse(st.getItem('cafetycoon.run')!).version).toBe(SNAPSHOT_VERSION);
-    st.setItem('cafetycoon.run', JSON.stringify({ version: SNAPSHOT_VERSION - 1, state: s }));
+    st.setItem('cafetycoon.run', JSON.stringify({ version: 2, state: s }));
     expect(store.load()).toBeNull();
     st.setItem('cafetycoon.run', JSON.stringify(s)); // legacy unversioned blob
     expect(store.load()).toBeNull();
