@@ -4,6 +4,7 @@ import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../sim/checkou
 import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
 import { layoutFor } from '../data/layout';
 import { stationMenuNote, stationsVM, type StationsVM } from './stationsVM';
+import { tipsVM, type TipVM } from './tipsVM';
 import { JUDGES, PITCH } from '../sim/pitch';
 import { copyIsLive, daysToCopy, RIVAL, rivalAskFactor, rivalMenu, sigPrice } from '../sim/rival';
 import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
@@ -298,6 +299,8 @@ export interface NightVM {
   sets: string[];
   /** FB1 WP1: the Tonight tab's at-a-glance brief (UI adapter until the sim's nightBrief lands). */
   brief: NightBriefVM;
+  /** FB1 WP6: the bot crew's tap-to-apply tips (the ones the brief does not already cover). */
+  tips: TipVM[];
   /** FB1 WP1: timed night or Relaxed (no clock, ready-up). */
   timer: NightTimerVM;
 }
@@ -698,7 +701,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           } : {}),
         }
       : null;
-  const vm: Omit<NightVM, 'brief'> = {
+  const vm: Omit<NightVM, 'brief' | 'tips'> = {
     clock: clockFor(state.phaseTicksLeft),
     cash: money(state.cash),
     takings,
@@ -732,7 +735,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     forecast: forecastViewModel(state),
     timer: nightTimerVM(state),
   };
-  return { ...vm, brief: nightBriefVM(vm) };
+  const brief = nightBriefVM(vm);
+  return { ...vm, brief, tips: tipsVM(state, brief.alerts.map((a) => a.id)) };
 }
 
 export interface ClosingVM {
@@ -1079,7 +1083,7 @@ function stockOf(state: GameState, drink: DrinkId, low: Set<SupplyId>): 'out' | 
 }
 
 /** The Tonight tab's brief, worked out from the rest of the night view (no sim changes). */
-export function nightBriefVM(vm: Omit<NightVM, 'brief'>): NightBriefVM {
+export function nightBriefVM(vm: Omit<NightVM, 'brief' | 'tips'>): NightBriefVM {
   const t = vm.takings;
   const out: BriefAlert[] = [];
   const goto = (tab: string, sub = ''): BriefFix['data'] => (sub ? { tab, sub } : { tab });

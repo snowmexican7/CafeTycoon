@@ -185,19 +185,24 @@ export interface BotLook {
   shades: boolean;
   /** Headphones (steady: in the zone). */
   headphones: boolean;
+  /** A red sweatband instead of a cap (hurried: always mid-sprint). */
+  headband: boolean;
   /** The little emote that pops up now and then, and how often (s). */
-  emote: 'sweat' | 'note' | 'steam';
+  emote: 'sweat' | 'note' | 'steam' | 'clock';
   every: number;
 }
 
 export function botLook(p: Personality): BotLook {
   switch (p) {
     case 'rookie':
-      return { badge: true, shades: false, headphones: false, emote: 'sweat', every: 4 };
+      return { badge: true, shades: false, headphones: false, headband: false, emote: 'sweat', every: 4 };
     case 'veteran':
-      return { badge: false, shades: true, headphones: false, emote: 'steam', every: 7 };
+      return { badge: false, shades: true, headphones: false, headband: false, emote: 'steam', every: 7 };
+    case 'hurried':
+      // FB1: the hurried bot pulls cups early when the line backs up; dress it like a sprinter with a stopwatch
+      return { badge: false, shades: false, headphones: false, headband: true, emote: 'clock', every: 3 };
     default:
-      return { badge: false, shades: false, headphones: true, emote: 'note', every: 6 };
+      return { badge: false, shades: false, headphones: true, headband: false, emote: 'note', every: 6 };
   }
 }
 
