@@ -37,6 +37,12 @@ declare global {
   }
 }
 
+/** Row kinds only the host may write (its own rows and the sim's log); a peer's tele events using one are rejected. */
+export const RESERVED_TELE_KINDS: readonly string[] = [
+  'meta', 'snapshot', 'summary', 'input', 'input.mash', 'peer.join', 'peer.leave',
+  'pass.put', 'pass.take', 'pass.serve', 'pass.stale', 'trash', 'bot.mistake', 'event.start', 'event.end', 'inspection', 'influencer',
+];
+
 const MASH_COUNT = 4;
 const MASH_WINDOW_MS = 1000;
 const UI_BUFFER_CAP = 200;
@@ -170,7 +176,7 @@ export function createTelemetry(
       }
     },
     peerEvents(token, events) {
-      for (const e of events) record(e.kind, { from: token, ...asObject(e.data) }, lastTick);
+      for (const e of events) record(e.kind, { ...asObject(e.data), from: token }, lastTick);
     },
     ui(kind, data) {
       record(kind, data ?? {}, lastTick);

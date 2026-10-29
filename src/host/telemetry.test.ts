@@ -179,6 +179,12 @@ describe('telemetry', () => {
     ]);
   });
 
+  it('peerEvents always records the real token as from, whatever the peer sent', () => {
+    const { tele } = setup();
+    tele.peerEvents('real', [{ kind: 'frame.long', data: { from: 'spoof', ms: 5 }, at: 1 }]);
+    expect(tele.rows()[0].data).toEqual({ from: 'real', ms: 5 });
+  });
+
   it('withTelemetry records inputs it forwards and snapshots it receives', () => {
     const { tele } = setup();
     const sent: PlayerInput[] = [];

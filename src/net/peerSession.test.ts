@@ -136,4 +136,17 @@ describe('PeerSession', () => {
     expect(t.pending).toHaveLength(0);
     expect(link.left).toBe(true);
   });
+
+  it('sends tele batches to the host only once connected', () => {
+    const { link, peer } = setup();
+    const events = [{ kind: 'frame.long', data: { ms: 300 }, at: 5 }];
+    peer.sendTele(events);
+    expect(link.sent.filter((s) => s.kind === 'tele')).toHaveLength(0);
+    link.receive('hello', hello(), 'hostPeer');
+    peer.sendTele(events);
+    expect(link.sent.filter((s) => s.kind === 'tele')).toHaveLength(1); // the pre-handshake call was not queued
+    expect(link.sent.at(-1)).toEqual({ kind: 'tele', target: 'hostPeer', data: { t: 'tele', token: 'T1', events } });
+    peer.sendTele([]);
+    expect(link.sent.filter((s) => s.kind === 'tele')).toHaveLength(1);
+  });
 });
