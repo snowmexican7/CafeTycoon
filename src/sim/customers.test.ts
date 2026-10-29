@@ -163,4 +163,16 @@ describe('customers', () => {
     expect(rep(6)).toBe(0.2); // 6/8 = 0.75
     expect(rep(4)).toBe(-0.2); // 4/6 < 0.7
   });
+  it('an upset customer is served first among matches', () => {
+    const s = day();
+    s.day = 2;
+    s.customers = [
+      { id: 1, drink: 'latte', patienceLeft: 200, patienceMax: 1000 },
+      { id: 2, drink: 'latte', patienceLeft: 900, patienceMax: 1000, upset: { ticksLeft: 500 } },
+    ];
+    s.players[0].holding = 'latte';
+    counterInteract(s, 'p1');
+    expect(s.customers.map((c) => c.id)).toEqual([1]);
+    expect(s.today.served).toBe(1);
+  });
 });
