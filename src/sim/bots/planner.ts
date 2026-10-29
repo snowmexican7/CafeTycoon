@@ -374,7 +374,7 @@ function scoutAdvice(state: GameState, budget: Budget): Advice[] {
 }
 
 /**
- * Switch off drinks the bar has no station for, as long as more than one drink stays on. Not while the
+ * Switch off drinks the bar has no station for, as long as at least one other drink stays on. Not while the
  * plan grows (the new tier may bring the station) or a missing station sits unplaced in equipment (the
  * slot advice, or the crew, can put it back).
  */
@@ -385,7 +385,7 @@ function menuAdvice(state: GameState, growing: boolean): Advice[] {
   let stays = on.length;
   const advice: Advice[] = [];
   for (const d of on) {
-    if (reasonOff(state, d) !== 'noStation' || stays - 1 <= 1) continue;
+    if (reasonOff(state, d) !== 'noStation' || stays <= 1) continue;
     const absent = DRINK_STATIONS[d].filter((k) => !state.stations.some((s) => s.kind === k));
     if (absent.some((k) => unplaced.includes(k))) continue;
     stays -= 1;

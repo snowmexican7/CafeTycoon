@@ -352,12 +352,16 @@ describe('planNight: back bar', () => {
     expect(find(full, 'equip:espresso')).toBeUndefined();
   });
 
-  it('switches off a drink the bar has no station for, while more than one stays on', () => {
+  it('switches off a drink the bar has no station for, while at least one other drink stays on', () => {
     const s = run('stand');
     s.supplies = { ...FULL };
     s.cash = rentForDay(s);
     expect(find(s, 'menu:latte')).toMatchObject({ kind: 'menu', input: { kind: 'menu', drink: 'latte', on: false }, priority: PLAN_PRIORITY.menu });
+    // one other drink is enough to keep the board alive
     s.menu.coldBrew = false;
+    expect(find(s, 'menu:latte')).toMatchObject({ kind: 'menu', input: { kind: 'menu', drink: 'latte', on: false } });
+    // the last drink on the board is never advised off, even with no station for it
+    s.menu.espresso = false;
     expect(find(s, 'menu:latte')).toBeUndefined();
   });
 
@@ -371,9 +375,9 @@ describe('planNight: back bar', () => {
     const plan = planNight(s);
     expect(plan.find((a) => a.kind === 'slot')?.input).toEqual({ kind: 'slot', index: 2, station: 'steamer' });
     expect(plan.some((a) => a.kind === 'menu')).toBe(false);
-    // The same stand with nothing unplaced: the board is made honest as before.
+    // The same stand with nothing unplaced: the board is made honest (espresso, the one drink with a station, stays on).
     s.equipment = [];
-    expect(planNight(s).filter((a) => a.kind === 'menu').map((a) => a.id)).toEqual(['menu:latte']);
+    expect(planNight(s).filter((a) => a.kind === 'menu').map((a) => a.id)).toEqual(['menu:coldBrew', 'menu:latte']);
   });
 
   it('keeps it on when the steamer is unplaced on a full stand', () => {
