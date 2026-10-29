@@ -84,6 +84,17 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B1: the night shop with roles picked (Ana is Chef, Cleo is Host; Ben and Dev free). */
+  roles: {
+    night: true,
+    setup(s) {
+      s.cash = 260;
+      s.players.find((p) => p.id === 'ana')!.role = 'chef';
+      s.players.find((p) => p.id === 'cleo')!.role = 'host';
+      s.ready = ['cleo'];
+    },
+    timeline: [],
+  },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */

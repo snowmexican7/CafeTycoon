@@ -18,6 +18,16 @@ when a build goes out, the line moves under its version with the date.
 
 Nothing yet.
 
+## Unreleased (Phase 3, on the phase3 branch)
+
+- **Barista roles (P3 B1).** At night each barista can take one of four roles (kept until they change it on a later night),
+  one barista per role. Chef: machines run 25% faster, but half tips on drinks they hand over.
+  Creator: +$0.75 craft bonus per drink handed over, but walks 15% slower. Host: +50% tips, but
+  machines take 25% longer. Manager: restocks cost the whole crew 20% less, but walks 10% and
+  works 10% slower. The night screen lists the roles with their perk, weakness and holder; your
+  role icon shows on the ready chips and next to your name in the hands panel. Save version 10,
+  network protocol 13.
+
 ## 2.0.1 — 2026-10-29
 
 - **Lighter network updates.** The host now sends a full picture of the café every 5 seconds and,
