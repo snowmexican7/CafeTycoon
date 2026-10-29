@@ -144,7 +144,7 @@ describe('health inspector', () => {
     expect(d.inspection).toBe('pass');
     expect(d.wasted).toBe(0);
     expect([s.pass, s.events]).toEqual([[], []]);
-    s = ticks(s, 60 * 60);
+    s = ticks(s, ECONOMY.nightLengthSec * 60);
     expect(s.phase).toBe('day');
     expect(s.today.inspection).toBeNull();
   });

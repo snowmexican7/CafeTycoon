@@ -407,6 +407,8 @@ export interface GameState {
   hand: string[];
   boughtTonight: string[];
   ready: PlayerId[];
+  /** Relaxed night only: ticks left on the last call. Absent means no last call has started. */
+  lastCall?: number;
   players: Player[];
   stations: Station[];
   customers: Customer[];

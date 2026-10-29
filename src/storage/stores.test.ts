@@ -32,7 +32,7 @@ describe('stores', () => {
     const st = memoryStorage();
     let n = 0;
     const s = createSettingsStore(st, () => `tok${++n}`);
-    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 60 });
+    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120 });
     expect(createSettingsStore(st, () => 'other').get().playerToken).toBe('tok1');
     expect(s.set({ playerName: 'Ken' }).playerName).toBe('Ken');
     expect(s.get().pace).toBe(3);
