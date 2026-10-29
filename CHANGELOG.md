@@ -139,6 +139,8 @@ Nothing yet.
     commuters in a hurry: more impatient walk-ins, no groups, fewer regulars.
   - Cart: 10 tiles, adds the milk steamer, a line of 5, $17 rent, some groups and more regulars.
   - Café: the full floor, a line of 6, $25 rent, everyone. This is the game as it was.
+  - Small tiers also earn less: the stand charges 25% less and gets fewer passers-by (×0.65),
+    the cart 10% less (×0.85), so growing pays off rather than staying small forever.
 
   Growing is for good. The new floor is set up that night: the hoarding moves back, the awning
   changes colour, and the next morning opens with a "Grand re-opening" burst of confetti and a
