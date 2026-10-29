@@ -6,7 +6,7 @@ import { rngInt, rngNext } from './rng';
 import { rogueActive, startRogue } from './rogue';
 import { tally } from './tally';
 import { tallyDrink } from './tally';
-import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular } from './types';
+import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, SimEvent } from './types';
 
 const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
 
@@ -155,8 +155,11 @@ function rollsUpset(state: GameState, customer: Customer): boolean {
   return rngNext(state) < ECONOMY.rogue.chance;
 }
 
+/** Served with at least this much patience left: a perfect serve (a visual celebration only). */
+export const PERFECT_PATIENCE = 0.75;
+
 /** Pay out one served customer: price, patience-scaled tip, cash, stats, and leave the queue. */
-export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId): void {
+export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId): void {
   if (customer.upset) {
     delete customer.upset;
     emitLog(state, 'rogue.remade', { drink });
@@ -175,6 +178,18 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   state.today.tips = round2(state.today.tips + tip);
   state.today.served += 1;
   tallyDrink(state.today, drink);
+  // For the "Dev served a latte +$6" toast: who, what, how much, and whether it was a perfect serve.
+  const served: SimEvent['data'] = {
+    by: by ?? '',
+    item: drink,
+    amount: round2(price + tip),
+    kind: customer.kind ?? 'normal',
+    cid: customer.id,
+    perfect: customer.patienceLeft / customer.patienceMax >= PERFECT_PATIENCE,
+    left: customer.extra?.length ?? 0,
+  };
+  if (customer.name !== undefined) served.name = customer.name;
+  emitLog(state, 'served', served);
   if (customer.kind === 'influencer') {
     tally(state.today, 'bonus', ECONOMY.events.influencer.bonus);
     state.cash = round2(state.cash + ECONOMY.events.influencer.bonus);
@@ -209,7 +224,7 @@ export function serveDrink(state: GameState, playerId: PlayerId): GameState {
   const drink = player.holding;
   const target = serveTarget(state, (c) => c.drink === drink);
   if (target === null) return state;
-  serveCustomer(state, target, drink);
+  serveCustomer(state, target, drink, playerId);
   player.holding = null;
   return state;
 }

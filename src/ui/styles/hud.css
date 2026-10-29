@@ -166,3 +166,18 @@
 @keyframes ev-stamp { 0% { transform: rotate(-12deg) scale(2.2); opacity: 0; } 100% { transform: rotate(-12deg) scale(1); opacity: 1; } }
 @keyframes ev-flicker { 0%, 100% { opacity: 1; } 12% { opacity: .55; } 16% { opacity: 1; } 47% { opacity: .7; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #hud .hud-eventcard.in, #hud .ev-chip, #hud .hud-eventcard .stamp { animation: none; } }
+
+/* Block 3: customer kinds on tickets, bots in the crew row. */
+#hud .ticket .ktag { grid-column: 1 / span 3; justify-self: start; font: 800 10px var(--font-body); letter-spacing: .04em; text-transform: uppercase;
+  padding: 1px 8px; border-radius: 99px; margin: -2px 0 2px; background: #efe2cc; color: var(--ink-soft); }
+#hud .ticket.kind-regular .ktag { background: #fde3ea; color: #b34a6b; }
+#hud .ticket.kind-impatient .ktag { background: #fde3c8; color: #9a4a12; }
+#hud .ticket.kind-group .ktag { background: #e3eefb; color: #2f6f9e; }
+#hud .ticket.kind-influencer .ktag { background: #33294a; color: #f7d7e3; }
+#hud .ticket.kind-influencer { box-shadow: 0 0 0 2px #e98aa6, var(--sh-1); }
+#hud .ticket.kind-upset .ktag { background: var(--cherry); color: #fff; }
+#hud .ticket.kind-upset { box-shadow: 0 0 0 3px var(--cherry), var(--sh-1); animation: hud-nudge .6s ease-in-out infinite; }
+#hud .hud-crew .av.bot { border: 2px dashed #fffaf2; }
+#hud .hud-crew .av.bot::after { content: ''; position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 50%;
+  background: #fffaf2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='3.2' fill='none' stroke='%233a2418' stroke-width='1.6' stroke-dasharray='2 1.2'/%3E%3Ccircle cx='6' cy='6' r='1.1' fill='%233a2418'/%3E%3C/svg%3E") center/10px no-repeat; }
+#hud .hud-crew .av { position: relative; }

@@ -93,7 +93,8 @@ export type SimEventKind =
   | 'rogue.upset'
   | 'rogue.remade'
   | 'rogue.made'
-  | 'rogue.stormed';
+  | 'rogue.stormed'
+  | 'served';
 
 export interface SimEvent {
   seq: number;

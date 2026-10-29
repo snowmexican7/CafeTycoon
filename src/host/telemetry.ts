@@ -45,7 +45,7 @@ declare global {
 export const RESERVED_TELE_KINDS: readonly string[] = [
   'meta', 'snapshot', 'summary', 'input', 'input.mash', 'peer.join', 'peer.leave',
   'pass.put', 'pass.take', 'pass.serve', 'pass.stale', 'trash', 'bot.mistake', 'event.start', 'event.end', 'inspection', 'influencer',
-  'drop', 'slip', 'clean', 'rogue.upset', 'rogue.remade', 'rogue.made', 'rogue.stormed',
+  'drop', 'slip', 'clean', 'rogue.upset', 'rogue.remade', 'rogue.made', 'rogue.stormed', 'served',
 ];
 
 const MASH_COUNT = 4;

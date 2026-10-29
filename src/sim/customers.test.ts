@@ -176,3 +176,20 @@ describe('customers', () => {
     expect(s.today.served).toBe(1);
   });
 });
+
+describe('served log (Block 3)', () => {
+  it('logs who served what, the take, the kind and a perfect serve; nothing on an upset', () => {
+    const s = day();
+    s.customers = [{ id: 50, drink: 'latte', patienceLeft: 1000, patienceMax: 1000, kind: 'regular', name: 'Ada' }];
+    s.players[0].holding = 'latte';
+    counterInteract(s, 'p1');
+    const e = s.log.filter((x) => x.kind === 'served').at(-1)!;
+    expect(e.data).toMatchObject({ by: 'p1', item: 'latte', kind: 'regular', name: 'Ada', cid: 50, perfect: true, left: 0 });
+    expect(e.data.amount).toBeCloseTo(s.today.sales + s.today.tips, 2);
+    // a nearly-out-of-patience serve is not perfect
+    s.customers = [{ id: 51, drink: 'espresso', patienceLeft: 100, patienceMax: 1000 }];
+    s.players[0].holding = 'espresso';
+    counterInteract(s, 'p1');
+    expect(s.log.filter((x) => x.kind === 'served').at(-1)!.data).toMatchObject({ cid: 51, perfect: false, kind: 'normal' });
+  });
+});

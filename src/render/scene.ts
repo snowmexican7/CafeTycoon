@@ -9,6 +9,7 @@ import type { RenderView } from './interpolate';
 import { Actors } from './layers/actors';
 import { Chaos } from './layers/chaos';
 import { EventVisuals } from './layers/events';
+import { crewBursts, newCrewMemory, type CrewBurst } from './crewModel';
 import { buildDecor } from './layers/decor';
 import { EspressoGags, fellAtScreen, shakePx } from './layers/espresso';
 import { Effects } from './layers/fx';
@@ -17,7 +18,7 @@ import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
 import { StationOverlay, buildStation, type StationOverlayState } from './layers/stations';
 import { buildWall } from './layers/wall';
-import { FRONT, MAT, TILE as THEME_TILE, WALL, isNightLook, sx, sy } from './theme';
+import { FRONT, MAT, PLAYER_COLORS, TILE as THEME_TILE, WALL, isNightLook, sx, sy } from './theme';
 
 export const TILE = THEME_TILE;
 export const SCENE_BACKGROUND = MAT.backdrop;
@@ -48,6 +49,9 @@ export class Scene {
   private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
   private lastTime = performance.now() / 1000;
+  private crewState: GameState | null = null;
+  private crewSeq = -1;
+  private readonly crewMem = newCrewMemory();
 
   constructor() {
     const floor = buildFloor(SCENE_WIDTH, SCENE_HEIGHT, LAYOUT.door);
@@ -112,9 +116,51 @@ export class Scene {
     const jolt = this.chaos.joltPx(now);
     this.root.position.set((shake ? Math.sin(now * 93) * shake : 0) + jolt.x, (shake ? Math.cos(now * 77) * shake * 0.7 : 0) + jolt.y);
 
-    const counter = LAYOUT.stations.find((s) => s.kind === 'counter');
-    if (counter) this.fx.track(state.day, state.today.sales + state.today.tips, sx(counter.pos.x), sy(counter.pos.y) - 70);
+    if (state !== this.crewState) {
+      const { bursts, lastSeq } = crewBursts(this.crewState, state, this.crewSeq, this.crewMem);
+      this.crewSeq = lastSeq;
+      this.crewState = state;
+      for (const b of bursts) this.crewBurst(b, state, view.baristaPositions);
+    }
     this.fx.step(dt);
+  }
+
+  /** Serve toasts (and the perfect-serve confetti), a bot's "Oops!", the influencer group photo. */
+  private crewBurst(b: CrewBurst, state: GameState, positions: Record<PlayerId, { x: number; y: number }>): void {
+    const counter = LAYOUT.stations.find((s) => s.kind === 'counter')!;
+    const cx = sx(counter.pos.x);
+    const cy = sy(counter.pos.y);
+    if (b.kind === 'serve') {
+      const color = b.playerIndex >= 0 ? PLAYER_COLORS[b.playerIndex % PLAYER_COLORS.length] : 0x9a8a7a;
+      this.fx.toast(b.text, color, cx, cy - 74, b.perfect);
+      if (b.perfect) {
+        this.fx.confetti(cx, cy - 40);
+        this.fx.spawn('Perfect!', cx + 70, cy - 50, 0x7fcfb4, 15);
+      }
+      if (b.customerKind === 'regular') {
+        this.fx.hearts(cx, sy(LAYOUT.queueSlots[0].y) - 70);
+        if (b.regular) this.fx.spawn(`${b.regular}'s usual!`, cx - 78, cy - 36, 0xffd6e2, 14);
+      }
+    } else if (b.kind === 'teamwork') {
+      this.fx.spawn(`${b.from} + ${b.to}: teamwork!`, cx, cy - 150, 0xfff2b8, 14);
+      this.fx.sparkles(cx, cy - 30, 5);
+    } else if (b.kind === 'streak') {
+      this.fx.spawn(b.count === 3 ? 'Hat trick! 3 perfect in a row' : `${b.count} perfect in a row!`, cx, cy - 175, 0xf6c35b, 18);
+      this.fx.confetti(cx - 120, cy - 60, 18);
+      this.fx.confetti(cx + 120, cy - 60, 18);
+    } else if (b.kind === 'oops') {
+      const p = state.players[b.playerIndex];
+      const pos = positions[p.id] ?? p.pos;
+      this.fx.spawn('Oops!', sx(pos.x), sy(pos.y) - 122, 0xf0a63a, 17);
+    } else {
+      // the influencer's photo: flash, the whole crew sparkles, "Say latte!"
+      this.eventFx.flashNow();
+      for (const p of state.players) {
+        const pos = positions[p.id] ?? p.pos;
+        this.fx.sparkles(sx(pos.x), sy(pos.y) - 70);
+      }
+      this.fx.spawn('Say latte!', cx, cy - 120, 0xe98aa6, 22);
+    }
   }
 
   private espressoPops(players: GameState['players'], positions: Record<PlayerId, { x: number; y: number }>): void {

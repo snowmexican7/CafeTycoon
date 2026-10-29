@@ -16,6 +16,17 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Who's who, at a glance.** Customers in a hurry carry a stopwatch and tap their feet, groups
+  bring their friends (and a ×3 on the bubble), regulars wear a name tag and get hearts when you
+  hand them their usual, and the order tickets say so too ("Ada · regular", "In a hurry",
+  "Group · 2 more after this", "Influencer · bonus", "Wrong drink!"). Bot baristas are labelled
+  "Bo · bot" with a personality: the rookie has a NEW sticker and sweats, the steady one hums in
+  headphones, the veteran wears shades and sips an espresso. A friend who drops out shows as
+  "· away" with z z z.
+- **Every serve gets a shout-out.** "Dev served a latte +$6.10" pops over the counter in your
+  colour. Perfect serves (served with plenty of patience left) throw confetti, three in a row is a
+  hat trick, a drink one of you parked and another handed over gets a "teamwork!" cheer, and serving
+  the influencer makes the whole crew pose for the photo.
 - **Events you can feel.** Each event opens with a card and its own sting: rush hour lights up a
   marquee board by the door, a power flicker really dims and stutters the lights (with a buzzing
   ballast and sparks off busy machines), the health inspector patrols the floor with a clipboard

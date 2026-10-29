@@ -13,7 +13,7 @@ export function counterInteract(state: GameState, playerId: PlayerId): GameState
   if (player.holding !== null) {
     const drink = player.holding;
     if (state.customers.some((c) => c.drink === drink)) {
-      serveCustomer(state, mostImpatient(state, (c) => c.drink === drink), drink);
+      serveCustomer(state, mostImpatient(state, (c) => c.drink === drink), drink, playerId);
       player.holding = null;
     } else if (state.pass.length < ECONOMY.pass.slots) {
       state.pass.push({ item: drink, ticksLeft: secondsToTicks(ECONOMY.pass.staleSeconds[drink]) });
@@ -29,7 +29,7 @@ export function counterInteract(state: GameState, playerId: PlayerId): GameState
     const customer = mostImpatient(state, (c) => onPass.has(c.drink));
     const index = stalestIndex(state, customer.drink);
     const [item] = state.pass.splice(index, 1);
-    serveCustomer(state, customer, item.item);
+    serveCustomer(state, customer, item.item, playerId);
     emitLog(state, 'pass.serve', { item: item.item, by: playerId });
   } else if (state.pass.length > 0) {
     const [item] = state.pass.splice(stalestIndex(state), 1);

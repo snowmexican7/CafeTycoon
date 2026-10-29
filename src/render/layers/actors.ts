@@ -6,6 +6,7 @@ import { TICK_RATE } from '../../sim/constants';
 import { type Facing, PALETTE, TILE, baristaLook, customerLook, nextFacing, patienceColor, sx, sy } from '../theme';
 import { dashedEllipse, drawHeart, drawItem, drawMop, drawStar, halfDome, label } from './draw';
 import { flashOn } from '../eventsModel';
+import { botLook, botTag, emotePhase, type BotLook } from '../crewModel';
 import { jitterPx, type CollapsePose } from '../espressoPose';
 
 /** Feet sit a little below the sim centre so a barista reads as standing on its tile. */
@@ -25,6 +26,10 @@ interface PersonOpts {
   /** Chaos pack: swirly eyes after a slip, furrowed brows and red cheeks when cross. */
   dizzy?: boolean;
   angry?: boolean;
+  /** Bot personality accessories (Block 3). */
+  shades?: boolean;
+  headphones?: boolean;
+  badge?: boolean;
 }
 
 const darker = (c: number, k = 0.8) => (Math.round(((c >> 16) & 255) * k) << 16) | (Math.round(((c >> 8) & 255) * k) << 8) | Math.round((c & 255) * k);
@@ -80,6 +85,23 @@ export function drawPerson(g: Graphics, o: PersonOpts): void {
     else g.roundRect(-16, -66, 32, 5, 2.5).fill(darker(o.cap));
     g.circle(0, -77, 3).fill(o.cap);
   }
+  if (o.shades && o.facing === 'down' && !o.dizzy) {
+    g.roundRect(-11, -57, 9, 6, 2.5).fill(0x1f1a24);
+    g.roundRect(2, -57, 9, 6, 2.5).fill(0x1f1a24);
+    g.moveTo(-2, -55).lineTo(2, -55).stroke({ width: 1.5, color: 0x1f1a24 });
+    g.moveTo(-9, -56).lineTo(-6, -53).stroke({ width: 1, color: 0xffffff, alpha: 0.6 });
+  }
+  if (o.headphones) {
+    g.moveTo(-17, -58).arc(0, -58, 17, Math.PI, 0).stroke({ width: 3.5, color: 0x2b2b30 });
+    g.roundRect(-21, -62, 7, 12, 3).fill(0x2b2b30);
+    g.roundRect(14, -62, 7, 12, 3).fill(0x2b2b30);
+    g.roundRect(-20, -60, 3, 8, 1.5).fill(PALETTE.mint);
+    g.roundRect(17, -60, 3, 8, 1.5).fill(PALETTE.mint);
+  }
+  if (o.badge && o.facing === 'down') {
+    g.circle(9, -33, 5.5).fill(0x4fae7b).stroke({ width: 1.5, color: 0xffffff });
+    drawStar(g, 9, -33, 3.2, 0xffffff);
+  }
   if (o.holding) drawItem(g, o.holding, 20, -24, 0.95);
 }
 
@@ -97,6 +119,14 @@ export function drawOrderBubble(g: Graphics, x: number, y: number, drink: DrinkI
   }
   g.poly([x - 5, y + r - 2, x, y + r + 7, x + 5, y + r - 2]).fill(0xffffff);
   drawItem(g, drink, x, y + 2, 1.05);
+}
+
+/** A little stopwatch badge (impatient customers), its hand sweeping. */
+function drawStopwatch(g: Graphics, x: number, y: number, t: number): void {
+  g.rect(x - 2, y - 11, 4, 4).fill(0x3a2418);
+  g.circle(x, y, 8).fill(0xf0a63a).stroke({ width: 2, color: 0xffffff });
+  const a = t * 4;
+  g.moveTo(x, y).lineTo(x + Math.sin(a) * 5.5, y - Math.cos(a) * 5.5).stroke({ width: 2, color: 0x3a2418, cap: 'round' });
 }
 
 /** The influencer's tell: a selfie stick with a ring light (it flashes) and likes floating up. */
@@ -134,6 +164,9 @@ interface PlayerSprite {
   /** The mop in hand (drawn once, rotated while scrubbing) and the dizzy stars after a slip. */
   tool: Graphics;
   stars: Graphics;
+  /** Bot emote bubble and the away "z z z". */
+  emote: Graphics;
+  zzz: Text;
 }
 
 interface CustomerSprite {
@@ -143,6 +176,10 @@ interface CustomerSprite {
   /** Per-kind tells drawn each frame (the influencer's ring light; B3 kinds). */
   extra: Graphics;
   x: number;
+  /** Group companions (one per extra drink, hidden as they are served) and the regular's name tag. */
+  companions: Graphics[];
+  count: Text | null;
+  nameTag: Container | null;
 }
 
 /**
@@ -174,10 +211,15 @@ export class Actors {
       const look = baristaLook(index);
       const me = p.id === localId;
       const stunned = p.stunTicksLeft > 0;
-      const key = `${sprite.facing}|${p.holding}|${me}|${index}|${stunned}`;
+      const bl = p.bot ? botLook(p.bot.personality) : null;
+      const key = `${sprite.facing}|${p.holding}|${me}|${index}|${stunned}|${p.bot?.personality ?? ''}|${p.tool}`;
       if (key !== sprite.key) {
         sprite.body.clear();
-        drawPerson(sprite.body, { shirt: look.cap, cap: look.cap, skin: look.skin, hair: look.hair, apron: true, facing: sprite.facing, holding: p.tool === 'mop' ? null : p.holding, ring: me ? look.cap : null, dizzy: stunned });
+        drawPerson(sprite.body, {
+          shirt: look.cap, cap: bl?.headphones ? undefined : look.cap, skin: look.skin, hair: look.hair, apron: true, facing: sprite.facing,
+          holding: p.tool === 'mop' ? null : p.holding, ring: me ? look.cap : null, dizzy: stunned,
+          shades: bl?.shades, headphones: bl?.headphones, badge: bl?.badge,
+        });
         sprite.key = key;
       }
       const pos = positions[p.id] ?? p.pos;
@@ -210,22 +252,38 @@ export class Actors {
 
       // on mop duty: the tag says so, so the crew knows who to shout for
       const name = p.tool === 'mop' ? `${p.name} · mop` : p.name;
-      const text = p.connected ? name : `${p.name} · reconnecting…`;
-      const tagKey = `${text}|${index}`;
+      // bots: a white tag in their colour ("Bo · bot"); away humans: a grey "· away" tag and z z z
+      const text = p.bot ? (p.tool === 'mop' ? `${botTag(p.name)} · mop` : botTag(p.name)) : p.connected ? name : `${p.name} · away`;
+      const tagKey = `${text}|${index}|${!!p.bot}|${p.connected}`;
       if (tagKey !== sprite.tagKey) {
         sprite.tagText.text = text;
         const w = Math.max(40, sprite.tagText.width + 18);
         sprite.tagBg.clear();
-        sprite.tagBg.roundRect(-w / 2, -9, w, 18, 9).fill(look.cap).stroke({ width: 2, color: 0xffffff });
+        if (p.bot) {
+          sprite.tagBg.roundRect(-w / 2, -9, w, 18, 9).fill(0xfffaf2).stroke({ width: 2, color: look.cap });
+          sprite.tagText.style.fill = look.cap;
+        } else {
+          sprite.tagBg.roundRect(-w / 2, -9, w, 18, 9).fill(p.connected ? look.cap : 0x9a8a7a).stroke({ width: 2, color: 0xffffff });
+          sprite.tagText.style.fill = 0xffffff;
+        }
         sprite.tagKey = tagKey;
       }
       sprite.tag.position.set(x, feet - 95 + bob);
-      sprite.tag.alpha = alpha;
+      sprite.tag.alpha = p.connected ? 1 : 0.8;
+      const away = !p.connected && !p.bot;
+      sprite.zzz.visible = away && !out;
+      if (away) {
+        const k = (timeSec * 0.7) % 1;
+        sprite.zzz.position.set(x + 34 + k * 12, feet - 116 - k * 16);
+        sprite.zzz.alpha = 1 - k * 0.7;
+      }
+      this.drawEmote(sprite, bl, index, timeSec, stunned || out);
     });
     for (const [id, sprite] of this.players) {
       if (!seen.has(id)) {
         sprite.root.destroy({ children: true });
         sprite.tag.destroy({ children: true });
+        sprite.zzz.destroy();
         sprite.trail.destroy();
         this.players.delete(id);
       }
@@ -260,6 +318,26 @@ export class Actors {
       } else drawOrderBubble(sprite.bubble, 0, -96, c.drink, c.patienceLeft / c.patienceMax);
       sprite.extra.clear();
       if (c.kind === 'influencer') drawInfluencer(sprite.extra, timeSec);
+      const frac = c.patienceLeft / c.patienceMax;
+      if (c.kind === 'impatient' && !c.upset) {
+        // a stopwatch on the bubble, a tapping foot, and a sweat drop when it gets close
+        drawStopwatch(sprite.extra, -22, -116, timeSec);
+        if (frac < 0.5) sprite.body.y = -Math.abs(Math.sin(timeSec * 14)) * 2;
+        if (frac < 0.35) {
+          const k = (timeSec * 1.5) % 1;
+          sprite.extra.moveTo(-16, -66 + k * 6).quadraticCurveTo(-12, -60 + k * 6, -16, -56 + k * 6).quadraticCurveTo(-20, -60 + k * 6, -16, -66 + k * 6).fill({ color: 0x6fb6e6, alpha: 1 - k });
+        }
+      } else sprite.body.y = 0;
+      const more = c.extra?.length ?? 0;
+      sprite.companions.forEach((g, k) => (g.visible = k < more));
+      if (sprite.count) {
+        sprite.count.visible = more > 0;
+        if (more > 0) {
+          const ct = `\u00d7${more + 1}`;
+          if (sprite.count.text !== ct) sprite.count.text = ct;
+          sprite.extra.roundRect(13, -125, 26, 16, 8).fill(0x4c8fd6).stroke({ width: 2, color: 0xffffff });
+        }
+      }
     });
     for (const [id, sprite] of this.customers) {
       if (!seenC.has(id)) {
@@ -276,6 +354,35 @@ export class Actors {
     if (!has) return;
     sprite.tool.rotation = p.cleaningTicksLeft > 0 ? Math.sin(timeSec * 14) * 0.45 - 0.2 : 0;
     sprite.tool.x = 18 + (p.cleaningTicksLeft > 0 ? Math.sin(timeSec * 14) * 6 : 0);
+  }
+
+  /** A bot's personality emote now and then: a rookie's sweat drop, a steady hum, a veteran's coffee. */
+  private drawEmote(sprite: PlayerSprite, look: BotLook | null, index: number, timeSec: number, hidden: boolean): void {
+    const g = sprite.emote;
+    const k = look && !hidden ? emotePhase(timeSec, index, look.every) : null;
+    if (k === null) {
+      if (g.visible) g.clear();
+      g.visible = false;
+      return;
+    }
+    g.visible = true;
+    g.clear();
+    const pop = k < 0.15 ? k / 0.15 : k > 0.85 ? (1 - k) / 0.15 : 1;
+    const x = 30;
+    const y = -64 - k * 6;
+    g.circle(x, y, 11 * pop).fill({ color: 0xffffff, alpha: 0.95 }).stroke({ width: 1.5, color: 0x3a2418, alpha: 0.4 });
+    if (pop < 0.6) return;
+    if (look!.emote === 'sweat') {
+      g.moveTo(x, y - 7).quadraticCurveTo(x + 6, y + 1, x, y + 5).quadraticCurveTo(x - 6, y + 1, x, y - 7).fill(0x6fb6e6);
+      g.circle(x - 1.5, y + 1, 1.3).fill(0xffffff);
+    } else if (look!.emote === 'note') {
+      g.circle(x - 3, y + 4, 3).fill(0x3a2418);
+      g.moveTo(x - 0.5, y + 4).lineTo(x - 0.5, y - 6).lineTo(x + 5, y - 4).stroke({ width: 1.8, color: 0x3a2418, cap: 'round', join: 'round' });
+    } else {
+      drawItem(g, 'espresso', x, y + 2, 0.6);
+      g.moveTo(x - 2, y - 4).quadraticCurveTo(x - 4, y - 7, x - 2, y - 10).stroke({ width: 1.3, color: 0x9a8a7a });
+      g.moveTo(x + 2, y - 4).quadraticCurveTo(x, y - 7, x + 2, y - 10).stroke({ width: 1.3, color: 0x9a8a7a });
+    }
   }
 
   /** Three stars circling the head after a slip (only redrawn while stunned). */
@@ -348,8 +455,13 @@ export class Actors {
     tool.position.set(18, -20);
     tool.visible = false;
     const stars = new Graphics();
-    root.addChild(tool, stars);
-    const sprite: PlayerSprite = { root, body, key: '', tag, tagBg, tagText, tagKey: '', facing: 'down', trail, history: [], tool, stars };
+    const emote = new Graphics();
+    root.addChild(tool, stars, emote);
+    const zzz = label('z z z', 13, 0xfffaf2, '700');
+    zzz.style.stroke = { color: 0x3a2418, width: 3 };
+    zzz.visible = false;
+    this.tagLayer.addChild(zzz);
+    const sprite: PlayerSprite = { root, body, key: '', tag, tagBg, tagText, tagKey: '', facing: 'down', trail, history: [], tool, stars, emote, zzz };
     this.players.set(id, sprite);
     return sprite;
   }
@@ -362,9 +474,39 @@ export class Actors {
     body.scale.set(0.92);
     const bubble = new Graphics();
     const extra = new Graphics();
-    root.addChild(body, extra, bubble);
+    // a group brings friends: smaller people either side, one per extra drink
+    const companions: Graphics[] = [];
+    for (let k = 0; k < (c.extra?.length ?? 0); k++) {
+      const g = new Graphics();
+      drawPerson(g, { ...customerLook(c.id * 7 + k + 1), facing: 'up' });
+      g.scale.set(0.74);
+      g.position.set(k % 2 === 0 ? -20 : 20, -4);
+      companions.push(g);
+    }
+    root.addChild(...companions, body, extra, bubble);
+    let count: Text | null = null;
+    if (c.kind === 'group') {
+      count = label('', 11, 0xffffff, '800');
+      count.position.set(26, -117);
+      root.addChild(count);
+    }
+    let nameTag: Container | null = null;
+    if (c.kind === 'regular' && c.name) {
+      nameTag = new Container();
+      const t = label(c.name, 11, 0xb34a6b, '700');
+      const w = t.width + 26;
+      const bg = new Graphics();
+      bg.roundRect(-w / 2, -9, w, 18, 4).fill(0xfffaf2).stroke({ width: 2, color: 0xe98aa6 });
+      bg.circle(-w / 2 + 2, 0, 2).fill(0xe98aa6);
+      drawHeart(bg, w / 2 - 9, -2, 4.5, PALETTE.cherry);
+      t.x = -5;
+      nameTag.addChild(bg, t);
+      nameTag.position.set(0, -134);
+      nameTag.rotation = -0.05;
+      root.addChild(nameTag);
+    }
     this.depthLayer.addChild(root);
-    const sprite: CustomerSprite = { root, body, bubble, extra, x: startX };
+    const sprite: CustomerSprite = { root, body, bubble, extra, x: startX, companions, count, nameTag };
     this.customers.set(c.id, sprite);
     return sprite;
   }
