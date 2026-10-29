@@ -16,7 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-Nothing yet.
+- **Longer, gentler nights.** Nights last two minutes now, and a relaxed night has no clock at all: the doors open when everyone is ready, with a 30-second last call once most of the crew is.
+- **A night screen that tells you what matters.** Yesterday's profit, one headline, and a few alerts with a one-tap fix.
 
 ## 2.1.0 — 2026-10-29 · Phase 3 preview
 
