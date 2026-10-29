@@ -9,7 +9,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 13;
+export const SNAPSHOT_VERSION = 14;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -49,6 +49,10 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   // P3 B4: pastries join the pantry.
   12: (s) => {
     if (s.supplies && s.supplies.pastry === undefined) s.supplies.pastry = 0;
+  },
+  // P3 B5: recipe accuracy. Cup marks start clean; a machine mid-run counts its run from now.
+  13: (s) => {
+    for (const st of s.stations ?? []) if (st.busyTicksLeft > 0 && st.busyTotal === undefined) st.busyTotal = st.busyTicksLeft;
   },
 };
 

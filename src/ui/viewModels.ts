@@ -1,3 +1,4 @@
+import { accuracyRating } from '../sim/accuracy';
 import { PRICING, menuPrice, priceForecast, priceTraffic } from '../sim/pricing';
 import { regularsViewModel, type RegularVM } from '../sim/regulars';
 import { ROLE_IDS, ROLES, roleHolders, type RoleId } from '../sim/roles';
@@ -246,7 +247,7 @@ export function handCardViewModel(state: GameState, item: CatalogueItem): HandCa
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -417,6 +418,11 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           ...(last.fines ? { fines: money(last.fines) } : {}), ...(last.bonus ? { bonus: money(last.bonus) } : {}),
           ...(last.spoiledValue ? { spoiled: money(last.spoiledValue), spoiledWhat: spoiledWhat(last.spoiled) } : {}),
           ...(last.pastries ? { pastries: last.pastries } : {}),
+          ...(last.cups ? {
+            cupStars: (last.cupStars! / last.cups).toFixed(1),
+            cupsPerfect: last.perfectCups ?? 0,
+            ...(accuracyRating(last) <= -0.01 ? { cupsRating: accuracyRating(last).toFixed(2) } : {}),
+          } : {}),
         }
       : null;
   return {

@@ -13,6 +13,7 @@ import { BASE_DRINKS, DRINK_IDS, DRINK_INFO } from '../data/drinks';
 import { clearNameMixOnServe, maybeNameMix, maybeSpawnCamper, secretServeBonus } from './eggs';
 import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, SimEvent } from './types';
 import { sellPastry } from './spoilage';
+import { accuracyTip, noteCup, starsFor } from './accuracy';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
 
@@ -187,7 +188,7 @@ function rollsUpset(state: GameState, customer: Customer): boolean {
 export const PERFECT_PATIENCE = 0.75;
 
 /** Pay out one served customer: price, patience-scaled tip, cash, stats, and leave the queue. */
-export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId): void {
+export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId, slips = 0): void {
   if (customer.egg === 'nameMix' && !customer.upset) {
     // Wrong name on the cup — they refuse until remade or the name is corrected.
     customer.upset = { ticksLeft: secondsToTicks(ECONOMY.rogue.remakeSeconds) };
@@ -210,7 +211,9 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     customer.kind === 'impatient' ? ECONOMY.customers.impatient.tip : customer.kind === 'regular' ? ECONOMY.customers.regular.tip * (reg ? regularTipFactor(state, reg) : 1) : 1;
   if (reg) noteRegularServed(state, reg);
   const pastry = sellPastry(state, by);
-  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) + roleCraft(state, by));
+  const stars = starsFor(slips);
+  noteCup(state.today, stars);
+  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) + roleCraft(state, by));
   state.cash = round2(state.cash + price + tip);
   state.today.sales = round2(state.today.sales + price);
   state.today.tips = round2(state.today.tips + tip);
@@ -227,6 +230,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     cid: customer.id,
     perfect,
     left: customer.extra?.length ?? 0,
+    stars,
   };
   if (pastry) served.pastry = pastry;
   if (customer.name !== undefined) served.name = customer.name;
@@ -268,7 +272,8 @@ export function serveDrink(state: GameState, playerId: PlayerId): GameState {
   const drink = player.holding;
   const target = serveTarget(state, (c) => c.drink === drink);
   if (target === null) return state;
-  serveCustomer(state, target, drink, playerId);
+  serveCustomer(state, target, drink, playerId, player.cupSlips ?? 0);
   player.holding = null;
+  delete player.cupSlips;
   return state;
 }
