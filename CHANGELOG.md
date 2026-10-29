@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- Everyone can vote to close early when the day is dead: once every barista agrees, the doors lock and whoever is inside gets served.
+- A sold-out board no longer makes the street empty: people still walk up, read the board and walk away, and the morning paper counts them.
 - **Longer, gentler nights.** Nights last two minutes now, and a relaxed night has no clock at all: the doors open when everyone is ready, with a 30-second last call once most of the crew is.
 - **A night screen that tells you what matters.** Yesterday's profit, one headline, and a few alerts with a one-tap fix.
 

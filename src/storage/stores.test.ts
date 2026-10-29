@@ -51,6 +51,15 @@ describe('snapshot versioning', () => {
     expect(out.lastCall).toBeUndefined();
   });
 
+  it('migrates a version-22 save through 22 -> 23 -> 24: walkouts at 0, lastCall absent', () => {
+    const old = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    delete (old.today as { soldOutWalkouts?: number }).soldOutWalkouts;
+    const out = migrateSnapshot(22, old)!;
+    expect(out).not.toBeNull();
+    expect(out.today.soldOutWalkouts).toBe(0);
+    expect(out.lastCall).toBeUndefined();
+  });
+
   it('migrates a version-4 save (three drinks, no flavours) to the B5 menu', () => {
     const st = memoryStorage();
     const store = createSnapshotStore(st);
@@ -89,7 +98,7 @@ describe('snapshot versioning', () => {
     const old = JSON.parse(JSON.stringify(s));
     delete old.forecast;
     st.setItem('cafetycoon.run', JSON.stringify({ version: 3, state: old }));
-    expect(store.load()).toEqual({ ...s, tier: 'cafe' }); // P3 B13: every old run is the café
+    expect(store.load()).toEqual({ ...s, tier: 'cafe', today: { ...s.today, soldOutWalkouts: 0 } }); // P3 B13: every old run is the café; FB1 WP4: walkouts start at 0
     st.setItem('cafetycoon.run', JSON.stringify({ version: 2, state: old }));
     expect(store.load()).toBeNull();
     st.setItem('cafetycoon.run', JSON.stringify({ version: SNAPSHOT_VERSION + 1, state: s }));

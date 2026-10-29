@@ -85,8 +85,10 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   21: (s) => {
     s.tier ??= 'cafe';
   },
-  // filled by fb1-sim-day; replaced at rebase
-  22: () => {},
+  // FB1 WP4: sold-out walk-ups are counted per day; earlier days saw none.
+  22: (s) => {
+    for (const d of [...(s.days ?? []), s.today]) if (d) d.soldOutWalkouts ??= 0;
+  },
   // FB1 WP1-sim: lastCall is optional (absent = no last call); nothing to migrate.
   23: () => {},
 };
