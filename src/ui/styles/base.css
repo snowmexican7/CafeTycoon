@@ -1,5 +1,5 @@
 /* Page shell shared by every screen (tokens live in ../theme.css). */
-:root { --gutter: clamp(200px, 19vw, 264px); --topbar: 64px; --bottombar: 82px; }
+:root { --gutter: clamp(200px, 19vw, 264px); --gutter-l: clamp(230px, 21vw, 330px); --topbar: 64px; --bottombar: 82px; }
 html, body { margin: 0; height: 100%; }
 body {
   font-family: var(--font-body); color: var(--ink); overflow: hidden;
@@ -14,7 +14,7 @@ h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; }
 
 /* The café stage sits between the HUD gutters; render/app.ts scales the canvas to this box. */
 #game {
-  position: fixed; top: var(--topbar); bottom: var(--bottombar); left: var(--gutter); right: var(--gutter);
+  position: fixed; top: var(--topbar); bottom: var(--bottombar); left: var(--gutter-l); right: var(--gutter);
   display: flex; align-items: center; justify-content: center; margin: 0; width: auto;
 }
 
