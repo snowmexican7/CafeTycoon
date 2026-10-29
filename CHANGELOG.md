@@ -25,6 +25,13 @@ when a build goes out, the line moves under its version with the date.
 - **Sound settings** in the pause menu: master, music and effects sliders and a mute switch,
   saved in your browser. Press **M** (or the speaker button in the top bar) to mute any time.
   Sound only affects you, never your crew.
+- **Drink your own espresso.** Stand at the espresso machine and press **Q** to down a shot
+  (it uses a bean): +30% speed for 15 seconds, and each shot that day is stronger (up to +50%) and
+  restarts the timer. You start to jitter, the screen shakes and you can hear your heart. The
+  sixth shot is one too many: you collapse, an ambulance pulls up and the paramedics wheel you
+  out. You're out for the rest of the day (a bot covers if there's room) and back the next
+  morning with a $150 ambulance bill on the crew's tab, paid off from half of each day's profit.
+  Bots don't drink.
 
 ## 1.0.0 — 2026-10-28
 
