@@ -87,3 +87,13 @@ describe('sold-out walkouts (FB1 WP4)', () => {
     expect(chaosBursts(b, b, b.nextLogSeq - 1).bursts).toHaveLength(0);
   });
 });
+
+describe('no-bin floor drops (FB1 WP5)', () => {
+  it('says "No bin!" once per snapshot when there is no bin on the floor', () => {
+    const a = run();
+    a.stations = a.stations.filter((s) => s.kind !== 'trash');
+    const b = withLog(a, { kind: 'drop', data: { item: 'grounds', x: 5, y: 4 } }, { kind: 'drop', data: { item: 'latte', x: 6, y: 4 } });
+    const kinds = chaosBursts(a, b, a.nextLogSeq - 1).bursts.map((x) => (x.kind === 'walkout' ? x.text : x.kind));
+    expect(kinds).toEqual(['scatter', 'No bin!', 'splash']);
+  });
+});

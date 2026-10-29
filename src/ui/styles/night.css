@@ -231,3 +231,28 @@
 @media (prefers-reduced-motion: reduce) { #night .icard, #night .drawer { transition: none; animation: none; } #night .gr-confetti { display: none; } #night .gr-big { animation: none; } }
 /* The night board replaces the day HUD; keep the blurred café, not the blurred HUD. */
 body:has(#night:not([hidden])) #hud { visibility: hidden; }
+
+/* FB1 WP5: Spend › Stations. Big slot tiles, a swap row, the trade-off line and the fixed-price shop. */
+#night .st-board { display: flex; flex-direction: column; gap: 12px; }
+#night .st-trade { font: 700 var(--fs-m) var(--font-display); color: var(--ink-soft); }
+#night .st-trade.warn { color: #8f3b22; background: #fff0e4; border: 2px solid #f0b48f; border-radius: 12px; padding: 8px 14px; align-self: flex-start; }
+#night .st-trade.more { font-size: var(--fs-s); font-weight: 600; margin-top: -6px; }
+#night .st-slots { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 12px; }
+#night .st-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 118px; padding: 12px 6px;
+  border: 0; border-radius: 18px; background: #fff; color: var(--ink); cursor: pointer; box-shadow: 0 4px 0 #e2cfb2, 0 10px 22px rgba(58, 36, 24, .1); }
+#night .st-slot:hover { transform: translateY(-1px); }
+#night .st-slot .st-ic { font-size: 38px; line-height: 1; }
+#night .st-slot b { font: 700 var(--fs-l) var(--font-display); }
+#night .st-slot small { font: 600 var(--fs-xs) var(--font-body); color: var(--ink-soft); }
+#night .st-slot.empty { background: #f7eddc; border: 3px dashed #c9ab84; box-shadow: none; }
+#night .st-slot.empty .st-ic { color: #a8865d; }
+#night .st-slot.on { box-shadow: 0 0 0 4px var(--caramel), 0 4px 0 #e2cfb2; }
+#night .st-pick { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font: 600 var(--fs-m) var(--font-display); min-height: 44px; }
+#night .st-pick.hint { color: var(--ink-soft); }
+#night .st-none { color: var(--ink-soft); }
+#night .st-spares { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font: 700 var(--fs-s) var(--font-display); color: var(--ink-soft); }
+#night .st-spares span { background: #fff; border-radius: 99px; padding: 4px 12px; color: var(--ink); box-shadow: var(--sh-1); }
+#night .st-shop-h { font: 700 var(--fs-l) var(--font-display); display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+#night .st-shop-h small { font: 600 var(--fs-s) var(--font-body); color: var(--ink-soft); }
+#night .st-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 1360px) { #night .st-slot { min-height: 96px; } #night .st-slot .st-ic { font-size: 30px; } }
