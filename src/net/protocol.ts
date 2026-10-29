@@ -1,10 +1,11 @@
+import { RESERVED_TELE_KINDS, type TeleEvent } from '../host/telemetry';
 import type { GameState, PlayerInput } from '../sim/types';
 
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
 export const APP_ID = 'cafetycoon-v1';
 /** Bump when any message below changes shape; mismatched builds refuse each other politely. */
 export const PROTOCOL_VERSION = 2;
-export const ACTIONS = ['hello', 'join', 'input', 'snap', 'lobby'] as const;
+export const ACTIONS = ['hello', 'join', 'input', 'snap', 'lobby', 'tele'] as const;
 export type ActionKind = (typeof ACTIONS)[number];
 
 export interface Member {
@@ -37,8 +38,16 @@ export interface LobbyMsg {
   members: Member[];
   started: boolean;
 }
+export interface TeleMsg {
+  t: 'tele';
+  token: string;
+  events: TeleEvent[];
+}
 
 const MAX_TOKEN = 64;
+const MAX_TELE_EVENTS = 200;
+const MAX_TELE_KIND = 40;
+const MAX_TELE_DATA = 1000;
 const MAX_NAME = 16;
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
@@ -83,4 +92,17 @@ export function parseLobby(data: unknown): LobbyMsg | null {
     members.push({ token: m.token, name: m.name });
   }
   return { t: 'lobby', members, started: data.started };
+}
+
+export function parseTele(data: unknown): TeleMsg | null {
+  if (!isObj(data) || data.t !== 'tele' || !str(data.token) || !Array.isArray(data.events)) return null;
+  if (data.token.length < 1 || data.token.length > MAX_TOKEN || data.events.length > MAX_TELE_EVENTS) return null;
+  const events: TeleEvent[] = [];
+  for (const e of data.events) {
+    if (!isObj(e) || !str(e.kind) || e.kind.length < 1 || e.kind.length > MAX_TELE_KIND || !finite(e.at)) return null;
+    if (RESERVED_TELE_KINDS.includes(e.kind)) return null;
+    const json = JSON.stringify(e.data);
+    events.push({ kind: e.kind, data: json !== undefined && json.length <= MAX_TELE_DATA ? e.data : null, at: e.at });
+  }
+  return { t: 'tele', token: data.token, events };
 }

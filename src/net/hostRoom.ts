@@ -1,4 +1,5 @@
-import { parseInput, parseJoin, PROTOCOL_VERSION, type Member } from './protocol';
+import type { TeleEvent } from '../host/telemetry';
+import { parseInput, parseJoin, parseTele, PROTOCOL_VERSION, type Member } from './protocol';
 import type { RoomLink } from './roomLink';
 import type { HostToClient, Transport } from './transport';
 
@@ -9,7 +10,17 @@ export interface HostRoom {
   close(): void;
 }
 
-export function createHostRoom(link: RoomLink, local: Transport, host: Member, onMembers?: (members: Member[]) => void): HostRoom {
+export interface HostRoomHooks {
+  onTele?(token: string, events: TeleEvent[]): void;
+}
+
+export function createHostRoom(
+  link: RoomLink,
+  local: Transport,
+  host: Member,
+  onMembers?: (members: Member[]) => void,
+  hooks?: HostRoomHooks,
+): HostRoom {
   const byPeer = new Map<string, Member>();
   let latest: HostToClient | null = null;
   let started = false;
@@ -61,6 +72,14 @@ export function createHostRoom(link: RoomLink, local: Transport, host: Member, o
     const member = byPeer.get(peerId);
     if (!msg || !member || msg.input.playerId !== member.token) return;
     local.sendInput(msg.input);
+  });
+
+  link.onMessage('tele', (data, peerId) => {
+    if (closed) return;
+    const msg = parseTele(data);
+    const member = byPeer.get(peerId);
+    if (!msg || !member || msg.token !== member.token) return;
+    hooks?.onTele?.(msg.token, msg.events);
   });
 
   link.onPeerLeave((peerId) => {

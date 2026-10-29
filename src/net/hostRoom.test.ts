@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { createTelemetry, withTelemetry, type TeleEvent } from '../host/telemetry';
 import { createRun } from '../sim/run';
 import { createHostRoom } from './hostRoom';
 import { PROTOCOL_VERSION } from './protocol';
@@ -123,5 +124,46 @@ describe('HostRoom', () => {
     local.emit(snap());
     expect(link.left).toBe(true);
     expect(link.sent.filter((s) => s.kind === 'snap')).toHaveLength(0);
+  });
+
+  it("forwards a member's tele batch and drops impersonation", () => {
+    const link = createFakeLink();
+    const local = fakeLocal();
+    const got: { token: string; events: TeleEvent[] }[] = [];
+    createHostRoom(link, local.t, { token: 'H', name: 'Host' }, undefined, { onTele: (token, events) => got.push({ token, events }) });
+    link.peerJoins('p1');
+    link.receive('join', join('T1', 'Sam'), 'p1');
+    const events = [{ kind: 'frame.long', data: { ms: 300 }, at: 5 }];
+    link.receive('tele', { t: 'tele', token: 'T1', events }, 'p1');
+    expect(got).toEqual([{ token: 'T1', events }]);
+    link.receive('tele', { t: 'tele', token: 'H', events }, 'p1');
+    link.receive('tele', { t: 'tele', token: 'T1', events }, 'stranger');
+    link.receive('tele', { t: 'tele', token: 'T1', events: [{ kind: 'input', data: 1, at: 1 }] }, 'p1');
+    link.receive('tele', { t: 'tele', token: 'T1', events: 'junk' }, 'p1');
+    expect(got).toHaveLength(1);
+  });
+
+  it('ignores tele when no hook is given', () => {
+    const link = createFakeLink();
+    const local = fakeLocal();
+    createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+    link.peerJoins('p1');
+    link.receive('join', join('T1', 'Sam'), 'p1');
+    expect(() => link.receive('tele', { t: 'tele', token: 'T1', events: [{ kind: 'x', data: 1, at: 1 }] }, 'p1')).not.toThrow();
+  });
+
+  it('a HostRoom on a telemetry-wrapped transport records peer joins and inputs', () => {
+    const link = createFakeLink();
+    const local = fakeLocal();
+    const tele = createTelemetry({ host: 'H', build: 'test', protocol: PROTOCOL_VERSION }, { now: () => 0 });
+    createHostRoom(link, withTelemetry(local.t, tele), { token: 'H', name: 'Host' });
+    link.peerJoins('p1');
+    link.receive('join', join('T1', 'Sam'), 'p1');
+    link.receive('input', { t: 'input', input: { kind: 'move', playerId: 'T1', x: 1, y: 0, interact: false } }, 'p1');
+    const recorded = tele.rows().map((r) => r.kind);
+    expect(recorded).toContain('peer.join');
+    expect(recorded).toContain('input');
+    expect(kinds(local.inputs, 'join')).toHaveLength(1);
+    expect(kinds(local.inputs, 'move')).toHaveLength(1);
   });
 });

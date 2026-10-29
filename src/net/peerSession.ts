@@ -1,3 +1,4 @@
+import type { TeleEvent } from '../host/telemetry';
 import { parseHello, parseLobby, parseSnap, PROTOCOL_VERSION, type LobbyMsg } from './protocol';
 import type { RoomLink } from './roomLink';
 import type { HostToClient, Transport } from './transport';
@@ -9,6 +10,8 @@ export interface PeerTransport extends Transport {
   onStatus(handler: (status: PeerStatus) => void): () => void;
   onLobby(handler: (msg: LobbyMsg) => void): () => void;
   status(): PeerStatus;
+  /** Send UI events to the host; a no-op until the host is known (not queued) and for empty batches. */
+  sendTele(events: TeleEvent[]): void;
 }
 
 export interface PeerSessionOptions {
@@ -120,6 +123,9 @@ export function createPeerSession(link: RoomLink, opts: PeerSessionOptions): Pee
     },
     sendInput(input) {
       if (hostPeerId) link.send('input', { t: 'input', input }, hostPeerId);
+    },
+    sendTele(events) {
+      if (hostPeerId && events.length > 0) link.send('tele', { t: 'tele', token: opts.token, events }, hostPeerId);
     },
     onSnapshot: (handler) => subscribe(snapshotHandlers, handler),
     onError: (handler) => subscribe(errorHandlers, handler),
