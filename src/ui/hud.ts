@@ -185,7 +185,8 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
         ? live.orders
             .slice(0, 6)
             .map(
-              (o) => `<div class="ticket ${o.patience < URGENT ? 'urgent' : ''}" data-id="${o.id}" style="--r:${tilt(o.id)}deg">
+              (o) => `<div class="ticket ${o.patience < URGENT ? 'urgent' : ''} ${o.tag ? `kind-${o.tag.tone}` : ''}" data-id="${o.id}" style="--r:${tilt(o.id)}deg">
+                ${o.tag ? `<div class="ktag">${esc(o.tag.text)}</div>` : ''}
                 <div class="ic">${itemIcon(o.drink, 34)}</div><div class="nm">${DRINK_LABEL[o.drink]}</div>
                 <div class="pr">${esc(prices[o.drink] ?? '')}</div>
                 <div class="steps">${DRINK_STEPS[o.drink].map((s) => `<span>${s}</span>`).join('')}</div>
@@ -212,7 +213,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     el.crew.innerHTML = live.crew
       .map(
         (c) =>
-          `<span class="av ${c.me ? 'me' : ''} ${c.connected ? '' : 'away'}" style="background:${c.color}" title="${esc(c.name)}${c.me ? ' (you)' : ''}${c.connected ? '' : ' · away'}">${esc(c.initial)}</span>`,
+          `<span class="av ${c.me ? 'me' : ''} ${c.connected ? '' : 'away'} ${c.bot ? 'bot' : ''}" style="background:${c.color}" title="${esc(c.name)}${c.me ? ' (you)' : ''}${c.bot ? ` · ${c.bot} bot` : ''}${c.connected ? '' : ' · away'}">${esc(c.initial)}</span>`,
       )
       .join('');
   }

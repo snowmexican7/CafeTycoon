@@ -37,6 +37,8 @@ export interface CrewMember {
   color: string;
   me: boolean;
   connected: boolean;
+  /** A bot barista (and its personality), shown with a gear badge. */
+  bot?: string;
 }
 
 export interface OrderTicket {
@@ -44,6 +46,27 @@ export interface OrderTicket {
   drink: DrinkId;
   /** Patience left, 0..1. Changes every tick: patch it, do not key on it. */
   patience: number;
+  /** Who's asking, when it matters: "Ada · regular", "In a hurry", "Group · 2 more", "Influencer", "Wrong drink!". */
+  tag?: { text: string; tone: 'regular' | 'impatient' | 'group' | 'influencer' | 'upset' };
+}
+
+/** The little tag on an order ticket for the customer kinds worth planning around. */
+export function ticketTag(c: GameState['customers'][number]): OrderTicket['tag'] {
+  if (c.upset) return { text: 'Wrong drink! Remake it', tone: 'upset' };
+  switch (c.kind) {
+    case 'regular':
+      return { text: `${c.name ?? 'Regular'} \u00b7 regular`, tone: 'regular' };
+    case 'impatient':
+      return { text: 'In a hurry', tone: 'impatient' };
+    case 'group': {
+      const more = c.extra?.length ?? 0;
+      return { text: more > 0 ? `Group \u00b7 ${more} more after this` : 'Group \u00b7 last one', tone: 'group' };
+    }
+    case 'influencer':
+      return { text: 'Influencer \u00b7 bonus', tone: 'influencer' };
+    default:
+      return undefined;
+  }
 }
 
 export interface HandHint {
@@ -75,6 +98,7 @@ export function crewOf(state: GameState, me: PlayerId): CrewMember[] {
     color: PLAYER_HEX[i % PLAYER_HEX.length],
     me: p.id === me,
     connected: p.connected,
+    ...(p.bot ? { bot: p.bot.personality } : {}),
   }));
 }
 
@@ -119,7 +143,10 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     dayInWeek: (state.day - 1) % 7,
     progress,
     open: state.phase === 'day',
-    orders: state.customers.map((c) => ({ id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0 })),
+    orders: state.customers.map((c) => {
+      const tag = ticketTag(c);
+      return { id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0, ...(tag ? { tag } : {}) };
+    }),
     crew: crewOf(state, me),
     holding: player?.holding ?? null,
     meName: player?.name ?? '',
@@ -128,8 +155,8 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
 }
 
 /** Keys for the HUD's independently rebuilt blocks (everything except per-tick values). */
-export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}`).join(',');
-export const crewKey = (l: HudLive) => l.crew.map((c) => `${c.id}:${c.name}:${c.connected ? 1 : 0}:${c.me ? 1 : 0}`).join(',');
+export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}`).join(',');
+export const crewKey = (l: HudLive) => l.crew.map((c) => `${c.id}:${c.name}:${c.connected ? 1 : 0}:${c.me ? 1 : 0}:${c.bot ?? ''}`).join(',');
 export const handKey = (l: HudLive) => `${l.holding}|${l.meName}|${l.hint.go}|${l.hint.title}|${l.hint.detail}`;
 
 export interface NightExtras {

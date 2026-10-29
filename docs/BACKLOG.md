@@ -334,3 +334,40 @@ Co-op fun:
   (flash, sparkles over every barista, "Say latte!").
 - Later: a "Weather radio" night card that reveals tomorrow's events, so planning becomes a team
   decision at the shop.
+
+## Block 3 reflection (customer and bot personality visuals)
+
+Shipped: customer tells drawn per kind in `Actors` (impatient stopwatch, foot tap and sweat drop;
+group companions that leave as their drinks are served plus a ×N pill; regular's name tag with a
+heart; influencer ring light from B2); ticket tags in the Orders list (`ticketTag`, part of
+`ordersKey`); bots with a white "Name · bot" tag in their colour and a personality look and emote
+(`botLook`: rookie NEW sticker + sweat drop, steady headphones + hum, veteran shades + espresso),
+dashed crew avatars with a gear badge; away humans greyed with "· away" and z z z; a new sim log
+entry `served` `{by, item, amount, kind, cid, perfect, left, name?}` (log only; `PERFECT_PATIENCE`
+0.75) driving stacked serve toasts in the server's colour (max 4), confetti and "Perfect!",
+hearts and "Ada's usual!", a bot's "Oops!", and the influencer group photo (flash, sparkles over
+every barista, "Say latte!"). The old "+$" earnings pop is replaced by the toasts.
+
+Performance: Scene + HUD update measured on the fixtures page (`cost.mjs`): median 0.3 ms per
+frame, 0.5 ms with everything at once (p95 0.7 ms). Four headless browsers on software GL ran at
+~9 fps both on `phase1-final` and on this block, so no measurable regression from the new layers.
+Caps: 4 toasts, 140 confetti/heart/star bits, 80 chaos particles, 8 comic texts; idle Graphics are
+not redrawn.
+
+What could be better:
+- With four people serving fast, the toast stack sits over the counter and can hide a drink on the
+  pass for a moment. A side column (right of the counter) or merging "Ana ×3" would be calmer.
+- Group companions are drawn once at arrival; a group that grew (it can't today) would not update.
+- "Perfect" is a fixed 75 % patience: it may want tuning with the tester in B11.
+
+What's missing (deferred):
+- Emotes reacting to the game (a bot sweating harder in a rush, a veteran's thumbs-up after a
+  perfect serve) rather than on a timer.
+- Bot speech lines ("On it!", "Behind you!"): B5 bot personalities.
+
+Co-op fun:
+- Folded in now: a **teamwork!** cheer when one barista parks a drink on the pass and another
+  serves it (`crewBursts` remembers who parked what), a **hat trick** shout-out for three perfect
+  serves in a row, and the influencer **group photo**.
+- Next: count hand-offs and perfect streaks per player for the week-end awards (B10: "Best
+  passer", "Mr. Perfect"), and a crew high-five emote when a rush hour ends with nobody lost.

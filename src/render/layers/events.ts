@@ -52,6 +52,9 @@ export class EventVisuals {
   private inspector: Sprite | null = null;
   private readonly board = new Container();
   private readonly boardBulbs = new Graphics();
+  /** A one-off camera flash (the influencer's group photo), seconds left. */
+  private flashLeft = 0;
+  private lastNow = 0;
 
   constructor(
     private readonly depth: Container,
@@ -89,9 +92,15 @@ export class EventVisuals {
     this.updateInspector(state, active.has('healthInspector') ? this.started.get('healthInspector')! : null, now);
     this.updateRush(active.has('rushHour'), now);
     const influencer = open && state.customers.some((c) => c.kind === 'influencer');
-    const on = influencer && flashOn(now);
+    this.flashLeft = Math.max(0, this.flashLeft - Math.max(0, now - this.lastNow));
+    this.lastNow = now;
+    const on = (influencer && flashOn(now)) || this.flashLeft > 0;
     this.flash.visible = on;
-    this.flash.alpha = on ? 0.16 : 0;
+    this.flash.alpha = this.flashLeft > 0 ? 0.5 * Math.min(1, this.flashLeft / 0.12) : on ? 0.16 : 0;
+  }
+
+  flashNow(): void {
+    this.flashLeft = 0.25;
   }
 
   private updatePower(state: GameState, t: number | null, now: number): void {
