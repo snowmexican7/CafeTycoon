@@ -225,3 +225,21 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .rg-txt small { flex-basis: 100%; font-size: 11px; color: #7a6450; } #night .rg-row.off small { color: #a6462f; }
 #night .rg-hearts { color: #d9534f; font-size: 12px; letter-spacing: 1px; } #night .rg-hearts i { color: #e3d5c5; font-style: normal; }
 #night .mb-fan { color: #c0473f; font-weight: 600; }
+
+/* P3 B4: tabbed night board */
+#night .ntab { cursor: pointer; border: 0; } #night .ntab small { font-weight: 500; opacity: .75; }
+#night .ntab:hover { filter: brightness(.97); } #night .ntab.alert:not(.on) { background: #fbe0d6; color: #a6462f; }
+#night .pane { grid-column: 2; grid-row: 2; display: none; min-height: 0; overflow: auto; padding: 2px 4px 12px; }
+#night .pane.on { display: block; } #night .pane.hand.on { display: grid; }
+#night .menu-pane .menu-board, #night .regs-pane .regs { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
+#night .crew-pane .roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+#night .paper-pane .paper-news { max-width: 980px; }
+#night .paper-strip { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; border: 0; cursor: pointer; text-align: left; background: #fffaf1; border-radius: 12px; padding: 8px 12px; box-shadow: var(--sh-1); font: inherit; color: var(--ink); }
+#night .paper-strip b { font: 700 15px Georgia, serif; } #night .paper-strip span { color: #6b5640; font-size: 13px; }
+#night .paper-strip em { margin-left: auto; font-style: normal; font-weight: 600; font-size: 13px; color: #b46a2a; } #night .ps-ic { font-size: 20px; }
+@media (max-width: 1400px) { #night .ntab { font-size: 13px; padding: 7px 9px; } #night .ntab small { display: none; } #night .ntab.alert small { display: inline; } }
+#night .menu-pane .mb-total, #night .menu-pane .sec, #night .regs-pane .sec, #night .crew-pane .sec { grid-column: 1 / -1; }
+
+/* P3 B4: fresh stock */
+#night .restock .spoil-note { display: block; color: #9a6a3a; font-size: 11px; } #night .restock .spoil-note b { color: #b4472f; }
+#night .restock.fresh { border-left: 4px solid #8cc7a8; } #night .line.spoil span:first-child { color: #8a5a3a; }

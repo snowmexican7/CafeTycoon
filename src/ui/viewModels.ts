@@ -14,6 +14,7 @@ import { EVENT_LABELS } from '../sim/events';
 import { challengeChipText } from '../sim/challenges';
 import { activeSets, fullSets, computeModifiers, setCounts, weekOf } from '../sim/effects';
 import { rerollCost, restockCost } from '../sim/night';
+import { spoilRate } from '../sim/spoilage';
 import { fittingsValue, scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
@@ -245,11 +246,12 @@ export function handCardViewModel(state: GameState, item: CatalogueItem): HandCa
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
-  restock: { supply: SupplyId; count: number; packSize: number; packCost: string; affordable: boolean }[];
+  /** P3 B4: fresh rows carry the share that goes off at each closing, and what went off last night. */
+  restock: { supply: SupplyId; count: number; packSize: number; packCost: string; affordable: boolean; spoilPct?: number; spoiled?: number }[];
   ready: { id: PlayerId; name: string; ready: boolean; role?: string }[];
   /** Phase 3 B1: the four roles, who holds each, and whether this barista can take it. */
   roles?: RoleVM[];
@@ -398,6 +400,14 @@ export function rolesViewModel(state: GameState, me: PlayerId): RoleVM[] {
   });
 }
 
+function spoiledWhat(s: Partial<Record<SupplyId, number>> | undefined): string {
+  if (!s) return '';
+  return Object.entries(s)
+    .filter(([, n]) => n)
+    .map(([k, n]) => `${n} ${k === 'pastry' ? (n === 1 ? 'pastry' : 'pastries') : k}`)
+    .join(', ');
+}
+
 export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   const last = state.days[state.days.length - 1];
   const takings =
@@ -405,6 +415,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
       ? {
           sales: money(last.sales), tips: money(last.tips), rent: money(last.rent), profit: money(profitOf(last)), ...espressoLines(last),
           ...(last.fines ? { fines: money(last.fines) } : {}), ...(last.bonus ? { bonus: money(last.bonus) } : {}),
+          ...(last.spoiledValue ? { spoiled: money(last.spoiledValue), spoiledWhat: spoiledWhat(last.spoiled) } : {}),
+          ...(last.pastries ? { pastries: last.pastries } : {}),
         }
       : null;
   return {
@@ -417,7 +429,12 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     sets: activeSets(state).map((id) => (fullSets(state).includes(id) ? `${CARD_SETS[id].name} (full)` : CARD_SETS[id].name)),
     restock: neededSupplies(state).map((supply) => {
       const cost = restockCost(state, supply, 1);
-      return { supply, count: state.supplies[supply] ?? 0, packSize: ECONOMY.packs[supply].size, packCost: money(cost), affordable: state.cash >= cost };
+      const rate = spoilRate(state, supply);
+      const lastSpoiled = takings ? last.spoiled?.[supply] ?? 0 : 0;
+      return {
+        supply, count: state.supplies[supply] ?? 0, packSize: ECONOMY.packs[supply].size, packCost: money(cost), affordable: state.cash >= cost,
+        ...(rate > 0 ? { spoilPct: Math.round(rate * 100) } : {}), ...(lastSpoiled ? { spoiled: lastSpoiled } : {}),
+      };
     }),
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id), ...(p.role ? { role: ROLES[p.role].icon } : {}) })),
     roles: rolesViewModel(state, me),

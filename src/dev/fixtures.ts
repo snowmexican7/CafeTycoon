@@ -119,6 +119,19 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B4: fresh stock: last night 4 milk and 3 pastries went off; a Manager is on the crew tonight. */
+  spoilage: {
+    night: true,
+    setup(s) {
+      s.cash = 180;
+      s.day = 2;
+      s.today = { day: 1, served: 22, lost: 3, turnedAway: 0, sales: 118.5, tips: 19.2, rent: 25, pastries: 4, spoiled: { milk: 4, pastry: 3 }, spoiledValue: 7.5 };
+      s.supplies = { ...s.supplies, milk: 9, pastry: 3 };
+      const p = s.players.find((x) => !x.bot);
+      if (p) p.role = 'manager';
+    },
+    timeline: [],
+  },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */

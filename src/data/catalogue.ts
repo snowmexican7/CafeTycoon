@@ -281,6 +281,11 @@ export const CATALOGUE: CatalogueItem[] = [
     flavor: 'It hums all night and drops a scoop of ice like applause.',
   },
   {
+    id: 'walkInFridge', name: 'Walk-in fridge', category: 'equipment', cost: 25, rarity: 'common', path: 'quality',
+    duration: 'permanent', effects: [{ kind: 'spoil', mul: 0.4 }],
+    flavor: 'Cold, humming and roomy. Milk keeps, croissants stay croissants.',
+  },
+  {
     id: 'kegFridge', name: 'Under-counter keg fridge', category: 'equipment', cost: 30, rarity: 'common', path: 'speed', set: 'coldBar',
     duration: 'permanent', effects: [{ kind: 'supplyCost', supply: 'concentrate', mul: 0.8 }, { kind: 'stationSpeed', station: 'coldBrewTap', mul: 1.1 }],
     flavor: 'Bigger kegs, fewer changeovers, less cold brew down the drain.',

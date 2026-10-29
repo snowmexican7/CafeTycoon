@@ -13,7 +13,7 @@ describe('createRun', () => {
     expect(s.cash).toBe(100);
     expect(s.startingCash).toBe(100);
     expect(s.reputation).toBe(2.5);
-    expect(s.supplies).toEqual({ beans: 20, milk: 10, concentrate: 15, flavour: 0 });
+    expect(s.supplies).toEqual({ beans: 20, milk: 10, concentrate: 15, flavour: 0, pastry: 0 });
     expect(s.unlocked).toEqual(['espresso', 'latte', 'coldBrew']);
     expect(s.phaseTicksLeft).toBe(60 * 60);
     expect(s.settings).toEqual({ dayLengthSec: 150, nightLengthSec: 60, pace: 3, bots: 'auto', botSkill: 3 });

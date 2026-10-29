@@ -1,3 +1,4 @@
+import { spoilOvernight } from './spoilage';
 import { noteMissedFavourites } from './regulars';
 import { ECONOMY } from '../data/economy';
 import { loseCustomer } from './customers';
@@ -56,6 +57,7 @@ export function finishDay(state: GameState): GameState {
   state.reputation = round2(Math.min(r.max, Math.max(r.min, next)));
 
   noteMissedFavourites(state);
+  spoilOvernight(state);
   state.days.push(state.today);
   state.activeTomorrow = [];
 

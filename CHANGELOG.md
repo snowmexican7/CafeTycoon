@@ -40,6 +40,17 @@ Nothing yet.
   heart, and so does a regular storming out or their favourite being off the menu for a day. The
   night screen lists the regulars with their hearts and a warning when their favourite is off or
   pricey, and each menu line shows whose favourite it is. Save version 12, network protocol 15.
+- **Tabbed night board (P3 B4).** The night screen's right side has tabs: Shop (tonight's hand,
+  with the paper in one line), Menu & prices, Crew & roles, Regulars (shown once you have one,
+  flagged when one is unhappy) and Paper. The left column keeps the receipt and the restock list,
+  and the ready row and Open the shop stay put. Checked at 1280x800 and 1920x1080.
+- **Supplies that spoil (P3 B4).** Milk and the new pastries are fresh stock: at each closing 30%
+  of the leftover milk and 50% of the leftover pastries go off. The restock rows show the share and
+  how much went off last night, and the receipt has a "Went off" line. Pastries come in packs of 6
+  for $7 and sell on the side ($3, about one serve in three) while the case has any. A Manager
+  halves spoilage, and a new Walk-in fridge card ($25) cuts it by 60%. Save v13 (adds an empty
+  pastry case), protocol v16.
+
 
 ## 2.0.1 — 2026-10-29
 

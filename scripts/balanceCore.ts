@@ -49,7 +49,7 @@ export class UsageError extends Error {}
 const DRINKS: DrinkId[] = DRINK_IDS;
 const SUPPLIES: SupplyId[] = SUPPLY_IDS;
 const SCENARIO_IDS = SCENARIOS.map((s) => s.id);
-const RESTOCK_TARGET: Record<SupplyId, number> = { beans: 40, milk: 20, concentrate: 30, flavour: 10 };
+const RESTOCK_TARGET: Record<SupplyId, number> = { beans: 40, milk: 20, concentrate: 30, flavour: 10, pastry: 6 };
 const NIGHT_SECONDS = 30;
 const TESTER = 'tester';
 const NO_BARISTAS = 'No baristas: nothing will be served.';

@@ -41,7 +41,7 @@ export const ROLES: Record<RoleId, RoleInfo> = {
     machineTime: 1.25, walk: 1, tip: 1.5, craft: 0, supplyCost: 1,
   },
   manager: {
-    name: 'Manager', icon: '📋', perk: 'Supplier deals: restocks cost 20% less', weakness: 'Clipboard in hand: walks 10% and works 10% slower',
+    name: 'Manager', icon: '📋', perk: 'Supplier deals: restocks cost 20% less, and half as much fresh stock goes off', weakness: 'Clipboard in hand: walks 10% and works 10% slower',
     machineTime: 1.1, walk: 0.9, tip: 1, craft: 0, supplyCost: 0.8,
   },
 };

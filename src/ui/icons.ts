@@ -61,7 +61,7 @@ export const jar = (fill: number, color: string, s = 28): string => {
   return `<svg width="${s}" height="${s * 1.2}" viewBox="0 0 30 36" aria-hidden="true"><rect x="4" y="6" width="22" height="28" rx="6" fill="#ffffffaa" stroke="#e6d2b4" stroke-width="1.5"/><rect x="5.5" y="${(7.5 + 25 * (1 - f)).toFixed(1)}" width="19" height="${(25 * f).toFixed(1)}" rx="4.5" fill="${color}"/><rect x="3" y="2" width="24" height="6" rx="2.5" fill="#7b4c2f"/><rect x="8" y="12" width="4" height="14" rx="2" fill="#fff" opacity=".5"/></svg>`;
 };
 
-export const SUPPLY_COLOR: Record<SupplyId, string> = { beans: '#7b4a2c', milk: '#f4efe6', concentrate: '#5b3420', flavour: '#d9862b' };
+export const SUPPLY_COLOR: Record<SupplyId, string> = { beans: '#7b4a2c', milk: '#f4efe6', concentrate: '#5b3420', flavour: '#d9862b', pastry: '#e0a95a' };
 
 export const logoCup = (s = 30): string =>
   `<svg width="${s}" height="${s}" viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12h18v8a8 8 0 0 1-8 8h-2a8 8 0 0 1-8-8z" fill="#e08a3c"/><path d="M23 14h2a4 4 0 0 1 0 8h-2" stroke="#e08a3c" stroke-width="3" fill="none"/><path d="M11 4q2 3 0 5M16 3q2 3 0 6" stroke="#fff4e2" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;

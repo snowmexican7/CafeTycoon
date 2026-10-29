@@ -161,7 +161,9 @@ describe('upgrade cards: the weather radio', () => {
       const mk = (radio: boolean) => {
         const s = solo(seed);
         s.day = 3;
+        // Same deck either way (an owned card leaves the deal), so only the radio's timing differs.
         if (radio) own(s, 'weatherRadio');
+        else s.owned.push({ itemId: 'weatherRadio', effects: [] });
         return startDay(startNight(s));
       };
       const a = mk(false);
