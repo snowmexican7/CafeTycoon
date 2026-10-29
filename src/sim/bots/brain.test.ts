@@ -123,6 +123,32 @@ describe('bot brain', () => {
     expect(bot(s).bot!.claim).toBeNull();
   });
 
+  it('grounds parked on the espresso machine do not cover an order and get cleared', () => {
+    let s = cafe(1);
+    s.players.find((p) => p.id === 'p1')!.pos = { x: 11, y: 5 }; // out of the way
+    const machine = (x: GameState) => x.stations.find((st) => st.id === 'espresso')!;
+    machine(s).output = 'grounds'; // e.g. dropped there with R
+    s.customers = [{ id: 900, drink: 'espresso', ...huge }];
+    expect(uncoveredOrder(s, bot(s))?.id).toBe(900);
+    const wasted = s.today.wasted ?? 0;
+    const served = s.today.served;
+    s = runUntil(s, (x) => machine(x).output === null, 1200);
+    expect(s.today.wasted ?? 0).toBe(wasted); // grounds are not waste
+    s = runUntil(s, (x) => x.today.served === served + 1, 1200);
+    expect(s.customers.some((c) => c.id === 900)).toBe(false);
+  });
+
+  it('grounds parked on the steamer do not stall a latte', () => {
+    let s = cafe(1);
+    s.players.find((p) => p.id === 'p1')!.pos = { x: 11, y: 5 };
+    const steamer = (x: GameState) => x.stations.find((st) => st.id === 'steamer')!;
+    steamer(s).output = 'grounds';
+    s.customers = [{ id: 900, drink: 'latte', ...huge }];
+    const served = s.today.served;
+    s = runUntil(s, (x) => x.today.served === served + 1, 2400);
+    expect(steamer(s).output).toBeNull();
+  });
+
   it('Review Focus 2: a bot does not wait forever at a blocked machine', () => {
     let s = cafe(1);
     s.customers = [{ id: 900, drink: 'espresso', ...huge }];
