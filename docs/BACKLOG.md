@@ -1121,3 +1121,55 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
   - The ad copy is static, one line per platform. A rotating pool chosen by `hash32` would keep
     it fresh across a week.
   - Influencer ads stack with the influencer-scouting goal. Watch for that being too strong.
+
+## P3 Block 11 reflection (pitch an idea)
+
+- **What shipped.**
+  - `src/sim/pitch.ts` has three scripted judges, each with a keyword list and verdict lines in
+    three bands: low (0–3), mid (4–6) and high (7–10).
+  - A judge scores `2 + 2 × min(3, hits)`, plus menu context (twist, drink or signature names,
+    capped at +3), plus 1 when the pitch suits the judge (Gordon likes items, Chad likes
+    promos). Each buzzword costs 3 points, except with Chad, who gains 1. ALL CAPS costs 2, fewer
+    than 4 words costs 3, and a repeat of last night's pitch costs 4. Scores are clamped to 0–10.
+  - Tiers: passed under 12, meh 12–17, green-lit 18+, ovation 24+.
+  - Lines are chosen by `strHash(kind:text)`, so they're pure and stable with no RNG.
+  - The input is cleaned (control characters, whitespace, 140 characters) and validated. It
+    allows one pitch a night, at night, by humans only. It is scored at submit time and stored as
+    `state.pitch`. Like ads, it only applies when `pitch.day === state.day`.
+  - A green-lit promo multiplies traffic (×1.04, or ×1.08 for an ovation); a green-lit item adds
+    to the tip rate (+0.02 / +0.04). There's a morning note.
+  - UI: the panel card on the "Ads & pitch" tab has promo/item toggles, a textarea whose draft
+    survives re-renders, and a result card with per-judge scores, verdicts, the boost pill and
+    notes.
+  - Save v20 and protocol v23.
+- **Ads tune.**
+  - A new `promo` balance policy plays taste plus an ad (Palm Book and Nextdoorish alternating,
+    only with $60 to spare) and a stock pitch every night.
+  - It showed that B10 ads were a trap: ads alone scored 211.89 against taste's 289.08, with
+    loss up from 28.6% to 33.5%. The café is capacity-bound, so more and bigger crowds didn't
+    convert.
+  - Fix: costs were cut by about 40%, and fine/viral runs add +0.015/+0.03 to the tip rate.
+    Ads alone now score 312.47 (+$23 over taste).
+  - Pitches alone score 305.73. The full promo policy scores 299.20 / 317.95 / loss 29.0%,
+    against taste's 289.08 / 323.58 / 28.6%. The two traffic boosts stack poorly on a full
+    café, so the payoff of doing both is modest. That's fine for a fun side system.
+- **Checks.**
+  - Five pitch tests plus one ad-tip assertion (578 total). They cover pure scoring and tiers,
+    the Chad buzzword quirk, caps and repeat penalties, cleaning and validation, one pitch a
+    night and humans only, promo/item/flop modifiers, the morning note and expiry, the VM, and an
+    identical stream with no pitch.
+  - Default balance is unchanged at 291.28 / 319.53 / 25.4%.
+  - Screenshots are in p3/b11. The 4-tab week sync results are in p3/b11/week.log.
+- **Bug caught.** B11's first cut put its CSS in a stray `src/ui/night.css` that nothing imports.
+  The screenshots showed the panel unstyled. The rules moved into `src/ui/styles/night.css`
+  under `#night`.
+- **Deferred / watch.**
+  - Keyword-stuffing is the dominant strategy. That's half the joke, but a "word salad" penalty
+    (judges docking points when hits exceed about 40% of the words) would reward real sentences.
+  - Pitches are text-only. Nothing on the menu changes yet: there's no real new item and no
+    named promo on the receipt. A follow-up could let a green-lit item become a limited-time
+    menu entry.
+  - There's no per-player credit or history wall of past pitches. A "Pitch of the week" award
+    would fit the awards screen.
+  - The judges aren't seasonal. Rotating a guest judge (Starbuck$'s regional manager?) per
+    season would keep it fresh.
