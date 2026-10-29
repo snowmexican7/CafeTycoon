@@ -127,6 +127,22 @@ function menuBoard(menu: MenuLineVM[] | undefined): string {
     <div class="mb-total">Tomorrow at these prices: <b>~${sum.orders} orders</b>, about <b>$${sum.profit.toFixed(0)}</b> profit before tips and rent. Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</div>`;
 }
 
+export type NightTab = 'shop' | 'menu' | 'crew' | 'regulars' | 'paper';
+/** P3 B4: the night board's right side is tabbed so the long lists don't stack in one column. */
+export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
+  { id: 'shop', label: 'Shop', icon: '🛒' },
+  { id: 'menu', label: 'Menu & prices', icon: '☕' },
+  { id: 'crew', label: 'Crew & roles', icon: '🧑‍🍳' },
+  { id: 'regulars', label: 'Regulars', icon: '♥' },
+  { id: 'paper', label: 'Paper', icon: '📰' },
+];
+
+/** The paper in one line on the Shop tab; the full paper is its own tab. */
+function paperStrip(f: ForecastVM | undefined): string {
+  if (!f) return '';
+  return `<button class="paper-strip" data-action="tab" data-tab="paper"><span class="ps-ic" aria-hidden="true">${f.icon}</span><b>${esc(f.headline)}</b><span>~${f.customers} walk-ins · ${f.hotPct}% hot</span><em>Read the paper →</em></button>`;
+}
+
 /** Phase 3 B3: the regulars, their favourite drink and loyalty hearts, with a nudge when it's off or pricey. */
 function regularsBoard(regs: RegularVM[] | undefined): string {
   if (!regs?.length) return '';
@@ -195,6 +211,7 @@ export function createNight(
     else if (action === 'menu') handlers.onMenu?.(el.dataset.drink as DrinkId, el.dataset.on === '1');
     else if (action === 'price') handlers.onPrice?.(el.dataset.drink as DrinkId, Number(el.dataset.step));
     else if (action === 'role') handlers.onRole?.(isRole(el.dataset.role) ? el.dataset.role : null);
+    else if (action === 'tab') selectTab(el.dataset.tab as NightTab);
     else if (action === 'jump-restock') jumpToRestock();
     else if (action === 'jump-warn') flash(container.querySelector<HTMLElement>('.warn-card'));
   });
@@ -219,6 +236,21 @@ export function createNight(
     (flagged[0]?.querySelector<HTMLButtonElement>('button:not(:disabled)') ?? null)?.focus({ preventScroll: true });
   }
   let lastKey = '';
+  let activeTab: NightTab = 'shop';
+  function selectTab(tab: NightTab): void {
+    if (!NIGHT_TABS.some((t) => t.id === tab)) return;
+    activeTab = tab;
+    applyTab();
+  }
+  function applyTab(): void {
+    container.querySelectorAll<HTMLElement>('.ntab').forEach((b) => {
+      const on = b.dataset.tab === activeTab;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+    container.querySelectorAll<HTMLElement>('.pane').forEach((p) => p.classList.toggle('on', p.dataset.pane === activeTab));
+    container.querySelector<HTMLElement>('.board')?.setAttribute('data-tab', activeTab);
+  }
 
   function patch(vm: NightVM, extras?: NightExtras): void {
     container.querySelector('.night-head .clock')!.textContent = vm.clock;
@@ -277,7 +309,21 @@ export function createNight(
       const bought = extras?.bought ?? [];
       const cards =
         vm.hand.map((c, i) => handCard(c, i, cash)).join('') + bought.map((b, i) => boughtCard(b.itemId, vm.hand.length + i)).join('');
-      const hand = newspaper(vm.forecast) + freshBanner(vm.fresh) + (cards || '<p class="empty">Nothing left to buy tonight. Restock, then open up.</p>');
+      const hand = paperStrip(vm.forecast) + freshBanner(vm.fresh) + (cards || '<p class="empty">Nothing left to buy tonight. Restock, then open up.</p>');
+      const regWarn = (vm.regulars ?? []).filter((r) => r.status !== 'ok').length;
+      const freeRoles = (vm.roles ?? []).filter((r) => !r.holder).length;
+      const menuOn = (vm.menu ?? []).filter((m) => m.on).length;
+      const badge: Record<NightTab, string> = {
+        shop: `${vm.hand.length}`,
+        menu: `${menuOn} on`,
+        crew: vm.roles?.length ? `${freeRoles} free` : '',
+        regulars: regWarn ? `${regWarn} !` : `${vm.regulars?.length ?? 0}`,
+        paper: vm.forecast ? `~${vm.forecast.customers}` : '',
+      };
+      const tabs = NIGHT_TABS.filter((t) => t.id !== 'regulars' || vm.regulars?.length)
+        .map((t) => `<button class="tab ntab ${t.id === 'regulars' && regWarn ? 'alert' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="false">${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}</button>`)
+        .join('');
+      if (activeTab === 'regulars' && !vm.regulars?.length) activeTab = 'shop';
       const colors = new Map((extras?.crew ?? []).map((c) => [c.id, c]));
       const ready = vm.ready
         .map((p) => {
@@ -304,14 +350,15 @@ export function createNight(
             <div class="paper">${receipt}${stats}</div>
             <div class="sec">Restock</div>
             <div class="restocks">${restock}</div>
-            ${rolesBoard(vm.roles)}
-            ${regularsBoard(vm.regulars)}
-            ${menuBoard(vm.menu)}
           </div>
-          <div class="tabs" role="tablist"><span class="tab on" role="tab" aria-selected="true">Tonight's hand · ${vm.hand.length}</span>
+          <div class="tabs" role="tablist">${tabs}
             <button class="btn reroll" data-action="reroll" ${vm.reroll.affordable ? '' : 'disabled'} title="Swap the cards on the table for a fresh deal">🎲 Re-roll · ${esc(vm.reroll.cost.replace('.00', ''))}</button>
             ${vm.sets.length ? `<span class="sets-on" title="Set bonuses switched on">${vm.sets.map((n) => `<span>✓ ${esc(n)}</span>`).join('')}</span>` : ''}</div>
-          <div class="hand">${hand}</div>
+          <div class="pane hand" data-pane="shop" role="tabpanel">${hand}</div>
+          <div class="pane menu-pane" data-pane="menu" role="tabpanel">${menuBoard(vm.menu)}</div>
+          <div class="pane crew-pane" data-pane="crew" role="tabpanel">${rolesBoard(vm.roles)}</div>
+          <div class="pane regs-pane" data-pane="regulars" role="tabpanel">${regularsBoard(vm.regulars)}</div>
+          <div class="pane paper-pane" data-pane="paper" role="tabpanel">${newspaper(vm.forecast)}</div>
           <div class="foot">
             <div class="ready">${ready}</div>
             <div class="spacer"></div>
@@ -320,6 +367,7 @@ export function createNight(
             <button class="btn primary big" data-action="ready" ${vm.meReady ? 'disabled' : ''}>${vm.meReady ? 'Ready ✓ waiting for the crew' : `${sun(24).replaceAll('#f6c35b', '#fff4e2')}Open the shop`}</button>
           </div>
         </div>`;
+      applyTab();
       patch(vm, extras);
     },
     show: () => show(container),
