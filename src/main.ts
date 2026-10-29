@@ -184,7 +184,7 @@ async function main(): Promise<void> {
   }, roadmap);
   const hintStore = (() => { try { return window.localStorage; } catch { return undefined; } })();
   let recipeHints = loadRecipeHints(hintStore);
-  const hud = createHud($('#hud'), { onMute: () => audio.toggleMute() }, { recipeHints });
+  const hud = createHud($('#hud'), { onMute: () => audio.toggleMute(), onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }) }, { recipeHints });
   const night = createNight($('#night'), {
     onBuy: (itemId) => send({ kind: 'buy', playerId: me(), itemId }),
     onRestock: (supply) => send({ kind: 'restock', playerId: me(), supply, packs: 1 }),
