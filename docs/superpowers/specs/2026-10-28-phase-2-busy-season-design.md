@@ -334,10 +334,10 @@ Commands (50 weeks each, seeds 1 to 50, deterministic):
 | Measure | Two humans + one bot | Three bots | Target |
 | --- | --- | --- | --- |
 | Weeks finished (seven days, no bankruptcy) | 50/50 | 50/50 | humans ≥ 95%, bots ≥ 60% |
-| Weeks ending above the $100 start | 50/50 | not checked | ≥ 80% |
+| Weeks ending above the $100 start | 50/50 | 50/50 | ≥ 80% |
 | Loss rate, lost / (served + lost) | 0.313 | 0.364 | humans in [0.15, 0.35] |
 | Mean final cash | $297.2 | $229.9 | bots never above humans |
-| Served / lost drinks | 7730 / 3527 | not recorded | |
+| Served / lost drinks | 7730 / 3527 | 7004 / 4010 | |
 | Bot mistakes | 197 | 786 | |
 | Wasted drinks | 457 | 876 | |
 
