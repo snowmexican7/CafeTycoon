@@ -12,8 +12,15 @@ export function isBot(p: Player): boolean {
   return p.bot !== undefined;
 }
 
+/** Crew bots and agency temps: ids no person can join as. */
 export function isBotId(id: string): boolean {
-  return id.startsWith('bot-');
+  return id.startsWith('bot-') || isTempId(id);
+}
+
+/** Temp baristas (B6 hire-temp card) clock in for one day and leave at closing. */
+export const TEMP_ID = 'temp-1';
+export function isTempId(id: string): boolean {
+  return id.startsWith('temp-');
 }
 
 /** Connected people, plus tester stand-ins (bots with the 'human' personality). */
@@ -71,7 +78,7 @@ function newBarista(state: GameState, id: string, name: string, personality: Per
 /** Bring the bot crew to the wanted size: drop the highest ids first, add at the lowest free ids. */
 export function syncBots(state: GameState): GameState {
   const wanted = wantedBots(state);
-  let current = state.players.filter((p) => isBotId(p.id));
+  let current = state.players.filter((p) => BOT_IDS.includes(p.id));
   while (current.length > wanted) {
     const highest = current.reduce((a, b) => (BOT_IDS.indexOf(b.id) > BOT_IDS.indexOf(a.id) ? b : a));
     state.players = state.players.filter((p) => p !== highest);
@@ -83,11 +90,21 @@ export function syncBots(state: GameState): GameState {
     state.players.push(bot);
     current.push(bot);
   }
+  syncTemp(state);
   return state;
+}
+
+/** A hired temp joins for the day when a spot behind the bar is free (four baristas at most). */
+function syncTemp(state: GameState): void {
+  if (state.phase !== 'day' || state.players.some((p) => isTempId(p.id))) return;
+  if (!state.activeTomorrow.some((o) => o.effects.some((e) => e.kind === 'temp'))) return;
+  if (state.players.length >= MAX_BARISTAS) return;
+  state.players.push(newBarista(state, TEMP_ID, ECONOMY.bots.tempName, 'rookie'));
 }
 
 /** Doors shut: bots forget the day's plans and stand still. Mistakes stay on the record. */
 export function resetBotsForNight(state: GameState): GameState {
+  state.players = state.players.filter((p) => !isTempId(p.id));
   for (const p of state.players) {
     if (!p.bot) continue;
     p.bot = { ...makeBotState(p.bot.personality), mistakes: p.bot.mistakes };

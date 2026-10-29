@@ -41,7 +41,9 @@ export const ECONOMY = {
   baristaHalfWidth: 0.35,
   dayLengthSec: 150,
   nightLengthSec: 60,
-  handSize: 5,
+  handSize: 4,
+  /** Re-rolling tonight's hand (B6): base price, plus step for each re-roll already made tonight. */
+  reroll: { base: 5, step: 5 },
   rarityWeights: { common: 60, uncommon: 30, rare: 10 },
   cheapThreshold: 30,
   /** Every supply a drink needs from scratch (derived from the station recipes in src/data/drinks.ts). */
@@ -86,6 +88,8 @@ export const ECONOMY = {
       speed: [0.85, 0.92, 1.0, 1.05, 1.1],
     },
     names: ['Bo', 'Lu', 'Mo'],
+    /** The agency temp from the hire-temp card (B6). */
+    tempName: 'Robin (temp)',
     maxWaitTicks: 900, // above a rogue's make (10 s) plus a power flicker (4 s)
     prepColdBrews: 2, // prepping bots keep at most this many cold brews ahead (pass + hands + tap)
     arriveRadius: 0.08,

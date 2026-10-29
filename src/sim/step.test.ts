@@ -31,7 +31,7 @@ describe('step', () => {
     expect(s.day).toBe(2);
     expect(s.days).toHaveLength(1);
     expect(s.days[0].rent).toBe(25);
-    expect(s.hand).toHaveLength(5);
+    expect(s.hand).toHaveLength(4);
   });
 
   it('counts idle ticks for still players', () => {
@@ -285,9 +285,9 @@ describe('floor day', () => {
       }
       return { s, seen };
     };
-    const a = floorDay(5);
+    const a = floorDay(7); // seed 7: B6's smaller hand moved seed 5's slip off the day
     expect(a.seen).toEqual({ drop: true, slip: true, mop: true });
-    expect(floorDay(5).s).toEqual(a.s);
+    expect(floorDay(7).s).toEqual(a.s);
     const round = JSON.parse(JSON.stringify(a.s)) as GameState;
     let x = a.s;
     let y = round;
@@ -296,7 +296,7 @@ describe('floor day', () => {
       y = step(y, []);
     }
     expect(y).toEqual(x);
-    expect(floorDay(6).s).not.toEqual(a.s);
+    expect(floorDay(8).s).not.toEqual(a.s);
   });
 });
 

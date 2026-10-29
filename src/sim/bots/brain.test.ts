@@ -695,6 +695,7 @@ describe('bots on a messy floor', () => {
     /** bot-1 holding an unchecked latte that it notices after 4 ticks (seed 2: the spill roll hits), `messes` spills down. */
     const notice = (messes: number) => {
       let s = cafe(1);
+      s.rng = 1128724345; // pinned: the stream where the notice's spill roll hits (B6's smaller hand moved seed 2's)
       parkHuman(s);
       for (let i = 0; i < messes; i++) spill(s, i < 11 ? 1 + i : 1, i < 11 ? 3 : 4);
       const b = bot(s);
