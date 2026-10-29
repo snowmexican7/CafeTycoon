@@ -653,6 +653,24 @@ describe('bots on a messy floor', () => {
     }
   });
 
+  it('a bot that loses the mop mid-plan drops the rest of the plan', () => {
+    let s = cafe(1);
+    parkHuman(s);
+    spill(s, 3, 4);
+    spill(s, 8, 3);
+    spill(s, 9, 5);
+    // Mop in hand, on its way to a clean node.
+    s = runUntil(s, (x) => {
+      const b = bot(x);
+      const first = b.bot!.plan[0];
+      return b.tool === 'mop' && first?.kind === 'floor' && first.action === 'clean' && b.bot!.path.length > 0;
+    }, 3000);
+    bot(s).tool = null; // e.g. sent home while the bot was out cold
+    s.mop = { pos: { ...LAYOUT.mopHome }, heldBy: null };
+    s = runUntil(s, (x) => bot(x).bot!.plan.length === 0, 2);
+    expect(bot(s).tool).toBeNull();
+  });
+
   // Review Focus 4
   it('an order interrupts a mop plan', () => {
     let s = cafe(1);

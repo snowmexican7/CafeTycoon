@@ -78,6 +78,19 @@ describe('the mop', () => {
     expect(s.messes.length).toBe(1);
   });
 
+  it('a clean whose mess vanished is cancelled', () => {
+    let s = chaosCafe();
+    addSpill(s, 9, 7);
+    withMop(s, { x: 10, y: 7 });
+    s = press(s);
+    expect(p1(s).cleaningTicksLeft).toBeGreaterThan(0);
+    s.messes = []; // e.g. another mop finished it first
+    s = ticks(s, 1);
+    expect(p1(s).cleaningTicksLeft).toBe(0);
+    expect(p1(s).cleaningMess).toBeNull();
+    expect(cleanLogs(s)).toEqual([]);
+  });
+
   it('E with the mop and no mess in range does nothing', () => {
     let s = chaosCafe();
     withMop(s, { x: 1, y: 2 });

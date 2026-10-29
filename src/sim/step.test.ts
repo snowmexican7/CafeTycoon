@@ -210,10 +210,23 @@ describe('input validation', () => {
 describe('drop input', () => {
   it('drop input validates, queues only by day and is cleared each tick', () => {
     expect(validateInput({ kind: 'drop', playerId: 'p1' })).toEqual({ kind: 'drop', playerId: 'p1' });
-    const night = createRun(opts);
-    expect(step(night, [{ kind: 'drop', playerId: 'p1' }]).players[0].dropQueued).toBe(false);
-    const day = startDay(createRun(opts));
-    expect(step(day, [{ kind: 'drop', playerId: 'p1' }]).players[0].dropQueued).toBe(false);
+    /** p1 at the counter with a latte in hand, then one tick with a drop. */
+    const dropAtCounter = (s: GameState): GameState => {
+      Object.assign(s.players[0], { pos: { x: 6, y: 5 }, holding: 'latte' });
+      return step(s, [{ kind: 'drop', playerId: 'p1' }]);
+    };
+    // By night nothing happens: the latte stays in hand.
+    const night = dropAtCounter(createRun(opts));
+    expect(night.phase).toBe('night');
+    expect(night.players[0].holding).toBe('latte');
+    expect(night.pass).toEqual([]);
+    expect(night.players[0].dropQueued).toBe(false);
+    // By day it lands on the pass.
+    const day = dropAtCounter(startDay(createRun(opts)));
+    expect(day.phase).toBe('day');
+    expect(day.players[0].holding).toBeNull();
+    expect(day.pass.map((i) => i.item)).toEqual(['latte']);
+    expect(day.players[0].dropQueued).toBe(false);
   });
 
   it('a drop naming a bot is ignored', () => {
