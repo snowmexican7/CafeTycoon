@@ -19,6 +19,11 @@ export function availableDrinks(state: GameState): DrinkId[] {
   return DRINKS.filter((d) => state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => state.supplies[s] >= 1));
 }
 
+/** Spots in the queue today: the layout's six, less any a forecast takes (never below three). */
+export function queueCapacity(m: Modifiers): number {
+  return Math.max(3, Math.min(ECONOMY.queueCapacity, ECONOMY.queueCapacity + m.queue));
+}
+
 /** One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. */
 export function spawnCustomers(state: GameState): GameState {
   const menu = availableDrinks(state);
@@ -26,7 +31,7 @@ export function spawnCustomers(state: GameState): GameState {
   const m = computeModifiers(state);
   const p = (ECONOMY.baseArrivalsPerSecond * m.traffic) / TICK_RATE;
   if (rngNext(state) >= p) return state;
-  if (state.customers.length >= ECONOMY.queueCapacity) {
+  if (state.customers.length >= queueCapacity(m)) {
     state.today.turnedAway += 1;
     return state;
   }
@@ -45,14 +50,17 @@ export function drawDrink(state: GameState, menu: DrinkId[], m: Modifiers): Drin
   return menu[menu.length - 1];
 }
 
-/** Which kind of customer walks in: day 1 uses the gentler mix; one rngNext, cumulative in mix order. */
+/** Which kind of customer walks in: day 1 uses the gentler mix, reweighted by the forecast; one rngNext, cumulative in mix order. */
 export function rollKind(state: GameState): Exclude<CustomerKind, 'influencer'> {
-  const mix: Partial<Record<Exclude<CustomerKind, 'influencer'>, number>> =
+  const base: Partial<Record<Exclude<CustomerKind, 'influencer'>, number>> =
     state.day === 1 ? ECONOMY.customers.mixDay1 : ECONOMY.customers.mix;
-  let roll = rngNext(state);
-  for (const kind of ['normal', 'impatient', 'group', 'regular'] as const) {
-    roll -= mix[kind] ?? 0;
-    if (roll < 0) return kind;
+  const w = computeModifiers(state).mix;
+  const kinds = ['normal', 'impatient', 'group', 'regular'] as const;
+  const weights = kinds.map((k) => (base[k] ?? 0) * (k === 'normal' ? 1 : w[k]));
+  let roll = rngNext(state) * weights.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < kinds.length; i++) {
+    roll -= weights[i];
+    if (roll < 0) return kinds[i];
   }
   return 'normal';
 }

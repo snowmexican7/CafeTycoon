@@ -24,6 +24,7 @@ describe('effects', () => {
   it('applies reputation, pace, and week ramp', () => {
     const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     s.scenario = 'normal';
+    s.forecast = 'ordinary';
     expect(computeModifiers(s).traffic).toBeCloseTo(0.7 + 0.12 * 2.5); // 1.0 at 2.5 stars, pace 3
     s.settings.pace = 5;
     expect(computeModifiers(s).traffic).toBeCloseTo(1.65);

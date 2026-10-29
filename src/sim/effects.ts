@@ -2,7 +2,9 @@ import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
 import { eventActive } from './events';
 import { rngNext } from './rng';
-import type { DrinkId, Effect, GameState, StationKind, SupplyId } from './types';
+import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
+import { dayProgress, forecastOf, shapeAt } from './forecast';
+import type { DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
 
 /** Every multiplier the simulation reads, already combined. */
 export interface Modifiers {
@@ -14,9 +16,14 @@ export interface Modifiers {
   tipRate: number;
   orderBias: Record<DrinkId, number>;
   supplyCost: Record<SupplyId, number>;
+  /** Weights on the customer mix's non-normal kinds. */
+  mix: Record<'impatient' | 'group' | 'regular', number>;
+  eventOdds: Record<EventKind, number>;
+  /** Added to the queue's capacity. */
+  queue: number;
 }
 
-const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
+const DRINKS: DrinkId[] = DRINK_IDS;
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -33,6 +40,9 @@ export function baseModifiers(): Modifiers {
     tipRate: 0,
     orderBias: { espresso: 1, latte: 1, coldBrew: 1 },
     supplyCost: { beans: 1, milk: 1, concentrate: 1 },
+    mix: { impatient: 1, group: 1, regular: 1 },
+    eventOdds: { rushHour: 1, powerFlicker: 1, influencerVisit: 1, healthInspector: 1 },
+    queue: 0,
   };
 }
 
@@ -65,6 +75,18 @@ export function itemModifiers(effects: Effect[]): Modifiers {
       case 'supplyCost':
         m.supplyCost[e.supply] *= e.mul;
         break;
+      case 'orderTag':
+        for (const d of DRINKS) if (DRINK_TEMP[d] === e.tag) m.orderBias[d] *= e.mul;
+        break;
+      case 'customerMix':
+        m.mix[e.customer] *= e.mul;
+        break;
+      case 'eventOdds':
+        m.eventOdds[e.event] *= e.mul;
+        break;
+      case 'queue':
+        m.queue += e.add;
+        break;
       case 'gamble':
         break;
     }
@@ -77,10 +99,12 @@ export function weekOf(day: number): number {
   return Math.ceil(day / ECONOMY.scoredWeekDays);
 }
 
-/** The modifiers in force right now: scenario and items, then reputation, pace, and the week ramp. */
+/** The modifiers in force right now: scenario, today's forecast and items, then reputation, pace, the week ramp and the forecast's traffic shape. */
 export function computeModifiers(state: GameState): Modifiers {
+  const forecast = forecastOf(state);
   const effects: Effect[] = [
     ...scenarioById[state.scenario].effects,
+    ...forecast.effects,
     ...state.owned.flatMap((o) => o.effects),
     ...state.activeTomorrow.flatMap((o) => o.effects),
   ];
@@ -90,6 +114,7 @@ export function computeModifiers(state: GameState): Modifiers {
   const ramp = weekOf(state.day) - 1;
   m.traffic *= (rep.base + rep.perStar * state.reputation) * ECONOMY.pace.arrival[paceIndex] * ECONOMY.weekRamp.traffic ** ramp;
   m.patience *= ECONOMY.pace.patience[paceIndex] * ECONOMY.weekRamp.patience ** ramp;
+  if (state.phase === 'day') m.traffic *= shapeAt(forecast.shape, dayProgress(state));
   if (eventActive(state, 'rushHour')) {
     m.traffic *= ECONOMY.events.rushHour.traffic;
     m.patience *= ECONOMY.events.rushHour.patience;

@@ -1,3 +1,4 @@
+import { forecastById } from '../data/forecasts';
 import { describe, it, expect } from 'vitest';
 import { catalogueById } from '../data/catalogue';
 import { EVENT_FORESHADOW, ROGUE_REVIEW, describeEffects, morningNotes } from './describe';
@@ -28,11 +29,12 @@ describe('describe', () => {
     s.owned = [{ itemId: 'streetSign', effects: [] }];
     expect(morningNotes(s)).toEqual([
       "Rainy week: everyone's grumpy and wants a latte.",
+      `${forecastById.opening.icon} Grand opening: ${forecastById.opening.blurb}`,
       'InstaGlam latte-art story is live: +40% customers, latte orders ×2',
       'Street sign installed',
     ]);
     s.day = 2;
-    expect(morningNotes(s)[0]).toContain('InstaGlam');
+    expect(morningNotes(s)[1]).toContain('InstaGlam');
   });
 
   it('carries the rogue review the morning after a rogue day, once', () => {

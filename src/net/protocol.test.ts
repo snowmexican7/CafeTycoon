@@ -3,8 +3,8 @@ import { RESERVED_TELE_KINDS } from '../host/telemetry';
 import { ACTIONS, parseHello, parseInput, parseJoin, parseLobby, parseSeat, parseSnap, parseTele, PROTOCOL_VERSION } from './protocol';
 
 describe('protocol parsers', () => {
-  it('is on version 4 (seat reclaim, room cap, lobby bots)', () => {
-    expect(PROTOCOL_VERSION).toBe(4);
+  it('is on version 5 (seat reclaim, room cap, lobby bots, forecasts in state)', () => {
+    expect(PROTOCOL_VERSION).toBe(5);
     expect(ACTIONS).toContain('seat');
     for (const a of ACTIONS) expect(new TextEncoder().encode(a).length).toBeLessThanOrEqual(12); // trystero action names
   });

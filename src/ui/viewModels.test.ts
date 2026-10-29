@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
 import type { RunRecord } from '../sim/types';
-import { cleanMeter, EVENT_INTRO, followerBump, scrutinyFor, closingViewModel, hudStructureKey, hudViewModel, lobbyViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
+import { cleanMeter, EVENT_INTRO, followerBump, forecastViewModel, scrutinyFor, closingViewModel, hudStructureKey, hudViewModel, lobbyViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 
@@ -299,5 +299,45 @@ describe('event receipt lines (Block 2)', () => {
     quiet.days.push({ ...before.today, events: [], inspection: null });
     const vm = closingViewModel(before, quiet);
     for (const k of ['events', 'inspection', 'fines', 'bonus']) expect(k in vm, k).toBe(false);
+  });
+});
+
+describe('the receipt adds up (fines and bonuses in the net)', () => {
+  it('profitOf includes the influencer bonus, inspector fines and hospital tab paid', async () => {
+    const { profitOf } = await import('./viewModels');
+    const d = { day: 2, served: 5, lost: 0, turnedAway: 0, sales: 30, tips: 5, rent: 25, fines: 15, bonus: 10, debtPaid: 2 };
+    expect(profitOf(d)).toBe(3);
+    expect(profitOf({ ...d, fines: undefined, bonus: undefined, debtPaid: undefined })).toBe(10);
+  });
+});
+
+describe('forecast view models', () => {
+  it('prints tomorrow’s paper with a hot/iced split and a rumour for the day after', () => {
+    const s = run();
+    s.forecast = 'heatWave';
+    s.day = 3;
+    const f = forecastViewModel(s);
+    expect(f.edition).toBe('Wednesday');
+    expect(f.name).toBe('Heat wave');
+    expect(f.eventNote).toContain('power flicker');
+    expect(f.hotPct).toBeLessThan(50);
+    s.forecast = 'rainy';
+    const wet = forecastViewModel(s);
+    expect(wet.name).toBe('Rainy Wednesday');
+    expect(wet.hotPct).toBeGreaterThan(f.hotPct);
+    expect(wet.later.name.length).toBeGreaterThan(0);
+    s.forecast = 'officeClosed';
+    const quiet = forecastViewModel(s).customers;
+    s.forecast = 'market';
+    expect(forecastViewModel(s).customers).toBeGreaterThan(quiet);
+    expect(nightViewModel(s, 'p1').forecast?.headline).toBe(forecastViewModel(s).headline);
+  });
+
+  it('shows today’s forecast as a hud chip', () => {
+    const s = run();
+    expect(hudViewModel(s).forecast?.name).toBe('Grand opening');
+    s.forecast = 'payday';
+    s.day = 5;
+    expect(hudViewModel(s).forecast?.name).toBe('Payday Friday');
   });
 });

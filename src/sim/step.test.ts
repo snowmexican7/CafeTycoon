@@ -157,6 +157,7 @@ describe('step', () => {
     let s = createRun(opts);
     s.scenario = 'normal'; // seed 11 rolls rainyWeek, which also scales patience
     s = ticks(s, 60 * 60);
+    s.forecast = 'ordinary'; // so is the opening day's forecast
     s.customers = [{ id: 1, drink: 'espresso', patienceLeft: 1500, patienceMax: 1500 }];
     s = step(s, [{ kind: 'settings', playerId: 'p1', settings: { pace: 5 } }]);
     expect(s.settings.pace).toBe(5);

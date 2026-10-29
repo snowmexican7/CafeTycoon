@@ -11,6 +11,7 @@
 #hud .week i { width: 9px; height: 9px; border-radius: 50%; background: var(--oat); }
 #hud .week i.on { background: var(--caramel); }
 #hud .week i.now { background: var(--cherry); box-shadow: 0 0 0 3px #e0564a44; }
+#hud .fc-chip { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 2px 9px; border-radius: 99px; background: #f4e6cf; font: 600 13px var(--font-display); color: var(--ink-soft); white-space: nowrap; }
 #hud .hud-clock { padding: 0 16px 0 10px; gap: 10px; min-width: 240px; flex: 0 1 280px; }
 #hud .hud-clock .clock { font-size: 22px; font-variant-numeric: tabular-nums; min-width: 3.2ch; }
 #hud .hud-clock .lab { font-size: 11px; letter-spacing: .08em; color: var(--mint-dk); background: #dff4ec; padding: 2px 8px; border-radius: 99px; }

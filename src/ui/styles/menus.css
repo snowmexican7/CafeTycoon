@@ -119,3 +119,7 @@
 .receipt-lines .line.inspection span:last-child { letter-spacing: .08em; }
 .receipt-lines .line.inspection.pass span:last-child, .receipt-lines .pos { color: var(--good); }
 .receipt-lines .line.inspection.fail span:last-child { color: var(--bad); }
+/* The receipt's bottom line: the day's net, so the card adds up (sales + tips + bonus − rent − fines − tab). */
+.receipt-lines .line.total { border-bottom: 0; border-top: 2px solid var(--ink); margin-top: 4px; padding-top: 7px; color: var(--good); font-size: 15px; }
+.receipt-lines .line.total span:first-child { color: var(--ink); }
+.receipt-lines .line.total.loss { color: var(--bad); }

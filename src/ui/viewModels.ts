@@ -14,6 +14,9 @@ import type { PeerStatus } from '../net/peerSession';
 import type { BotsChoice, Member } from '../net/protocol';
 import type { DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
+import { DRINK_TEMP } from '../data/drinks';
+import { forecastById } from '../data/forecasts';
+import { WEEKDAY_NAMES, forecastFor, forecastName, forecastOf, weekdayOf } from '../sim/forecast';
 
 const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
 const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate'];
@@ -45,8 +48,9 @@ function espressoLines(d: DayStats): { ambulance?: string; tabPaid?: string } {
   return { ...(d.ambulance ? { ambulance: money(d.ambulance) } : {}), ...(d.debtPaid ? { tabPaid: money(d.debtPaid) } : {}) };
 }
 
-function profitOf(d: DayStats): number {
-  return Math.round((d.sales + d.tips - d.rent) * 100) / 100;
+/** The day's net: everything that moved the till during the day (sales, tips, bonuses, minus rent, fines and tab paid). */
+export function profitOf(d: DayStats): number {
+  return Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0)) * 100) / 100;
 }
 
 export interface HudVM {
@@ -71,6 +75,8 @@ export interface HudVM {
   closing?: { left: number };
   /** While the health inspector is in: how today looks against their two rules (patched in place). */
   scrutiny?: Scrutiny;
+  /** Today's neighbourhood forecast, as a chip by the day label. */
+  forecast?: { icon: string; name: string; blurb: string };
   /** Today's event outcomes so far, for the PASSED/FAILED stamp and the follower bump (patched). */
   results?: { inspection: 'pass' | 'fail' | null; influencer: 'served' | 'lost' | null; followers: string };
 }
@@ -146,6 +152,10 @@ export function hudViewModel(state: GameState): HudVM {
   const available = availableDrinks(state);
   return {
     dayLabel: dayLabelFor(state.day),
+    forecast: (() => {
+      const f = forecastOf(state);
+      return { icon: f.icon, name: forecastName(f, state.day), blurb: f.blurb };
+    })(),
     clock: clockFor(state.phaseTicksLeft),
     cash: money(state.cash),
     reputation: stars(state.reputation),
@@ -179,7 +189,7 @@ export interface HandCardVM {
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -189,13 +199,60 @@ export interface NightVM {
   menu?: { drink: DrinkId; on: boolean }[];
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
+  /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
+  forecast?: ForecastVM;
+}
+
+export interface ForecastVM {
+  /** "Tuesday": the paper's edition. */
+  edition: string;
+  icon: string;
+  name: string;
+  headline: string;
+  blurb: string;
+  plan: string;
+  /** The forecast's effects in plain words. */
+  effects: string;
+  eventNote?: string;
+  /** About how many walk-ins to expect over the day (cards bought tonight included). */
+  customers: number;
+  /** Share of tomorrow's orders that are hot drinks, 0..100 (the rest are iced). */
+  hotPct: number;
+  /** The day after: a one-line rumour, so the crew can plan two days out. */
+  later: { icon: string; name: string };
+}
+
+/** Tomorrow's paper. At night `state.day` is already tomorrow. */
+export function forecastViewModel(state: GameState): ForecastVM {
+  const f = forecastOf(state);
+  const m = computeModifiers(state);
+  const menu = DRINKS.filter((d) => state.menu[d]);
+  const total = menu.reduce((s, d) => s + m.orderBias[d], 0) || 1;
+  const hot = menu.filter((d) => DRINK_TEMP[d] === 'hot').reduce((s, d) => s + m.orderBias[d], 0);
+  const next = forecastById[forecastFor(state.seed, state.day + 1)];
+  return {
+    edition: WEEKDAY_NAMES[weekdayOf(state.day)],
+    icon: f.icon,
+    name: forecastName(f, state.day),
+    headline: f.headline,
+    blurb: f.blurb,
+    plan: f.plan,
+    effects: describeEffects(f.effects),
+    ...(f.eventNote ? { eventNote: f.eventNote } : {}),
+    customers: Math.round(ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic),
+    hotPct: Math.round((hot / total) * 100),
+    later: { icon: next.icon, name: forecastName(next, state.day + 1) },
+  };
 }
 
 export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   const last = state.days[state.days.length - 1];
   const takings =
     state.days.length > 0 && state.days.length === state.day - 1
-      ? { sales: money(last.sales), tips: money(last.tips), rent: money(last.rent), profit: money(profitOf(last)), ...espressoLines(last) }
+      ? {
+          sales: money(last.sales), tips: money(last.tips), rent: money(last.rent), profit: money(profitOf(last)), ...espressoLines(last),
+          ...(last.fines ? { fines: money(last.fines) } : {}), ...(last.bonus ? { bonus: money(last.bonus) } : {}),
+        }
       : null;
   return {
     clock: clockFor(state.phaseTicksLeft),
@@ -223,6 +280,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     meReady: state.ready.includes(me),
     menu: DRINKS.map((drink) => ({ drink, on: state.menu[drink] })),
     warnings: nightWarnings(state),
+    forecast: forecastViewModel(state),
   };
 }
 
