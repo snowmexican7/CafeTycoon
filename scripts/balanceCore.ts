@@ -1,15 +1,20 @@
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../src/sim/checkout';
 import type { CheckoutId } from '../src/sim/types';
 import { nextTier, TIERS } from '../src/sim/growth';
-import { defaultSlots, growSlots, stationsFromSlots } from '../src/sim/slots';
+import { defaultSlots, growSlots, isEquipmentKind, stationsFromSlots } from '../src/sim/slots';
 import { layoutFor } from '../src/data/layout';
 import { ADS } from '../src/sim/ads';
 import { judgePitch } from '../src/sim/pitch';
 import type { AdId, PitchKind } from '../src/sim/types';
 import { knownStars, TWISTS, type TwistId } from '../src/sim/taste';
-import { DRINK_IDS } from '../src/data/drinks';
+import { BASE_DRINKS, DRINK_IDS } from '../src/data/drinks';
 import { zeroDrinks } from '../src/sim/tally';
 import { SUPPLY_IDS, menuDrinks } from '../src/sim/unlocks';
+import { planNight, type Advice } from '../src/sim/bots/planner';
+import { EQUIPMENT } from '../src/data/equipment';
+import { PRICING } from '../src/sim/pricing';
+import { RIVAL } from '../src/sim/rival';
+import { cleanDraft } from '../src/sim/signature';
 /**
  * Headless balance tester: plays whole weeks with stand-ins and bots, no browser.
  * No Node APIs here, so tsc checks it through src/balance.test.ts; scripts/balance.ts is the CLI shell.
@@ -24,15 +29,15 @@ import { CARD_SETS } from '../src/data/cardSets';
 import { setCounts } from '../src/sim/effects';
 import { forecastOf } from '../src/sim/forecast';
 import { isDownside } from '../src/sim/describe';
-import type { CardPath, CatalogueItem } from '../src/sim/types';
+import type { CardPath, CatalogueItem, Rival } from '../src/sim/types';
 import { createRun } from '../src/sim/run';
 import { step } from '../src/sim/step';
 import { scoreRun } from '../src/sim/score';
 import type { BotSkill, DrinkId, EventKind, GameState, Pace, PlayerInput, ScenarioId, StationKind, SupplyId } from '../src/sim/types';
 
 /** How the tester shops at night: `simple` is the spec's original rule; `smart` plays like a sensible crew (B11). */
-export type Policy = 'simple' | 'smart' | 'speed' | 'quality' | 'reach' | 'none' | 'taste' | 'promo' | 'kiosk' | 'squarely' | 'stand' | 'grow';
-export const POLICIES: Policy[] = ['simple', 'smart', 'speed', 'quality', 'reach', 'none', 'taste', 'promo', 'kiosk', 'squarely', 'stand', 'grow'];
+export type Policy = 'simple' | 'smart' | 'speed' | 'quality' | 'reach' | 'none' | 'taste' | 'promo' | 'kiosk' | 'squarely' | 'stand' | 'grow' | 'planner';
+export const POLICIES: Policy[] = ['simple', 'smart', 'speed', 'quality', 'reach', 'none', 'taste', 'promo', 'kiosk', 'squarely', 'stand', 'grow', 'planner'];
 
 /** Back-bar loadouts the tester can open with (applied to the slots right after the run is created). */
 export type Layout = 'default' | 'twinEspresso' | 'noColdBrew' | 'noTrash';
@@ -75,14 +80,14 @@ export const USAGE = `Usage: npm run balance -- [options]
   --weeks N          weeks to play, each an independent run (1-1000, default 10)
   --seed N           seed of the first week; week i uses seed+i (default 1)
   --humans N         stand-in human baristas (0-4, default 2)
-  --bots N           ordinary bots (0-3, default 1); humans + bots <= 4
+  --bots N           ordinary bots (0-4, default 1); humans + bots <= 4
   --skill N          bot skill 1-5 (default 3)
   --pace N           pace 1-5 (default 3)
   --scenario ID      random | ${SCENARIO_IDS.join(' | ')} (default random)
   --menu M           all | a drink | comma list of ${DRINKS.join(',')} (default all)
   --compare menus    run all, espresso, latte, coldBrew on the same seeds (overrides --menu)
   --compare policies run every night policy on the same seeds (overrides --policy)
-  --policy P         night shopping: smart (default) | simple | speed | quality | reach | none | taste (smart + twists and a signature) | promo (taste + an ad and a pitch every night) | kiosk / squarely (smart + install that checkout, and the ones before it, once there's $60 spare) | stand (smart, opens as the stand and never grows) | grow (smart, opens as the stand and grows once there's $60 spare)
+  --policy P         night shopping: smart (default) | simple | speed | quality | reach | none | taste (smart + twists and a signature) | promo (taste + an ad and a pitch every night) | kiosk / squarely (smart + install that checkout, and the ones before it, once there's $60 spare) | stand (smart, opens as the stand and never grows) | grow (smart, opens as the stand and grows once there's $60 spare) | planner (smart's card buys, but every night applies the night planner's whole advice list; opens as the stand)
                      (simple = cheapest permanent card; speed/quality/reach = smart, locked to a path)
   --layout L         opening back-bar: default | twinEspresso (a second espresso machine in the first empty slot) | noColdBrew (no cold-brew tap) | noTrash (no bin)
   --day N            day length in seconds (30-600, default 150)
@@ -330,6 +335,132 @@ export function growNight(state: GameState): void {
   state.mop = { pos: { ...layoutFor(next).mopHome }, heldBy: null };
 }
 
+const clampTo = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+
+/**
+ * FB1 WP6: apply one planner advice by direct mutation, mirroring the sim's apply functions the way
+ * `tasteNight` and `growNight` do (the tester has no human player to send inputs as). Anything the
+ * till cannot pay for, or the sim would refuse, is skipped. Returns whether it changed anything.
+ */
+export function applyAdvice(state: GameState, advice: Advice): boolean {
+  const input = advice.input;
+  switch (input.kind) {
+    case 'restock': {
+      const cost = restockCost(state, input.supply, input.packs);
+      if (input.packs <= 0 || state.cash < cost) return false;
+      state.cash = round2(state.cash - cost);
+      state.supplies[input.supply] += input.packs * ECONOMY.packs[input.supply].size;
+      return true;
+    }
+    case 'price': {
+      const next = clampTo(Math.round(input.step), PRICING.minStep, PRICING.maxStep);
+      const steps = { ...(state.priceSteps ?? {}) };
+      if (next === 0) delete steps[input.drink];
+      else steps[input.drink] = next;
+      if (Object.keys(steps).length) state.priceSteps = steps;
+      else delete state.priceSteps;
+      return true;
+    }
+    case 'twist': {
+      const next = { ...(state.twists ?? {}) };
+      if (input.twist === null) delete next[input.drink];
+      else next[input.drink] = input.twist;
+      if (Object.keys(next).length) state.twists = next;
+      else delete state.twists;
+      return true;
+    }
+    case 'signature': {
+      if (input.sig === null) {
+        delete state.signature;
+        return true;
+      }
+      const d = cleanDraft(input.sig);
+      if (!d) return false;
+      const old = state.signature;
+      const same = old && old.drink === d.drink && old.twist === d.twist;
+      state.signature = { ...d, since: same ? old.since : state.day };
+      return true;
+    }
+    case 'scout':
+      if (state.rival?.scouted === state.day || state.cash < RIVAL.scoutCost) return false;
+      state.cash = round2(state.cash - RIVAL.scoutCost);
+      state.rival = { ...(state.rival ?? {}), scouted: state.day } as Rival;
+      return true;
+    case 'grow': {
+      if (nextTier(state) !== input.tier || state.cash < TIERS[input.tier].cost) return false;
+      state.cash = round2(state.cash - TIERS[input.tier].cost);
+      growSlots(state, input.tier);
+      state.tier = input.tier;
+      state.tierLog = [...(state.tierLog ?? []), { tier: input.tier, day: state.day, by: 'tester' }];
+      state.mop = { pos: { ...layoutFor(input.tier).mopHome }, heldBy: null };
+      return true;
+    }
+    case 'checkout': {
+      if (nextCheckout(state) !== input.checkout || state.cash < CHECKOUT[input.checkout].cost) return false;
+      state.cash = round2(state.cash - CHECKOUT[input.checkout].cost);
+      state.checkout = { owned: [...checkoutOf(state).owned, input.checkout], active: input.checkout, since: state.day, by: 'tester' };
+      return true;
+    }
+    case 'slot': {
+      const slots = [...(state.slots ?? defaultSlots(state.tier))];
+      const equipment = [...(state.equipment ?? [])];
+      const had = slots[input.index] ?? null;
+      if (input.index < 0 || input.index >= slots.length || input.station === had) return false;
+      if (input.station !== null) {
+        const at = equipment.indexOf(input.station);
+        if (at < 0) return false;
+        equipment.splice(at, 1);
+      }
+      if (had !== null) equipment.push(had);
+      slots[input.index] = input.station;
+      state.slots = slots;
+      state.equipment = equipment;
+      state.stations = stationsFromSlots(state.tier, slots);
+      return true;
+    }
+    case 'equip': {
+      if (!isEquipmentKind(input.station)) return false;
+      const cost = EQUIPMENT[input.station].cost;
+      if (state.cash < cost) return false;
+      state.cash = round2(state.cash - cost);
+      const slots = [...(state.slots ?? defaultSlots(state.tier))];
+      const free = slots.indexOf(null);
+      if (free >= 0) {
+        slots[free] = input.station;
+        state.slots = slots;
+        state.stations = stationsFromSlots(state.tier, slots);
+      } else {
+        state.slots = slots;
+        state.equipment = [...(state.equipment ?? []), input.station];
+      }
+      state.equipLog = [...(state.equipLog ?? []), { station: input.station, day: state.day, by: 'tester' }];
+      return true;
+    }
+    case 'menu': {
+      const unlocked = state.unlocked ?? BASE_DRINKS;
+      if (!unlocked.includes(input.drink)) return false;
+      if (!input.on && state.menu[input.drink] && unlocked.filter((d) => state.menu[d]).length === 1) return false;
+      state.menu[input.drink] = input.on;
+      return true;
+    }
+    default:
+      return false;
+  }
+}
+
+/**
+ * The 'planner' policy's stage-0 night: apply the planner's whole advice list in order, growing last
+ * (growing resets the back bar), then re-plan once and apply what the bigger shop calls for.
+ */
+export function plannerNight(state: GameState): void {
+  const advice = planNight(state);
+  for (const a of advice) if (a.kind !== 'grow') applyAdvice(state, a);
+  const grow = advice.find((a) => a.kind === 'grow');
+  if (grow && applyAdvice(state, grow)) {
+    for (const a of planNight(state)) if (a.kind !== 'grow') applyAdvice(state, a);
+  }
+}
+
 /** FB1 WP5: set the opening back-bar. Mutates slots/equipment directly (the tester has no human to send inputs) and rebuilds the stations. */
 export function applyLayout(state: GameState, layout: Layout): void {
   if (layout === 'default') return;
@@ -361,7 +492,7 @@ function tickCap(daySeconds: number): number {
 export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[], policy: Policy = opts.policies[0] ?? 'smart'): WeekResult {
   let state = createRun({
     seed, hostId: TESTER, players: [],
-    ...(policy === 'stand' || policy === 'grow' ? { tier: 'stand' as const } : {}),
+    ...(policy === 'stand' || policy === 'grow' || policy === 'planner' ? { tier: 'stand' as const } : {}),
     settings: { bots: opts.bots, botSkill: opts.skill, pace: opts.pace, dayLengthSec: opts.daySeconds, nightLengthSec: NIGHT_SECONDS },
   });
   addStandIns(state, opts.humans);
@@ -392,7 +523,9 @@ export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[], pol
         if (policy === 'promo' && stage === 0) promoNight(state);
         if ((policy === 'kiosk' || policy === 'squarely') && stage === 0) checkoutNight(state, policy);
         if (policy === 'grow' && stage === 0) growNight(state);
-        inputs = smartNightInputs(state, policy === 'taste' || policy === 'promo' || policy === 'kiosk' || policy === 'squarely' || policy === 'stand' || policy === 'grow' ? 'smart' : policy, stage);
+        if (policy === 'planner' && stage === 0) plannerNight(state);
+        const plannerRestocked = policy === 'planner' && stage === 0; // the planner already restocked
+        inputs = plannerRestocked ? [] : smartNightInputs(state, policy === 'taste' || policy === 'promo' || policy === 'kiosk' || policy === 'squarely' || policy === 'stand' || policy === 'grow' || policy === 'planner' ? 'smart' : policy, stage);
         stage = inputs.length === 0 && stage > 0 ? -1 : stage + 1;
       }
     }

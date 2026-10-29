@@ -27,6 +27,7 @@ when a build goes out, the line moves under its version with the date.
 - No bin? Then whatever you drop lands on the floor. The mop matters.
 - Growing keeps what you own: the stations you bought come along to the bigger shop, and the new shop's own gear is a gift on top.
 - Bots know about spare machines: with two espresso machines they use whichever is free, and with no bin they drop grounds on the floor (or run them through the espresso machine when the floor is already full of mess).
+- Bot crewmates have opinions: at night they can offer up to two tips about stock, prices, twists or growing (the night screen will show them soon).
 
 ## 2.1.0 — 2026-10-29 · Phase 3 preview
 
