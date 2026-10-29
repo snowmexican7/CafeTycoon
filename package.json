@@ -1,6 +1,6 @@
 {
   "name": "cafetycoon",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A small café game built for fun by a few friends, played together in the browser.",
   "directories": {
     "doc": "docs"

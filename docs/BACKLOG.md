@@ -783,3 +783,23 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
 - **Layout:** 1280x800 and 1920x1080 (`layout/`) show no overflow. The title shows v2.0.0.
   - At 1920x1080 the right column leaves a gap between Floor and the Menu board. That's cosmetic
     and deferred.
+
+## Hotfix 2.0.1 reflection (lighter network updates)
+
+- **What shipped.** `src/net/delta.ts`: a structural JSON patch (`r` replace, `o` object keys and
+  deletions, `a` array slots plus length) diffed against what the peers already hold, with floats
+  rounded to 3 decimals on the wire. The host sends a keyframe on join, on a peer's `resync` and
+  every 100 sends (5 s); everything else is a `snapd` delta. Protocol 11 → 12 (`seq` on `snap`,
+  new `snapd` and `resync` actions); an old tab gets the usual "different version" message.
+- **Numbers (scripts/perf4.ts, a 4-barista week, 20 Hz):** full snapshot avg 8,676 B → delta avg
+  744 B (keyframes included), max single delta 3.9 KB. Host upload with 3 peers 4.16 → 0.36 Mbit/s.
+  Diffing costs about 0.1 ms per send on the host. Days played identically (same served/lost).
+- **Where the bytes were:** `players` (3 KB, mostly bot brain fields, changing every tick),
+  `stations`, `customers` and `pass`. Static data (`days`, `crew`, `owned`, `menu`, forecast…) was
+  about half of every snapshot and now goes only when it changes, which falls out of the diff for free.
+- **What went well.** A generic diff instead of hand-picked fields means new state in Phase 3 is
+  covered with no extra work. The end-to-end host → peer test drops a delta mid-day and checks the
+  peer heals via `resync`.
+- **What to watch.** A rewritten array is sent whole when that is smaller; bot `path`/`plan` arrays
+  are the biggest remaining churn. If a bigger café pushes deltas up, strip bot brain fields
+  (render never reads them) before diffing. Real-network P2P is still untested from this box.
