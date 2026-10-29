@@ -63,6 +63,7 @@ function newspaper(f: ForecastVM | undefined): string {
         ${f.effects ? `<div class="pn-eff">${esc(f.effects)}</div>` : ''}
         ${f.eventNote ? `<div class="pn-ev">⚠ ${esc(f.eventNote)}</div>` : ''}
         ${f.radio ? `<div class="pn-radio" title="Weather radio: tomorrow's events">📻 <b>Radio:</b> ${esc(f.radio)}</div>` : ''}
+        ${f.challenges ? `<div class="pn-challenge" title="Optional daily challenge">${esc(f.challenges)}</div>` : ''}
         <div class="pn-later">Day after: ${f.later.icon} ${esc(f.later.name)} <small>(rumour)</small></div>
       </div>
     </div>

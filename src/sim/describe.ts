@@ -146,5 +146,14 @@ export function morningNotes(state: GameState): string[] {
   }
   if ((state.days.at(-1)?.rogues ?? 0) > 0) notes.push(ROGUE_REVIEW);
   for (const kind of new Set(state.eventSchedule.map((e) => e.kind))) notes.push(EVENT_FORESHADOW[kind]);
+  for (const ch of state.challenges ?? []) notes.push(`🎯 Challenge: ${ch.blurb} (+$${ch.reward})`);
   return notes;
+}
+
+/** One line for the night paper listing tonight's optional goals. */
+export function challengePaperLine(state: GameState): string | undefined {
+  const list = state.challenges ?? [];
+  if (!list.length) return undefined;
+  if (list.length === 1) return `🎯 Optional: ${list[0]!.label} (+$${list[0]!.reward})`;
+  return `🎯 Optional: ${list.map((c) => `${c.label} (+$${c.reward})`).join(' · ')}`;
 }

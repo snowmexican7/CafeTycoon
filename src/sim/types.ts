@@ -95,7 +95,8 @@ export type SimEventKind =
   | 'rogue.remade'
   | 'rogue.made'
   | 'rogue.stormed'
-  | 'served';
+  | 'served'
+  | 'challenge.won';
 
 export interface SimEvent {
   seq: number;
@@ -229,6 +230,18 @@ export interface Settings {
   botSkill: BotSkill;
 }
 
+/** One optional daily challenge and its live progress (B7). */
+export interface ChallengeProgress {
+  id: string;
+  label: string;
+  blurb: string;
+  need: number;
+  have: number;
+  reward: number;
+  done: boolean;
+  failed: boolean;
+}
+
 export interface DayStats {
   day: number;
   served: number;
@@ -252,6 +265,12 @@ export interface DayStats {
   rogues?: number;
   /** Chaos pack: baristas who slipped on a mess today (a receipt line, nothing else). */
   slips?: number;
+  /** Perfect serves today (patience left ≥ threshold). */
+  perfect?: number;
+  /** Challenge tip paid at closing (folded into bonus too). */
+  challengeBonus?: number;
+  /** Challenge ids won today. */
+  challengesWon?: string[];
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -307,6 +326,10 @@ export interface GameState {
   rerolls?: number;
   /** Weather radio (B6): tomorrow's events, drawn at night. */
   radio?: RadioReport;
+  /** Optional daily challenges for state.day (B7); dealt at startDay. */
+  challenges?: ChallengeProgress[];
+  /** Preview of tomorrow's challenges, shown on the night paper (B7). */
+  challengePreview?: ChallengeProgress[];
 }
 
 export type PlayerInput =

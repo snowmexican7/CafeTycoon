@@ -25,14 +25,15 @@ describe('effects', () => {
     const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     s.scenario = 'normal';
     s.forecast = 'ordinary';
-    expect(computeModifiers(s).traffic).toBeCloseTo(0.7 + 0.12 * 2.5); // 1.0 at 2.5 stars, pace 3
+    // Day-1 curve (B7) multiplies traffic 0.88 / patience 1.12 on top of rep+pace+weekRamp.
+    expect(computeModifiers(s).traffic).toBeCloseTo((0.7 + 0.12 * 2.5) * 0.88);
     s.settings.pace = 5;
-    expect(computeModifiers(s).traffic).toBeCloseTo(1.65);
-    expect(computeModifiers(s).patience).toBeCloseTo(0.7);
-    s.day = 8;
+    expect(computeModifiers(s).traffic).toBeCloseTo(1.65 * 0.88);
+    expect(computeModifiers(s).patience).toBeCloseTo(0.7 * 1.12);
+    s.day = 8; // week 2 ramp, day-of-week curve wraps to Mon (= day 1)
     s.settings.pace = 3;
-    expect(computeModifiers(s).traffic).toBeCloseTo(1.15);
-    expect(computeModifiers(s).patience).toBeCloseTo(0.95);
+    expect(computeModifiers(s).traffic).toBeCloseTo(1.15 * 0.88);
+    expect(computeModifiers(s).patience).toBeCloseTo(0.95 * 1.12);
     expect(rentForDay(s)).toBeCloseTo(31.25);
   });
 

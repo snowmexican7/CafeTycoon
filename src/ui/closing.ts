@@ -30,6 +30,7 @@ export function createClosing(container: HTMLElement): { render(vm: ClosingVM): 
             <div class="line"><span>Rent</span><span class="neg">−${esc(vm.rent)}</span></div>
             ${vm.events ? `<div class="line chaos"><span>Today: ${esc(vm.events.join(', '))}</span><span></span></div>` : ''}
             ${vm.inspection ? `<div class="line inspection ${vm.inspection}"><span>Health inspection</span><span>${vm.inspection === 'pass' ? 'PASSED' : `FAILED${vm.fines ? ` −${esc(vm.fines)}` : ''}`}</span></div>` : ''}
+            ${vm.challenges ? vm.challenges.map((c) => `<div class="line challenge"><span>✓ ${esc(c.label)}</span><span class="pos">+${esc(c.reward)}</span></div>`).join('') : ''}
             ${vm.bonus ? `<div class="line"><span>Influencer bonus</span><span class="pos">+${esc(vm.bonus)}</span></div>` : ''}
             ${vm.wasted ? `<div class="line chaos"><span>Drinks wasted (spilled or stale)</span><span>${vm.wasted}</span></div>` : ''}
             ${vm.slips ? `<div class="line chaos"><span>Pratfalls on the floor</span><span>${vm.slips}</span></div>` : ''}

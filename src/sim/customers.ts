@@ -191,13 +191,15 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   state.today.served += 1;
   tallyDrink(state.today, drink);
   // For the "Dev served a latte +$6" toast: who, what, how much, and whether it was a perfect serve.
+  const perfect = customer.patienceLeft / customer.patienceMax >= PERFECT_PATIENCE;
+  if (perfect) state.today.perfect = (state.today.perfect ?? 0) + 1;
   const served: SimEvent['data'] = {
     by: by ?? '',
     item: drink,
     amount: round2(price + tip),
     kind: customer.kind ?? 'normal',
     cid: customer.id,
-    perfect: customer.patienceLeft / customer.patienceMax >= PERFECT_PATIENCE,
+    perfect,
     left: customer.extra?.length ?? 0,
   };
   if (customer.name !== undefined) served.name = customer.name;

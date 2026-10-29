@@ -27,6 +27,7 @@ describe('describe', () => {
     s.activeTomorrow = [{ itemId: 'instaGlamStory', effects: catalogueById.instaGlamStory.effects }];
     s.boughtTonight = ['instaGlamStory', 'streetSign'];
     s.owned = [{ itemId: 'streetSign', effects: [] }];
+    s.challenges = []; // B7 challenges append their own lines; pin the classic four here
     expect(morningNotes(s)).toEqual([
       "Rainy week: everyone's grumpy and wants a latte.",
       `${forecastById.opening.icon} Grand opening: ${forecastById.opening.blurb}`,
