@@ -721,3 +721,8 @@ What could be better:
 Deferred:
 - A force-own `--card X` A/B mode in the balance CLI.
 - Hover or expand to read full card text at small heights.
+
+Final-code check (8 seeds per policy, `/workspace/overnight/b11/bal/r5.txt`): smart 319.77 / 26.6%,
+simple 356.70 / 27.9%, speed 318.87 / 24.4%, quality 422.88 / 24.1%, reach 307.18 / 29.8%, none
+361.03 / 30.7%. Quality leads on a small sample (370 vs 348 for none over 56 seeds). Watch it in
+playtests; a nerf of Quality's reputation cards is the first lever if it holds.
