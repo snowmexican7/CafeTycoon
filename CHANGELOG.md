@@ -27,6 +27,13 @@ Nothing yet.
   works 10% slower. The night screen lists the roles with their perk, weakness and holder; your
   role icon shows on the ready chips and next to your name in the hands panel. Save version 10,
   network protocol 13.
+- **Per-item pricing (P3 B2).** On the night menu board every drink has − and + buttons that move
+  its price in $0.25 steps (from $1.00 under to $2.00 over the list price). Customers react: a
+  pricier drink gets fewer orders, the whole café gets fewer walk-ins if the menu is pricey, and
+  customers ordering a pricey drink lose patience sooner (cheaper drinks win orders and patience).
+  Each line shows tomorrow's expected orders, the change against list price and the profit before
+  tips. A total line sums the menu, and the newspaper's walk-in count follows the prices. Save
+  version 11, network protocol 14.
 
 ## 2.0.1 — 2026-10-29
 

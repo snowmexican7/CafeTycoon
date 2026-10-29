@@ -39,7 +39,7 @@ describe('night menu vm', () => {
   it('lists the menu switches in fixed order', () => {
     const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
     s.menu.latte = false;
-    expect(nightViewModel(s, 'p1').menu).toEqual([
+    expect(nightViewModel(s, 'p1').menu?.map(({ drink, on }) => ({ drink, on }))).toEqual([
       { drink: 'espresso', on: true },
       { drink: 'latte', on: false },
       { drink: 'coldBrew', on: true },

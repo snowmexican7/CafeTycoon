@@ -95,6 +95,15 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B2: the night menu board with prices moved (latte up $1, espresso down $0.50). */
+  pricing: {
+    night: true,
+    setup(s) {
+      s.cash = 260;
+      s.priceSteps = { latte: 4, espresso: -2 };
+    },
+    timeline: [],
+  },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */

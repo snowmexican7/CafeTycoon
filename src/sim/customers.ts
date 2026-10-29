@@ -1,4 +1,5 @@
 import { roleCraft, roleTip } from './roles';
+import { demandFactor, menuPrice, pricePatience, priceTraffic } from './pricing';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE, secondsToTicks } from './constants';
 import { computeModifiers, type Modifiers } from './effects';
@@ -33,7 +34,7 @@ export function spawnCustomers(state: GameState): GameState {
   const menu = availableDrinks(state);
   if (menu.length === 0) return state;
   const m = computeModifiers(state);
-  const p = (ECONOMY.baseArrivalsPerSecond * m.traffic) / TICK_RATE;
+  const p = (ECONOMY.baseArrivalsPerSecond * m.traffic * priceTraffic(state, menu, m)) / TICK_RATE;
   if (rngNext(state) >= p) return state;
   if (state.customers.length >= queueCapacity(m)) {
     state.today.turnedAway += 1;
@@ -47,7 +48,7 @@ export function spawnCustomers(state: GameState): GameState {
 
 /** Weighted drink draw over the menu, biased by the café's order modifiers (one rngNext). */
 export function drawDrink(state: GameState, menu: DrinkId[], m: Modifiers): DrinkId {
-  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias);
+  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d));
   let roll = rngNext(state) * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < menu.length; i++) {
     roll -= weights[i];
@@ -99,7 +100,7 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const drinks = regular ? [regular.drink] : Array.from({ length: count }, () => drawDrink(state, menu, m));
   const mul = kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1;
   // fancy drinks buy a little patience; a group waits as long as its fanciest order
-  const wait = Math.max(...drinks.map((d) => DRINK_INFO[d].wait ?? 1));
+  const wait = Math.max(...drinks.map((d) => (DRINK_INFO[d].wait ?? 1) * pricePatience(state, d)));
   const patienceMax = patienceFor(m, mul * wait);
   const customer: Customer = { id: state.nextCustomerId++, drink: drinks[0], patienceLeft: patienceMax, patienceMax };
   if (kind === 'impatient' || kind === 'group') customer.kind = kind;
@@ -198,7 +199,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     return;
   }
   const m = computeModifiers(state);
-  const price = round2(ECONOMY.prices[drink] * m.price[drink]);
+  const price = round2(menuPrice(state, drink) * m.price[drink]);
   const kindTip = customer.kind === 'impatient' ? ECONOMY.customers.impatient.tip : customer.kind === 'regular' ? ECONOMY.customers.regular.tip : 1;
   const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) + roleCraft(state, by));
   state.cash = round2(state.cash + price + tip);
