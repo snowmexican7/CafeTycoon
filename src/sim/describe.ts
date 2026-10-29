@@ -33,9 +33,21 @@ function times(mul: number): string {
 const RADIO_WHEN = (frac: number) => (frac < 0.33 ? 'in the morning' : frac < 0.6 ? 'around midday' : 'in the afternoon');
 
 /** The weather radio's report on tomorrow, if it was heard tonight. */
+/** B11: what the radio says when tomorrow has no events, so a quiet report still has some character. */
+const QUIET_RADIO = [
+  'Nothing on the wire but smooth jazz. No surprises tomorrow; plan for the forecast.',
+  'The traffic reporter is bored: no events tomorrow, just the crowd.',
+  'Static, a weather jingle, then nothing. A clean day: no surprises.',
+] as const;
+
+export function quietRadio(state: GameState): string {
+  if (state.forecast === 'opening') return 'Opening-day chatter only: no surprises, just a curious street. Learn the stations.';
+  return QUIET_RADIO[state.day % QUIET_RADIO.length]!;
+}
+
 export function radioLine(state: GameState): string | undefined {
   if (state.radio?.day !== state.day) return undefined;
-  if (state.radio.events.length === 0) return 'A quiet day: no surprises on the wire.';
+  if (state.radio.events.length === 0) return quietRadio(state);
   const dayTicks = secondsToTicks(state.settings.dayLengthSec);
   return state.radio.events
     .slice()

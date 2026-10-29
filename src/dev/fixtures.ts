@@ -7,19 +7,20 @@ import '../style.css';
 import { LAYOUT } from '../data/layout';
 import { createRenderer } from '../render/app';
 import { EVENT_FORESHADOW } from '../sim/describe';
-import { createRun, startDay } from '../sim/run';
+import { createRun, startDay, startNight } from '../sim/run';
+import { createNight } from '../ui/night';
 import type { GameState, SimEvent } from '../sim/types';
 import { createClosing } from '../ui/closing';
 import { createHud } from '../ui/hud';
 import { hudLive } from '../ui/live';
-import { closingViewModel, hudViewModel, weekEndViewModel } from '../ui/viewModels';
+import { closingViewModel, hudViewModel, nightViewModel, weekEndViewModel } from '../ui/viewModels';
 import { createWeekEnd } from '../ui/weekEnd';
 import { createRecordsDialog } from '../ui/records';
 import { awardsFor } from '../sim/awards';
 import { blank } from '../sim/stats';
 import { emptyRecords, foldRecords } from '../storage/recordsStore';
 
-type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; records?: boolean };
+type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; records?: boolean; night?: boolean };
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
@@ -74,6 +75,15 @@ function weekPlayed(s: GameState): void {
 const FIXTURES: Record<string, Fixture> = {
   /** Block 10: the week-end awards ceremony. */
   weekEnd: { weekEnd: true, setup: weekPlayed, timeline: [] },
+  /** Block 11: the night shop with set progress (one Espresso bar card owned), for card-face density checks. */
+  night: {
+    night: true,
+    setup(s) {
+      s.cash = 260;
+      s.owned = [{ itemId: 'dualBoiler', effects: [] }];
+    },
+    timeline: [],
+  },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */
@@ -273,6 +283,13 @@ async function main(): Promise<void> {
     const we = createWeekEnd($('#weekEnd'), { onContinue() {}, onStop() {}, onBackToTitle() {} });
     we.render(weekEndViewModel(state, 'ana'), false);
     we.show();
+  }
+  if (fx.night) {
+    state.days.push({ ...state.today });
+    state = startNight(state);
+    const n = createNight($('#night'), { onBuy() {}, onRestock() {}, onReady() {} });
+    n.render(nightViewModel(state, 'ana'));
+    n.show();
   }
   if (fx.records) {
     let r = emptyRecords();

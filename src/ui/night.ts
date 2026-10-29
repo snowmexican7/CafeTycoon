@@ -50,7 +50,7 @@ function handCard(c: HandCardVM, i: number, cash: number): string {
     <span class="rib ${c.rarity}">${c.rarity.toUpperCase()}</span>
     <span class="body"><span class="tags"><span class="path ${c.path}">${PATH_LABEL[c.path]}</span>${c.spicy ? '<span class="spicy" title="Spicy: a real downside">🌶 Spicy</span>' : ''}</span>
       <h4>${esc(c.name)}</h4>${c.ups ? `<span class="eff">${esc(c.ups)}</span>` : ''}${c.downs ? `<span class="eff down">▼ ${esc(c.downs)}</span>` : ''}
-      ${c.set ? setLine(c.set) : ''}<span class="flav">${esc(c.flavor)}</span>
+      ${c.set ? setLine(c.set) : ''}<span class="flav" title="${esc(c.flavor)}">${esc(c.flavor)}</span>
       <span class="dur ${c.duration === 'permanent' ? 'perm' : 'tmrw'}">${c.duration === 'permanent' ? 'PERMANENT' : 'TOMORROW ONLY'}</span></span>
     ${c.affordable ? '' : `<span class="need">${needText(cost, cash)}</span>`}
     ${c.affordable && c.cutsRent ? '<span class="rent-risk" title="Buying this leaves less than tomorrow\'s rent">Cuts into rent</span>' : ''}

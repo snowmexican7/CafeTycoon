@@ -1,7 +1,7 @@
 import { forecastById } from '../data/forecasts';
 import { describe, it, expect } from 'vitest';
 import { catalogueById } from '../data/catalogue';
-import { EVENT_FORESHADOW, ROGUE_REVIEW, describeEffects, morningNotes } from './describe';
+import { EVENT_FORESHADOW, ROGUE_REVIEW, describeEffects, morningNotes, radioLine } from './describe';
 import { createRun } from './run';
 
 describe('describe', () => {
@@ -19,6 +19,24 @@ describe('describe', () => {
     expect(describeEffects([{ kind: 'supplyCost', supply: 'beans', mul: 0.6 }, { kind: 'gamble', chance: 0.5, win: [], lose: [] }])).toBe(
       'beans 40% cheaper, a gamble',
     );
+  });
+
+  it('gives a quiet radio report some character, deterministically (B11)', () => {
+    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+    s.radio = { day: s.day, events: [] };
+    s.forecast = 'opening';
+    expect(radioLine(s)).toMatch(/Opening-day/);
+    s.forecast = 'ordinary';
+    const lines = new Set<string>();
+    for (const d of [2, 3, 4]) {
+      s.day = d;
+      s.radio = { day: d, events: [] };
+      const a = radioLine(s)!;
+      expect(radioLine(s)).toBe(a);
+      expect(a).toMatch(/surprises|no events/i);
+      lines.add(a);
+    }
+    expect(lines.size).toBe(3);
   });
 
   it('writes the morning notes', () => {

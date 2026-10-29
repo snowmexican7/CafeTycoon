@@ -3,6 +3,9 @@ import type { HostToClient, Transport } from '../net/transport';
 import { isBot } from '../sim/bots/roster';
 import { validateInput } from '../sim/validate';
 import type { DayStats, DrinkId, EventKind, GameState, Phase, PlayerInput } from '../sim/types';
+import type { ForecastId } from '../data/forecasts';
+import { awardsFor } from '../sim/awards';
+import { scoreRun } from '../sim/score';
 
 /**
  * The host's in-memory record of a run: validated inputs, phase-boundary snapshots, the
@@ -15,7 +18,15 @@ export interface TelemetryRow { kind: string; at: number; tick?: number; data: u
 export interface TeleEvent { kind: string; data: unknown; at: number }
 export interface TelemetrySummary {
   days: DayStats[]; drinks: Record<DrinkId, number>;
-  cards: { day: number; offered: string[]; bought: string[] }[];
+  cards: { day: number; offered: string[]; bought: string[]; rerolls: number }[];
+  /** B11: balance telemetry. Each played day's forecast and challenges (dealt / won). */
+  forecasts: { day: number; forecast: ForecastId }[];
+  challenges: { day: number; dealt: string[]; won: string[] }[];
+  /** Easter eggs seen this run, by log kind (egg.cat, egg.camper, ...). */
+  eggs: Record<string, number>;
+  /** Award ids and winners at the time of the summary, and the run's score. */
+  awards: { id: string; winner: string }[];
+  score: number;
   idleTicks: Record<string, number>; botMistakes: Record<string, number>;
   events: { day: number; events: EventKind[] }[];
   pass: { put: number; take: number; serve: number; stale: number };
@@ -93,7 +104,10 @@ function summaryDays(state: GameState): DayStats[] {
   return inProgress ? [...state.days, state.today] : [...state.days];
 }
 
-function buildSummary(state: GameState, rows: TelemetryRow[], cards: Map<number, { offered: string[]; bought: string[] }>): TelemetrySummary {
+type NightCards = { offered: string[]; bought: string[]; rerolls: number };
+type DayDeal = { forecast: ForecastId; dealt: string[] };
+
+function buildSummary(state: GameState, rows: TelemetryRow[], cards: Map<number, NightCards>, deals: Map<number, DayDeal>): TelemetrySummary {
   const days = summaryDays(state);
   const drinks: Record<DrinkId, number> = zeroDrinks();
   for (const d of days) for (const k of Object.keys(drinks) as DrinkId[]) drinks[k] += d.drinks?.[k] ?? 0;
@@ -104,14 +118,25 @@ function buildSummary(state: GameState, rows: TelemetryRow[], cards: Map<number,
     if (p.bot) botMistakes[p.name] = p.bot.mistakes;
   }
   const pass = { put: 0, take: 0, serve: 0, stale: 0 };
+  const eggs: Record<string, number> = {};
   for (const r of rows) {
+    if (r.kind.startsWith('egg.')) eggs[r.kind] = (eggs[r.kind] ?? 0) + 1;
     const key = r.kind.startsWith('pass.') ? (r.kind.slice(5) as keyof typeof pass) : null;
     if (key && key in pass) pass[key] += 1;
   }
   return {
     days,
     drinks,
-    cards: [...cards.entries()].sort((a, b) => a[0] - b[0]).map(([day, c]) => ({ day, offered: [...c.offered], bought: [...c.bought] })),
+    cards: [...cards.entries()].sort((a, b) => a[0] - b[0]).map(([day, c]) => ({ day, offered: [...c.offered], bought: [...c.bought], rerolls: c.rerolls })),
+    forecasts: [...deals.entries()].sort((a, b) => a[0] - b[0]).map(([day, d]) => ({ day, forecast: d.forecast })),
+    challenges: [...deals.entries()].sort((a, b) => a[0] - b[0]).map(([day, d]) => ({
+      day,
+      dealt: [...d.dealt],
+      won: [...(days.find((x) => x.day === day)?.challengesWon ?? [])],
+    })),
+    eggs,
+    awards: state.days.length ? awardsFor(state).map((a) => ({ id: a.id, winner: a.winner })) : [],
+    score: scoreRun(state),
     idleTicks,
     botMistakes,
     events: days.map((d) => ({ day: d.day, events: [...(d.events ?? [])] })),
@@ -133,7 +158,8 @@ export function createTelemetry(
   const start = now();
   const at = () => now() - start;
   const rows: TelemetryRow[] = [];
-  const cards = new Map<number, { offered: string[]; bought: string[] }>();
+  const cards = new Map<number, NightCards>();
+  const deals = new Map<number, DayDeal>();
   const isMash = createMashTracker();
   let seed: number | null = null;
   let lastTick: number | undefined;
@@ -166,7 +192,9 @@ export function createTelemetry(
       }
       if (state.phase !== lastPhase) {
         lastPhase = state.phase;
-        record('snapshot', structuredClone(state), state.tick);
+        // The log is already recorded row by row below; keep it out of snapshots so files stay small.
+        const { log: _log, ...rest } = state;
+        record('snapshot', structuredClone(rest), state.tick);
       }
       for (const e of state.log) {
         if (e.seq <= lastSeq) continue;
@@ -175,7 +203,10 @@ export function createTelemetry(
       }
       if (state.phase === 'night') {
         const offered = [...new Set([...state.hand, ...state.boughtTonight])];
-        cards.set(state.day, { offered, bought: [...state.boughtTonight] });
+        cards.set(state.day, { offered, bought: [...state.boughtTonight], rerolls: state.rerolls ?? 0 });
+      }
+      if (state.phase === 'day' && !deals.has(state.day)) {
+        deals.set(state.day, { forecast: state.forecast, dealt: (state.challenges ?? []).map((c) => c.id) });
       }
       // A summary at the scored week's end and again when the run ends; the last one is authoritative.
       if (state.phase === 'weekEnd' && !weekSummarized) {
@@ -193,7 +224,7 @@ export function createTelemetry(
     ui(kind, data) {
       record(kind, data ?? {}, lastTick);
     },
-    summary: (state) => buildSummary(state, rows, cards),
+    summary: (state) => buildSummary(state, rows, cards, deals),
     toNdjson: () => toNdjson(rows),
     rows: () => rows,
     download(filename) {
