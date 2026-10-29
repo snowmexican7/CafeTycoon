@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRun } from '../sim/run';
 import { TICK_RATE } from '../sim/constants';
 import { nightExtras } from './live';
-import { nightHtml, type NightUiState } from './night';
+import { menuCols, nightHtml, type NightUiState } from './night';
 import {
   DEFAULT_NIGHT_LENGTH, MAX_BRIEF_ALERTS, RELAXED_FALLBACK_SEC, migrateNightLength, nightBriefVM, nightLengthChoice,
   nightLengthForSim, nightStructureKey, nightTimerVM, nightViewModel,
@@ -120,5 +120,11 @@ describe('FB1 WP1 night board html', () => {
     expect(h.match(/class="dcard/g)!.length).toBeGreaterThan(1);
     expect(h).toMatch(/class="dc-p"/);
     expect(h.match(/pr-btn/g)!.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('menu grid columns (fb1 menu polish)', () => {
+  it('lays four drinks out 2×2, five or six three across, more four across', () => {
+    expect([1, 2, 3, 4, 5, 6, 7, 8].map(menuCols)).toEqual([1, 2, 3, 2, 3, 3, 4, 4]);
   });
 });

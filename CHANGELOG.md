@@ -21,6 +21,7 @@ when a build goes out, the line moves under its version with the date.
 - **Longer, gentler nights.** Nights last two minutes now, and a relaxed night has no clock at all: the doors open when everyone is ready, with a 30-second last call once most of the crew is.
 - **A night screen that tells you what matters.** Yesterday's profit, one headline, and a few alerts with a one-tap fix.
 - The night board has three tabs (Tonight, Menu, Spend), bigger text and big drink cards. The night-length picker has a Relaxed option with no timer.
+- The Menu tab's drink cards fill the board (2×2 for four drinks, three across for five or six) with big names, prices and +/− buttons. The Tonight stock tiles and buy buttons are bigger too.
 - Order tickets are bigger, and the rail shows four of them, then "+N more". Click a ticket to see its recipe steps, with the next step highlighted. Pause > Recipe hints can show steps on click (the default), always or never. On day 1 the first ticket shows its steps.
 
 ## 2.1.0 — 2026-10-29 · Phase 3 preview

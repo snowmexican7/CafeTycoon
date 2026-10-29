@@ -178,6 +178,11 @@ function drinkCard(m: MenuLineVM, onlyOne: boolean): string {
   </div>`;
 }
 
+/** Menu grid columns: 2×2 for four drinks, three across for five or six, four beyond that. */
+export function menuCols(n: number): number {
+  return n <= 2 ? Math.max(1, n) : n === 3 ? 3 : n === 4 ? 2 : n <= 6 ? 3 : 4;
+}
+
 function menuPane(vm: NightVM): string {
   const menu = vm.menu ?? [];
   const onCount = menu.filter((m) => m.on).length;
@@ -189,7 +194,7 @@ function menuPane(vm: NightVM): string {
   return `<div class="mn-head"><span class="mn-sum">Tomorrow: <b>~${sum.orders} orders</b> · <b>$${sum.profit.toFixed(0)}</b> profit</span>${sig}
       <button class="btn mini ghost" data-action="drawer" data-d="pricing">How pricing works ⓘ</button></div>
     ${vm.growth.waiting ? `<div class="mn-wait" title="${esc(vm.growth.waiting)}">${esc(vm.growth.waiting.split(':')[0])}: grow to make more</div>` : ''}
-    <div class="dgrid">${menu.map((m) => drinkCard(m, onCount === 1)).join('')}</div>`;
+    <div class="dgrid" style="--cols:${menuCols(menu.length)};--rows:${Math.ceil(menu.length / menuCols(menu.length)) || 1}">${menu.map((m) => drinkCard(m, onCount === 1)).join('')}</div>`;
 }
 
 // ---------------------------------------------------------------------------------------------- Tonight
@@ -246,7 +251,7 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
   const extrasRow = `${regs.length ? `<button class="chip ${regWarn ? 'warn' : ''}" data-action="drawer" data-d="regulars">♥ ${regs.length} regulars${regWarn ? ` · ${regWarn} !` : ''} ▸</button>` : ''}
     ${r.scouted ? `<button class="chip" data-action="drawer" data-d="paper">🔭 Scouted ▸</button>` : `<button class="chip" data-action="scout" ${r.affordable ? '' : 'disabled'} title="See ${esc(r.name)}'s menu and prices for tomorrow">🔭 Scout ${esc(r.name)} · ${esc(short$(r.cost))}</button>`}`;
   return `${banner}<div class="tn-grid">${yday}${tmrw}${alerts}
-    <div class="tn-card st"><div class="tn-h">Stock</div><div class="restocks">${stock}</div></div>
+    <div class="tn-card st"><div class="tn-h">Stock</div><div class="restocks" style="--n:${vm.restock?.length || 1}">${stock}</div></div>
     <div class="tn-card cr"><div class="tn-h">Crew roles</div><div class="roles">${rolesRow(vm.roles)}</div><div class="cr-x">${extrasRow}</div></div></div>`;
 }
 
