@@ -9,7 +9,7 @@ import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import {
   nightStructureKey,
   type AdsVM, type BriefAlert, type CheckoutVM, type GrowthVM, type PitchVM, type ForecastVM, type HandCardVM, type MenuLineVM,
-  type NightVM, type RivalVM, type RoleVM, type SignatureVM,
+  type NightTimerVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM,
 } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
 import { isEquipmentKind } from '../sim/slots';
@@ -237,6 +237,12 @@ function menuPane(vm: NightVM): string {
     <div class="dgrid" style="--cols:${menuCols(menu.length)};--rows:${Math.ceil(menu.length / menuCols(menu.length)) || 1}">${menu.map((m) => drinkCard(m, onCount === 1)).join('')}</div>`;
 }
 
+/** FB1: who is ready, on the night clock pill ("✓ 1/2 ready"). */
+const readyText = (t: NightTimerVM) => `✓ ${t.ready}/${t.needed} ready`;
+function readyTag(t: NightTimerVM): string {
+  return t.needed > 0 ? `<span class="rd ${t.ready >= t.needed ? 'all' : ''}" aria-label="${t.ready} of ${t.needed} ready">${readyText(t)}</span>` : '';
+}
+
 // ---------------------------------------------------------------------------------------------- Tonight
 
 function alertRow(a: BriefAlert): string {
@@ -438,7 +444,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
   const day = extras?.day ?? 1;
   const title = day <= 1 ? 'Opening night' : `After Day ${day - 1}`;
   const sub = `planning ${extras ? `${extras.weekday}, ` : ''}Day ${day}`;
-  const alertN = vm.brief.alerts.filter((a) => a.severity !== 'good').length;
+  const alertN = vm.brief.alerts.filter((a) => a.severity === 'danger' || a.severity === 'warn').length;
   const badge: Record<NightTab, string> = { tonight: alertN ? `${alertN}` : '', menu: '', spend: vm.hand.length ? `${vm.hand.length}` : '' };
   const tabs = NIGHT_TABS
     .map((t) => `<button class="tab ntab ${t.id === ui.tab ? 'on' : ''} ${t.id === 'tonight' && alertN ? 'alert' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="${t.id === ui.tab}">${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}</button>`)
@@ -475,7 +481,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
   return `
     <div class="night-shade"></div>
     <div class="night-head">${moon(34)}<h1>${title} <small>· ${esc(sub)}</small></h1><div class="spacer"></div>
-      <div class="pill timer ${relaxed ? 'relaxed' : ''}" role="timer" aria-label="${relaxed ? 'Relaxed night' : 'Night time left'}">${relaxed ? '<span aria-hidden="true">☾</span>' : `<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="#ffffff22" stroke-width="5"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#ffcf7a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${RING} ${RING}" transform="rotate(-90 18 18)"/></svg>`}<span class="clock">${relaxed ? 'Relaxed' : esc(vm.clock)}</span></div>
+      <div class="pill timer ${relaxed ? 'relaxed' : ''}" role="timer" aria-label="${relaxed ? 'Relaxed night' : 'Night time left'}">${relaxed ? '<span aria-hidden="true">☾</span>' : `<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="#ffffff22" stroke-width="5"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#ffcf7a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${RING} ${RING}" transform="rotate(-90 18 18)"/></svg>`}<span class="clock">${relaxed ? 'Relaxed' : esc(vm.clock)}</span>${readyTag(vm.timer)}</div>
       <div class="pill">${coin(24)}<span class="cash">${esc(vm.cash)}</span></div>
       ${room ? `<div class="pill room"><small>ROOM</small><b>${esc(room)}</b></div>` : ''}
     </div>
@@ -541,7 +547,10 @@ export function createNight(
       handlers.onSlot?.(Number(el.dataset.index), isEquipmentKind(el.dataset.station) ? el.dataset.station : null);
       ui.slotSel = null;
     } else if (action === 'equip' && isEquipmentKind(el.dataset.station)) handlers.onEquip?.(el.dataset.station);
-    else if (action === 'tip') {
+    else if (action === 'fix') {
+      const fix = lastVm?.brief.alerts.find((a) => a.id === el.dataset.fix)?.fix?.input;
+      if (fix) handlers.onTip?.(fix);
+    } else if (action === 'tip') {
       const tip = lastVm?.tips.find((t) => t.id === el.dataset.tip);
       if (tip) handlers.onTip?.(tip.input);
     }
@@ -631,6 +640,11 @@ export function createNight(
     const clock = container.querySelector('.night-head .clock');
     if (clock) clock.textContent = vm.timer.relaxed ? (vm.timer.lastCall ? `Last call ${vm.timer.lastCallClock ?? vm.clock}` : 'Relaxed') : vm.clock;
     container.querySelector('.night-head .timer')?.classList.toggle('last-call', vm.timer.lastCall);
+    const rd = container.querySelector<HTMLElement>('.night-head .timer .rd');
+    if (rd) {
+      rd.textContent = readyText(vm.timer);
+      rd.classList.toggle('all', vm.timer.needed > 0 && vm.timer.ready >= vm.timer.needed);
+    }
     const cashEl = container.querySelector('.night-head .cash');
     if (cashEl) cashEl.textContent = vm.cash;
     const ring = container.querySelector<SVGCircleElement>('.night-head .ring .arc');
