@@ -9,7 +9,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 16;
+export const SNAPSHOT_VERSION = 17;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -58,6 +58,9 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   14: () => {},
   // P3 B7: signature drink. No signature is "absent", so nothing to fill in.
   15: () => {},
+  // P3 B8: taste seasons. A notebook entry with no season was learned in season 0, which is what
+  // "absent" means, so older entries correctly read as stale once a later season starts.
+  16: () => {},
 };
 
 /** Bring a saved state up to SNAPSHOT_VERSION, or null when no migration path exists. */

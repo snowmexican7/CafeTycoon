@@ -4,7 +4,7 @@ import { ACTIONS, parseHello, parseInput, parseJoin, parseLobby, parseSeat, pars
 
 describe('protocol parsers', () => {
   it('is on version 13 (seat reclaim, room cap, lobby bots, forecasts, re-roll, challenges, eggs, crew stats, B11 balance, 2.0.1 deltas, P3 roles, prices, regulars)', () => {
-    expect(PROTOCOL_VERSION).toBe(19);
+    expect(PROTOCOL_VERSION).toBe(20);
     expect(ACTIONS).toContain('snapd');
     expect(ACTIONS).toContain('resync');
     expect(ACTIONS).toContain('seat');

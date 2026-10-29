@@ -1,5 +1,5 @@
 import { SIG, sigShare } from '../sim/signature';
-import { knownStars, TWISTS, type TwistId } from '../sim/taste';
+import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
 import { accuracyRating } from '../sim/accuracy';
 import { PRICING, menuPrice, priceForecast, priceTraffic } from '../sim/pricing';
 import { regularsViewModel, type RegularVM } from '../sim/regulars';
@@ -316,6 +316,8 @@ export interface ForecastVM {
   radio?: string;
   /** Optional daily challenges for tomorrow (B7). */
   challenges?: string;
+  /** P3 B8: the taste column: a season turning. */
+  taste?: string;
 }
 
 /** Tomorrow's paper. At night `state.day` is already tomorrow. */
@@ -341,6 +343,7 @@ export function forecastViewModel(state: GameState): ForecastVM {
     later: { icon: next.icon, name: forecastName(next, state.day + 1) },
     ...(radioLine(state) ? { radio: radioLine(state) } : {}),
     ...(challengePaperLine(state) ? { challenges: challengePaperLine(state) } : {}),
+    ...(tasteLine(state) ? { taste: tasteLine(state) } : {}),
   };
 }
 
@@ -361,7 +364,7 @@ export interface MenuLineVM {
   fans?: string[];
   /** P3 B6: tonight's twist and the taste notebook for this drink (stars, or null if not yet tried). */
   twist?: TwistId;
-  book: { twist: TwistId; stars: number | null }[];
+  book: { twist: TwistId; stars: number | null; stale?: true }[];
 }
 
 /** P3 B7: the signature designer's options and the current signature. */
@@ -369,17 +372,35 @@ export interface SignatureVM {
   current?: { name: string; drink: DrinkId; twist: TwistId; premium: number; stars: number | null; since: number; onMenu: boolean };
   drinks: DrinkId[];
   /** Per drink: each twist's known stars (null = not tried). */
-  book: Record<string, { twist: TwistId; stars: number | null }[]>;
+  book: Record<string, { twist: TwistId; stars: number | null; stale?: true }[]>;
   /** Expected signature asks tomorrow at the current premium (0 without a signature). */
   asks: number;
   premiumStep: number;
   maxPremium: number;
 }
 
+/** The taste notebook for a drink: stars once served, flagged stale when learned last season (B8). */
+function bookOf(state: GameState, drink: DrinkId): { twist: TwistId; stars: number | null; stale?: true }[] {
+  return TWISTS.map((twist) => ({ twist, stars: knownStars(state, drink, twist), ...(knownStale(state, drink, twist) ? { stale: true as const } : {}) }));
+}
+
+/** P3 B8: the paper's taste column: a season turning tomorrow (with a tip-off), or the day after. */
+export function tasteLine(state: GameState): string | undefined {
+  const menu = menuDrinks(state);
+  if (!menu.length) return undefined;
+  if (seasonStarts(state.day)) {
+    const drink = menu[state.day % menu.length];
+    const t = TWIST_INFO[risingTwist(state.seed, drink, state.day)];
+    return `Season ${seasonOf(state.day) + 1} starts tomorrow and tastes are turning. Word is ${t.name.toLowerCase()} is the new thing in ${DRINK_INFO[drink].short.toLowerCase()}s, and last season's hits may not land.`;
+  }
+  if (seasonStarts(state.day + 1)) return 'Tastes turn the day after tomorrow: enjoy your hits while they last.';
+  return undefined;
+}
+
 export function signatureVM(state: GameState): SignatureVM {
   const drinks = unlockedDrinks(state);
   const book: SignatureVM['book'] = {};
-  for (const d of drinks) book[d] = TWISTS.map((twist) => ({ twist, stars: knownStars(state, d, twist) }));
+  for (const d of drinks) book[d] = bookOf(state, d);
   const sig = state.signature;
   const m = computeModifiers(state);
   const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
@@ -415,7 +436,7 @@ export function menuLines(state: GameState): MenuLineVM[] {
       ...(l ? { demandPct: l.demandPct, orders: l.orders, profit: l.profit } : {}),
       ...(fans.length ? { fans } : {}),
       ...(state.twists?.[drink] ? { twist: state.twists[drink] } : {}),
-      book: TWISTS.map((twist) => ({ twist, stars: knownStars(state, drink, twist) })),
+      book: bookOf(state, drink),
     };
   });
 }
