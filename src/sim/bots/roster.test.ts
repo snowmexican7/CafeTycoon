@@ -8,7 +8,7 @@ import { summarizeRun } from '../score';
 import { step } from '../step';
 import { validateInput } from '../validate';
 import type { GameState, Settings } from '../types';
-import { addStandIns, botSpeed, isBot, makeBotState, resetBotsForNight } from './roster';
+import { BOT_IDS, BOT_PERSONALITIES, addStandIns, botSpeed, botsFor, isBot, makeBotState, resetBotsForNight } from './roster';
 
 const p1 = { id: 'p1', name: 'K' };
 const p2 = { id: 'p2', name: 'S' };
@@ -35,11 +35,33 @@ describe('bot roster', () => {
     expect(s.players.map((p) => [p.id, p.name, p.bot?.personality])).toEqual([
       ['p1', 'K', undefined],
       ['bot-1', 'Bo', 'steady'],
-      ['bot-2', 'Lu', 'rookie'],
-      ['bot-3', 'Mo', 'veteran'],
+      ['bot-2', 'Lu', 'hurried'],
+      ['bot-3', 'Mo', 'rookie'],
     ]);
     expect(botIds(startDay(two({ bots: 0 })))).toEqual([]);
     expect(botIds(startDay(two({ bots: 1 })))).toEqual(['bot-1']);
+  });
+
+  it('the roster has four bots; any crew with two or more bots includes a hurried one', () => {
+    expect(BOT_IDS).toEqual(['bot-1', 'bot-2', 'bot-3', 'bot-4']);
+    expect(BOT_PERSONALITIES).toEqual(['steady', 'hurried', 'rookie', 'veteran']);
+    expect(ECONOMY.bots.names).toHaveLength(BOT_IDS.length);
+    // four bots with no humans (tester runs): everyone clocks in, the fourth is a veteran
+    const four = startDay(createRun({ seed: 1, hostId: 'p1', players: [], settings: { bots: 4 } }));
+    expect(four.players.map((p) => [p.id, p.name, p.bot?.personality])).toEqual([
+      ['bot-1', 'Bo', 'steady'],
+      ['bot-2', 'Lu', 'hurried'],
+      ['bot-3', 'Mo', 'rookie'],
+      ['bot-4', 'Zip', 'veteran'],
+    ]);
+    for (const n of [2, 3]) {
+      const s = startDay(createRun({ ...solo, settings: { bots: n } }));
+      expect(s.players.filter((p) => p.bot?.personality === 'hurried')).toHaveLength(1);
+    }
+    expect(startDay(createRun({ ...solo, settings: { bots: 1 } })).players.some((p) => p.bot?.personality === 'hurried')).toBe(false);
+    expect(botsFor('auto', 1)).toBe(2); // auto still fills to three baristas
+    expect(botsFor(4, 0)).toBe(4);
+    expect(botsFor(4, 1)).toBe(3);
   });
 
   it('a friend who joins mid-week replaces a bot the next morning, highest id first', () => {

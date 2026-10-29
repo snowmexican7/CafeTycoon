@@ -904,13 +904,15 @@ describe('bots with duplicate or missing stations', () => {
 });
 
 describe('default café determinism (station resolution must not change the default choice)', () => {
-  // RNG goldens measured on fb1 @ e503518 (before any FB1 code): seed 5, p1, scenario 'normal', 900 ticks after
-  // startDay. Whole-state JSON is not pinned: other FB1 packages add optional fields (emptySince, slots, ...).
+  // RNG goldens: seed 5, p1, scenario 'normal', 900 ticks after startDay. Bots 0 and 1 were measured on
+  // fb1 @ e503518 (before any FB1 code); bots 2 and 3 were re-measured on fb1-sim-bots-hurried when the roster grew
+  // a hurried bot-2 (the roster is the feature). Whole-state JSON is not pinned: other FB1 packages add optional
+  // fields (emptySince, slots, ...).
   const golden: [number, number][] = [
     [0, 1798888878],
     [1, -1928183945],
     [2, -1360289472],
-    [3, -2056066339],
+    [3, 1671006484],
   ];
   for (const [bots, rng] of golden) {
     it(`seed 5, ${bots} bot(s), 900 ticks: the base RNG stream`, () => {
@@ -921,4 +923,68 @@ describe('default café determinism (station resolution must not change the defa
       expect(s.rng).toBe(rng);
     });
   }
+});
+
+describe('hurried bots pull cups early under a queue', () => {
+  /** bot-1 standing at the espresso machine, which is mid-run on a shot, with a `take` step next and `queued` orders waiting. */
+  function atMachine(personality: Personality, ticksLeft: number, queued: number): GameState {
+    const s = cafe(1);
+    s.players.find((p) => p.id === 'p1')!.pos = { x: 11, y: 5 };
+    const esp = s.stations.find((st) => st.id === 'espresso')!;
+    esp.making = 'espresso';
+    esp.busyTotal = 100;
+    esp.busyTicksLeft = ticksLeft;
+    s.customers = Array.from({ length: queued }, (_, i) => ({ id: 900 + i, drink: 'espresso' as const, ...huge }));
+    const b = bot(s);
+    b.pos = { ...targetNodes(s, esp, b.pos)[0] };
+    Object.assign(b, floorFields(b.pos));
+    b.holding = null;
+    b.bot = { ...makeBotState(personality), plan: [{ kind: 'use', station: 'espresso', action: 'take' }] };
+    return s;
+  }
+  const early = (s: GameState) => s.log.filter((e) => e.kind === 'cup.early');
+  const run = (s: GameState, ticks: number) => {
+    for (let i = 0; i < ticks; i++) s = step(s, []);
+    return s;
+  };
+
+  it('takes the cup in the last 40% of the run with three customers waiting', () => {
+    const s = run(atMachine('hurried', 40, ECONOMY.bots.hurriedQueue), 3);
+    expect(early(s)).toHaveLength(1);
+    expect(early(s)[0].data).toMatchObject({ by: 'bot-1', item: 'espresso' });
+    expect(bot(s).holding).toBe('espresso');
+    expect(bot(s).cupSlips).toBe(1); // one star off
+    const esp = s.stations.find((st) => st.id === 'espresso')!;
+    expect(esp.busyTicksLeft).toBe(0);
+    expect(esp.making).toBeNull();
+  });
+
+  it('waits when only two customers are queued', () => {
+    const s = run(atMachine('hurried', 40, ECONOMY.bots.hurriedQueue - 1), 3);
+    expect(early(s)).toHaveLength(0);
+    expect(bot(s).holding).toBeNull();
+    expect(s.stations.find((st) => st.id === 'espresso')!.busyTicksLeft).toBeGreaterThan(0);
+  });
+
+  it('waits when the run is not yet in its last 40%', () => {
+    const s = run(atMachine('hurried', 60, 3), 3);
+    expect(early(s)).toHaveLength(0);
+    expect(bot(s).holding).toBeNull();
+  });
+
+  it('steady, rookie and veteran bots never pull early', () => {
+    for (const personality of ['steady', 'rookie', 'veteran'] as const) {
+      const s = run(atMachine(personality, 40, 4), 3);
+      expect(early(s)).toHaveLength(0);
+      expect(bot(s).holding).toBeNull();
+    }
+  });
+
+  it('the hurried personality is quick and sloppy', () => {
+    const s = cafe(0);
+    expect(makeBotState('hurried').personality).toBe('hurried');
+    expect(ECONOMY.bots.personalities.hurried).toEqual({ speed: 1.15, reaction: 0.85, mistake: 0.08, preps: false });
+    s.settings.botSkill = 3;
+    expect(botSpeed(s, makeBotState('hurried'))).toBeCloseTo(1.15);
+  });
 });

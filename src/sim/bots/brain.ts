@@ -1,4 +1,5 @@
 import { ECONOMY } from '../../data/economy';
+import { ACCURACY } from '../accuracy';
 import { availableDrinks } from '../customers';
 import { eventActive } from '../events';
 import type { Modifiers } from '../effects';
@@ -384,6 +385,19 @@ function retarget(b: BotState, from: Station, twin: Station): void {
   b.waitTicks = 0;
 }
 
+/** A hurried bot with a queue behind it grabs a cup in the last stretch of its run instead of waiting it out. */
+function pullsEarly(state: GameState, p: Player, st: Station): boolean {
+  return (
+    p.bot!.personality === 'hurried' &&
+    p.holding === null &&
+    st.busyTicksLeft > 0 &&
+    !!st.making &&
+    !!st.busyTotal &&
+    st.busyTicksLeft <= st.busyTotal * ACCURACY.earlyShare &&
+    state.customers.length >= BOTS.hurriedQueue
+  );
+}
+
 /** At the station: press "use" when the step can happen, wait while the machine is busy, else give up. */
 function act(state: GameState, p: Player, action: BotAction, st: Station): void {
   const b = p.bot!;
@@ -412,6 +426,7 @@ function act(state: GameState, p: Player, action: BotAction, st: Station): void 
     }
     case 'take':
       if (st.output !== null && p.holding === null) return execute(p);
+      if (pullsEarly(state, p, st)) return execute(p); // the interact early-pull takes the cup, one star off
       if (st.busyTicksLeft > 0) return wait(state, p);
       return abandon(state, p);
     case 'serve': {

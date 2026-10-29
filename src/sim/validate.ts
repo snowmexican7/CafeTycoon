@@ -6,7 +6,7 @@ import { isTierId } from './growth';
 import { isEquipmentKind } from './slots';
 import { TWISTS } from './taste';
 import { isRole } from './roles';
-import { ECONOMY } from '../data/economy';
+import { LAYOUT } from '../data/layout';
 import { DRINK_IDS } from '../data/drinks';
 import type { BotSkill, Pace, PlayerInput, Settings, SupplyId } from './types';
 
@@ -15,7 +15,7 @@ const MIN_PHASE_SEC = 30;
 const MAX_PHASE_SEC = 600;
 const MAX_PACKS = 100;
 const MAX_NAME = 16;
-const MAX_BOTS = ECONOMY.bots.names.length;
+const MAX_BOTS = LAYOUT.spawnPoints.length - 1; // four baristas in all, at least one of them a person
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
