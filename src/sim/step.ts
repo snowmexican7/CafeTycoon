@@ -24,6 +24,7 @@ import { resolveDrops } from './drop';
 import { stepCleaning } from './mop';
 import { stepRogue } from './rogue';
 import { pruneLog } from './log';
+import { noteNight, tallyStats } from './stats';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -85,8 +86,14 @@ function applyInput(s: GameState, input: PlayerInput): void {
       if (s.phase === 'day' || s.phase === 'closing' || s.phase === 'night') unlockSecret(s, input.playerId, input.code);
       break;
     case 'buy':
+    case 'reroll': {
+      const before = input.kind === 'buy' ? s.boughtTonight.length : (s.rerolls ?? 0);
+      applyNightInput(s, input);
+      const after = input.kind === 'buy' ? s.boughtTonight.length : (s.rerolls ?? 0);
+      if (after > before) noteNight(s, input.playerId, input.kind === 'buy' ? 'cardsBought' : 'rerolls');
+      break;
+    }
     case 'restock':
-    case 'reroll':
     case 'ready':
       applyNightInput(s, input);
       break;
@@ -188,6 +195,7 @@ export function step(state: GameState, inputs: PlayerInput[]): GameState {
     case 'ended':
       break;
   }
+  tallyStats(s);
   pruneLog(s);
   return s;
 }

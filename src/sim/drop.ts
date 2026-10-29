@@ -29,18 +29,18 @@ function resolveDrop(state: GameState, p: Player): void {
     if (station.kind === 'trash') {
       p.holding = null;
       if (item !== 'grounds') tally(state.today, 'wasted');
-      emitLog(state, 'drop', { item, station: station.id });
+      emitLog(state, 'drop', { item, station: station.id, by: p.id });
     } else if (station.kind === 'counter') {
       if (item !== 'grounds' && state.pass.length < ECONOMY.pass.slots) {
         state.pass.push({ item, ticksLeft: secondsToTicks(ECONOMY.pass.staleSeconds[item]) });
         p.holding = null;
-        emitLog(state, 'drop', { item, station: station.id });
+        emitLog(state, 'drop', { item, station: station.id, by: p.id });
       }
     } else if (station.kind in STATION_RECIPES) {
       if (station.busyTicksLeft === 0 && station.output === null && station.occupiedBy === null) {
         station.output = item;
         p.holding = null;
-        emitLog(state, 'drop', { item, station: station.id });
+        emitLog(state, 'drop', { item, station: station.id, by: p.id });
       }
     }
     return;
@@ -50,5 +50,5 @@ function resolveDrop(state: GameState, p: Player): void {
   if (!placeMess(state, item === 'grounds' ? 'grounds' : 'spill', tile)) return;
   p.holding = null;
   if (item !== 'grounds') tally(state.today, 'wasted');
-  emitLog(state, 'drop', { item, x: tile.x, y: tile.y });
+  emitLog(state, 'drop', { item, x: tile.x, y: tile.y, by: p.id });
 }

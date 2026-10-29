@@ -1,3 +1,4 @@
+import { awardsFor, awardsText, type Award } from '../sim/awards';
 import { catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
@@ -437,11 +438,20 @@ export interface WeekEndVM {
   seed: number;
   isHost: boolean;
   bankrupt: boolean;
+  /** B10: the awards ceremony, MVP first. */
+  awards: Award[];
+  /** Plain text of the awards for "Copy awards". */
+  awardsText: string;
+  /** Lost customers as a share of everyone who walked in, e.g. "23%". */
+  lostPct: string;
 }
 
 export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
   let best: DayStats | null = null;
   for (const d of state.days) if (best === null || profitOf(d) > profitOf(best)) best = d;
+  const awards = awardsFor(state);
+  const lost = state.days.reduce((n, d) => n + d.lost, 0);
+  const walkIns = lost + state.days.reduce((n, d) => n + d.served, 0);
   return {
     score: money(scoreRun(state)),
     cash: money(state.cash),
@@ -454,6 +464,9 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
     seed: state.seed,
     isHost: me === state.hostId,
     bankrupt: state.bankrupt,
+    awards,
+    awardsText: awardsText(state, awards),
+    lostPct: `${walkIns ? Math.round((100 * lost) / walkIns) : 0}%`,
   };
 }
 

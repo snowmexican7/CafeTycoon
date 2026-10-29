@@ -9,7 +9,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 8;
+export const SNAPSHOT_VERSION = 9;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -35,6 +35,10 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   // v8 (Phase 2 B8): Easter egg pack 2 (absent = no eggs yet; morning reset fills it).
   7: (s) => {
     /* eggs stays undefined until eggsMorning / first gag */
+  },
+  // v9 (Phase 2 B10): crew stats for the awards. Start counting from now (older days have no per-player stats; the few log entries still in the save are counted).
+  8: (s) => {
+    s.crew ??= { seen: 0, players: [] };
   },
 };
 

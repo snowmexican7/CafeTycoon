@@ -41,6 +41,7 @@ export function createTitle(
     onJoin(code: string, name: string): void;
     onResume(): void;
     onRejoin(code: string): void;
+    onRecords?(): void;
   },
   roadmap?: RoadmapDrawer,
 ): { render(vm: TitleVM, settings: LocalSettings, notice?: string): void; show(): void; hide(): void } {
@@ -61,6 +62,7 @@ export function createTitle(
     else if (action === 'join') handlers.onJoin(q<HTMLInputElement>('[name=code]').value, readChoice().name);
     else if (action === 'rejoin') handlers.onRejoin(el.dataset.code!);
     else if (action === 'roadmap') roadmap?.open();
+    else if (action === 'records') handlers.onRecords?.();
   });
   container.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.target as HTMLElement).matches('[name=code]')) {
@@ -115,6 +117,7 @@ export function createTitle(
             <p class="keys-help"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> or arrows move · <span class="key">E</span> or <span class="key">Space</span> uses a station · <span class="key">Q</span> drinks an espresso (in hand or at the machine) · <span class="key">Esc</span> pauses · <span class="key">M</span> mutes sound</p>
           </details>
         </main>
+        <button class="btn recbtn" data-action="records" aria-haspopup="dialog">🏆 Records</button>
         <button class="btn rmbtn" data-action="roadmap" aria-haspopup="dialog"><span class="dot" hidden></span>${roadmapIcon}Roadmap <span class="badge" hidden></span></button>`;
       badge();
     },
