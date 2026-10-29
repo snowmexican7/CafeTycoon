@@ -648,17 +648,36 @@ describe('bots on a messy floor', () => {
 
   // Review Focus 1
   it('a botched drink at the cap is binned, not spilled', () => {
-    let s = cafe(1);
-    parkHuman(s);
-    for (let i = 0; i < ECONOMY.mess.max; i++) spill(s, i < 11 ? 1 + i : 1, i < 11 ? 3 : 4);
-    expect(s.messes.length).toBe(12);
-    const b = bot(s);
-    b.holding = 'latte';
-    b.bot!.noticeTicksLeft = 1;
-    s = step(s, []);
-    expect(bot(s).bot!.noticeTicksLeft).toBe(0);
-    expect(s.messes.length).toBe(12);
-    expect(bot(s).holding).toBe('latte');
-    expect(bot(s).bot!.plan[0]).toEqual({ kind: 'use', station: 'trash', action: 'trash' });
+    /** bot-1 holding an unchecked latte that it notices after 4 ticks (seed 2: the spill roll hits), `messes` spills down. */
+    const notice = (messes: number) => {
+      let s = cafe(1);
+      parkHuman(s);
+      for (let i = 0; i < messes; i++) spill(s, i < 11 ? 1 + i : 1, i < 11 ? 3 : 4);
+      const b = bot(s);
+      b.holding = 'latte';
+      b.bot!.noticeTicksLeft = 4;
+      const wasted = s.today.wasted ?? 0;
+      for (let i = 0; i < 4; i++) s = step(s, []);
+      expect(bot(s).bot!.noticeTicksLeft).toBe(0);
+      return { s, wasted };
+    };
+    // Control, one below the cap: the roll hits, the latte hits the floor where the bot stands.
+    const below = notice(ECONOMY.mess.max - 1);
+    const tile = bot(below.s).tile;
+    expect(below.s.messes.length).toBe(ECONOMY.mess.max);
+    expect(below.s.messes.at(-1)).toMatchObject({ kind: 'spill', x: tile.x, y: tile.y });
+    expect(bot(below.s).holding).toBeNull();
+    expect(below.s.today.wasted ?? 0).toBe(below.wasted + 1);
+    expect(bot(below.s).bot!.plan.some((st) => st.kind === 'use' && st.action === 'trash')).toBe(false); // nothing left to bin
+    // At the cap the same roll hits, but nothing lands: the drink stays in hand and goes in the bin.
+    const at = notice(ECONOMY.mess.max);
+    expect(at.s.messes.length).toBe(ECONOMY.mess.max);
+    expect(bot(at.s).holding).toBe('latte');
+    expect(at.s.today.wasted ?? 0).toBe(at.wasted); // nothing wasted on the floor
+    expect(bot(at.s).bot!.plan[0]).toEqual({ kind: 'use', station: 'trash', action: 'trash' });
+    const s = runUntil(at.s, (x) => bot(x).holding === null, 60 * 10); // binned at the trash
+    expect(s.messes.length).toBe(ECONOMY.mess.max);
+    expect(s.today.wasted ?? 0).toBe(at.wasted + 1);
+    expect(nearestStation(s, bot(s).pos)?.kind).toBe('trash');
   });
 });
