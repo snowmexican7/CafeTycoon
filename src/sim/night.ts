@@ -162,10 +162,11 @@ export function applyNightInput(state: GameState, input: PlayerInput): GameState
  */
 export function stepNight(state: GameState): GameState {
   const connected = state.players.filter((p) => p.connected && !p.bot);
-  const everyoneReady = connected.length > 0 && connected.every((p) => state.ready.includes(p.id));
+  const readyConnected = connected.filter((p) => state.ready.includes(p.id)).length;
+  const everyoneReady = connected.length > 0 && readyConnected === connected.length;
   if (state.settings.nightLengthSec === 0) {
     if (everyoneReady) return startDay(state);
-    if (state.lastCall === undefined && (connected.length === 0 || state.ready.length * 2 > connected.length)) {
+    if (state.lastCall === undefined && (connected.length === 0 || readyConnected * 2 > connected.length)) {
       state.lastCall = secondsToTicks(LAST_CALL_SECONDS);
     }
     if (state.lastCall !== undefined) {
@@ -185,7 +186,7 @@ export function stepNight(state: GameState): GameState {
  *     mode: 'timed' | 'relaxed';          // relaxed when settings.nightLengthSec === 0
  *     secondsLeft: number | null;         // ceil(phaseTicksLeft / TICK_RATE) when timed, null when relaxed
  *     lastCallSecondsLeft: number | null; // ceil(lastCall / TICK_RATE) once a relaxed last call runs, else null
- *     ready: PlayerId[];                  // who has readied up tonight
+ *     ready: PlayerId[];                  // connected humans who have readied up tonight
  *     needed: number;                     // connected humans (the ready count that opens the shop)
  *   }
  */
@@ -201,7 +202,7 @@ export function nightClock(state: GameState): {
     mode: relaxed ? 'relaxed' : 'timed',
     secondsLeft: relaxed ? null : Math.ceil(state.phaseTicksLeft / TICK_RATE),
     lastCallSecondsLeft: state.lastCall === undefined ? null : Math.ceil(state.lastCall / TICK_RATE),
-    ready: state.ready,
+    ready: state.ready.filter((id) => state.players.some((p) => p.id === id && p.connected && !p.bot)),
     needed: state.players.filter((p) => p.connected && !p.bot).length,
   };
 }

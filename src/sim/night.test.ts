@@ -153,12 +153,15 @@ describe('relaxed night', () => {
     expect(s.lastCall).toBeUndefined();
   });
 
-  it('the last call starts at secondsToTicks(30) before its first count down', () => {
-    const s = relaxed(3);
-    ready(s, 'p1', 'p2');
-    s.lastCall = undefined;
-    // Observe the value the rule assigns: one tick later it is one less.
-    expect(stepNight(s).lastCall).toBe(secondsToTicks(30) - 1);
+  it('a human who readied and then left does not count toward the last call or nightClock.ready', () => {
+    let s = relaxed(2);
+    ready(s, 'p1');
+    s = step(s, [{ kind: 'leave', playerId: 'p1' }]);
+    for (let i = 0; i < 2000; i++) s = stepNight(s);
+    expect(s.phase).toBe('night');
+    expect(s.lastCall).toBeUndefined();
+    expect(nightClock(s).ready).toEqual([]);
+    expect(nightClock(s).needed).toBe(1);
   });
 
   it('with 2 humans and 1 ready (not more than half) there is no last call', () => {
