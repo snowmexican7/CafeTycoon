@@ -14,6 +14,7 @@
 import { ECONOMY } from '../data/economy';
 import { layoutFor } from '../data/layout';
 import type { Modifiers } from './effects';
+import { defaultSlots, growSlots, stationsFromSlots } from './slots';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
 export interface TierInfo {
@@ -117,19 +118,19 @@ export function floorWidth(state: GameState): number {
   return layoutFor(state.tier).width;
 }
 
-/** True when the shop has a station of this kind. */
+/** True when a station of this kind stands on the floor (FB1 WP5: read from the floor, not the tier). */
 export function hasStation(state: GameState, kind: StationKind): boolean {
-  return layoutFor(state.tier).stations.some((s) => s.kind === kind);
+  return state.stations.some((s) => s.kind === kind);
 }
 
-/** True when the shop has every station the drink's recipe needs. */
+/** True when the floor has every station the drink's recipe needs (a café with its steamer removed cannot make a latte). */
 export function canMake(state: GameState, drink: DrinkId): boolean {
-  return state.tier === undefined || state.tier === 'cafe' || DRINK_STATIONS[drink].every((k) => hasStation(state, k));
+  return DRINK_STATIONS[drink].every((k) => hasStation(state, k));
 }
 
-/** Fresh, idle stations for a tier. */
+/** Fresh, idle stations for a tier's default loadout. */
 export function stationsFor(tier: TierId | undefined): Station[] {
-  return layoutFor(tier).stations.map((s) => ({ id: s.id, kind: s.kind, pos: { ...s.pos }, busyTicksLeft: 0, output: null, occupiedBy: null }));
+  return stationsFromSlots(tier, defaultSlots(tier));
 }
 
 /** What the crew spent growing this run (for the week's fittings value). */
@@ -143,7 +144,7 @@ export function grownToday(state: GameState): { tier: TierId; day: number; by: s
   return last && last.day === state.day ? last : null;
 }
 
-/** Night input: grow into the next tier (in order, humans only, cash in hand). The new floor is set up at once. */
+/** Night input: grow into the next tier (in order, humans only, cash in hand). The new floor is set up at once: its default slots, with any extra machines moved to equipment. */
 export function applyGrowInput(state: GameState, input: Extract<PlayerInput, { kind: 'grow' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
@@ -152,9 +153,9 @@ export function applyGrowInput(state: GameState, input: Extract<PlayerInput, { k
   const cost = TIERS[input.tier].cost;
   if (state.cash < cost) return state;
   state.cash = Math.round((state.cash - cost) * 100) / 100;
+  growSlots(state, state.tier, input.tier);
   state.tier = input.tier;
   state.tierLog = [...(state.tierLog ?? []), { tier: input.tier, day: state.day, by: p.name }];
-  state.stations = stationsFor(input.tier);
   if (state.mop.heldBy === null) state.mop = { pos: { ...layoutFor(input.tier).mopHome }, heldBy: null };
   return state;
 }

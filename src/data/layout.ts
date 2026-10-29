@@ -46,6 +46,7 @@ export const LAYOUT: {
 export interface TierLayout {
   /** Floor width in tiles: the rest of the 12-wide lot is hoarding ("space for lease"). */
   width: number;
+  /** The tier's default loadout (FB1 WP5: what `defaultSlots` places), counter last. */
   stations: { id: string; kind: StationKind; pos: Vec2 }[];
   queueSlots: Vec2[];
   mopHome: Vec2;
@@ -80,6 +81,35 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
     mopHome: { x: 9, y: 7 },
   },
   cafe: { width: LAYOUT.width, stations: LAYOUT.stations, queueSlots: LAYOUT.queueSlots, mopHome: LAYOUT.mopHome },
+};
+
+/**
+ * FB1 WP5: the back-bar slots per tier, left to right. A slot holds one station or nothing; the
+ * counter is not a slot. The café keeps its five old positions (they are not on an even grid, and
+ * moving them would change every bot path) and gains a sixth at the end of the bar.
+ */
+export const SLOT_POSITIONS: Record<TierId, Vec2[]> = {
+  stand: [
+    { x: 1, y: 1 },
+    { x: 3, y: 1 },
+    { x: 5, y: 1 },
+    { x: 7, y: 1 },
+  ],
+  cart: [
+    { x: 1, y: 1 },
+    { x: 3, y: 1 },
+    { x: 5, y: 1 },
+    { x: 7, y: 1 },
+    { x: 9, y: 1 },
+  ],
+  cafe: [
+    { x: 1, y: 1 },
+    { x: 3, y: 1 },
+    { x: 5, y: 1 },
+    { x: 8, y: 1 },
+    { x: 10, y: 1 },
+    { x: 11, y: 1 },
+  ],
 };
 
 /** The layout for a tier (absent = the café, as every run before P3 B13). */

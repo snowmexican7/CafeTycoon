@@ -1,6 +1,7 @@
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../src/sim/checkout';
 import type { CheckoutId } from '../src/sim/types';
-import { nextTier, stationsFor, TIERS } from '../src/sim/growth';
+import { nextTier, TIERS } from '../src/sim/growth';
+import { growSlots } from '../src/sim/slots';
 import { layoutFor } from '../src/data/layout';
 import { ADS } from '../src/sim/ads';
 import { judgePitch } from '../src/sim/pitch';
@@ -310,9 +311,9 @@ export function growNight(state: GameState): void {
   const next = nextTier(state);
   if (!next || state.cash < TIERS[next].cost + 60) return;
   state.cash = Math.round((state.cash - TIERS[next].cost) * 100) / 100;
+  growSlots(state, state.tier, next);
   state.tier = next;
   state.tierLog = [...(state.tierLog ?? []), { tier: next, day: state.day, by: 'tester' }];
-  state.stations = stationsFor(next);
   state.mop = { pos: { ...layoutFor(next).mopHome }, heldBy: null };
 }
 
