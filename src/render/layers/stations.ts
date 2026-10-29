@@ -1,5 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import type { ItemKind, StationKind, Vec2 } from '../../sim/types';
+import type { CheckoutId, ItemKind, StationKind, Vec2 } from '../../sim/types';
 import { MAT, PALETTE, PROGRESS_BAR_RISE, STATION_LABELS, sx, sy } from '../theme';
 import { CHROME, dashedEllipse, drawItem, halfDome, label, shadow, sheen, vertical } from './draw';
 
@@ -32,8 +32,57 @@ function plate(root: Container, g: Graphics, cx: number, cy: number, text: strin
   root.addChild(t);
 }
 
+/** P3 B12: what sits on (or beside) the counter for the active checkout. */
+function checkoutArt(root: Container, g: Graphics, cx: number, cy: number, checkout: CheckoutId): void {
+  if (checkout === 'register') {
+    // the beige Ka-Ching 3000: a chunky till with a cash drawer and a green readout
+    g.roundRect(cx + 1, cy - 36, 28, 8, 2).fill(0xbfae8f); // drawer
+    g.rect(cx + 12, cy - 33, 6, 2).fill(0x8d7c60);
+    g.poly([cx + 3, cy - 36, cx + 27, cy - 36, cx + 24, cy - 50, cx + 6, cy - 50]).fill(0xe3d6bb); // keypad body
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) g.roundRect(cx + 8 + c * 4.5, cy - 46 + r * 4.5, 3, 3, 0.8).fill(0x9a8a6c);
+    g.roundRect(cx + 9, cy - 60, 14, 9, 2).fill(0x3d3a33); // readout
+    g.roundRect(cx + 10.5, cy - 58.5, 11, 6, 1).fill(0x9fe08a);
+    return;
+  }
+  if (checkout === 'kiosk') {
+    // a small card reader on the counter...
+    g.roundRect(cx + 8, cy - 34, 14, 8, 2).fill(0x5a6470);
+    // ...and the OrderBot totem standing beside it, facing the line
+    const kx = cx - 46;
+    shadow(g, kx, cy + 30, 13, 5);
+    g.roundRect(kx - 9, cy + 20, 18, 10, 3).fill(0x3a414c); // foot
+    g.rect(kx - 3, cy - 20, 6, 42).fill(0x7d8a91); // pole
+    g.roundRect(kx - 15, cy - 66, 30, 48, 5).fill(0x2f3440); // body
+    g.roundRect(kx - 12, cy - 62, 24, 34, 3).fill(0x86c7ff); // screen
+    g.roundRect(kx - 9, cy - 58, 18, 6, 2).fill(0xffffff); // menu rows
+    g.roundRect(kx - 9, cy - 49, 18, 6, 2).fill({ color: 0xffffff, alpha: 0.7 });
+    g.roundRect(kx - 8, cy - 39, 16, 7, 3).fill(0x4fb36f); // "ORDER" button
+    g.circle(kx, cy - 23, 2).fill(0xffcf7a);
+    const t = label('ORDER HERE', 6.5, 0xfff4e2, '800', undefined, 0.5);
+    t.position.set(kx, cy - 71);
+    root.addChild(t);
+    return;
+  }
+  // "Squarely": a white swivel terminal on a stand, screen turned to the customer with the tip prompt
+  g.rect(cx + 13, cy - 40, 4, 8).fill(0xb9c1c7); // swivel neck
+  g.ellipse(cx + 15, cy - 32, 9, 3).fill(0x9aa3aa);
+  g.roundRect(cx - 1, cy - 66, 32, 27, 5).fill(0xf8f8f6);
+  g.roundRect(cx + 1.5, cy - 63.5, 27, 22, 3).fill(0x1f2329);
+  const tips = ['18%', '20%', '25%'];
+  tips.forEach((p, i) => {
+    g.roundRect(cx + 3 + i * 8.6, cy - 52, 7.5, 8, 1.5).fill(i === 2 ? 0x4fb36f : 0x3b4350);
+    const t = label(p, 4.2, 0xffffff, '800', undefined, 0);
+    t.position.set(cx + 6.8 + i * 8.6, cy - 48);
+    root.addChild(t);
+  });
+  const h = label('Add a tip?', 4.8, 0xffffff, '700', undefined, 0);
+  h.position.set(cx + 15, cy - 58);
+  root.addChild(h);
+  g.roundRect(cx + 21, cy - 24, 10, 6, 2).fill(0xf8f8f6); // card reader dongle
+}
+
 /** Static art for one station (cabinet, machine, nameplate). The footprint stays inside its unit square. */
-export function buildStation(kind: StationKind, pos: Vec2): Container {
+export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register'): Container {
   const root = new Container();
   const g = new Graphics();
   root.addChild(g);
@@ -64,10 +113,7 @@ export function buildStation(kind: StationKind, pos: Vec2): Container {
     g.moveTo(x + 6, cy - 24).quadraticCurveTo(x + 20, cy - 18, x + 34, cy - 26).stroke({ width: 1.5, color: 0xd9d1c6 });
     g.moveTo(x + 26, cy - 14).quadraticCurveTo(x + 40, cy - 20, x + 54, cy - 12).stroke({ width: 1.5, color: 0xd9d1c6 });
     g.roundRect(x - 3, cy - 10, w + 6, 6, 3).fill(0xd8cdbf);
-    // register tablet on a stand
-    g.rect(cx + 12, cy - 48, 4, 16).fill(0x7d8a91);
-    g.roundRect(cx + 2, cy - 60, 24, 17, 4).fill(0x2f3440);
-    g.roundRect(cx + 4.5, cy - 57.5, 19, 12, 2).fill(PALETTE.mint);
+    checkoutArt(root, g, cx, cy, checkout);
     // service bell
     g.ellipse(cx - 17, cy - 22, 8, 3).fill(0xb88a2a);
     halfDome(g, cx - 17, cy - 23, 7, 7).fill(0xf1cf6e);

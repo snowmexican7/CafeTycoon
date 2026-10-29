@@ -78,35 +78,7 @@ export const CATALOGUE: CatalogueItem[] = [
     effects: [{ kind: 'moveSpeed', mul: 1.15 }],
     flavor: 'Ugly. Fast. Dry socks.',
   },
-  {
-    id: 'digitalKiosk',
-    name: 'Digital kiosk',
-    category: 'pos',
-    cost: 65,
-    rarity: 'common',
-    path: 'quality',
-    duration: 'permanent',
-    effects: [
-      { kind: 'patience', mul: 1.15 },
-      { kind: 'tipRate', add: 0.05 },
-    ],
-    flavor: 'Customers tap their own orders and feel in control.',
-  },
-  {
-    id: 'squarelyTerminal',
-    name: '"Squarely" tap terminal',
-    category: 'pos',
-    cost: 160,
-    rarity: 'rare',
-    path: 'quality',
-    duration: 'permanent',
-    effects: [
-      { kind: 'patience', mul: 1.25 },
-      { kind: 'tipRate', add: 0.2 },
-    ],
-    excludes: ['digitalKiosk'],
-    flavor: 'The screen flips around. Everyone tips 20% out of shame.',
-  },
+  // P3 B12: the digital kiosk and the Squarely terminal moved to the checkout path (src/sim/checkout.ts).
   {
     id: 'chirperThread',
     name: 'Chirper thread',

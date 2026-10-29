@@ -6,6 +6,7 @@ import { noteMissedFavourites } from './regulars';
 import { ECONOMY } from '../data/economy';
 import { loseCustomer } from './customers';
 import { computeModifiers, rentForDay } from './effects';
+import { activeCheckout } from './checkout';
 import { eventActive, judgeInspection } from './events';
 import { emitLog } from './log';
 import { startNight } from './run';
@@ -48,6 +49,11 @@ export function finishDay(state: GameState): GameState {
   const rent = rentForDay(state);
   state.today.rent = rent;
   state.cash = round2(state.cash - rent);
+  const licence = activeCheckout(state).daily;
+  if (licence > 0) {
+    state.cash = round2(state.cash - licence);
+    state.today.checkoutFees = round2((state.today.checkoutFees ?? 0) + licence);
+  }
   settleEspresso(state);
 
   const { served, lost } = state.today;

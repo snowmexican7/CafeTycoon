@@ -214,6 +214,16 @@ export interface PitchResult {
   boost: number;
 }
 
+/** P3 B12: the checkout path. */
+export type CheckoutId = 'register' | 'kiosk' | 'squarely';
+/** Owned checkouts (always the register) and the one in use; `since` is the day the latest was installed. */
+export interface CheckoutState {
+  owned: CheckoutId[];
+  active: CheckoutId;
+  since?: number;
+  by?: string;
+}
+
 export interface AdCampaign {
   id: AdId;
   day: number;
@@ -364,6 +374,8 @@ export interface DayStats {
   sigBonus?: number;
   /** P3 B10: the ad that ran today and how it landed. */
   ad?: { id: AdId; outcome: AdOutcome };
+  /** P3 B12: what the checkout cost today (card fees plus the kiosk licence). */
+  checkoutFees?: number;
   /** Challenge tip paid at closing (folded into bonus too). */
   challengeBonus?: number;
   /** Challenge ids won today. */
@@ -414,6 +426,8 @@ export interface GameState {
   rival?: Rival;
   /** P3 B10: the ad campaign booked for tomorrow (or running today). */
   ad?: AdCampaign;
+  /** P3 B12: the checkout path (absent = the register only). */
+  checkout?: CheckoutState;
   /** P3 B11: the latest pitch to the panel (it applies on its `day` when green-lit). */
   pitch?: PitchResult;
   eventSchedule: ScheduledEvent[];
@@ -460,6 +474,7 @@ export type PlayerInput =
   | { kind: 'twist'; playerId: PlayerId; drink: DrinkId; twist: TwistId | null }
   | { kind: 'scout'; playerId: PlayerId }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
+  | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }

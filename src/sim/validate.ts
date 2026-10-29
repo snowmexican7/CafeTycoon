@@ -1,6 +1,7 @@
 import { cleanDraft } from './signature';
 import { cleanPitch, isPitchKind } from './pitch';
 import { isAdId } from './ads';
+import { isCheckoutId } from './checkout';
 import { TWISTS } from './taste';
 import { isRole } from './roles';
 import { ECONOMY } from '../data/economy';
@@ -59,6 +60,8 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return DRINK_IDS.includes(input.drink) && (input.twist === null || TWISTS.includes(input.twist))
         ? { kind: 'twist', playerId: input.playerId, drink: input.drink, twist: input.twist }
         : null;
+    case 'checkout':
+      return isCheckoutId(input.checkout) ? { kind: 'checkout', playerId: input.playerId, checkout: input.checkout } : null;
     case 'ad':
       return input.ad === null || isAdId(input.ad) ? { kind: 'ad', playerId: input.playerId, ad: input.ad } : null;
     case 'pitch':
