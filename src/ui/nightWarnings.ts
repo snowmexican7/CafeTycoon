@@ -1,6 +1,8 @@
 import { ECONOMY } from '../data/economy';
 import { computeModifiers, rentForDay } from '../sim/effects';
 import { restockCost } from '../sim/night';
+import { DRINK_INFO } from '../data/drinks';
+import { SUPPLY_IDS, menuDrinks } from '../sim/unlocks';
 import type { DrinkId, GameState, SupplyId } from '../sim/types';
 
 /**
@@ -18,10 +20,10 @@ export interface NightWarning {
   supply?: SupplyId;
 }
 
-const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
-const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate'];
-const NAME: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'cold brew' };
-const DRINK_PLURAL: Record<DrinkId, string> = { espresso: 'Espressos', latte: 'Lattes', coldBrew: 'Cold brews' };
+const NAME: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'cold brew', flavour: 'flavours' };
+const DRINK_PLURAL: Record<DrinkId, string> = {
+  espresso: 'Espressos', latte: 'Lattes', coldBrew: 'Cold brews', icedLatte: 'Iced lattes', mocha: 'Mochas', matcha: 'Matchas', special: 'Maple foams',
+};
 
 const dollars = (n: number) => `$${Math.abs(n).toFixed(2).replace(/\.00$/, '')}`;
 const listJoin = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
@@ -38,11 +40,12 @@ export function rentTomorrow(state: GameState): number {
 export function expectedUse(state: GameState): Record<SupplyId, number> {
   const m = computeModifiers(state);
   const arrivals = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
-  const menu = DRINKS.filter((d) => state.menu[d]);
-  const total = menu.reduce((s, d) => s + m.orderBias[d], 0) || 1;
-  const use: Record<SupplyId, number> = { beans: 0, milk: 0, concentrate: 0 };
-  for (const d of menu) for (const s of ECONOMY.drinkSupplies[d]) use[s] += (arrivals * m.orderBias[d]) / total;
-  for (const s of SUPPLIES) use[s] = Math.ceil(use[s]);
+  const menu = menuDrinks(state);
+  const w = (d: DrinkId) => m.orderBias[d] * DRINK_INFO[d].bias;
+  const total = menu.reduce((s, d) => s + w(d), 0) || 1;
+  const use: Record<SupplyId, number> = { beans: 0, milk: 0, concentrate: 0, flavour: 0 };
+  for (const d of menu) for (const s of ECONOMY.drinkSupplies[d]) use[s] += (arrivals * w(d)) / total;
+  for (const s of SUPPLY_IDS) use[s] = Math.ceil(use[s]);
   return use;
 }
 
@@ -78,10 +81,10 @@ export function nightWarnings(state: GameState): NightWarning[] {
   }
 
   const use = expectedUse(state);
-  for (const s of SUPPLIES) {
-    const needs = DRINKS.filter((d) => state.menu[d] && ECONOMY.drinkSupplies[d].includes(s));
+  for (const s of SUPPLY_IDS) {
+    const needs = menuDrinks(state).filter((d) => ECONOMY.drinkSupplies[d].includes(s));
     if (needs.length === 0) continue;
-    const have = state.supplies[s];
+    const have = state.supplies[s] ?? 0;
     const afford = state.cash >= restockCost(state, s, 1);
     const fix = afford ? 'Restock before you open.' : `A pack costs ${dollars(restockCost(state, s, 1))}, more than you have.`;
     if (have <= 0) {

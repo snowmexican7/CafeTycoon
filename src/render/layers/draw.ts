@@ -113,6 +113,34 @@ export function drawItem(g: Graphics, kind: ItemKind, x: number, y: number, k = 
     g.roundRect(X(-5), Y(-5), 5 * k, 5 * k, k).fill({ color: 0xe6f5ff, alpha: 0.85 });
     g.roundRect(X(1), Y(-2), 4.5 * k, 4.5 * k, k).fill({ color: 0xe6f5ff, alpha: 0.8 });
     g.poly([X(2), Y(-21), X(4.6), Y(-20.5), X(4.2), Y(-7), X(1.6), Y(-7.5)]).fill(PALETTE.mint);
+  } else if (kind === 'icedLatte') {
+    g.poly([X(-8), Y(-12), X(8), Y(-12), X(6), Y(8), X(-6), Y(8)]).fill({ color: 0xc9e7f7, alpha: 0.9 }).stroke({ width: 1, color: 0x9fc9e2 });
+    g.poly([X(-7.5), Y(-8), X(7.5), Y(-8), X(5.9), Y(7.5), X(-5.9), Y(7.5)]).fill(0xc89a6a);
+    g.poly([X(-6.8), Y(-1), X(6.8), Y(-1), X(5.9), Y(7.5), X(-5.9), Y(7.5)]).fill({ color: 0xe8d2b4, alpha: 0.8 });
+    g.roundRect(X(-5), Y(-7), 5 * k, 5 * k, k).fill({ color: 0xe6f5ff, alpha: 0.85 });
+    g.roundRect(X(1), Y(-4), 4.5 * k, 4.5 * k, k).fill({ color: 0xe6f5ff, alpha: 0.8 });
+    g.poly([X(2), Y(-21), X(4.6), Y(-20.5), X(4.2), Y(-7), X(1.6), Y(-7.5)]).fill(PALETTE.cherry);
+  } else if (kind === 'mocha') {
+    g.poly([X(-8), Y(-10), X(8), Y(-10), X(6), Y(8), X(-6), Y(8)]).fill(0xffffff).stroke(cupStroke);
+    g.rect(X(-7.6), Y(-4), 15.2 * k, 6 * k).fill({ color: 0x6b3a22, alpha: 0.9 });
+    for (const [cx, cy, r] of [[-4, -11, 4], [3, -11, 4.5], [0, -15, 3.6]]) g.circle(X(cx), Y(cy), r * k).fill(0xfff8ee).stroke({ width: 1, color: 0xead9c2 });
+    g.moveTo(X(-5), Y(-12)).quadraticCurveTo(X(-2), Y(-15), X(0), Y(-12)).quadraticCurveTo(X(3), Y(-15), X(5), Y(-12)).stroke({ width: 1.6 * k, color: 0x6b3a22 });
+  } else if (kind === 'matcha') {
+    g.poly([X(-8), Y(-12), X(8), Y(-12), X(6), Y(8), X(-6), Y(8)]).fill(0xffffff).stroke(cupStroke);
+    g.rect(X(-7.6), Y(-6), 15.2 * k, 6 * k).fill({ color: 0x6fa84a, alpha: 0.9 });
+    g.ellipse(X(0), Y(-12), 8 * k, 2.6 * k).fill(0xa8d07a);
+    g.ellipse(X(0), Y(-12.4), 3 * k, 1.2 * k).fill(0xe9f5dc);
+  } else if (kind === 'special') {
+    g.poly([X(-8), Y(-12), X(8), Y(-12), X(6), Y(8), X(-6), Y(8)]).fill({ color: 0xc9e7f7, alpha: 0.9 }).stroke({ width: 1, color: 0x9fc9e2 });
+    g.poly([X(-7.3), Y(-4), X(7.3), Y(-4), X(5.9), Y(7.5), X(-5.9), Y(7.5)]).fill(0x5b3420);
+    g.poly([X(-7.9), Y(-12), X(7.9), Y(-12), X(7.3), Y(-4), X(-7.3), Y(-4)]).fill(0xf2c48d);
+    const leaf: number[] = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (Math.PI * i) / 5;
+      const r = (i % 2 === 0 ? 4.2 : 1.9) * k;
+      leaf.push(X(0) + Math.cos(a) * r, Y(-16) + Math.sin(a) * r);
+    }
+    g.poly(leaf).fill(0xd9542b);
   }
 }
 

@@ -3,6 +3,7 @@ import { ECONOMY } from '../data/economy';
 import { computeModifiers, resolveGamble } from './effects';
 import { rngNext } from './rng';
 import { startDay } from './run';
+import { unlockDrink } from './unlocks';
 import type { CatalogueItem, Effect, GameState, OwnedItem, PlayerInput, SupplyId } from './types';
 
 function round2(n: number): number {
@@ -16,8 +17,17 @@ export function eligibleItems(state: GameState, pool: CatalogueItem[] = CATALOGU
     (item) =>
       !(item.duration === 'permanent' && ownedIds.has(item.id)) &&
       (item.requires ?? []).every((id) => ownedIds.has(id)) &&
-      !(item.excludes ?? []).some((id) => ownedIds.has(id)),
+      !(item.excludes ?? []).some((id) => ownedIds.has(id)) &&
+      !teachesNothing(state, item),
   );
+}
+
+/** A card whose only point is unlocking drinks the menu already has. */
+function teachesNothing(state: GameState, item: CatalogueItem): boolean {
+  const unlocks = item.effects.filter((e): e is Extract<Effect, { kind: 'unlock' }> => e.kind === 'unlock');
+  if (unlocks.length === 0) return false;
+  const known = state.unlocked ?? [];
+  return unlocks.every((e) => known.includes(e.drink));
 }
 
 /** Pick one item by rarity weight and remove it from the array. */
@@ -57,6 +67,9 @@ function buy(state: GameState, itemId: string): void {
   const effects: Effect[] = item.effects.flatMap((e) => resolveGamble(e, state));
   const owned: OwnedItem = { itemId, effects };
   (item.duration === 'permanent' ? state.owned : state.activeTomorrow).push(owned);
+  for (const e of effects) {
+    if (e.kind === 'unlock' && unlockDrink(state, e.drink)) state.freshDrinks = [...(state.freshDrinks ?? []), e.drink];
+  }
   state.hand = state.hand.filter((id) => id !== itemId);
   state.boughtTonight.push(itemId);
 }

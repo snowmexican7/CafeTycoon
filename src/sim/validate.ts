@@ -1,8 +1,8 @@
 import { ECONOMY } from '../data/economy';
-import type { BotSkill, DrinkId, Pace, PlayerInput, Settings, SupplyId } from './types';
+import { DRINK_IDS } from '../data/drinks';
+import type { BotSkill, Pace, PlayerInput, Settings, SupplyId } from './types';
 
-const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate'];
-const DRINK_IDS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
+const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour'];
 const MIN_PHASE_SEC = 30;
 const MAX_PHASE_SEC = 600;
 const MAX_PACKS = 100;

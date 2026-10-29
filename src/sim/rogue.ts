@@ -7,7 +7,9 @@ import { STATION_RECIPES } from './stations';
 import type { Customer, DrinkId, GameState, Rogue, Station, Vec2 } from './types';
 
 /** The station a rogue heads for first, by drink. */
-export const ROGUE_STATION: Record<DrinkId, string> = { espresso: 'espresso', latte: 'steamer', coldBrew: 'coldBrewTap' };
+export const ROGUE_STATION: Record<DrinkId, string> = {
+  espresso: 'espresso', latte: 'steamer', coldBrew: 'coldBrewTap', icedLatte: 'coldBrewTap', mocha: 'steamer', matcha: 'steamer', special: 'steamer',
+};
 
 const dist = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 

@@ -139,3 +139,23 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .pn-ev { font-family: var(--font-body); font-weight: 700; color: #a04a1c; }
 #night .pn-later { font-style: italic; color: #6b5a48; } #night .pn-later small { font-size: 11px; }
 @media (max-width: 1100px) { #night .pn-cols { grid-template-columns: 1fr; } #night .pn-facts { border-left: 0; padding-left: 0; } }
+
+/* Menu variety (B5): new-drink banner, recipe tickets, menu board */
+#night .fresh-menu { grid-column: 1 / -1; background: #fff8e6; border-radius: 14px; padding: 10px 14px; box-shadow: 0 0 0 2.5px #f0b64a, var(--sh-1); color: #3a2418;
+  display: flex; flex-wrap: wrap; gap: 8px 18px; animation: fm-pop .5s ease-out; }
+#night .fresh-menu header { flex-basis: 100%; font: 800 14px var(--font-display); letter-spacing: .12em; color: #b8741a; display: flex; align-items: baseline; gap: 8px; }
+#night .fresh-menu header small { font: 600 12px var(--font-body); letter-spacing: 0; color: var(--ink-soft); }
+#night .fm-star { color: #f0b64a; font-size: 18px; }
+#night .fm-drink { display: flex; gap: 10px; align-items: center; flex: 1 1 260px; }
+#night .fm-txt { display: flex; flex-direction: column; gap: 3px; }
+#night .fm-txt b { font: 700 17px var(--font-display); } #night .fm-txt b em { font-style: normal; color: #4fae7b; margin-left: 6px; }
+#night .fm-txt small { font-size: 12.5px; color: var(--ink-soft); } #night .fm-note { color: #b8741a !important; font-weight: 700; }
+#night .rt { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 3px; font: 700 11px var(--font-body); }
+#night .rt span { background: #3a2418; color: #fff4e2; border-radius: 6px; padding: 2px 6px; }
+#night .rt span.hand-off { background: #4fae7b; } #night .rt i { font-style: normal; color: #b39a7c; }
+#night .menu-board { display: flex; flex-direction: column; gap: 6px; }
+#night .mb-row { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 12px; padding: 6px 8px; box-shadow: var(--sh-1); }
+#night .mb-row.off { opacity: .55; } #night .mb-txt { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#night .mb-txt b { font: 600 14px var(--font-display); } #night .mb-price { font: 700 13px var(--font-display); color: #4a3a2c; }
+#night .btn.mini { font-size: 12px; padding: 4px 10px; min-height: 30px; }
+@keyframes fm-pop { from { transform: scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }

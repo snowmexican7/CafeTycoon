@@ -167,6 +167,7 @@ async function main(): Promise<void> {
     onBuy: (itemId) => send({ kind: 'buy', playerId: me(), itemId }),
     onRestock: (supply) => send({ kind: 'restock', playerId: me(), supply, packs: 1 }),
     onReady: () => send({ kind: 'ready', playerId: me() }),
+    onMenu: (drink, on) => send({ kind: 'menu', playerId: me(), drink, on }),
   });
   const closing = createClosing($('#closing'));
   const weekEnd = createWeekEnd($('#weekEnd'), {

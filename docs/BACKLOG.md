@@ -409,3 +409,43 @@ Co-op fun:
   tonight for tomorrow's market crowd; a crew tip on every paper.
 - Next: let one player "read the paper aloud" (a ping on the paper that highlights it for everyone)
   and a stamp when the crew stocked what the paper suggested.
+
+## Block 5 reflection (menu variety)
+
+Shipped: four new drinks built from the existing stations in new combinations, all data-driven in
+`src/data/drinks.ts` (recipes per station, `recipeChain`, `suppliesFor`, `DRINK_INFO` with icon,
+ticket, blurb, order bias and patience). Iced latte = espresso shot into the tap (+milk); mocha =
+latte back into the steamer (+flavour); matcha = empty hands at the steamer (+milk, +flavour);
+maple cold foam = cold brew into the steamer (+milk, +flavour). Iced latte unlocks on day 3, mocha
+on day 5; matcha and the special only via cards (Matcha whisk $25, Seasonal board $30), Cocoa tin
+$15 brings the mocha early. Cards that would teach nothing are not dealt. One cheap new supply,
+flavour pumps (starter bottle on first unlock, hidden until needed). Forecasts nudge the new
+drinks. The bot brain derives its chains from the recipes, so bots make every drink. UI: recipe
+chips on order tickets, a "New on the menu" banner the night before, a menu board with On/Off at
+night, SVG + Pixi icons, spill tints. Save v5 (migration from v4: unlocked from the day, menu keys,
+flavour 0, zeroed drink counts), protocol v6.
+
+Balance (20 weeks, menu "all" so every drink is ordered as it unlocks): first run **$296.84 /
+35.0 %** — too hard (the steamer is now shared by five drinks). Folded in a fix: fancy drinks buy
+patience (iced latte ×1.15, special ×1.2, mocha ×1.3) and lower order weights for mocha/special.
+Final: mean final cash **$310.22**, loss rate **32.5 %**, 0/20 bankrupt (B4: $323.68 / 29.4 %).
+Slightly harder, by design a little: the menu is wider and more complex; not a cliff.
+
+What could be better:
+- The steamer is the new bottleneck (latte, mocha ×2, matcha, special). A second steamer card in
+  B6 (or a "Dual wand" upgrade) is the natural answer and a good Speed-path card.
+- The wall chalkboard in the scene still lists the three classics; it is drawn once. Make it
+  redraw from the menu (deferred: needs a render-layer refresh hook).
+- The "New on the menu" banner pushes the hand down on small screens; the hand scrolls but the
+  cards can sit below the fold on 800 px tall windows. Consider a compact chip row.
+- Balance bot restocks flavour to a flat 10; forecast-aware restock still deferred (from B4).
+
+What's missing (deferred):
+- Audio cue for a new drink (a little bell on the banner).
+- Customers who ask for "the special" by name with a speech-bubble line.
+- More seasonal specials rotating by week (pumpkin spice in a fall scenario).
+
+Co-op fun:
+- Mocha is a natural hand-off drink (one player pulls the latte, the other does cocoa), and the
+  menu board lets the crew argue about turning the slow mocha off on a Market Saturday.
+- Next: a "signature drink" vote at night where each player picks one to push (tips bonus).

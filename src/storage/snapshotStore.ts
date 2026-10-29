@@ -1,3 +1,4 @@
+import { DRINK_IDS, dayUnlocks } from '../data/drinks';
 import type { GameState } from '../sim/types';
 import { forecastFor } from '../sim/forecast';
 import { readJson, type StorageLike } from './storageLike';
@@ -8,13 +9,20 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 4;
+export const SNAPSHOT_VERSION = 5;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
   // v4 (Phase 2 B4): neighbourhood forecasts.
   3: (s) => {
     s.forecast ??= forecastFor(s.seed, s.day);
+  },
+  // v5 (Phase 2 B5): menu variety. Drinks known by today's day, every menu key, a flavour jar.
+  4: (s) => {
+    s.unlocked ??= dayUnlocks(s.day);
+    for (const d of DRINK_IDS) if (s.menu[d] === undefined) s.menu[d] = true;
+    s.supplies.flavour ??= 0;
+    for (const d of [...s.days, s.today]) if (d?.drinks) for (const k of DRINK_IDS) d.drinks[k] ??= 0;
   },
 };
 

@@ -16,6 +16,20 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **A bigger menu.** Four new drinks made from the stations you already have: the **iced
+  latte** (a shot over cold milk at the tap, joins the menu on day 3), the **mocha** (a latte back
+  on the steamer for a pump of cocoa, day 5), the **matcha latte** (one whisk at the steamer) and
+  **maple cold foam**, the seasonal special (a tap pour topped with foam). The matcha and the
+  special come from new night cards (Matcha whisk, Seasonal board); a Cocoa tin brings the mocha
+  early. Fancy drinks cost more and their customers wait a little longer for them.
+- **Flavour pumps.** A cheap new supply used by the mocha, matcha and special; you get a starter
+  bottle when the first flavour drink arrives, and it only shows up in the pantry once you need it.
+- **New on the menu.** The night before a drink arrives, the shop board shows it with its price,
+  what it is and its recipe ticket. Order tickets on the HUD list every step (Grind, Pull, Steam,
+  Cocoa, Hand off), and the menu board at night lists each drink with its recipe and an On/Off
+  switch.
+- **Orders follow the paper.** Exam week wants iced lattes and matcha, a cold snap wants mochas,
+  payday splurges on mochas and the special, and Market Saturday loves the special.
 - **Neighbourhood days.** Every day has its own forecast, so no two days play alike: a rainy
   Monday (hot drinks fly, a slow soggy start), exam week (students camp with cold brews and take a
   queue spot), Market Saturday (a big impatient crowd, rush hour likely), payday (big tips at

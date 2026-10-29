@@ -37,7 +37,7 @@ describe('night menu', () => {
 
   it('never switches off the last drink', () => {
     const s = step(createRun(opts), [menu('p1', 'espresso', false), menu('p1', 'latte', false), menu('p1', 'coldBrew', false)]);
-    expect(s.menu).toEqual({ espresso: false, latte: false, coldBrew: true });
+    expect(s.menu).toMatchObject({ espresso: false, latte: false, coldBrew: true });
   });
 
   it('ignores menu inputs by day, from unknown or disconnected players, and malformed ones', () => {

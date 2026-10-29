@@ -1,3 +1,4 @@
+import { zeroDrinks } from '../sim/tally';
 import { describe, it, expect, afterEach } from 'vitest';
 import { parseTele } from '../net/protocol';
 import type { HostToClient, Transport } from '../net/transport';
@@ -134,8 +135,8 @@ describe('telemetry', () => {
     s.log = [logEntry(1), logEntry(2), logEntry(3, 'pass.stale')];
     startDay(s);
     tele.snapshot(s);
-    const d1 = { ...freshDayStats(1), served: 4, events: ['rushHour' as const], drinks: { espresso: 1, latte: 2, coldBrew: 0 } };
-    const d2 = { ...freshDayStats(2), served: 3, drinks: { espresso: 0, latte: 1, coldBrew: 2 } };
+    const d1 = { ...freshDayStats(1), served: 4, events: ['rushHour' as const], drinks: { ...zeroDrinks(), espresso: 1, latte: 2, coldBrew: 0 } };
+    const d2 = { ...freshDayStats(2), served: 3, drinks: { ...zeroDrinks(), espresso: 0, latte: 1, coldBrew: 2 } };
     s.days = [d1, d2];
     s.players[1].idleTicks = 30;
     s.players.push({ ...s.players[0], id: 'bot-1', name: 'Bo', idleTicks: 0, bot: { ...makeBotState('steady'), mistakes: 2 } });
@@ -152,7 +153,7 @@ describe('telemetry', () => {
     expect(sum.botMistakes).toEqual({ Bo: 2 });
     expect(sum.idleTicks).toEqual({ Kay: 0, Lu: 30, Bo: 0 });
     expect(sum.days).toEqual([d1, d2]);
-    expect(sum.drinks).toEqual({ espresso: 1, latte: 3, coldBrew: 2 });
+    expect(sum.drinks).toEqual({ ...zeroDrinks(), espresso: 1, latte: 3, coldBrew: 2 });
     expect(sum.cards).toEqual([{ day: 1, offered: ['a', 'b', 'c'], bought: ['c'] }]);
     expect(sum.events).toEqual([
       { day: 1, events: ['rushHour'] },
@@ -183,8 +184,8 @@ describe('telemetry', () => {
   it('counts the day in progress in the summary', () => {
     const { tele } = setup();
     const s = startDay(run());
-    s.days = [{ ...freshDayStats(0), drinks: { espresso: 1, latte: 0, coldBrew: 0 } }];
-    s.today.drinks = { espresso: 2, latte: 0, coldBrew: 0 };
+    s.days = [{ ...freshDayStats(0), drinks: { ...zeroDrinks(), espresso: 1, latte: 0, coldBrew: 0 } }];
+    s.today.drinks = { ...zeroDrinks(), espresso: 2, latte: 0, coldBrew: 0 };
     const sum = tele.summary(s);
     expect(sum.days.map((d) => d.day)).toEqual([0, 1]);
     expect(sum.drinks.espresso).toBe(3);

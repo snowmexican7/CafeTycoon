@@ -10,7 +10,10 @@ import { forecastFor } from './forecast';
 import { syncBots } from './bots/roster';
 import { espressoMorning } from './espresso';
 import { floorFields, tileOf } from './tiles';
-import type { CreateRunOptions, DayStats, GameState, Player, Settings } from './types';
+import { BASE_DRINKS, DRINK_IDS } from '../data/drinks';
+import { zeroDrinks } from './tally';
+import { unlockForDay } from './unlocks';
+import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
   return {
@@ -28,7 +31,7 @@ export function freshDayStats(day: number): DayStats {
     lostRegulars: 0,
     inspection: null,
     events: [],
-    drinks: { espresso: 0, latte: 0, coldBrew: 0 },
+    drinks: zeroDrinks(),
     influencer: null,
     rogues: 0,
   };
@@ -87,7 +90,7 @@ export function createRun(opts: CreateRunOptions): GameState {
     days: [],
     morningNotes: [],
     pass: [],
-    menu: { espresso: true, latte: true, coldBrew: true },
+    menu: Object.fromEntries(DRINK_IDS.map((d) => [d, true])) as Record<DrinkId, boolean>,
     eventSchedule: [],
     events: [],
     regulars: [],
@@ -99,6 +102,7 @@ export function createRun(opts: CreateRunOptions): GameState {
     mop: { pos: { ...LAYOUT.mopHome }, heldBy: null },
     rogue: null,
     forecast: forecastFor(opts.seed, 1),
+    unlocked: [...BASE_DRINKS],
   };
   state.scenario = SCENARIOS[rngInt(state, SCENARIOS.length)].id;
   return startNight(state);
@@ -111,6 +115,7 @@ export function startNight(state: GameState): GameState {
   state.ready = [];
   state.boughtTonight = [];
   state.forecast = forecastFor(state.seed, state.day);
+  state.freshDrinks = unlockForDay(state);
   return dealHand(state);
 }
 

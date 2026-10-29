@@ -1,14 +1,16 @@
 import { catalogueById } from '../data/catalogue';
 import { describeEffects } from '../sim/describe';
-import type { SupplyId } from '../sim/types';
+import { DRINK_INFO } from '../data/drinks';
+import { ECONOMY } from '../data/economy';
+import type { DrinkId, SupplyId } from '../sim/types';
 import { cardArt, CATEGORY_LABEL, CATEGORY_TINT } from './cardArt';
 import { esc, hide, onAction, show } from './dom';
-import { coin, jar, moon, sun, SUPPLY_COLOR } from './icons';
+import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
-import { nightStructureKey, type ForecastVM, type HandCardVM, type NightVM } from './viewModels';
+import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type NightVM } from './viewModels';
 
-const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew' } as const;
+const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours' } as const;
 const LOW_AT = 5;
 const RING = 2 * Math.PI * 14;
 const parseMoney = (s: string) => Number(s.replace(/[^0-9.-]/g, '')) || 0;
@@ -54,6 +56,41 @@ function newspaper(f: ForecastVM | undefined): string {
   </article>`;
 }
 
+/** A recipe ticket: the stations in order, as chips with arrows. */
+function ticketChips(steps: string[]): string {
+  return `<span class="rt">${steps.map((s) => `<span>${esc(s)}</span>`).join('<i aria-hidden="true">→</i>')}<span class="hand-off">Counter</span></span>`;
+}
+
+/** "New on the menu": the drinks that joined tonight, each with its recipe ticket. */
+function freshBanner(fresh: FreshDrinkVM[] | undefined): string {
+  if (!fresh?.length) return '';
+  return `<section class="fresh-menu" aria-label="New on the menu">
+    <header><span class="fm-star" aria-hidden="true">★</span>NEW ON THE MENU<small>tomorrow customers can order ${fresh.length === 1 ? 'it' : 'them'}</small></header>
+    ${fresh
+      .map(
+        (f) => `<div class="fm-drink" data-drink="${f.drink}">${itemIcon(f.drink, 44)}
+        <div class="fm-txt"><b>${esc(f.name)} <em>${esc(f.price)}</em></b><small>${esc(f.blurb)}</small>${ticketChips(f.ticket)}
+        ${f.flavour ? '<small class="fm-note">Uses the flavours jar: restock it below.</small>' : ''}</div></div>`,
+      )
+      .join('')}
+  </section>`;
+}
+
+/** The menu board: every known drink, its ticket, and an on/off switch. */
+function menuBoard(menu: { drink: DrinkId; on: boolean }[] | undefined): string {
+  if (!menu?.length) return '';
+  const onCount = menu.filter((m) => m.on).length;
+  return `<div class="sec">Menu board</div><div class="menu-board">${menu
+    .map((m) => {
+      const info = DRINK_INFO[m.drink];
+      const last = m.on && onCount === 1;
+      return `<div class="mb-row ${m.on ? '' : 'off'}">${itemIcon(m.drink, 26)}<div class="mb-txt"><b>${esc(info.name)}</b>${ticketChips(info.ticket)}</div>
+        <span class="mb-price">$${ECONOMY.prices[m.drink].toFixed(2)}</span>
+        <button class="btn mini" data-action="menu" data-drink="${m.drink}" data-on="${m.on ? '0' : '1'}" ${last ? 'disabled title="Keep at least one drink on"' : ''} aria-pressed="${m.on}">${m.on ? 'On' : 'Off'}</button></div>`;
+    })
+    .join('')}</div>`;
+}
+
 /** The heads-up card above the receipt: a friendly paper note, never a blocker. */
 function warningCard(ws: NightWarning[]): string {
   if (ws.length === 0) return '';
@@ -86,12 +123,13 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
     else if (action === 'restock') handlers.onRestock(el.dataset.supply as SupplyId);
     else if (action === 'ready') handlers.onReady();
+    else if (action === 'menu') handlers.onMenu?.(el.dataset.drink as DrinkId, el.dataset.on === '1');
     else if (action === 'jump-restock') jumpToRestock();
     else if (action === 'jump-warn') flash(container.querySelector<HTMLElement>('.warn-card'));
   });
@@ -174,7 +212,7 @@ export function createNight(
       const bought = extras?.bought ?? [];
       const cards =
         vm.hand.map((c, i) => handCard(c, i, cash)).join('') + bought.map((b, i) => boughtCard(b.itemId, vm.hand.length + i)).join('');
-      const hand = newspaper(vm.forecast) + (cards || '<p class="empty">Nothing left to buy tonight. Restock, then open up.</p>');
+      const hand = newspaper(vm.forecast) + freshBanner(vm.fresh) + (cards || '<p class="empty">Nothing left to buy tonight. Restock, then open up.</p>');
       const colors = new Map((extras?.crew ?? []).map((c) => [c.id, c]));
       const ready = vm.ready
         .map((p) => {
@@ -201,6 +239,7 @@ export function createNight(
             <div class="paper">${receipt}${stats}</div>
             <div class="sec">Restock</div>
             <div class="restocks">${restock}</div>
+            ${menuBoard(vm.menu)}
           </div>
           <div class="tabs" role="tablist"><span class="tab on" role="tab" aria-selected="true">Tonight's hand · ${vm.hand.length}</span>
             <span class="tab locked" title="Coming in a later phase">Upgrades <span class="chip">Soon</span></span>

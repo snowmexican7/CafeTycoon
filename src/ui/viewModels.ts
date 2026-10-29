@@ -14,12 +14,11 @@ import type { PeerStatus } from '../net/peerSession';
 import type { BotsChoice, Member } from '../net/protocol';
 import type { DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
-import { DRINK_TEMP } from '../data/drinks';
+import { BASE_DRINKS, DRINK_IDS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
+import { menuDrinks, neededSupplies, unlockedDrinks } from '../sim/unlocks';
 import { forecastById } from '../data/forecasts';
 import { WEEKDAY_NAMES, forecastFor, forecastName, forecastOf, weekdayOf } from '../sim/forecast';
 
-const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
-const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate'];
 
 /** '$1,234.50' or '-$20.00'. */
 export function money(n: number): string {
@@ -159,8 +158,8 @@ export function hudViewModel(state: GameState): HudVM {
     clock: clockFor(state.phaseTicksLeft),
     cash: money(state.cash),
     reputation: stars(state.reputation),
-    supplies: SUPPLIES.map((id) => ({ id, count: state.supplies[id] })),
-    menu: DRINKS.map((id) => ({ id, price: money(ECONOMY.prices[id] * mods.price[id]), available: available.includes(id) })),
+    supplies: neededSupplies(state).map((id) => ({ id, count: state.supplies[id] ?? 0 })),
+    menu: unlockedDrinks(state).map((id) => ({ id, price: money(ECONOMY.prices[id] * mods.price[id]), available: available.includes(id) })),
     notes: state.morningNotes,
     phase: state.phase,
     seed: state.seed,
@@ -201,6 +200,28 @@ export interface NightVM {
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
   forecast?: ForecastVM;
+  /** "New on the menu": drinks that joined tonight, with their recipe ticket. */
+  fresh?: FreshDrinkVM[];
+}
+
+export interface FreshDrinkVM {
+  drink: DrinkId;
+  name: string;
+  icon: string;
+  price: string;
+  blurb: string;
+  /** The stations in order, as the barista walks them. */
+  ticket: string[];
+  /** Needs the flavour pantry (pumps of cocoa, matcha, maple). */
+  flavour: boolean;
+}
+
+function freshDrink(drink: DrinkId): FreshDrinkVM {
+  const info = DRINK_INFO[drink];
+  return {
+    drink, name: info.name, icon: info.icon, price: money(ECONOMY.prices[drink]), blurb: info.blurb, ticket: info.ticket,
+    flavour: ECONOMY.drinkSupplies[drink].includes('flavour'),
+  };
 }
 
 export interface ForecastVM {
@@ -226,9 +247,10 @@ export interface ForecastVM {
 export function forecastViewModel(state: GameState): ForecastVM {
   const f = forecastOf(state);
   const m = computeModifiers(state);
-  const menu = DRINKS.filter((d) => state.menu[d]);
-  const total = menu.reduce((s, d) => s + m.orderBias[d], 0) || 1;
-  const hot = menu.filter((d) => DRINK_TEMP[d] === 'hot').reduce((s, d) => s + m.orderBias[d], 0);
+  const menu = menuDrinks(state);
+  const w = (d: DrinkId) => m.orderBias[d] * DRINK_INFO[d].bias;
+  const total = menu.reduce((s, d) => s + w(d), 0) || 1;
+  const hot = menu.filter((d) => DRINK_TEMP[d] === 'hot').reduce((s, d) => s + w(d), 0);
   const next = forecastById[forecastFor(state.seed, state.day + 1)];
   return {
     edition: WEEKDAY_NAMES[weekdayOf(state.day)],
@@ -237,7 +259,7 @@ export function forecastViewModel(state: GameState): ForecastVM {
     headline: f.headline,
     blurb: f.blurb,
     plan: f.plan,
-    effects: describeEffects(f.effects),
+    effects: describeEffects(f.effects.filter((e) => e.kind !== 'orderBias' || unlockedDrinks(state).includes(e.drink))),
     ...(f.eventNote ? { eventNote: f.eventNote } : {}),
     customers: Math.round(ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic),
     hotPct: Math.round((hot / total) * 100),
@@ -272,13 +294,14 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
         ...(cutsIntoRent(state, item.cost) ? { cutsRent: true } : {}),
       };
     }),
-    restock: SUPPLIES.map((supply) => {
+    restock: neededSupplies(state).map((supply) => {
       const cost = restockCost(state, supply, 1);
-      return { supply, count: state.supplies[supply], packSize: ECONOMY.packs[supply].size, packCost: money(cost), affordable: state.cash >= cost };
+      return { supply, count: state.supplies[supply] ?? 0, packSize: ECONOMY.packs[supply].size, packCost: money(cost), affordable: state.cash >= cost };
     }),
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
     meReady: state.ready.includes(me),
-    menu: DRINKS.map((drink) => ({ drink, on: state.menu[drink] })),
+    menu: unlockedDrinks(state).map((drink) => ({ drink, on: state.menu[drink] })),
+    ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),
     forecast: forecastViewModel(state),
   };
@@ -505,7 +528,7 @@ export function receiptViewModel(d: DayStats): ReceiptVM {
     botMistakes: d.botMistakes ?? 0,
     lostRegulars: d.lostRegulars ?? 0,
     rogues: d.rogues ?? 0,
-    drinks: DRINKS.map((drink) => ({ drink, count: d.drinks?.[drink] ?? 0 })),
+    drinks: DRINK_IDS.filter((drink) => BASE_DRINKS.includes(drink) || (d.drinks?.[drink] ?? 0) > 0).map((drink) => ({ drink, count: d.drinks?.[drink] ?? 0 })),
   };
 }
 

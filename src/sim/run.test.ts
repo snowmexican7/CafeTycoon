@@ -13,7 +13,8 @@ describe('createRun', () => {
     expect(s.cash).toBe(100);
     expect(s.startingCash).toBe(100);
     expect(s.reputation).toBe(2.5);
-    expect(s.supplies).toEqual({ beans: 20, milk: 10, concentrate: 15 });
+    expect(s.supplies).toEqual({ beans: 20, milk: 10, concentrate: 15, flavour: 0 });
+    expect(s.unlocked).toEqual(['espresso', 'latte', 'coldBrew']);
     expect(s.phaseTicksLeft).toBe(60 * 60);
     expect(s.settings).toEqual({ dayLengthSec: 150, nightLengthSec: 60, pace: 3, bots: 'auto', botSkill: 3 });
     expect(s.stations.map((st) => st.kind)).toEqual(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash', 'counter']);
@@ -33,7 +34,7 @@ describe('createRun', () => {
   it('starts phase 2 state empty', () => {
     const s = createRun(opts);
     expect(s.pass).toEqual([]);
-    expect(s.menu).toEqual({ espresso: true, latte: true, coldBrew: true });
+    expect(s.menu).toMatchObject({ espresso: true, latte: true, coldBrew: true });
     expect([s.eventSchedule, s.events, s.regulars, s.log]).toEqual([[], [], [], []]);
     expect(s.today).toMatchObject({ wasted: 0, fines: 0, bonus: 0, botMistakes: 0, lostRegulars: 0, inspection: null, events: [], drinks: { espresso: 0, latte: 0, coldBrew: 0 } });
     expect(s.players.every((p) => p.idleTicks === 0 && p.bot === undefined)).toBe(true);

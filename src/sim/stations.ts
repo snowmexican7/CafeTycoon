@@ -7,11 +7,10 @@ import { counterInteract } from './pass';
 import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
+import { BASE_DRINKS, RECIPES, type Recipe, type RecipeStation } from '../data/drinks';
 import type { GameState, ItemKind, PlayerId, StationKind, SupplyId } from './types';
 
-type RecipeStation = Exclude<StationKind, 'counter' | 'trash'>;
-
-/** What each working station takes from a barista's hands, what it gives back, and what it uses up. */
+/** Each working station's first (classic) recipe: what it takes, gives back and uses up. See RECIPES for all of them. */
 export const STATION_RECIPES: Record<RecipeStation, { takes: ItemKind | null; gives: ItemKind; consumes: SupplyId | null }> = {
   grinder: { takes: null, gives: 'grounds', consumes: 'beans' },
   espresso: { takes: 'grounds', gives: 'espresso', consumes: null },
@@ -23,6 +22,23 @@ function isRecipeStation(kind: StationKind): kind is RecipeStation {
   return kind in STATION_RECIPES;
 }
 
+/** A drink the café can make right now: a classic, or unlocked and on tonight's menu. Grounds always. */
+export function recipeAllowed(state: GameState, gives: ItemKind): boolean {
+  if (gives === 'grounds' || BASE_DRINKS.includes(gives)) return true;
+  return (state.unlocked ?? BASE_DRINKS).includes(gives) && state.menu[gives] !== false;
+}
+
+/** The recipe a station runs for what is in hand (null = empty hands), or null when there is none. */
+export function recipeFor(state: GameState, kind: StationKind, held: ItemKind | null): Recipe | null {
+  if (!isRecipeStation(kind)) return null;
+  return RECIPES[kind].find((r) => r.takes === held && recipeAllowed(state, r.gives)) ?? null;
+}
+
+/** Every supply the recipe uses is in stock. */
+export function stocked(state: GameState, r: Recipe): boolean {
+  return r.consumes.every((s) => state.supplies[s] >= 1);
+}
+
 /** Stations keep working after you walk away; finished items wait on the station. */
 export function stepStations(state: GameState): GameState {
   if (eventActive(state, 'powerFlicker')) return state;
@@ -30,7 +46,10 @@ export function stepStations(state: GameState): GameState {
     if (s.busyTicksLeft > 0) {
       s.busyTicksLeft -= 1;
       if (s.busyTicksLeft === 0 && s.occupiedBy !== null) s.occupiedBy = null; // a rogue's drink leaves with them
-      else if (s.busyTicksLeft === 0 && isRecipeStation(s.kind)) s.output = STATION_RECIPES[s.kind].gives;
+      else if (s.busyTicksLeft === 0 && isRecipeStation(s.kind)) {
+        s.output = s.making ?? STATION_RECIPES[s.kind].gives;
+        s.making = null;
+      }
     }
   }
   return state;
@@ -63,19 +82,20 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     return counterInteract(state, playerId);
   }
 
-  const recipe = STATION_RECIPES[station.kind];
   if (station.output !== null && player.holding === null) {
     player.holding = station.output;
     station.output = null;
     return state;
   }
   const idle = station.busyTicksLeft === 0 && station.output === null;
-  const hasSupply = recipe.consumes === null || state.supplies[recipe.consumes] >= 1;
-  if (idle && player.holding === recipe.takes && hasSupply) {
-    if (recipe.consumes !== null) state.supplies[recipe.consumes] -= 1;
+  const recipe = recipeFor(state, station.kind, player.holding);
+  if (idle && recipe && stocked(state, recipe)) {
+    for (const s of recipe.consumes) state.supplies[s] -= 1;
     player.holding = null;
+    station.making = recipe.gives;
     const speed = computeModifiers(state).stationSpeed[station.kind];
-    station.busyTicksLeft = Math.round((ECONOMY.stationSeconds[station.kind] / speed) * TICK_RATE);
+    const seconds = recipe.seconds ?? ECONOMY.stationSeconds[station.kind as RecipeStation];
+    station.busyTicksLeft = Math.round((seconds / speed) * TICK_RATE);
   }
   return state;
 }

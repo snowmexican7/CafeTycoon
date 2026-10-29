@@ -13,7 +13,10 @@ import type { CatalogueItem, DrinkId, GameState, ItemKind, PlayerId, StationKind
 export const PLAYER_HEX = ['#e0564a', '#4c8fd6', '#4fae7b', '#8a6bbf'] as const;
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
-export const ITEM_LABEL: Record<ItemKind, string> = { grounds: 'Grounds', espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew' };
+export const ITEM_LABEL: Record<ItemKind, string> = {
+  grounds: 'Grounds', espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew',
+  icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha latte', special: 'Maple cold foam',
+};
 export const STATION_NAME: Record<StationKind, string> = {
   grinder: 'Grinder',
   espresso: 'Espresso machine',
@@ -22,12 +25,16 @@ export const STATION_NAME: Record<StationKind, string> = {
   counter: 'Pick-up counter',
   trash: 'Trash',
 };
-export const SUPPLY_NAME: Record<SupplyId, string> = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew' };
+export const SUPPLY_NAME: Record<SupplyId, string> = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours' };
 /** The steps on an order ticket, in the order a barista does them. */
 export const DRINK_STEPS: Record<DrinkId, string[]> = {
   espresso: ['Grind', 'Pull', 'Hand off'],
   latte: ['Grind', 'Pull', 'Steam', 'Hand off'],
   coldBrew: ['Tap', 'Hand off'],
+  icedLatte: ['Grind', 'Pull', 'Tap', 'Hand off'],
+  mocha: ['Grind', 'Pull', 'Steam', 'Cocoa', 'Hand off'],
+  matcha: ['Whisk', 'Hand off'],
+  special: ['Tap', 'Foam', 'Hand off'],
 };
 
 export interface CrewMember {
