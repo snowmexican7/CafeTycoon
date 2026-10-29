@@ -1,4 +1,5 @@
 import { cleanDraft } from './signature';
+import { isAdId } from './ads';
 import { TWISTS } from './taste';
 import { isRole } from './roles';
 import { ECONOMY } from '../data/economy';
@@ -57,6 +58,8 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return DRINK_IDS.includes(input.drink) && (input.twist === null || TWISTS.includes(input.twist))
         ? { kind: 'twist', playerId: input.playerId, drink: input.drink, twist: input.twist }
         : null;
+    case 'ad':
+      return input.ad === null || isAdId(input.ad) ? { kind: 'ad', playerId: input.playerId, ad: input.ad } : null;
     case 'signature': {
       if (input.sig === null) return { kind: 'signature', playerId: input.playerId, sig: null };
       const sig = cleanDraft(input.sig);

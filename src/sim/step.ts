@@ -1,4 +1,5 @@
 import { applySignatureInput } from './signature';
+import { applyAdInput } from './ads';
 import { applyScoutInput } from './rival';
 import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
@@ -113,6 +114,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'signature':
       applySignatureInput(s, input);
+      break;
+    case 'ad':
+      applyAdInput(s, input);
       break;
     case 'scout':
       applyScoutInput(s, input);

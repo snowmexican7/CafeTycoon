@@ -1087,3 +1087,37 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
   - There's only one copy at a time and no escalation. Ideas: rival loyalty cards, or a rival
     event card in the paper.
   - The scout result lasts for that night only. There's no history of past rival menus.
+
+## P3 Block 10 reflection (parody ads)
+
+- **What shipped.**
+  - `src/sim/ads.ts` has five parody platforms, each with a target crowd (group, regular,
+    impatient, influencer, or everyone), a cost, ad copy, and odds for flop, fine and viral.
+  - The outcome is a pure `hash32(seed, day, platform)`, so there are no new RNG draws. It is
+    resolved in `startDay` and kept hidden at night, so the forecast and the paper can't leak it.
+  - When an ad runs, `applyAd` changes `computeModifiers`: it multiplies the target's share of
+    the crowd mix (×1.5 for fine, ×2.2 for viral), and influencer ads multiply
+    `eventOdds.influencerVisit` instead (×2.5 / ×6). Traffic goes up a little (×1.04 / ×1.1).
+    Tik Tak changes overall traffic only: ×0.95 on a flop, ×1.08 fine, ×1.22 viral.
+  - A new `ad` input works at night, for humans only. It books, switches (with a refund) or
+    cancels (`ad: null`, refunded).
+  - UI: a 📣 Ads tab with ad cards (copy, reach, odds, Run it / Switch), a booked strip with a
+    Cancel button, yesterday's result banner, and a line on the receipt.
+  - Save v19 (no-op migration) and protocol v22.
+- **Checks.**
+  - Four new tests (573 total): outcome odds and determinism; book, switch and cancel cash, plus
+    poor, bot and day-phase refusals and validation; the result stays hidden at night, then the
+    reveal, morning note, `today.ad`, mix change, receipt line, and the ad expiring the next day;
+    a no-ad run has an identical state and RNG stream.
+  - Balance is unchanged: default 291.28 / 319.53 / 25.4%, taste 289.08 / 323.58 / 28.6%. Bots
+    and the policies don't buy ads.
+  - Screenshots are in p3/b10. The 4-tab week sync results are in p3/b10/week.log.
+- **Deferred / watch.**
+  - Ads are never worth measuring in balance yet, because no policy buys them. B11 adds a promo
+    policy.
+  - The EV is roughly break-even by design: fine plus viral is about 65–75%, and a group- or
+    regular-heavy mix pays mostly through bigger orders and tips. Tune the costs after playtest.
+  - Only one campaign per night, with no stacking and no multi-day campaigns.
+  - The ad copy is static, one line per platform. A rotating pool chosen by `hash32` would keep
+    it fresh across a week.
+  - Influencer ads stack with the influencer-scouting goal. Watch for that being too strong.

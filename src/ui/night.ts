@@ -3,13 +3,13 @@ import { catalogueById } from '../data/catalogue';
 import { describeEffects } from '../sim/describe';
 import { DRINK_INFO } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
-import type { DrinkId, SupplyId } from '../sim/types';
+import type { AdId, DrinkId, SupplyId } from '../sim/types';
 import { cardArt, CATEGORY_LABEL, CATEGORY_TINT } from './cardArt';
 import { esc, hide, onAction, show } from './dom';
 import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
-import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM } from './viewModels';
+import { nightStructureKey, type AdsVM, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
 import { isRole, type RoleId } from '../sim/roles';
 
@@ -183,7 +183,7 @@ function menuBoard(menu: MenuLineVM[] | undefined): string {
     <div class="mb-total">Tomorrow at these prices: <b>~${sum.orders} orders</b>, about <b>$${sum.profit.toFixed(0)}</b> profit before tips and rent. Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</div>`;
 }
 
-export type NightTab = 'shop' | 'menu' | 'crew' | 'regulars' | 'paper';
+export type NightTab = 'shop' | 'menu' | 'crew' | 'regulars' | 'paper' | 'ads';
 /** P3 B4: the night board's right side is tabbed so the long lists don't stack in one column. */
 export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
   { id: 'shop', label: 'Shop', icon: '🛒' },
@@ -191,7 +191,29 @@ export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
   { id: 'crew', label: 'Crew & roles', icon: '🧑‍🍳' },
   { id: 'regulars', label: 'Regulars', icon: '♥' },
   { id: 'paper', label: 'Paper', icon: '📰' },
+  { id: 'ads', label: 'Ads', icon: '📣' },
 ];
+
+/** P3 B10: the Ads tab: one parody campaign for tomorrow, results hidden until the doors open. */
+function adsBoard(a: AdsVM | undefined): string {
+  if (!a) return '';
+  const last = a.last
+    ? `<div class="ad-last ${a.last.outcome}"><b>Yesterday: ${a.last.icon} ${esc(a.last.name)} ${a.last.outcome === 'viral' ? 'went viral' : a.last.outcome === 'ok' ? 'did fine' : 'flopped'}.</b> ${esc(a.last.result)}</div>`
+    : '';
+  const head = a.booked
+    ? `<div class="ad-booked">${a.booked.icon} <b>${esc(a.booked.name)}</b> campaign booked for tomorrow by ${esc(a.booked.by)} (${esc(a.booked.cost)} paid). How it lands shows when the doors open. <button class="btn mini" data-action="ad" data-ad="">Cancel (refund)</button></div>`
+    : `<div class="ad-intro">Buy one campaign for tomorrow. Each platform reaches a different crowd, and results are mixed: you only find out how it landed when the doors open.</div>`;
+  const cards = a.options
+    .map(
+      (o) => `<div class="ad-card ${o.booked ? 'booked' : ''}">
+        <div class="ad-top"><span class="ad-ic" aria-hidden="true">${o.icon}</span><b>${esc(o.name)}</b><small>Sponsored · reaches ${esc(o.reach)}</small></div>
+        <p class="ad-copy">${esc(o.copy)}</p>
+        <div class="ad-foot"><small>${esc(o.odds)}</small>${o.booked ? '<span class="ad-ok">✓ Booked</span>' : `<button class="btn mini" data-action="ad" data-ad="${o.id}" ${o.affordable ? '' : 'disabled'}>${a.booked ? 'Switch' : 'Run it'} · ${esc(o.cost)}</button>`}</div>
+      </div>`,
+    )
+    .join('');
+  return `<div class="ads-board">${last}${head}<div class="ad-grid">${cards}</div></div>`;
+}
 
 /** P3 B9: Starbuck$ down the street, under the paper: its knock-off (public) and a paid scouting peek. */
 function rivalCard(r: RivalVM | undefined): string {
@@ -270,7 +292,7 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -292,6 +314,7 @@ export function createNight(
       handlers.onSignature?.(null);
     }
     else if (action === 'scout') handlers.onScout?.();
+    else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);
     else if (action === 'jump-restock') jumpToRestock();
     else if (action === 'jump-warn') flash(container.querySelector<HTMLElement>('.warn-card'));
   });
@@ -403,6 +426,7 @@ export function createNight(
            <div class="line"><span>Rent</span><span class="neg">−${esc(t.rent)}</span></div>
            ${t.bonus ? `<div class="line"><span>Bonuses</span><span class="pos">+${esc(t.bonus)}</span></div>` : ''}
            ${t.combos ? t.combos.map((c) => `<div class="line combo"><span>New combo: ${TWIST_INFO[c.twist].icon} ${esc(TWIST_INFO[c.twist].name)} ${esc(DRINK_INFO[c.drink].short.toLowerCase())}</span><span class="stars">${starRow(c.stars)}</span></div>`).join('') : ''}
+           ${t.ad ? `<div class="line"><span>${esc(t.ad)}</span><span></span></div>` : ''}
            ${t.sigSold ? `<div class="line"><span>Signature: ${t.sigSold} sold</span><span>${t.sigBonus !== '$0.00' ? `+${esc(t.sigBonus!)} bonus` : ''}</span></div>` : ''}
            ${t.twists ? `<div class="line"><span>Twists</span><span class="neg">−${esc(t.twists)}</span></div>` : ''}
            ${t.cupStars ? `<div class="line cups" title="Each cup starts at 3 stars; pulling it early, leaving it sitting, or taking it to the wrong station costs one. Stars scale the tip."><span>Cups ★${esc(t.cupStars)} avg · ${t.cupsPerfect} perfect</span><span>${t.cupsRating ? `<span class="neg">${esc(t.cupsRating)} rating</span>` : '★★★ keeps the rating'}</span></div>` : ''}
@@ -439,6 +463,7 @@ export function createNight(
         crew: vm.roles?.length ? `${freeRoles} free` : '',
         regulars: regWarn ? `${regWarn} !` : `${vm.regulars?.length ?? 0}`,
         paper: vm.forecast ? `~${vm.forecast.customers}` : '',
+        ads: vm.ads?.booked ? '1 booked' : '',
       };
       const tabs = NIGHT_TABS.filter((t) => t.id !== 'regulars' || vm.regulars?.length)
         .map((t) => `<button class="tab ntab ${t.id === 'regulars' && regWarn ? 'alert' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="false">${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}</button>`)
@@ -479,6 +504,7 @@ export function createNight(
           <div class="pane crew-pane" data-pane="crew" role="tabpanel">${rolesBoard(vm.roles)}</div>
           <div class="pane regs-pane" data-pane="regulars" role="tabpanel">${regularsBoard(vm.regulars)}</div>
           <div class="pane paper-pane" data-pane="paper" role="tabpanel">${newspaper(vm.forecast)}${rivalCard(vm.rival)}</div>
+          <div class="pane ads-pane" data-pane="ads" role="tabpanel">${adsBoard(vm.ads)}</div>
           <div class="foot">
             <div class="ready">${ready}</div>
             <div class="spacer"></div>

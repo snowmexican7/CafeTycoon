@@ -90,6 +90,14 @@ Nothing yet.
   under the knock-off to keep 85% of the asks (Starbuck$ cuts again every three days, down to its
   floor), or design a new signature, which it then needs another three days to copy. Copies and
   cuts are announced in the morning notes. Save v18 (migration), protocol v21.
+- **Parody ads (P3 B10).** A new 📣 Ads tab at night lets one barista book tomorrow's campaign on
+  one of five platforms: Palm Book (families and groups, $14), Nextdoorish (locals and regulars,
+  $10), LinkedOut (commuters in a hurry, $12), Glimpse (influencers, $18) or Tik Tak (everyone,
+  $16). Each comes with its own ad copy. You can switch or cancel for a full refund until the
+  doors open. Results are mixed and hidden until morning: a flop does nothing (Tik Tak's flop even
+  puts people off a little), a fine run brings a few more of that crowd, and a viral one brings a
+  lot more, plus a small traffic bump. The morning note and the next night's receipt say how it
+  landed. Save v19 (migration), protocol v22.
 
 ## 2.0.1 — 2026-10-29
 

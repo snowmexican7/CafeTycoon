@@ -7,6 +7,7 @@ import { scheduleEvents, tuneRadio } from './events';
 import { computeModifiers } from './effects';
 import { morningNotes } from './describe';
 import { rivalMorning } from './rival';
+import { adMorning } from './ads';
 import { dealHand } from './night';
 import { forecastFor } from './forecast';
 import { syncBots } from './bots/roster';
@@ -144,12 +145,14 @@ export function startDay(state: GameState): GameState {
   state.rogue = null;
   syncBots(state);
   for (const p of state.players) p.tile = tileOf(p.pos);
+  const adNote = adMorning(state);
   scheduleEvents(state);
   pruneChallenges(state);
   eggsMorning(state);
   state.morningNotes = morningNotes(state);
   const rivalNote = rivalMorning(state);
   if (rivalNote) state.morningNotes.push(rivalNote);
+  if (adNote) state.morningNotes.push(adNote);
   espressoMorning(state);
   return state;
 }

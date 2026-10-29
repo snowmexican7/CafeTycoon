@@ -223,6 +223,17 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B10: the Ads tab with yesterday's viral Tik Tak on the receipt and Palm Book booked for tomorrow. */
+  ads: {
+    night: true,
+    setup(s) {
+      s.cash = 214;
+      s.day = 2;
+      s.ad = { id: 'palmbook', day: 2, by: 'Ana' };
+      s.today = { day: 1, served: 31, lost: 3, turnedAway: 1, sales: 151, tips: 24.6, rent: 25, ad: { id: 'tiktak', outcome: 'viral' } };
+    },
+    timeline: [],
+  },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */

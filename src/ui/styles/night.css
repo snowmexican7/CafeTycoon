@@ -280,3 +280,21 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .rival-card .rv-menu td.neg { color: #c0392b; font-weight: 700; }
 #night .rival-card .rv-eye { font-weight: 700; color: #8a4b1f; }
 #night .rival-card small { color: #8a7560; }
+/* P3 B10: the Ads tab */
+#night .ads-board { display: flex; flex-direction: column; gap: 10px; font: 500 12.5px/1.35 var(--font-body); color: #4a3523; }
+#night .ad-intro, #night .ad-booked { background: #fffaf3; border: 1px dashed #d9c4a8; border-radius: 10px; padding: 8px 12px; }
+#night .ad-booked { border-style: solid; border-color: #2f6b4a; background: #eef7f0; }
+#night .ad-booked .btn { margin-left: 6px; }
+#night .ad-last { border-radius: 10px; padding: 8px 12px; background: #f5efe6; }
+#night .ad-last.viral { background: #e6f4ea; } #night .ad-last.flop { background: #fbe9e4; }
+#night .ad-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+#night .ad-card { background: #fff; border: 1px solid #e2d3bf; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 0 #0000000d; }
+#night .ad-card.booked { outline: 2px solid #2f6b4a; }
+#night .ad-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; }
+#night .ad-top b { font: 800 14px var(--font-display, inherit); }
+#night .ad-top small { flex-basis: 100%; color: #8a7560; font-size: 11px; }
+#night .ad-ic { font-size: 18px; }
+#night .ad-copy { margin: 0; font-style: italic; background: #f7f3ee; border-radius: 8px; padding: 6px 8px; flex: 1; }
+#night .ad-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+#night .ad-foot small { color: #8a7560; font-size: 10.5px; }
+#night .ad-ok { color: #2f6b4a; font-weight: 800; }
