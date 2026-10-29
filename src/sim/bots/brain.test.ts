@@ -6,7 +6,7 @@ import { nearestStation } from '../movement';
 import { step } from '../step';
 import type { GameState, Personality, Player, Vec2 } from '../types';
 import { chainFor, dropPlan, reactionDelay, think, uncoveredOrder } from './brain';
-import { findPath, floorDropNode, isWalkable, targetNodes } from './path';
+import { findPath, floorDropNode, isWalkable, nodeOf, targetNodes, walkableNodes } from './path';
 import { addStandIns, botSpeed, makeBotState } from './roster';
 import { floorFields } from '../tiles';
 import { stationsFromSlots, type SlotContent } from '../slots';
@@ -844,6 +844,41 @@ describe('bots with duplicate or missing stations', () => {
     const second = floorDropNode(s, from);
     expect(second).not.toEqual(first);
     expect(spillTiles(s).some((t) => t.x === second.x && t.y === second.y)).toBe(false);
+    // Every clear node wet: the bot's own node.
+    let id = 1000;
+    for (const n of walkableNodes(s)) if (nearestStation(s, n) === null) s.messes.push({ id: id++, kind: 'spill', x: n.x, y: n.y, amount: 1 });
+    expect(floorDropNode(s, from)).toEqual(nodeOf(s, from));
+  });
+
+  it('no bin and the floor at the mess cap: a bot holding grounds pulls them through the espresso machine and works on', () => {
+    let s = cafeSlots(1, NO_TRASH);
+    for (let i = 0; i < ECONOMY.mess.max; i++) s.messes.push({ id: 500 + i, kind: 'grounds', x: 1 + (i % 10), y: i < 10 ? 4 : 5, amount: 1 });
+    s.customers = [
+      { id: 940, drink: 'espresso', ...huge },
+      { id: 941, drink: 'coldBrew', ...huge },
+      { id: 942, drink: 'espresso', ...huge },
+    ];
+    const b = bot(s);
+    b.holding = 'grounds';
+    const served = s.today.served;
+    const espressos = s.today.drinks?.espresso ?? 0;
+    const onDrop = (x: GameState) => { const st = bot(x).bot!.plan[0]; return st?.kind === 'floor' && st.action === 'drop'; };
+    expect(bot(s).bot!.plan).toEqual([]);
+    s = step(s, []);
+    expect(onDrop(s)).toBe(false); // the plan goes through the espresso machine, not to the floor
+    const shotOut = (x: GameState) =>
+      x.today.served > served || (x.today.drinks?.espresso ?? 0) > espressos || x.pass.some((i) => i.item === 'espresso');
+    s = runUntil(s, (x) => bot(x).holding === null && shotOut(x), 900);
+    expect(s.messes.length).toBe(ECONOMY.mess.max);
+    expect(onDrop(s)).toBe(false);
+  });
+
+  it('no bin, no espresso machine, floor at the cap: the floor drop stays (bounded re-plan)', () => {
+    const s = cafeSlots(1, (sl) => { NO_TRASH(sl); sl[sl.indexOf('espresso')] = null; });
+    for (let i = 0; i < ECONOMY.mess.max; i++) s.messes.push({ id: 500 + i, kind: 'grounds', x: 1 + (i % 10), y: i < 10 ? 4 : 5, amount: 1 });
+    const b = bot(s);
+    b.holding = 'grounds';
+    expect(dropPlan(s, b)).toEqual([{ kind: 'floor', node: floorDropNode(s, b.pos), action: 'drop' }]);
   });
 
   it('a botched drink with no bin ends on the floor as a spill', () => {
