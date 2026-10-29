@@ -358,8 +358,9 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
     `smartNightInputs(state, 'smart', stage)` after stage 0 (stage 0's smart restock is skipped: the planner already restocked).
   - *Hurried personality.* `Personality` gains `'hurried'` (`ECONOMY.bots.personalities.hurried`:
     speed 1.15, reaction 0.85, mistake 0.08, no cold-brew prep) and the roster grows to four bots
-    (`BOT_IDS` ×4, `BOT_PERSONALITIES = ['steady', 'hurried', 'rookie', 'veteran']`), so any game with
-    two or more bots has a hurried one. In `act` for a `take` step, a hurried bot whose machine is in
+    (`BOT_IDS` ×4, `BOT_PERSONALITIES = ['steady', 'hurried', 'veteran', 'rookie']`, named Bo, Lu, Mo, Zip), so any game
+    with two or more bots has a hurried one and the veteran (Mo, shades and espresso) stays in the three-bot
+    crews the lobby can ask for; the rookie is the fourth, tester-only bot (`--bots 4`). In `act` for a `take` step, a hurried bot whose machine is in
     the last 40% of its run (`ACCURACY.earlyShare`) with `ECONOMY.bots.hurriedQueue` (3) or more
     customers queued presses use: the existing early pull takes the cup one star down and logs
     `cup.early`. `ECONOMY.bots.autoCrew = 3` keeps `bots: 'auto'` at three bots; the lobby cap stays

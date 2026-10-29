@@ -36,7 +36,7 @@ describe('bot roster', () => {
       ['p1', 'K', undefined],
       ['bot-1', 'Bo', 'steady'],
       ['bot-2', 'Lu', 'hurried'],
-      ['bot-3', 'Mo', 'rookie'],
+      ['bot-3', 'Mo', 'veteran'],
     ]);
     expect(botIds(startDay(two({ bots: 0 })))).toEqual([]);
     expect(botIds(startDay(two({ bots: 1 })))).toEqual(['bot-1']);
@@ -44,15 +44,15 @@ describe('bot roster', () => {
 
   it('the roster has four bots; any crew with two or more bots includes a hurried one', () => {
     expect(BOT_IDS).toEqual(['bot-1', 'bot-2', 'bot-3', 'bot-4']);
-    expect(BOT_PERSONALITIES).toEqual(['steady', 'hurried', 'rookie', 'veteran']);
+    expect(BOT_PERSONALITIES).toEqual(['steady', 'hurried', 'veteran', 'rookie']);
     expect(ECONOMY.bots.names).toHaveLength(BOT_IDS.length);
-    // four bots with no humans (tester runs): everyone clocks in, the fourth is a veteran
+    // four bots with no humans (tester runs): everyone clocks in, the fourth is a rookie (the veteran stays in the three-bot cap)
     const four = startDay(createRun({ seed: 1, hostId: 'p1', players: [], settings: { bots: 4 } }));
     expect(four.players.map((p) => [p.id, p.name, p.bot?.personality])).toEqual([
       ['bot-1', 'Bo', 'steady'],
       ['bot-2', 'Lu', 'hurried'],
-      ['bot-3', 'Mo', 'rookie'],
-      ['bot-4', 'Zip', 'veteran'],
+      ['bot-3', 'Mo', 'veteran'],
+      ['bot-4', 'Zip', 'rookie'],
     ]);
     for (const n of [2, 3]) {
       const s = startDay(createRun({ ...solo, settings: { bots: n } }));

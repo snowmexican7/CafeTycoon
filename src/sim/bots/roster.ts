@@ -5,7 +5,7 @@ import { floorFields } from '../tiles';
 
 /** Who the bot baristas are: their ids, names, personalities, and how many the café wants. */
 export const BOT_IDS = ['bot-1', 'bot-2', 'bot-3', 'bot-4'];
-export const BOT_PERSONALITIES: Personality[] = ['steady', 'hurried', 'rookie', 'veteran'];
+export const BOT_PERSONALITIES: Personality[] = ['steady', 'hurried', 'veteran', 'rookie'];
 const MAX_BARISTAS = LAYOUT.spawnPoints.length; // four: one spawn point per barista
 
 export function isBot(p: Player): boolean {

@@ -905,14 +905,14 @@ describe('bots with duplicate or missing stations', () => {
 
 describe('default café determinism (station resolution must not change the default choice)', () => {
   // RNG goldens: seed 5, p1, scenario 'normal', 900 ticks after startDay. Bots 0 and 1 were measured on
-  // fb1 @ e503518 (before any FB1 code); bots 2 and 3 were re-measured on fb1-sim-bots-hurried when the roster grew
-  // a hurried bot-2 (the roster is the feature). Whole-state JSON is not pinned: other FB1 packages add optional
-  // fields (emptySince, slots, ...).
+  // fb1 @ e503518 (before any FB1 code); bots 2 was re-measured on fb1-sim-bots-hurried when the roster grew
+  // a hurried bot-2, and bots 3 again on fb1-sim-fixes when the veteran moved up to bot-3 (the roster is the
+  // feature). Whole-state JSON is not pinned: other FB1 packages add optional fields (emptySince, slots, ...).
   const golden: [number, number][] = [
     [0, 1798888878],
     [1, -1928183945],
     [2, -1360289472],
-    [3, 1671006484],
+    [3, -2056066339],
   ];
   for (const [bots, rng] of golden) {
     it(`seed 5, ${bots} bot(s), 900 ticks: the base RNG stream`, () => {
