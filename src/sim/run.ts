@@ -6,6 +6,7 @@ import { SCENARIOS } from '../data/scenarios';
 import { scheduleEvents, tuneRadio } from './events';
 import { computeModifiers } from './effects';
 import { morningNotes } from './describe';
+import { rivalMorning } from './rival';
 import { dealHand } from './night';
 import { forecastFor } from './forecast';
 import { syncBots } from './bots/roster';
@@ -147,6 +148,8 @@ export function startDay(state: GameState): GameState {
   pruneChallenges(state);
   eggsMorning(state);
   state.morningNotes = morningNotes(state);
+  const rivalNote = rivalMorning(state);
+  if (rivalNote) state.morningNotes.push(rivalNote);
   espressoMorning(state);
   return state;
 }

@@ -9,7 +9,7 @@ import { esc, hide, onAction, show } from './dom';
 import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
-import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RoleVM, type SignatureVM } from './viewModels';
+import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
 import { isRole, type RoleId } from '../sim/roles';
 
@@ -193,6 +193,19 @@ export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
   { id: 'paper', label: 'Paper', icon: '📰' },
 ];
 
+/** P3 B9: Starbuck$ down the street, under the paper: its knock-off (public) and a paid scouting peek. */
+function rivalCard(r: RivalVM | undefined): string {
+  if (!r) return '';
+  const copy = r.copy
+    ? `<div class="rv-copy ${r.copy.matched ? 'ok' : 'bad'}">Their knock-off of “${esc(r.copy.of)}” sells at <b>${esc(r.copy.price)}</b>, ours at <b>${esc(r.copy.ours)}</b>. ${r.copy.matched ? `We match it, so we keep ~${r.copy.keep}% of the asks (they'll cut again in a few days).` : `We keep only ~${r.copy.keep}% of the asks. Lower our price to match, or design a new signature.`}</div>`
+    : '';
+  const peek = r.scouted && r.menu
+    ? `<table class="rv-menu"><tr><th></th><th>${esc(r.name)}</th><th>Us</th></tr>${r.menu.map((x) => `<tr><td>${x.icon} ${esc(x.name)}</td><td class="${x.cheaper ? 'neg' : ''}">${esc(x.price)}</td><td>${esc(x.ours)}</td></tr>`).join('')}</table>
+       ${r.eyeing !== undefined ? `<div class="rv-eye">${r.eyeing === 0 ? 'Their barista was photographing our signature: expect a knock-off tomorrow.' : `They're eyeing our signature: a knock-off in about ${r.eyeing + 1} days.`}</div>` : ''}`
+    : `<button class="btn mini rv-scout" data-action="scout" ${r.affordable ? '' : 'disabled'}>🔭 Scout it tonight · ${esc(r.cost)}</button> <small>See their menu and prices for tomorrow, and whether they're after our signature.</small>`;
+  return `<div class="rival-card"><div class="rv-head">☕ ${esc(r.name)} <small>down the street</small></div>${copy}${peek}</div>`;
+}
+
 /** The paper in one line on the Shop tab; the full paper is its own tab. */
 function paperStrip(f: ForecastVM | undefined): string {
   if (!f) return '';
@@ -257,7 +270,7 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -278,6 +291,7 @@ export function createNight(
       draft = null;
       handlers.onSignature?.(null);
     }
+    else if (action === 'scout') handlers.onScout?.();
     else if (action === 'jump-restock') jumpToRestock();
     else if (action === 'jump-warn') flash(container.querySelector<HTMLElement>('.warn-card'));
   });
@@ -464,7 +478,7 @@ export function createNight(
           <div class="pane menu-pane" data-pane="menu" role="tabpanel">${signatureCard(vm.signature, syncDraft(vm.signature))}${menuBoard(vm.menu)}</div>
           <div class="pane crew-pane" data-pane="crew" role="tabpanel">${rolesBoard(vm.roles)}</div>
           <div class="pane regs-pane" data-pane="regulars" role="tabpanel">${regularsBoard(vm.regulars)}</div>
-          <div class="pane paper-pane" data-pane="paper" role="tabpanel">${newspaper(vm.forecast)}</div>
+          <div class="pane paper-pane" data-pane="paper" role="tabpanel">${newspaper(vm.forecast)}${rivalCard(vm.rival)}</div>
           <div class="foot">
             <div class="ready">${ready}</div>
             <div class="spacer"></div>

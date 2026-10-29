@@ -184,6 +184,12 @@ export interface Customer {
 }
 
 /** P3 B7: the crew's signature drink. `premium` is in $0.50 steps; `since` is the day the recipe was set. */
+/** P3 B9: the rival café. `scouted` is the night (by `day`) the crew last peeked; `copy` is its knock-off of a signature. */
+export interface Rival {
+  scouted?: number;
+  copy?: { drink: DrinkId; twist: TwistId; since: number; price: number; day: number };
+}
+
 export interface Signature {
   name: string;
   drink: DrinkId;
@@ -371,6 +377,8 @@ export interface GameState {
   tasteSeason?: Record<string, number>;
   /** P3 B7: the signature drink, if the crew has designed one. */
   signature?: Signature;
+  /** P3 B9: Starbuck$ down the street. */
+  rival?: Rival;
   eventSchedule: ScheduledEvent[];
   events: ActiveEvent[];
   regulars: Regular[];
@@ -413,6 +421,7 @@ export type PlayerInput =
   | { kind: 'menu'; playerId: PlayerId; drink: DrinkId; on: boolean }
   | { kind: 'price'; playerId: PlayerId; drink: DrinkId; step: number }
   | { kind: 'twist'; playerId: PlayerId; drink: DrinkId; twist: TwistId | null }
+  | { kind: 'scout'; playerId: PlayerId }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
