@@ -18,6 +18,8 @@ when a build goes out, the line moves under its version with the date.
 
 - Everyone can vote to close early when the day is dead: once every barista agrees, the doors lock and whoever is inside gets served.
 - A sold-out board no longer makes the street empty: people still walk up, read the board and walk away, and the morning paper counts them.
+- The night board has three tabs (Tonight, Menu, Spend) with bigger text and big drink cards. Nights last 2:00 by default, and there's a new Relaxed option with no timer.
+- Order tickets are bigger, and the rail shows four of them, then "+N more". Click a ticket to see its recipe steps, with the next step highlighted. Pause > Recipe hints can show steps on click (the default), always or never. On day 1 the first ticket shows its steps.
 
 ## 2.1.0 — 2026-10-29 · Phase 3 preview
 

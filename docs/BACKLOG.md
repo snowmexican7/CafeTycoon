@@ -168,6 +168,17 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
 - **Check only:** a kerbside stand should never list a latte. `unlockedDrinks` already filters
   by `canMake` for non-café tiers, so this is probably fine; worth a quick test in the sim lane.
 
+## FB1 WP2 (UI lane): order tickets
+
+- WP2 needs nothing from the sim. The "Recipe hints" setting (on click, always, off) is kept per browser in
+  localStorage (`cafetycoon.recipeHints`), like sound. It isn't a run setting, so saves and the protocol are unchanged.
+- The next-step highlight is a guess based on what you're holding (`nextStepIndex` in `src/ui/tickets.ts`).
+  If recipes change (new drinks or steps), update `DRINK_STEPS` and that mapping together.
+- The left gutter now has its own width, `--gutter-l: clamp(230px, 21vw, 330px)` (panel 284 px at 1512 wide).
+  The café stage is narrower by the same amount, and the canvas scales to fit.
+- Still open on the UI side (WP3 and WP4, not in this pass): the press-and-hold "Close early" button in the clock
+  pill, which reads `closeEarlyState`, and a sold-out sign.
+
 ## main.ts hook-ins (phase 2)
 
 Telemetry hook-ins in `src/main.ts` (slice 7); the UI agent should expect these when merging the title wiring.

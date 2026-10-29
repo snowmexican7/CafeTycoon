@@ -3,7 +3,7 @@ import type { DrinkId } from '../sim/types';
 import { esc, hide, show } from './dom';
 import { coin, itemIcon, jar, logoCup, pauseGlyph, speakerGlyph, stars, sun, SUPPLY_COLOR } from './icons';
 import { crewKey, handKey, ITEM_LABEL, ordersKey, type HudLive } from './live';
-import { MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, URGENT as TICKET_URGENT, type RecipeHints, type TicketOpts } from './tickets';
+import { loadRecipeHints, MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, URGENT as TICKET_URGENT, type RecipeHints, type TicketOpts } from './tickets';
 import { DRINK_LABEL } from './tickets';
 import { cleanMeter, EVENT_INTRO, hudStructureKey, type HudVM } from './viewModels';
 import type { EventKind } from '../sim/types';
@@ -124,7 +124,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
   let lastKey = '';
   let lastWeekKey = '';
   let lastOrders = '';
-  let recipeHints: RecipeHints = opts.recipeHints ?? 'click';
+  let recipeHints: RecipeHints = opts.recipeHints ?? loadRecipeHints((() => { try { return window.localStorage; } catch { return undefined; } })());
   let lastCrew = '';
   let lastHand = '';
   let lastCash: number | null = null;
