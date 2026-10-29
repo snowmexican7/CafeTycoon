@@ -122,3 +122,47 @@
 #hud .hud-clean[data-tone=bad] { color: var(--cherry); box-shadow: 0 0 0 3px #e0564a99, var(--sh-1); animation: hud-nudge 1.2s ease-in-out infinite; }
 #hud .hud-clean[data-tone=bad] .lab small { color: var(--cherry); }
 #hud .hud-clean[data-tone=bad] .cbar i { background: linear-gradient(90deg, #e98a6a, #e0564a); }
+
+/* Block 2: event chips (under the top bar), intro cards and outcome stamps. */
+#hud .hud-events { position: absolute; top: calc(var(--topbar) + 8px); left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 2; }
+#hud .ev-chip { display: flex; align-items: center; gap: 6px; background: var(--foam); border-radius: 99px; padding: 4px 12px 4px 6px; box-shadow: var(--sh-1);
+  font: 600 13px var(--font-display); white-space: nowrap; animation: hud-pop .3s ease-out; }
+#hud .ev-chip .secs { font-variant-numeric: tabular-nums; color: var(--ink-soft); min-width: 3ch; }
+#hud .ev-chip.tone-rush { box-shadow: 0 0 0 2px #e0564a, var(--sh-1); }
+#hud .ev-chip.tone-power { background: #2f2a3d; color: #f6e7b0; box-shadow: 0 0 0 2px #f6c35b, var(--sh-1); animation: ev-flicker 1.3s steps(1) infinite; }
+#hud .ev-chip.tone-power .secs { color: #d7cfae; }
+#hud .ev-chip.tone-inspector { box-shadow: 0 0 0 2px #6b4430, var(--sh-1); }
+#hud .ev-chip.tone-influencer { box-shadow: 0 0 0 2px #e98aa6, var(--sh-1); }
+#hud .scrutiny { display: flex; gap: 8px; align-items: center; margin-left: 4px; padding-left: 8px; border-left: 2px dotted #d9c4a6; font: 700 12px var(--font-body); color: var(--ink-soft); }
+#hud .scrutiny b { color: var(--ink); font-variant-numeric: tabular-nums; }
+#hud .scrutiny .verdict { font: 700 11px var(--font-body); padding: 1px 7px; border-radius: 99px; background: #dff4ec; color: var(--mint-dk); }
+#hud .ev-chip[data-verdict=risky] .verdict { background: #fde3c8; color: #9a4a12; }
+#hud .ev-chip[data-verdict=fail] .verdict { background: var(--cherry); color: #fff; }
+#hud .ev-chip[data-verdict=fail] { animation: hud-nudge 1s ease-in-out infinite; }
+#hud .hud-eventcard { position: absolute; top: calc(var(--topbar) + 44px); left: 50%; transform: translate(-50%, 0); z-index: 3; display: flex; gap: 14px; align-items: center;
+  max-width: 440px; padding: 14px 20px 14px 14px; background: var(--foam); border-radius: 18px; box-shadow: 0 12px 30px #0006; }
+#hud .hud-eventcard[hidden] { display: none; }
+#hud .hud-eventcard.in { animation: ev-card 3.4s ease-out both; }
+#hud .hud-eventcard .ic { width: 54px; height: 54px; flex: none; border-radius: 14px; background: #f6ead7; display: grid; place-items: center; }
+#hud .hud-eventcard .ic svg { width: 36px; height: 36px; }
+#hud .hud-eventcard b { font: 700 22px var(--font-display); display: block; }
+#hud .hud-eventcard p { margin: 2px 0 0; font: 600 14px var(--font-body); color: var(--ink-soft); line-height: 1.3; }
+#hud .hud-eventcard.tone-rush { box-shadow: 0 0 0 4px #e0564a, 0 12px 30px #0006; }
+#hud .hud-eventcard.tone-rush b { color: var(--cherry); }
+#hud .hud-eventcard.tone-power { background: #2f2a3d; color: #f6e7b0; box-shadow: 0 0 0 4px #f6c35b, 0 12px 30px #0008; }
+#hud .hud-eventcard.tone-power p { color: #d7cfae; }
+#hud .hud-eventcard.tone-power .ic { background: #463d5c; }
+#hud .hud-eventcard.tone-inspector { box-shadow: 0 0 0 4px #6b4430, 0 12px 30px #0006; }
+#hud .hud-eventcard.tone-influencer { box-shadow: 0 0 0 4px #e98aa6, 0 12px 30px #0006; }
+#hud .hud-eventcard.tone-influencer b { color: #c2577a; }
+#hud .hud-eventcard .stamp { flex: none; font: 800 22px var(--font-display); letter-spacing: .08em; padding: 6px 10px; border: 4px solid currentColor; border-radius: 10px;
+  transform: rotate(-12deg); animation: ev-stamp .35s cubic-bezier(.2,1.6,.4,1) both; }
+#hud .hud-eventcard .stamp.pass { color: var(--good); }
+#hud .hud-eventcard .stamp.fail { color: var(--cherry); }
+#hud .hud-eventcard.tone-pass { box-shadow: 0 0 0 4px var(--good), 0 12px 30px #0006; }
+#hud .hud-eventcard.tone-fail { box-shadow: 0 0 0 4px var(--cherry), 0 12px 30px #0006; }
+@keyframes ev-card { 0% { opacity: 0; transform: translate(-50%, 18px) scale(.85); } 8% { opacity: 1; transform: translate(-50%, 0) scale(1.04); } 12% { transform: translate(-50%, 0) scale(1); }
+  88% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -14px); } }
+@keyframes ev-stamp { 0% { transform: rotate(-12deg) scale(2.2); opacity: 0; } 100% { transform: rotate(-12deg) scale(1); opacity: 1; } }
+@keyframes ev-flicker { 0%, 100% { opacity: 1; } 12% { opacity: .55; } 16% { opacity: 1; } 47% { opacity: .7; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #hud .hud-eventcard.in, #hud .ev-chip, #hud .hud-eventcard .stamp { animation: none; } }

@@ -47,7 +47,8 @@ export type CueId =
   | 'rogueSaved'
   | 'rogueMade'
   | 'rogueStorm'
-  | 'doorSlam';
+  | 'doorSlam'
+  | 'buzz';
 
 export interface Cue {
   id: CueId;
@@ -70,6 +71,9 @@ export const EVENT_CUE: Record<EventKind, CueId> = {
   healthInspector: 'inspector',
   influencerVisit: 'influencer',
 };
+
+/** Ticks between ballast buzzes while the power is out. */
+export const BUZZ_TICKS = 48;
 
 /** Longest a station loop may run, so a slowed station can't drone forever. */
 export const MAX_STATION_SEC = 8;
@@ -139,6 +143,8 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
   }
 
   const sameDay = prev.day === next.day && prev.phase !== 'night';
+  // the lights are out: the ballast keeps buzzing every ~0.8 s
+  if (sameDay && next.events.some((e) => e.kind === 'powerFlicker') && Math.floor(prev.tick / BUZZ_TICKS) !== Math.floor(next.tick / BUZZ_TICKS)) cues.push({ id: 'buzz' });
   // chaos pack state changes: the mop picked up, a rogue appearing, the door slamming behind them
   if (prev.mop && next.mop && prev.mop.heldBy === null && next.mop.heldBy !== null) cues.push({ id: 'mopGrab', mine: next.mop.heldBy === me });
   const rogueStarted = !prev.rogue && !!next.rogue;

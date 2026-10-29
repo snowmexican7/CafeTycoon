@@ -69,7 +69,46 @@ export interface HudVM {
   rogue?: { stage: RogueStage; drink: DrinkId; x: number; y: number; secondsLeft: number; name?: string };
   /** Doors locked: customers still inside (queue plus a rogue). Present only while closing; patched in place. */
   closing?: { left: number };
+  /** While the health inspector is in: how today looks against their two rules (patched in place). */
+  scrutiny?: Scrutiny;
+  /** Today's event outcomes so far, for the PASSED/FAILED stamp and the follower bump (patched). */
+  results?: { inspection: 'pass' | 'fail' | null; influencer: 'served' | 'lost' | null; followers: string };
 }
+
+export interface Scrutiny {
+  wasted: number;
+  wastedLimit: number;
+  clean: number;
+  cleanMin: number;
+  /** 'fail' if they judged now it would fail; 'risky' within one waste or 10 points of the bar. */
+  verdict: 'ok' | 'risky' | 'fail';
+}
+
+export function scrutinyFor(state: GameState): Scrutiny | undefined {
+  if (!state.events.some((e) => e.kind === 'healthInspector')) return undefined;
+  const wasted = state.today.wasted ?? 0;
+  const wastedLimit = ECONOMY.events.inspector.wastedLimit;
+  const clean = Math.round(state.cleanliness);
+  const cleanMin = ECONOMY.mess.inspectorMin;
+  const fail = wasted >= wastedLimit || state.cleanliness < cleanMin;
+  const risky = wasted >= wastedLimit - 1 || state.cleanliness < cleanMin + 10;
+  return { wasted, wastedLimit, clean, cleanMin, verdict: fail ? 'fail' : risky ? 'risky' : 'ok' };
+}
+
+/** A made-up but stable follower count for the influencer's post ("+1.4k"), from the seed and day. */
+export function followerBump(seed: number, day: number): string {
+  const h = (Math.imul((seed ^ (day * 7919)) >>> 0, 2654435761) >>> 0) % 2600;
+  const n = 400 + h;
+  return n >= 1000 ? `+${(n / 1000).toFixed(1)}k` : `+${n}`;
+}
+
+/** The intro card for an event: a title, one line of advice for the crew, and its tone. */
+export const EVENT_INTRO: Record<EventKind, { title: string; line: string; tone: 'rush' | 'power' | 'inspector' | 'influencer' }> = {
+  rushHour: { title: 'Rush hour!', line: 'A tour bus just pulled up. Split the jobs: one grinds, one steams, one serves.', tone: 'rush' },
+  powerFlicker: { title: 'Power flicker!', line: 'The machines sputter for a few seconds. Hand off what\u2019s already made.', tone: 'power' },
+  healthInspector: { title: 'Health inspector', line: 'Keep the floor clean and waste fewer than 4 drinks until they leave.', tone: 'inspector' },
+  influencerVisit: { title: 'An influencer walked in', line: 'Serve them before they leave for a bonus and a follower bump.', tone: 'influencer' },
+};
 
 /** The floor: messes, cleanliness, the mop, who is stunned and who is cleaning (seconds rounded up). */
 export function floorHud(state: GameState): Pick<HudVM, 'messes' | 'cleanliness' | 'mop' | 'stuns' | 'cleaning'> {
@@ -120,6 +159,8 @@ export function hudViewModel(state: GameState): HudVM {
     ...floorHud(state),
     ...rogueHud(state),
     ...(state.phase === 'closing' ? { closing: { left: state.customers.length + (state.rogue ? 1 : 0) } } : {}),
+    ...(scrutinyFor(state) ? { scrutiny: scrutinyFor(state) } : {}),
+    results: { inspection: state.today.inspection ?? null, influencer: state.today.influencer ?? null, followers: followerBump(state.seed, state.day) },
   };
 }
 
@@ -209,6 +250,11 @@ export interface ClosingVM {
   rogues?: number;
   wasted?: number;
   slips?: number;
+  /** Block 2 receipt lines, present only when they happened. */
+  events?: string[];
+  inspection?: 'pass' | 'fail';
+  fines?: string;
+  bonus?: string;
 }
 
 /** `before` is the last snapshot of the closing phase; `after` is the first of the next phase. */
@@ -229,6 +275,10 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     ...(d.rogues ? { rogues: d.rogues } : {}),
     ...(d.wasted ? { wasted: d.wasted } : {}),
     ...(d.slips ? { slips: d.slips } : {}),
+    ...(d.events?.length ? { events: d.events.map((k) => EVENT_LABELS[k]) } : {}),
+    ...(d.inspection ? { inspection: d.inspection } : {}),
+    ...(d.fines ? { fines: money(d.fines) } : {}),
+    ...(d.bonus ? { bonus: money(d.bonus) } : {}),
     ...(after.debt ? { tab: money(after.debt) } : {}),
     cash: money(after.cash),
     profitVsStart: money(scoreRun(after)),
@@ -300,7 +350,7 @@ export function nightStructureKey(vm: NightVM): string {
 
 /** Everything about the HUD except the clock and cash. */
 export function hudStructureKey(vm: HudVM): string {
-  const { clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, closing, ...rest } = vm;
+  const { clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, closing, scrutiny, results: _results, ...rest } = vm;
   // per-tick values are patched, not rebuilt: the pass keys on its items only
   return JSON.stringify({
     ...rest,
@@ -312,6 +362,7 @@ export function hudStructureKey(vm: HudVM): string {
     cleaning: cleaning?.map((x) => x.playerId),
     rogue: rogue && { stage: rogue.stage, drink: rogue.drink, name: rogue.name },
     closing: closing !== undefined, // the banner is structure; its count is patched
+    scrutiny: scrutiny !== undefined, // the inspector's meter is patched
   });
 }
 

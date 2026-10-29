@@ -68,13 +68,24 @@ export const RECIPES: Record<CueId, Layer[]> = {
   dayEnd: [{ sample: 'dayEnd', gain: 0.5 }],
   weekEnd: [{ sample: 'weekEnd', gain: 0.5 }],
   gameOver: [{ sample: 'fail', gain: 0.5 }],
-  rushHour: [{ sample: 'rush', gain: 0.5 }],
-  powerFlicker: [{ synth: 'flicker', gain: 1 }],
-  inspector: [{ sample: 'inspector', gain: 0.5 }],
-  influencer: [
-    { synth: 'shutter', gain: 0.8 },
-    { sample: 'influencer', gain: 0.45, delay: 0.4 },
+  rushHour: [
+    { synth: 'rushSting', gain: 1 },
+    { sample: 'rush', gain: 0.45, delay: 0.35 },
   ],
+  powerFlicker: [
+    { synth: 'flicker', gain: 1 },
+    { synth: 'buzz', gain: 0.9, delay: 0.1 },
+  ],
+  inspector: [
+    { synth: 'inspectorSting', gain: 1 },
+    { sample: 'inspector', gain: 0.4, delay: 0.9 },
+  ],
+  influencer: [
+    { synth: 'glitter', gain: 1 },
+    { synth: 'shutter', gain: 0.8, delay: 0.25 },
+    { sample: 'influencer', gain: 0.45, delay: 0.6 },
+  ],
+  buzz: [{ synth: 'buzz', gain: 0.7 }],
   inspectPass: [{ sample: 'pass', gain: 0.5 }],
   inspectFail: [{ sample: 'fail', gain: 0.45 }],
   influencerServed: [
@@ -121,6 +132,7 @@ export const RECIPES: Record<CueId, Layer[]> = {
 export function cueSeconds(id: CueId, dur = 0): number {
   if (id === 'grinder' || id === 'espresso' || id === 'steam' || id === 'pour') return Math.max(0.6, dur) + 0.4;
   if (id === 'collapse') return 9;
+  if (id === 'buzz') return 0.5;
   if (id === 'heartbeat') return 0.35;
   if (id === 'click' || id === 'pickUp' || id === 'cupDown') return 0.25;
   if (['dayStart', 'dayEnd', 'weekEnd', 'gameOver', 'rushHour', 'inspector', 'influencer', 'inspectPass', 'inspectFail'].includes(id)) return 2.5;

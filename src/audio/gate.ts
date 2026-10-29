@@ -55,6 +55,7 @@ export const CUE_RULES: Partial<Record<CueId, CueRule>> = {
   rogueMade: { cooldownMs: 1000, maxVoices: 1, priority: 3 },
   rogueStorm: { cooldownMs: 1000, maxVoices: 1, priority: 3 },
   doorSlam: { cooldownMs: 600, maxVoices: 1, priority: 3 },
+  buzz: { cooldownMs: 500, maxVoices: 1, priority: 1 },
 };
 
 /** Simultaneous one-shot voices across every cue. */
