@@ -13,17 +13,24 @@
  *  - `stationsFromSlots(tier, slots): Station[]`: fresh idle stations in slot order (empty slots
  *    skipped), ids `kind` for the first of a kind then `kind-2`, `kind-3`, …, positions from
  *    `SLOT_POSITIONS`, then the counter. Default slots give exactly the pre-WP5 stations.
- *  - `growSlots(state, from, to)`: on growing, machines placed beyond `from`'s defaults (by count per
- *    kind) go to `equipment`, slots reset to `to`'s defaults and the stations are rebuilt.
+ *  - `growSlots(state, to)`: on growing, owned stations (placed + equipment, per kind) are conserved: the
+ *    new tier's defaults go on the floor, only the surplus stays in `equipment` (kind order grinder,
+ *    espresso, steamer, coldBrewTap, trash), and the stations are rebuilt.
+ *  - `applySlotInput(state, { kind: 'slot', playerId, index, station: StationKind | null })` and
+ *    `applyEquipInput(state, { kind: 'equip', playerId, station })`: the two night inputs (see
+ *    data/equipment.ts); `state.equipLog?: { station, day, by }[]` records each purchase and
+ *    `equipmentSpent(state)` sums their prices.
  *  - `reasonOff(state, drink): 'noStation' | 'noStock' | 'off' | null`: why a drink is off the
  *    board, checked in that order (null = it is on).
  *
  * Pure: no RNG, and the order of everything follows the slot order.
  */
 import { ECONOMY } from '../data/economy';
+import { EQUIPMENT, EQUIPMENT_KINDS } from '../data/equipment';
+import type { EquipmentKind } from '../data/equipment';
 import { SLOT_POSITIONS, layoutFor } from '../data/layout';
 import { canMake } from './growth';
-import type { DrinkId, GameState, Station, StationKind, TierId } from './types';
+import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
 export type SlotContent = StationKind | null;
 export type OffReason = 'noStation' | 'noStock' | 'off';
@@ -56,20 +63,87 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
   return out;
 }
 
-/** Growing from `from` to `to`: extra machines (beyond `from`'s defaults) go to equipment, the new tier's defaults go in. */
-export function growSlots(state: GameState, from: TierId | undefined, to: TierId): void {
-  const left = new Map<StationKind, number>();
-  for (const k of defaultSlots(from)) if (k !== null) left.set(k, (left.get(k) ?? 0) + 1);
-  const extras: StationKind[] = [];
-  for (const k of state.slots ?? defaultSlots(from)) {
-    if (k === null) continue;
-    const n = left.get(k) ?? 0;
-    if (n > 0) left.set(k, n - 1);
-    else extras.push(k);
+const KIND_ORDER: EquipmentKind[] = EQUIPMENT_KINDS;
+
+/**
+ * Growing into `to`: owned stations are conserved. Everything the crew owns (placed + equipment, counted per
+ * kind) is weighed against the new tier's defaults; the defaults go on the floor and only what is left over
+ * stays in `equipment`, in a stable kind order. A crew that removed its grinder before growing gets no second
+ * one, and a kind the new tier adds (the cart's steamer) is part of the tier's price.
+ */
+export function growSlots(state: GameState, to: TierId): void {
+  const owned = new Map<StationKind, number>();
+  for (const k of state.slots ?? []) if (k !== null) owned.set(k, (owned.get(k) ?? 0) + 1);
+  for (const k of state.equipment ?? []) owned.set(k, (owned.get(k) ?? 0) + 1);
+  const defaults = new Map<StationKind, number>();
+  for (const k of defaultSlots(to)) if (k !== null) defaults.set(k, (defaults.get(k) ?? 0) + 1);
+  const equipment: StationKind[] = [];
+  for (const k of KIND_ORDER) {
+    const extra = Math.max(0, (owned.get(k) ?? 0) - (defaults.get(k) ?? 0));
+    for (let i = 0; i < extra; i++) equipment.push(k);
   }
-  state.equipment = [...(state.equipment ?? []), ...extras];
+  state.equipment = equipment;
   state.slots = defaultSlots(to);
   state.stations = stationsFromSlots(to, state.slots);
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/** A station kind the shop sells (any StationKind but the counter). */
+export const isEquipmentKind = (k: unknown): k is EquipmentKind => typeof k === 'string' && (EQUIPMENT_KINDS as string[]).includes(k);
+
+/** Night input: put a station from equipment into a slot, or empty the slot (`null`). The old content goes to equipment. Free. */
+export function applySlotInput(state: GameState, input: Extract<PlayerInput, { kind: 'slot' }>): GameState {
+  if (state.phase !== 'night') return state;
+  const p = state.players.find((x) => x.id === input.playerId);
+  if (!p || !p.connected || p.bot) return state;
+  const slots = [...(state.slots ?? defaultSlots(state.tier))];
+  const i = input.index;
+  if (!Number.isInteger(i) || i < 0 || i >= slotCount(state.tier) || i >= slots.length) return state;
+  const want = input.station;
+  if (want !== null && !isEquipmentKind(want)) return state;
+  const equipment = [...(state.equipment ?? [])];
+  const had = slots[i] ?? null;
+  if (want === had) return state;
+  if (want !== null) {
+    const at = equipment.indexOf(want);
+    if (at < 0) return state;
+    equipment.splice(at, 1);
+  }
+  if (had !== null) equipment.push(had);
+  slots[i] = want;
+  state.slots = slots;
+  state.equipment = equipment;
+  state.stations = stationsFromSlots(state.tier, slots);
+  return state;
+}
+
+/** Night input: buy a station at its fixed price. It goes into the first empty slot, else into equipment. */
+export function applyEquipInput(state: GameState, input: Extract<PlayerInput, { kind: 'equip' }>): GameState {
+  if (state.phase !== 'night') return state;
+  const p = state.players.find((x) => x.id === input.playerId);
+  if (!p || !p.connected || p.bot) return state;
+  if (!isEquipmentKind(input.station)) return state;
+  const cost = EQUIPMENT[input.station].cost;
+  if (state.cash < cost) return state;
+  state.cash = round2(state.cash - cost);
+  const slots = [...(state.slots ?? defaultSlots(state.tier))];
+  const free = slots.indexOf(null);
+  if (free >= 0 && free < slotCount(state.tier)) {
+    slots[free] = input.station;
+    state.slots = slots;
+    state.stations = stationsFromSlots(state.tier, slots);
+  } else {
+    state.slots = slots;
+    state.equipment = [...(state.equipment ?? []), input.station];
+  }
+  state.equipLog = [...(state.equipLog ?? []), { station: input.station, day: state.day, by: p.name }];
+  return state;
+}
+
+/** Everything the crew has paid the stations shop this run (for the fittings value). */
+export function equipmentSpent(state: GameState): number {
+  return (state.equipLog ?? []).reduce((a, e) => a + EQUIPMENT[e.station as EquipmentKind].cost, 0);
 }
 
 /** Why a drink is off the board: no station for it, a supply has run out, or the crew switched it off (null = on). */

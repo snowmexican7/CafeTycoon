@@ -311,7 +311,7 @@ export function growNight(state: GameState): void {
   const next = nextTier(state);
   if (!next || state.cash < TIERS[next].cost + 60) return;
   state.cash = Math.round((state.cash - TIERS[next].cost) * 100) / 100;
-  growSlots(state, state.tier, next);
+  growSlots(state, next);
   state.tier = next;
   state.tierLog = [...(state.tierLog ?? []), { tier: next, day: state.day, by: 'tester' }];
   state.mop = { pos: { ...layoutFor(next).mopHome }, heldBy: null };
