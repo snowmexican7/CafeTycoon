@@ -9,7 +9,7 @@
 #title .tag { font: 700 15px/1.4 var(--font-body); color: var(--ink-soft); margin: 10px 0 16px; }
 #title .notice { margin: -4px 0 14px; background: #fde2dc; color: #8c2a20; border-radius: 12px; padding: 9px 12px; font: 700 13.5px/1.35 var(--font-body); box-shadow: inset 0 0 0 2px #f3b8ad; }
 #title .resume { margin: -2px 0 14px; }
-#title .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+#title .row2 { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
 #title .fld { margin-bottom: 0; } #title > .titlecard > .fld { margin-bottom: 14px; }
 .seg span i { display: flex; justify-content: center; align-items: flex-end; gap: 2px; height: 14px; margin-bottom: 3px; }
 .seg span i b { width: 4px; border-radius: 2px; background: currentColor; opacity: .7; }

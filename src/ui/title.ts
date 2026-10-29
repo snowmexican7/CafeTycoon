@@ -5,7 +5,7 @@ import { esc, hide, onAction, show } from './dom';
 import { logoCup } from './icons';
 import { roadmapIcon, type RoadmapDrawer } from './roadmap';
 import { storefrontSVG } from './storefront';
-import type { TitleVM } from './viewModels';
+import { DEFAULT_NIGHT_LENGTH, NIGHT_LENGTHS, nightLengthChoice, type TitleVM } from './viewModels';
 import { APP_VERSION } from '../version';
 
 export interface StartChoice {
@@ -13,6 +13,8 @@ export interface StartChoice {
   seed: number | null;
   pace: Pace;
   dayLengthSec: number;
+  /** FB1 WP1: seconds of night planning; 0 = Relaxed (untimed, ready-up, 30 s last call). */
+  nightLengthSec: number;
 }
 
 const DAY_LENGTHS = [60, 90, 120, 150, 180, 240, 300];
@@ -34,6 +36,16 @@ export const dayOptions = (current: number) =>
     .map((s) => `<option value="${s}" ${current === s ? 'selected' : ''}>${s} s${s === DEFAULT_DAY_LENGTH ? ' · default' : ''}</option>`)
     .join('');
 
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+/** FB1 WP1: the night-length picker. 0 is Relaxed. `current` is the stored setting (seconds). */
+export const nightOptions = (current: number) => {
+  const pick = nightLengthChoice(current);
+  const choices: number[] = (NIGHT_LENGTHS as readonly number[]).includes(pick) ? [...NIGHT_LENGTHS] : [...NIGHT_LENGTHS.filter((s) => s > 0), pick, 0].sort((a, b) => (a || 1e9) - (b || 1e9));
+  return choices
+    .map((s) => `<option value="${s}" ${pick === s ? 'selected' : ''}>${s === 0 ? 'Relaxed · no timer' : `${clock(s)}${s === DEFAULT_NIGHT_LENGTH ? ' · default' : ''}`}</option>`)
+    .join('');
+};
+
 export function createTitle(
   container: HTMLElement,
   handlers: {
@@ -54,6 +66,7 @@ export function createTitle(
       seed: seedRaw === '' || Number.isNaN(Number(seedRaw)) ? null : Math.floor(Number(seedRaw)),
       pace: Number(container.querySelector<HTMLInputElement>('[name=pace]:checked')?.value ?? 3) as Pace,
       dayLengthSec: Number(q<HTMLSelectElement>('[name=dayLength]').value),
+      nightLengthSec: Number(container.querySelector<HTMLSelectElement>('[name=nightLength]')?.value ?? DEFAULT_NIGHT_LENGTH),
     };
   };
   onAction(container, (action, el) => {
@@ -103,6 +116,7 @@ export function createTitle(
           <div class="row2">
             <label class="fld"><span class="lbl">Your name</span><input class="inp" name="name" maxlength="16" value="${esc(settings.playerName)}" autocomplete="nickname"></label>
             <label class="fld"><span class="lbl">Day length</span><select class="inp" name="dayLength">${dayOptions(settings.dayLengthSec)}</select></label>
+            <label class="fld"><span class="lbl">Night length</span><select class="inp" name="nightLength" title="How long you get to plan each night. Relaxed has no timer: the night ends when everyone is ready.">${nightOptions(settings.nightLengthSec)}</select></label>
           </div>
           <div class="fld"><span class="lbl">Pace</span>${paceSeg(settings.pace)}</div>
           <div class="btns">
