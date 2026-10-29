@@ -41,7 +41,7 @@ describe('stores', () => {
 
 describe('snapshot versioning', () => {
   it('is on version 9', () => {
-    expect(SNAPSHOT_VERSION).toBe(22);
+    expect(SNAPSHOT_VERSION).toBe(23);
   });
 
   it('migrates a version-4 save (three drinks, no flavours) to the B5 menu', () => {
@@ -82,7 +82,7 @@ describe('snapshot versioning', () => {
     const old = JSON.parse(JSON.stringify(s));
     delete old.forecast;
     st.setItem('cafetycoon.run', JSON.stringify({ version: 3, state: old }));
-    expect(store.load()).toEqual({ ...s, tier: 'cafe' }); // P3 B13: every old run is the café
+    expect(store.load()).toEqual({ ...s, tier: 'cafe', today: { ...s.today, soldOutWalkouts: 0 } }); // P3 B13: every old run is the café; FB1 WP4: walkouts start at 0
     st.setItem('cafetycoon.run', JSON.stringify({ version: 2, state: old }));
     expect(store.load()).toBeNull();
     st.setItem('cafetycoon.run', JSON.stringify({ version: SNAPSHOT_VERSION + 1, state: s }));

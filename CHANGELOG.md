@@ -16,7 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-Nothing yet.
+- Everyone can vote to close early when the day is dead: once every barista agrees, the doors lock and whoever is inside gets served.
+- A sold-out board no longer makes the street empty: people still walk up, read the board and walk away, and the morning paper counts them.
 
 ## 2.1.0 — 2026-10-29 · Phase 3 preview
 
