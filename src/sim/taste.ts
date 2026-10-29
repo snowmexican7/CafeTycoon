@@ -28,7 +28,7 @@ export const TASTE = {
 };
 
 /** 32-bit integer hash (xmur3-style finaliser); pure, no RNG state. */
-function hash32(n: number): number {
+export function hash32(n: number): number {
   let h = n | 0;
   h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);

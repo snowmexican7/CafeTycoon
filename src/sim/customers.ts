@@ -1,4 +1,5 @@
 import { signatureServed, sigPremium, sigShare } from './signature';
+import { rivalAskFactor } from './rival';
 import { roleCraft, roleTip } from './roles';
 import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
 import { demandFactor, menuPrice, pricePatience, priceTraffic } from './pricing';
@@ -105,7 +106,7 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const drinks = regular ? [regular.drink] : Array.from({ length: count }, () => drawDrink(state, menu, m));
   // P3 B7: a single walk-in may ask for the signature by name (one rngNext, only when a signature is on the menu).
   const sig = state.signature;
-  const asksSig = !regular && count === 1 && sig !== undefined && menu.includes(sig.drink) && rngNext(state) < sigShare(sig);
+  const asksSig = !regular && count === 1 && sig !== undefined && menu.includes(sig.drink) && rngNext(state) < sigShare(sig) * rivalAskFactor(state);
   if (asksSig) drinks[0] = sig.drink;
   const mul = kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1;
   // fancy drinks buy a little patience; a group waits as long as its fanciest order

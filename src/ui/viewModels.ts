@@ -1,4 +1,5 @@
 import { SIG, sigShare } from '../sim/signature';
+import { copyIsLive, daysToCopy, RIVAL, rivalAskFactor, rivalMenu, sigPrice } from '../sim/rival';
 import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
 import { accuracyRating } from '../sim/accuracy';
 import { PRICING, menuPrice, priceForecast, priceTraffic } from '../sim/pricing';
@@ -263,6 +264,8 @@ export interface NightVM {
   meReady: boolean;
   menu?: MenuLineVM[];
   signature?: SignatureVM;
+  /** P3 B9: Starbuck$ down the street. */
+  rival: RivalVM;
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
@@ -397,6 +400,42 @@ export function tasteLine(state: GameState): string | undefined {
   return undefined;
 }
 
+export interface RivalVM {
+  name: string;
+  cost: string;
+  affordable: boolean;
+  /** Scouted tonight: the menu and the signature watch are visible. */
+  scouted: boolean;
+  menu?: { drink: DrinkId; name: string; icon: string; price: string; ours: string; cheaper: boolean }[];
+  /** Their knock-off of our current signature (public: it's in the window). */
+  copy?: { of: string; price: string; ours: string; matched: boolean; keep: number };
+  /** Scouted only: days until they copy our signature (0 = tomorrow). */
+  eyeing?: number;
+}
+
+export function rivalVM(state: GameState): RivalVM {
+  const scouted = state.rival?.scouted === state.day;
+  const m = computeModifiers(state);
+  const sig = state.signature;
+  const c = state.rival?.copy;
+  const live = copyIsLive(state);
+  const eye = daysToCopy(state);
+  return {
+    name: RIVAL.name,
+    cost: money(RIVAL.scoutCost),
+    affordable: state.cash >= RIVAL.scoutCost,
+    scouted,
+    ...(scouted ? {
+      menu: rivalMenu(state).map(({ drink, price }) => {
+        const ours = Math.round(menuPrice(state, drink) * m.price[drink] * 100) / 100;
+        return { drink, name: DRINK_INFO[drink].name, icon: DRINK_INFO[drink].icon, price: money(price), ours: money(ours), cheaper: price < ours };
+      }),
+      ...(eye !== null ? { eyeing: eye } : {}),
+    } : {}),
+    ...(live && sig && c ? { copy: { of: sig.name, price: money(c.price), ours: money(sigPrice(state, sig)), matched: sigPrice(state, sig) <= c.price, keep: Math.round(rivalAskFactor(state) * 100) } } : {}),
+  };
+}
+
 export function signatureVM(state: GameState): SignatureVM {
   const drinks = unlockedDrinks(state);
   const book: SignatureVM['book'] = {};
@@ -410,7 +449,7 @@ export function signatureVM(state: GameState): SignatureVM {
       : {}),
     drinks,
     book,
-    asks: sig && menuDrinks(state).includes(sig.drink) ? Math.round(walkIns * sigShare(sig) * 0.8) : 0,
+    asks: sig && menuDrinks(state).includes(sig.drink) ? Math.round(walkIns * sigShare(sig) * rivalAskFactor(state) * 0.8) : 0,
     premiumStep: SIG.premiumStep,
     maxPremium: SIG.maxPremium,
   };
@@ -516,6 +555,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     meReady: state.ready.includes(me),
     menu: menuLines(state),
     signature: signatureVM(state),
+    rival: rivalVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),
     forecast: forecastViewModel(state),

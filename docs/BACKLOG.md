@@ -1046,3 +1046,44 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
   - The signature isn't warned specifically when its combo goes stale. A receipt line ("Your
     signature tasted ★★★ this season") would make the cause and effect clearer. B9's rival
     pressure makes this more relevant.
+
+## P3 Block 09 reflection (rival Starbuck$)
+
+- **What shipped.**
+  - `src/sim/rival.ts`: a `RIVAL` tuning table (scout $5, copy after 3 days, undercut $0.50,
+    asks ×0.5 while the copy is cheaper and ×0.85 when matched, a floor at 75% of list, a menu of 3).
+  - `rivalMenu` is a pure hash of seed and day: three unlocked drinks at 85–105% of list, rounded
+    to $0.25. It never touches the RNG.
+  - `rivalMorning` runs in `startDay` after the morning notes. It copies a signature that has
+    stood for 3 days, or re-undercuts a matched copy every 3 days down to the floor. Both write a
+    morning note.
+  - `rivalAskFactor` scales the signature ask share inside the existing draw, so there's no extra
+    RNG draw.
+  - A new `scout` input works at night, for humans only, once a night, and costs $5.
+  - UI: a Starbuck$ card under the paper. It has the Scout button; once scouted, it shows the
+    menu table with our prices (theirs in red when cheaper) and an "eyeing your signature in N
+    days" line. When a knock-off is live it shows a red status line with the counter-move hints,
+    or a green one when we match it.
+  - Save v18 (no-op migration, since `rival` is optional) and protocol v21.
+- **Checks.**
+  - Four new tests (569 total): menu determinism and price bands; the copy timing, undercut and
+    floor; the ask factor, matching, and a new recipe dropping the copy; scout rules (night only,
+    once, cost, bots refused). A game with no signature has an identical state and RNG stream.
+  - Default balance is unchanged at 291.28 / 319.53 / 25.4%.
+  - The taste bot, which re-picks its best combo as the signature whenever the best combo changes
+    and so counters by accident, scores 289.08 / 323.58 / loss 28.6%. B8 was 287.30 / 321.80 /
+    28.8%.
+  - The rival didn't cost the bot anything, and it gained slightly. The likely reason is fewer
+    premium-price signature asks while its stale signature was 3★, which earns no bonus and costs
+    patience. So the rival is a mild pressure, and it bites hardest on a good signature the crew
+    leaves standing. That's the intent, but watch it in playtest; `askCut` is the lever.
+  - The 4-tab week run synced all 3 nights (see p3/b09/week.log).
+- **Deferred / watch.**
+  - Bots never scout and never deliberately counter. A price-match counter in `tasteNight` is a
+    few lines.
+  - There's no general traffic pressure. The rival only affects signature asks; its menu prices
+    are information only for now. A follow-up could shave walk-ins when our list price for a
+    drink is well above theirs.
+  - There's only one copy at a time and no escalation. Ideas: rival loyalty cards, or a rival
+    event card in the paper.
+  - The scout result lasts for that night only. There's no history of past rival menus.

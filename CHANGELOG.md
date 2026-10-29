@@ -82,6 +82,14 @@ Nothing yet.
   twist. Notebook stars from an earlier season show as ~★★★★★ in grey (and "(last season)" in the
   signature picker) until someone serves that combo again, which re-learns it and lists it on the
   receipt. Save v17 (migration), protocol v20.
+- **Rival café (P3 B9).** Starbuck$ has opened down the street. A Starbuck$ card under the paper
+  lets one barista scout it at night ($5, once a night): you see three of its drinks for tomorrow
+  with its prices next to ours, and whether it's eyeing your signature ("in 2 days"). Three days
+  after a signature goes up, Starbuck$ launches a knock-off $0.50 cheaper (never below 75% of
+  list), and only half as many walk-ins ask for yours. Counter-moves: price your signature at or
+  under the knock-off to keep 85% of the asks (Starbuck$ cuts again every three days, down to its
+  floor), or design a new signature, which it then needs another three days to copy. Copies and
+  cuts are announced in the morning notes. Save v18 (migration), protocol v21.
 
 ## 2.0.1 — 2026-10-29
 

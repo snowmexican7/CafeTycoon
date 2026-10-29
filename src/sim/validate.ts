@@ -44,6 +44,7 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       if (!Number.isInteger(input.packs) || input.packs < 1 || input.packs > MAX_PACKS) return null;
       return { kind: 'restock', playerId: input.playerId, supply: input.supply, packs: input.packs };
     case 'ready':
+    case 'scout':
     case 'reroll':
     case 'leave':
     case 'espresso':

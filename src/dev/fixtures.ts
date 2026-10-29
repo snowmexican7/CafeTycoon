@@ -196,6 +196,33 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B9: Starbuck$ scouted tonight, with a live knock-off of the signature undercutting it. */
+  rival: {
+    night: true,
+    setup(s) {
+      s.cash = 252;
+      s.day = 5;
+      s.tasteBook = {
+        [`latte:cinnamon`]: comboStars(s.seed, 'latte', 'cinnamon'),
+        [`latte:vanilla`]: comboStars(s.seed, 'latte', 'vanilla'),
+        [`espresso:seaSalt`]: comboStars(s.seed, 'espresso', 'seaSalt'),
+      };
+      s.signature = { name: 'Midnight Cinnamon', drink: 'latte', twist: 'cinnamon', premium: 3, since: 1 };
+      s.rival = { scouted: 5, copy: { drink: 'latte', twist: 'cinnamon', since: 1, price: 5.75, day: 4 } };
+      s.today = { day: 4, served: 25, lost: 2, turnedAway: 0, sales: 133, tips: 22.1, rent: 25, sigServed: 3, sigStarSum: 3, sigBonus: 2.25 };
+    },
+    timeline: [],
+  },
+  /** P3 B9: the rival card before scouting (the Scout button), signature set two days ago. */
+  rivalScout: {
+    night: true,
+    setup(s) {
+      s.cash = 180;
+      s.day = 3;
+      s.signature = { name: 'Honey Haze', drink: 'latte', twist: 'honey', premium: 2, since: 2 };
+    },
+    timeline: [],
+  },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */
