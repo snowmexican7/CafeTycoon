@@ -1,6 +1,7 @@
 import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
-import { canMake, growthMorning, stationsFor } from './growth';
+import { canMake, growthMorning } from './growth';
+import { defaultSlots, stationsFromSlots } from './slots';
 import { secondsToTicks } from './constants';
 import { rngInt, seedRng } from './rng';
 import { SCENARIOS } from '../data/scenarios';
@@ -91,7 +92,9 @@ export function createRun(opts: CreateRunOptions): GameState {
     boughtTonight: [],
     ready: [],
     players,
-    stations: stationsFor(opts.tier),
+    slots: defaultSlots(opts.tier),
+    equipment: [],
+    stations: stationsFromSlots(opts.tier, defaultSlots(opts.tier)),
     ...(opts.tier && opts.tier !== 'cafe' ? { tier: opts.tier } : {}),
     customers: [],
     nextCustomerId: 1,

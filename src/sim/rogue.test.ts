@@ -5,7 +5,9 @@ import { finishDay } from './closing';
 import { serveCustomer, stepCustomers } from './customers';
 import { ROGUE_REVIEW } from './describe';
 import { findPath, nodeOf, targetNodes } from './bots/path';
-import { isFreeForRogue } from './rogue';
+import { isFreeForRogue, pickStation } from './rogue';
+import { stationsFromSlots } from './slots';
+import { tierOf } from './growth';
 import { secondsToTicks } from './constants';
 import { createRun, startDay } from './run';
 import { step } from './step';
@@ -569,5 +571,40 @@ describe('bots and the rogue', () => {
       y = step(y, []);
     }
     expect(y).toEqual(x);
+  });
+});
+
+describe('the rogue with duplicate stations', () => {
+  const twin = (): GameState => {
+    const s = rogueCafe(2);
+    s.slots![5] = 'espresso';
+    s.stations = stationsFromSlots(tierOf(s), s.slots!);
+    return s;
+  };
+
+  it('picks espresso-2 when espresso is occupied', () => {
+    const s = twin();
+    const from = LAYOUT.rogueStart;
+    expect(pickStation(s, from, 'espresso', null)?.id).toBe('espresso');
+    s.stations.find((st) => st.id === 'espresso')!.occupiedBy = 5;
+    expect(pickStation(s, from, 'espresso', null)?.id).toBe('espresso-2');
+    // Excluded (a player blocked it) works the same way.
+    s.stations.find((st) => st.id === 'espresso')!.occupiedBy = null;
+    expect(pickStation(s, from, 'espresso', 'espresso')?.id).toBe('espresso-2');
+  });
+
+  it('prefers the nearer free station of the drink\'s kind', () => {
+    const s = twin();
+    expect(pickStation(s, { x: 10, y: 3 }, 'espresso', null)?.id).toBe('espresso-2');
+  });
+
+  it('own kind missing: the nearest free recipe station', () => {
+    const s = rogueCafe(2);
+    s.slots![s.slots!.indexOf('steamer')] = null;
+    s.stations = stationsFromSlots(tierOf(s), s.slots!);
+    const from = LAYOUT.rogueStart;
+    const free = s.stations.filter((st) => isFreeForRogue(s, st, from));
+    const nearest = free.reduce((a, b) => (Math.hypot(b.pos.x - from.x, b.pos.y - from.y) < Math.hypot(a.pos.x - from.x, a.pos.y - from.y) ? b : a));
+    expect(pickStation(s, from, 'latte', null)?.id).toBe(nearest.id);
   });
 });

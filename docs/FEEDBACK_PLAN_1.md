@@ -1,6 +1,7 @@
 # Feedback plan 1: Kennedy's first Phase 3 playtest (2026-10-29)
 
-> Local planning doc, not committed. Live build audited: `main` @ `e276359` (deployed by
+> Written by the Video Game Designer agent as a local planning doc; committed to `fb1` on
+> 2026-10-29 so both lanes read the same copy. Live build audited: `main` @ `e276359` (deployed by
 > "Test, build, deploy" at 9:06 AM EDT), played at **1512×982** (14-inch MacBook). Screenshots and
 > the capture log are in `/workspace/overnight/feedback1/` (script: `overnight/pw/live1512.mjs`).
 
@@ -203,73 +204,7 @@ Kennedy's approved ideas; those live only in `docs/PHASE3_PLAN.md`. WP0 fixes bo
 5. **Needs people:** a game night with telemetry read by the analysis agent (P1/P2 "done when").
 
 ## 6. Ready-to-paste Claude prompt
-See the REPORT; the same text is kept below.
-
-```text
-You are working on CafeTycoon (TypeScript, Vite, Vitest, Pixi, Trystero; host-authoritative,
-deterministic sim). Repo: snowmexican7/CafeTycoon. Read docs/FEEDBACK_PLAN_1.md (sections 1, 3, 4)
-and docs/PHASE3_PLAN.md before you start.
-
-END GOAL
-Kennedy playtested the live Phase 3 build and found nights unreadable and too short, no way to end
-a dead day, rush hour "firing" while sold out, and fixed station layouts. You own the simulation
-side of the fix, so the UI lane can build on stable, tested selectors. Deliver, in this order, each
-on its own branch cut from the `fb1` integration branch, merged into `fb1` with --no-ff and tagged:
-  1. fb1/sim-day   (tag fb1-wp34): WP3 close-early input + closeEarlyState(state) selector;
-                   WP4 sold-out walk-ups (today.soldOutWalkouts), morning-note line.
-  2. fb1/sim-night (tag fb1-wp1s): relaxed/untimed night (nightLengthSec 0 = open when all
-                   connected humans are ready; 30 s "last call" once more than half are ready),
-                   default night 120 s, and nightBrief(state) -> { profit, headline,
-                   alerts: { kind, severity, text, fix?: Input }[] }.
-  3. fb1/sim-slots (tag fb1-wp5s): station slots (stand 4 / cart 5 / cafe 6), state.slots +
-                   state.equipment, 'slot' night input, second espresso machine and second grinder
-                   cards, no-bin = drops make a floor mess, hasStation/unlockedDrinks read
-                   state.stations, bots handle duplicate stations.
-  4. fb1/sim-bots  (tag fb1-wp6): a 'hurried' bot personality, and src/sim/bots/planner.ts
-                   planNight(state): Advice[] that uses grow, checkout, slots, twists, signature,
-                   scouting/rival counters, per-drink pricing and restocks; a --policy planner
-                   in scripts/balance.ts; advice is suggestions only (bots still never spend in a
-                   real game).
-The exact shapes are in docs/FEEDBACK_PLAN_1.md section 4; adjust them if you find a better one,
-but write the final shape at the top of each selector file and in the commit message, because
-the UI is built against it.
-
-YOUR FREEDOM
-- Within src/sim (including src/sim/bots), src/net, src/host, src/storage, src/data and scripts/
-  you decide the design, names, tuning numbers and test strategy.
-- You may add pure selectors and types under src/sim for the UI to consume.
-- You may change card data and copy in src/data (keep the cozy, slightly silly tone).
-- Leave anything big or off-goal as a dated note in docs/BACKLOG.md.
-
-RULES
-- Deterministic sim: RNG only from state (no Math.random, Date, or unordered iteration in src/sim).
-  Café runs that don't use a new feature keep an identical RNG stream; add a test proving it.
-- Bump SNAPSHOT_VERSION with a migration (old saves load, a test calls migrateSnapshot) and
-  PROTOCOL_VERSION whenever a snapshot or input shape changes. Trystero action names stay <= 12 bytes.
-- New inputs: validated in validate.ts, humans only, refused in the wrong phase, with tests.
-- Green before every merge: npx vitest run, npx tsc --noEmit -p ., npm run build; plus
-  npx tsx scripts/balance.ts --weeks 40 --policy smart --summary (and taste, plus planner once it
-  exists). Record before/after numbers in a "## FB1 WPn reflection" section in docs/BACKLOG.md and
-  player-facing lines under "Unreleased" in CHANGELOG.md.
-- Commit and push at every milestone. Never force-push or rewrite history. If a push is blocked,
-  retry once, then carry on locally and say so.
-- No GitHub issues, labels, PRs or releases. Never merge to main; Kennedy merges fb1 -> main.
-
-DO NOT TOUCH
-- src/ui, src/render, src/audio, src/ui/styles, src/main.ts, src/ui/viewModels.ts, index.html,
-  public/. That is the UI lane (the Video Game Designer agent). If you need a button to test something, use
-  the window.cafetycoon dev hook or a sim test, not UI code. If a UI file must change for your code
-  to compile (for example an exhaustive switch over Input kinds), make the smallest possible edit
-  and list it in your report.
-- Do not rename existing selectors or view-model inputs the UI already uses without a shim.
-
-WHAT THE UI LANE DOES AFTER YOU (so you don't)
-- The hold-to-close button, sold-out bubbles and stamps, the rush "sold out" banner, the redesigned
-  three-tab night (Tonight / Menu / Spend), big drink cards, the type scale, the night-length
-  choice in the lobby, the ready strip, the slots strip, rendering duplicate or empty stations,
-  crew-tip chips, and fixing any UI fallout from your shape changes.
-
-REPORT when done (times in EDT): per package, the branch, merge hash, tag, what shipped, the final
-selector/input shapes, tests (count), balance before/after, version numbers, any UI file you
-touched, and open questions for the UI lane.
-```
+The brief handed to Claude on 2026-10-29 (the same text was in the designer agent's REPORT) is
+summarised in section 4 above: four sim packages, `fb1/sim-day` (tag `fb1-wp34`), `fb1/sim-night`
+(`fb1-wp1s`), `fb1/sim-slots` (`fb1-wp5s`), `fb1/sim-bots` (`fb1-wp6`), each cut from `fb1`,
+merged with `--no-ff`, pushed at every milestone, never merged to `main`.

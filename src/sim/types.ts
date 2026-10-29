@@ -16,7 +16,7 @@ export type Rarity = 'common' | 'uncommon' | 'rare';
 export type Pace = 1 | 2 | 3 | 4 | 5;
 export type EventKind = 'rushHour' | 'powerFlicker' | 'influencerVisit' | 'healthInspector';
 export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer';
-export type Personality = 'rookie' | 'steady' | 'veteran' | 'human'; // 'human' = tester stand-in
+export type Personality = 'rookie' | 'steady' | 'veteran' | 'hurried' | 'human'; // 'human' = tester stand-in
 export type BotSkill = 1 | 2 | 3 | 4 | 5;
 export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash';
 
@@ -33,7 +33,8 @@ export interface Rogue {
   customerId: number; name?: string; drink: DrinkId; stage: RogueStage;
   pos: Vec2; path: Vec2[]; station: string | null; ticksLeft: number; waitTicks: number;
 }
-export type FloorAction = 'takeMop' | 'clean' | 'returnMop';
+/** Mop steps (takeMop, clean, returnMop), and `drop`: put what is in hand on the floor (no bin in the shop). */
+export type FloorAction = 'takeMop' | 'clean' | 'returnMop' | 'drop';
 export type BotStep = { kind: 'use'; station: string; action: BotAction } | { kind: 'idle'; node: Vec2 }
   | { kind: 'floor'; node: Vec2; action: FloorAction };
 
@@ -435,6 +436,10 @@ export interface GameState {
   tier?: TierId;
   /** P3 B13: each time the crew grew the shop this run (the tier grown into, the coming day, who did it). */
   tierLog?: { tier: TierId; day: number; by: string }[];
+  /** FB1 WP5: what stands in each back-bar slot, left to right (absent = the tier's defaults; see sim/slots.ts). */
+  slots?: (StationKind | null)[];
+  /** FB1 WP5: stations the crew owns but has not placed (absent = none). */
+  equipment?: StationKind[];
   /** P3 B11: the latest pitch to the panel (it applies on its `day` when green-lit). */
   pitch?: PitchResult;
   eventSchedule: ScheduledEvent[];

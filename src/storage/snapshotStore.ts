@@ -1,6 +1,7 @@
 import { DRINK_IDS, dayUnlocks } from '../data/drinks';
 import type { GameState } from '../sim/types';
 import { forecastFor } from '../sim/forecast';
+import { defaultSlots } from '../sim/slots';
 import { readJson, type StorageLike } from './storageLike';
 
 const KEY = 'cafetycoon.run';
@@ -9,7 +10,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 22;
+export const SNAPSHOT_VERSION = 25;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -84,6 +85,15 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   // P3 B13: the growth path. Every run before it was the full café (its stations and floor already match).
   21: (s) => {
     s.tier ??= 'cafe';
+  },
+  // filled by fb1-sim-day / fb1-sim-night; replaced at rebase
+  22: () => {},
+  // filled by fb1-sim-day / fb1-sim-night; replaced at rebase
+  23: () => {},
+  // FB1 WP5: station slots. Every older run has its tier's default stations, so its slots are the defaults and nothing is spare.
+  24: (s) => {
+    s.slots ??= defaultSlots(s.tier);
+    s.equipment ??= [];
   },
 };
 

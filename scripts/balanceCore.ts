@@ -1,6 +1,7 @@
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../src/sim/checkout';
 import type { CheckoutId } from '../src/sim/types';
-import { nextTier, stationsFor, TIERS } from '../src/sim/growth';
+import { nextTier, TIERS } from '../src/sim/growth';
+import { growSlots } from '../src/sim/slots';
 import { layoutFor } from '../src/data/layout';
 import { ADS } from '../src/sim/ads';
 import { judgePitch } from '../src/sim/pitch';
@@ -68,7 +69,7 @@ export const USAGE = `Usage: npm run balance -- [options]
   --weeks N          weeks to play, each an independent run (1-1000, default 10)
   --seed N           seed of the first week; week i uses seed+i (default 1)
   --humans N         stand-in human baristas (0-4, default 2)
-  --bots N           ordinary bots (0-3, default 1); humans + bots <= 4
+  --bots N           ordinary bots (0-4, default 1); humans + bots <= 4
   --skill N          bot skill 1-5 (default 3)
   --pace N           pace 1-5 (default 3)
   --scenario ID      random | ${SCENARIO_IDS.join(' | ')} (default random)
@@ -310,9 +311,9 @@ export function growNight(state: GameState): void {
   const next = nextTier(state);
   if (!next || state.cash < TIERS[next].cost + 60) return;
   state.cash = Math.round((state.cash - TIERS[next].cost) * 100) / 100;
+  growSlots(state, state.tier, next);
   state.tier = next;
   state.tierLog = [...(state.tierLog ?? []), { tier: next, day: state.day, by: 'tester' }];
-  state.stations = stationsFor(next);
   state.mop = { pos: { ...layoutFor(next).mopHome }, heldBy: null };
 }
 

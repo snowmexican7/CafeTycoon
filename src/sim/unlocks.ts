@@ -27,10 +27,10 @@ export function unlockForDay(state: GameState): DrinkId[] {
   return fresh;
 }
 
-/** Drinks the café knows how to make (old saves without the field: the classics); P3 B13: only those the shop has the stations for. */
+/** Drinks the café knows how to make (old saves without the field: the classics); P3 B13: only those the shop has the stations for (FB1 WP5: at every tier, read from the floor). */
 export function unlockedDrinks(state: GameState): DrinkId[] {
   const known = state.unlocked ?? [...BASE_DRINKS];
-  return state.tier === undefined || state.tier === 'cafe' ? known : known.filter((d) => canMake(state, d));
+  return known.filter((d) => canMake(state, d));
 }
 
 /** Known drinks that are switched on tonight. */

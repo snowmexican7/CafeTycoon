@@ -4,6 +4,8 @@ import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from './constants';
 import { ESPRESSO, canDrinkEspresso, espressoSpeed, settleEspresso } from './espresso';
 import { createRun } from './run';
+import { stationsFromSlots } from './slots';
+import { tierOf } from './growth';
 import { step } from './step';
 import type { GameState, PlayerInput } from './types';
 
@@ -30,6 +32,16 @@ const drinks = (s: GameState, n: number) => {
 };
 
 describe('espresso easter egg', () => {
+  it('works at any espresso machine, not only the first', () => {
+    const s = atMachine();
+    s.slots![5] = 'espresso';
+    s.stations = stationsFromSlots(tierOf(s), s.slots!);
+    p1(s).pos = { x: 11, y: 2 };
+    expect(canDrinkEspresso(s, p1(s))).toBe(true);
+    p1(s).pos = { x: 6, y: 4 };
+    expect(canDrinkEspresso(s, p1(s))).toBe(false);
+  });
+
   it('only works near the espresso machine, during the day, for people', () => {
     let s = createRun(opts);
     expect(canDrinkEspresso(s, p1(s))).toBe(false); // night
@@ -116,7 +128,7 @@ describe('espresso easter egg', () => {
   it('a bot covers the station when the crew has room', () => {
     let s = drinks(atMachine({ bots: 'auto' }), 6);
     const bots = s.players.filter((p) => p.bot).length;
-    expect(bots).toBe(ECONOMY.bots.names.length - 1); // two humans, one out
+    expect(bots).toBe(ECONOMY.bots.autoCrew - 1); // two humans, one out
     s = ticks(s, s.phaseTicksLeft + ECONOMY.closingGraceSeconds * TICK_RATE + 2);
     expect(s.phase).toBe('night');
     s = ticks(s, s.phaseTicksLeft);

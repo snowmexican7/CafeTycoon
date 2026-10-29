@@ -83,6 +83,7 @@ export const ECONOMY = {
       rookie: { speed: 1.1, reaction: 0.8, mistake: 0.12, preps: false },
       steady: { speed: 1.0, reaction: 1.0, mistake: 0.06, preps: true },
       veteran: { speed: 0.9, reaction: 1.3, mistake: 0.02, preps: true },
+      hurried: { speed: 1.15, reaction: 0.85, mistake: 0.08, preps: false },
       human: { speed: 1, reaction: 0, mistake: 0, preps: true },
     },
     skill: {
@@ -90,7 +91,9 @@ export const ECONOMY = {
       mistake: [2.0, 1.5, 1.0, 0.7, 0.4],
       speed: [0.85, 0.92, 1.0, 1.05, 1.1],
     },
-    names: ['Bo', 'Lu', 'Mo'],
+    names: ['Bo', 'Lu', 'Mo', 'Zip'],
+    autoCrew: 3, // 'auto' tops the café up to this many baristas (the roster has a fourth for explicit requests)
+    hurriedQueue: 3, // a hurried bot pulls a nearly-done cup early once this many customers wait
     /** The agency temp from the hire-temp card (B6). */
     tempName: 'Robin (temp)',
     maxWaitTicks: 900, // above a rogue's make (10 s) plus a power flicker (4 s)

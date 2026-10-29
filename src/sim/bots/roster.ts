@@ -4,8 +4,8 @@ import type { BotState, GameState, Personality, Player } from '../types';
 import { floorFields } from '../tiles';
 
 /** Who the bot baristas are: their ids, names, personalities, and how many the café wants. */
-export const BOT_IDS = ['bot-1', 'bot-2', 'bot-3'];
-export const BOT_PERSONALITIES: Personality[] = ['steady', 'rookie', 'veteran'];
+export const BOT_IDS = ['bot-1', 'bot-2', 'bot-3', 'bot-4'];
+export const BOT_PERSONALITIES: Personality[] = ['steady', 'hurried', 'rookie', 'veteran'];
 const MAX_BARISTAS = LAYOUT.spawnPoints.length; // four: one spawn point per barista
 
 export function isBot(p: Player): boolean {
@@ -36,7 +36,7 @@ export function wantedBots(state: GameState): number {
 
 /** How many bots clock in for a bots setting and crew size: 'auto' fills to three baristas; a number never overfills the four spots. */
 export function botsFor(n: GameState['settings']['bots'], humans: number): number {
-  const wanted = n === 'auto' ? ECONOMY.bots.names.length - humans : Math.min(n, MAX_BARISTAS - humans, ECONOMY.bots.names.length);
+  const wanted = n === 'auto' ? ECONOMY.bots.autoCrew - humans : Math.min(n, MAX_BARISTAS - humans, ECONOMY.bots.names.length);
   return Math.max(0, wanted);
 }
 
