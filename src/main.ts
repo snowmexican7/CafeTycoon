@@ -416,8 +416,12 @@ async function main(): Promise<void> {
   function frame(): void {
     requestAnimationFrame(frame); // re-arm first so a bad frame can never stop rendering for good
     const now = performance.now();
-    if (lastFrameAt !== null && now - lastFrameAt > 250) uiTelemetry.ui('frame.long', { ms: Math.round(now - lastFrameAt) });
-    lastFrameAt = now;
+    // A background tab's frames are throttled, not slow: skip the measurement and start over on return.
+    if (document.hidden) lastFrameAt = null;
+    else {
+      if (lastFrameAt !== null && now - lastFrameAt > 250) uiTelemetry.ui('frame.long', { ms: Math.round(now - lastFrameAt) });
+      lastFrameAt = now;
+    }
     try {
       drawAndSend();
     } catch (err) {
