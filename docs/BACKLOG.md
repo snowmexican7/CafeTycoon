@@ -201,3 +201,17 @@ The data exists; the visuals are the UI agent's.
 - the occupied-station tell (`Station.occupiedBy`)
 - the review in the morning notes
 - the receipt's `rogues` line
+
+## Chaos pack open items
+
+- **Mopping under traffic (tuning question).** Bots only mop when no order is waiting, so on a busy floor they rarely get to it: with 2 bots on day 2, 9 of 16 seeds produced a bot clean in 4000 ticks, and a floor nobody mops hits cleanliness ~11 within a minute. Candidate tweaks: allow `shouldMop` when `cleanliness < inspectorMin` even with orders waiting, or whenever the queue is ≤ 1.
+- **The tester has no chaos columns.** Add rogues, messes, cleanliness and cleans to its output.
+- **Host tip (game night).** Until the UI draws piles on stations, a bot standing idle with an order waiting may mean grounds parked in a machine. Fixed in the sim (bots no longer count stray grounds as a shot and bin them); kept here for the record.
+
+Deferred minors:
+- Drop logs (`drop` events) carry no player id.
+- Mop logging differs between a holder leaving and a stale holder being cleared.
+- `idleNode` may pick a spill tile.
+- The spill-avoiding path search runs twice when nobody is near (the "around people" pass adds nothing).
+- Determinism tests compare whole states with `toEqual`.
+- The mop corner sits in the queue column (layout/visual note).

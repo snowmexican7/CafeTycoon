@@ -86,17 +86,16 @@ export function stepCleaning(state: GameState): void {
 
   for (const p of state.players) {
     if (p.cleaningTicksLeft === 0) continue;
-    if (p.stunTicksLeft > 0 || p.tool !== 'mop' || p.moveDir.x !== 0 || p.moveDir.y !== 0) {
+    const mess = state.messes.find((m) => m.id === p.cleaningMess);
+    // A stun, moving, losing the mop, or the mess already gone (another mop got there first) cancels it.
+    if (p.stunTicksLeft > 0 || p.tool !== 'mop' || p.moveDir.x !== 0 || p.moveDir.y !== 0 || !mess) {
       stopCleaning(p);
       continue;
     }
     p.cleaningTicksLeft -= 1;
     if (p.cleaningTicksLeft > 0) continue;
-    const mess = state.messes.find((m) => m.id === p.cleaningMess);
-    if (mess) {
-      state.messes = state.messes.filter((m) => m !== mess);
-      emitLog(state, 'clean', { player: p.id, x: mess.x, y: mess.y });
-    }
+    state.messes = state.messes.filter((m) => m !== mess);
+    emitLog(state, 'clean', { player: p.id, x: mess.x, y: mess.y });
     p.cleaningMess = null;
   }
 }

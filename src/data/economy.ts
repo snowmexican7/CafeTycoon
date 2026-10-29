@@ -80,7 +80,7 @@ export const ECONOMY = {
       speed: [0.85, 0.92, 1.0, 1.05, 1.1],
     },
     names: ['Bo', 'Lu', 'Mo'],
-    maxWaitTicks: 600,
+    maxWaitTicks: 900, // above a rogue's make (10 s) plus a power flicker (4 s)
     prepColdBrews: 2, // prepping bots keep at most this many cold brews ahead (pass + hands + tap)
     arriveRadius: 0.08,
   },

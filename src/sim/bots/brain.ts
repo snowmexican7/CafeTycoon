@@ -62,7 +62,8 @@ interface Coverage { drinks: Record<DrinkId, number>; pending: number }
 /**
  * Drinks already on their way: held by non-claiming players, waiting or brewing at stations (unless a
  * claiming bot is about to take them), or on the pass. A person's chain in progress counts as pending:
- * grounds they hold or in/at the grinder, and a shot they hold or in/at the espresso machine.
+ * grounds they hold or in/at the grinder, and a shot they hold or in/at the espresso machine. Grounds
+ * parked anywhere but the grinder count for nothing.
  */
 function coveragePool(state: GameState): Coverage {
   const drinks: Record<DrinkId, number> = { espresso: 0, latte: 0, coldBrew: 0 };
@@ -78,7 +79,9 @@ function coveragePool(state: GameState): Coverage {
     const brewing = st.busyTicksLeft > 0 && isRecipeKind(st.kind) ? STATION_RECIPES[st.kind].gives : null;
     for (const item of [st.output, brewing]) {
       if (item === null) continue;
-      if (st.kind === 'grinder' || st.kind === 'espresso') pending += 1;
+      // Only the machine's own product is a shot-to-be: grounds dropped on the espresso machine are not.
+      const own = isRecipeKind(st.kind) && item === STATION_RECIPES[st.kind].gives;
+      if (own && (st.kind === 'grinder' || st.kind === 'espresso')) pending += 1;
       else if (isDrink(item)) drinks[item] += 1;
     }
   }
@@ -116,7 +119,13 @@ function coldBrewsAhead(state: GameState): number {
   return onPass + held + inTap;
 }
 
-/** A drink left sitting in a machine that no other bot is already on its way to take; nearest first. */
+/** Grounds parked in a machine that does not make them (e.g. dropped there): they block it until binned. */
+const strayGrounds = (st: Station): boolean => st.kind !== 'grinder' && st.output === 'grounds';
+
+/**
+ * A drink left sitting in a machine, or stray grounds, that no other bot is already on its way to take;
+ * nearest first.
+ */
 function orphanedDrink(state: GameState, self: Player): Station | null {
   const takenBy = (st: Station) =>
     state.players.some((p) => p !== self && p.bot && isTakeAt(p.bot.plan[0], st));
@@ -124,7 +133,7 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
   const personAt = (st: Station) =>
     state.players.some((p) => !p.bot && p.connected && dist(p.pos, st.pos) <= ECONOMY.interactRangeTiles);
   const candidates = state.stations
-    .filter((st) => isRecipeKind(st.kind) && isDrink(st.output) && !takenBy(st) && !personAt(st))
+    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st)) && !takenBy(st) && !personAt(st))
     .map((st) => ({ st, d: dist(st.pos, self.pos) }))
     .sort((a, b) => a.d - b.d || a.st.pos.y - b.st.pos.y || a.st.pos.x - b.st.pos.x);
   return candidates[0]?.st ?? null;
@@ -194,7 +203,7 @@ export function think(state: GameState, p: Player): BotStep[] {
     if (state.pass.length < ECONOMY.pass.slots) return [use('counter', 'put')];
     return [use('trash', 'trash')];
   }
-  // 0b. Collect a drink left in a machine (e.g. its customer left mid-chain); rule 0 then places it.
+  // 0b. Collect a drink left in a machine (e.g. its customer left mid-chain), or stray grounds; rule 0 then places or bins it.
   const orphan = orphanedDrink(state, p);
   if (orphan) return [{ kind: 'use', station: orphan.id, action: 'take' }];
   // 1. A drink on the pass that a customer (not another bot's) is waiting for.
@@ -393,10 +402,14 @@ function planPath(state: GameState, p: Player, node: Vec2): Vec2[] | null {
   return findPath(state, p.pos, node);
 }
 
+/** A clean or returnMop step with no mop in hand (it was taken or sent home): the rest of the plan is moot. */
+const mopGone = (p: Player, step: BotStep): boolean =>
+  step.kind === 'floor' && step.action !== 'takeMop' && p.tool !== 'mop';
+
 /**
  * A floor step on arrival. takeMop: press "use" when the mop is free, in range and the hands are
- * empty, else drop the plan. clean: press "use" when a mess is in range (with the mop in hand).
- * returnMop: press R (with the mop in hand). clean and returnMop pop either way.
+ * empty, else drop the plan. clean: press "use" when a mess is in range. returnMop: press R. Without
+ * the mop, clean and returnMop drop the plan; with it they pop either way.
  */
 export function stepFloor(state: GameState, p: Player, step: Extract<BotStep, { kind: 'floor' }>): void {
   const b = p.bot!;
@@ -409,10 +422,12 @@ export function stepFloor(state: GameState, p: Player, step: Extract<BotStep, { 
     }
     case 'clean':
       // Without the mop, "use" could take a station's output instead.
-      if (p.tool === 'mop' && nearestMess(state, p.pos) !== null) p.interactQueued = true;
+      if (mopGone(p, step)) return setPlan(b, []);
+      if (nearestMess(state, p.pos) !== null) p.interactQueued = true;
       return pop(b);
     case 'returnMop':
-      if (p.tool === 'mop') p.dropQueued = true; // with empty hands R does nothing else
+      if (mopGone(p, step)) return setPlan(b, []);
+      p.dropQueued = true;
       return pop(b);
   }
 }
@@ -486,6 +501,8 @@ function stepBot(state: GameState, p: Player): void {
   if (b.plan.length === 0) return;
 
   const current = b.plan[0];
+  // Lost the mop on the way: do not walk the leftover clean nodes (and block other bots' mop plans).
+  if (mopGone(p, current)) return setPlan(b, []);
   let node: Vec2;
   let station: Station | null = null;
   let maxRank = 0;

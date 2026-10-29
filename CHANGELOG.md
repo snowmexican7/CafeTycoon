@@ -16,6 +16,13 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+_Nothing yet._
+
+## 1.1.0 — 2026-10-28
+
+Sound, an espresso dare, and a messier café. Three new keys: **M** mute, **Q** drink a shot,
+**R** drop what you're holding.
+
 - **Sound and music.** A lo-fi jazz loop plays through the day and a calmer one at night and on
   the menus, both looping without a seam. The grinder grinds, the espresso machine pulls, milk
   steams, cold brew pours, cups clink down, the register chings with tips, the door bell rings
