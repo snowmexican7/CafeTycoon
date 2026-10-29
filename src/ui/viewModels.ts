@@ -45,8 +45,9 @@ function espressoLines(d: DayStats): { ambulance?: string; tabPaid?: string } {
   return { ...(d.ambulance ? { ambulance: money(d.ambulance) } : {}), ...(d.debtPaid ? { tabPaid: money(d.debtPaid) } : {}) };
 }
 
-function profitOf(d: DayStats): number {
-  return Math.round((d.sales + d.tips - d.rent) * 100) / 100;
+/** The day's net: everything that moved the till during the day (sales, tips, bonuses, minus rent, fines and tab paid). */
+export function profitOf(d: DayStats): number {
+  return Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0)) * 100) / 100;
 }
 
 export interface HudVM {
@@ -179,7 +180,7 @@ export interface HandCardVM {
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -195,7 +196,10 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   const last = state.days[state.days.length - 1];
   const takings =
     state.days.length > 0 && state.days.length === state.day - 1
-      ? { sales: money(last.sales), tips: money(last.tips), rent: money(last.rent), profit: money(profitOf(last)), ...espressoLines(last) }
+      ? {
+          sales: money(last.sales), tips: money(last.tips), rent: money(last.rent), profit: money(profitOf(last)), ...espressoLines(last),
+          ...(last.fines ? { fines: money(last.fines) } : {}), ...(last.bonus ? { bonus: money(last.bonus) } : {}),
+        }
       : null;
   return {
     clock: clockFor(state.phaseTicksLeft),

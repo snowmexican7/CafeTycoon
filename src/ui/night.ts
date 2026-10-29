@@ -131,6 +131,8 @@ export function createNight(
            <div class="line"><span>Sales</span><span>${esc(t.sales)}</span></div>
            <div class="line"><span>Tips</span><span>${esc(t.tips)}</span></div>
            <div class="line"><span>Rent</span><span class="neg">−${esc(t.rent)}</span></div>
+           ${t.bonus ? `<div class="line"><span>Bonuses</span><span class="pos">+${esc(t.bonus)}</span></div>` : ''}
+           ${t.fines ? `<div class="line"><span>Fines</span><span class="neg">−${esc(t.fines)}</span></div>` : ''}
            ${t.tabPaid ? `<div class="line"><span>Hospital tab paid</span><span class="neg">−${esc(t.tabPaid)}</span></div>` : ''}
            ${t.ambulance ? `<div class="line ambulance"><span>Ambulance ride. Worth it?</span><span class="neg">−${esc(t.ambulance)}</span></div>` : ''}
            <div class="line total ${t.profit.startsWith('-') ? 'loss' : ''}"><span>Profit</span><span>${t.profit.startsWith('-') ? esc(t.profit) : `+${esc(t.profit)}`}</span></div>

@@ -301,3 +301,12 @@ describe('event receipt lines (Block 2)', () => {
     for (const k of ['events', 'inspection', 'fines', 'bonus']) expect(k in vm, k).toBe(false);
   });
 });
+
+describe('the receipt adds up (fines and bonuses in the net)', () => {
+  it('profitOf includes the influencer bonus, inspector fines and hospital tab paid', async () => {
+    const { profitOf } = await import('./viewModels');
+    const d = { day: 2, served: 5, lost: 0, turnedAway: 0, sales: 30, tips: 5, rent: 25, fines: 15, bonus: 10, debtPaid: 2 };
+    expect(profitOf(d)).toBe(3);
+    expect(profitOf({ ...d, fines: undefined, bonus: undefined, debtPaid: undefined })).toBe(10);
+  });
+});
