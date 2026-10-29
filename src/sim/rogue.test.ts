@@ -431,11 +431,13 @@ describe('bots and the rogue', () => {
     const served = s.today.served;
     let waited = false;
     let claimed = false;
+    let trashed = false; // the log is pruned each tick, so watch it as we go
     const limit = 600 + ECONOMY.bots.maxWaitTicks;
     for (let i = 0; i < limit && s.customers.some((c) => c.id === 900); i++) {
       const held = botOf(s).holding;
       const occupied = station(s, 'espresso').occupiedBy !== null;
       s = step(s, []);
+      if (s.log.some((x) => x.kind === 'trash')) trashed = true;
       const e = station(s, 'espresso');
       if (occupied && e.occupiedBy !== null) {
         // No insert while the rogue is at the machine, and the grounds stay in hand.
@@ -448,7 +450,7 @@ describe('bots and the rogue', () => {
     }
     expect(claimed).toBe(true);
     expect(waited).toBe(true);
-    expect(s.log.some((e) => e.kind === 'trash')).toBe(false);
+    expect(trashed).toBe(false);
     expect(s.customers.some((c) => c.id === 900)).toBe(false);
     expect(s.today.served).toBe(served + 1);
     expect(station(s, 'espresso').occupiedBy).toBeNull();
@@ -520,9 +522,11 @@ describe('bots and the rogue', () => {
       { kind: 'use', station: 'espresso', action: 'take' },
       { kind: 'use', station: 'counter', action: 'serve' },
     ];
+    let trashed = false; // the log is pruned each tick, so watch it as we go
     let occupiedTicks = 0;
     while (station(s, 'espresso').occupiedBy !== null) {
       s = step(s, []);
+      if (s.log.some((x) => x.kind === 'trash')) trashed = true;
       occupiedTicks += 1;
       expect(occupiedTicks).toBeLessThan(ECONOMY.bots.maxWaitTicks + 60);
       expect(botOf(s).bot!.claim).toBe(900);
@@ -530,9 +534,10 @@ describe('bots and the rogue', () => {
     }
     expect(occupiedTicks).toBeGreaterThan(make); // the flicker stretched the occupancy past the make
     const served = s.today.served;
+    seen.clear();
     s = runUntil(s, (t) => !t.customers.some((c) => c.id === 900), 900);
     expect(s.today.served).toBe(served + 1);
-    expect(s.log.some((e) => e.kind === 'trash')).toBe(false);
+    expect(trashed || seen.has('trash')).toBe(false);
   });
 
   it('a day with a rogue is deterministic and JSON-safe', () => {
