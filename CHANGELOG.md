@@ -58,6 +58,14 @@ Nothing yet.
   (★★☆), and the night receipt shows "Cups ★avg · N perfect"; a day averaging under 3 stars
   costs up to 0.45 rating at closing. The hand hint warns before a rush, a sat drink or a fumble.
   Save v14 (migration), protocol v17.
+- **Taste map (P3 B6).** At night, each drink on the menu board has a row of house twists
+  (cinnamon, vanilla, sea salt, honey, oat milk, or plain). Every run hides a different star
+  rating for each drink+twist pair, from the run seed: each drink has exactly one 5★ combo and one
+  1★ flop. You only learn a combo's stars by serving it, and from then on the chip shows them, so
+  the board doubles as the crew's taste notebook. A twisted cup costs $0.20; the combo's stars scale
+  the tip (1★ ×0.7 … 5★ ×1.4) and nudge the closing rating (±0.004 per cup per star from 3, capped at
+  ±0.25 a day). The served toast names the twist ("· new: vanilla ★★★★★"), and the receipt lists
+  new combos and the twist spend, which profit now includes. Save v15 (migration), protocol v18.
 
 ## 2.0.1 — 2026-10-29
 
