@@ -1,3 +1,4 @@
+import type { TwistId } from './taste';
 import type { RoleId } from './roles';
 import type { EggsState } from './eggs';
 import type { EspressoState } from './espresso';
@@ -305,6 +306,10 @@ export interface DayStats {
   cups?: number;
   cupStars?: number;
   perfectCups?: number;
+  /** P3 B6: combos discovered today, the day's summed (stars − 3) over twisted cups, and twist cost. */
+  combosFound?: string[];
+  comboStarSum?: number;
+  twistCost?: number;
   /** Challenge tip paid at closing (folded into bonus too). */
   challengeBonus?: number;
   /** Challenge ids won today. */
@@ -344,6 +349,9 @@ export interface GameState {
   menu: Record<DrinkId, boolean>;
   /** Phase 3 B2: price steps per drink ($0.25 each); absent or 0 = list price. */
   priceSteps?: Partial<Record<DrinkId, number>>;
+  /** P3 B6: tonight's house twist per drink, and the combos discovered so far ("drink:twist" -> stars). */
+  twists?: Partial<Record<DrinkId, TwistId>>;
+  tasteBook?: Record<string, number>;
   eventSchedule: ScheduledEvent[];
   events: ActiveEvent[];
   regulars: Regular[];
@@ -385,6 +393,7 @@ export type PlayerInput =
   | { kind: 'weekEnd'; playerId: PlayerId; choice: 'stop' | 'continue' }
   | { kind: 'menu'; playerId: PlayerId; drink: DrinkId; on: boolean }
   | { kind: 'price'; playerId: PlayerId; drink: DrinkId; step: number }
+  | { kind: 'twist'; playerId: PlayerId; drink: DrinkId; twist: TwistId | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
   | { kind: 'espresso'; playerId: PlayerId }

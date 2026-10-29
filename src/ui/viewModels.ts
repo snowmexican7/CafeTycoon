@@ -1,3 +1,4 @@
+import { knownStars, TWISTS, type TwistId } from '../sim/taste';
 import { accuracyRating } from '../sim/accuracy';
 import { PRICING, menuPrice, priceForecast, priceTraffic } from '../sim/pricing';
 import { regularsViewModel, type RegularVM } from '../sim/regulars';
@@ -57,7 +58,7 @@ function espressoLines(d: DayStats): { ambulance?: string; tabPaid?: string } {
 
 /** The day's net: everything that moved the till during the day (sales, tips, bonuses, minus rent, fines and tab paid). */
 export function profitOf(d: DayStats): number {
-  return Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0)) * 100) / 100;
+  return Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0) - (d.twistCost ?? 0)) * 100) / 100;
 }
 
 export interface HudVM {
@@ -247,7 +248,7 @@ export function handCardViewModel(state: GameState, item: CatalogueItem): HandCa
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[] } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -356,6 +357,9 @@ export interface MenuLineVM {
   profit?: number;
   /** Regulars whose favourite this is (P3 B3). */
   fans?: string[];
+  /** P3 B6: tonight's twist and the taste notebook for this drink (stars, or null if not yet tried). */
+  twist?: TwistId;
+  book: { twist: TwistId; stars: number | null }[];
 }
 
 export function menuLines(state: GameState): MenuLineVM[] {
@@ -377,6 +381,8 @@ export function menuLines(state: GameState): MenuLineVM[] {
       canDown: step > PRICING.minStep,
       ...(l ? { demandPct: l.demandPct, orders: l.orders, profit: l.profit } : {}),
       ...(fans.length ? { fans } : {}),
+      ...(state.twists?.[drink] ? { twist: state.twists[drink] } : {}),
+      book: TWISTS.map((twist) => ({ twist, stars: knownStars(state, drink, twist) })),
     };
   });
 }
@@ -418,6 +424,13 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           ...(last.fines ? { fines: money(last.fines) } : {}), ...(last.bonus ? { bonus: money(last.bonus) } : {}),
           ...(last.spoiledValue ? { spoiled: money(last.spoiledValue), spoiledWhat: spoiledWhat(last.spoiled) } : {}),
           ...(last.pastries ? { pastries: last.pastries } : {}),
+          ...(last.twistCost ? { twists: money(last.twistCost) } : {}),
+          ...(last.combosFound?.length ? {
+            combos: last.combosFound.map((k) => {
+              const [drink, twist] = k.split(':') as [DrinkId, TwistId];
+              return { drink, twist, stars: state.tasteBook?.[k] ?? 0 };
+            }),
+          } : {}),
           ...(last.cups ? {
             cupStars: (last.cupStars! / last.cups).toFixed(1),
             cupsPerfect: last.perfectCups ?? 0,
