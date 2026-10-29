@@ -21,7 +21,7 @@ when a build goes out, the line moves under its version with the date.
   with how many are left. The day ends as soon as the shop is empty, or after 30 seconds, when
   any stragglers storm out.
 - **Your seat waits for you.** Close the tab by accident, open the game again, and Rejoin puts
-  you back on your own barista (with your cash, stats and spot), not a new one. The room holds
+  you back on your own barista, not a new one. The room holds
   four people; a fifth is told the café is full.
 - **Bots on or off.** The host picks Off, 1, 2 or 3 bot baristas on a card in the lobby; everyone
   else sees the choice. Bots are off by default when friends are in, and fill the empty spots
