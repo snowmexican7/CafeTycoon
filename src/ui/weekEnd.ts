@@ -67,14 +67,14 @@ export function createWeekEnd(
           </div>
           <div class="sec-h">Bought this run</div>
           <div class="items">${items}</div>
+          <div class="menu-btns row-btns">${buttons}</div>
+          <p class="hint">Seed ${vm.seed}: play it again with the same customers.</p>
           </div>
           <section class="ceremony" aria-labelledby="aw-h">
             <div class="sec-h" id="aw-h">The awards <span class="chip">${vm.lostPct} walked out</span></div>
             ${ceremonyHtml(vm.awards)}
             ${vm.awards.length ? '<button class="btn small ghost copy" data-action="copyAwards">📋 Copy awards for the group chat</button>' : ''}
           </section></div>
-          <div class="menu-btns row-btns">${buttons}</div>
-          <p class="hint">Seed ${vm.seed}: play it again with the same customers.</p>
         </div>`;
     },
     show: () => show(container),

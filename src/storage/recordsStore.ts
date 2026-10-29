@@ -4,7 +4,6 @@
  * a thin store, so the maths is testable without a browser.
  */
 import type { Award } from '../sim/awards';
-import { crewOf } from '../sim/stats';
 import type { DayStats, GameState } from '../sim/types';
 import { readJson, type StorageLike } from './storageLike';
 
@@ -47,7 +46,7 @@ export function emptyRecords(): Records {
 const dayProfit = (d: DayStats) => Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0)) * 100) / 100;
 
 export function runTotals(state: GameState): Totals {
-  const crew = crewOf(state).players;
+  const crew = state.crew?.players ?? [];
   return {
     days: state.days.length,
     served: state.days.reduce((n, d) => n + d.served, 0),

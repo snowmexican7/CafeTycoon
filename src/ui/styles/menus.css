@@ -128,16 +128,17 @@
 .menu.weekend { width: min(100%, 940px); }
 .we-cols { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 20px; align-items: start; }
 .we-main { display: flex; flex-direction: column; gap: 14px; }
+.we-main .menu-btns { margin-top: auto; }
 .ceremony { display: flex; flex-direction: column; gap: 12px; background: linear-gradient(#fbe6c8, #fff4e2 60%); border-radius: 20px; padding: 14px; box-shadow: inset 0 0 0 2px #f0d6ae; }
 .ceremony .sec-h { margin-bottom: 0; justify-content: space-between; }
 .ceremony .mvp { position: relative; display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px;
   background: linear-gradient(135deg, #ffe08a, #f6c35b 55%, #e8a93a); box-shadow: 0 4px 0 #b9651f, 0 12px 26px rgba(185, 101, 31, .35);
   animation: aw-pop .45s cubic-bezier(.2, 1.6, .4, 1) both; }
 .ceremony .mvp .crown { position: absolute; right: 14px; top: 8px; font-size: 40px; filter: drop-shadow(0 3px 0 #0002); transform: rotate(10deg); }
-.ceremony .mvp .av.big { width: 58px; height: 58px; font-size: 26px; background: var(--espresso); border-color: #fff4e2; }
+.ceremony .mvp .av.big { width: 58px; height: 58px; font-size: 26px; background: var(--espresso); color: var(--crema); border: 3px solid #fff4e2; flex: none; }
 .ceremony .mvp small { font: 700 11px var(--font-body); letter-spacing: .16em; color: #7a4a14; }
 .ceremony .mvp b { display: block; font: 700 30px/1 var(--font-display); color: var(--espresso); }
-.ceremony .mvp span { display: block; font: 700 13px var(--font-body); color: #5b3a1a; }
+.ceremony .mvp div > span { display: block; font: 700 13px var(--font-body); color: #5b3a1a; }
 .ceremony .mvp em { display: block; font: italic 600 13px var(--font-body); color: #7a4a14; margin-top: 2px; }
 .awards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .award { display: grid; grid-template-columns: 38px 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; background: #fff; border-radius: 14px; padding: 8px 10px;
@@ -170,6 +171,7 @@
 .rec-tot b { font-family: var(--font-display); }
 .hall { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .hall li { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 12px; padding: 6px 10px; box-shadow: var(--sh-1); font: 700 14px var(--font-display); }
-.hall li .av { background: var(--roast); } .hall li span.n { margin-left: auto; font: 700 12px var(--font-body); color: var(--ink-soft); }
+.hall li .av { background: var(--roast); color: var(--crema); } .hall li span.n { margin-left: auto; font: 700 12px var(--font-body); color: var(--ink-soft); }
 @media (max-width: 640px) { .rec-grid { grid-template-columns: 1fr 1fr; } }
-.recbtn { position: fixed; top: 24px; left: 24px; z-index: 3; }
+.recbtn { position: fixed; top: 24px; right: 252px; z-index: 3; }
+@media (max-width: 720px) { .recbtn { top: auto; bottom: 16px; right: 16px; } }
