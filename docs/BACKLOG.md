@@ -856,3 +856,27 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
     its depth.
   - The night's left column is getting long (Restock, Roles, Menu board). A tabbed or two-column
     layout is worth doing before B7's menu designer.
+
+## P3 Block 03 reflection (regulars with favourites)
+
+- **What shipped.** `src/sim/regulars.ts`: loyalty from 0 to 5 hearts on each regular.
+  - A fair serve earns +1 heart (fair means at most 6% over list, so one $0.25 step on a $4+ drink).
+  - Each heart adds 8% to the regular's tip.
+  - A gouge (half tip at 25% over) costs a heart, and so does a storm-out or the favourite being
+    off the menu at close.
+  - The night screen shows a Regulars board with hearts and an off/pricey warning, and the menu
+    lines show "♥ Ada" on that regular's favourite.
+  - Save v12, protocol v15.
+- **Checks.** Four new tests (loyalty cap and the tip it pays; gouge and the fair edge; storm-outs
+  and off-menu days; the night VM and fans): 539 in total. Balance sim over 10 seeds: mean final
+  cash 291.59 → 283.62, loss rate 27.2% → 27.5%, 0 bankruptcies in both. That is within seed
+  noise; the change is the tip, which moves cash, so the bots' later buys diverge.
+- **What went well.** Pricing (B2) and the regulars now pull against each other: raising the
+  latte costs June's hearts. That is the "choices over repetition" Kennedy asked for.
+- **What to watch / deferred.**
+  - Hearts never make a regular leave for good. A "lost regular" at 0 hearts after N misses
+    could raise the stakes, but it's a balance question for the integration block.
+  - Regulars are still immune to the B2 demand curve: they come for the favourite anyway. That's
+    intended, but it's worth saying so in the PLAYTEST_GUIDE.
+  - The night left column now has Restock, Roles, Regulars and Menu board. It needs the
+    two-column or tabbed layout soon (noted under B2).

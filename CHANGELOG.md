@@ -34,6 +34,12 @@ Nothing yet.
   Each line shows tomorrow's expected orders, the change against list price and the profit before
   tips. A total line sums the menu, and the newspaper's walk-in count follows the prices. Save
   version 11, network protocol 14.
+- **Regulars with favourites (P3 B3).** Each regular comes back for one favourite drink and has
+  loyalty (0–5 hearts). A fair-priced serve earns a heart (up to 6% over list counts as fair);
+  every heart adds 8% to their tip. Overcharging cuts the tip (to half at 25% over) and costs a
+  heart, and so does a regular storming out or their favourite being off the menu for a day. The
+  night screen lists the regulars with their hearts and a warning when their favourite is off or
+  pricey, and each menu line shows whose favourite it is. Save version 12, network protocol 15.
 
 ## 2.0.1 — 2026-10-29
 

@@ -1,3 +1,4 @@
+import { noteMissedFavourites } from './regulars';
 import { ECONOMY } from '../data/economy';
 import { loseCustomer } from './customers';
 import { computeModifiers, rentForDay } from './effects';
@@ -54,6 +55,7 @@ export function finishDay(state: GameState): GameState {
   const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus - rogueHit + computeModifiers(state).quality;
   state.reputation = round2(Math.min(r.max, Math.max(r.min, next)));
 
+  noteMissedFavourites(state);
   state.days.push(state.today);
   state.activeTomorrow = [];
 

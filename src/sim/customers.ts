@@ -1,4 +1,5 @@
 import { roleCraft, roleTip } from './roles';
+import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
 import { demandFactor, menuPrice, pricePatience, priceTraffic } from './pricing';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE, secondsToTicks } from './constants';
@@ -120,7 +121,10 @@ export function loseCustomer(state: GameState, c: Customer): void {
   state.today.lost += 1 + (c.extra?.length ?? 0);
   if (c.kind === 'regular') {
     const regular = state.regulars.find((r) => r.name === c.name);
-    if (regular) regular.lost += 1;
+    if (regular) {
+      regular.lost += 1;
+      noteRegularLost(regular);
+    }
     tally(state.today, 'lostRegulars');
   }
   if (c.kind === 'influencer') state.today.influencer = 'lost';
@@ -200,7 +204,10 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   }
   const m = computeModifiers(state);
   const price = round2(menuPrice(state, drink) * m.price[drink]);
-  const kindTip = customer.kind === 'impatient' ? ECONOMY.customers.impatient.tip : customer.kind === 'regular' ? ECONOMY.customers.regular.tip : 1;
+  const reg = customer.kind === 'regular' ? state.regulars.find((r) => r.name === customer.name && r.drink === drink) : undefined;
+  const kindTip =
+    customer.kind === 'impatient' ? ECONOMY.customers.impatient.tip : customer.kind === 'regular' ? ECONOMY.customers.regular.tip * (reg ? regularTipFactor(state, reg) : 1) : 1;
+  if (reg) noteRegularServed(state, reg);
   const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) + roleCraft(state, by));
   state.cash = round2(state.cash + price + tip);
   state.today.sales = round2(state.today.sales + price);
