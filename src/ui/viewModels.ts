@@ -86,6 +86,22 @@ export function floorHud(state: GameState): Pick<HudVM, 'messes' | 'cleanliness'
   };
 }
 
+/** The cleanliness meter: a 0..100 fill, a tone and a word. Below the inspector's bar an inspection fails. */
+export interface CleanMeter {
+  pct: number;
+  tone: 'good' | 'warn' | 'bad';
+  word: string;
+}
+
+export function cleanMeter(cleanliness: number): CleanMeter {
+  const pct = Math.max(0, Math.min(100, Math.round(cleanliness)));
+  const min = ECONOMY.mess.inspectorMin;
+  if (pct >= 90) return { pct, tone: 'good', word: 'Spotless' };
+  if (pct >= 75) return { pct, tone: 'good', word: 'Tidy' };
+  if (pct >= min) return { pct, tone: 'warn', word: 'Scuffed' };
+  return { pct, tone: 'bad', word: 'Grimy! Inspector would fail' };
+}
+
 export function hudViewModel(state: GameState): HudVM {
   const mods = computeModifiers(state);
   const available = availableDrinks(state);
@@ -189,6 +205,10 @@ export interface ClosingVM {
   /** The run score so far: cash minus starting cash. */
   profitVsStart: string;
   startingCash: string;
+  /** Chaos pack receipt lines, present only when non-zero: customers who went rogue, drinks wasted. */
+  rogues?: number;
+  wasted?: number;
+  slips?: number;
 }
 
 /** `before` is the last snapshot of the closing phase; `after` is the first of the next phase. */
@@ -206,6 +226,9 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     reputationBefore: stars(before.reputation),
     reputationAfter: stars(after.reputation),
     ...espressoLines(d),
+    ...(d.rogues ? { rogues: d.rogues } : {}),
+    ...(d.wasted ? { wasted: d.wasted } : {}),
+    ...(d.slips ? { slips: d.slips } : {}),
     ...(after.debt ? { tab: money(after.debt) } : {}),
     cash: money(after.cash),
     profitVsStart: money(scoreRun(after)),

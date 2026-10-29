@@ -107,3 +107,18 @@
 @media (max-height: 700px) { #hud .note { display: none; } }
 @media (prefers-reduced-motion: reduce) { #hud * { animation: none !important; transition: none !important; } }
 #hud .iconbtn.mute[aria-pressed="true"] { background: var(--latte); color: var(--ink-soft); }
+
+/* Chaos pack: the floor cleanliness meter (patched in place). */
+#hud .hud-clean { display: grid; grid-template-columns: 22px 1fr auto; grid-template-rows: auto auto; gap: 4px 8px; align-items: center; padding: 10px 14px; color: var(--mint-dk); }
+#hud .hud-clean[hidden] { display: none; }
+#hud .hud-clean .spark { grid-row: 1 / span 2; grid-column: 1; }
+#hud .hud-clean .lab { font: 600 15px var(--font-display); color: var(--ink); display: flex; flex-direction: column; }
+#hud .hud-clean .lab small { font: 700 11px var(--font-body); color: var(--ink-soft); }
+#hud .hud-clean .cpct { grid-column: 3; grid-row: 1; font: 700 18px var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; }
+#hud .hud-clean .cbar { grid-column: 2 / span 2; grid-row: 2; height: 8px; border-radius: 99px; background: #ead7bb; overflow: hidden; }
+#hud .hud-clean .cbar i { display: block; height: 100%; width: 100%; border-radius: 99px; background: linear-gradient(90deg, #7fcfb4, #3f9e80); transition: width .4s ease-out; }
+#hud .hud-clean[data-tone=warn] { color: var(--caramel-dk); }
+#hud .hud-clean[data-tone=warn] .cbar i { background: linear-gradient(90deg, #f6c35b, #f0a63a); }
+#hud .hud-clean[data-tone=bad] { color: var(--cherry); box-shadow: 0 0 0 3px #e0564a99, var(--sh-1); animation: hud-nudge 1.2s ease-in-out infinite; }
+#hud .hud-clean[data-tone=bad] .lab small { color: var(--cherry); }
+#hud .hud-clean[data-tone=bad] .cbar i { background: linear-gradient(90deg, #e98a6a, #e0564a); }

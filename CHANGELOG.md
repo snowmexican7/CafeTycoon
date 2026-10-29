@@ -16,6 +16,15 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Messy floors you can see.** Spilled grounds pile up in little heaps and dropped drinks
+  spread into puddles (cold brew ones are darker). Slipping gets a THUD!, dizzy stars and a wobble;
+  the mop has a bucket in the corner, a carry pose and a wet-floor sign that follows whoever is
+  mopping, and their name tag says "· mop". A Floor meter on the right says how clean it is and
+  warns when an inspector would fail you. All with new sounds: splosh, slide-whistle thud, mop squeaks.
+- **The rogue customer, in person.** A customer handed the wrong drink fumes in line with a red
+  bubble. If you don't fix it, they sneak behind the counter in a huff (steam and all), tape off a
+  machine with an OCCUPIED sign, make their own drink and leave with a "Two stars." Or they storm out
+  and the door slams. The day's receipt lists rogues, wasted drinks and pratfalls.
 - **Finish the customers inside.** At closing time the doors lock: nobody new comes in, but
   everyone already inside can still be served. A sign on the HUD says "Doors locked: finish up!"
   with how many are left. The day ends as soon as the shop is empty, or after 30 seconds, when

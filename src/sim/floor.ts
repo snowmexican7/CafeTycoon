@@ -92,6 +92,7 @@ function slip(state: GameState, p: Player): void {
     if (item !== 'grounds') tally(state.today, 'wasted');
     data.item = item;
   }
+  tally(state.today, 'slips');
   emitLog(state, 'slip', data);
 }
 

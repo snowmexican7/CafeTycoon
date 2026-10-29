@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
 import type { RunRecord } from '../sim/types';
-import { closingViewModel, hudStructureKey, hudViewModel, lobbyViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
+import { cleanMeter, closingViewModel, hudStructureKey, hudViewModel, lobbyViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 
@@ -202,5 +202,35 @@ describe('phase 1 polish: cash vs score', () => {
     expect(w.tab).toBeUndefined();
     after.debt = 75;
     expect(weekEndViewModel(after, 'p1').tab).toBe('$75.00');
+  });
+});
+
+describe('chaos pack view models (Block 1)', () => {
+  it('reads the cleanliness meter: tone and words, failing below the inspector bar', () => {
+    expect(cleanMeter(100)).toEqual({ pct: 100, tone: 'good', word: 'Spotless' });
+    expect(cleanMeter(80).word).toBe('Tidy');
+    expect(cleanMeter(60)).toMatchObject({ tone: 'warn', word: 'Scuffed' });
+    expect(cleanMeter(59.4)).toMatchObject({ pct: 59, tone: 'bad' });
+    expect(cleanMeter(-5).pct).toBe(0);
+    expect(cleanMeter(140).pct).toBe(100);
+  });
+
+  it('keeps cleanliness out of the HUD structure key (it is patched in place)', () => {
+    const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
+    const a = hudViewModel(s);
+    s.cleanliness = 42;
+    expect(hudStructureKey(hudViewModel(s))).toBe(hudStructureKey(a));
+  });
+
+  it('adds the rogue and wasted receipt lines only when they happened', () => {
+    const before = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
+    const after = structuredClone(before);
+    after.days.push({ ...before.today, rogues: 2, wasted: 3, slips: 4 });
+    expect(closingViewModel(before, after)).toMatchObject({ rogues: 2, wasted: 3, slips: 4 });
+    const quiet = structuredClone(before);
+    quiet.days.push({ ...before.today });
+    const vm = closingViewModel(before, quiet);
+    expect('rogues' in vm).toBe(false);
+    expect('wasted' in vm).toBe(false);
   });
 });

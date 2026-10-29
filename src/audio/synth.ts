@@ -274,3 +274,118 @@ export const siren: Synth = (ctx, out, t) => {
   o.connect(filter(ctx, 'lowpass', 2400)).connect(g).connect(out);
   return len;
 };
+
+/* ---- Chaos pack (Block 1): slips, spills, the mop and the rogue customer ---- */
+
+/** Feet go out from under you: a quick slide-whistle up, then a cartoon body thud. */
+export const slip: Synth = (ctx, out, t) => {
+  const w = osc(ctx, 'sine', 500, t, t + 0.26);
+  w.frequency.setValueAtTime(500, t);
+  w.frequency.exponentialRampToValueAtTime(1700, t + 0.22);
+  const wg = gain(ctx);
+  ahr(wg.gain, t, 0.02, 0.07, 0.17, 0.05);
+  w.connect(wg).connect(out);
+  const at = t + 0.26;
+  const body = osc(ctx, 'sine', 130, at, at + 0.35);
+  body.frequency.setValueAtTime(130, at);
+  body.frequency.exponentialRampToValueAtTime(42, at + 0.25);
+  const bg = gain(ctx);
+  perc(bg.gain, at, 0.5, 0.07, 0.002);
+  body.connect(bg).connect(out);
+  const n = noise(ctx, at, 0.2);
+  const ng = gain(ctx);
+  perc(ng.gain, at, 0.35, 0.03, 0.001);
+  n.connect(filter(ctx, 'lowpass', 500, 0.8)).connect(ng).connect(out);
+  // dizzy birdies
+  [2637, 3136, 2637].forEach((hz, i) => {
+    const b = osc(ctx, 'sine', hz, at + 0.35 + i * 0.13, at + 0.45 + i * 0.13);
+    b.frequency.setValueAtTime(hz, at + 0.35 + i * 0.13);
+    b.frequency.exponentialRampToValueAtTime(hz * 1.25, at + 0.42 + i * 0.13);
+    const g = gain(ctx);
+    perc(g.gain, at + 0.35 + i * 0.13, 0.03, 0.025);
+    b.connect(g).connect(out);
+  });
+  return 1.1;
+};
+
+/** A drink hits the floor: a wet splosh that drops in pitch, plus a few droplets. */
+export const splash: Synth = (ctx, out, t, _dur, rnd) => {
+  const n = noise(ctx, t, 0.4, rnd);
+  const bp = filter(ctx, 'bandpass', 1800, 1.4);
+  bp.frequency.setValueAtTime(1800, t);
+  bp.frequency.exponentialRampToValueAtTime(380, t + 0.3);
+  const g = gain(ctx);
+  perc(g.gain, t, 0.45, 0.08, 0.003);
+  n.connect(bp).connect(g).connect(out);
+  for (let i = 0; i < 4; i++) {
+    const at = t + 0.08 + rnd() * 0.25;
+    const hz = 900 + rnd() * 900;
+    const d = osc(ctx, 'sine', hz, at, at + 0.06);
+    d.frequency.setValueAtTime(hz, at);
+    d.frequency.exponentialRampToValueAtTime(hz * 1.6, at + 0.04);
+    const dg = gain(ctx);
+    perc(dg.gain, at, 0.05, 0.012, 0.001);
+    d.connect(dg).connect(out);
+  }
+  return 0.5;
+};
+
+/** Grounds spilled: a dry gritty scatter. */
+export const scatter: Synth = (ctx, out, t, _dur, rnd) => {
+  for (let i = 0; i < 6; i++) {
+    const at = t + i * 0.025 + rnd() * 0.02;
+    const g = gain(ctx);
+    perc(g.gain, at, 0.18 - i * 0.02, 0.02, 0.001);
+    noise(ctx, at, 0.08, rnd).connect(filter(ctx, 'highpass', 2500 + rnd() * 2000)).connect(g).connect(out);
+  }
+  return 0.3;
+};
+
+/** Mop squeaks on clean tile, twice. */
+export const squeak: Synth = (ctx, out, t) => {
+  for (const [at, f] of [[t, 1900], [t + 0.16, 2300]] as const) {
+    const o = osc(ctx, 'sine', f, at, at + 0.1);
+    o.frequency.setValueAtTime(f, at);
+    o.frequency.linearRampToValueAtTime(f * 1.3, at + 0.08);
+    const vib = osc(ctx, 'sine', 38, at, at + 0.1);
+    vib.connect(gain(ctx, 60)).connect(o.frequency);
+    const g = gain(ctx);
+    ahr(g.gain, at, 0.01, 0.06, 0.06, 0.03);
+    o.connect(g).connect(out);
+  }
+  return 0.35;
+};
+
+/** Wooden mop handle knocked against the bucket. */
+export const clack: Synth = (ctx, out, t) => {
+  const o = osc(ctx, 'triangle', 340, t, t + 0.12);
+  o.frequency.setValueAtTime(340, t);
+  o.frequency.exponentialRampToValueAtTime(220, t + 0.08);
+  const g = gain(ctx);
+  perc(g.gain, t, 0.22, 0.03, 0.001);
+  o.connect(g).connect(out);
+  const ng = gain(ctx);
+  perc(ng.gain, t, 0.2, 0.015, 0.001);
+  noise(ctx, t, 0.06).connect(filter(ctx, 'bandpass', 1400, 2)).connect(ng).connect(out);
+  return 0.2;
+};
+
+/** Tiptoe pizzicato: someone is sneaking behind the counter. */
+export const sneak: Synth = (ctx, out, t) => {
+  // E3 . C3 . Eb3 . B2: the classic sneaky creep
+  const notes = [164.8, 130.8, 155.6, 123.5, 164.8, 130.8];
+  notes.forEach((hz, i) => {
+    const at = t + i * 0.16;
+    const o = osc(ctx, 'triangle', hz * 2, at, at + 0.14);
+    const g = gain(ctx);
+    perc(g.gain, at, 0.16, 0.04, 0.002);
+    o.connect(filter(ctx, 'lowpass', 1600, 1)).connect(g).connect(out);
+  });
+  return 1.1;
+};
+
+/** A smug little "ta-da": the rogue finished their own drink. */
+export const smug: Synth = (ctx, out, t) => {
+  bell(ctx, out, t, 784, 0.06, 0.4);
+  return bell(ctx, out, t + 0.12, 1175, 0.07, 0.8) - t;
+};

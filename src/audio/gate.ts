@@ -43,6 +43,18 @@ export const CUE_RULES: Partial<Record<CueId, CueRule>> = {
   inspectPass: { cooldownMs: 2000, maxVoices: 1, priority: 4 },
   inspectFail: { cooldownMs: 2000, maxVoices: 1, priority: 4 },
   influencerServed: { cooldownMs: 2000, maxVoices: 1, priority: 4 },
+  slip: { cooldownMs: 300, maxVoices: 2, priority: 3 },
+  splash: { cooldownMs: 200, maxVoices: 2, priority: 2 },
+  scatter: { cooldownMs: 200, maxVoices: 1, priority: 1 },
+  mopGrab: { cooldownMs: 300, maxVoices: 1, priority: 1 },
+  mopDown: { cooldownMs: 300, maxVoices: 1, priority: 1 },
+  squeak: { cooldownMs: 250, maxVoices: 2, priority: 2 },
+  rogueSneak: { cooldownMs: 2000, maxVoices: 1, priority: 3 },
+  rogueUpset: { cooldownMs: 1000, maxVoices: 1, priority: 3 },
+  rogueSaved: { cooldownMs: 1000, maxVoices: 1, priority: 3 },
+  rogueMade: { cooldownMs: 1000, maxVoices: 1, priority: 3 },
+  rogueStorm: { cooldownMs: 1000, maxVoices: 1, priority: 3 },
+  doorSlam: { cooldownMs: 600, maxVoices: 1, priority: 3 },
 };
 
 /** Simultaneous one-shot voices across every cue. */

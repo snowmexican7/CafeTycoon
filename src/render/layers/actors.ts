@@ -1,8 +1,10 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { LAYOUT } from '../../data/layout';
 import type { Customer, DrinkId, ItemKind, Player, PlayerId, Vec2 } from '../../sim/types';
-import { type Facing, TILE, baristaLook, customerLook, nextFacing, patienceColor, sx, sy } from '../theme';
-import { dashedEllipse, drawItem, halfDome, label } from './draw';
+import { ECONOMY } from '../../data/economy';
+import { TICK_RATE } from '../../sim/constants';
+import { type Facing, PALETTE, TILE, baristaLook, customerLook, nextFacing, patienceColor, sx, sy } from '../theme';
+import { dashedEllipse, drawItem, drawMop, drawStar, halfDome, label } from './draw';
 import { jitterPx, type CollapsePose } from '../espressoPose';
 
 /** Feet sit a little below the sim centre so a barista reads as standing on its tile. */
@@ -19,6 +21,9 @@ interface PersonOpts {
   facing: Facing;
   holding?: ItemKind | null;
   ring?: number | null;
+  /** Chaos pack: swirly eyes after a slip, furrowed brows and red cheeks when cross. */
+  dizzy?: boolean;
+  angry?: boolean;
 }
 
 const darker = (c: number, k = 0.8) => (Math.round(((c >> 16) & 255) * k) << 16) | (Math.round(((c >> 8) & 255) * k) << 8) | Math.round((c & 255) * k);
@@ -42,13 +47,27 @@ export function drawPerson(g: Graphics, o: PersonOpts): void {
   g.circle(0, -58, 17).fill(o.skin);
   if (o.facing === 'down') {
     halfDome(g, 0, -56, 17, 15).fill(o.hair);
-    g.ellipse(-6, -53, 2.3, 3).fill(0x2b1a12);
-    g.ellipse(6, -53, 2.3, 3).fill(0x2b1a12);
-    g.circle(-5.2, -54.2, 0.8).fill(0xffffff);
-    g.circle(6.8, -54.2, 0.8).fill(0xffffff);
-    g.ellipse(-11, -47, 3.6, 2.2).fill({ color: 0xf08a7a, alpha: 0.55 });
-    g.ellipse(11, -47, 3.6, 2.2).fill({ color: 0xf08a7a, alpha: 0.55 });
-    g.moveTo(-3.5, -46.5).quadraticCurveTo(0, -43.5, 3.5, -46.5).stroke({ width: 1.6, color: 0x2b1a12, cap: 'round' });
+    if (o.dizzy) {
+      // swirly @ eyes and a wobbly little "o" mouth
+      for (const ex of [-6, 6]) {
+        g.circle(ex, -53, 3).stroke({ width: 1.3, color: 0x2b1a12 });
+        g.circle(ex + 0.6, -53.4, 1.3).stroke({ width: 1.1, color: 0x2b1a12 });
+      }
+      g.ellipse(0, -45.5, 2.2, 2.6).stroke({ width: 1.5, color: 0x2b1a12 });
+    } else {
+      g.ellipse(-6, -53, 2.3, 3).fill(0x2b1a12);
+      g.ellipse(6, -53, 2.3, 3).fill(0x2b1a12);
+      g.circle(-5.2, -54.2, 0.8).fill(0xffffff);
+      g.circle(6.8, -54.2, 0.8).fill(0xffffff);
+    }
+    if (o.angry) {
+      g.moveTo(-10, -60).lineTo(-3, -57).stroke({ width: 2.2, color: 0x2b1a12, cap: 'round' });
+      g.moveTo(10, -60).lineTo(3, -57).stroke({ width: 2.2, color: 0x2b1a12, cap: 'round' });
+    }
+    g.ellipse(-11, -47, 3.6, 2.2).fill({ color: o.angry ? 0xe0564a : 0xf08a7a, alpha: o.angry ? 0.8 : 0.55 });
+    g.ellipse(11, -47, 3.6, 2.2).fill({ color: o.angry ? 0xe0564a : 0xf08a7a, alpha: o.angry ? 0.8 : 0.55 });
+    if (o.angry) g.moveTo(-3.5, -44.5).quadraticCurveTo(0, -47.5, 3.5, -44.5).stroke({ width: 1.6, color: 0x2b1a12, cap: 'round' });
+    else if (!o.dizzy) g.moveTo(-3.5, -46.5).quadraticCurveTo(0, -43.5, 3.5, -46.5).stroke({ width: 1.6, color: 0x2b1a12, cap: 'round' });
   } else {
     g.circle(0, -59, 17).fill(o.hair);
     g.ellipse(-16, -56, 3, 4).fill(o.skin);
@@ -64,15 +83,16 @@ export function drawPerson(g: Graphics, o: PersonOpts): void {
 }
 
 /** Order bubble with a drink icon and a patience ring, centred at (x, y). */
-export function drawOrderBubble(g: Graphics, x: number, y: number, drink: DrinkId, patience: number): void {
+export function drawOrderBubble(g: Graphics, x: number, y: number, drink: DrinkId, patience: number, upset = false): void {
   const r = 22;
   const p = Math.max(0, Math.min(1, patience));
-  g.circle(x, y, r).fill({ color: 0xffffff, alpha: 0.92 });
+  g.circle(x, y, r).fill({ color: upset ? 0xffe2dc : 0xffffff, alpha: 0.95 });
   g.circle(x, y, r).stroke({ width: 5, color: 0x000000, alpha: 0.09 });
   if (p > 0) {
     g.moveTo(x, y - r);
     g.arc(x, y, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * p);
-    g.stroke({ width: 5, color: patienceColor(p), cap: 'round' });
+    // an upset customer's ring is their remake window: it drains in angry red
+    g.stroke({ width: 5, color: upset ? 0xc0392b : patienceColor(p), cap: 'round' });
   }
   g.poly([x - 5, y + r - 2, x, y + r + 7, x + 5, y + r - 2]).fill(0xffffff);
   drawItem(g, drink, x, y + 2, 1.05);
@@ -90,6 +110,9 @@ interface PlayerSprite {
   /** Espresso speed trail: recent screen positions, drawn as fading ghosts while boosted. */
   trail: Graphics;
   history: { x: number; y: number }[];
+  /** The mop in hand (drawn once, rotated while scrubbing) and the dizzy stars after a slip. */
+  tool: Graphics;
+  stars: Graphics;
 }
 
 interface CustomerSprite {
@@ -127,10 +150,11 @@ export class Actors {
       sprite.facing = nextFacing(sprite.facing, p.moveDir);
       const look = baristaLook(index);
       const me = p.id === localId;
-      const key = `${sprite.facing}|${p.holding}|${me}|${index}`;
+      const stunned = p.stunTicksLeft > 0;
+      const key = `${sprite.facing}|${p.holding}|${me}|${index}|${stunned}`;
       if (key !== sprite.key) {
         sprite.body.clear();
-        drawPerson(sprite.body, { shirt: look.cap, cap: look.cap, skin: look.skin, hair: look.hair, apron: true, facing: sprite.facing, holding: p.holding, ring: me ? look.cap : null });
+        drawPerson(sprite.body, { shirt: look.cap, cap: look.cap, skin: look.skin, hair: look.hair, apron: true, facing: sprite.facing, holding: p.tool === 'mop' ? null : p.holding, ring: me ? look.cap : null, dizzy: stunned });
         sprite.key = key;
       }
       const pos = positions[p.id] ?? p.pos;
@@ -150,15 +174,20 @@ export class Actors {
       const pose = collapsed[p.id];
       const out = !!esp?.out;
       sprite.root.position.set(pose ? pose.body.x : x, pose ? pose.body.y : feet);
-      sprite.root.rotation = pose ? pose.body.rot : 0;
+      // slipped: a dizzy wobble on the spot
+      sprite.root.rotation = pose ? pose.body.rot : stunned ? Math.sin(timeSec * 9 + index) * 0.16 : 0;
       sprite.root.visible = out ? !!pose?.body.visible : true;
       sprite.body.y = pose ? 0 : bob;
+      this.drawTool(sprite, p, timeSec);
+      this.drawStars(sprite, stunned, timeSec, bob);
       sprite.root.zIndex = pose ? pose.body.y + (pose.stretcher?.loaded ? 30 : 0) : feet;
       const alpha = p.connected ? 1 : 0.4;
       sprite.root.alpha = alpha;
       sprite.tag.visible = !out;
 
-      const text = p.connected ? p.name : `${p.name} · reconnecting…`;
+      // on mop duty: the tag says so, so the crew knows who to shout for
+      const name = p.tool === 'mop' ? `${p.name} · mop` : p.name;
+      const text = p.connected ? name : `${p.name} · reconnecting…`;
       const tagKey = `${text}|${index}`;
       if (tagKey !== sprite.tagKey) {
         sprite.tagText.text = text;
@@ -192,13 +221,54 @@ export class Actors {
       sprite.root.position.set(sprite.x, feet + (shuffling ? -Math.abs(Math.sin(timeSec * 12)) * 2 : 0));
       sprite.root.zIndex = feet;
       sprite.bubble.clear();
-      drawOrderBubble(sprite.bubble, 0, -96, c.drink, c.patienceLeft / c.patienceMax);
+      const upset = c.upset ? Math.min(1, c.upset.ticksLeft / (ECONOMY.rogue.remakeSeconds * TICK_RATE)) : null;
+      if (upset !== null) {
+        // wrong drink: a shaking red bubble and angry steam while the remake window drains
+        const jig = Math.sin(timeSec * 38) * 1.5;
+        drawOrderBubble(sprite.bubble, jig, -96, c.drink, upset, true);
+        for (let k = 0; k < 3; k++) {
+          const t = (timeSec * 1.3 + k / 3) % 1;
+          const side = k % 2 === 0 ? -1 : 1;
+          sprite.bubble.circle(side * (12 + t * 8), -70 - t * 18, 3 + t * 5).fill({ color: 0xe9b3a8, alpha: 0.8 * (1 - t) });
+        }
+        sprite.bubble.roundRect(16, -128, 16, 18, 5).fill(0xc0392b);
+        sprite.bubble.rect(22.8, -125, 2.4, 8).fill(0xffffff);
+        sprite.bubble.circle(24, -114, 1.5).fill(0xffffff);
+      } else drawOrderBubble(sprite.bubble, 0, -96, c.drink, c.patienceLeft / c.patienceMax);
     });
     for (const [id, sprite] of this.customers) {
       if (!seenC.has(id)) {
         sprite.root.destroy({ children: true });
         this.customers.delete(id);
       }
+    }
+  }
+
+  /** The mop in hand: held upright at the side, scrubbing back and forth while cleaning. */
+  private drawTool(sprite: PlayerSprite, p: Player, timeSec: number): void {
+    const has = p.tool === 'mop';
+    sprite.tool.visible = has;
+    if (!has) return;
+    sprite.tool.rotation = p.cleaningTicksLeft > 0 ? Math.sin(timeSec * 14) * 0.45 - 0.2 : 0;
+    sprite.tool.x = 18 + (p.cleaningTicksLeft > 0 ? Math.sin(timeSec * 14) * 6 : 0);
+  }
+
+  /** Three stars circling the head after a slip (only redrawn while stunned). */
+  private drawStars(sprite: PlayerSprite, on: boolean, timeSec: number, bob: number): void {
+    const g = sprite.stars;
+    if (!on) {
+      if (g.visible) g.clear();
+      g.visible = false;
+      return;
+    }
+    g.visible = true;
+    g.clear();
+    for (let i = 0; i < 3; i++) {
+      const a = timeSec * 5 + (i * Math.PI * 2) / 3;
+      const x = Math.cos(a) * 20;
+      const y = -84 + Math.sin(a) * 6 + bob;
+      const front = Math.sin(a) > 0;
+      drawStar(g, x, y, front ? 6 : 4.5, front ? PALETTE.honey : 0xf8e3a0, a);
     }
   }
 
@@ -247,7 +317,14 @@ export class Actors {
     this.tagLayer.addChild(tag);
     const trail = new Graphics();
     this.depthLayer.addChild(trail);
-    const sprite: PlayerSprite = { root, body, key: '', tag, tagBg, tagText, tagKey: '', facing: 'down', trail, history: [] };
+    const tool = new Graphics();
+    drawMop(tool, 12, -2, 34, -78);
+    tool.pivot.set(18, -20);
+    tool.position.set(18, -20);
+    tool.visible = false;
+    const stars = new Graphics();
+    root.addChild(tool, stars);
+    const sprite: PlayerSprite = { root, body, key: '', tag, tagBg, tagText, tagKey: '', facing: 'down', trail, history: [], tool, stars };
     this.players.set(id, sprite);
     return sprite;
   }

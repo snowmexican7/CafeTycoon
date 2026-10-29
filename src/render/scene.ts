@@ -7,6 +7,7 @@ import { nearestStation } from '../sim/movement';
 import type { GameState, PlayerId } from '../sim/types';
 import type { RenderView } from './interpolate';
 import { Actors } from './layers/actors';
+import { Chaos } from './layers/chaos';
 import { buildDecor } from './layers/decor';
 import { EspressoGags, fellAtScreen, shakePx } from './layers/espresso';
 import { Effects } from './layers/fx';
@@ -40,6 +41,7 @@ export class Scene {
   private readonly fx = new Effects();
   private readonly actors: Actors;
   private readonly gags: EspressoGags;
+  private readonly chaos: Chaos;
   /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
   private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
@@ -53,8 +55,9 @@ export class Scene {
     for (const d of buildDecor(SCENE_WIDTH, LAYOUT.height)) this.depth.addChild(d);
     this.actors = new Actors(this.depth, this.tags);
     this.gags = new EspressoGags(this.depth);
-    this.overlay.addChild(this.stationOverlay.root, this.tags);
-    this.root.addChild(this.wall.root, buildLamps(), floor, this.depth, this.lighting.root, this.overlay, this.fx.root);
+    this.chaos = new Chaos(this.depth);
+    this.overlay.addChild(this.stationOverlay.root, this.tags, this.chaos.overlay);
+    this.root.addChild(this.wall.root, buildLamps(), floor, this.chaos.floor, this.depth, this.lighting.root, this.overlay, this.fx.root);
   }
 
   /** Which barista is "me" (gets the ring and the station focus). Unset = the only player, if there's exactly one. */
@@ -97,11 +100,13 @@ export class Scene {
     };
     const poses = this.gags.update(state.players, simAge, now, (p) => fellAtScreen(p.espresso?.fellAt ?? p.pos));
     this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses);
+    this.chaos.update(state, now, dt);
     this.espressoPops(state.players, view.baristaPositions);
 
     // espresso tell: the local barista's screen shakes from the 4th shot, and jolts when they hit the floor
     const shake = shakePx(me, me ? simAge(me) : null);
-    this.root.position.set(shake ? Math.sin(now * 93) * shake : 0, shake ? Math.cos(now * 77) * shake * 0.7 : 0);
+    const jolt = this.chaos.joltPx(now);
+    this.root.position.set((shake ? Math.sin(now * 93) * shake : 0) + jolt.x, (shake ? Math.cos(now * 77) * shake * 0.7 : 0) + jolt.y);
 
     const counter = LAYOUT.stations.find((s) => s.kind === 'counter');
     if (counter) this.fx.track(state.day, state.today.sales + state.today.tips, sx(counter.pos.x), sy(counter.pos.y) - 70);

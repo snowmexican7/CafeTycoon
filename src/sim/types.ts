@@ -213,6 +213,8 @@ export interface DayStats {
   ambulance?: number;
   debtPaid?: number;
   rogues?: number;
+  /** Chaos pack: baristas who slipped on a mess today (a receipt line, nothing else). */
+  slips?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
