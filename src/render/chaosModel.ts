@@ -1,4 +1,4 @@
-import { LAYOUT } from '../data/layout';
+import { LAYOUT, layoutFor } from '../data/layout';
 import type { GameState, MessKind, RogueStage, Vec2 } from '../sim/types';
 
 /**
@@ -70,7 +70,11 @@ export type Burst =
   | { kind: 'meow'; at: Vec2 }
   | { kind: 'smoke'; at: Vec2 }
   | { kind: 'review'; at: Vec2; text: string }
-  | { kind: 'secret'; at: Vec2; text: string };
+  | { kind: 'secret'; at: Vec2; text: string }
+  | { kind: 'walkout'; at: Vec2; text: string };
+
+/** FB1 WP4: what someone says as they read a sold-out board and walk away (picked by log seq). */
+export const WALKOUT_LINES = ['Sold out?!', 'Nothing left?', 'Aw, sold out.', 'Maybe tomorrow.'] as const;
 
 /**
  * One-shot comic effects that happened between two snapshots, read from the sim log (by seq) and from
@@ -80,12 +84,27 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
   const cursor = next.nextLogSeq - 1;
   if (!prev || prev.seed !== next.seed || cursor < lastSeq) return { bursts: [], lastSeq: cursor };
   const bursts: Burst[] = [];
+  let walked = false;
+  let binless = false;
   for (const e of next.log) {
     if (e.seq <= lastSeq) continue;
+    // One walk-away puff per snapshot, at the front of the line, however many turned round.
+    if (e.kind === 'walkout') {
+      if (!walked) bursts.push({ kind: 'walkout', at: queueFrontFor(next), text: WALKOUT_LINES[e.seq % WALKOUT_LINES.length]! });
+      walked = true;
+      continue;
+    }
     const d = e.data;
     const at = typeof d.x === 'number' && typeof d.y === 'number' ? { x: d.x, y: d.y } : null;
     if (e.kind === 'slip' && at) bursts.push({ kind: 'thud', at, playerId: String(d.player) });
-    else if (e.kind === 'drop' && at && d.item !== 'mop') bursts.push(d.item === 'grounds' ? { kind: 'scatter', at } : { kind: 'splash', at, item: String(d.item) });
+    else if (e.kind === 'drop' && at && d.item !== 'mop') {
+      bursts.push(d.item === 'grounds' ? { kind: 'scatter', at } : { kind: 'splash', at, item: String(d.item) });
+      // FB1 WP5: with no bin on the floor, everything binned lands here; say why once per snapshot.
+      if (!binless && !next.stations.some((s) => s.kind === 'trash')) {
+        binless = true;
+        bursts.push({ kind: 'walkout', at, text: 'No bin!' });
+      }
+    }
     else if (e.kind === 'clean' && at) bursts.push({ kind: 'sparkle', at });
     else if (e.kind === 'rogue.upset') bursts.push({ kind: 'hmph', at: queueFront(), text: 'That\u2019s not right\u2026' });
     else if (e.kind === 'rogue.stormed' && next.rogue) bursts.push({ kind: 'hmph', at: next.rogue.pos, text: 'HMPH!' });
@@ -108,6 +127,11 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
   // The rogue walked out the door (made it, or gave up): the door slams behind them.
   if (prev.rogue && !next.rogue && (prev.rogue.stage === 'leaving' || prev.rogue.stage === 'stormingOut')) bursts.push({ kind: 'slam', at: { ...LAYOUT.door } });
   return { bursts, lastSeq: Math.max(lastSeq, cursor) };
+}
+
+function queueFrontFor(state: GameState): Vec2 {
+  const s = layoutFor(state.tier).queueSlots[0] ?? LAYOUT.queueSlots[0];
+  return { x: s.x, y: s.y };
 }
 
 function queueFront(): Vec2 {

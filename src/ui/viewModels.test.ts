@@ -345,3 +345,35 @@ describe('forecast view models', () => {
     expect(hudViewModel(s).forecast?.name).toBe('Payday Friday');
   });
 });
+
+describe('sold-out HUD (FB1 WP4)', () => {
+  it('flags sold out while open and rewrites the rush-hour chip', async () => {
+    const { createRun } = await import('../sim/run');
+    const { hudViewModel, hudStructureKey, SOLD_OUT_RUSH } = await import('./viewModels');
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
+    s.phase = 'day';
+    expect(hudViewModel(s).soldOut).toBeUndefined();
+    const before = hudStructureKey(hudViewModel(s));
+    for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 0;
+    s.events = [{ kind: 'rushHour', ticksLeft: 600 } as (typeof s.events)[number]];
+    const vm = hudViewModel(s);
+    expect(vm.soldOut).toBe(true);
+    expect(vm.events?.[0]?.label).toBe(SOLD_OUT_RUSH.label);
+    expect(hudStructureKey(vm)).not.toBe(before);
+    s.phase = 'night';
+    expect(hudViewModel(s).soldOut).toBeUndefined();
+  });
+});
+
+describe('HUD menu board: off menu is not sold out (FB1 RC)', () => {
+  it('marks a drink the crew took off the menu as offMenu, not just unavailable', async () => {
+    const { createRun } = await import('../sim/run');
+    const { hudViewModel } = await import('./viewModels');
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
+    s.phase = 'day';
+    s.menu.espresso = false;
+    const row = hudViewModel(s).menu.find((m) => m.id === 'espresso')!;
+    expect(row).toMatchObject({ available: false, offMenu: true });
+    expect(hudViewModel(s).menu.find((m) => m.id === 'coldBrew')?.offMenu).toBeUndefined();
+  });
+});

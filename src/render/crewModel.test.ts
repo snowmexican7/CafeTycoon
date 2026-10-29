@@ -42,6 +42,8 @@ describe('crew visuals model', () => {
     expect(botLook('rookie')).toMatchObject({ badge: true, emote: 'sweat' });
     expect(botLook('veteran')).toMatchObject({ shades: true, emote: 'steam' });
     expect(botLook('steady')).toMatchObject({ headphones: true, emote: 'note' });
+    expect(botLook('hurried')).toMatchObject({ headband: true, headphones: false, emote: 'clock' });
+    expect(botLook('hurried').every).toBeLessThan(botLook('steady').every);
     expect(botTag('Bo')).toBe('Bo \u00b7 bot');
   });
 

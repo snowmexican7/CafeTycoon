@@ -5,7 +5,8 @@ import { coin, itemIcon, jar, logoCup, pauseGlyph, speakerGlyph, stars, sun, SUP
 import { crewKey, handKey, ITEM_LABEL, ordersKey, type HudLive } from './live';
 import { loadRecipeHints, MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, URGENT as TICKET_URGENT, type RecipeHints, type TicketOpts } from './tickets';
 import { DRINK_LABEL } from './tickets';
-import { cleanMeter, EVENT_INTRO, hudStructureKey, type HudVM } from './viewModels';
+import { mountCloseEarly } from './closeEarly';
+import { cleanMeter, EVENT_INTRO, hudStructureKey, SOLD_OUT_RUSH, type HudVM } from './viewModels';
 import type { EventKind } from '../sim/types';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours', pastry: 'Pastries' } as const;
@@ -28,7 +29,7 @@ const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a
  * The in-day HUD: a top bar of pills, order tickets on the left, pantry/menu/note on the right and
  * what you hold along the bottom. Every block renders once, then only per-tick values are patched.
  */
-export function createHud(container: HTMLElement, handlers: { onMute?(): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
+export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
   render(vm: HudVM, live?: HudLive): void;
   /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
   setRecipeHints(mode: RecipeHints): void;
@@ -45,6 +46,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
       <div class="hud-logo">${logoCup()}<span>Cafe<b>Tycoon</b></span></div>
       <div class="pill hud-day"></div>
       <div class="pill hud-clock" role="timer" aria-label="Time left today">${sun()}<span class="lab"></span><span class="clock"></span><span class="daybar"><i></i></span></div>
+      <button class="pill hud-close" type="button" tabindex="-1" hidden></button>
       <div class="pill hud-cash">${coin()}<span class="cash"></span><span class="plus" hidden></span></div>
       <div class="pill hud-rep"></div>
       <div class="pill hud-vibe" hidden title="Crew vibe"><span class="vbar"><i></i></span><span class="vlab"></span><span class="vcombo" hidden></span></div>
@@ -68,7 +70,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
       <div class="hold hand"></div>
       <div class="hold hint"></div>
       <div class="spacer"></div>
-      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">R</span> drop <span class="key">Q</span> drinks an espresso (in hand or at the machine) <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
+      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">R</span> drop <span class="key">Q</span> drink espresso <span class="key">C</span> hold to close early <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
     </div>
     <div class="hud-challenges" aria-live="polite" hidden></div>
     <div class="hud-events" aria-live="polite"></div>
@@ -119,6 +121,9 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     handlers.onMute?.();
   });
 
+  const closeBtn = $<HTMLButtonElement>('.hud-close');
+  const closeEarly = mountCloseEarly(closeBtn, (on) => handlers.onCloseEarly?.(on));
+
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
   let plusTimer: ReturnType<typeof setTimeout> | null = null;
   let lastKey = '';
@@ -155,8 +160,9 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
         return `<div class="supply ${low ? 'low' : ''}">${jar(fill, SUPPLY_COLOR[s.id])}<div class="lab">${SUPPLY_LABEL[s.id]}<small>${sub}</small></div><div class="num">${s.count}</div></div>`;
       })
       .join('');
-    el.menu.innerHTML = vm.menu
-      .map((m) => `<div class="row ${m.available ? '' : 'off'}"><span class="d">${itemIcon(m.id, 24)}${DRINK_LABEL[m.id]}</span><b>${m.available ? esc(m.price) : 'sold out'}</b></div>`)
+    el.menu.classList.toggle('sold-out', !!vm.soldOut);
+    el.menu.innerHTML = (vm.soldOut ? `<div class="soldout-sign" role="status"><b>SOLD OUT</b><small>Nothing left to make today</small></div>` : '') + vm.menu
+      .map((m) => `<div class="row ${m.available ? '' : 'off'}"><span class="d">${itemIcon(m.id, 24)}${DRINK_LABEL[m.id]}</span><b>${m.available ? esc(m.price) : m.offMenu ? 'off menu' : 'sold out'}</b></div>`)
       .join('');
     notes = vm.notes;
     prices = Object.fromEntries(vm.menu.map((m) => [m.id, m.price]));
@@ -289,7 +295,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     if (open) {
       for (const k of active) {
         if (knownEvents.has(k)) continue;
-        const intro = EVENT_INTRO[k];
+        const intro = k === 'rushHour' && vm.soldOut ? { ...EVENT_INTRO[k], title: SOLD_OUT_RUSH.label, line: SOLD_OUT_RUSH.line } : EVENT_INTRO[k];
         showCard(`<div class="ic">${EVENT_ICON[k]}</div><div><b>${esc(intro.title)}</b><p>${esc(intro.line)}</p></div>`, intro.tone);
       }
     }
@@ -426,6 +432,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
         renderCrew(live);
         renderHand(live);
       }
+      closeEarly.render(live?.closeEarly);
     },
     toast(lines) {
       if (lines.length === 0) return;

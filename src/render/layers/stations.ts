@@ -25,10 +25,22 @@ function cabinet(g: Graphics, cx: number, cy: number, w = 60): void {
 }
 
 function plate(root: Container, g: Graphics, cx: number, cy: number, text: string, color: number = PALETTE.espresso, alpha = 0.82): void {
-  const w = Math.max(60, text.length * 7 + 14);
+  // FB1 WP5: slots can sit one tile apart, so plates are capped at a tile and the text squeezes to fit.
+  const w = Math.min(62, Math.max(56, text.length * 7 + 14));
   g.roundRect(cx - w / 2, cy + 34, w, 15, 7.5).fill({ color, alpha });
   const t = label(text, 9.5, 0xfff4e2, '600', undefined, 0.6);
+  if (t.width > w - 8) t.scale.x *= (w - 8) / t.width;
   t.position.set(cx, cy + 41.5);
+  root.addChild(t);
+}
+
+/** FB1 WP5: a round number badge on the second (third, …) station of a kind. */
+function numberBadge(root: Container, cx: number, cy: number, n: number): void {
+  const g = new Graphics();
+  g.circle(cx + 28, cy - 34, 11).fill(PALETTE.honey).stroke({ width: 2.5, color: 0xffffff });
+  root.addChild(g);
+  const t = label(String(n), 13, PALETTE.espresso, '800', undefined, 0);
+  t.position.set(cx + 28, cy - 34);
   root.addChild(t);
 }
 
@@ -82,7 +94,41 @@ function checkoutArt(root: Container, g: Graphics, cx: number, cy: number, check
 }
 
 /** Static art for one station (cabinet, machine, nameplate). The footprint stays inside its unit square. */
-export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register'): Container {
+/** FB1 WP5: which of its kind a station is, from its id (`espresso-2` = 2; the first has no suffix = 1). */
+export function stationNumber(id?: string): number {
+  return Number(id?.match(/-(\d+)$/)?.[1] ?? 1);
+}
+
+/** FB1 WP5: an empty back-bar slot: a dashed plinth with brackets, so the gap reads as "something goes here". */
+export function buildEmptySlot(pos: Vec2): Container {
+  const root = new Container();
+  const g = new Graphics();
+  root.addChild(g);
+  const cx = sx(pos.x);
+  const cy = sy(pos.y);
+  root.zIndex = stationDepth(pos);
+  shadow(g, cx, cy + 28, 26, 7);
+  g.roundRect(cx - 24, cy + 6, 48, 22, 6).fill({ color: MAT.cab, alpha: 0.35 });
+  dashedEllipse(g, cx, cy + 17, 22, 8, 7, 5, 0xfff4e2, 2.5, 0.75);
+  for (const side of [-1, 1]) {
+    const x = cx + side * 27;
+    g.moveTo(x - side * 7, cy - 22).lineTo(x, cy - 22).lineTo(x, cy + 26).lineTo(x - side * 7, cy + 26).stroke({ width: 3, color: PALETTE.espresso, alpha: 0.45, join: 'round', cap: 'round' });
+  }
+  const plus = label('+', 26, PALETTE.espresso, '800', undefined, 0);
+  plus.alpha = 0.4;
+  plus.position.set(cx, cy - 4);
+  root.addChild(plus);
+  plate(root, g, cx, cy, 'EMPTY', PALETTE.espresso, 0.5);
+  return root;
+}
+
+export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1): Container {
+  const root = buildStationArt(kind, pos, checkout);
+  if (n > 1) numberBadge(root, sx(pos.x), sy(pos.y), n);
+  return root;
+}
+
+function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId): Container {
   const root = new Container();
   const g = new Graphics();
   root.addChild(g);

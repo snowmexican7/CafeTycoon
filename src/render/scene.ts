@@ -1,10 +1,10 @@
-import { Container } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
-import type { CheckoutId, GameState, PlayerId, TierId } from '../sim/types';
+import type { CheckoutId, GameState, PlayerId, Station, TierId } from '../sim/types';
 import type { RenderView } from './interpolate';
 import { Actors } from './layers/actors';
 import { Chaos } from './layers/chaos';
@@ -16,10 +16,14 @@ import { Effects } from './layers/fx';
 import { ESPRESSO } from '../sim/espresso';
 import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
-import { StationOverlay, buildStation, type StationOverlayState } from './layers/stations';
+import { StationOverlay, buildEmptySlot, buildStation, stationNumber, type StationOverlayState } from './layers/stations';
+import { emptySlotPositions } from './slotModel';
 import { buildWall } from './layers/wall';
 import { buildLot } from './layers/lot';
 import { layoutFor } from '../data/layout';
+import { availableDrinks } from '../sim/customers';
+import { menuDrinks } from '../sim/unlocks';
+import { label } from './layers/draw';
 import { FRONT, MAT, PLAYER_COLORS, TILE as THEME_TILE, WALL, isNightLook, sx, sy } from './theme';
 
 export const TILE = THEME_TILE;
@@ -66,26 +70,37 @@ export class Scene {
     this.chaos = new Chaos(this.depth);
     this.eventFx = new EventVisuals(this.depth, this.chaos.overlay, SCENE_WIDTH, SCENE_HEIGHT);
     this.overlay.addChild(this.stationOverlay.root, this.tags, this.chaos.overlay);
-    this.root.addChild(this.wall.root, buildLamps(), floor, this.chaos.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
+    this.root.addChild(this.wall.root, this.soldOutSign, buildLamps(), floor, this.chaos.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
+
+  /** FB1 WP4: a red "SOLD OUT" strip hung across the chalkboard menu while nothing can be made. */
+  private readonly soldOutSign = buildSoldOutSign();
 
   /** P3 B12: the station art, rebuilt when the checkout on the counter changes. */
   private stationArt: Container[] = [];
   private stationKey = '';
   /** P3 B13: the hoarding and awning, rebuilt (with the stations and the line) when the shop grows. */
   private readonly lot = new Container();
-  private buildStations(checkout: CheckoutId, tier: TierId | undefined): void {
-    const key = `${tier ?? 'cafe'}:${checkout}`;
+  private buildStations(checkout: CheckoutId, tier: TierId | undefined, stations?: readonly Station[]): void {
+    // FB1 WP5: the art follows state.stations (bought duplicates, swapped slots), with a plinth in every empty slot.
+    const lay = layoutFor(tier);
+    const list = stations ?? lay.stations;
+    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}`).join('|')}`;
     if (key === this.stationKey) return;
     this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
-    const lay = layoutFor(tier);
-    this.stationArt = lay.stations.map((s) => buildStation(s.kind, s.pos, checkout));
+    this.stationArt = list.map((s) => buildStation(s.kind, s.pos, checkout, stationNumber(s.id)));
+    for (const pos of emptySlotPositions(tier, list)) this.stationArt.push(buildEmptySlot(pos));
     for (const c of this.stationArt) this.depth.addChild(c);
-    for (const c of this.lot.removeChildren()) c.destroy({ children: true });
-    this.lot.addChild(buildLot(tier));
+    const lotKey = tier ?? 'cafe';
+    if (lotKey !== this.lotKey) {
+      this.lotKey = lotKey;
+      for (const c of this.lot.removeChildren()) c.destroy({ children: true });
+      this.lot.addChild(buildLot(tier));
+    }
     if (this.actors) this.actors.queueSlots = lay.queueSlots;
   }
+  private lotKey = '';
 
   /** P3 B13: the milestone moment in the scene, once, when the bigger floor first appears. */
   private celebrated = '';
@@ -113,12 +128,13 @@ export class Scene {
 
   update(view: RenderView): void {
     const { state } = view;
-    this.buildStations(state.checkout?.active ?? 'register', state.tier);
+    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations);
     this.maybeCelebrate(state);
     const now = performance.now() / 1000;
     const dt = Math.min(0.1, Math.max(0, now - this.lastTime));
     this.lastTime = now;
 
+    this.soldOutSign.visible = (state.phase === 'day' || state.phase === 'closing') && menuDrinks(state).length > 0 && availableDrinks(state).length === 0;
     const night = isNightLook(state.phase);
     this.wall.setNight(night);
     this.lighting.setNight(night);
@@ -255,4 +271,18 @@ export class Scene {
     return { vibe: v, combo: this.crewMem.streak, label: lab.text, tone: lab.tone };
   }
 
+}
+
+/** The sold-out strip over the wall chalkboard (wall.ts draws the board at x 378..476, y 18..88). */
+function buildSoldOutSign(): Container {
+  const c = new Container();
+  const g = new Graphics();
+  g.roundRect(-56, -14, 112, 28, 5).fill(0xe0564a).stroke({ width: 2, color: 0xb8413a });
+  const t = label('SOLD OUT', 15, 0xffffff, '800');
+  t.anchor.set(0.5);
+  c.addChild(g, t);
+  c.position.set(427, 56);
+  c.rotation = -0.12;
+  c.visible = false;
+  return c;
 }

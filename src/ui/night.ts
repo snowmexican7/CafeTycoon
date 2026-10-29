@@ -9,9 +9,14 @@ import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import {
   nightStructureKey,
   type AdsVM, type BriefAlert, type CheckoutVM, type GrowthVM, type PitchVM, type ForecastVM, type HandCardVM, type MenuLineVM,
-  type NightVM, type RivalVM, type RoleVM, type SignatureVM,
+  type NightTimerVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM,
 } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
+import { isEquipmentKind } from '../sim/slots';
+import type { EquipmentKind } from '../data/equipment';
+import type { StationsVM } from './stationsVM';
+import type { TipVM } from './tipsVM';
+import type { NightFix } from '../sim/brief';
 import { isRole, type RoleId } from '../sim/roles';
 
 /*
@@ -19,7 +24,7 @@ import { isRole, type RoleId } from '../sim/roles';
  *   Tonight  the brief (yesterday's profit, tomorrow's paper in one line, up to three heads-ups with
  *            one-tap fixes), stock and crew roles;
  *   Menu     one big card per drink with a big price and −/+;
- *   Spend    cards, ads, the pitch, growing the shop, the checkout.
+ *   Spend    cards, stations (slots and the shop), ads, the pitch, growing the shop, the checkout.
  * Anything long (the receipt, the full paper, the signature designer, twist notebooks, how pricing
  * works) opens in a drawer over the board. Rebuilt only on structure changes; the clock, cash,
  * timer ring, warning text and "need $X" tags are patched in place.
@@ -36,9 +41,10 @@ export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
   { id: 'menu', label: 'Menu', icon: '☕' },
   { id: 'spend', label: 'Spend', icon: '🛒' },
 ];
-export type SpendView = 'cards' | 'ads' | 'pitch' | 'grow' | 'checkout';
+export type SpendView = 'cards' | 'stations' | 'ads' | 'pitch' | 'grow' | 'checkout';
 export const SPEND_VIEWS: { id: SpendView; label: string }[] = [
   { id: 'cards', label: '🃏 Cards' },
+  { id: 'stations', label: '🛠️ Stations' },
   { id: 'ads', label: '📣 Ads' },
   { id: 'pitch', label: '🎤 Pitch' },
   { id: 'grow', label: '🌱 Grow' },
@@ -86,6 +92,40 @@ function boughtCard(itemId: string): string {
   return `<div class="icard sold" title="${esc(item.flavor)}">
     <span class="art" style="background:${CATEGORY_TINT[item.category]}">${cardArt(item.category)}</span>
     <span class="body"><h4>${esc(item.name)}</h4></span><span class="stamp">BOUGHT</span></div>`;
+}
+
+// ---------------------------------------------------------------------------------------------- Spend: stations (FB1 WP5)
+
+/** The back bar as big slot tiles; a picked tile opens the swap row (spares from the back room, or empty it); then the shop. */
+export function stationsBoard(st: StationsVM, sel: number | null): string {
+  const picked = sel !== null ? st.slots[sel] : undefined;
+  const tiles = st.slots
+    .map((t) => `<button class="st-slot ${t.kind ? '' : 'empty'} ${picked?.index === t.index ? 'on' : ''}" data-action="slot-pick" data-index="${t.index}" aria-pressed="${picked?.index === t.index}" aria-label="Slot ${t.index + 1}: ${esc(t.name)}">
+        <span class="st-ic" aria-hidden="true">${t.icon}</span><b>${esc(t.name)}</b><small>Slot ${t.index + 1}</small></button>`)
+    .join('');
+  let pick = '<div class="st-pick hint">Tap a slot to swap what stands there. Swapping is free.</div>';
+  if (picked) {
+    const opts = st.spares.filter((x) => x.kind !== picked.kind)
+      .map((x) => `<button class="btn st-put" data-action="slot-set" data-index="${picked.index}" data-station="${x.kind}">${x.icon} Put ${esc(x.name)} here</button>`).join('');
+    const clear = picked.kind ? `<button class="btn ghost st-put" data-action="slot-set" data-index="${picked.index}" data-station="">Empty slot ${picked.index + 1}</button>` : '';
+    const none = opts ? '' : `<span class="st-none">${picked.kind ? 'Nothing spare in the back room.' : 'Nothing spare to put here.'} Buy one below.</span>`;
+    pick = `<div class="st-pick"><b>Slot ${picked.index + 1}:</b>${opts}${clear}${none}</div>`;
+  }
+  const spares = st.spares.length
+    ? `<div class="st-spares">Back room: ${st.spares.map((x) => `<span>${x.icon} ${esc(x.name)}${x.n > 1 ? ` ×${x.n}` : ''}</span>`).join('')}</div>`
+    : '';
+  const notes = st.notes.length
+    ? `<div class="st-trade warn" role="status">⚖️ ${esc(st.notes[0])}</div>${st.notes.slice(1).map((n) => `<div class="st-trade more">${esc(n)}</div>`).join('')}`
+    : '<div class="st-trade">⚖️ Every station is on the floor.</div>';
+  const shop = st.shop
+    .map((x) => `<div class="sp-card st-buy" title="${esc(x.blurb)}">
+        <div class="sp-top"><span class="sp-ic" aria-hidden="true">${x.icon}</span><b>${esc(x.name)}</b></div>
+        <span class="sp-sub">${x.owned ? `You own ${x.owned}` : 'You own none'}</span>
+        <button class="btn" data-action="equip" data-station="${x.kind}" ${x.affordable ? '' : 'disabled'}>Buy · $${x.cost}</button>
+      </div>`)
+    .join('');
+  return `<div class="st-board">${notes}<div class="st-slots" style="--n:${st.slots.length}">${tiles}</div>${pick}${spares}
+    <div class="st-shop-h">Buy a station <small>It goes in the first empty slot, else the back room.</small></div><div class="sp-grid st-shop">${shop}</div></div>`;
 }
 
 // ---------------------------------------------------------------------------------------------- Spend: ads, pitch, grow, checkout
@@ -193,8 +233,14 @@ function menuPane(vm: NightVM): string {
     : '';
   return `<div class="mn-head"><span class="mn-sum">Tomorrow: <b>~${sum.orders} orders</b> · <b>$${sum.profit.toFixed(0)}</b> profit</span>${sig}
       <button class="btn mini ghost" data-action="drawer" data-d="pricing">How pricing works ⓘ</button></div>
-    ${vm.growth.waiting ? `<div class="mn-wait" title="${esc(vm.growth.waiting)}">${esc(vm.growth.waiting.split(':')[0])}: grow to make more</div>` : ''}
+    ${vm.growth.waiting ? `<div class="mn-wait" role="status">${esc(vm.growth.waiting)} <button class="btn mini" data-action="goto" data-tab="spend" data-sub="stations">Stations ▸</button></div>` : ''}
     <div class="dgrid" style="--cols:${menuCols(menu.length)};--rows:${Math.ceil(menu.length / menuCols(menu.length)) || 1}">${menu.map((m) => drinkCard(m, onCount === 1)).join('')}</div>`;
+}
+
+/** FB1: who is ready, on the night clock pill ("✓ 1/2 ready"). */
+const readyText = (t: NightTimerVM) => `✓ ${t.ready}/${t.needed} ready`;
+function readyTag(t: NightTimerVM): string {
+  return t.needed > 0 ? `<span class="rd ${t.ready >= t.needed ? 'all' : ''}" aria-label="${t.ready} of ${t.needed} ready">${readyText(t)}</span>` : '';
 }
 
 // ---------------------------------------------------------------------------------------------- Tonight
@@ -203,6 +249,12 @@ function alertRow(a: BriefAlert): string {
   const data = a.fix ? Object.entries(a.fix.data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ') : '';
   return `<li class="al ${a.severity}" data-wid="${esc(a.id)}"><span class="al-ic" aria-hidden="true">${a.icon}</span><span class="al-t">${esc(a.text)}</span>
     ${a.fix ? `<button class="btn mini" data-action="${a.fix.action}" ${data}>${esc(a.fix.label)}</button>` : ''}</li>`;
+}
+
+/** FB1 WP6: a bot's tip as one big tap-to-apply chip ("💬 Bo · hurried: Raise the latte to $5.50 ✓"). */
+function tipChip(t: TipVM): string {
+  return `<button class="tip p-${t.personality}" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.by}: ${t.full}. Tap to do it.`)}">
+    <span class="tip-by"><span aria-hidden="true">💬</span> ${esc(t.by)}</span><span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Do it</span></button>`;
 }
 
 function rolesRow(roles: RoleVM[] | undefined): string {
@@ -234,7 +286,8 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     ? `<div class="tn-card tm"><div class="tn-h">Tomorrow${extras ? ` · ${esc(extras.weekday)}` : ''}</div><div class="tm-row"><span class="tm-ic" aria-hidden="true">${h.icon}</span><b class="tm-head">${esc(h.text)}</b></div>
         <div class="tm-sub">${esc(h.sub)}</div><button class="btn mini ghost" data-action="drawer" data-d="paper">Read the paper ▸</button></div>`
     : '';
-  const alerts = `<div class="tn-card al-card"><div class="tn-h">Heads up</div>${b.alerts.length ? `<ul class="alerts">${b.alerts.map(alertRow).join('')}</ul>` : '<p class="al-none">✓ All set. Open when ready.</p>'}</div>`;
+  const tips = vm.tips.length ? `<div class="tips" aria-label="Crew tips"><div class="tips-h">Crew tips</div>${vm.tips.map(tipChip).join('')}</div>` : '';
+  const alerts = `<div class="tn-card al-card"><div class="tn-h">Heads up</div>${b.alerts.length ? `<ul class="alerts">${b.alerts.map(alertRow).join('')}</ul>` : tips ? '' : '<p class="al-none">✓ All set. Open when ready.</p>'}${tips}</div>`;
   const warned = new Map(vm.warnings.filter((w) => w.supply).map((w) => [w.supply!, w.level]));
   const stock = vm.restock
     .map((r) => {
@@ -383,7 +436,7 @@ function drawerHtml(d: Drawer | null, vm: NightVM, extras: NightExtras | undefin
 
 // ---------------------------------------------------------------------------------------------- The board
 
-export interface NightUiState { tab: NightTab; spend: SpendView; drawer: Drawer | null; sig: SigDraft | null; pitch: PitchDraft }
+export interface NightUiState { tab: NightTab; spend: SpendView; drawer: Drawer | null; sig: SigDraft | null; pitch: PitchDraft; slotSel: number | null }
 
 /** The whole board as HTML (pure: tests and the word-count check use it). */
 export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: string | null | undefined, ui: NightUiState): string {
@@ -391,7 +444,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
   const day = extras?.day ?? 1;
   const title = day <= 1 ? 'Opening night' : `After Day ${day - 1}`;
   const sub = `planning ${extras ? `${extras.weekday}, ` : ''}Day ${day}`;
-  const alertN = vm.brief.alerts.filter((a) => a.severity !== 'good').length;
+  const alertN = vm.brief.alerts.filter((a) => a.severity === 'danger' || a.severity === 'warn').length;
   const badge: Record<NightTab, string> = { tonight: alertN ? `${alertN}` : '', menu: '', spend: vm.hand.length ? `${vm.hand.length}` : '' };
   const tabs = NIGHT_TABS
     .map((t) => `<button class="tab ntab ${t.id === ui.tab ? 'on' : ''} ${t.id === 'tonight' && alertN ? 'alert' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="${t.id === ui.tab}">${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}</button>`)
@@ -402,6 +455,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
     cards: `<div class="sp-bar"><button class="btn" data-action="reroll" ${vm.reroll.affordable ? '' : 'disabled'} title="Swap the cards on the table for a fresh deal">🎲 Re-roll · ${esc(short$(vm.reroll.cost))}</button>
       ${vm.sets.length ? `<span class="sets-on" title="Set bonuses switched on">${vm.sets.map((n) => `<span>✓ ${esc(n)}</span>`).join('')}</span>` : ''}</div>
       <div class="hand">${cards || '<p class="empty">Nothing left to buy tonight.</p>'}</div>`,
+    stations: stationsBoard(vm.stations, ui.slotSel),
     ads: adsBoard(vm.ads),
     pitch: pitchCard(vm.pitch, ui.pitch),
     grow: growthBoard(vm.growth),
@@ -427,7 +481,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
   return `
     <div class="night-shade"></div>
     <div class="night-head">${moon(34)}<h1>${title} <small>· ${esc(sub)}</small></h1><div class="spacer"></div>
-      <div class="pill timer ${relaxed ? 'relaxed' : ''}" role="timer" aria-label="${relaxed ? 'Relaxed night' : 'Night time left'}">${relaxed ? '<span aria-hidden="true">☾</span>' : `<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="#ffffff22" stroke-width="5"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#ffcf7a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${RING} ${RING}" transform="rotate(-90 18 18)"/></svg>`}<span class="clock">${relaxed ? 'Relaxed' : esc(vm.clock)}</span></div>
+      <div class="pill timer ${relaxed ? 'relaxed' : ''}" role="timer" aria-label="${relaxed ? 'Relaxed night' : 'Night time left'}">${relaxed ? '<span aria-hidden="true">☾</span>' : `<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="#ffffff22" stroke-width="5"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#ffcf7a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${RING} ${RING}" transform="rotate(-90 18 18)"/></svg>`}<span class="clock">${relaxed ? 'Relaxed' : esc(vm.clock)}</span>${readyTag(vm.timer)}</div>
       <div class="pill">${coin(24)}<span class="cash">${esc(vm.cash)}</span></div>
       ${room ? `<div class="pill room"><small>ROOM</small><b>${esc(room)}</b></div>` : ''}
     </div>
@@ -449,9 +503,9 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onTip?(input: NightFix): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
-  const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' } };
+  const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
   let lastVm: NightVM | null = null;
   let lastExtras: NightExtras | undefined;
   let lastKey = '';
@@ -485,6 +539,21 @@ export function createNight(
     else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);
     else if (action === 'checkout' && el.dataset.checkout) handlers.onCheckout?.(el.dataset.checkout as CheckoutId);
     else if (action === 'grow' && el.dataset.tier) handlers.onGrow?.(el.dataset.tier as TierId);
+    else if (action === 'slot-pick') {
+      const i = Number(el.dataset.index);
+      ui.slotSel = ui.slotSel === i ? null : i;
+      redrawStations();
+    } else if (action === 'slot-set') {
+      handlers.onSlot?.(Number(el.dataset.index), isEquipmentKind(el.dataset.station) ? el.dataset.station : null);
+      ui.slotSel = null;
+    } else if (action === 'equip' && isEquipmentKind(el.dataset.station)) handlers.onEquip?.(el.dataset.station);
+    else if (action === 'fix') {
+      const fix = lastVm?.brief.alerts.find((a) => a.id === el.dataset.fix)?.fix?.input;
+      if (fix) handlers.onTip?.(fix);
+    } else if (action === 'tip') {
+      const tip = lastVm?.tips.find((t) => t.id === el.dataset.tip);
+      if (tip) handlers.onTip?.(tip.input);
+    }
     else if (action === 'pitch-kind') {
       ui.pitch = { ...ui.pitch, kind: el.dataset.kind === 'item' ? 'item' : 'promo' };
       redrawPitch();
@@ -512,6 +581,10 @@ export function createNight(
   function openDrawer(d: Drawer | null): void {
     ui.drawer = d;
     redrawDrawer();
+  }
+  function redrawStations(): void {
+    const el = container.querySelector('.st-board');
+    if (el && lastVm) el.outerHTML = stationsBoard(lastVm.stations, ui.slotSel);
   }
   function redrawPitch(): void {
     const el = container.querySelector('.pitch-card');
@@ -567,6 +640,11 @@ export function createNight(
     const clock = container.querySelector('.night-head .clock');
     if (clock) clock.textContent = vm.timer.relaxed ? (vm.timer.lastCall ? `Last call ${vm.timer.lastCallClock ?? vm.clock}` : 'Relaxed') : vm.clock;
     container.querySelector('.night-head .timer')?.classList.toggle('last-call', vm.timer.lastCall);
+    const rd = container.querySelector<HTMLElement>('.night-head .timer .rd');
+    if (rd) {
+      rd.textContent = readyText(vm.timer);
+      rd.classList.toggle('all', vm.timer.needed > 0 && vm.timer.ready >= vm.timer.needed);
+    }
     const cashEl = container.querySelector('.night-head .cash');
     if (cashEl) cashEl.textContent = vm.cash;
     const ring = container.querySelector<SVGCircleElement>('.night-head .ring .arc');

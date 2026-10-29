@@ -1,6 +1,7 @@
 import { recipeFor } from '../sim/stations';
 import { ACCURACY } from '../sim/accuracy';
 import { ROLES } from '../sim/roles';
+import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
 /**
  * Presentational helpers for the restyled overlays. They read GameState directly for the things
  * the view models do not carry (order tickets, crew, what you hold, the day bar), and never change
@@ -100,6 +101,8 @@ export interface HudLive {
   holding: ItemKind | null;
   meName: string;
   hint: HandHint;
+  /** FB1 WP3: the close-early vote (button by the clock). */
+  closeEarly?: CloseEarlyVM;
 }
 
 export function crewOf(state: GameState, me: PlayerId): CrewMember[] {
@@ -171,6 +174,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     holding: player?.holding ?? null,
     meName: player?.role ? `${ROLES[player.role].icon} ${player.name} the ${ROLES[player.role].name}` : (player?.name ?? ''),
     hint: handHint(state, me),
+    closeEarly: closeEarlyVM(state, me),
   };
 }
 

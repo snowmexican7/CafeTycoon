@@ -3,6 +3,9 @@ import { AD_IDS, ADS } from '../sim/ads';
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../sim/checkout';
 import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
 import { layoutFor } from '../data/layout';
+import { stationMenuNote, stationsVM, type StationsVM } from './stationsVM';
+import { tipsVM, type TipVM } from './tipsVM';
+import { nightBrief, type NightAlert, type NightFix } from '../sim/brief';
 import { JUDGES, PITCH } from '../sim/pitch';
 import { copyIsLive, daysToCopy, RIVAL, rivalAskFactor, rivalMenu, sigPrice } from '../sim/rival';
 import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
@@ -72,7 +75,10 @@ export interface HudVM {
   cash: string;
   reputation: string;
   supplies: { id: SupplyId; count: number }[];
-  menu: { id: DrinkId; price: string; available: boolean }[];
+  /** `offMenu`: the crew took it off tonight, so the board says so instead of "sold out". */
+  menu: { id: DrinkId; price: string; available: boolean; offMenu?: true }[];
+  /** FB1 WP4: the doors are open and nothing on the menu can be made. */
+  soldOut?: boolean;
   notes: string[];
   phase: Phase;
   seed: number;
@@ -162,11 +168,16 @@ export function cleanMeter(cleanliness: number): CleanMeter {
   return { pct, tone: 'bad', word: 'Grimy! Inspector would fail' };
 }
 
+/** FB1 WP4: what the rush-hour chip and card say while the board is sold out. */
+export const SOLD_OUT_RUSH = { label: "Rush hour, but you're sold out", line: 'A crowd is coming and there is nothing to sell. Close early, or restock tonight.' } as const;
+
 export function hudViewModel(state: GameState): HudVM {
   const mods = computeModifiers(state);
   const available = availableDrinks(state);
+  const soldOut = (state.phase === 'day' || state.phase === 'closing') && menuDrinks(state).length > 0 && available.length === 0;
   return {
     dayLabel: dayLabelFor(state.day),
+    ...(soldOut ? { soldOut: true } : {}),
     forecast: (() => {
       const f = forecastOf(state);
       return { icon: f.icon, name: forecastName(f, state.day), blurb: f.blurb };
@@ -175,12 +186,12 @@ export function hudViewModel(state: GameState): HudVM {
     cash: money(state.cash),
     reputation: stars(state.reputation),
     supplies: neededSupplies(state).map((id) => ({ id, count: state.supplies[id] ?? 0 })),
-    menu: unlockedDrinks(state).map((id) => ({ id, price: money(menuPrice(state, id) * mods.price[id]), available: available.includes(id) })),
+    menu: unlockedDrinks(state).map((id) => ({ id, price: money(menuPrice(state, id) * mods.price[id]), available: available.includes(id), ...(state.menu[id] ? {} : { offMenu: true as const }) })),
     notes: state.morningNotes,
     phase: state.phase,
     seed: state.seed,
     pass: state.pass.map((i) => ({ item: i.item, secondsLeft: Math.ceil(i.ticksLeft / 60) })),
-    events: state.events.map((e) => ({ kind: e.kind, label: EVENT_LABELS[e.kind], secondsLeft: Math.ceil(e.ticksLeft / 60) })),
+    events: state.events.map((e) => ({ kind: e.kind, label: soldOut && e.kind === 'rushHour' ? SOLD_OUT_RUSH.label : EVENT_LABELS[e.kind], secondsLeft: Math.ceil(e.ticksLeft / 60) })),
     ...floorHud(state),
     ...rogueHud(state),
     ...(state.phase === 'closing' ? { closing: { left: state.customers.length + (state.rogue ? 1 : 0) } } : {}),
@@ -276,6 +287,8 @@ export interface NightVM {
   checkout: CheckoutVM;
   /** P3 B13: the growth path (stand → cart → café) on the Shopfront tab. */
   growth: GrowthVM;
+  /** FB1 WP5: the Spend › Stations card. */
+  stations: StationsVM;
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
@@ -288,6 +301,8 @@ export interface NightVM {
   sets: string[];
   /** FB1 WP1: the Tonight tab's at-a-glance brief (UI adapter until the sim's nightBrief lands). */
   brief: NightBriefVM;
+  /** FB1 WP6: the bot crew's tap-to-apply tips (the ones the brief does not already cover). */
+  tips: TipVM[];
   /** FB1 WP1: timed night or Relaxed (no clock, ready-up). */
   timer: NightTimerVM;
 }
@@ -472,13 +487,9 @@ export interface GrowthVM {
 const STATION_ICON: Record<string, string> = { grinder: '⚙️ grinder', espresso: '☕ espresso', steamer: '🥛 steamer', coldBrewTap: '🧊 cold-brew tap' };
 
 function waitingNote(state: GameState): { waiting?: string } {
-  if (tierOf(state) === 'cafe') return {};
-  const have = layoutFor(state.tier).stations.map((s) => s.kind);
-  const known = state.unlocked ?? BASE_DRINKS;
-  const missing = known.filter((d) => !DRINK_STATIONS[d].every((k) => have.includes(k)));
-  if (missing.length === 0) return {};
-  const t = TIERS[tierOf(state)];
-  return { waiting: `${t.icon} No steamer at the ${t.short}: ${missing.map((d) => DRINK_INFO[d].short).join(', ')} ${missing.length > 1 ? 'wait' : 'waits'} until we grow (Shopfront tab).` };
+  // FB1 WP5: from reasonOff, so a swapped-out steamer reads the same as a stand that never had one.
+  const note = stationMenuNote(state);
+  return note ? { waiting: note } : {};
 }
 
 export function growthVM(state: GameState): GrowthVM {
@@ -692,7 +703,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           } : {}),
         }
       : null;
-  const vm: Omit<NightVM, 'brief'> = {
+  const vm: Omit<NightVM, 'brief' | 'tips'> = {
     clock: clockFor(state.phaseTicksLeft),
     cash: money(state.cash),
     takings,
@@ -719,13 +730,15 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     ads: adsVM(state),
     checkout: checkoutVM(state),
     growth: growthVM(state),
+    stations: stationsVM(state),
     pitch: pitchVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),
     forecast: forecastViewModel(state),
     timer: nightTimerVM(state),
   };
-  return { ...vm, brief: nightBriefVM(vm) };
+  const brief = nightBriefVM(vm, state);
+  return { ...vm, brief, tips: tipsVM(state, brief.alerts.map((a) => a.id)) };
 }
 
 export interface ClosingVM {
@@ -1038,18 +1051,25 @@ export interface NightTimerVM {
   lastCall: boolean;
   /** The last-call countdown, m:ss, while it runs. */
   lastCallClock?: string;
+  /** People readied up / people needed to open (the sim's nightClock; patched, not structure). */
+  ready: number;
+  needed: number;
 }
 
 export function nightTimerVM(state: GameState): NightTimerVM {
   const c = nightClock(state);
   const relaxed = c.mode === 'relaxed';
   const left = relaxed ? c.lastCallSecondsLeft : null;
-  return left === null ? { relaxed, lastCall: false } : { relaxed, lastCall: true, lastCallClock: clockFor(left * TICK_RATE) };
+  const crew = { ready: c.ready.length, needed: c.needed };
+  return left === null ? { relaxed, lastCall: false, ...crew } : { relaxed, lastCall: true, lastCallClock: clockFor(left * TICK_RATE), ...crew };
 }
 
-export type BriefSeverity = 'danger' | 'warn' | 'good';
-/** A one-tap fix: a night action and its data attributes (restock, go to a tab). */
-export interface BriefFix { label: string; action: 'restock' | 'goto' | 'scout'; data: Record<string, string> }
+export type BriefSeverity = 'danger' | 'warn' | 'info' | 'good';
+/**
+ * A one-tap fix: a night action and its data attributes (go to a tab, scout), or 'fix': send the
+ * sim's own fix input for the alert (restock the packs nightBrief worked out).
+ */
+export interface BriefFix { label: string; action: 'restock' | 'goto' | 'scout' | 'fix'; data: Record<string, string>; input?: NightFix }
 export interface BriefAlert { id: string; severity: BriefSeverity; icon: string; text: string; fix?: BriefFix }
 export interface NightBriefVM {
   /** Yesterday's profit, signed ('+$12.84' / '-$3.10'); null on the opening night. */
@@ -1062,8 +1082,9 @@ export interface NightBriefVM {
 }
 
 export const MAX_BRIEF_ALERTS = 3;
-const SEVERITY_RANK: Record<BriefSeverity, number> = { danger: 0, warn: 1, good: 2 };
+const SEVERITY_RANK: Record<BriefSeverity, number> = { danger: 0, warn: 1, info: 2, good: 3 };
 const SUPPLY_ICON: Record<SupplyId, string> = { beans: '🫘', milk: '🥛', concentrate: '🧊', flavour: '🍯', pastry: '🥐' };
+const ALERT_ICON: Record<NightAlert['kind'], string> = { cash: '🏠', stock: '📦', soldOut: '🪧', spoil: '🥀', grow: '🏗️', checkout: '🧾', rival: '☕', signature: '⭐' };
 
 function stockOf(state: GameState, drink: DrinkId, low: Set<SupplyId>): 'out' | 'low' | null {
   const needs = ECONOMY.drinkSupplies[drink];
@@ -1071,33 +1092,40 @@ function stockOf(state: GameState, drink: DrinkId, low: Set<SupplyId>): 'out' | 
   return needs.some((s) => low.has(s)) ? 'low' : null;
 }
 
-/** The Tonight tab's brief, worked out from the rest of the night view (no sim changes). */
-export function nightBriefVM(vm: Omit<NightVM, 'brief'>): NightBriefVM {
-  const t = vm.takings;
-  const out: BriefAlert[] = [];
-  const goto = (tab: string, sub = ''): BriefFix['data'] => (sub ? { tab, sub } : { tab });
-  for (const w of vm.warnings) {
-    if (w.supply) {
-      const r = vm.restock.find((x) => x.supply === w.supply);
-      out.push({
-        id: w.id, severity: w.level === 'danger' ? 'danger' : 'warn', icon: SUPPLY_ICON[w.supply], text: w.title,
-        ...(r?.affordable ? { fix: { label: `+${r.packSize} · ${r.packCost.replace('.00', '')}`, action: 'restock', data: { supply: r.supply } } } : {}),
-      });
-    } else out.push({ id: w.id, severity: w.level === 'danger' ? 'danger' : 'warn', icon: '🏠', text: w.title });
+/** A sim brief alert as a Tonight row: its icon, and a button for its fix (restock) or where to go. */
+function briefRow(state: GameState, a: NightAlert): BriefAlert {
+  const row: BriefAlert = { id: a.id, severity: a.severity, icon: ALERT_ICON[a.kind], text: a.text };
+  const f = a.fix;
+  if (f?.kind === 'restock') {
+    row.icon = a.kind === 'stock' ? SUPPLY_ICON[f.supply] : row.icon;
+    const cost = restockCost(state, f.supply, f.packs);
+    row.fix = { label: `+${f.packs * ECONOMY.packs[f.supply].size} · ${money(cost).replace('.00', '')}`, action: 'fix', data: { fix: a.id }, input: f };
+  } else if (a.kind === 'grow') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'grow' } };
+  else if (a.kind === 'checkout') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'checkout' } };
+  else if (a.kind === 'rival' || a.kind === 'signature') row.fix = { label: 'Menu', action: 'goto', data: { tab: 'menu' } };
+  else if (a.kind === 'stock') {
+    const supply = a.id.split(':')[1] as SupplyId;
+    if (SUPPLY_ICON[supply]) row.icon = SUPPLY_ICON[supply];
   }
+  return row;
+}
+
+/**
+ * The Tonight tab's brief: the sim's `nightBrief(state)` alerts (cash, stock, sold out, spoilage,
+ * grow, checkout, rival, signature), plus the UI-only ones the sim does not raise (a milestone,
+ * regulars and the signature off the menu, new drinks).
+ */
+export function nightBriefVM(vm: Omit<NightVM, 'brief' | 'tips'>, state: GameState): NightBriefVM {
+  const t = vm.takings;
+  const out: BriefAlert[] = nightBrief(state).alerts.map((a) => briefRow(state, a));
+  const goto = (tab: string, sub = ''): BriefFix['data'] => (sub ? { tab, sub } : { tab });
   const g = vm.growth;
   if (g.milestone) out.push({ id: 'grow:done', severity: 'good', icon: g.milestone.icon, text: `We're a ${g.milestone.name.replace(/^The /, '').toLowerCase()} now!` });
-  const nextTier = g.tiers.find((x) => x.next && x.affordable);
-  if (nextTier) out.push({ id: `grow:${nextTier.id}`, severity: 'good', icon: nextTier.icon, text: `Can grow to the ${nextTier.name.replace(/^The /, '').toLowerCase()} (${nextTier.cost.replace('.00', '')})`, fix: { label: 'See it', action: 'goto', data: goto('spend', 'grow') } });
-  const r = vm.rival;
-  if (r.copy && !r.copy.matched) out.push({ id: 'rival:copy', severity: 'warn', icon: '☕', text: `${r.name} copied “${r.copy.of}” at ${r.copy.price}`, fix: { label: 'Prices', action: 'goto', data: goto('menu') } });
   for (const reg of vm.regulars ?? []) {
     if (reg.status === 'off') out.push({ id: `reg:${reg.name}`, severity: 'warn', icon: '♥', text: `${reg.name}'s ${reg.drinkName.toLowerCase()} is off the menu`, fix: { label: 'Menu', action: 'goto', data: goto('menu') } });
   }
   if (vm.signature?.current && !vm.signature.current.onMenu) out.push({ id: 'sig:off', severity: 'warn', icon: '⭐', text: `“${vm.signature.current.name}” can't be ordered`, fix: { label: 'Menu', action: 'goto', data: goto('menu') } });
   for (const f of vm.fresh ?? []) out.push({ id: `fresh:${f.drink}`, severity: 'good', icon: f.icon, text: `New on the menu: ${f.name}`, fix: { label: 'Menu', action: 'goto', data: goto('menu') } });
-  const next = vm.checkout.options.find((o) => o.next && o.affordable);
-  if (next) out.push({ id: `checkout:${next.id}`, severity: 'good', icon: next.icon, text: `Can afford the ${next.name} (${next.cost.replace('.00', '')})`, fix: { label: 'See it', action: 'goto', data: goto('spend', 'checkout') } });
   const alerts = out
     .map((a, i) => ({ a, i }))
     .sort((x, y) => SEVERITY_RANK[x.a.severity] - SEVERITY_RANK[y.a.severity] || x.i - y.i)

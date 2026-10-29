@@ -68,14 +68,28 @@
 #hud .card { background: var(--foam); border-radius: 16px; padding: 12px 14px; box-shadow: var(--sh-1); border: 0; min-height: 0; }
 #hud .supply { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
 #hud .supply .lab { flex: 1; font: 600 15px var(--font-display); }
-#hud .supply .lab small { display: block; font: 700 11px var(--font-body); color: var(--ink-soft); }
+#hud .supply .lab small { display: block; font: 700 13px var(--font-body); color: var(--ink-soft); }
 #hud .supply .num { font: 700 20px var(--font-display); font-variant-numeric: tabular-nums; }
 #hud .supply.low .num, #hud .supply.low small { color: #c23d32; }
 #hud .chalk { background: #2f3b36; color: #f1ebdf; border: 6px solid #8b5a3a; }
 #hud .chalk .row { display: flex; justify-content: space-between; align-items: center; font: 700 14px var(--font-body); padding: 3px 0; margin: 0; }
 #hud .chalk .row b { color: var(--honey); font-family: var(--font-display); }
 #hud .chalk .row .d { display: flex; align-items: center; gap: 6px; }
-#hud .chalk .row.off { opacity: .55; } #hud .chalk .row.off b { color: #f1ebdf; font-size: 12px; }
+#hud .chalk .row.off { opacity: .55; } #hud .chalk .row.off b { color: #f1ebdf; font-size: 13px; }
+/* FB1 WP4: the sold-out sign hung on the menu card */
+#hud .chalk .soldout-sign { display: flex; flex-direction: column; align-items: center; margin: -2px -4px 8px; padding: 6px 8px; border-radius: 8px;
+  background: #e0564a; color: #fff; transform: rotate(-2.5deg); box-shadow: 0 3px 0 #b8413a; }
+#hud .chalk .soldout-sign b { font: 800 22px var(--font-display); letter-spacing: .12em; }
+#hud .chalk .soldout-sign small { font: 600 13px var(--font-body); opacity: .95; }
+/* Short screens (1280x800): the right rail has to fit pantry, floor, menu and the morning note without clipping. */
+@media (max-height: 860px) {
+  #hud .hud-side.right { gap: 8px; }
+  #hud .hud-side.right .card { padding: 9px 12px; }
+  #hud .supply { padding: 1px 0; }
+  #hud .supply .lab small { display: none; }
+  #hud .chalk.sold-out .row { display: none; }
+  #hud .chalk .soldout-sign { margin-bottom: 2px; }
+}
 #hud .note { background: #fff1b8; transform: rotate(1.5deg); font-size: 13.5px; line-height: 1.35; overflow: auto; }
 #hud .note b { font: 600 13px var(--font-display); display: block; letter-spacing: .08em; color: #7a5c0e; margin-bottom: 2px; }
 #hud .note p { margin: 0 0 4px; }
@@ -92,7 +106,7 @@
 #hud .hold.hint.idle { background: #fff4e2cc; }
 #hud .hold.hint.idle .t { color: var(--ink-soft); }
 #hud .keys { color: var(--oat); font: 600 13px var(--font-body); display: flex; gap: 8px; align-items: center; white-space: nowrap; }
-#hud .keys .seed { opacity: .6; font-size: 12px; }
+#hud .keys .seed { opacity: .6; font-size: 13px; }
 
 #hud .toast { position: absolute; top: calc(var(--topbar) + 10px); left: 50%; transform: translateX(-50%); max-width: min(560px, 60vw);
   background: var(--foam); color: var(--ink); padding: 10px 18px; border-radius: 20px; font: 600 15px var(--font-display); box-shadow: var(--sh-2);
@@ -112,6 +126,7 @@
 @keyframes hud-wiggle { 0%, 100% { transform: rotate(1.5deg); } 30% { transform: rotate(-1deg) scale(1.03); } 60% { transform: rotate(2.5deg); } }
 
 /* Narrow laptops: drop the logo text and the key hints first. */
+@media (max-width: 1440px) { #hud .hud-top { gap: 7px; padding: 0 12px; } #hud .hud-logo span { display: none; } #hud .hud-clock { min-width: 190px; flex-basis: 220px; } #hud .hud-close .ce-t small { display: none; } #hud .hud-close.mine .ce-t small { display: block; } }
 @media (max-width: 1180px) { #hud .hud-logo span { display: none; } #hud .keys { display: none; } }
 @media (max-width: 1000px) { #hud .hud-clock { min-width: 170px; } #hud .hud-rep svg { width: 14px; } }
 @media (max-height: 700px) { #hud .note { display: none; } }
@@ -223,3 +238,23 @@
 #hud .hud-vibe[data-tone=low] .vbar i { background: linear-gradient(90deg, #e0564a, #f0a63a); }
 #hud .hud-vibe .vlab { font-size: 13px; letter-spacing: .04em; color: var(--ink-soft); }
 #hud .hud-vibe .vcombo { font-size: 12px; font-weight: 700; color: #9a4a12; background: #fde3c8; padding: 2px 7px; border-radius: 99px; }
+
+/* FB1 WP3: hold-to-close button by the day clock. --p (0..100) fills the ring while held. */
+#hud .hud-close { --p: 0; position: relative; cursor: pointer; border: 0; color: var(--ink); gap: 8px; padding: 0 14px 0 6px; height: 46px;
+  user-select: none; -webkit-user-select: none; touch-action: none; flex: 0 0 auto; }
+#hud .hud-close .ce-ring { width: 36px; height: 36px; transform: rotate(-90deg); flex: 0 0 auto; }
+#hud .hud-close .ce-ring circle { fill: none; stroke-width: 4; }
+#hud .hud-close .ce-ring .bg { stroke: #ead7bb; fill: #fffaf2; }
+#hud .hud-close .ce-ring .fg { stroke: var(--cherry, #e0564a); stroke-linecap: round; stroke-dasharray: calc(var(--p) * 1) 100; }
+#hud .hud-close .ce-ring .door { fill: #c98d62; stroke: #6b4430; stroke-width: 1.4; transform: rotate(90deg); transform-origin: 18px 18px; }
+#hud .hud-close .ce-t { display: flex; flex-direction: column; line-height: 1.1; text-align: left; }
+#hud .hud-close .ce-t b { font: 700 17px var(--font-display); }
+#hud .hud-close .ce-t small { font: 600 13px var(--font-body, var(--font-display)); color: var(--ink-soft); }
+#hud .hud-close:hover { background: #fff3e0; }
+#hud .hud-close.holding { background: #fde3c8; }
+#hud .hud-close.mine { background: #fde3c8; }
+#hud .hud-close.mine .ce-ring .fg { stroke: #9a4a12; }
+#hud .hud-close.nudge { animation: ce-pulse 1.4s ease-in-out infinite; }
+#hud .hud-close .ce-t small.ce-nudge { display: block; color: #b8413a; font-weight: 700; }
+@keyframes ce-pulse { 0%, 100% { box-shadow: var(--sh-1), 0 0 0 0 #e0564a66; } 50% { box-shadow: var(--sh-1), 0 0 0 7px #e0564a00; } }
+@media (prefers-reduced-motion: reduce) { #hud .hud-close.nudge { animation: none; outline: 3px solid #e0564a; } }

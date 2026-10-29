@@ -30,6 +30,7 @@ interface PersonOpts {
   shades?: boolean;
   headphones?: boolean;
   badge?: boolean;
+  headband?: boolean;
 }
 
 const darker = (c: number, k = 0.8) => (Math.round(((c >> 16) & 255) * k) << 16) | (Math.round(((c >> 8) & 255) * k) << 8) | Math.round((c & 255) * k);
@@ -97,6 +98,15 @@ export function drawPerson(g: Graphics, o: PersonOpts): void {
     g.roundRect(14, -62, 7, 12, 3).fill(0x2b2b30);
     g.roundRect(-20, -60, 3, 8, 1.5).fill(PALETTE.mint);
     g.roundRect(17, -60, 3, 8, 1.5).fill(PALETTE.mint);
+  }
+  if (o.headband) {
+    g.roundRect(-17, -67, 34, 6, 3).fill(0xe0564a);
+    g.roundRect(-17, -65, 34, 1.6, 0.8).fill(0xffffff);
+    if (o.facing === 'up') {
+      // the knot's tails flap at the back
+      g.moveTo(0, -64).lineTo(-6, -54).stroke({ width: 3, color: 0xe0564a, cap: 'round' });
+      g.moveTo(0, -64).lineTo(5, -55).stroke({ width: 3, color: 0xe0564a, cap: 'round' });
+    }
   }
   if (o.badge && o.facing === 'down') {
     g.circle(9, -33, 5.5).fill(0x4fae7b).stroke({ width: 1.5, color: 0xffffff });
@@ -218,9 +228,9 @@ export class Actors {
       if (key !== sprite.key) {
         sprite.body.clear();
         drawPerson(sprite.body, {
-          shirt: look.cap, cap: bl?.headphones ? undefined : look.cap, skin: look.skin, hair: look.hair, apron: true, facing: sprite.facing,
+          shirt: look.cap, cap: bl?.headphones || bl?.headband ? undefined : look.cap, skin: look.skin, hair: look.hair, apron: true, facing: sprite.facing,
           holding: p.tool === 'mop' ? null : p.holding, ring: me ? look.cap : null, dizzy: stunned,
-          shades: bl?.shades, headphones: bl?.headphones, badge: bl?.badge,
+          shades: bl?.shades, headphones: bl?.headphones, badge: bl?.badge, headband: bl?.headband,
         });
         sprite.key = key;
       }
@@ -367,7 +377,7 @@ export class Actors {
     sprite.tool.x = 18 + (p.cleaningTicksLeft > 0 ? Math.sin(timeSec * 14) * 6 : 0);
   }
 
-  /** A bot's personality emote now and then: a rookie's sweat drop, a steady hum, a veteran's coffee. */
+  /** A bot's personality emote now and then: a rookie's sweat drop, a steady hum, a veteran's coffee, a hurried stopwatch. */
   private drawEmote(sprite: PlayerSprite, look: BotLook | null, index: number, timeSec: number, hidden: boolean): void {
     const g = sprite.emote;
     const k = look && !hidden ? emotePhase(timeSec, index, look.every) : null;
@@ -386,6 +396,8 @@ export class Actors {
     if (look!.emote === 'sweat') {
       g.moveTo(x, y - 7).quadraticCurveTo(x + 6, y + 1, x, y + 5).quadraticCurveTo(x - 6, y + 1, x, y - 7).fill(0x6fb6e6);
       g.circle(x - 1.5, y + 1, 1.3).fill(0xffffff);
+    } else if (look!.emote === 'clock') {
+      drawStopwatch(g, x, y + 1, timeSec * 2);
     } else if (look!.emote === 'note') {
       g.circle(x - 3, y + 4, 3).fill(0x3a2418);
       g.moveTo(x - 0.5, y + 4).lineTo(x - 0.5, y - 6).lineTo(x + 5, y - 4).stroke({ width: 1.8, color: 0x3a2418, cap: 'round', join: 'round' });
