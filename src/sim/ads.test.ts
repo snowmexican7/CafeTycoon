@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from './run';
 import { step } from './step';
 import { validateInput } from './validate';
-import { AD_IDS, ADS, adOutcome, applyAdInput } from './ads';
+import { AD_EFFECT, AD_IDS, ADS, adOutcome, applyAdInput } from './ads';
 import { computeModifiers } from './effects';
 import { nightViewModel } from '../ui/viewModels';
 import type { AdId, GameState } from './types';
@@ -69,6 +69,7 @@ describe('parody ads (P3 B10)', () => {
     expect(s.today.ad).toEqual({ id: 'palmbook', outcome: 'viral' });
     expect(s.morningNotes.some((n) => n.includes('Palm Book ad went viral'))).toBe(true);
     expect(computeModifiers(s).mix.group).toBeCloseTo(computeModifiers(plain).mix.group * 2.2);
+    expect(computeModifiers(s).tipRate).toBeCloseTo(computeModifiers(plain).tipRate + AD_EFFECT.viral.tip); // B11 tune
     const f = run(seed);
     f.day = flopDay;
     book(f, 'palmbook');

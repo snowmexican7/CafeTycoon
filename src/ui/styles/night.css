@@ -298,3 +298,23 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .ad-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 #night .ad-foot small { color: #8a7560; font-size: 10.5px; }
 #night .ad-ok { color: #2f6b4a; font-weight: 800; }
+
+/* P3 B11: pitch an idea */
+#night .pitch-card { background: #fff8ec; border: 2px solid #e8cfa6; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+#night .pitch-card.greenlit { border-color: #5aa469; background: #f1faf2; }
+#night .pitch-card.ovation { border-color: #d9a400; background: #fffbe6; box-shadow: 0 0 0 3px #ffe58a66; }
+#night .pitch-card .pc-head { font-weight: 700; }
+#night .pitch-card .pc-head small, #night .pitch-card small { font-weight: 400; opacity: 0.75; }
+#night .pj-list { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; }
+#night .pc-kinds { display: flex; gap: 6px; }
+#night .pc-kinds .pk.on { background: #4a2c1a; color: #fff; }
+#night .pitch-text { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; border: 1.5px solid #d8c3a0; border-radius: 8px; padding: 6px 8px; resize: vertical; background: #fff; }
+#night .pc-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+#night .pr-text { margin: 0; padding: 6px 10px; border-left: 3px solid #c79a5b; background: #fff; border-radius: 6px; font-style: italic; }
+#night .pr-text small { display: block; font-style: normal; }
+#night .pr-row { display: grid; grid-template-columns: 22px 160px 52px 1fr; align-items: baseline; gap: 6px; font-size: 13px; }
+#night .pr-score { font-weight: 700; text-align: right; }
+#night .pr-score.shi { color: #2f7d3b; } #night .pr-score.smid { color: #9a6b00; } #night .pr-score.slo { color: #b33a2b; }
+#night .pr-total { font-size: 14px; }
+#night .pr-boost { background: #5aa469; color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 12px; margin-left: 4px; }
+#night .pr-notes { font-size: 12px; opacity: 0.75; }

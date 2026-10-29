@@ -33,7 +33,7 @@ export const ADS: Record<AdId, AdInfo> = {
     icon: '📘',
     target: 'group',
     reach: 'families and big groups',
-    cost: 14,
+    cost: 8,
     copy: 'Your aunt shared this: GROUP HUG LATTES ☕☕☕ Bring the whole cul-de-sac. Type AMEN for a free biscotti.*',
     odds: { flop: 30, viral: 20 },
     result: {
@@ -47,7 +47,7 @@ export const ADS: Record<AdId, AdInfo> = {
     icon: '🏡',
     target: 'regular',
     reach: 'locals and regulars',
-    cost: 10,
+    cost: 6,
     copy: 'Who keeps leaving that lovely coffee smell on our street?? Asking for a café. (It\'s us. Come say hi.)',
     odds: { flop: 25, viral: 15 },
     result: {
@@ -61,7 +61,7 @@ export const ADS: Record<AdId, AdInfo> = {
     icon: '💼',
     target: 'impatient',
     reach: 'commuters in a hurry',
-    cost: 12,
+    cost: 7,
     copy: 'Thrilled to announce our espresso has been promoted to Senior Espresso. Agree? 👇 #Hustle #Grindset #CoffeeIsALeadershipSkill',
     odds: { flop: 30, viral: 20 },
     result: {
@@ -75,7 +75,7 @@ export const ADS: Record<AdId, AdInfo> = {
     icon: '📸',
     target: 'influencer',
     reach: 'influencers and the selfie crowd',
-    cost: 18,
+    cost: 10,
     copy: 'POV: the foam art is looking back at you ✨ #NoFilter (one filter) #CafeCore',
     odds: { flop: 35, viral: 20 },
     result: {
@@ -89,7 +89,7 @@ export const ADS: Record<AdId, AdInfo> = {
     icon: '🎵',
     target: 'everyone',
     reach: 'everyone (it\'s chaos)',
-    cost: 16,
+    cost: 9,
     copy: 'Barista does the "Steam Wand Shuffle" for 8 seconds, then the milk explodes. Link in bio.',
     odds: { flop: 40, viral: 25 },
     result: {
@@ -101,10 +101,15 @@ export const ADS: Record<AdId, AdInfo> = {
 };
 
 /** How much an outcome moves traffic, the target's share of the mix, and the influencer odds. */
-export const AD_EFFECT: Record<AdOutcome, { traffic: number; mix: number; everyone: number; influencer: number }> = {
-  flop: { traffic: 1, mix: 1, everyone: 0.95, influencer: 1 },
-  ok: { traffic: 1.04, mix: 1.5, everyone: 1.08, influencer: 2.5 },
-  viral: { traffic: 1.1, mix: 2.2, everyone: 1.22, influencer: 6 },
+/**
+ * P3 B11 tune: the café is usually capacity-bound, so more walk-ins alone rarely paid for the ad.
+ * Whoever came because of a fine or viral ad is in a good mood, so tips go up (`tip` is added to
+ * the tip rate), and the costs were cut by about 40%.
+ */
+export const AD_EFFECT: Record<AdOutcome, { traffic: number; mix: number; everyone: number; influencer: number; tip: number }> = {
+  flop: { traffic: 1, mix: 1, everyone: 0.95, influencer: 1, tip: 0 },
+  ok: { traffic: 1.04, mix: 1.5, everyone: 1.08, influencer: 2.5, tip: 0.015 },
+  viral: { traffic: 1.1, mix: 2.2, everyone: 1.22, influencer: 6, tip: 0.03 },
 };
 
 export function isAdId(x: unknown): x is AdId {
@@ -130,6 +135,7 @@ export function applyAd(state: GameState, m: Modifiers): void {
   if (!ad) return;
   const fx = AD_EFFECT[ad.outcome];
   const target = ADS[ad.id].target;
+  m.tipRate += fx.tip;
   if (target === 'everyone') {
     m.traffic *= fx.everyone;
     return;
