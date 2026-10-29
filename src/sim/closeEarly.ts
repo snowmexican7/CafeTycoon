@@ -1,9 +1,10 @@
 // FB1 WP3: the "close early" vote. Final selector shape:
 //   closeEarlyState(state): { votes: number; needed: number; voted: PlayerId[]; open: boolean; hint: 'soldOut' | 'empty' | null }
-// `needed` = connected humans, `votes` = how many of them have voted, `open` = day phase and the 15 s gate has passed,
+// `needed` = connected humans who are not wheeled out, `votes` = how many of them have voted, `open` = day phase and the 15 s gate has passed,
 // `hint` = why the UI may nudge the button ('soldOut' wins over 'empty').
 import { secondsToTicks } from './constants';
 import { availableDrinks } from './customers';
+import { isOut } from './espresso';
 import { menuDrinks } from './unlocks';
 import type { GameState, Player, PlayerId, PlayerInput } from './types';
 
@@ -22,9 +23,9 @@ export interface CloseEarlyState {
 
 const isConnectedHuman = (p: Player): boolean => !p.bot && p.connected;
 
-/** Connected humans: the people whose agreement closes the shop. */
+/** Connected humans who are not wheeled out (collapsed on espresso): the people whose agreement closes the shop. */
 export function closeVoters(state: GameState): Player[] {
-  return state.players.filter(isConnectedHuman);
+  return state.players.filter((p) => isConnectedHuman(p) && !isOut(p));
 }
 
 /** True once the doors are open and the day has run long enough for a vote to count. */

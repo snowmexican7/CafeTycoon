@@ -158,7 +158,7 @@ Written down from a voice note after the Phase 3 playtest. Only the first item i
   - `nightBrief(state)` in `src/sim/brief.ts`, with `dayClock`, `expectedUse` and `runOutFraction`. A restock
     fix is left off an alert when the till cannot pay for it (the alert stays).
   - `profitOf` moved into the sim (`src/sim/profit.ts`); `viewModels.ts` re-exports it.
-  - Save version 24 (migration 23 is a no-op; 22 is a placeholder owned by fb1-sim-day, replaced at rebase),
+  - Save version 24 (migration 23 is a no-op; migration 22, the `soldOutWalkouts` backfill, came in with fb1-sim-day and is real now),
     network protocol 27.
 - **Final shapes.**
 
@@ -278,7 +278,7 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
     steamer is a gift on top), and a grinder removed into equipment is not duplicated. Surplus is kept in kind order grinder, espresso,
     steamer, coldBrewTap, trash. (An earlier version, `owned - defaults(to)`, swallowed a bought steamer; fixed in `40396e3`.)
   - *Save version 25, network protocol 28.* Migration 24→25 sets `slots = defaultSlots(tier)` and `equipment = []`; the 22 and 23
-    steps are placeholders that the day/night branches fill at merge.
+    steps are real (`soldOutWalkouts` backfill and a no-op); the day/night branches filled them at merge.
 - **Final shapes** (header comments, verbatim in spirit).
   - `src/sim/slots.ts`: `slotCount(tier): number`; `defaultSlots(tier): (StationKind | null)[]`; `stationsFromSlots(tier, slots): Station[]`
     (slot order, empty slots skipped, counter last); `growSlots(state, to)` (called before `state.tier` changes);
@@ -292,7 +292,7 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
   - Tester: `--layout default | twinEspresso | noColdBrew | noTrash` (`BalanceOptions.layout`, `applyLayout(state, layout)` in `scripts/balanceCore.ts`),
     applied right after `createRun` and `addStandIns` by editing slots and equipment and rebuilding the stations. Under the `grow` policy the
     layout only shapes the stand: growing hands the new tier's defaults back (the bin comes back as a default), so use it with the café-start policies.
-- **Tests.** 596 before FB1; 736 now (90 files) on this branch with the whole fb1 sim lane merged in, of which the slots work adds
+- **Tests.** 596 before FB1; 787 now (92 files) on `fb1-sim-fixes` with the whole fb1 sim lane merged in, of which the slots work adds
   48 in `slots.test.ts`, the bots work about 16 in `brain.test.ts`/`rogue.test.ts`/`espresso.test.ts`, and C4 adds three in `balance.test.ts` plus the grow-formula tests.
 - **Balance (40 weeks from seed 1, smart policy, 2 stand-in humans + 1 bot, café start).**
 
@@ -358,8 +358,9 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
     `smartNightInputs(state, 'smart', stage)` after stage 0 (stage 0's smart restock is skipped: the planner already restocked).
   - *Hurried personality.* `Personality` gains `'hurried'` (`ECONOMY.bots.personalities.hurried`:
     speed 1.15, reaction 0.85, mistake 0.08, no cold-brew prep) and the roster grows to four bots
-    (`BOT_IDS` ×4, `BOT_PERSONALITIES = ['steady', 'hurried', 'rookie', 'veteran']`), so any game with
-    two or more bots has a hurried one. In `act` for a `take` step, a hurried bot whose machine is in
+    (`BOT_IDS` ×4, `BOT_PERSONALITIES = ['steady', 'hurried', 'veteran', 'rookie']`, named Bo, Lu, Mo, Zip), so any game
+    with two or more bots has a hurried one and the veteran (Mo, shades and espresso) stays in the three-bot
+    crews the lobby can ask for; the rookie is the fourth, tester-only bot (`--bots 4`). In `act` for a `take` step, a hurried bot whose machine is in
     the last 40% of its run (`ACCURACY.earlyShare`) with `ECONOMY.bots.hurriedQueue` (3) or more
     customers queued presses use: the existing early pull takes the cup one star down and logs
     `cup.early`. `ECONOMY.bots.autoCrew = 3` keeps `bots: 'auto'` at three bots; the lobby cap stays
@@ -367,7 +368,11 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
     base RNG stream (goldens); two- and three-bot runs change by design (the roster is the feature).
     Open: the render's `botLook` gives hurried the steady look (UI lane); no `cup.early` showed up in
     the seed-5 900-tick runs, so telemetry from a game night should confirm hurried bots do rush.
-- **Suite.** 86 files / 596 tests before FB1; after this branch 92 files / 784 tests. `tsc` and `npm run build` clean.
+- **Final fix wave (fb1-sim-fixes).** `crewTips` names the ids the roster will spawn (`BOT_IDS.slice(0, botsFor(...))`) on the
+  opening night, before any bot has clocked in; the roster order keeps the veteran in three-bot crews; the planner switches a
+  drink off while at least one other stays on (it used to keep two); the early-close note reads whole seconds rounded up (never
+  0:00); wheeled-out players are not counted as close-early voters.
+- **Suite.** 86 files / 596 tests before FB1; after this branch and the final fix wave 92 files / 787 tests. `tsc` and `npm run build` clean.
 - **Balance (40 weeks, seed 1, humans 2, bots 1, skill 3, pace 3, scenario random, day 150 s).**
 
   | policy | start | mean cash | score | loss | profitable | bankrupt |

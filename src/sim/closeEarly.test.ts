@@ -73,10 +73,28 @@ describe('closeEarly input', () => {
     s = step(s, [vote('p2')]);
     expect(s.phase).toBe('closing');
     expect(s.phaseTicksLeft).toBe(secondsToTicks(ECONOMY.closingGraceSeconds));
-    const left = Math.round((before - 1) / 60);
+    const left = Math.ceil((before - 1) / 60);
     expect(s.today.closedEarly).toBe(left);
     const entry = s.log.find((e) => e.kind === 'closedEarly')!;
     expect(entry.data).toEqual({ votes: 2, left });
+  });
+
+  it('a vote in the last second still reads 0:01 on the clock, never 0:00', () => {
+    let s = advance(solo(), 16);
+    s.phaseTicksLeft = 20;
+    s = step(s, [vote('p1')]);
+    expect(s.phase).toBe('closing');
+    expect(s.today.closedEarly).toBe(1);
+    expect(s.log.find((e) => e.kind === 'closedEarly')!.data).toEqual({ votes: 1, left: 1 });
+  });
+
+  it('a wheeled-out player is not a needed voter: the other one closes the shop alone', () => {
+    let s = advance(two(), 16);
+    const p2 = s.players.find((p) => p.id === 'p2')!;
+    p2.espresso = { shots: 0, boostTicksLeft: 0, mul: 1, collapsedAt: s.tick, fellAt: null, out: true };
+    expect(closeEarlyState(s)).toMatchObject({ votes: 0, needed: 1 });
+    s = step(s, [vote('p1')]);
+    expect(s.phase).toBe('closing');
   });
 
   it('a solo player closes on one vote', () => {

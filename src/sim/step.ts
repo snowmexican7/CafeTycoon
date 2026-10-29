@@ -210,7 +210,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
     else s.emptySince ??= s.tick;
     // Checked every tick, so a vote that becomes unanimous because someone left still closes the shop.
     if (closeVoteUnanimous(s)) {
-      const left = Math.round(s.phaseTicksLeft / TICK_RATE);
+      const left = Math.ceil(s.phaseTicksLeft / TICK_RATE); // whole seconds, rounded up: a vote in the last second reads 0:01, not 0:00
       emitLog(s, 'closedEarly', { votes: s.closeVotes?.length ?? 0, left });
       s.today.closedEarly = left;
       enterClosing(s);
