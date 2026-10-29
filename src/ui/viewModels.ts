@@ -75,7 +75,8 @@ export interface HudVM {
   cash: string;
   reputation: string;
   supplies: { id: SupplyId; count: number }[];
-  menu: { id: DrinkId; price: string; available: boolean }[];
+  /** `offMenu`: the crew took it off tonight, so the board says so instead of "sold out". */
+  menu: { id: DrinkId; price: string; available: boolean; offMenu?: true }[];
   /** FB1 WP4: the doors are open and nothing on the menu can be made. */
   soldOut?: boolean;
   notes: string[];
@@ -185,7 +186,7 @@ export function hudViewModel(state: GameState): HudVM {
     cash: money(state.cash),
     reputation: stars(state.reputation),
     supplies: neededSupplies(state).map((id) => ({ id, count: state.supplies[id] ?? 0 })),
-    menu: unlockedDrinks(state).map((id) => ({ id, price: money(menuPrice(state, id) * mods.price[id]), available: available.includes(id) })),
+    menu: unlockedDrinks(state).map((id) => ({ id, price: money(menuPrice(state, id) * mods.price[id]), available: available.includes(id), ...(state.menu[id] ? {} : { offMenu: true as const }) })),
     notes: state.morningNotes,
     phase: state.phase,
     seed: state.seed,

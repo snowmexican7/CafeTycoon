@@ -162,7 +162,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       .join('');
     el.menu.classList.toggle('sold-out', !!vm.soldOut);
     el.menu.innerHTML = (vm.soldOut ? `<div class="soldout-sign" role="status"><b>SOLD OUT</b><small>Nothing left to make today</small></div>` : '') + vm.menu
-      .map((m) => `<div class="row ${m.available ? '' : 'off'}"><span class="d">${itemIcon(m.id, 24)}${DRINK_LABEL[m.id]}</span><b>${m.available ? esc(m.price) : 'sold out'}</b></div>`)
+      .map((m) => `<div class="row ${m.available ? '' : 'off'}"><span class="d">${itemIcon(m.id, 24)}${DRINK_LABEL[m.id]}</span><b>${m.available ? esc(m.price) : m.offMenu ? 'off menu' : 'sold out'}</b></div>`)
       .join('');
     notes = vm.notes;
     prices = Object.fromEntries(vm.menu.map((m) => [m.id, m.price]));

@@ -364,3 +364,16 @@ describe('sold-out HUD (FB1 WP4)', () => {
     expect(hudViewModel(s).soldOut).toBeUndefined();
   });
 });
+
+describe('HUD menu board: off menu is not sold out (FB1 RC)', () => {
+  it('marks a drink the crew took off the menu as offMenu, not just unavailable', async () => {
+    const { createRun } = await import('../sim/run');
+    const { hudViewModel } = await import('./viewModels');
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
+    s.phase = 'day';
+    s.menu.espresso = false;
+    const row = hudViewModel(s).menu.find((m) => m.id === 'espresso')!;
+    expect(row).toMatchObject({ available: false, offMenu: true });
+    expect(hudViewModel(s).menu.find((m) => m.id === 'coldBrew')?.offMenu).toBeUndefined();
+  });
+});
