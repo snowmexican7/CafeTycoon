@@ -2,17 +2,16 @@ import { ECONOMY } from '../data/economy';
 import type { DrinkId } from '../sim/types';
 import { esc, hide, show } from './dom';
 import { coin, itemIcon, jar, logoCup, pauseGlyph, speakerGlyph, stars, sun, SUPPLY_COLOR } from './icons';
-import { crewKey, DRINK_STEPS, handKey, ITEM_LABEL, ordersKey, type HudLive } from './live';
+import { crewKey, handKey, ITEM_LABEL, ordersKey, type HudLive } from './live';
+import { MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, URGENT as TICKET_URGENT, type RecipeHints, type TicketOpts } from './tickets';
+import { DRINK_LABEL } from './tickets';
 import { cleanMeter, EVENT_INTRO, hudStructureKey, type HudVM } from './viewModels';
 import type { EventKind } from '../sim/types';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours', pastry: 'Pastries' } as const;
 const SUPPLY_UNIT = { beans: 'shots', milk: 'steams', concentrate: 'pours', flavour: 'pumps', pastry: 'pastries' } as const;
-const DRINK_LABEL = {
-  espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew', icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha', special: 'Maple foam',
-} as const;
 const LOW_AT = 5;
-const URGENT = 0.28;
+const URGENT = TICKET_URGENT;
 
 /** Small inline icons for the event chips and cards. */
 const EVENT_ICON: Record<EventKind, string> = {
@@ -24,15 +23,15 @@ const EVENT_ICON: Record<EventKind, string> = {
 
 const parseMoney = (s: string) => Number(s.replace(/[^0-9.-]/g, '')) || 0;
 const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a' : '#e0564a');
-/** A tiny stable tilt per ticket so the rail looks pinned by hand. */
-const tilt = (id: number) => (((id * 37) % 7) - 3) * 0.3;
 
 /**
  * The in-day HUD: a top bar of pills, order tickets on the left, pantry/menu/note on the right and
  * what you hold along the bottom. Every block renders once, then only per-tick values are patched.
  */
-export function createHud(container: HTMLElement, handlers: { onMute?(): void } = {}): {
+export function createHud(container: HTMLElement, handlers: { onMute?(): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
   render(vm: HudVM, live?: HudLive): void;
+  /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
+  setRecipeHints(mode: RecipeHints): void;
   toast(lines: string[]): void;
   setRoom(code: string | null): void;
   setMuted(muted: boolean): void;
@@ -125,6 +124,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
   let lastKey = '';
   let lastWeekKey = '';
   let lastOrders = '';
+  let recipeHints: RecipeHints = opts.recipeHints ?? 'click';
   let lastCrew = '';
   let lastHand = '';
   let lastCash: number | null = null;
@@ -191,30 +191,42 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     el.day.innerHTML = `<span>${esc(vm.dayLabel)}</span>${dots}${fc}`;
   }
 
+  // FB1 WP2: which tickets show their steps, by customer id; kept across rebuilds, pruned as people leave.
+  const openSteps = new Set<number>();
+  const seenTickets = new Set<number>();
+  let lastLive: HudLive | null = null;
+  const ticketOpts = (live: HudLive): TicketOpts => ({ mode: recipeHints, open: openSteps, day: live.day ?? 0, holding: live.holding, prices });
+  el.tickets.addEventListener('click', (ev) => {
+    if (recipeHints !== 'click' || !lastLive) return;
+    const t = (ev.target as HTMLElement).closest<HTMLElement>('.ticket[data-id]');
+    if (!t) return;
+    const id = Number(t.dataset.id);
+    const i = lastLive.orders.findIndex((o) => o.id === id);
+    if (i < 0) return;
+    toggleTicket(openSteps, id, stepsOpen(recipeHints, i, id, openSteps, lastLive.day ?? 0));
+    renderOrders(lastLive);
+  });
+
   function renderOrders(live: HudLive): void {
-    const key = ordersKey(live);
+    lastLive = live;
+    pruneOpen(openSteps, live.orders.map((o) => o.id));
+    const o = ticketOpts(live);
+    const key = ticketsKey(ordersKey(live), o);
     if (key !== lastOrders) {
       lastOrders = key;
       el.count.textContent = String(live.orders.length);
       el.count.classList.toggle('zero', live.orders.length === 0);
-      el.tickets.innerHTML = live.orders.length
-        ? live.orders
-            .slice(0, 6)
-            .map(
-              (o) => `<div class="ticket ${o.patience < URGENT ? 'urgent' : ''} ${o.tag ? `kind-${o.tag.tone}` : ''}" data-id="${o.id}" style="--r:${tilt(o.id)}deg">
-                ${o.tag ? `<div class="ktag">${esc(o.tag.text)}</div>` : ''}
-                <div class="ic">${itemIcon(o.drink, 34)}</div><div class="nm">${DRINK_LABEL[o.drink]}</div>
-                <div class="pr">${esc(prices[o.drink] ?? '')}</div>
-                <div class="steps">${DRINK_STEPS[o.drink].map((s) => `<span>${s}</span>`).join('')}</div>
-                <div class="pat"><i></i></div></div>`,
-            )
-            .join('') + (live.orders.length > 6 ? `<div class="more">+${live.orders.length - 6} more waiting</div>` : '')
-        : '<div class="empty-orders">No one in line yet.<br>Grind some beans while it\'s quiet.</div>';
+      el.tickets.innerHTML = ticketsHtml(live.orders, o);
+      // Only tickets that just arrived drop in; a toggle or a new hand item must not replay it.
+      el.tickets.querySelectorAll<HTMLElement>('.ticket[data-id]').forEach((t) => {
+        const id = Number(t.dataset.id);
+        if (!seenTickets.has(id)) { seenTickets.add(id); t.classList.add('new'); }
+      });
     }
     const bars = el.tickets.querySelectorAll<HTMLElement>('.ticket');
     bars.forEach((t, i) => {
       const o = live.orders[i];
-      if (!o) return;
+      if (!o || i >= MAX_TICKETS) return;
       const bar = t.querySelector<HTMLElement>('.pat i')!;
       bar.style.width = `${(o.patience * 100).toFixed(1)}%`;
       bar.style.background = patienceHex(o.patience);
@@ -386,6 +398,11 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
   }
 
   return {
+    setRecipeHints(mode) {
+      if (mode === recipeHints) return;
+      recipeHints = mode;
+      if (lastLive) renderOrders(lastLive);
+    },
     render(vm, live) {
       const key = hudStructureKey(vm);
       if (key !== lastKey) {

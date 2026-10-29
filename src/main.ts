@@ -31,6 +31,7 @@ import { createSnapshotStore } from './storage/snapshotStore';
 import { APP_VERSION } from './version';
 import { createClosing } from './ui/closing';
 import { createHud } from './ui/hud';
+import { loadRecipeHints, saveRecipeHints } from './ui/tickets';
 import { hudLive, nightExtras } from './ui/live';
 import { createLobby } from './ui/lobby';
 import { createNight } from './ui/night';
@@ -179,7 +180,9 @@ async function main(): Promise<void> {
     onRejoin: (code) => startPeer(code, stores.settings.get().playerName),
     onRecords: () => records.open(),
   }, roadmap);
-  const hud = createHud($('#hud'), { onMute: () => audio.toggleMute() });
+  const hintStore = (() => { try { return window.localStorage; } catch { return undefined; } })();
+  let recipeHints = loadRecipeHints(hintStore);
+  const hud = createHud($('#hud'), { onMute: () => audio.toggleMute() }, { recipeHints });
   const night = createNight($('#night'), {
     onBuy: (itemId) => send({ kind: 'buy', playerId: me(), itemId }),
     onRestock: (supply) => send({ kind: 'restock', playerId: me(), supply, packs: 1 }),
@@ -206,6 +209,11 @@ async function main(): Promise<void> {
     onSettings: (patch) => send({ kind: 'settings', playerId: me(), settings: patch }),
     onQuit: () => endSession(),
     onAudio: (patch) => audio.update(patch),
+    onRecipeHints: (mode) => {
+      recipeHints = mode;
+      saveRecipeHints(hintStore, mode);
+      hud.setRecipeHints(mode);
+    },
   }, roadmap);
   const lobby = createLobby($('#lobby'), {
     onStart: () => startHostedRun(),
@@ -523,6 +531,7 @@ async function main(): Promise<void> {
       const s = session;
       pause.render({
         audio: audio.settings(),
+        recipeHints,
         pace: s.next!.settings.pace,
         dayLengthSec: s.next!.settings.dayLengthSec,
         isHost: s.me === s.next!.hostId,
