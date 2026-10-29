@@ -48,7 +48,13 @@ export type CueId =
   | 'rogueMade'
   | 'rogueStorm'
   | 'doorSlam'
-  | 'buzz';
+  | 'buzz'
+  | 'eggMeow'
+  | 'eggSmoke'
+  | 'eggReview'
+  | 'eggSecret'
+  | 'eggCamper'
+  | 'eggNameMix';
 
 export interface Cue {
   id: CueId;
@@ -138,6 +144,20 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'rogue.remade': cues.push({ id: 'rogueSaved' }); break;
       case 'rogue.made': cues.push({ id: 'rogueMade' }); break;
       case 'rogue.stormed': cues.push({ id: 'rogueStorm' }); break;
+      case 'egg.cat':
+        if (!e.data.left) cues.push({ id: 'eggMeow', mine });
+        break;
+      case 'egg.smoke':
+        cues.push({ id: e.data.cleared ? 'squeak' : 'eggSmoke', mine });
+        break;
+      case 'egg.latteArt': cues.push({ id: 'eggReview' }); break;
+      case 'egg.secret': cues.push({ id: 'eggSecret', mine }); break;
+      case 'egg.camper':
+        if (!e.data.left) cues.push({ id: 'eggCamper' });
+        break;
+      case 'egg.nameMix':
+        if (e.data.wrong || e.data.refuse) cues.push({ id: 'eggNameMix' });
+        break;
       default: break;
     }
   }

@@ -539,6 +539,8 @@ async function main(): Promise<void> {
       if (heart.tick(performance.now(), heartbeatGapMs(s.next, s.me))) audio.play({ id: 'heartbeat', mine: true });
       // Q: drink a shot (one-shot input; the host decides whether it counts)
       if (keyboard.takeEspresso()) s.transport.sendInput({ kind: 'espresso', playerId: s.me });
+      const secret = keyboard.takeSecret();
+      if (secret) s.transport.sendInput({ kind: 'secret', playerId: s.me, code: secret });
     }
   }
 

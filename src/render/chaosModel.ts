@@ -66,7 +66,11 @@ export type Burst =
   | { kind: 'scatter'; at: Vec2 }
   | { kind: 'sparkle'; at: Vec2 }
   | { kind: 'slam'; at: Vec2 }
-  | { kind: 'hmph'; at: Vec2; text: string };
+  | { kind: 'hmph'; at: Vec2; text: string }
+  | { kind: 'meow'; at: Vec2 }
+  | { kind: 'smoke'; at: Vec2 }
+  | { kind: 'review'; at: Vec2; text: string }
+  | { kind: 'secret'; at: Vec2; text: string };
 
 /**
  * One-shot comic effects that happened between two snapshots, read from the sim log (by seq) and from
@@ -85,6 +89,21 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
     else if (e.kind === 'clean' && at) bursts.push({ kind: 'sparkle', at });
     else if (e.kind === 'rogue.upset') bursts.push({ kind: 'hmph', at: queueFront(), text: 'That\u2019s not right\u2026' });
     else if (e.kind === 'rogue.stormed' && next.rogue) bursts.push({ kind: 'hmph', at: next.rogue.pos, text: 'HMPH!' });
+    else if (e.kind === 'egg.cat' && !d.left && !d.pet) {
+      const st = next.stations.find((x) => x.id === String(d.station ?? ''));
+      if (st) bursts.push({ kind: 'meow', at: { ...st.pos } });
+    } else if (e.kind === 'egg.smoke' && !d.cleared) {
+      const st = next.stations.find((x) => x.id === String(d.station ?? ''));
+      if (st) bursts.push({ kind: 'smoke', at: { ...st.pos } });
+    } else if (e.kind === 'egg.latteArt') {
+      bursts.push({ kind: 'review', at: queueFront(), text: String(d.caption ?? '2\u2605 blob') });
+    } else if (e.kind === 'egg.secret' && !d.served) {
+      bursts.push({ kind: 'secret', at: queueFront(), text: 'Secret menu!' });
+    } else if (e.kind === 'egg.nameMix' && d.wrong) {
+      bursts.push({ kind: 'hmph', at: queueFront(), text: `Cup says "${d.wrong}"` });
+    } else if (e.kind === 'egg.camper' && !d.left && !d.kicked) {
+      bursts.push({ kind: 'hmph', at: queueFront(), text: 'Just the Wi-Fi, thanks' });
+    }
   }
   // The rogue walked out the door (made it, or gave up): the door slams behind them.
   if (prev.rogue && !next.rogue && (prev.rogue.stage === 'leaving' || prev.rogue.stage === 'stormingOut')) bursts.push({ kind: 'slam', at: { ...LAYOUT.door } });

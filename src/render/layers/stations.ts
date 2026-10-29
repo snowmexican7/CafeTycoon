@@ -125,6 +125,10 @@ export interface StationOverlayState {
   /** 0..1 while working, null when idle. */
   progress: number | null;
   output: ItemKind | null;
+  /** B8: shop cat napping on this station. */
+  cat?: boolean;
+  /** B8: soft smoke alarm puffing. */
+  smoke?: boolean;
 }
 
 /**
@@ -171,6 +175,22 @@ export class StationOverlay {
         drawItem(g, s.output, cx + 22, cy - 20, 0.9);
         const pulse = 1 + Math.sin(timeSec * 5) * 0.06;
         dashedEllipse(g, cx + 22, cy - 22, 15 * pulse, 15 * pulse, 3, 4, PALETTE.honey, 2.5, 0.95);
+      }
+      // B8: soft smoke puff over a burnt espresso.
+      if (s.smoke) {
+        for (const [dx, dy, r, ph] of [[-6, -48, 7, 0], [4, -58, 9, 0.33], [-2, -68, 6, 0.66]] as const) {
+          const t = (timeSec * 0.7 + ph) % 1;
+          g.circle(cx + dx + Math.sin((t + ph) * 4) * 3, cy + dy - t * 8, r * (0.6 + t * 0.5)).fill({ color: 0x8a8a8a, alpha: 0.55 * (1 - t * 0.7) });
+        }
+      }
+      // B8: loafing shop cat (a little orange blob + ears).
+      if (s.cat) {
+        const bob = Math.sin(timeSec * 2) * 1.5;
+        g.ellipse(cx, cy - 28 + bob, 14, 9).fill(0xe89a4a);
+        g.circle(cx - 10, cy - 34 + bob, 4).fill(0xe89a4a);
+        g.circle(cx + 10, cy - 34 + bob, 4).fill(0xe89a4a);
+        g.circle(cx - 5, cy - 30 + bob, 1.6).fill(0x2a1a10);
+        g.circle(cx + 5, cy - 30 + bob, 1.6).fill(0x2a1a10);
       }
     }
     if (focus) {

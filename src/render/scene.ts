@@ -89,7 +89,14 @@ export class Scene {
         const total = Math.round((ECONOMY.stationSeconds[s.kind] / mods.stationSpeed[s.kind]) * TICK_RATE);
         progress = Math.max(0, Math.min(1, 1 - s.busyTicksLeft / total));
       }
-      return { kind: s.kind, pos: s.pos, progress, output: s.output };
+      return {
+        kind: s.kind,
+        pos: s.pos,
+        progress,
+        output: s.output,
+        cat: state.eggs?.cat?.stationId === s.id,
+        smoke: state.eggs?.smoke?.stationId === s.id,
+      };
     });
 
     const localId = this.localId ?? (state.players.length === 1 ? state.players[0].id : null);
