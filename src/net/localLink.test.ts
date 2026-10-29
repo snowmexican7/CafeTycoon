@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createLocalLink, wantsLocalLink } from './localLink';
 
-const tick = () => new Promise((r) => setTimeout(r, 30));
+// BroadcastChannel delivery is async and slower on CI runners: poll (up to 3 s) instead of a fixed wait.
+const until = async (ok: () => boolean) => { for (let i = 0; i < 150 && !ok(); i++) await new Promise((r) => setTimeout(r, 20)); };
 
 describe('local BroadcastChannel link', () => {
   it('only turns on with ?link=local', () => {
@@ -19,17 +20,17 @@ describe('local BroadcastChannel link', () => {
     const c = createLocalLink('TEST1', 'c');
     for (const [n, l] of [['b', b], ['c', c]] as const) l.onMessage('snap', (d, from) => got.push([n, d, from]));
     const other = createLocalLink('OTHER', 'z');
-    await tick();
+    await until(() => joinedA.length >= 2);
     expect(joinedA.sort()).toEqual(['b', 'c']);
     expect(other.peers()).toEqual([]);
     a.send('snap', { n: 1 });
     a.send('snap', { n: 2 }, 'c');
-    await tick();
+    await until(() => got.length >= 3);
     expect(got).toEqual([['b', { n: 1 }, 'a'], ['c', { n: 1 }, 'a'], ['c', { n: 2 }, 'a']]);
     const left: string[] = [];
     a.onPeerLeave((p) => left.push(p));
     b.leave();
-    await tick();
+    await until(() => left.length >= 1);
     expect(left).toEqual(['b']);
     expect(a.peers()).toEqual(['c']);
     for (const l of [a, c, other]) l.leave();
