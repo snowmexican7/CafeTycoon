@@ -1,3 +1,4 @@
+import { applySignatureInput } from './signature';
 import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
 import { applyPriceInput } from './pricing';
@@ -108,6 +109,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'twist':
       applyTwistInput(s, input);
+      break;
+    case 'signature':
+      applySignatureInput(s, input);
       break;
     case 'role':
       applyRoleInput(s, input);

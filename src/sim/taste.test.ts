@@ -62,8 +62,8 @@ describe('taste map (P3 B6)', () => {
     expect(knownStars(s, 'latte', t)).toBe(5);
     expect(s.today.combosFound).toEqual([`latte:${t}`]);
     expect(s.today.twistCost).toBe(TASTE.cost);
-    // Plain cup tip 0.87 (see customers.test) × 1.4 for a 5★ combo, minus the twist cost.
-    expect(s.cash).toBeCloseTo(100 + 4.75 + 1.22 - TASTE.cost, 2);
+    // Plain cup tip 0.87 (see customers.test) × 1.45 for a 5★ combo, minus the twist cost.
+    expect(s.cash).toBeCloseTo(100 + 4.75 + 1.27 - TASTE.cost, 2);
     s = serveLatte(s);
     expect(s.today.combosFound).toHaveLength(1); // only once
     expect(s.today.comboStarSum).toBe(4);

@@ -1,4 +1,4 @@
-import { TASTE, TWIST_INFO, type TwistId } from '../sim/taste';
+import { TASTE, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
 import { catalogueById } from '../data/catalogue';
 import { describeEffects } from '../sim/describe';
 import { DRINK_INFO } from '../data/drinks';
@@ -9,7 +9,7 @@ import { esc, hide, onAction, show } from './dom';
 import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
-import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RoleVM } from './viewModels';
+import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RoleVM, type SignatureVM } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
 import { isRole, type RoleId } from '../sim/roles';
 
@@ -120,6 +120,42 @@ function twistChips(m: MenuLineVM): string {
     .join('')}</div>`;
 }
 
+type SigDraft = { name: string; drink: DrinkId; twist: TwistId; premium: number };
+
+/** P3 B7: the signature designer (name, base, twist, premium) and what's on the board now. */
+function signatureCard(vm: SignatureVM | undefined, d: SigDraft | null): string {
+  if (!vm || !vm.drinks.length) return '';
+  const draft = d ?? { name: '', drink: vm.drinks[0], twist: TWISTS[0], premium: 2 };
+  const book = vm.book[draft.drink] ?? [];
+  const starsOf = (t: TwistId) => book.find((b) => b.twist === t)?.stars ?? null;
+  const cur = vm.current;
+  const dirty = !cur || cur.name !== draft.name || cur.drink !== draft.drink || cur.twist !== draft.twist || cur.premium !== draft.premium;
+  const now = cur
+    ? `<div class="sig-now"><b>On the board: “${esc(cur.name)}”</b> · ${TWIST_INFO[cur.twist].icon} ${esc(TWIST_INFO[cur.twist].name.toLowerCase())} ${esc(DRINK_INFO[cur.drink].short.toLowerCase())}
+        <span class="stars">${cur.stars === null ? '★ ?' : starRow(cur.stars)}</span> · +$${(cur.premium * vm.premiumStep).toFixed(2)} · since day ${cur.since}
+        ${cur.onMenu ? ` · ~${vm.asks} asks tomorrow` : ' · <em class="down">its base is off the menu, so nobody can order it</em>'}</div>`
+    : '<div class="sig-now">No signature yet. Design one: regulars-to-be will ask for it by name.</div>';
+  return `<div class="sig-card">
+    <div class="sig-head">⭐ Signature drink <small>name it, pick a base and a twist, set the premium</small></div>
+    <div class="sig-form">
+      <label>Name <input class="sig-name" maxlength="20" placeholder="${esc(`${TWIST_INFO[draft.twist].name} ${DRINK_INFO[draft.drink].short.toLowerCase()}`)}" value="${esc(draft.name)}"></label>
+      <label>Base <select class="sig-drink">${vm.drinks.map((x) => `<option value="${x}" ${x === draft.drink ? 'selected' : ''}>${esc(DRINK_INFO[x].name)}</option>`).join('')}</select></label>
+      <label>Twist <select class="sig-twist">${TWISTS.map((t) => {
+        const s = starsOf(t);
+        return `<option value="${t}" ${t === draft.twist ? 'selected' : ''}>${TWIST_INFO[t].icon} ${esc(TWIST_INFO[t].name)} ${s === null ? '?' : '★'.repeat(s)}</option>`;
+      }).join('')}</select></label>
+      <span class="sig-prem">Premium
+        <button class="btn mini pr-btn" data-action="sig-prem" data-step="-1" ${draft.premium <= 0 ? 'disabled' : ''} aria-label="Lower the premium">−</button>
+        <b>+$${(draft.premium * vm.premiumStep).toFixed(2)}</b>
+        <button class="btn mini pr-btn" data-action="sig-prem" data-step="1" ${draft.premium >= vm.maxPremium ? 'disabled' : ''} aria-label="Raise the premium">+</button></span>
+      <button class="btn mini primary" data-action="sig-save" ${dirty ? '' : 'disabled'}>${cur ? 'Update signature' : 'Put it on the board'}</button>
+      ${cur ? '<button class="btn mini" data-action="sig-retire">Retire</button>' : ''}
+    </div>
+    ${now}
+    <div class="sig-note">Signature cups sell at the premium. A 5★ combo earns +$1.50 a cup and 4★ +$0.75; ★★ or worse costs rating. A higher premium means fewer asks. Changing the base or twist makes it a new recipe.</div>
+  </div>`;
+}
+
 function menuBoard(menu: MenuLineVM[] | undefined): string {
   if (!menu?.length) return '';
   const onCount = menu.filter((m) => m.on).length;
@@ -141,7 +177,7 @@ function menuBoard(menu: MenuLineVM[] | undefined): string {
         <button class="btn mini" data-action="menu" data-drink="${m.drink}" data-on="${m.on ? '0' : '1'}" ${last ? 'disabled title="Keep at least one drink on"' : ''} aria-pressed="${m.on}">${m.on ? 'On' : 'Off'}</button>${fc}</div>`;
     })
     .join('')}</div>
-    <div class="mb-total tw-note">House twists: each cup with a twist costs $${TASTE.cost.toFixed(2)}. Every drink has one ★★★★★ twist and one ★ flop, different every run, and you only find out by serving it. Great combos tip up to +40%; flops tip less and cost a little rating.</div>
+    <div class="mb-total tw-note">House twists: each cup with a twist costs $${TASTE.cost.toFixed(2)}. Every drink has one ★★★★★ twist and one ★ flop, different every run, and you only find out by serving it. Great combos tip up to +45%; a flop tips 45% less and costs a little rating.</div>
     <div class="mb-total">Tomorrow at these prices: <b>~${sum.orders} orders</b>, about <b>$${sum.profit.toFixed(0)}</b> profit before tips and rent. Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</div>`;
 }
 
@@ -219,7 +255,7 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -231,6 +267,15 @@ export function createNight(
     else if (action === 'price') handlers.onPrice?.(el.dataset.drink as DrinkId, Number(el.dataset.step));
     else if (action === 'role') handlers.onRole?.(isRole(el.dataset.role) ? el.dataset.role : null);
     else if (action === 'tab') selectTab(el.dataset.tab as NightTab);
+    else if (action === 'sig-prem' && sigVm) {
+      const d = draftOr(sigVm);
+      draft = { ...d, premium: Math.max(0, Math.min(sigVm.maxPremium, d.premium + Number(el.dataset.step))) };
+      redrawSig();
+    } else if (action === 'sig-save' && sigVm) handlers.onSignature?.(draftOr(sigVm));
+    else if (action === 'sig-retire') {
+      draft = null;
+      handlers.onSignature?.(null);
+    }
     else if (action === 'jump-restock') jumpToRestock();
     else if (action === 'jump-warn') flash(container.querySelector<HTMLElement>('.warn-card'));
   });
@@ -256,6 +301,40 @@ export function createNight(
   }
   let lastKey = '';
   let activeTab: NightTab = 'shop';
+  // P3 B7: the designer's draft lives here, so a re-render (someone else bought a card) keeps it.
+  let draft: SigDraft | null = null;
+  let sigVm: SignatureVM | undefined;
+  let lastSig = '';
+  const draftOr = (vm: SignatureVM): SigDraft => draft ?? { name: '', drink: vm.drinks[0], twist: TWISTS[0], premium: 2 };
+  function syncDraft(vm: SignatureVM | undefined): SigDraft | null {
+    sigVm = vm;
+    const key = JSON.stringify(vm?.current ?? null);
+    if (key !== lastSig) {
+      lastSig = key;
+      const c = vm?.current;
+      draft = c ? { name: c.name, drink: c.drink, twist: c.twist, premium: c.premium } : draft;
+    }
+    return draft;
+  }
+  function redrawSig(): void {
+    const el = container.querySelector('.sig-card');
+    if (el) el.outerHTML = signatureCard(sigVm, draft);
+  }
+  container.addEventListener('input', (e) => {
+    const t = e.target as HTMLInputElement | HTMLSelectElement;
+    if (!sigVm || !t.closest?.('.sig-card')) return;
+    const d = draftOr(sigVm);
+    if (t.classList.contains('sig-name')) {
+      draft = { ...d, name: t.value };
+      const save = container.querySelector<HTMLButtonElement>('[data-action="sig-save"]');
+      if (save) save.disabled = false;
+      return;
+    }
+    if (t.classList.contains('sig-drink')) draft = { ...d, drink: t.value as DrinkId };
+    else if (t.classList.contains('sig-twist')) draft = { ...d, twist: t.value as TwistId };
+    else return;
+    redrawSig();
+  });
   function selectTab(tab: NightTab): void {
     if (!NIGHT_TABS.some((t) => t.id === tab)) return;
     activeTab = tab;
@@ -308,6 +387,7 @@ export function createNight(
            <div class="line"><span>Rent</span><span class="neg">−${esc(t.rent)}</span></div>
            ${t.bonus ? `<div class="line"><span>Bonuses</span><span class="pos">+${esc(t.bonus)}</span></div>` : ''}
            ${t.combos ? t.combos.map((c) => `<div class="line combo"><span>New combo: ${TWIST_INFO[c.twist].icon} ${esc(TWIST_INFO[c.twist].name)} ${esc(DRINK_INFO[c.drink].short.toLowerCase())}</span><span class="stars">${starRow(c.stars)}</span></div>`).join('') : ''}
+           ${t.sigSold ? `<div class="line"><span>Signature: ${t.sigSold} sold</span><span>${t.sigBonus !== '$0.00' ? `+${esc(t.sigBonus!)} bonus` : ''}</span></div>` : ''}
            ${t.twists ? `<div class="line"><span>Twists</span><span class="neg">−${esc(t.twists)}</span></div>` : ''}
            ${t.cupStars ? `<div class="line cups" title="Each cup starts at 3 stars; pulling it early, leaving it sitting, or taking it to the wrong station costs one. Stars scale the tip."><span>Cups ★${esc(t.cupStars)} avg · ${t.cupsPerfect} perfect</span><span>${t.cupsRating ? `<span class="neg">${esc(t.cupsRating)} rating</span>` : '★★★ keeps the rating'}</span></div>` : ''}
            ${t.pastries ? `<div class="line"><span>Pastries sold (in sales)</span><span>${t.pastries}</span></div>` : ''}
@@ -379,7 +459,7 @@ export function createNight(
             <button class="btn reroll" data-action="reroll" ${vm.reroll.affordable ? '' : 'disabled'} title="Swap the cards on the table for a fresh deal">🎲 Re-roll · ${esc(vm.reroll.cost.replace('.00', ''))}</button>
             ${vm.sets.length ? `<span class="sets-on" title="Set bonuses switched on">${vm.sets.map((n) => `<span>✓ ${esc(n)}</span>`).join('')}</span>` : ''}</div>
           <div class="pane hand" data-pane="shop" role="tabpanel">${hand}</div>
-          <div class="pane menu-pane" data-pane="menu" role="tabpanel">${menuBoard(vm.menu)}</div>
+          <div class="pane menu-pane" data-pane="menu" role="tabpanel">${signatureCard(vm.signature, syncDraft(vm.signature))}${menuBoard(vm.menu)}</div>
           <div class="pane crew-pane" data-pane="crew" role="tabpanel">${rolesBoard(vm.roles)}</div>
           <div class="pane regs-pane" data-pane="regulars" role="tabpanel">${regularsBoard(vm.regulars)}</div>
           <div class="pane paper-pane" data-pane="paper" role="tabpanel">${newspaper(vm.forecast)}</div>

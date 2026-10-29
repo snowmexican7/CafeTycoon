@@ -19,7 +19,7 @@ export const TWIST_INFO: Record<TwistId, { name: string; icon: string }> = {
 
 export const TASTE = {
   /** Tip multiplier by combo stars (index = stars; 0 unused). */
-  tip: [1, 0.7, 0.85, 1, 1.2, 1.4],
+  tip: [1, 0.55, 0.85, 1, 1.2, 1.45],
   /** Rating per serve, per star away from 3 (summed over the day, then capped). */
   repPerServe: 0.004,
   repCap: 0.25,
@@ -59,8 +59,8 @@ export function knownStars(state: GameState, drink: DrinkId, twist: TwistId): nu
 }
 
 /** At serve: the combo's stars (null with no twist); records a discovery on first serve. */
-export function serveCombo(state: GameState, drink: DrinkId, today: DayStats): { twist: TwistId; stars: number; found: boolean } | null {
-  const twist = twistFor(state, drink);
+export function serveCombo(state: GameState, drink: DrinkId, today: DayStats, override?: TwistId): { twist: TwistId; stars: number; found: boolean } | null {
+  const twist = override ?? twistFor(state, drink);
   if (!twist) return null;
   const stars = comboStars(state.seed, drink, twist);
   const key = comboKey(drink, twist);

@@ -253,3 +253,14 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .tw-chip:hover:not(.on) { background: #f6ead9; }
 #night .tw-note { background: #f3f7ec; }
 #night .line.combo .stars { color: #c8902e; letter-spacing: -1px; }
+
+/* P3 B7: signature designer. */
+#night .sig-card { grid-column: 1 / -1; background: #fff; border-radius: 12px; padding: 8px 10px; box-shadow: var(--sh-1); border: 2px solid #f0c66b; display: flex; flex-direction: column; gap: 5px; }
+#night .sig-head { font: 700 14px var(--font-display); color: #4a3a2c; } #night .sig-head small { font: 500 11px var(--font-body, inherit); color: #8a735c; margin-left: 6px; }
+#night .sig-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; color: #5a4632; }
+#night .sig-form label { display: inline-flex; align-items: center; gap: 4px; }
+#night .sig-form input, #night .sig-form select { font: 600 12px inherit; padding: 3px 6px; border: 1px solid #e2d3bf; border-radius: 8px; background: #fffaf3; color: #4a3a2c; }
+#night .sig-form input { width: 150px; }
+#night .sig-prem { display: inline-flex; align-items: center; gap: 4px; }
+#night .sig-now { font-size: 12px; color: #4a3a2c; } #night .sig-now .stars { color: #c8902e; }
+#night .sig-note { font-size: 11px; color: #8a735c; line-height: 1.3; }

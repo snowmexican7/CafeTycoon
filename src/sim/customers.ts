@@ -1,3 +1,4 @@
+import { signatureServed, sigPremium, sigShare } from './signature';
 import { roleCraft, roleTip } from './roles';
 import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
 import { demandFactor, menuPrice, pricePatience, priceTraffic } from './pricing';
@@ -102,6 +103,10 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const g = ECONOMY.customers.group;
   const count = kind === 'group' ? g.min + rngInt(state, g.max - g.min + 1) : 1;
   const drinks = regular ? [regular.drink] : Array.from({ length: count }, () => drawDrink(state, menu, m));
+  // P3 B7: a single walk-in may ask for the signature by name (one rngNext, only when a signature is on the menu).
+  const sig = state.signature;
+  const asksSig = !regular && count === 1 && sig !== undefined && menu.includes(sig.drink) && rngNext(state) < sigShare(sig);
+  if (asksSig) drinks[0] = sig.drink;
   const mul = kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1;
   // fancy drinks buy a little patience; a group waits as long as its fanciest order
   const wait = Math.max(...drinks.map((d) => (DRINK_INFO[d].wait ?? 1) * pricePatience(state, d)));
@@ -109,6 +114,7 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const customer: Customer = { id: state.nextCustomerId++, drink: drinks[0], patienceLeft: patienceMax, patienceMax };
   if (kind === 'impatient' || kind === 'group') customer.kind = kind;
   if (kind === 'group') customer.extra = drinks.slice(1);
+  if (asksSig) customer.sig = true;
   if (regular) {
     regular.visits += 1;
     customer.kind = 'regular';
@@ -206,7 +212,8 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     return;
   }
   const m = computeModifiers(state);
-  const price = round2(menuPrice(state, drink) * m.price[drink]);
+  const sig = customer.sig && state.signature?.drink === drink ? state.signature : undefined;
+  const price = round2(menuPrice(state, drink) * m.price[drink] + (sig ? sigPremium(sig) : 0));
   const reg = customer.kind === 'regular' ? state.regulars.find((r) => r.name === customer.name && r.drink === drink) : undefined;
   const kindTip =
     customer.kind === 'impatient' ? ECONOMY.customers.impatient.tip : customer.kind === 'regular' ? ECONOMY.customers.regular.tip * (reg ? regularTipFactor(state, reg) : 1) : 1;
@@ -214,9 +221,10 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   const pastry = sellPastry(state, by);
   const stars = starsFor(slips);
   noteCup(state.today, stars);
-  const combo = serveCombo(state, drink, state.today);
+  const combo = serveCombo(state, drink, state.today, sig?.twist);
+  const sigBonus = sig && combo ? signatureServed(state.today, combo.stars) : 0;
   const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) + roleCraft(state, by));
-  state.cash = round2(state.cash + price + tip - (combo ? TASTE.cost : 0));
+  state.cash = round2(state.cash + price + tip + sigBonus - (combo ? TASTE.cost : 0));
   state.today.sales = round2(state.today.sales + price);
   state.today.tips = round2(state.today.tips + tip);
   state.today.served += 1;
@@ -239,6 +247,8 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     served.combo = combo.stars;
     if (combo.found) served.found = true;
   }
+  if (sig) served.sig = sig.name;
+  if (sigBonus) served.sigBonus = sigBonus;
   if (pastry) served.pastry = pastry;
   if (customer.name !== undefined) served.name = customer.name;
   emitLog(state, 'served', served);

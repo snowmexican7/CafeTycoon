@@ -1,3 +1,4 @@
+import { sigRating } from './signature';
 import { comboRating } from './taste';
 import { accuracyRating } from './accuracy';
 import { spoilOvernight } from './spoilage';
@@ -55,7 +56,7 @@ export function finishDay(state: GameState): GameState {
   const r = ECONOMY.reputation;
   const bonus = state.today.inspection === 'pass' ? ECONOMY.events.inspector.reputationBonus : 0;
   const rogueHit = ECONOMY.rogue.repHit * (state.today.rogues ?? 0);
-  const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus - rogueHit + computeModifiers(state).quality + accuracyRating(state.today) + comboRating(state.today);
+  const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus - rogueHit + computeModifiers(state).quality + accuracyRating(state.today) + comboRating(state.today) + sigRating(state.today);
   state.reputation = round2(Math.min(r.max, Math.max(r.min, next)));
 
   noteMissedFavourites(state);
