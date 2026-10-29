@@ -1,3 +1,5 @@
+import { recipeFor } from '../sim/stations';
+import { ACCURACY } from '../sim/accuracy';
 import { ROLES } from '../sim/roles';
 /**
  * Presentational helpers for the restyled overlays. They read GameState directly for the things
@@ -132,10 +134,17 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
   if (station.kind === 'trash') return held ? go(`Bin the ${ITEM_LABEL[held].toLowerCase()}`, where) : idle('Hands are empty', where);
   if (station.kind === 'counter') return held && held !== 'grounds' ? go(`Hand off ${ITEM_LABEL[held].toLowerCase()}`, where) : idle('Bring a drink here', where);
   const kind = station.kind;
-  if (station.output !== null && held === null) return go(`Pick up ${ITEM_LABEL[station.output].toLowerCase()}`, where);
+  if (station.output !== null && held === null) {
+    const sat = station.doneAt !== undefined && state.tick - station.doneAt > ACCURACY.sitSeconds * TICK_RATE;
+    return go(`Pick up ${ITEM_LABEL[station.output].toLowerCase()}`, sat ? `${where} · sat too long, −1★` : where);
+  }
+  // P3 B5: near the end of a run, empty hands can rush it.
+  if (station.busyTicksLeft > 0 && held === null && station.making && station.busyTotal && station.busyTicksLeft <= station.busyTotal * ACCURACY.earlyShare)
+    return go(`Rush it out now (−1★)`, `${where} · ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`);
   if (station.busyTicksLeft > 0) return idle(`Ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`, where);
   if (station.output !== null) return idle('Hands full', where);
   const need = TAKES[kind];
+  if (held !== null && held !== 'grounds' && !recipeFor(state, kind, held)) return idle(`Wrong station: E fumbles it (−1★)`, `${where} needs ${need ? ITEM_LABEL[need].toLowerCase() : 'empty hands'}`);
   if (held !== need) return idle(need ? `Needs ${ITEM_LABEL[need].toLowerCase()}` : 'Hands full', where);
   const supply = USES[kind];
   if (supply && state.supplies[supply] < 1) return idle(`Out of ${SUPPLY_NAME[supply].toLowerCase()}`, where);

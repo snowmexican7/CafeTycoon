@@ -14,6 +14,13 @@ export function toastText(name: string, item: DrinkId, amount: number): string {
   return `${name} served ${DRINK_PHRASE[item]} +$${amount.toFixed(2)}`;
 }
 
+/** P3 B5: the cup's accuracy stars, e.g. " ★★☆". Empty for old events without stars. */
+export function starText(stars: unknown): string {
+  if (typeof stars !== 'number') return '';
+  const n = Math.max(0, Math.min(3, Math.round(stars)));
+  return ' ' + '★'.repeat(n) + '☆'.repeat(3 - n);
+}
+
 export type CrewBurst =
   | { kind: 'serve'; text: string; by: string; playerIndex: number; perfect: boolean; customerKind: string; regular?: string; cid: number }
   | { kind: 'oops'; playerIndex: number; by: string }
@@ -82,7 +89,7 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       const name = playerIndex >= 0 ? next.players[playerIndex].name : 'Someone';
       bursts.push({
         kind: 'serve',
-        text: toastText(name, e.data.item as DrinkId, Number(e.data.amount) || 0),
+        text: toastText(name, e.data.item as DrinkId, Number(e.data.amount) || 0) + starText(e.data.stars),
         by,
         playerIndex,
         perfect: e.data.perfect === true,

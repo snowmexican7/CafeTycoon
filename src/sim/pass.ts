@@ -19,11 +19,13 @@ export function counterInteract(state: GameState, playerId: PlayerId): GameState
   if (player.holding !== null) {
     const drink = player.holding;
     if (state.customers.some((c) => c.egg !== 'camper' && c.drink === drink)) {
-      serveCustomer(state, mostImpatient(state, (c) => c.egg !== 'camper' && c.drink === drink), drink, playerId);
+      serveCustomer(state, mostImpatient(state, (c) => c.egg !== 'camper' && c.drink === drink), drink, playerId, player.cupSlips ?? 0);
       player.holding = null;
+      delete player.cupSlips;
     } else if (state.pass.length < ECONOMY.pass.slots) {
-      state.pass.push({ item: drink, ticksLeft: secondsToTicks(ECONOMY.pass.staleSeconds[drink]) });
+      state.pass.push({ item: drink, ticksLeft: secondsToTicks(ECONOMY.pass.staleSeconds[drink]), ...(player.cupSlips ? { slips: player.cupSlips } : {}) });
       player.holding = null;
+      delete player.cupSlips;
       emitLog(state, 'pass.put', { item: drink, by: playerId });
     }
     return state;
@@ -36,11 +38,13 @@ export function counterInteract(state: GameState, playerId: PlayerId): GameState
     const customer = mostImpatient(state, (c) => c.egg !== 'camper' && onPass.has(c.drink));
     const index = stalestIndex(state, customer.drink);
     const [item] = state.pass.splice(index, 1);
-    serveCustomer(state, customer, item.item, playerId);
+    serveCustomer(state, customer, item.item, playerId, item.slips ?? 0);
     emitLog(state, 'pass.serve', { item: item.item, by: playerId });
   } else if (state.pass.length > 0) {
     const [item] = state.pass.splice(stalestIndex(state), 1);
     player.holding = item.item;
+    if (item.slips) player.cupSlips = item.slips;
+    else delete player.cupSlips;
     emitLog(state, 'pass.take', { item: item.item, by: playerId });
   }
   return state;

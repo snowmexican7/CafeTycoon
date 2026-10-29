@@ -903,3 +903,32 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
     this robust; that's a candidate for the integration block.
   - Pastries have no station or art beyond the jar colour; a counter case sprite would help.
   - There's no over-order warning yet. The night warnings only flag running out.
+
+## P3 Block 05 reflection (recipe accuracy)
+
+- **What shipped.**
+  - `src/sim/accuracy.ts`: cups carry sloppy marks (`Player.cupSlips`, `Station.cupSlips`,
+    `PassItem.slips`). Three marks: rushing (empty-handed E in the last 40% of a run takes the
+    drink now), left sitting (picked up more than 8 s after `Station.doneAt`), and fumbling (a cup
+    offered to an idle station that has no recipe for it). Stars = 3 − marks.
+  - Stars multiply the tip, tally `today.cups`, `today.cupStars` and `today.perfectCups`, and at
+    closing the rating moves by −0.15 × (3 − avg). It is never a bonus, so careful play costs
+    nothing it had before. There's no RNG anywhere in the block.
+  - UI: stars on the served toast, a receipt line with a tooltip explaining the three marks, and
+    the hand hint ("Rush it out now (−1★)", "sat too long, −1★", "Wrong station: E fumbles it").
+  - Save v14 (busy machines get a `busyTotal` so they can still be rushed), protocol v17.
+- **Checks.** Seven new tests (scoring maths; perfect cup; rush window; sitting and marks
+  following the cup; fumble; pass carry, tip, rating and receipt; migration), with two existing
+  expectations updated: the perfect-cup tip and the wrong-station hint. 552 in total.
+  Balance over 10 seeds: mean final cash 288.48 → 291.28, loss rate 25.6% → 25.4%, 0 bankrupt.
+  The bots never rush or fumble (they only press E on a ready output with a valid recipe), so
+  they earn the ×1.05 perfect-cup tip almost every time. That's within noise.
+- **What went well.** The tension is spatial and immediate: you're standing at the machine,
+  the hint tells you that you could rush it now, and you choose. Nothing new to learn at night.
+- **What to watch / deferred.**
+  - The bots are always careful. A "hurried" bot personality that rushes when the queue is long
+    would show the trade-off in solo games.
+  - The 8 s sitting window is generous on purpose. Playtests should tell whether drinks left
+    sitting happen at all in 3–4 player crews.
+  - There's no star mark on the held cup sprite yet; the hint and toast carry it for now.
+

@@ -39,6 +39,8 @@ export type BotStep = { kind: 'use'; station: string; action: BotAction } | { ki
 export interface PassItem {
   item: DrinkId;
   ticksLeft: number;
+  /** P3 B5: the cup's sloppy marks. */
+  slips?: number;
 }
 
 /** Absolute state.tick at which the event starts. */
@@ -81,6 +83,8 @@ export interface BotState {
 }
 
 export type SimEventKind =
+  | 'cup.early'
+  | 'cup.fumble'
   | 'pass.put'
   | 'pass.take'
   | 'pass.serve'
@@ -123,6 +127,8 @@ export interface Player {
   moveDir: Vec2;
   interactQueued: boolean;
   holding: ItemKind | null;
+  /** P3 B5: sloppy marks on the cup in hand (absent = 0). */
+  cupSlips?: number;
   connected: boolean;
   bot?: BotState;
   idleTicks: number;
@@ -153,6 +159,10 @@ export interface Station {
   occupiedBy: number | null;
   /** What the station is brewing (a station has several recipes since B5); null when idle. */
   making?: ItemKind | null;
+  /** P3 B5: sloppy marks on the cup inside; the length of the current run; the tick its drink finished. */
+  cupSlips?: number;
+  busyTotal?: number;
+  doneAt?: number;
 }
 
 export interface Customer {
@@ -291,6 +301,10 @@ export interface DayStats {
   slips?: number;
   /** Perfect serves today (patience left ≥ threshold). */
   perfect?: number;
+  /** P3 B5: cups scored today and their stars summed. */
+  cups?: number;
+  cupStars?: number;
+  perfectCups?: number;
   /** Challenge tip paid at closing (folded into bonus too). */
   challengeBonus?: number;
   /** Challenge ids won today. */
