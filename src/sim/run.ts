@@ -8,6 +8,7 @@ import { morningNotes } from './describe';
 import { dealHand } from './night';
 import { syncBots } from './bots/roster';
 import { espressoMorning } from './espresso';
+import { floorFields, tileOf } from './tiles';
 import type { CreateRunOptions, DayStats, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
@@ -28,6 +29,7 @@ export function freshDayStats(day: number): DayStats {
     events: [],
     drinks: { espresso: 0, latte: 0, coldBrew: 0 },
     influencer: null,
+    rogues: 0,
   };
 }
 
@@ -41,16 +43,20 @@ export function createRun(opts: CreateRunOptions): GameState {
     botSkill: 3,
     ...opts.settings,
   };
-  const players: Player[] = opts.players.map((p, i) => ({
-    id: p.id,
-    name: p.name,
-    pos: { ...(LAYOUT.spawnPoints[i] ?? LAYOUT.door) },
-    moveDir: { x: 0, y: 0 },
-    interactQueued: false,
-    holding: null,
-    connected: true,
-    idleTicks: 0,
-  }));
+  const players: Player[] = opts.players.map((p, i) => {
+    const pos = { ...(LAYOUT.spawnPoints[i] ?? LAYOUT.door) };
+    return {
+      id: p.id,
+      name: p.name,
+      pos,
+      moveDir: { x: 0, y: 0 },
+      interactQueued: false,
+      holding: null,
+      connected: true,
+      idleTicks: 0,
+      ...floorFields(pos),
+    };
+  });
   const state: GameState = {
     seed: opts.seed,
     rng: seedRng(opts.seed),
@@ -73,7 +79,7 @@ export function createRun(opts: CreateRunOptions): GameState {
     boughtTonight: [],
     ready: [],
     players,
-    stations: LAYOUT.stations.map((s) => ({ id: s.id, kind: s.kind, pos: { ...s.pos }, busyTicksLeft: 0, output: null })),
+    stations: LAYOUT.stations.map((s) => ({ id: s.id, kind: s.kind, pos: { ...s.pos }, busyTicksLeft: 0, output: null, occupiedBy: null })),
     customers: [],
     nextCustomerId: 1,
     today: freshDayStats(1),
@@ -86,6 +92,11 @@ export function createRun(opts: CreateRunOptions): GameState {
     regulars: [],
     log: [],
     nextLogSeq: 1,
+    messes: [],
+    nextMessId: 1,
+    cleanliness: 100,
+    mop: { pos: { ...LAYOUT.mopHome }, heldBy: null },
+    rogue: null,
   };
   state.scenario = SCENARIOS[rngInt(state, SCENARIOS.length)].id;
   return startNight(state);
@@ -108,7 +119,12 @@ export function startDay(state: GameState): GameState {
   state.today = freshDayStats(state.day);
   state.events = [];
   state.eventSchedule = [];
+  state.messes = [];
+  state.cleanliness = 100;
+  state.mop = { pos: { ...LAYOUT.mopHome }, heldBy: null };
+  state.rogue = null;
   syncBots(state);
+  for (const p of state.players) p.tile = tileOf(p.pos);
   scheduleEvents(state);
   state.morningNotes = morningNotes(state);
   espressoMorning(state);

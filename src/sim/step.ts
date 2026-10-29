@@ -16,6 +16,11 @@ import { validateInput } from './validate';
 import { isBotId } from './bots/roster';
 import { afterBotInteract, stepBots } from './bots/brain';
 import { drinkEspresso, stepEspresso } from './espresso';
+import { clearFloorFields, floorFields, stepStuns, trackTiles } from './tiles';
+import { onTileEntry, stepCleanliness } from './floor';
+import { resolveDrops } from './drop';
+import { stepCleaning } from './mop';
+import { stepRogue } from './rogue';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -35,6 +40,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
           holding: null,
           connected: true,
           idleTicks: 0,
+          ...floorFields(LAYOUT.door),
         });
       }
       break;
@@ -45,7 +51,13 @@ function applyInput(s: GameState, input: PlayerInput): void {
         p.connected = false;
         p.holding = null;
         p.moveDir = { x: 0, y: 0 };
+        p.heldDir = { x: 0, y: 0 };
         p.interactQueued = false;
+        clearFloorFields(p);
+        if (s.mop.heldBy === p.id) {
+          s.mop.heldBy = null;
+          s.mop.pos = { ...LAYOUT.mopHome };
+        }
       }
       break;
     }
@@ -55,9 +67,15 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'move': {
       const p = s.players.find((x) => x.id === input.playerId);
       if (p) {
-        p.moveDir = { x: input.x, y: input.y };
+        p.heldDir = { x: input.x, y: input.y };
+        if (p.stunTicksLeft === 0) p.moveDir = { x: input.x, y: input.y };
         if (input.interact) p.interactQueued = true;
       }
+      break;
+    }
+    case 'drop': {
+      const p = s.players.find((x) => x.id === input.playerId);
+      if (p && (s.phase === 'day' || s.phase === 'closing')) p.dropQueued = true;
       break;
     }
     case 'buy':
@@ -88,8 +106,10 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepEspresso(s);
   stepEvents(s, doorsOpen);
   const m = computeModifiers(s);
+  stepStuns(s);
   stepBots(s, m);
   applyMovement(s, m.moveSpeed);
+  onTileEntry(s, trackTiles(s));
   // Idle total (not a streak): a connected person's ticks with no movement and no interact.
   for (const p of s.players) {
     if (p.bot || !p.connected) continue;
@@ -101,11 +121,18 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
     interact(s, p.id);
     if (p.bot) afterBotInteract(s, p, held);
   }
-  for (const p of s.players) p.interactQueued = false;
+  resolveDrops(s);
+  for (const p of s.players) {
+    p.interactQueued = false;
+    p.dropQueued = false;
+  }
+  stepCleaning(s);
   stepStations(s);
   stepPass(s);
+  stepCleanliness(s);
   if (doorsOpen) spawnCustomers(s);
   stepCustomers(s);
+  stepRogue(s);
   s.phaseTicksLeft -= 1;
   if (s.phaseTicksLeft > 0) return;
   if (doorsOpen) {

@@ -3,8 +3,8 @@ import { RESERVED_TELE_KINDS } from '../host/telemetry';
 import { parseHello, parseInput, parseJoin, parseLobby, parseSnap, parseTele, PROTOCOL_VERSION } from './protocol';
 
 describe('protocol parsers', () => {
-  it('is on version 2', () => {
-    expect(PROTOCOL_VERSION).toBe(2);
+  it('is on version 3', () => {
+    expect(PROTOCOL_VERSION).toBe(3);
   });
 
   it('parses well-formed messages and rejects junk', () => {

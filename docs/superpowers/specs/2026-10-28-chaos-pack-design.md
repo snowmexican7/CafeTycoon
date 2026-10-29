@@ -54,8 +54,9 @@ a stale peer tab gets the version-mismatch message). Both tracks share one found
     the item goes into the output slot and the hand empties; if the station is busy or
     already holds something, **nothing happens** (no floor drop either).
 - **Otherwise the floor.** The target tile is the tile in front of the player
-  (`round(pos + facing)`, where `Player.facing` is the last non-zero `moveDir`, default
-  facing down `{0, 1}`); if that tile is a station square or outside the floor, the player's
+  (`round(pos + facing)`, where `Player.facing` is a 4-way unit vector taken from the dominant
+  axis of the last non-zero `moveDir`, ties to vertical, default facing down `{0, 1}`; the
+  renderer currently draws only up/down facing, so "4-way facing" is a Needs UI line); if that tile is a station square or outside the floor, the player's
   own tile. Grounds → a **grounds pile** (amount 1.0; onto an existing pile: amount = min(1,
   amount + 0.5)). A drink → a **spill** (same merging). The mop (§6) dropped anywhere goes
   back to its corner. Nothing drops while the mess cap is reached (the hand keeps the item).
@@ -77,11 +78,20 @@ a stale peer tab gets the version-mismatch message). Both tracks share one found
   halving bound the spread: a dropped pile can touch at most a handful of tiles.
 - **Slips.** Entering a spill: with probability `slipChance` (0.05) the player slips and is
   stunned for `stunTicks` drawn from `[180, 300]` (3–5 s): `moveDir` forced to zero, inputs
-  ignored, a bot keeps its plan and waits. The held item is kept (stun only). Log `slip`.
+  ignored (the latest move input is still remembered so a held key does not freeze the player
+  past the stun), a bot keeps its plan and waits. **The held item hits the floor** on the
+  player's own tile (a drink becomes a spill, grounds a pile; bounded by the cap). Log `slip`.
+- **Messes without pranks.** So the system lives in normal play and the tester can tune it: a
+  bot that botches a drink drops it where it stands as a spill half the time (`botSpillChance`
+  0.5) instead of binning it (still a mistake, still waste, the remake plan unchanged), and a
+  slip drops what was held (above). Humans pressing R are the third source.
+- **One mess per tile.** A spill landing on a grounds pile replaces it (a wet pile is a
+  spill); grounds landing on a spill are absorbed (the spill stays, amount merged).
 - **Cleanliness.** `GameState.cleanliness` 0–100, starts 100 each morning. Every tick it
   drops by `dirtPerMessPerTick` (0.0025) per mess and, with no messes, recovers by
   `recoverPerTick` (0.01). Customers: patience × `(patienceFloor + (1 − patienceFloor) ×
-  cleanliness / 100)` with `patienceFloor` 0.8. The health inspector fails the visit when
+  cleanliness / 100)` with `patienceFloor` 0.8, applied through `computeModifiers` when a
+  customer arrives (it sets `patienceMax` once); waiting customers are not re-rated. The health inspector fails the visit when
   cleanliness < `inspectorMin` (60), as well as on wasted drinks; one fine either way.
 - **Day end** clears every mess, every stun and every cleaning in progress; the mop returns
   to its corner; cleanliness resets to 100 at the next `startDay`.
@@ -94,6 +104,9 @@ a stale peer tab gets the version-mismatch message). Both tracks share one found
   cannot pick up the mop while holding an item.
 - **Pick up:** E with empty hands, no station within interact range, the mop within interact
   range and not held.
+- **E while carrying the mop:** cleaning comes first — if a mess is within interact range,
+  E starts a clean (below); otherwise E does nothing (a mop carrier cannot start a machine,
+  take an output or serve from the pass; the mop fills their hands).
 - **Clean:** E while carrying the mop with a mess within interact range starts a clean of the
   nearest mess: `cleaningTicksLeft = cleanTicks` (90, 1.5 s). Moving cancels it. At 0 the mess
   is removed (log `clean`). One press cleans one mess; a held key is not needed.
@@ -112,8 +125,10 @@ a stale peer tab gets the version-mismatch message). Both tracks share one found
 - **Trigger.** In `serveCustomer`, from day 2, when no rogue is active, for a normal,
   impatient or regular customer (never an influencer or a group with drinks left): roll
   `rngNext < ECONOMY.rogue.chance` (0.015). On a hit the customer is **not paid for and not
-  counted served**; they stay in the queue with `upset: { ticksLeft }` where `ticksLeft =
-  remakeSeconds` (15 s) and their patience stops counting down. Log `rogue.upset`.
+  counted served**; the drink they were handed is gone (consumed, not counted as waste); they
+  stay in the queue with `upset: { ticksLeft }` where `ticksLeft = remakeSeconds` (15 s) and
+  their patience stops counting down. An upset customer counts as the active rogue (so a second
+  cannot start) and the remake serve never rolls again. Log `rogue.upset`.
 - **Remake.** Serving them a matching drink inside the window pays normally and counts a
   serve; they leave happy. Log `rogue.remade`.
 - **Going rogue.** When the window ends they leave the queue (others move up) and become
@@ -129,9 +144,11 @@ a stale peer tab gets the version-mismatch message). Both tracks share one found
   on arrival.
 - **Making.** Stage `making`: `station.occupiedBy = customerId` and `busyTicksLeft =
   makeSeconds × 60` (10 s); players and bots cannot use an occupied station (E does nothing;
-  bots treat it as busy); when the timer ends the station is freed with **no output**. Then
+  bots treat it as busy); when the timer ends the station is freed with **no output**; the drink's supply is consumed
+  if in stock (one unit, like a normal make), otherwise they make it anyway. Then
   stage `leaving`: path to the door, removed on arrival.
-- **Cost.** Made-it-themselves or stormed out: `today.lost += 1`, `today.rogues += 1`, and
+- **Cost.** Made-it-themselves or stormed out: `today.lost += 1` (a regular also counts as a
+  lost regular, as any lost regular does), `today.rogues += 1`, and
   reputation −`repHit` (0.1) per rogue at day end; the next morning's notes carry a one-line
   review ("Had to make it myself. Two stars. Good beans though."). That is the lost sale plus
   a small hit; no gain variant (the review is the joke).
@@ -160,7 +177,7 @@ cleaning → stations → pass → cleanliness → spawns → customers → rogu
 
 `mess: { max: 12, spreadChance: 0.25, spreadMin: 0.5, slipChance: 0.05, stunTicks: [180, 300],
 cleanTicks: 90, dirtPerMessPerTick: 0.0025, recoverPerTick: 0.01, inspectorMin: 60,
-botMopBelow: 70, botMopMesses: 3, botMopMax: 3, patienceFloor: 0.8 }`
+botMopBelow: 70, botMopMesses: 3, botMopMax: 3, patienceFloor: 0.8, botSpillChance: 0.5 }`
 `rogue: { chance: 0.015, remakeSeconds: 15, waitSeconds: 5, makeSeconds: 10, speed: 0.8,
 repHit: 0.1, minDay: 2 }`
 
@@ -190,7 +207,12 @@ never two rogues; a day with messes, a mop plan and a rogue is deterministic and
 
 ## 12. Calls Kennedy may want to reverse
 
-- Slipping stuns only; the drink stays in hand.
+- Slipping drops what was held (so spills breed spills, bounded by the cap).
+- Bots spill half their botched drinks; the upset customer's first drink is consumed, not waste.
+- Facing is 4-way from the dominant axis of the last movement, not the renderer's up/down.
+- A mop carrier's E only cleans; cleanliness rates customers on arrival only.
+- Rogues consume supplies and a rogue regular counts as a lost regular.
+- Bots may take an item a human parked on a station once the human walks away.
 - The mop teleports home when dropped, instead of being carried back.
 - One E press cleans one mess after a 1.5 s stand-still, instead of holding E.
 - The rogue's review is a joke in the morning notes, not a reputation gain.

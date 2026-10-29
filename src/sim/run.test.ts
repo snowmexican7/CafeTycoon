@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createRun } from './run';
+import { createRun, startDay } from './run';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 
@@ -37,6 +37,14 @@ describe('createRun', () => {
     expect([s.eventSchedule, s.events, s.regulars, s.log]).toEqual([[], [], [], []]);
     expect(s.today).toMatchObject({ wasted: 0, fines: 0, bonus: 0, botMistakes: 0, lostRegulars: 0, inspection: null, events: [], drinks: { espresso: 0, latte: 0, coldBrew: 0 } });
     expect(s.players.every((p) => p.idleTicks === 0 && p.bot === undefined)).toBe(true);
+  });
+
+  it('starts chaos state clean', () => {
+    const s = startDay(createRun(opts));
+    expect([s.messes, s.cleanliness, s.mop, s.rogue, s.nextMessId]).toEqual([[], 100, { pos: { x: 11, y: 7 }, heldBy: null }, null, 1]);
+    expect(s.today.rogues).toBe(0);
+    expect(s.stations.every((st) => st.occupiedBy === null)).toBe(true);
+    expect(s.players[0]).toMatchObject({ facing: { x: 0, y: 1 }, heldDir: { x: 0, y: 0 }, stunTicksLeft: 0, tool: null, cleaningTicksLeft: 0, cleaningMess: null, dropQueued: false, tile: { x: 6, y: 4 } });
   });
 
   it('honours settings overrides', () => {

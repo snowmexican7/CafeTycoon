@@ -1,6 +1,7 @@
 import { ECONOMY } from '../../data/economy';
 import { LAYOUT } from '../../data/layout';
 import type { BotState, GameState, Personality, Player } from '../types';
+import { floorFields } from '../tiles';
 
 /** Who the bot baristas are: their ids, names, personalities, and how many the café wants. */
 export const BOT_IDS = ['bot-1', 'bot-2', 'bot-3'];
@@ -49,16 +50,18 @@ export function makeBotState(personality: Personality): BotState {
 }
 
 function newBarista(state: GameState, id: string, name: string, personality: Personality): Player {
+  const pos = { ...(LAYOUT.spawnPoints[state.players.length] ?? LAYOUT.door) };
   return {
     id,
     name,
-    pos: { ...(LAYOUT.spawnPoints[state.players.length] ?? LAYOUT.door) },
+    pos,
     moveDir: { x: 0, y: 0 },
     interactQueued: false,
     holding: null,
     connected: true,
     bot: makeBotState(personality),
     idleTicks: 0,
+    ...floorFields(pos),
   };
 }
 

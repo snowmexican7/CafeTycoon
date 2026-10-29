@@ -6,6 +6,7 @@ import { emitLog } from './log';
 import { counterInteract } from './pass';
 import { tally } from './tally';
 import { nearestStation } from './movement';
+import { mopInteract } from './mop';
 import type { GameState, ItemKind, PlayerId, StationKind, SupplyId } from './types';
 
 type RecipeStation = Exclude<StationKind, 'counter' | 'trash'>;
@@ -28,7 +29,8 @@ export function stepStations(state: GameState): GameState {
   for (const s of state.stations) {
     if (s.busyTicksLeft > 0) {
       s.busyTicksLeft -= 1;
-      if (s.busyTicksLeft === 0 && isRecipeStation(s.kind)) s.output = STATION_RECIPES[s.kind].gives;
+      if (s.busyTicksLeft === 0 && s.occupiedBy !== null) s.occupiedBy = null; // a rogue's drink leaves with them
+      else if (s.busyTicksLeft === 0 && isRecipeStation(s.kind)) s.output = STATION_RECIPES[s.kind].gives;
     }
   }
   return state;
@@ -38,8 +40,16 @@ export function stepStations(state: GameState): GameState {
 export function interact(state: GameState, playerId: PlayerId): GameState {
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return state;
+  if (player.tool !== null) {
+    mopInteract(state, player);
+    return state;
+  }
   const station = nearestStation(state, player.pos);
-  if (!station) return state;
+  if (!station) {
+    if (player.holding === null) mopInteract(state, player);
+    return state;
+  }
+  if (station.occupiedBy !== null) return state;
 
   if (station.kind === 'trash') {
     if (player.holding !== null && player.holding !== 'grounds') {

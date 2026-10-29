@@ -1,6 +1,6 @@
 import type { DayStats, DrinkId } from './types';
 
-export type TallyKey = 'wasted' | 'fines' | 'bonus' | 'botMistakes' | 'lostRegulars';
+export type TallyKey = 'wasted' | 'fines' | 'bonus' | 'botMistakes' | 'lostRegulars' | 'rogues';
 
 export function tally(today: DayStats, key: TallyKey, by = 1): void {
   today[key] = (today[key] ?? 0) + by;

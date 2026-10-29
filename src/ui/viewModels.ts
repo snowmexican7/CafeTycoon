@@ -10,7 +10,7 @@ import { restockCost } from '../sim/night';
 import { scoreRun } from '../sim/score';
 import type { PeerStatus } from '../net/peerSession';
 import type { Member } from '../net/protocol';
-import type { DayStats, DrinkId, EventKind, GameState, Phase, PlayerId, RunRecord, SupplyId } from '../sim/types';
+import type { DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 
 const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
@@ -59,6 +59,17 @@ export interface HudVM {
   seed: number;
   pass?: { item: DrinkId; secondsLeft: number }[];
   events?: { kind: EventKind; label: string; secondsLeft: number }[];
+  messes?: { id: number; kind: MessKind; x: number; y: number; amount: number }[];
+  cleanliness?: number;
+  mop?: { x: number; y: number; heldBy: string | null };
+  stuns?: { playerId: string; secondsLeft: number }[];
+  cleaning?: { playerId: string; secondsLeft: number }[];
+  rogue?: { stage: RogueStage; drink: DrinkId; x: number; y: number; secondsLeft: number; name?: string };
+}
+
+/** Track A fills this: messes, cleanliness, the mop, stuns and cleaning. */
+export function floorHud(_state: GameState): Pick<HudVM, 'messes' | 'cleanliness' | 'mop' | 'stuns' | 'cleaning'> {
+  return {};
 }
 
 export function hudViewModel(state: GameState): HudVM {
@@ -76,6 +87,8 @@ export function hudViewModel(state: GameState): HudVM {
     seed: state.seed,
     pass: state.pass.map((i) => ({ item: i.item, secondsLeft: Math.ceil(i.ticksLeft / 60) })),
     events: state.events.map((e) => ({ kind: e.kind, label: EVENT_LABELS[e.kind], secondsLeft: Math.ceil(e.ticksLeft / 60) })),
+    ...floorHud(state),
+    ...rogueHud(state),
   };
 }
 
@@ -225,9 +238,18 @@ export function nightStructureKey(vm: NightVM): string {
 
 /** Everything about the HUD except the clock and cash. */
 export function hudStructureKey(vm: HudVM): string {
-  const { clock: _clock, cash: _cash, pass, events, ...rest } = vm;
+  const { clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, ...rest } = vm;
   // per-tick values are patched, not rebuilt: the pass keys on its items only
-  return JSON.stringify({ ...rest, pass: pass?.map((i) => i.item), events: events?.map((e) => e.kind) });
+  return JSON.stringify({
+    ...rest,
+    pass: pass?.map((i) => i.item),
+    events: events?.map((e) => e.kind),
+    messes: messes?.map((m) => [m.id, m.kind, m.x, m.y]),
+    mop: mop?.heldBy,
+    stuns: stuns?.map((x) => x.playerId),
+    cleaning: cleaning?.map((x) => x.playerId),
+    rogue: rogue && { stage: rogue.stage, drink: rogue.drink, name: rogue.name },
+  });
 }
 
 export interface LobbyVM {
@@ -279,4 +301,9 @@ export function receiptViewModel(d: DayStats): ReceiptVM {
     lostRegulars: d.lostRegulars ?? 0,
     drinks: DRINKS.map((drink) => ({ drink, count: d.drinks?.[drink] ?? 0 })),
   };
+}
+
+/** Track B fills this: the rogue customer. */
+export function rogueHud(_state: GameState): Pick<HudVM, 'rogue'> {
+  return {};
 }

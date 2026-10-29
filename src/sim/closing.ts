@@ -4,7 +4,9 @@ import { rentForDay } from './effects';
 import { eventActive, judgeInspection } from './events';
 import { emitLog } from './log';
 import { startNight } from './run';
+import { LAYOUT } from '../data/layout';
 import { resetBotsForNight } from './bots/roster';
+import { clearFloorFields } from './tiles';
 import type { GameState } from './types';
 import { settleEspresso } from './espresso';
 
@@ -17,6 +19,9 @@ export function finishDay(state: GameState): GameState {
   if (eventActive(state, 'healthInspector')) judgeInspection(state);
   for (const c of state.customers) loseCustomer(state, c);
   state.customers = [];
+  state.messes = [];
+  state.rogue = null;
+  state.mop = { pos: { ...LAYOUT.mopHome }, heldBy: null };
   state.pass = [];
   for (const e of state.events) emitLog(state, 'event.end', { kind: e.kind });
   state.events = [];
@@ -24,8 +29,12 @@ export function finishDay(state: GameState): GameState {
   for (const s of state.stations) {
     s.busyTicksLeft = 0;
     s.output = null;
+    s.occupiedBy = null;
   }
-  for (const p of state.players) p.holding = null;
+  for (const p of state.players) {
+    p.holding = null;
+    clearFloorFields(p);
+  }
   resetBotsForNight(state);
 
   const rent = rentForDay(state);

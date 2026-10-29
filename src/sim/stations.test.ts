@@ -67,4 +67,33 @@ describe('stations', () => {
     expect(s.supplies.beans).toBe(19); // the second press lands on an idle grinder and starts a fresh grind
     expect(s.stations[0].busyTicksLeft).toBe(150);
   });
+
+  it('an occupied station ends with no output and is freed', () => {
+    let s = run2();
+    const esp = s.stations.find((st) => st.id === 'espresso')!;
+    esp.busyTicksLeft = 2;
+    esp.occupiedBy = 7;
+    s = stepStations(stepStations(s));
+    const after = s.stations.find((st) => st.id === 'espresso')!;
+    expect(after.output).toBeNull();
+    expect(after.occupiedBy).toBeNull();
+  });
+
+  it('E does nothing at an occupied station', () => {
+    let s = at(run2(), 'p1', 3, 2);
+    s.players[0].holding = 'grounds';
+    s.stations.find((st) => st.id === 'espresso')!.occupiedBy = 7;
+    s = interact(s, 'p1');
+    expect(s.players[0].holding).toBe('grounds');
+    expect(s.stations.find((st) => st.id === 'espresso')!.busyTicksLeft).toBe(0);
+  });
+
+  it('a mop carrier cannot use a station', () => {
+    let s = at(run2(), 'p1', 1, 2);
+    s.players[0].tool = 'mop';
+    const beans = s.supplies.beans;
+    s = interact(s, 'p1');
+    expect(s.stations.find((st) => st.id === 'grinder')!.busyTicksLeft).toBe(0);
+    expect(s.supplies.beans).toBe(beans);
+  });
 });

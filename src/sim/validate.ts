@@ -58,6 +58,8 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       const name = typeof input.name === 'string' ? input.name.trim().slice(0, MAX_NAME) : '';
       return { kind: 'join', playerId: input.playerId, name: name || 'Barista' };
     }
+    case 'drop':
+      return { kind: 'drop', playerId: input.playerId };
     default:
       return null;
   }

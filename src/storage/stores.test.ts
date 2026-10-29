@@ -40,8 +40,8 @@ describe('stores', () => {
 });
 
 describe('snapshot versioning', () => {
-  it('is on version 2', () => {
-    expect(SNAPSHOT_VERSION).toBe(2);
+  it('is on version 3', () => {
+    expect(SNAPSHOT_VERSION).toBe(3);
   });
 
   it('stamps saves with the schema version and refuses other versions', () => {

@@ -20,7 +20,17 @@ export interface Vec2 {
   y: number;
 }
 
-export type BotStep = { kind: 'use'; station: string; action: BotAction } | { kind: 'idle'; node: Vec2 };
+export type MessKind = 'grounds' | 'spill';
+export interface Mess { id: number; kind: MessKind; x: number; y: number; amount: number }
+export interface Mop { pos: Vec2; heldBy: PlayerId | null }
+export type RogueStage = 'walking' | 'waiting' | 'making' | 'leaving' | 'stormingOut';
+export interface Rogue {
+  customerId: number; name?: string; drink: DrinkId; stage: RogueStage;
+  pos: Vec2; path: Vec2[]; station: string | null; ticksLeft: number; waitTicks: number;
+}
+export type FloorAction = 'takeMop' | 'clean' | 'returnMop';
+export type BotStep = { kind: 'use'; station: string; action: BotAction } | { kind: 'idle'; node: Vec2 }
+  | { kind: 'floor'; node: Vec2; action: FloorAction };
 
 export interface PassItem {
   item: DrinkId;
@@ -76,7 +86,14 @@ export type SimEventKind =
   | 'inspection'
   | 'influencer'
   | 'espresso.shot'
-  | 'espresso.collapse';
+  | 'espresso.collapse'
+  | 'drop'
+  | 'slip'
+  | 'clean'
+  | 'rogue.upset'
+  | 'rogue.remade'
+  | 'rogue.made'
+  | 'rogue.stormed';
 
 export interface SimEvent {
   seq: number;
@@ -97,6 +114,17 @@ export interface Player {
   idleTicks: number;
   /** Espresso Easter egg (src/sim/espresso.ts); absent until they drink a shot today. */
   espresso?: EspressoState;
+  /** 4-way unit vector from the last non-zero moveDir; starts facing down. */
+  facing: Vec2;
+  /** The latest move input, kept through a stun so a held key resumes motion. */
+  heldDir: Vec2;
+  stunTicksLeft: number;
+  tool: 'mop' | null;
+  cleaningTicksLeft: number;
+  cleaningMess: number | null;
+  dropQueued: boolean;
+  /** tileOf(pos) as of the last tile-entry check. */
+  tile: Vec2;
 }
 
 export interface Station {
@@ -105,6 +133,8 @@ export interface Station {
   pos: Vec2;
   busyTicksLeft: number;
   output: ItemKind | null;
+  /** A rogue customer's id while they use the station. */
+  occupiedBy: number | null;
 }
 
 export interface Customer {
@@ -115,6 +145,7 @@ export interface Customer {
   kind?: CustomerKind; // absent = 'normal'
   extra?: DrinkId[];
   name?: string;
+  upset?: { ticksLeft: number };
 }
 
 export type Effect =
@@ -181,6 +212,7 @@ export interface DayStats {
   /** Espresso Easter egg: ambulance bill run up today, and hospital tab paid off from today's profit. */
   ambulance?: number;
   debtPaid?: number;
+  rogues?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -221,6 +253,11 @@ export interface GameState {
   nextLogSeq: number;
   /** Espresso Easter egg: unpaid hospital tab, paid off from future profits. Absent = 0. */
   debt?: number;
+  messes: Mess[];
+  nextMessId: number;
+  cleanliness: number;
+  mop: Mop;
+  rogue: Rogue | null;
 }
 
 export type PlayerInput =
@@ -233,7 +270,8 @@ export type PlayerInput =
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
   | { kind: 'espresso'; playerId: PlayerId }
   | { kind: 'join'; playerId: PlayerId; name: string }
-  | { kind: 'leave'; playerId: PlayerId };
+  | { kind: 'leave'; playerId: PlayerId }
+  | { kind: 'drop'; playerId: PlayerId };
 
 export interface CreateRunOptions {
   seed: number;

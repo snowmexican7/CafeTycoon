@@ -3,7 +3,7 @@ import type { HostToClient, Transport } from '../net/transport';
 import { createRun, freshDayStats, startDay } from '../sim/run';
 import { makeBotState } from '../sim/bots/roster';
 import type { GameState, PlayerInput, SimEvent } from '../sim/types';
-import { createTelemetry, createUiBuffer, setUiTelemetrySink, uiTelemetry, withTelemetry } from './telemetry';
+import { createTelemetry, RESERVED_TELE_KINDS, createUiBuffer, setUiTelemetrySink, uiTelemetry, withTelemetry } from './telemetry';
 
 const META = { host: 'p1', build: 'test', protocol: 3 };
 const run = (): GameState =>
@@ -22,6 +22,10 @@ const move = (playerId: string, interact: boolean): PlayerInput => ({ kind: 'mov
 
 describe('telemetry', () => {
   afterEach(() => setUiTelemetrySink(null));
+
+  it('reserves the chaos sim kinds', () => {
+    expect(RESERVED_TELE_KINDS).toEqual(expect.arrayContaining(['drop', 'slip', 'clean', 'rogue.upset', 'rogue.remade', 'rogue.made', 'rogue.stormed']));
+  });
 
   it('starts with a meta row and records phase-boundary snapshots once each', () => {
     const { tele } = setup();

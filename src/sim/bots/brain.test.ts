@@ -7,6 +7,7 @@ import type { GameState, Personality, Player } from '../types';
 import { chainFor, reactionDelay, think, uncoveredOrder } from './brain';
 import { findPath, targetNodes } from './path';
 import { addStandIns, botSpeed, makeBotState } from './roster';
+import { floorFields } from '../tiles';
 
 /** One human p1 who never moves, `bots` bot baristas, no arrivals, and a long day. */
 function cafe(bots: number): GameState {
@@ -46,6 +47,15 @@ describe('bot brain', () => {
     s = runUntil(s, (x) => !x.customers.some((c) => c.id === 900), 60 * 30);
     expect(s.today.served).toBe(served + 1);
     expect(s.today.drinks!.espresso).toBeGreaterThan(0);
+  });
+
+  it('an occupied station does not cover an order', () => {
+    const s = cafe(1);
+    s.customers = [{ id: 900, drink: 'espresso', ...huge }];
+    const esp = s.stations.find((st) => st.id === 'espresso')!;
+    esp.busyTicksLeft = 600;
+    esp.occupiedBy = 99;
+    expect(uncoveredOrder(s, bot(s))?.drink).toBe('espresso');
   });
 
   it('a latte goes through the steamer; a cold brew through the tap', () => {
@@ -370,7 +380,7 @@ describe('bot feel: yielding', () => {
     const spots = [{ x: 5, y: 4 }, { x: 7, y: 4 }, { x: 6, y: 3 }, { x: 6, y: 5 }];
     s.players.find((p) => p.id === 'p1')!.pos = spots[0];
     for (let i = 1; i < spots.length; i++) {
-      s.players.unshift({ id: `p${i + 1}`, name: `P${i + 1}`, pos: spots[i], moveDir: { x: 0, y: 0 }, interactQueued: false, holding: null, connected: true, idleTicks: 0 });
+      s.players.unshift({ id: `p${i + 1}`, name: `P${i + 1}`, pos: spots[i], moveDir: { x: 0, y: 0 }, interactQueued: false, holding: null, connected: true, idleTicks: 0, ...floorFields(spots[i]) });
     }
     return s;
   }
