@@ -9,6 +9,7 @@ import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
 import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RoleVM } from './viewModels';
+import type { RegularVM } from '../sim/regulars';
 import { isRole, type RoleId } from '../sim/roles';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours' } as const;
@@ -112,8 +113,8 @@ function menuBoard(menu: MenuLineVM[] | undefined): string {
       const last = m.on && onCount === 1;
       const delta = m.step === 0 ? '' : `<span class="mb-step ${m.step > 0 ? 'up' : 'down'}">${m.step > 0 ? '+' : '−'}$${Math.abs(m.price - m.list).toFixed(2)}</span>`;
       const fc = m.orders === undefined
-        ? '<span class="mb-fc off">not on the menu</span>'
-        : `<span class="mb-fc">~${m.orders} orders${m.demandPct ? ` <em class="${m.demandPct > 0 ? 'up' : 'down'}">${m.demandPct > 0 ? '+' : ''}${m.demandPct}%</em>` : ''} · <b>$${m.profit!.toFixed(0)}</b> profit</span>`;
+        ? `<span class="mb-fc off">not on the menu${m.fans ? ` · <em class="down">${esc(m.fans.join(', '))} will miss it</em>` : ''}</span>`
+        : `<span class="mb-fc">~${m.orders} orders${m.demandPct ? ` <em class="${m.demandPct > 0 ? 'up' : 'down'}">${m.demandPct > 0 ? '+' : ''}${m.demandPct}%</em>` : ''} · <b>$${m.profit!.toFixed(0)}</b> profit${m.fans ? ` · <span class="mb-fan">♥ ${esc(m.fans.join(', '))}</span>` : ''}</span>`;
       return `<div class="mb-row ${m.on ? '' : 'off'}" data-drink-row="${m.drink}">${itemIcon(m.drink, 26)}<div class="mb-txt"><b>${esc(info.name)}</b>${ticketChips(info.ticket)}</div>
         <div class="mb-pricer">
           <button class="btn mini pr-btn" data-action="price" data-drink="${m.drink}" data-step="${m.step - 1}" ${m.canDown ? '' : 'disabled'} aria-label="Lower the ${esc(info.name)} price">−</button>
@@ -124,6 +125,16 @@ function menuBoard(menu: MenuLineVM[] | undefined): string {
     })
     .join('')}</div>
     <div class="mb-total">Tomorrow at these prices: <b>~${sum.orders} orders</b>, about <b>$${sum.profit.toFixed(0)}</b> profit before tips and rent. Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</div>`;
+}
+
+/** Phase 3 B3: the regulars, their favourite drink and loyalty hearts, with a nudge when it's off or pricey. */
+function regularsBoard(regs: RegularVM[] | undefined): string {
+  if (!regs?.length) return '';
+  const note = { ok: 'happy with the menu', off: 'favourite is off the menu: skips tomorrow, loses a heart', pricey: 'thinks it is overpriced: smaller tips' } as const;
+  return `<div class="sec">Regulars <small>favourites · loyalty</small></div><div class="regs">${regs
+    .map((r) => `<div class="rg-row ${r.status}">${itemIcon(r.drink, 22)}<div class="rg-txt"><b>${esc(r.name)}</b> <span>${esc(r.drinkName)}</span><small>${note[r.status]}</small></div>
+      <span class="rg-hearts" aria-label="loyalty ${r.loyalty} of ${r.max}">${'♥'.repeat(r.loyalty)}<i>${'♥'.repeat(r.max - r.loyalty)}</i></span></div>`)
+    .join('')}</div>`;
 }
 
 /** Phase 3 B1: pick a role for the week. Each card names the perk and the weakness. */
@@ -294,6 +305,7 @@ export function createNight(
             <div class="sec">Restock</div>
             <div class="restocks">${restock}</div>
             ${rolesBoard(vm.roles)}
+            ${regularsBoard(vm.regulars)}
             ${menuBoard(vm.menu)}
           </div>
           <div class="tabs" role="tablist"><span class="tab on" role="tab" aria-selected="true">Tonight's hand · ${vm.hand.length}</span>

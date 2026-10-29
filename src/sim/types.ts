@@ -58,6 +58,8 @@ export interface Regular {
   drink: DrinkId;
   visits: number;
   lost: number;
+  /** Phase 3 B3: 0..5; absent = 0. */
+  loyalty?: number;
 }
 
 export interface BotState {

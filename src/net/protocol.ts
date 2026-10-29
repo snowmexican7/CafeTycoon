@@ -5,7 +5,7 @@ import type { GameState, PlayerInput } from '../sim/types';
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
 export const APP_ID = 'cafetycoon-v1';
 /** Bump when any message below changes shape; mismatched builds refuse each other politely. */
-export const PROTOCOL_VERSION = 14;
+export const PROTOCOL_VERSION = 15;
 export const ACTIONS = ['hello', 'join', 'input', 'snap', 'lobby', 'tele', 'seat', 'snapd', 'resync'] as const;
 export type ActionKind = (typeof ACTIONS)[number];
 

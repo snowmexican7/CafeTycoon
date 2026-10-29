@@ -1,4 +1,5 @@
 import { PRICING, menuPrice, priceForecast, priceTraffic } from '../sim/pricing';
+import { regularsViewModel, type RegularVM } from '../sim/regulars';
 import { ROLE_IDS, ROLES, roleHolders, type RoleId } from '../sim/roles';
 import { awardsFor, awardsText, type Award } from '../sim/awards';
 import { catalogueById } from '../data/catalogue';
@@ -252,6 +253,8 @@ export interface NightVM {
   ready: { id: PlayerId; name: string; ready: boolean; role?: string }[];
   /** Phase 3 B1: the four roles, who holds each, and whether this barista can take it. */
   roles?: RoleVM[];
+  /** Phase 3 B3: regulars, their favourite and loyalty. */
+  regulars?: RegularVM[];
   meReady: boolean;
   menu?: MenuLineVM[];
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
@@ -348,6 +351,8 @@ export interface MenuLineVM {
   demandPct?: number;
   orders?: number;
   profit?: number;
+  /** Regulars whose favourite this is (P3 B3). */
+  fans?: string[];
 }
 
 export function menuLines(state: GameState): MenuLineVM[] {
@@ -358,6 +363,7 @@ export function menuLines(state: GameState): MenuLineVM[] {
   return unlockedDrinks(state).map((drink) => {
     const step = state.priceSteps?.[drink] ?? 0;
     const l = fc.get(drink);
+    const fans = state.regulars.filter((r) => r.drink === drink).map((r) => r.name);
     return {
       drink,
       on: state.menu[drink],
@@ -367,6 +373,7 @@ export function menuLines(state: GameState): MenuLineVM[] {
       canUp: step < PRICING.maxStep,
       canDown: step > PRICING.minStep,
       ...(l ? { demandPct: l.demandPct, orders: l.orders, profit: l.profit } : {}),
+      ...(fans.length ? { fans } : {}),
     };
   });
 }
@@ -414,6 +421,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     }),
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id), ...(p.role ? { role: ROLES[p.role].icon } : {}) })),
     roles: rolesViewModel(state, me),
+    ...(state.regulars.length ? { regulars: regularsViewModel(state) } : {}),
     meReady: state.ready.includes(me),
     menu: menuLines(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
