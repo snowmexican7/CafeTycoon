@@ -77,6 +77,7 @@ function newspaper(f: ForecastVM | undefined): string {
         ${f.eventNote ? `<div class="pn-ev">⚠ ${esc(f.eventNote)}</div>` : ''}
         ${f.radio ? `<div class="pn-radio" title="Weather radio: tomorrow's events">📻 <b>Radio:</b> ${esc(f.radio)}</div>` : ''}
         ${f.challenges ? `<div class="pn-challenge" title="Optional daily challenge">${esc(f.challenges)}</div>` : ''}
+        ${f.taste ? `<div class="pn-taste" title="Tastes drift every few days: the top twist for each drink moves">☕ <b>Taste:</b> ${esc(f.taste)}</div>` : ''}
         <div class="pn-later">Day after: ${f.later.icon} ${esc(f.later.name)} <small>(rumour)</small></div>
       </div>
     </div>
@@ -110,12 +111,12 @@ function starRow(n: number): string {
 
 /** P3 B6: the drink's house twist picker, doubling as its taste notebook (stars once served, ? until then). */
 function twistChips(m: MenuLineVM): string {
-  const chip = (twist: TwistId | null, label: string, stars: string, title: string) =>
-    `<button class="tw-chip ${(m.twist ?? null) === twist ? 'on' : ''}" data-action="twist" data-drink="${m.drink}" data-twist="${twist ?? ''}" title="${esc(title)}" aria-pressed="${(m.twist ?? null) === twist}">${label}${stars ? `<small>${stars}</small>` : ''}</button>`;
+  const chip = (twist: TwistId | null, label: string, stars: string, title: string, stale = false) =>
+    `<button class="tw-chip ${(m.twist ?? null) === twist ? 'on' : ''}${stale ? ' stale' : ''}" data-action="twist" data-drink="${m.drink}" data-twist="${twist ?? ''}" title="${esc(title)}" aria-pressed="${(m.twist ?? null) === twist}">${label}${stars ? `<small>${stars}</small>` : ''}</button>`;
   return `<div class="tw-row">${chip(null, 'Plain', '', 'No twist')}${m.book
     .map((b) => {
       const info = TWIST_INFO[b.twist];
-      return chip(b.twist, `${info.icon} ${esc(info.name)}`, b.stars === null ? '?' : starRow(b.stars), b.stars === null ? `${info.name}: not tried yet` : `${info.name}: ${b.stars} of 5 stars`);
+      return chip(b.twist, `${info.icon} ${esc(info.name)}`, b.stars === null ? '?' : `${b.stale ? '~' : ''}${starRow(b.stars)}`, b.stars === null ? `${info.name}: not tried yet` : b.stale ? `${info.name}: ${b.stars} of 5 stars last season; tastes have turned since` : `${info.name}: ${b.stars} of 5 stars`, b.stale);
     })
     .join('')}</div>`;
 }
@@ -142,7 +143,8 @@ function signatureCard(vm: SignatureVM | undefined, d: SigDraft | null): string 
       <label>Base <select class="sig-drink">${vm.drinks.map((x) => `<option value="${x}" ${x === draft.drink ? 'selected' : ''}>${esc(DRINK_INFO[x].name)}</option>`).join('')}</select></label>
       <label>Twist <select class="sig-twist">${TWISTS.map((t) => {
         const s = starsOf(t);
-        return `<option value="${t}" ${t === draft.twist ? 'selected' : ''}>${TWIST_INFO[t].icon} ${esc(TWIST_INFO[t].name)} ${s === null ? '?' : '★'.repeat(s)}</option>`;
+        const old = book.find((b) => b.twist === t)?.stale ? ' (last season)' : '';
+        return `<option value="${t}" ${t === draft.twist ? 'selected' : ''}>${TWIST_INFO[t].icon} ${esc(TWIST_INFO[t].name)} ${s === null ? '?' : '★'.repeat(s)}${old}</option>`;
       }).join('')}</select></label>
       <span class="sig-prem">Premium
         <button class="btn mini pr-btn" data-action="sig-prem" data-step="-1" ${draft.premium <= 0 ? 'disabled' : ''} aria-label="Lower the premium">−</button>
@@ -177,7 +179,7 @@ function menuBoard(menu: MenuLineVM[] | undefined): string {
         <button class="btn mini" data-action="menu" data-drink="${m.drink}" data-on="${m.on ? '0' : '1'}" ${last ? 'disabled title="Keep at least one drink on"' : ''} aria-pressed="${m.on}">${m.on ? 'On' : 'Off'}</button>${fc}</div>`;
     })
     .join('')}</div>
-    <div class="mb-total tw-note">House twists: each cup with a twist costs $${TASTE.cost.toFixed(2)}. Every drink has one ★★★★★ twist and one ★ flop, different every run, and you only find out by serving it. Great combos tip up to +45%; a flop tips 45% less and costs a little rating.</div>
+    <div class="mb-total tw-note">House twists: each cup with a twist costs $${TASTE.cost.toFixed(2)}. Every drink has one ★★★★★ twist and one ★ flop, different every run, and you only find out by serving it. Tastes turn every 3 days (watch the paper), so a ~ marks stars from last season. Great combos tip up to +45%; a flop tips 45% less and costs a little rating.</div>
     <div class="mb-total">Tomorrow at these prices: <b>~${sum.orders} orders</b>, about <b>$${sum.profit.toFixed(0)}</b> profit before tips and rent. Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</div>`;
 }
 

@@ -367,6 +367,8 @@ export interface GameState {
   /** P3 B6: tonight's house twist per drink, and the combos discovered so far ("drink:twist" -> stars). */
   twists?: Partial<Record<DrinkId, TwistId>>;
   tasteBook?: Record<string, number>;
+  /** P3 B8: the taste season each notebook entry was learned in (absent = season 0). */
+  tasteSeason?: Record<string, number>;
   /** P3 B7: the signature drink, if the crew has designed one. */
   signature?: Signature;
   eventSchedule: ScheduledEvent[];
