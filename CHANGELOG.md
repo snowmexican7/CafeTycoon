@@ -16,6 +16,21 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Neighbourhood days.** Every day has its own forecast, so no two days play alike: a rainy
+  Monday (hot drinks fly, a slow soggy start), exam week (students camp with cold brews and take a
+  queue spot), Market Saturday (a big impatient crowd, rush hour likely), payday (big tips at
+  lunch), a heat wave (iced drinks spike, the power may flicker), the office next door closed (a
+  quiet day), plus cold snaps, street festivals, roadworks, commuter crushes and lazy Sundays.
+  Each week is dealt so the same kind of day never comes twice in a row.
+- **The Daily Grind.** At night the shop board opens with tomorrow's local paper: the headline,
+  what it means, a crew tip, about how many walk-ins to expect, the hot-vs-iced split, which event
+  is likely, and a rumour about the day after. The day's forecast also sits by the day counter
+  and in the morning note.
+- **Receipts add up.** The closing card and last night's receipt now count fines and bonuses in
+  the profit, with a clear "Net profit (after rent, fines and bonuses)" line.
+- Saves from the previous version carry over (the forecast is filled in); friends need the same
+  version to play together.
+
 - **Who's who, at a glance.** Customers in a hurry carry a stopwatch and tap their feet, groups
   bring their friends (and a ×3 on the bubble), regulars wear a name tag and get hearts when you
   hand them their usual, and the order tickets say so too ("Ada · regular", "In a hurry",

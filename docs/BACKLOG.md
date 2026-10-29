@@ -371,3 +371,41 @@ Co-op fun:
   serves in a row, and the influencer **group photo**.
 - Next: count hand-offs and perfect streaks per player for the week-end awards (B10: "Best
   passer", "Mr. Perfect"), and a crew high-five emote when a rush hour ends with nobody lost.
+
+## Block 4 reflection (neighbourhood days)
+
+Shipped: 12 seeded neighbourhood forecasts (`src/data/forecasts.ts`) in six families (calm, wet,
+busy, quiet, money, hot) with weekday rules (Market only on Saturday, lazy Sunday only on Sunday,
+exam week Mon–Thu, payday Thu–Fri, office closed / roadworks / commuter crush on weekdays).
+`weekPlan(seed, week)` deals each week with its own seeded RNG (never touches `state.rng`), with
+a backtracking search so no forecast repeats in a week and no family runs two days in a row (also
+across Sunday → Monday). Forecasts feed `computeModifiers`: order tags (hot/iced), customer mix,
+event odds, queue length, tips, patience, arrivals and a traffic shape over the day (slow start,
+late crowd, lunch peak, morning rush). Events now draw their kind with the forecast's odds while
+consuming the same single RNG draw, so event days still schedule exactly as before. The night
+shop opens with **The Daily Grind** newspaper (headline, crew tip, expected walk-ins, hot/iced
+split, likely event, rumour for the day after); the HUD shows a forecast chip. Save v4 with a
+migration from v3, protocol v5. Quick fix in the same block: the receipt's profit includes fines,
+bonuses and tab paid, with a net line.
+
+Balance (20 weeks, `npm run balance`): mean final cash **$323.68**, loss rate **29.4 %**, 0/20
+bankrupt, vs. baseline $334.78 / 28.9 %. A touch harder on average, well within noise.
+
+What could be better:
+- The paper's walk-in count is the base estimate; it does not yet include owned cards or
+  reputation, so a strong crew sees "~11" and gets 16. Fine for planning, but could be exact.
+- The bot crew ignores the forecast (it preps cold brew on a rainy day). B5's brain changes are a
+  good place to make "prep for the paper" a bot trait.
+- Forecast effects stack with scenario effects multiplicatively; a heat wave + "summer" scenario
+  could push iced orders very high. Not seen in the tester, but worth a cap in B11 tuning.
+
+What's missing (deferred):
+- A weekly preview (the whole week's papers at Sunday night) for long-range planning.
+- Forecast-specific decor in the scene (rain on the window, market stalls outside).
+- Ordering supplies by forecast in the balance bot (it restocks to a flat target).
+
+Co-op fun:
+- Folded in now: the rumour line ("Day after: …") so the crew argues about whether to save cash
+  tonight for tomorrow's market crowd; a crew tip on every paper.
+- Next: let one player "read the paper aloud" (a ping on the paper that highlights it for everyone)
+  and a stamp when the crew stocked what the paper suggested.
