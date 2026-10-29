@@ -215,3 +215,53 @@ Deferred minors:
 - The spill-avoiding path search runs twice when nobody is near (the "around people" pass adds nothing).
 - Determinism tests compare whole states with `toEqual`.
 - The mop corner sits in the queue column (layout/visual note).
+
+## Block 0 (Phase 1 close-out, 2026-10-29 overnight)
+
+Review of the chaos pack (tracks A and B, Claude, since `076d181`) and its final-review fixes
+(`318c1e9`, `b0e7b86`, `55d8ba9`): tests, `tsc` and the build are green; no `Math.random`, `Date`
+or unordered iteration in the new sim code; the rogue, floor, mop and drop logic only reads
+`state.rng`. Findings:
+
+- **Fixed:** the sim never called `pruneLog`, so `state.log` (and every snapshot) grew all day.
+  `step()` now prunes every tick (`LOG_KEEP_TICKS` = 120). Telemetry and sound consume the log by
+  `seq` on every snapshot (20 Hz), so nothing is lost. Tests that inspected `s.log` after long runs
+  now record the kinds while stepping.
+- **Fixed:** `pass.ts` and `drop.ts` hard-coded 60 ticks per second for staleness; they use
+  `secondsToTicks` now.
+- **Deferred (tuning):** `placeMess` refuses a new mess at the cap (12) even when the tile already
+  has one it could merge into, so at the cap a drop onto an existing puddle is refused and the
+  player keeps the item. Probably better to allow the merge; tests "nothing drops at the cap" and
+  "slip at the cap keeps item" pin today's behaviour.
+- **Deferred:** a bot's `returnMop` step relies on R preferring the mop over a held cup (it does,
+  in `resolveDrop`); worth a direct test if R ever changes.
+- Claude's own open items are in "Chaos pack open items" above.
+
+Decisions:
+
+- **Closing.** At 0:00 the doors lock (no new arrivals); everyone inside can still be served. The
+  day ends when the shop is empty (customers and the rogue) or after `ECONOMY.closingGraceSeconds`
+  (30 s); leftovers storm out and count as lost. The closing phase lasts at least
+  `closingMinSeconds` (1 s) so the banner and receipt always show. The HUD shows "Doors locked:
+  finish up! N left"; the banner's presence is structural, the count is patched.
+- **Seats.** A peer offers the seat this browser last played in that room (`prev`, from
+  `localStorage` `cafetycoon.seat.<CODE>`); the host gives it back only if it is a human seat that
+  is away (not live, not the host). Without one, an away seat with the same name (trimmed,
+  case-insensitive) is reclaimed. Otherwise a new seat if fewer than 4 humans, else the room is full
+  (`hello.reject = 'full'`, "The café is full"). A live seat is never handed to a second
+  connection. The host tells the peer its seat with a new `seat` message (protocol 4). Peers leave
+  the room on `pagehide` so a closed tab shows as away quickly. The peer's room (for "Rejoin") is
+  now per browser too.
+- **Known seat risks (accepted):** two people with the same name, one of them away, can swap into
+  each other's seat by the name match; a duplicated browser tab copies `sessionStorage`, so both
+  copies claim the same token and the later connection wins (the earlier one is replaced). Both
+  need the same browser or the same name; fine for game night.
+- **Bots setting.** Off or 1–3, picked by the host on a paper card in the lobby (peers see it
+  read-only). Until the host picks: Off with 2+ humans, auto (fill to three baristas) for a lone
+  host. Saved in `state.settings.bots` with the run; the roster, morning sync and the espresso
+  cover bot read it. Bots never take a spot behind the counter a human would need (max 4
+  baristas), so with 4 humans the card says no bot fits.
+- **Deferred:** a host-only Bots row in the pause menu (the sim already accepts a `settings`
+  input with `bots` and applies it next morning; only the UI row is missing).
+- **Dev hook:** `window.cafetycoon.peek` (`state()`, `me()`) is a read-only copy of the latest
+  snapshot for smoke scripts and playtests.
