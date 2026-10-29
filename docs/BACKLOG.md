@@ -123,3 +123,23 @@ The data exists; the visuals are the UI agent's.
 - `tele` batches have no host-side rate limit.
 - `frame.long` still logs one row covering the whole hidden period on the first frame after a tab returns (animation frames stop while hidden); add a `visibilitychange` listener in `main.ts` that resets the previous-frame timestamp. Until then, drop `frame.long` rows over a few seconds when analysing.
 - Grounds abandoned as the grinder's output count as a pending drink for bot coverage, so a single espresso or latte order reads as covered until someone takes them; extend the orphan rule so a bot picks up abandoned grounds and continues the chain when an espresso/latte order is uncovered.
+
+## Sound and music (stage 1): deferred and open items
+
+Sound is client-only (`src/audio/`): cues come from diffing two snapshots this client already has,
+so it cannot affect the sim, co-op sync or the seed. Settings live in `localStorage` under `cafetycoon.audio`.
+
+- **Station sounds don't pause in a power flicker.** A grind or pull is scheduled for the station's
+  busy time when it starts; if the power cuts out mid-pull the sound plays on. The music does
+  tape-stop and muffle during the flicker. Fix: track playing station voices per station id and
+  fade them when `busyTicksLeft` stops falling.
+- **No positional audio.** Everything is centred; the local player's own actions are only a little
+  louder (`mine`). Panning by station x position would be cheap (StereoPannerNode per voice).
+- **Synth recipes are procedural, not recorded.** Grinder, espresso, steam and pour are Web Audio
+  recipes tuned by ear; real CC0 recordings (freesound) would sound richer if someone finds good ones.
+- **Music is generated at runtime** (about a second of OfflineAudioContext work after the first
+  click). It is cheap, but there is no "pre-rendered file" fallback if a browser lacks OfflineAudioContext;
+  such browsers simply get no music.
+- **No per-customer-kind sounds** (regulars, VIPs) and no menu/tab switch sounds on the night screen
+  beyond the generic UI click.
+- **No volume ducking for stingers**: the day/night music keeps playing under event jingles.

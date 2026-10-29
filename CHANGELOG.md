@@ -16,7 +16,15 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- **Sound and music.** A lo-fi jazz loop plays through the day and a calmer one at night and on
+  the menus, both looping without a seam. The grinder grinds, the espresso machine pulls, milk
+  steams, cold brew pours, cups clink down, the register chings with tips, the door bell rings
+  as customers come in, and the door slams when one storms out. Little jingles mark the day
+  opening and closing, rush hour, the inspector, the influencer and power flickers (the music
+  winds down while the lights are out), and the café gets louder as the queue fills up.
+- **Sound settings** in the pause menu: master, music and effects sliders and a mute switch,
+  saved in your browser. Press **M** (or the speaker button in the top bar) to mute any time.
+  Sound only affects you, never your crew.
 
 ## 1.0.0 — 2026-10-28
 
