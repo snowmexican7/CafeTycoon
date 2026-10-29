@@ -205,3 +205,12 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .rl-who { font: 600 12px var(--font-display); color: #6b5640; }
 #night .rl-badge { margin-right: 3px; }
 #night .sec small { font-weight: 400; opacity: .7; margin-left: 6px; }
+
+/* Phase 3 B2: pricing on the menu board */
+#night .mb-pricer { display: flex; align-items: center; gap: 4px; }
+#night .mb-pricer .pr-btn { min-width: 26px; padding: 2px 6px; }
+#night .mb-price { display: flex; flex-direction: column; align-items: center; min-width: 46px; }
+#night .mb-step { font: 600 10px var(--font-display); } #night .mb-step.up { color: #2f7a3e; } #night .mb-step.down { color: #a6462f; }
+#night .mb-fc { font-size: 11.5px; color: #6b5640; } #night .mb-fc.off { opacity: .7; }
+#night .mb-fc em { font-style: normal; font-weight: 700; } #night .mb-fc em.up { color: #2f7a3e; } #night .mb-fc em.down { color: #a6462f; }
+#night .mb-total { margin-top: 6px; font-size: 12px; line-height: 1.35; color: #5a4632; background: #fff7ec; border-radius: 10px; padding: 6px 8px; }

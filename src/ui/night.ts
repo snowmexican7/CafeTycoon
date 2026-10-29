@@ -8,7 +8,7 @@ import { esc, hide, onAction, show } from './dom';
 import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
-import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type NightVM, type RoleVM } from './viewModels';
+import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RoleVM } from './viewModels';
 import { isRole, type RoleId } from '../sim/roles';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours' } as const;
@@ -102,18 +102,28 @@ function freshBanner(fresh: FreshDrinkVM[] | undefined): string {
 }
 
 /** The menu board: every known drink, its ticket, and an on/off switch. */
-function menuBoard(menu: { drink: DrinkId; on: boolean }[] | undefined): string {
+function menuBoard(menu: MenuLineVM[] | undefined): string {
   if (!menu?.length) return '';
   const onCount = menu.filter((m) => m.on).length;
-  return `<div class="sec">Menu board</div><div class="menu-board">${menu
+  const sum = menu.reduce((a, m) => ({ orders: a.orders + (m.orders ?? 0), profit: a.profit + (m.profit ?? 0) }), { orders: 0, profit: 0 });
+  return `<div class="sec">Menu board <small>price · tomorrow's orders</small></div><div class="menu-board">${menu
     .map((m) => {
       const info = DRINK_INFO[m.drink];
       const last = m.on && onCount === 1;
-      return `<div class="mb-row ${m.on ? '' : 'off'}">${itemIcon(m.drink, 26)}<div class="mb-txt"><b>${esc(info.name)}</b>${ticketChips(info.ticket)}</div>
-        <span class="mb-price">$${ECONOMY.prices[m.drink].toFixed(2)}</span>
+      const delta = m.step === 0 ? '' : `<span class="mb-step ${m.step > 0 ? 'up' : 'down'}">${m.step > 0 ? '+' : '−'}$${Math.abs(m.price - m.list).toFixed(2)}</span>`;
+      const fc = m.orders === undefined
+        ? '<span class="mb-fc off">not on the menu</span>'
+        : `<span class="mb-fc">~${m.orders} orders${m.demandPct ? ` <em class="${m.demandPct > 0 ? 'up' : 'down'}">${m.demandPct > 0 ? '+' : ''}${m.demandPct}%</em>` : ''} · <b>$${m.profit!.toFixed(0)}</b> profit</span>`;
+      return `<div class="mb-row ${m.on ? '' : 'off'}" data-drink-row="${m.drink}">${itemIcon(m.drink, 26)}<div class="mb-txt"><b>${esc(info.name)}</b>${ticketChips(info.ticket)}${fc}</div>
+        <div class="mb-pricer">
+          <button class="btn mini pr-btn" data-action="price" data-drink="${m.drink}" data-step="${m.step - 1}" ${m.canDown ? '' : 'disabled'} aria-label="Lower the ${esc(info.name)} price">−</button>
+          <span class="mb-price">$${m.price.toFixed(2)}${delta}</span>
+          <button class="btn mini pr-btn" data-action="price" data-drink="${m.drink}" data-step="${m.step + 1}" ${m.canUp ? '' : 'disabled'} aria-label="Raise the ${esc(info.name)} price">+</button>
+        </div>
         <button class="btn mini" data-action="menu" data-drink="${m.drink}" data-on="${m.on ? '0' : '1'}" ${last ? 'disabled title="Keep at least one drink on"' : ''} aria-pressed="${m.on}">${m.on ? 'On' : 'Off'}</button></div>`;
     })
-    .join('')}</div>`;
+    .join('')}</div>
+    <div class="mb-total">Tomorrow at these prices: <b>~${sum.orders} orders</b>, about <b>$${sum.profit.toFixed(0)}</b> profit before tips and rent. Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</div>`;
 }
 
 /** Phase 3 B1: pick a role for the week. Each card names the perk and the weakness. */
@@ -164,7 +174,7 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -172,6 +182,7 @@ export function createNight(
     else if (action === 'restock') handlers.onRestock(el.dataset.supply as SupplyId);
     else if (action === 'ready') handlers.onReady();
     else if (action === 'menu') handlers.onMenu?.(el.dataset.drink as DrinkId, el.dataset.on === '1');
+    else if (action === 'price') handlers.onPrice?.(el.dataset.drink as DrinkId, Number(el.dataset.step));
     else if (action === 'role') handlers.onRole?.(isRole(el.dataset.role) ? el.dataset.role : null);
     else if (action === 'jump-restock') jumpToRestock();
     else if (action === 'jump-warn') flash(container.querySelector<HTMLElement>('.warn-card'));

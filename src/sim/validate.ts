@@ -46,6 +46,10 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
     case 'leave':
     case 'espresso':
       return { kind: input.kind, playerId: input.playerId };
+    case 'price':
+      return DRINK_IDS.includes(input.drink) && Number.isInteger(input.step) && Math.abs(input.step) <= 20
+        ? { kind: 'price', playerId: input.playerId, drink: input.drink, step: input.step }
+        : null;
     case 'menu':
       return DRINK_IDS.includes(input.drink) && typeof input.on === 'boolean'
         ? { kind: 'menu', playerId: input.playerId, drink: input.drink, on: input.on }

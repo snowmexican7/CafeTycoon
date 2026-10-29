@@ -319,6 +319,8 @@ export interface GameState {
   morningNotes: string[];
   pass: PassItem[];
   menu: Record<DrinkId, boolean>;
+  /** Phase 3 B2: price steps per drink ($0.25 each); absent or 0 = list price. */
+  priceSteps?: Partial<Record<DrinkId, number>>;
   eventSchedule: ScheduledEvent[];
   events: ActiveEvent[];
   regulars: Regular[];
@@ -359,6 +361,7 @@ export type PlayerInput =
   | { kind: 'ready'; playerId: PlayerId }
   | { kind: 'weekEnd'; playerId: PlayerId; choice: 'stop' | 'continue' }
   | { kind: 'menu'; playerId: PlayerId; drink: DrinkId; on: boolean }
+  | { kind: 'price'; playerId: PlayerId; drink: DrinkId; step: number }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
   | { kind: 'espresso'; playerId: PlayerId }

@@ -1,4 +1,5 @@
 import { applyRoleInput } from './roles';
+import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { finishDay } from './closing';
@@ -100,6 +101,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'menu':
       applyMenuInput(s, input);
+      break;
+    case 'price':
+      applyPriceInput(s, input);
       break;
     case 'role':
       applyRoleInput(s, input);

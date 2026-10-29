@@ -1,3 +1,4 @@
+import { PRICING, menuPrice, priceForecast, priceTraffic } from '../sim/pricing';
 import { ROLE_IDS, ROLES, roleHolders, type RoleId } from '../sim/roles';
 import { awardsFor, awardsText, type Award } from '../sim/awards';
 import { catalogueById } from '../data/catalogue';
@@ -165,7 +166,7 @@ export function hudViewModel(state: GameState): HudVM {
     cash: money(state.cash),
     reputation: stars(state.reputation),
     supplies: neededSupplies(state).map((id) => ({ id, count: state.supplies[id] ?? 0 })),
-    menu: unlockedDrinks(state).map((id) => ({ id, price: money(ECONOMY.prices[id] * mods.price[id]), available: available.includes(id) })),
+    menu: unlockedDrinks(state).map((id) => ({ id, price: money(menuPrice(state, id) * mods.price[id]), available: available.includes(id) })),
     notes: state.morningNotes,
     phase: state.phase,
     seed: state.seed,
@@ -252,7 +253,7 @@ export interface NightVM {
   /** Phase 3 B1: the four roles, who holds each, and whether this barista can take it. */
   roles?: RoleVM[];
   meReady: boolean;
-  menu?: { drink: DrinkId; on: boolean }[];
+  menu?: MenuLineVM[];
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
@@ -326,12 +327,48 @@ export function forecastViewModel(state: GameState): ForecastVM {
     plan: f.plan,
     effects: describeEffects(f.effects.filter((e) => e.kind !== 'orderBias' || unlockedDrinks(state).includes(e.drink))),
     ...(f.eventNote ? { eventNote: f.eventNote } : {}),
-    customers: Math.round(ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic),
+    customers: Math.round(ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic * priceTraffic(state, menu, m)),
     hotPct: Math.round((hot / total) * 100),
     later: { icon: next.icon, name: forecastName(next, state.day + 1) },
     ...(radioLine(state) ? { radio: radioLine(state) } : {}),
     ...(challengePaperLine(state) ? { challenges: challengePaperLine(state) } : {}),
   };
+}
+
+/** Phase 3 B2: a menu board line with its price, the price steps and tomorrow's expected orders. */
+export interface MenuLineVM {
+  drink: DrinkId;
+  on: boolean;
+  price: number;
+  list: number;
+  step: number;
+  canUp: boolean;
+  canDown: boolean;
+  /** Only for drinks on the menu: order change vs. list price (%), expected orders, profit before tips. */
+  demandPct?: number;
+  orders?: number;
+  profit?: number;
+}
+
+export function menuLines(state: GameState): MenuLineVM[] {
+  const m = computeModifiers(state);
+  const on = menuDrinks(state);
+  const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
+  const fc = new Map(priceForecast(state, on, m, walkIns).map((l) => [l.drink, l]));
+  return unlockedDrinks(state).map((drink) => {
+    const step = state.priceSteps?.[drink] ?? 0;
+    const l = fc.get(drink);
+    return {
+      drink,
+      on: state.menu[drink],
+      price: l?.price ?? Math.round(menuPrice(state, drink) * m.price[drink] * 100) / 100,
+      list: ECONOMY.prices[drink],
+      step,
+      canUp: step < PRICING.maxStep,
+      canDown: step > PRICING.minStep,
+      ...(l ? { demandPct: l.demandPct, orders: l.orders, profit: l.profit } : {}),
+    };
+  });
 }
 
 export interface RoleVM {
@@ -378,7 +415,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id), ...(p.role ? { role: ROLES[p.role].icon } : {}) })),
     roles: rolesViewModel(state, me),
     meReady: state.ready.includes(me),
-    menu: unlockedDrinks(state).map((drink) => ({ drink, on: state.menu[drink] })),
+    menu: menuLines(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),
     forecast: forecastViewModel(state),

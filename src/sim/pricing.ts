@@ -1,0 +1,128 @@
+/**
+ * Phase 3 B2: per-item pricing. At night the crew nudges each drink's price in $0.25 steps.
+ * Demand reacts to the price ratio (new price / list price):
+ *  - that drink's share of orders scales by ratio^-ELASTICITY,
+ *  - overall walk-ins scale by the menu's weighted demand (a pricey menu keeps people away),
+ *  - patience moves a little (cheap drinks are worth the wait, pricey ones are not).
+ * With no steps set every factor is exactly 1, so un-priced runs play identically to before.
+ */
+import { ECONOMY } from '../data/economy';
+import { DRINK_INFO, DRINK_IDS } from '../data/drinks';
+import type { Modifiers } from './effects';
+import type { DrinkId, GameState, PlayerInput } from './types';
+
+export const PRICING = {
+  step: 0.25,
+  minStep: -4,
+  maxStep: 8,
+  elasticity: 1.8,
+  /** Patience multiplier = 1 + patience * (1 - ratio), clamped. */
+  patience: 0.6,
+  patienceClamp: [0.7, 1.25] as const,
+  demandClamp: [0.25, 1.8] as const,
+} as const;
+
+const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+export function priceStep(state: GameState, d: DrinkId): number {
+  return state.priceSteps?.[d] ?? 0;
+}
+
+/** The drink's menu price before forecast modifiers (list price plus the crew's steps). */
+export function menuPrice(state: GameState, d: DrinkId): number {
+  const s = priceStep(state, d);
+  return s === 0 ? ECONOMY.prices[d] : round2(ECONOMY.prices[d] + s * PRICING.step);
+}
+
+export function priceRatio(state: GameState, d: DrinkId): number {
+  const s = priceStep(state, d);
+  return s === 0 ? 1 : menuPrice(state, d) / ECONOMY.prices[d];
+}
+
+/** How many orders the drink gets relative to list price (1 = unchanged). */
+export function demandFactor(state: GameState, d: DrinkId): number {
+  const s = priceStep(state, d);
+  if (s === 0) return 1;
+  return clamp(Math.pow(priceRatio(state, d), -PRICING.elasticity), PRICING.demandClamp[0], PRICING.demandClamp[1]);
+}
+
+export function pricePatience(state: GameState, d: DrinkId): number {
+  const s = priceStep(state, d);
+  if (s === 0) return 1;
+  return clamp(1 + PRICING.patience * (1 - priceRatio(state, d)), PRICING.patienceClamp[0], PRICING.patienceClamp[1]);
+}
+
+const anyPriced = (state: GameState) => !!state.priceSteps && Object.values(state.priceSteps).some((v) => v);
+
+/** Base order weight of a drink on the menu (forecast bias × drink bias). */
+export const orderWeight = (m: Modifiers, d: DrinkId) => m.orderBias[d] * DRINK_INFO[d].bias;
+
+/** Overall walk-in multiplier: the menu's order-weighted demand. Exactly 1 when nothing is priced. */
+export function priceTraffic(state: GameState, menu: DrinkId[], m: Modifiers): number {
+  if (!anyPriced(state) || menu.length === 0) return 1;
+  let w = 0;
+  let wd = 0;
+  for (const d of menu) {
+    const x = orderWeight(m, d);
+    w += x;
+    wd += x * demandFactor(state, d);
+  }
+  return w > 0 ? wd / w : 1;
+}
+
+/** Night input: nudge a drink's price one way; clamped to the allowed range. */
+export function applyPriceInput(state: GameState, input: Extract<PlayerInput, { kind: 'price' }>): GameState {
+  if (state.phase !== 'night') return state;
+  const p = state.players.find((x) => x.id === input.playerId);
+  if (!p || !p.connected || p.bot) return state;
+  const unlocked = state.unlocked ?? DRINK_IDS;
+  if (!unlocked.includes(input.drink)) return state;
+  const next = clamp(Math.round(input.step), PRICING.minStep, PRICING.maxStep);
+  const steps = { ...(state.priceSteps ?? {}) };
+  if (next === 0) delete steps[input.drink];
+  else steps[input.drink] = next;
+  if (Object.keys(steps).length) state.priceSteps = steps;
+  else delete state.priceSteps;
+  return state;
+}
+
+/** Ingredient cost of one drink at list pack prices (beans, milk… one unit each). */
+export function unitCost(d: DrinkId): number {
+  return round2(ECONOMY.drinkSupplies[d].reduce((a, s) => a + ECONOMY.packs[s].cost / ECONOMY.packs[s].size, 0));
+}
+
+export interface PriceLine {
+  drink: DrinkId;
+  price: number;
+  list: number;
+  step: number;
+  /** Order change vs. list price, in percent (e.g. -17). */
+  demandPct: number;
+  /** Expected orders tomorrow (rounded) and the profit on them before tips. */
+  orders: number;
+  profit: number;
+}
+
+/**
+ * The night's pricing forecast: for each drink on the menu, expected orders and margin.
+ * `walkIns` is the forecast's walk-ins at list prices.
+ */
+export function priceForecast(state: GameState, menu: DrinkId[], m: Modifiers, walkIns: number): PriceLine[] {
+  const traffic = priceTraffic(state, menu, m);
+  const weights = menu.map((d) => orderWeight(m, d) * demandFactor(state, d));
+  const total = weights.reduce((a, b) => a + b, 0) || 1;
+  return menu.map((d, i) => {
+    const price = round2(menuPrice(state, d) * m.price[d]);
+    const orders = Math.round(walkIns * traffic * (weights[i] / total));
+    return {
+      drink: d,
+      price,
+      list: ECONOMY.prices[d],
+      step: priceStep(state, d),
+      demandPct: Math.round((demandFactor(state, d) * traffic - 1) * 100),
+      orders,
+      profit: round2(orders * (price - unitCost(d))),
+    };
+  });
+}
