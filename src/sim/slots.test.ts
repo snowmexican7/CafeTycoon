@@ -101,7 +101,7 @@ describe('station slots (FB1 WP5)', () => {
     expect(reasonOff(s, 'espresso')).toBeNull();
   });
 
-  it('growing resets slots to the new tier and keeps only the surplus of what the crew owns in equipment', () => {
+  it('growing resets slots to the new tier and keeps the surplus plus the tier gifts in equipment', () => {
     const s = night('stand');
     s.players[0].connected = true;
     s.equipment = ['steamer'];
@@ -109,8 +109,8 @@ describe('station slots (FB1 WP5)', () => {
     applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cart' });
     expect(s.tier).toBe('cart');
     expect(s.slots).toEqual(defaultSlots('cart'));
-    // owned: grinder 1, espresso 2, steamer 1, trash 1 (the cold-brew tap was never bought back); cart defaults take one of each but the tap
-    expect(s.equipment).toEqual(['espresso']);
+    // owned before: grinder 1, espresso 2, steamer 1, trash 1; the cart gifts a steamer, so the bought one stays in equipment, and the extra espresso too
+    expect(s.equipment).toEqual(['espresso', 'steamer']);
     expect(s.stations).toStrictEqual(legacyStations('cart'));
   });
 
@@ -125,15 +125,24 @@ describe('station slots (FB1 WP5)', () => {
     expect(s.stations.filter((x) => x.kind === 'grinder')).toHaveLength(1);
   });
 
-  it('growing: a kind the new tier adds (the cart steamer) is part of the price, so a spare steamer is absorbed by it', () => {
+  it('growing conserves the tier gifts: a steamer bought and placed on the stand survives the move to the cart', () => {
     const s = night('stand');
     s.players[0].connected = true;
     s.cash = 1000;
     applyEquipInput(s, { kind: 'equip', playerId: 'p1', station: 'steamer' });
     expect(s.equipment).toEqual(['steamer']);
+    // the stand's four slots are full: swap the steamer in for the bin
+    applySlotInput(s, { kind: 'slot', playerId: 'p1', index: s.slots!.indexOf('trash'), station: 'steamer' });
+    expect(s.slots).toContain('steamer');
+    expect(s.equipment).toEqual(['trash']);
     applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cart' });
-    expect(s.equipment).toEqual([]);
-    // growing again keeps surplus in a stable kind order
+    expect(s.equipment).toEqual(['steamer']);
+    expect(s.slots).toEqual(defaultSlots('cart'));
+    expect(s.stations.filter((x) => x.kind === 'steamer')).toHaveLength(1);
+    expect(s.stations.filter((x) => x.kind === 'trash')).toHaveLength(1);
+  });
+
+  it('growing keeps surplus in a stable kind order', () => {
     const t = night('cart');
     t.players[0].connected = true;
     t.equipment = ['trash', 'grinder', 'espresso'];

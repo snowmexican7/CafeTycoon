@@ -13,9 +13,10 @@
  *  - `stationsFromSlots(tier, slots): Station[]`: fresh idle stations in slot order (empty slots
  *    skipped), ids `kind` for the first of a kind then `kind-2`, `kind-3`, …, positions from
  *    `SLOT_POSITIONS`, then the counter. Default slots give exactly the pre-WP5 stations.
- *  - `growSlots(state, to)`: on growing, owned stations (placed + equipment, per kind) are conserved: the
- *    new tier's defaults go on the floor, only the surplus stays in `equipment` (kind order grinder,
- *    espresso, steamer, coldBrewTap, trash), and the stations are rebuilt.
+ *  - `growSlots(state, to)`: on growing, owned stations (placed + equipment, per kind) and the tier's gifts are
+ *    conserved: per kind `equipment = max(0, owned + max(0, defaults(to) - defaults(from)) - defaults(to))`, the new
+ *    tier's defaults go on the floor, the surplus stays in `equipment` (kind order grinder, espresso, steamer,
+ *    coldBrewTap, trash), and the stations are rebuilt.
  *  - `applySlotInput(state, { kind: 'slot', playerId, index, station: StationKind | null })` and
  *    `applyEquipInput(state, { kind: 'equip', playerId, station })`: the two night inputs (see
  *    data/equipment.ts); `state.equipLog?: { station, day, by }[]` records each purchase and
@@ -29,7 +30,7 @@ import { ECONOMY } from '../data/economy';
 import { EQUIPMENT, EQUIPMENT_KINDS } from '../data/equipment';
 import type { EquipmentKind } from '../data/equipment';
 import { SLOT_POSITIONS, layoutFor } from '../data/layout';
-import { canMake } from './growth';
+import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
 export type SlotContent = StationKind | null;
@@ -66,24 +67,27 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
 const KIND_ORDER: EquipmentKind[] = EQUIPMENT_KINDS;
 
 /**
- * Growing into `to`: owned stations are conserved. Everything the crew owns (placed + equipment, counted per
- * kind) is weighed against the new tier's defaults; the defaults go on the floor and only what is left over
- * stays in `equipment`, in a stable kind order. A crew that removed its grinder before growing gets no second
- * one, and a kind the new tier adds (the cart's steamer) is part of the tier's price.
+ * Growing into `to`: owned stations and the tier's gifts are conserved. Per kind,
+ * `equipmentAfter = ownedBefore + max(0, defaultCount(to) - defaultCount(fromTier)) - defaultCount(to)`, clamped at 0, where
+ * ownedBefore = placed + equipment. The new tier's defaults go on the floor; a kind the tier adds (the cart's steamer) is a
+ * gift on top of what the crew owns, so a steamer bought on the stand is not swallowed by it. A grinder removed into
+ * equipment before growing is not duplicated. Surplus stays in `equipment` in the stable kind order.
  */
 export function growSlots(state: GameState, to: TierId): void {
-  const owned = new Map<StationKind, number>();
-  for (const k of state.slots ?? []) if (k !== null) owned.set(k, (owned.get(k) ?? 0) + 1);
-  for (const k of state.equipment ?? []) owned.set(k, (owned.get(k) ?? 0) + 1);
-  const defaults = new Map<StationKind, number>();
-  for (const k of defaultSlots(to)) if (k !== null) defaults.set(k, (defaults.get(k) ?? 0) + 1);
+  const from = tierOf(state);
+  const fromSlots = state.slots ?? defaultSlots(state.tier);
+  const count = (list: readonly SlotContent[], k: StationKind) => list.filter((x) => x === k).length;
+  const toDefaults = defaultSlots(to);
+  const fromDefaults = defaultSlots(from);
   const equipment: StationKind[] = [];
   for (const k of KIND_ORDER) {
-    const extra = Math.max(0, (owned.get(k) ?? 0) - (defaults.get(k) ?? 0));
+    const owned = count(fromSlots, k) + count(state.equipment ?? [], k);
+    const gift = Math.max(0, count(toDefaults, k) - count(fromDefaults, k));
+    const extra = Math.max(0, owned + gift - count(toDefaults, k));
     for (let i = 0; i < extra; i++) equipment.push(k);
   }
   state.equipment = equipment;
-  state.slots = defaultSlots(to);
+  state.slots = toDefaults;
   state.stations = stationsFromSlots(to, state.slots);
 }
 
