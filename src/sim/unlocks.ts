@@ -1,5 +1,6 @@
 import { BASE_DRINKS, DRINK_IDS, dayUnlocks } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
+import { canMake } from './growth';
 import type { DrinkId, GameState, SupplyId } from './types';
 
 export const SUPPLY_IDS: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour', 'pastry'];
@@ -26,9 +27,10 @@ export function unlockForDay(state: GameState): DrinkId[] {
   return fresh;
 }
 
-/** Drinks the café knows how to make (old saves without the field: the classics). */
+/** Drinks the café knows how to make (old saves without the field: the classics); P3 B13: only those the shop has the stations for. */
 export function unlockedDrinks(state: GameState): DrinkId[] {
-  return state.unlocked ?? [...BASE_DRINKS];
+  const known = state.unlocked ?? [...BASE_DRINKS];
+  return state.tier === undefined || state.tier === 'cafe' ? known : known.filter((d) => canMake(state, d));
 }
 
 /** Known drinks that are switched on tonight. */

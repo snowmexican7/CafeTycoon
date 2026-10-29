@@ -1,6 +1,8 @@
 import { SIG, sigShare } from '../sim/signature';
 import { AD_IDS, ADS } from '../sim/ads';
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../sim/checkout';
+import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
+import { layoutFor } from '../data/layout';
 import { JUDGES, PITCH } from '../sim/pitch';
 import { copyIsLive, daysToCopy, RIVAL, rivalAskFactor, rivalMenu, sigPrice } from '../sim/rival';
 import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
@@ -274,6 +276,8 @@ export interface NightVM {
   pitch: PitchVM;
   /** P3 B12: the checkout path on the Shopfront tab. */
   checkout: CheckoutVM;
+  /** P3 B13: the growth path (stand → cart → café) on the Shopfront tab. */
+  growth: GrowthVM;
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
@@ -445,6 +449,56 @@ export function adsVM(state: GameState): AdsVM {
     }),
     ...(booked ? { booked: { id: booked.id, name: ADS[booked.id].name, icon: ADS[booked.id].icon, cost: money(ADS[booked.id].cost), by: booked.by } } : {}),
     ...(prev && state.days.length === state.day - 1 ? { last: { name: ADS[prev.id].name, icon: ADS[prev.id].icon, outcome: prev.outcome, result: ADS[prev.id].result[prev.outcome] } } : {}),
+  };
+}
+
+/** P3 B13: the growth path. */
+export interface GrowthVM {
+  tiers: {
+    id: string; name: string; icon: string; blurb: string; width: number; stations: string[]; drinks: string;
+    queue: number; rent: string; crowd: string; cost: string; current: boolean; past: boolean; next: boolean; locked: boolean; affordable: boolean;
+  }[];
+  current: { id: string; name: string; icon: string };
+  /** Grown tonight: the milestone banner. */
+  milestone?: { name: string; icon: string; by: string; line: string; width: number; queue: number };
+  /** Known drinks this shop has no station for yet (the menu tab's note). */
+  waiting?: string;
+}
+
+const STATION_ICON: Record<string, string> = { grinder: '⚙️ grinder', espresso: '☕ espresso', steamer: '🥛 steamer', coldBrewTap: '🧊 cold-brew tap' };
+
+function waitingNote(state: GameState): { waiting?: string } {
+  if (tierOf(state) === 'cafe') return {};
+  const have = layoutFor(state.tier).stations.map((s) => s.kind);
+  const known = state.unlocked ?? BASE_DRINKS;
+  const missing = known.filter((d) => !DRINK_STATIONS[d].every((k) => have.includes(k)));
+  if (missing.length === 0) return {};
+  const t = TIERS[tierOf(state)];
+  return { waiting: `${t.icon} No steamer at the ${t.short}: ${missing.map((d) => DRINK_INFO[d].short).join(', ')} ${missing.length > 1 ? 'wait' : 'waits'} until we grow (Shopfront tab).` };
+}
+
+export function growthVM(state: GameState): GrowthVM {
+  const now = tierOf(state);
+  const at = TIER_IDS.indexOf(now);
+  const nxt = nextTier(state);
+  const g = grownToday(state);
+  return {
+    tiers: TIER_IDS.map((id, i) => {
+      const t = TIERS[id];
+      const lay = layoutFor(id);
+      const kinds = lay.stations.map((s) => s.kind);
+      const drinks = DRINK_IDS.filter((d) => DRINK_STATIONS[d].every((k) => kinds.includes(k)))
+        .map((d) => DRINK_INFO[d].short).join(', ');
+      return {
+        id, name: t.name, icon: t.icon, blurb: t.blurb, width: lay.width,
+        stations: kinds.filter((k) => STATION_ICON[k]).map((k) => STATION_ICON[k]),
+        drinks, queue: t.queue, rent: money(t.rentPerDay), crowd: t.crowd, cost: money(t.cost),
+        current: id === now, past: i < at, next: id === nxt, locked: i > at && id !== nxt, affordable: id === nxt && state.cash >= t.cost,
+      };
+    }),
+    current: { id: now, name: TIERS[now].name, icon: TIERS[now].icon },
+    ...waitingNote(state),
+    ...(g ? { milestone: { name: TIERS[g.tier].name, icon: TIERS[g.tier].icon, by: g.by, line: TIERS[g.tier].milestone, width: layoutFor(g.tier).width, queue: TIERS[g.tier].queue } } : {}),
   };
 }
 
@@ -658,6 +712,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     rival: rivalVM(state),
     ads: adsVM(state),
     checkout: checkoutVM(state),
+    growth: growthVM(state),
     pitch: pitchVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),

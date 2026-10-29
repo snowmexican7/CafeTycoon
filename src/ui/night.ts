@@ -3,13 +3,13 @@ import { catalogueById } from '../data/catalogue';
 import { describeEffects } from '../sim/describe';
 import { DRINK_INFO } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
-import type { AdId, CheckoutId, DrinkId, PitchKind, SupplyId } from '../sim/types';
+import type { AdId, CheckoutId, DrinkId, PitchKind, SupplyId, TierId } from '../sim/types';
 import { cardArt, CATEGORY_LABEL, CATEGORY_TINT } from './cardArt';
 import { esc, hide, onAction, show } from './dom';
 import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
-import { nightStructureKey, type AdsVM, type CheckoutVM, type PitchVM, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM } from './viewModels';
+import { nightStructureKey, type AdsVM, type CheckoutVM, type GrowthVM, type PitchVM, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
 import { isRole, type RoleId } from '../sim/roles';
 
@@ -195,6 +195,46 @@ export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
   { id: 'shopfront', label: 'Shopfront', icon: '🏪' },
 ];
 
+/** P3 B13: the growth path at the top of the Shopfront tab, with the milestone banner on the night the crew grows. */
+function growthBoard(g: GrowthVM | undefined): string {
+  if (!g) return '';
+  const confetti = Array.from({ length: 18 }, (_, i) => `<i style="--i:${i}"></i>`).join('');
+  const banner = g.milestone
+    ? `<div class="gr-milestone" role="status"><div class="gr-confetti" aria-hidden="true">${confetti}</div>
+        <div class="gr-big">${g.milestone.icon}</div>
+        <div><b>We're ${g.milestone.name === 'The café' ? 'a café' : `a ${esc(g.milestone.name.toLowerCase())}`} now!</b>
+        <span>${esc(g.milestone.by)} signed the lease. Tomorrow the floor is ${g.milestone.width} tiles wide and the line holds ${g.milestone.queue}.</span>
+        ${g.milestone.line ? `<em>${esc(g.milestone.line)}</em>` : ''}</div></div>`
+    : '';
+  const steps = g.tiers
+    .map((t, i) => {
+      const state = t.current ? 'current' : t.past ? 'past' : t.next ? 'next' : 'locked';
+      const btn = t.current
+        ? '<span class="co-ok">📍 We are here</span>'
+        : t.past
+          ? '<span class="gr-past">✓ Outgrown</span>'
+          : t.next
+            ? `<button class="btn mini" data-action="grow" data-tier="${t.id}" ${t.affordable ? '' : 'disabled'}>Grow · ${esc(t.cost)}</button>`
+            : `<span class="co-lock">🔒 Grow into the ${esc(g.tiers[i - 1]?.name.toLowerCase() ?? '')} first</span>`;
+      const floor = `<span class="gr-floor" aria-hidden="true"><span style="width:${Math.round((t.width / 12) * 100)}%"></span></span>`;
+      return `${i ? '<div class="co-arrow" aria-hidden="true">→</div>' : ''}<div class="co-card gr-card ${state}" data-tier-card="${t.id}">
+        <div class="co-top"><span class="co-ic" aria-hidden="true">${t.icon}</span><b>${esc(t.name)}</b></div>
+        <div class="gr-stat">${floor}<small>${t.width} tiles of floor</small></div>
+        <ul class="co-list">
+          <li>🧰 ${esc(t.stations.join(' · '))}</li>
+          <li>🥤 ${esc(t.drinks)}</li>
+          <li>🚶 Line of ${t.queue} · 🏠 rent ${esc(t.rent)}/day</li>
+          <li>👥 ${esc(t.crowd)}</li>
+        </ul>
+        <div class="co-foot">${btn}</div>
+      </div>`;
+    })
+    .join('');
+  return `<div class="co-board gr-board">${banner}<div class="co-h">🌱 Grow the shop</div>
+    <div class="co-intro">We're a ${g.current.icon} <b>${esc(g.current.name.replace(/^The /, ''))}</b>. A bigger place means more floor, more machines, a longer line and a new crowd, but the rent goes up too. Growing is for good: there's no going back to a folding table.</div>
+    <div class="co-path">${steps}</div></div>`;
+}
+
 /** P3 B12: the Shopfront tab's checkout path: register → kiosk → Squarely, each a trade-off. */
 function checkoutBoard(c: CheckoutVM | undefined): string {
   if (!c) return '';
@@ -342,7 +382,7 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -366,6 +406,7 @@ export function createNight(
     else if (action === 'scout') handlers.onScout?.();
     else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);
     else if (action === 'checkout' && el.dataset.checkout) handlers.onCheckout?.(el.dataset.checkout as CheckoutId);
+    else if (action === 'grow' && el.dataset.tier) handlers.onGrow?.(el.dataset.tier as TierId);
     else if (action === 'pitch-kind') {
       pitch = { ...pitch, kind: el.dataset.kind === 'item' ? 'item' : 'promo' };
       redrawPitch();
@@ -535,7 +576,7 @@ export function createNight(
         regulars: regWarn ? `${regWarn} !` : `${vm.regulars?.length ?? 0}`,
         paper: vm.forecast ? `~${vm.forecast.customers}` : '',
         ads: [vm.ads?.booked ? '1 booked' : '', vm.pitch?.result ? `${vm.pitch.result.total}/30` : ''].filter(Boolean).join(' · '),
-        shopfront: vm.checkout?.active.icon ?? '',
+        shopfront: `${vm.growth?.milestone ? '🎉 ' : ''}${vm.growth?.current.icon ?? ''}${vm.checkout?.active.icon ?? ''}`,
       };
       const tabs = NIGHT_TABS.filter((t) => t.id !== 'regulars' || vm.regulars?.length)
         .map((t) => `<button class="tab ntab ${t.id === 'regulars' && regWarn ? 'alert' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="false">${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}</button>`)
@@ -572,12 +613,12 @@ export function createNight(
             <button class="btn reroll" data-action="reroll" ${vm.reroll.affordable ? '' : 'disabled'} title="Swap the cards on the table for a fresh deal">🎲 Re-roll · ${esc(vm.reroll.cost.replace('.00', ''))}</button>
             ${vm.sets.length ? `<span class="sets-on" title="Set bonuses switched on">${vm.sets.map((n) => `<span>✓ ${esc(n)}</span>`).join('')}</span>` : ''}</div>
           <div class="pane hand" data-pane="shop" role="tabpanel">${hand}</div>
-          <div class="pane menu-pane" data-pane="menu" role="tabpanel">${signatureCard(vm.signature, syncDraft(vm.signature))}${menuBoard(vm.menu)}</div>
+          <div class="pane menu-pane" data-pane="menu" role="tabpanel">${signatureCard(vm.signature, syncDraft(vm.signature))}${vm.growth?.waiting ? `<div class="gr-wait">${esc(vm.growth.waiting)}</div>` : ''}${menuBoard(vm.menu)}</div>
           <div class="pane crew-pane" data-pane="crew" role="tabpanel">${rolesBoard(vm.roles)}</div>
           <div class="pane regs-pane" data-pane="regulars" role="tabpanel">${regularsBoard(vm.regulars)}</div>
           <div class="pane paper-pane" data-pane="paper" role="tabpanel">${newspaper(vm.forecast)}${rivalCard(vm.rival)}</div>
           <div class="pane ads-pane" data-pane="ads" role="tabpanel">${pitchCard(vm.pitch, pitch)}${adsBoard(vm.ads)}</div>
-          <div class="pane shopfront-pane" data-pane="shopfront" role="tabpanel">${checkoutBoard(vm.checkout)}</div>
+          <div class="pane shopfront-pane" data-pane="shopfront" role="tabpanel">${growthBoard(vm.growth)}${checkoutBoard(vm.checkout)}</div>
           <div class="foot">
             <div class="ready">${ready}</div>
             <div class="spacer"></div>

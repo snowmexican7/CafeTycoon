@@ -1,5 +1,5 @@
 import { ECONOMY } from '../data/economy';
-import { LAYOUT } from '../data/layout';
+import { layoutFor } from '../data/layout';
 import { isOut } from './espresso';
 import { emitLog } from './log';
 import type { GameState, Mess, Player, Vec2 } from './types';
@@ -67,7 +67,7 @@ export function returnMop(state: GameState, p: Player): void {
 }
 
 function sendHome(state: GameState): void {
-  const home = LAYOUT.mopHome;
+  const home = layoutFor(state.tier).mopHome;
   state.mop = { pos: { ...home }, heldBy: null };
   emitLog(state, 'drop', { item: 'mop', x: home.x, y: home.y });
 }

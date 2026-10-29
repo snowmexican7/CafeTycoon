@@ -1229,3 +1229,45 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
     trade-off visible, but it would change the serve loop.
   - Night fixtures show "YESTERDAY · DAY 0" on the receipt because the harness passes no
     `extras.day`. This is cosmetic and harness-only.
+
+## P3 Block 13 reflection (growth path)
+
+**Shipped.** New runs start as a ⛱️ stand (8 tiles, line of 3, $10 rent, commuter crowd, no
+steamer), grow at night to a 🛺 cart ($80: 10 tiles, steamer, line 5, $17 rent) and then to
+☕ the café ($150: the old game). Hoarding + FOR LEASE sign (with a narrow mode for the cart
+strip), a "Grand re-opening" confetti burst the next morning, a milestone note, and a
+Shopfront "Grow the shop" card. Host-authoritative `grow` input (night only, humans only, must
+afford it). Snapshot v22 (migration 21: old saves count as `tier: 'cafe'`), protocol v25.
+Fittings resale includes tier spend. A café run's RNG stream is identical to B12.
+
+**Balance (40 weeks).** The first pass had staying at the stand dominant (stand 337 cash / 383
+score vs grow 197 / 266), because the stand paid café prices with lower rent. Fix: tier price
+and traffic multipliers (stand ×0.75 / ×0.65, cart ×0.9 / ×0.85, café 1/1).
+
+| policy | cash | score | loss% |
+|---|---|---|---|
+| stand (never grows) | 182.78 | 150.03 | 9.2% |
+| grow | 186.10 | 173.42 | 17.9% |
+| smart (café start) | 260.53 | 276.53 | 26.4% (= B12) |
+| taste (café start) | 274.88 | 288.19 | 28.1% |
+
+Growth days (grow policy): cart 35/40 seeds, avg day 4.7; café 6/40 within the week, avg day 6.7.
+So growing now beats staying small, and the café is a week-2 goal for most runs.
+
+**Checks.** 596 tests, tsc and build green; the 4-tab week sync with a night-1 grow showed
+cash/tier/tierLog/stations/mop the same on every peer, with no page errors; screenshots of
+every tier (day fixtures plus night tabs at 1280×800 and 1920×1080) are in `overnight/p3/b13`.
+
+**Bugs caught.** The preview served a stale dist (first sync run showed café: rebuild first);
+the growth `affordable` flag was in the VM structure key, so it re-keyed with cash (test + CI
+failure on 40dbbfd, fixed); the FOR LEASE sign overflowed on the narrow cart strip.
+
+**Deferred.**
+- Bots never grow (and never use checkout); a solo run with bots relies on the human.
+- The signature base select still offers latte at the stand, and the chalkboard menu art still
+  lists latte at the stand. Both need to be stand-aware.
+- The chaos sign position still starts at LAYOUT.mopHome rather than per tier.
+- The week harness's role click flakes ("element not stable/detached").
+- New-run scores (~170–190) are lower than café-start records (~277), so old week records don't
+  compare directly. Consider a separate leaderboard or a "started as" tag.
+- The week-end screen doesn't show the growth journey yet.

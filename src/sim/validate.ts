@@ -2,6 +2,7 @@ import { cleanDraft } from './signature';
 import { cleanPitch, isPitchKind } from './pitch';
 import { isAdId } from './ads';
 import { isCheckoutId } from './checkout';
+import { isTierId } from './growth';
 import { TWISTS } from './taste';
 import { isRole } from './roles';
 import { ECONOMY } from '../data/economy';
@@ -62,6 +63,8 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
         : null;
     case 'checkout':
       return isCheckoutId(input.checkout) ? { kind: 'checkout', playerId: input.playerId, checkout: input.checkout } : null;
+    case 'grow':
+      return isTierId(input.tier) ? { kind: 'grow', playerId: input.playerId, tier: input.tier } : null;
     case 'ad':
       return input.ad === null || isAdId(input.ad) ? { kind: 'ad', playerId: input.playerId, ad: input.ad } : null;
     case 'pitch':

@@ -187,6 +187,8 @@ interface CustomerSprite {
  * name tags live in the overlay layer so they're never hidden behind a machine.
  */
 export class Actors {
+  /** P3 B13: where the line stands (it shortens and shifts with the shop's size). */
+  queueSlots: { x: number; y: number }[] = LAYOUT.queueSlots;
   private readonly players = new Map<PlayerId, PlayerSprite>();
   private readonly customers = new Map<number, CustomerSprite>();
 
@@ -292,7 +294,8 @@ export class Actors {
     const seenC = new Set<number>();
     customers.forEach((c, i) => {
       seenC.add(c.id);
-      const slot = LAYOUT.queueSlots[Math.min(i, LAYOUT.queueSlots.length - 1)];
+      const slots = this.queueSlots;
+      const slot = slots[Math.min(i, slots.length - 1)];
       const targetX = sx(slot.x);
       let sprite = this.customers.get(c.id);
       if (!sprite) sprite = this.addCustomer(c, targetX + TILE * 0.8);

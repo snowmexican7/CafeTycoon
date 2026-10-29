@@ -7,7 +7,8 @@ import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
 import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
-import { LAYOUT } from '../data/layout';
+import { LAYOUT, layoutFor } from '../data/layout';
+import { applyGrowInput } from './growth';
 import { finishDay } from './closing';
 import { markBeforeGrace, tickChallenges } from './challenges';
 import { secondsToTicks } from './constants';
@@ -68,7 +69,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
         clearFloorFields(p);
         if (s.mop.heldBy === p.id) {
           s.mop.heldBy = null;
-          s.mop.pos = { ...LAYOUT.mopHome };
+          s.mop.pos = { ...layoutFor(s.tier).mopHome };
         }
       }
       break;
@@ -119,6 +120,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'checkout':
       applyCheckoutInput(s, input);
+      break;
+    case 'grow':
+      applyGrowInput(s, input);
       break;
     case 'ad':
       applyAdInput(s, input);
