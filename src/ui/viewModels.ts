@@ -2,6 +2,7 @@ import { catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
 import { TICK_RATE, secondsToTicks } from '../sim/constants';
+import { botsFor } from '../sim/bots/roster';
 import { availableDrinks } from '../sim/customers';
 import { describeEffects } from '../sim/describe';
 import { EVENT_LABELS } from '../sim/events';
@@ -304,13 +305,13 @@ export interface LobbyVM {
 export interface LobbyBotsVM {
   /** 0 = Off. For 'auto' this is how many bots fill the empty seats right now. */
   count: number;
+  /** How many actually clock in with this crew (bots never take a fourth human's spot). */
+  clocking: number;
   auto: boolean;
   picked: boolean;
   editable: boolean;
 }
 
-/** How many bots 'auto' brings for a crew this size (mirrors the roster: fill to three baristas). */
-const autoBots = (humans: number) => Math.max(0, ECONOMY.bots.names.length - humans);
 
 export function lobbyViewModel(input: {
   code: string;
@@ -338,7 +339,8 @@ export function lobbyViewModel(input: {
     ...(input.bots
       ? {
           bots: {
-            count: input.bots.bots === 'auto' ? autoBots(input.members.length) : input.bots.bots,
+            count: input.bots.bots === 'auto' ? botsFor('auto', input.members.length) : input.bots.bots,
+            clocking: botsFor(input.bots.bots, input.members.length),
             auto: input.bots.bots === 'auto',
             picked: input.bots.picked,
             editable: input.isHost && !started,

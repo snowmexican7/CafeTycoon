@@ -24,9 +24,12 @@ export function humanCount(state: GameState): number {
 
 /** 'auto' tops the crew up to three; a number is a request, capped at four baristas in all. */
 export function wantedBots(state: GameState): number {
-  const h = humanCount(state);
-  const n = state.settings.bots;
-  const wanted = n === 'auto' ? ECONOMY.bots.names.length - h : Math.min(n, MAX_BARISTAS - h, ECONOMY.bots.names.length);
+  return botsFor(state.settings.bots, humanCount(state));
+}
+
+/** How many bots clock in for a bots setting and crew size: 'auto' fills to three baristas; a number never overfills the four spots. */
+export function botsFor(n: GameState['settings']['bots'], humans: number): number {
+  const wanted = n === 'auto' ? ECONOMY.bots.names.length - humans : Math.min(n, MAX_BARISTAS - humans, ECONOMY.bots.names.length);
   return Math.max(0, wanted);
 }
 

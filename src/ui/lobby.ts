@@ -15,11 +15,15 @@ const BOT_CHOICES = [
 /** The paper card with the bots run setting: a segmented Off/1/2/3, read-only for everyone but the host. */
 function botsCard(b: LobbyBotsVM): string {
   const note = b.auto
-    ? `Auto: bots fill the empty seats (${b.count === 0 ? 'none needed' : `${b.count} now`}).`
-    : !b.picked && b.count === 0
-      ? 'Off, since you have company. Bots can still help.'
-      : b.count === 0
+    ? `Auto: bots fill the empty seats (${b.clocking === 0 ? 'none needed' : `${b.clocking} now`}).`
+    : b.count === 0
+      ? b.picked
         ? 'Just the humans. Good luck.'
+        : 'Off, since you have company. Bots can still help.'
+      : b.clocking < b.count
+        ? b.clocking === 0
+          ? 'No spot behind the counter for a bot: the café is full.'
+          : `Only ${b.clocking} fit behind the counter with this crew.`
         : `${b.count} bot barista${b.count === 1 ? '' : 's'} will clock in.`;
   const who = b.editable ? '' : '<span class="chip">host picks</span>';
   return `<div class="botscard" data-bots="${b.auto ? 'auto' : b.count}">

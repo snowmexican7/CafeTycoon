@@ -541,7 +541,10 @@ async function main(): Promise<void> {
   }
 
   syncMute();
-  window.cafetycoon = { telemetry: { download: downloadTelemetry, rows: telemetryRows } };
+  window.cafetycoon = {
+    telemetry: { download: downloadTelemetry, rows: telemetryRows },
+    peek: { state: () => (session?.next ? structuredClone(session.next) : null), me: () => session?.me ?? null },
+  };
   showTitle();
   requestAnimationFrame(frame);
 }
