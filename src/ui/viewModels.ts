@@ -38,6 +38,11 @@ function clockFor(ticks: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+/** Espresso Easter egg receipt lines; absent on a normal day. */
+function espressoLines(d: DayStats): { ambulance?: string; tabPaid?: string } {
+  return { ...(d.ambulance ? { ambulance: money(d.ambulance) } : {}), ...(d.debtPaid ? { tabPaid: money(d.debtPaid) } : {}) };
+}
+
 function profitOf(d: DayStats): number {
   return Math.round((d.sales + d.tips - d.rent) * 100) / 100;
 }
@@ -87,7 +92,9 @@ export interface HandCardVM {
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string } | null;
+  /** Espresso Easter egg: unpaid hospital tab, if any. */
+  tab?: string;
   hand: HandCardVM[];
   restock: { supply: SupplyId; count: number; packSize: number; packCost: string; affordable: boolean }[];
   ready: { id: PlayerId; name: string; ready: boolean }[];
@@ -99,12 +106,13 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   const last = state.days[state.days.length - 1];
   const takings =
     state.days.length > 0 && state.days.length === state.day - 1
-      ? { sales: money(last.sales), tips: money(last.tips), rent: money(last.rent), profit: money(profitOf(last)) }
+      ? { sales: money(last.sales), tips: money(last.tips), rent: money(last.rent), profit: money(profitOf(last)), ...espressoLines(last) }
       : null;
   return {
     clock: clockFor(state.phaseTicksLeft),
     cash: money(state.cash),
     takings,
+    ...(state.debt ? { tab: money(state.debt) } : {}),
     hand: state.hand.map((id) => {
       const item = catalogueById[id];
       return {
@@ -138,6 +146,10 @@ export interface ClosingVM {
   profit: string;
   reputationBefore: string;
   reputationAfter: string;
+  /** Espresso Easter egg: today's ambulance ride, tab paid off today, and what's still owed. */
+  ambulance?: string;
+  tabPaid?: string;
+  tab?: string;
 }
 
 /** `before` is the last snapshot of the closing phase; `after` is the first of the next phase. */
@@ -154,6 +166,8 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     profit: money(profitOf(d)),
     reputationBefore: stars(before.reputation),
     reputationAfter: stars(after.reputation),
+    ...espressoLines(d),
+    ...(after.debt ? { tab: money(after.debt) } : {}),
   };
 }
 

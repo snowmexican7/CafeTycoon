@@ -106,7 +106,7 @@ export function createTitle(
             <label class="seedfld">Seed <input name="seed" placeholder="random" inputmode="numeric" aria-label="Seed (optional)"></label></div>
           <details class="more"><summary>Past runs &amp; controls</summary>
             ${history}
-            <p class="keys-help"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> or arrows move · <span class="key">E</span> or <span class="key">Space</span> uses a station · <span class="key">Esc</span> pauses · <span class="key">M</span> mutes sound</p>
+            <p class="keys-help"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> or arrows move · <span class="key">E</span> or <span class="key">Space</span> uses a station · <span class="key">Q</span> at the espresso machine drinks a shot (careful) · <span class="key">Esc</span> pauses · <span class="key">M</span> mutes sound</p>
           </details>
         </main>
         <button class="btn rmbtn" data-action="roadmap" aria-haspopup="dialog"><span class="dot" hidden></span>${roadmapIcon}Roadmap <span class="badge" hidden></span></button>`;

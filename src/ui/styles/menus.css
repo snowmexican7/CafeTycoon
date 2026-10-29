@@ -91,3 +91,6 @@
 .switch input:focus-visible + .track { box-shadow: 0 0 0 3px #e08a3c66; }
 .switch .lbl { display: inline-flex; align-items: center; gap: 8px; }
 .switch .lbl .key { text-transform: none; letter-spacing: 0; }
+/* espresso Easter egg: the ambulance line on the receipts */
+.receipt-lines .line.ambulance span:first-child, .line.ambulance span:first-child { color: var(--bad); font-style: italic; }
+.line.tab span:last-child { color: var(--ink-soft); }

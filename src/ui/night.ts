@@ -84,7 +84,10 @@ export function createNight(
            <div class="line"><span>Sales</span><span>${esc(t.sales)}</span></div>
            <div class="line"><span>Tips</span><span>${esc(t.tips)}</span></div>
            <div class="line"><span>Rent</span><span class="neg">−${esc(t.rent)}</span></div>
-           <div class="line total ${t.profit.startsWith('-') ? 'loss' : ''}"><span>Profit</span><span>${t.profit.startsWith('-') ? esc(t.profit) : `+${esc(t.profit)}`}</span></div>`
+           ${t.tabPaid ? `<div class="line"><span>Hospital tab paid</span><span class="neg">−${esc(t.tabPaid)}</span></div>` : ''}
+           ${t.ambulance ? `<div class="line ambulance"><span>Ambulance ride. Worth it?</span><span class="neg">−${esc(t.ambulance)}</span></div>` : ''}
+           <div class="line total ${t.profit.startsWith('-') ? 'loss' : ''}"><span>Profit</span><span>${t.profit.startsWith('-') ? esc(t.profit) : `+${esc(t.profit)}`}</span></div>
+           ${vm.tab ? `<div class="line tab"><span>Hospital tab (half of each day's profit pays it off)</span><span>${esc(vm.tab)}</span></div>` : ''}`
         : `<h3>OPENING NIGHT</h3><p class="first">No sales yet. Spend a little on the shop, keep enough for stock, and open at dawn.</p>
            <div class="line total"><span>In the till</span><span>${esc(vm.cash)}</span></div>`;
       const stats = extras

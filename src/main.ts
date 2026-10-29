@@ -1,5 +1,5 @@
 import './style.css';
-import { ambienceFor, diffCues } from './audio/cues';
+import { ambienceFor, createHeartbeat, diffCues, heartbeatGapMs } from './audio/cues';
 import { createAudioEngine } from './audio/engine';
 import { SNAPSHOT_INTERVAL_MS } from './host/loop';
 import { createTelemetry, withTelemetry, createUiBuffer, setUiTelemetrySink, uiTelemetry, type Telemetry } from './host/telemetry';
@@ -472,6 +472,8 @@ async function main(): Promise<void> {
     }
   }
 
+  const heart = createHeartbeat();
+
   function drawAndSend(): void {
     const s = session;
     if (s?.next) {
@@ -485,6 +487,10 @@ async function main(): Promise<void> {
         lastSent = vec;
         interactPending = false;
       }
+      // espresso tell: the local barista hears their heart speed up from the 3rd shot
+      if (heart.tick(performance.now(), heartbeatGapMs(s.next, s.me))) audio.play({ id: 'heartbeat', mine: true });
+      // Q: drink a shot (one-shot input; the host decides whether it counts)
+      if (keyboard.takeEspresso()) s.transport.sendInput({ kind: 'espresso', playerId: s.me });
     }
   }
 

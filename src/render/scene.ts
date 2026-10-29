@@ -4,11 +4,13 @@ import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
-import type { PlayerId } from '../sim/types';
+import type { GameState, PlayerId } from '../sim/types';
 import type { RenderView } from './interpolate';
 import { Actors } from './layers/actors';
 import { buildDecor } from './layers/decor';
+import { EspressoGags, fellAtScreen, shakePx } from './layers/espresso';
 import { Effects } from './layers/fx';
+import { ESPRESSO } from '../sim/espresso';
 import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
 import { StationOverlay, buildStation, type StationOverlayState } from './layers/stations';
@@ -37,6 +39,9 @@ export class Scene {
   private readonly lighting = new Lighting(SCENE_WIDTH, SCENE_HEIGHT);
   private readonly fx = new Effects();
   private readonly actors: Actors;
+  private readonly gags: EspressoGags;
+  /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
+  private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
   private lastTime = performance.now() / 1000;
 
@@ -47,6 +52,7 @@ export class Scene {
     for (const s of LAYOUT.stations) this.depth.addChild(buildStation(s.kind, s.pos));
     for (const d of buildDecor(SCENE_WIDTH, LAYOUT.height)) this.depth.addChild(d);
     this.actors = new Actors(this.depth, this.tags);
+    this.gags = new EspressoGags(this.depth);
     this.overlay.addChild(this.stationOverlay.root, this.tags);
     this.root.addChild(this.wall.root, buildLamps(), floor, this.depth, this.lighting.root, this.overlay, this.fx.root);
   }
@@ -85,10 +91,37 @@ export class Scene {
     }
 
     this.stationOverlay.update(stations, focus, now);
-    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now);
+    const simAge = (p: (typeof state.players)[number]) => {
+      const at = p.espresso?.collapsedAt;
+      return at == null ? null : Math.max(0, (state.tick - at) / TICK_RATE);
+    };
+    const poses = this.gags.update(state.players, simAge, now, (p) => fellAtScreen(p.espresso?.fellAt ?? p.pos));
+    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses);
+    this.espressoPops(state.players, view.baristaPositions);
+
+    // espresso tell: the local barista's screen shakes from the 4th shot, and jolts when they hit the floor
+    const shake = shakePx(me, me ? simAge(me) : null);
+    this.root.position.set(shake ? Math.sin(now * 93) * shake : 0, shake ? Math.cos(now * 77) * shake * 0.7 : 0);
 
     const counter = LAYOUT.stations.find((s) => s.kind === 'counter');
     if (counter) this.fx.track(state.day, state.today.sales + state.today.tips, sx(counter.pos.x), sy(counter.pos.y) - 70);
     this.fx.step(dt);
+  }
+
+  private espressoPops(players: GameState['players'], positions: Record<PlayerId, { x: number; y: number }>): void {
+    for (const p of players) {
+      const shots = p.espresso?.shots ?? 0;
+      const seen = this.shotsSeen.get(p.id);
+      this.shotsSeen.set(p.id, shots);
+      if (seen === undefined || shots <= seen) continue;
+      const pos = positions[p.id] ?? p.pos;
+      const x = sx(pos.x);
+      const y = sy(pos.y) - 90;
+      if (p.espresso?.out) this.fx.spawn('Too much espresso!', x, y);
+      else {
+        const pct = Math.round(ESPRESSO.boosts[Math.min(shots, ESPRESSO.boosts.length) - 1] * 100);
+        this.fx.spawn(shots === ESPRESSO.boosts.length ? `+${pct}% speed... one more?` : `+${pct}% speed`, x, y);
+      }
+    }
   }
 }

@@ -207,3 +207,70 @@ export const tick: Synth = (ctx, out, t) => {
   o.connect(g).connect(out);
   return 0.08;
 };
+
+/** Espresso shot knocked back: two quick glugs and a satisfied "ahh" of breath. */
+export const gulp: Synth = (ctx, out, t) => {
+  for (const [dt, f] of [[0, 340], [0.16, 300]] as const) {
+    const o = osc(ctx, 'sine', f, t + dt, t + dt + 0.14);
+    o.frequency.setValueAtTime(f, t + dt);
+    o.frequency.exponentialRampToValueAtTime(f * 0.45, t + dt + 0.12);
+    const g = gain(ctx);
+    perc(g.gain, t + dt, 0.16, 0.09, 0.006);
+    o.connect(g).connect(out);
+  }
+  const g = gain(ctx);
+  ahr(g.gain, t + 0.36, 0.04, 0.05, 0.12, 0.25);
+  noise(ctx, t + 0.36, 0.5).connect(filter(ctx, 'bandpass', 900, 0.8)).connect(g).connect(out);
+  return 0.9;
+};
+
+/** Lub-dub: a soft low double thump (the espresso tell). */
+export const heartbeat: Synth = (ctx, out, t) => {
+  for (const [dt, f, pk] of [[0, 62, 0.5], [0.13, 52, 0.34]] as const) {
+    const o = osc(ctx, 'sine', f * 1.6, t + dt, t + dt + 0.18);
+    o.frequency.setValueAtTime(f * 1.6, t + dt);
+    o.frequency.exponentialRampToValueAtTime(f, t + dt + 0.05);
+    const g = gain(ctx);
+    perc(g.gain, t + dt, pk, 0.11, 0.005);
+    o.connect(filter(ctx, 'lowpass', 220)).connect(g).connect(out);
+  }
+  return 0.32;
+};
+
+/** Cartoon faint: a slide whistle all the way down, then a soft thud on the floor. */
+export const faint: Synth = (ctx, out, t) => {
+  const w = osc(ctx, 'sine', 1500, t, t + 0.85);
+  w.frequency.setValueAtTime(1500, t);
+  w.frequency.exponentialRampToValueAtTime(180, t + 0.8);
+  const vib = osc(ctx, 'sine', 9, t, t + 0.85);
+  const depth = gain(ctx, 30);
+  vib.connect(depth).connect(w.frequency);
+  const g = gain(ctx);
+  ahr(g.gain, t, 0.02, 0.07, 0.6, 0.15);
+  w.connect(g).connect(out);
+  const thud = osc(ctx, 'sine', 110, t + 0.85, t + 1.2);
+  thud.frequency.setValueAtTime(110, t + 0.85);
+  thud.frequency.exponentialRampToValueAtTime(40, t + 1.1);
+  const tg = gain(ctx);
+  perc(tg.gain, t + 0.85, 0.5, 0.18, 0.004);
+  thud.connect(tg).connect(out);
+  const ng = gain(ctx);
+  perc(ng.gain, t + 0.85, 0.18, 0.1, 0.003);
+  noise(ctx, t + 0.85, 0.2).connect(filter(ctx, 'lowpass', 400)).connect(ng).connect(out);
+  return 1.25;
+};
+
+/** Ambulance pulling up and driving off: a hi-lo two-tone siren that swells in and fades away. */
+export const siren: Synth = (ctx, out, t) => {
+  const len = 7.5;
+  const o = osc(ctx, 'triangle', 960, t, t + len);
+  for (let i = 0, at = t; at < t + len; i++, at += 0.42) o.frequency.setValueAtTime(i % 2 ? 770 : 960, at);
+  const g = gain(ctx);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.05, t + 1.8);
+  g.gain.setValueAtTime(0.05, t + 4.2);
+  g.gain.linearRampToValueAtTime(0.03, t + 5.5);
+  g.gain.linearRampToValueAtTime(0, t + len);
+  o.connect(filter(ctx, 'lowpass', 2400)).connect(g).connect(out);
+  return len;
+};

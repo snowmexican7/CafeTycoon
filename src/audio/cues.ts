@@ -32,6 +32,9 @@ export type CueId =
   | 'inspectPass'
   | 'inspectFail'
   | 'influencerServed'
+  | 'gulp'
+  | 'heartbeat'
+  | 'collapse'
   | 'click';
 
 export interface Cue {
@@ -107,6 +110,8 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       }
       case 'inspection': cues.push({ id: e.data.result === 'pass' ? 'inspectPass' : 'inspectFail' }); break;
       case 'influencer': if (e.data.result === 'served') cues.push({ id: 'influencerServed' }); break;
+      case 'espresso.shot': cues.push({ id: 'gulp', mine }); break;
+      case 'espresso.collapse': cues.push({ id: 'collapse', mine }); break;
       default: break;
     }
   }
@@ -148,5 +153,37 @@ export function ambienceFor(state: GameState | null): Ambience {
     music: state.phase === 'day' ? 'day' : 'night',
     crowd: open ? Math.min(1, owed(state) / CROWD_FULL) : 0,
     powerOut: open && state.events.some((e) => e.kind === 'powerFlicker'),
+  };
+}
+
+/**
+ * The espresso Easter egg's tell: from the 3rd shot today the local barista hears their own heart,
+ * faster with every shot. Returns the gap between beats in ms, or null for no heartbeat.
+ */
+export function heartbeatGapMs(state: GameState | null, me: PlayerId): number | null {
+  if (!state || (state.phase !== 'day' && state.phase !== 'closing')) return null;
+  const e = state.players.find((p) => p.id === me)?.espresso;
+  if (!e || e.out || e.boostTicksLeft <= 0 || e.shots < 3) return null;
+  const bpm = [0, 0, 0, 96, 128, 168][Math.min(5, e.shots)];
+  return 60000 / bpm;
+}
+
+/** Tick every frame; says when to play the next heartbeat. Starts with a beat right away. */
+export function createHeartbeat() {
+  let next = 0;
+  return {
+    tick(nowMs: number, gapMs: number | null): boolean {
+      if (gapMs === null) {
+        next = 0;
+        return false;
+      }
+      if (next === 0 || nowMs >= next) {
+        next = (next === 0 || nowMs - next > gapMs ? nowMs : next) + gapMs;
+        return true;
+      }
+      // a faster heart takes over at once instead of waiting out the slow gap
+      if (next - nowMs > gapMs) next = nowMs + gapMs;
+      return false;
+    },
   };
 }

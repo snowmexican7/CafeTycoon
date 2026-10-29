@@ -81,12 +81,20 @@ export const RECIPES: Record<CueId, Layer[]> = {
     { sample: 'coins1', gain: 0.4 },
     { synth: 'sparkle', gain: 1, delay: 0.08 },
   ],
+  gulp: [{ synth: 'gulp', gain: 1 }],
+  heartbeat: [{ synth: 'heartbeat', gain: 1 }],
+  collapse: [
+    { synth: 'faint', gain: 1 },
+    { synth: 'siren', gain: 1, delay: 0.9 },
+  ],
   click: [{ sample: 'click', gain: 0.3, rate: [0.97, 1.03] }],
 };
 
 /** Seconds a cue will sound for, used to hold its voice slot in the gate. */
 export function cueSeconds(id: CueId, dur = 0): number {
   if (id === 'grinder' || id === 'espresso' || id === 'steam' || id === 'pour') return Math.max(0.6, dur) + 0.4;
+  if (id === 'collapse') return 9;
+  if (id === 'heartbeat') return 0.35;
   if (id === 'click' || id === 'pickUp' || id === 'cupDown') return 0.25;
   if (['dayStart', 'dayEnd', 'weekEnd', 'gameOver', 'rushHour', 'inspector', 'influencer', 'inspectPass', 'inspectFail'].includes(id)) return 2.5;
   return 1;

@@ -93,3 +93,5 @@
 @media (prefers-reduced-motion: reduce) { #night .icard { transition: none; } }
 /* The night board replaces the day HUD; keep the blurred café, not the blurred HUD. */
 body:has(#night:not([hidden])) #hud { visibility: hidden; }
+#night .line.ambulance span:first-child { color: var(--bad); font-style: italic; }
+#night .line.tab { font-size: 13px; }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRun } from '../sim/run';
 import { step } from '../sim/step';
 import type { GameState, SimEvent } from '../sim/types';
-import { ambienceFor, CROWD_FULL, diffCues, logCursor, MAX_STATION_SEC, type CueId } from './cues';
+import { ambienceFor, createHeartbeat, CROWD_FULL, diffCues, heartbeatGapMs, logCursor, MAX_STATION_SEC, type CueId } from './cues';
 
 const run = () => createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 const clone = (s: GameState): GameState => structuredClone(s);
@@ -151,5 +151,46 @@ describe('ambienceFor', () => {
     expect(ambienceFor(s).powerOut).toBe(true);
     s.phase = 'night';
     expect(ambienceFor(s)).toEqual({ music: 'night', crowd: 0, powerOut: false });
+  });
+});
+
+describe('espresso sounds', () => {
+  it('gulps on a shot and faints + sirens on the collapse', () => {
+    const a = run();
+    const b = withLog(a, { kind: 'espresso.shot', data: { by: 'p1', shot: 1 } }, { kind: 'espresso.collapse', data: { by: 'p2' } });
+    const r = diffCues(a, b, 'p1', logCursor(a));
+    expect(r.cues).toEqual([{ id: 'gulp', mine: true }, { id: 'collapse', mine: false }]);
+  });
+
+  it('beats faster with every shot from the 3rd, and stops when out or unboosted', () => {
+    const s = run();
+    s.phase = 'day';
+    const me = s.players[0];
+    expect(heartbeatGapMs(s, 'p1')).toBeNull();
+    me.espresso = { shots: 2, boostTicksLeft: 100, mul: 1.35, collapsedAt: null, fellAt: null, out: false };
+    expect(heartbeatGapMs(s, 'p1')).toBeNull();
+    const gaps = [3, 4, 5].map((n) => {
+      me.espresso!.shots = n;
+      return heartbeatGapMs(s, 'p1')!;
+    });
+    expect(gaps[0]).toBeGreaterThan(gaps[1]);
+    expect(gaps[1]).toBeGreaterThan(gaps[2]);
+    expect(heartbeatGapMs(s, 'p2')).toBeNull();
+    me.espresso!.boostTicksLeft = 0;
+    expect(heartbeatGapMs(s, 'p1')).toBeNull();
+    me.espresso!.boostTicksLeft = 5;
+    me.espresso!.out = true;
+    expect(heartbeatGapMs(s, 'p1')).toBeNull();
+  });
+
+  it('heartbeat ticker beats at the gap and speeds up at once', () => {
+    const h = createHeartbeat();
+    expect(h.tick(1000, 600)).toBe(true);
+    expect(h.tick(1300, 600)).toBe(false);
+    expect(h.tick(1600, 600)).toBe(true);
+    expect(h.tick(1700, 300)).toBe(false); // next pulled in to 2000
+    expect(h.tick(2000, 300)).toBe(true);
+    expect(h.tick(2100, null)).toBe(false);
+    expect(h.tick(2150, 300)).toBe(true);
   });
 });

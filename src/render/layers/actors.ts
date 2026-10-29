@@ -3,6 +3,7 @@ import { LAYOUT } from '../../data/layout';
 import type { Customer, DrinkId, ItemKind, Player, PlayerId, Vec2 } from '../../sim/types';
 import { type Facing, TILE, baristaLook, customerLook, nextFacing, patienceColor, sx, sy } from '../theme';
 import { dashedEllipse, drawItem, halfDome, label } from './draw';
+import { jitterPx, type CollapsePose } from '../espressoPose';
 
 /** Feet sit a little below the sim centre so a barista reads as standing on its tile. */
 export const FEET_OFFSET = 0.3;
@@ -86,6 +87,9 @@ interface PlayerSprite {
   tagText: Text;
   tagKey: string;
   facing: Facing;
+  /** Espresso speed trail: recent screen positions, drawn as fading ghosts while boosted. */
+  trail: Graphics;
+  history: { x: number; y: number }[];
 }
 
 interface CustomerSprite {
@@ -108,7 +112,14 @@ export class Actors {
     private readonly tagLayer: Container,
   ) {}
 
-  update(players: Player[], positions: Record<PlayerId, Vec2>, customers: Customer[], localId: PlayerId | null, timeSec: number): void {
+  update(
+    players: Player[],
+    positions: Record<PlayerId, Vec2>,
+    customers: Customer[],
+    localId: PlayerId | null,
+    timeSec: number,
+    collapsed: Record<PlayerId, CollapsePose> = {},
+  ): void {
     const seen = new Set<PlayerId>();
     players.forEach((p, index) => {
       seen.add(p.id);
@@ -125,13 +136,27 @@ export class Actors {
       const pos = positions[p.id] ?? p.pos;
       const moving = p.connected && (p.moveDir.x !== 0 || p.moveDir.y !== 0);
       const bob = moving ? -Math.abs(Math.sin(timeSec * 12)) * 2.5 : 0;
-      const x = sx(pos.x);
-      const feet = sy(pos.y + FEET_OFFSET);
-      sprite.root.position.set(x, feet);
-      sprite.body.y = bob;
-      sprite.root.zIndex = feet;
+      let x = sx(pos.x);
+      let feet = sy(pos.y + FEET_OFFSET);
+      const esp = p.espresso;
+      const boosted = !!esp && !esp.out && esp.boostTicksLeft > 0;
+      if (boosted) {
+        // the espresso tell: a buzzing, jittery barista
+        const j = jitterPx(esp.shots);
+        x += Math.sin(timeSec * 71 + index * 1.7) * j;
+        feet += Math.cos(timeSec * 57 + index) * j * 0.5;
+      }
+      this.drawTrail(sprite, boosted && moving, x, feet, look.cap);
+      const pose = collapsed[p.id];
+      const out = !!esp?.out;
+      sprite.root.position.set(pose ? pose.body.x : x, pose ? pose.body.y : feet);
+      sprite.root.rotation = pose ? pose.body.rot : 0;
+      sprite.root.visible = out ? !!pose?.body.visible : true;
+      sprite.body.y = pose ? 0 : bob;
+      sprite.root.zIndex = pose ? pose.body.y + (pose.stretcher?.loaded ? 30 : 0) : feet;
       const alpha = p.connected ? 1 : 0.4;
       sprite.root.alpha = alpha;
+      sprite.tag.visible = !out;
 
       const text = p.connected ? p.name : `${p.name} · reconnecting…`;
       const tagKey = `${text}|${index}`;
@@ -149,6 +174,7 @@ export class Actors {
       if (!seen.has(id)) {
         sprite.root.destroy({ children: true });
         sprite.tag.destroy({ children: true });
+        sprite.trail.destroy();
         this.players.delete(id);
       }
     }
@@ -176,6 +202,39 @@ export class Actors {
     }
   }
 
+  /** Fading afterimages behind a boosted, moving barista (a cozy "zoom" streak, not a blur). */
+  private drawTrail(sprite: PlayerSprite, on: boolean, x: number, feet: number, color: number): void {
+    const h = sprite.history;
+    sprite.trail.clear();
+    if (!on) {
+      h.length = 0;
+      return;
+    }
+    h.unshift({ x, y: feet });
+    if (h.length > 10) h.length = 10;
+    for (let i = 2; i < h.length; i += 2) {
+      const a = 0.32 * (1 - i / h.length);
+      const pt = h[i];
+      sprite.trail.roundRect(pt.x - 15, pt.y - 44, 30, 40, 13).fill({ color, alpha: a });
+      sprite.trail.circle(pt.x, pt.y - 58, 15).fill({ color: 0xfffaf2, alpha: a * 0.7 });
+    }
+    // speed lines
+    const last = h[h.length - 1];
+    const dx = x - last.x;
+    const dy = feet - last.y;
+    const len = Math.hypot(dx, dy);
+    if (len > 6) {
+      const ux = dx / len;
+      const uy = dy / len;
+      for (const off of [-22, -2, 18]) {
+        const bx = x - ux * 26 - uy * off * 0.6;
+        const by = feet - 30 + off * 0.9 - uy * 26 + ux * off * 0.1;
+        sprite.trail.moveTo(bx, by).lineTo(bx - ux * 22, by - uy * 22).stroke({ width: 3, color: 0xfffaf2, alpha: 0.7, cap: 'round' });
+      }
+    }
+    sprite.trail.zIndex = feet - 1;
+  }
+
   private addPlayer(id: PlayerId): PlayerSprite {
     const root = new Container();
     const body = new Graphics();
@@ -186,7 +245,9 @@ export class Actors {
     const tagText = label('', 11, 0xffffff, '600');
     tag.addChild(tagBg, tagText);
     this.tagLayer.addChild(tag);
-    const sprite: PlayerSprite = { root, body, key: '', tag, tagBg, tagText, tagKey: '', facing: 'down' };
+    const trail = new Graphics();
+    this.depthLayer.addChild(trail);
+    const sprite: PlayerSprite = { root, body, key: '', tag, tagBg, tagText, tagKey: '', facing: 'down', trail, history: [] };
     this.players.set(id, sprite);
     return sprite;
   }

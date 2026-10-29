@@ -15,6 +15,9 @@ export const MOVE_KEYS: Record<string, Vec2> = {
 /** Keyboard codes that use a station. */
 export const INTERACT_KEYS: string[] = ['KeyE', 'Space'];
 
+/** Keyboard code that knocks back a shot of espresso (by physical position, like WASD). */
+export const ESPRESSO_KEYS: string[] = ['KeyQ'];
+
 /** Sum the pressed movement keys into a direction with each component in [-1, 1]. */
 export function keysToVector(pressed: Iterable<string>): Vec2 {
   let x = 0;

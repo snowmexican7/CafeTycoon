@@ -28,6 +28,9 @@ export function createClosing(container: HTMLElement): { render(vm: ClosingVM): 
             <div class="line"><span>Sales</span><span>${esc(vm.sales)}</span></div>
             <div class="line"><span>Tips</span><span>${esc(vm.tips)}</span></div>
             <div class="line"><span>Rent</span><span class="neg">−${esc(vm.rent)}</span></div>
+            ${vm.tabPaid ? `<div class="line"><span>Hospital tab paid</span><span class="neg">−${esc(vm.tabPaid)}</span></div>` : ''}
+            ${vm.ambulance ? `<div class="line ambulance"><span>Ambulance ride: −${esc(vm.ambulance)}. Worth it?</span><span class="neg">on the tab</span></div>` : ''}
+            ${vm.tab ? `<div class="line tab"><span>Hospital tab left</span><span>${esc(vm.tab)}</span></div>` : ''}
           </div>
           <div class="rep ${repTrend}"><span class="lbl">Reputation</span><span class="st">${stars(before)}</span><span class="arrow">→</span><span class="st">${stars(after)}</span>
             <b>${esc(vm.reputationAfter)}</b></div>
