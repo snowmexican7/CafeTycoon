@@ -165,6 +165,16 @@ describe('lobby view model', () => {
     expect(lobbyViewModel({ ...base, status: 'connected', started: true }).statusText).toBe('');
     expect(lobbyViewModel({ ...base, status: 'hostAway', started: true }).statusText).toBe('Waiting for the host to come back…');
     expect(lobbyViewModel({ ...base, status: 'failed' }).canStart).toBe(false);
+    expect(lobbyViewModel({ ...base, status: 'full' }).statusText).toMatch(/full/);
+  });
+  it('shows the bots setting: host edits before the start, peers read it', () => {
+    const host = lobbyViewModel({ code: 'ABCDE', members, isHost: true, status: 'hosting', started: false, bots: { bots: 0, picked: false } });
+    expect(host.bots).toEqual({ count: 0, auto: false, picked: false, editable: true });
+    const solo = lobbyViewModel({ code: 'ABCDE', members: members.slice(0, 1), isHost: true, status: 'hosting', started: false, bots: { bots: 'auto', picked: false } });
+    expect(solo.bots).toEqual({ count: 2, auto: true, picked: false, editable: true });
+    const peer = lobbyViewModel({ code: 'ABCDE', members, isHost: false, status: 'connected', started: false, bots: { bots: 3, picked: true } });
+    expect(peer.bots).toEqual({ count: 3, auto: false, picked: true, editable: false });
+    expect(lobbyViewModel({ code: 'ABCDE', members, isHost: true, status: 'hosting', started: true, bots: { bots: 1, picked: true } }).bots!.editable).toBe(false);
   });
   it('offers rejoin on the title when the room store says peer', () => {
     expect(titleViewModel([], null, { code: 'ABCDE', role: 'peer' }).rejoinCode).toBe('ABCDE');

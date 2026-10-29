@@ -1,5 +1,6 @@
 import type { TeleEvent } from '../host/telemetry';
-import { parseInput, parseJoin, parseTele, PROTOCOL_VERSION, type Member } from './protocol';
+import { parseBots, parseInput, parseJoin, parseTele, PROTOCOL_VERSION, type BotsChoice, type Member } from './protocol';
+import { assignSeat } from './seats';
 import type { RoomLink } from './roomLink';
 import type { HostToClient, Transport } from './transport';
 
@@ -7,8 +8,15 @@ import type { HostToClient, Transport } from './transport';
 export interface HostRoom {
   members(): Member[];
   latestSnapshot(): HostToClient | null;
+  /** The bots setting the run will start with: the host's pick, else the default for this crew size. */
+  bots(): { bots: BotsChoice; picked: boolean };
+  /** Host only, before the start: pick Off/1–3 (null goes back to the default). Synced to the lobby. */
+  setBots(choice: BotsChoice | null): void;
   close(): void;
 }
+
+/** Off once two or more baristas are in; a lone host gets bots filling the empty seats. */
+export const defaultBots = (humans: number): BotsChoice => (humans >= 2 ? 0 : 'auto');
 
 export interface HostRoomHooks {
   onTele?(token: string, events: TeleEvent[]): void;
@@ -25,11 +33,17 @@ export function createHostRoom(
   let latest: HostToClient | null = null;
   let started = false;
   let closed = false;
+  let botsChoice: BotsChoice | null = null;
 
   const members = (): Member[] => [host, ...byPeer.values()];
+  const bots = (): { bots: BotsChoice; picked: boolean } => {
+    if (latest) return { bots: latest.state.settings.bots, picked: true };
+    return botsChoice !== null ? { bots: botsChoice, picked: true } : { bots: defaultBots(members().length), picked: false };
+  };
   const broadcastLobby = () => {
     const list = members();
-    link.send('lobby', { t: 'lobby', members: list, started });
+    const b = bots();
+    link.send('lobby', { t: 'lobby', members: list, started, bots: b.bots, botsPicked: b.picked });
     onMembers?.(list);
   };
 
@@ -57,11 +71,19 @@ export function createHostRoom(
       return;
     }
     if (msg.token === host.token) return; // nobody joins as the host
-    for (const [otherPeer, member] of byPeer) {
-      if (member.token === msg.token && otherPeer !== peerId) byPeer.delete(otherPeer);
+    const live = new Set([...byPeer].filter(([p]) => p !== peerId).map(([, m]) => m.token));
+    const result = assignSeat({ token: msg.token, prev: msg.prev, name: msg.name, hostToken: host.token, state: latest?.state ?? null, live });
+    if ('reject' in result) {
+      link.send('hello', { t: 'hello', protocol: PROTOCOL_VERSION, hostToken: host.token, reject: 'full' }, peerId);
+      return;
     }
-    byPeer.set(peerId, { token: msg.token, name: msg.name });
-    local.sendInput({ kind: 'join', playerId: msg.token, name: msg.name });
+    const seat = result.seat;
+    for (const [otherPeer, member] of byPeer) {
+      if (member.token === seat && otherPeer !== peerId) byPeer.delete(otherPeer);
+    }
+    if (seat !== msg.token) link.send('seat', { t: 'seat', token: seat }, peerId);
+    byPeer.set(peerId, { token: seat, name: msg.name });
+    local.sendInput({ kind: 'join', playerId: seat, name: msg.name });
     if (latest) link.send('snap', { t: 'snap', state: latest.state, sentAt: latest.sentAt }, peerId);
     broadcastLobby();
   });
@@ -94,6 +116,14 @@ export function createHostRoom(
   return {
     members,
     latestSnapshot: () => latest,
+    bots,
+    setBots(choice) {
+      if (closed || latest) return;
+      const next = choice === null ? null : (parseBots(choice) ?? null);
+      if (next === botsChoice) return;
+      botsChoice = next;
+      broadcastLobby();
+    },
     close() {
       if (closed) return;
       closed = true;

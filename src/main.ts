@@ -8,7 +8,7 @@ import { markPeersAway } from './net/hostResume';
 import { createLocalTransport } from './net/localTransport';
 import type { PeerStatus } from './net/peerSession';
 import { createPeerTransport } from './net/peerTransport';
-import { PROTOCOL_VERSION, type Member } from './net/protocol';
+import { PROTOCOL_VERSION, type BotsChoice, type Member } from './net/protocol';
 import { makeRoomCode, normalizeRoomCode } from './net/roomCode';
 import { createTrysteroLink } from './net/roomLink';
 import { createSendGate } from './net/sendGate';
@@ -20,6 +20,7 @@ import { summarizeRun } from './sim/score';
 import type { CreateRunOptions, GameState, Phase, PlayerId, PlayerInput } from './sim/types';
 import { createHistoryStore } from './storage/historyStore';
 import { createRoomStore } from './storage/roomStore';
+import { createSeatStore } from './storage/seatStore';
 import { memoryStorage, type StorageLike } from './storage/storageLike';
 import { createSettingsStore } from './storage/settingsStore';
 import { createSnapshotStore } from './storage/snapshotStore';
@@ -51,9 +52,11 @@ const stores = {
   snapshot: createSnapshotStore(localStorage),
   history: createHistoryStore(localStorage),
   settings: createSettingsStore(localStorage, () => crypto.randomUUID()),
-  // The host's room belongs with the run save (per browser); a peer's room belongs with the tab's identity.
+  // The host's room belongs with the run save (per browser). A peer's room and seat are per browser
+  // too, so closing the tab and opening the game again can rejoin and reclaim the same barista.
   hostRoom: createRoomStore(localStorage, 'cafetycoon.room.host'),
-  peerRoom: createRoomStore(perTab, 'cafetycoon.room.peer'),
+  peerRoom: createRoomStore(localStorage, 'cafetycoon.room.peer'),
+  seats: createSeatStore(localStorage),
 };
 /** A text box has focus, so letter keys belong to it (sliders and switches don't count). */
 function typingText(): boolean {
@@ -105,6 +108,8 @@ interface Session {
   peerStatus: PeerStatus | 'hosting';
   started: boolean;
   pendingStart: StartChoice | null;
+  /** The bots setting as the host last announced it (peers), for the lobby card. */
+  lobbyBots: { bots: BotsChoice; picked: boolean } | null;
 }
 
 async function main(): Promise<void> {
@@ -176,9 +181,18 @@ async function main(): Promise<void> {
   }, roadmap);
   const lobby = createLobby($('#lobby'), {
     onStart: () => startHostedRun(),
+    onBots: (count) => {
+      const s = session;
+      if (s?.role !== 'host' || !s.room || s.started) return;
+      s.room.setBots(count);
+      renderLobby(s);
+    },
     onLeave: () => {
       if (session?.role === 'host') stores.hostRoom.clear();
-      else stores.peerRoom.clear();
+      else {
+        stores.peerRoom.clear();
+        if (session?.code) stores.seats.clear(session.code);
+      }
       endSession();
     },
   });
@@ -190,13 +204,13 @@ async function main(): Promise<void> {
     audio.setAmbience(ambienceFor(null));
   }
 
-  function runOptions(choice: StartChoice, hostId: PlayerId, players: Member[]): CreateRunOptions {
+  function runOptions(choice: StartChoice, hostId: PlayerId, players: Member[], bots: BotsChoice = 'auto'): CreateRunOptions {
     const settings = stores.settings.get();
     return {
       seed: choice.seed ?? Math.floor(Math.random() * 2 ** 31),
       hostId,
       players: players.map((m) => ({ id: m.token, name: m.name })),
-      settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec },
+      settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec, bots },
     };
   }
 
@@ -224,6 +238,7 @@ async function main(): Promise<void> {
       peerStatus: 'hosting',
       started: false,
       pendingStart: null,
+      lobbyBots: null,
     };
     s.unsubscribers.push(transport.onSnapshot((snap) => onSnapshot(s, snap)));
     s.unsubscribers.push(
@@ -248,7 +263,10 @@ async function main(): Promise<void> {
 
   function renderLobby(s: Session): void {
     if (!s.code) return;
-    lobby.render(lobbyViewModel({ code: s.code, members: s.members, isHost: s.role === 'host', status: s.peerStatus, started: s.started }));
+    const bots = s.role === 'host' ? (s.room?.bots() ?? null) : s.lobbyBots;
+    lobby.render(
+      lobbyViewModel({ code: s.code, members: s.members, isHost: s.role === 'host', status: s.peerStatus, started: s.started, ...(bots ? { bots } : {}) }),
+    );
   }
 
   function startSolo(choice: StartChoice): void {
@@ -292,7 +310,7 @@ async function main(): Promise<void> {
     const s = session;
     if (!s || s.role !== 'host' || s.started || !s.pendingStart || !s.room) return;
     armWatchdog(s);
-    s.transport.start(runOptions(s.pendingStart, s.me, s.room.members()));
+    s.transport.start(runOptions(s.pendingStart, s.me, s.room.members(), s.room.bots().bots));
     s.pendingStart = null;
   }
 
@@ -305,8 +323,30 @@ async function main(): Promise<void> {
     const settings = stores.settings.set({ playerName: name.trim() || 'Barista' });
     stores.peerRoom.save({ code, role: 'peer' });
     const id = tabIdentity();
-    const transport = createPeerTransport(code, id, settings.playerName);
+    const prev = stores.seats.load(code);
+    const transport = createPeerTransport(code, id, settings.playerName, prev && prev !== id ? prev : undefined);
     const s = createSession('peer', code, transport, id);
+    stores.seats.save(code, id);
+    // The host handed back an older seat (this browser's, or an away barista with our name): play as it.
+    s.unsubscribers.push(
+      transport.onSeat((token) => {
+        if (session !== s) return;
+        s.me = token;
+        renderer.setLocalPlayer(token);
+        stores.seats.save(code, token);
+        try {
+          perTab.setItem('cafetycoon.tab', token);
+        } catch {
+          /* per-tab storage blocked: the seat store still has it */
+        }
+      }),
+    );
+    // Closing the tab: leave the room at once so the seat shows as away and can be reclaimed.
+    const onPageHide = () => {
+      if (session === s) s.transport.close();
+    };
+    window.addEventListener('pagehide', onPageHide);
+    s.unsubscribers.push(() => window.removeEventListener('pagehide', onPageHide));
     s.peerStatus = 'connecting';
     const buffer = createUiBuffer();
     setUiTelemetrySink(buffer.push);
@@ -323,6 +363,7 @@ async function main(): Promise<void> {
       transport.onLobby((msg) => {
         s.members = msg.members;
         s.started = msg.started;
+        s.lobbyBots = msg.bots !== undefined ? { bots: msg.bots, picked: msg.botsPicked === true } : null;
         renderLobby(s);
       }),
     );

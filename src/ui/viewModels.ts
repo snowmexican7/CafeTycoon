@@ -10,7 +10,7 @@ import { restockCost } from '../sim/night';
 import { scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
-import type { Member } from '../net/protocol';
+import type { BotsChoice, Member } from '../net/protocol';
 import type { DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 
@@ -297,9 +297,29 @@ export interface LobbyVM {
   isHost: boolean;
   canStart: boolean;
   statusText: string;
+  /** The bots run setting: Off (0) or 1–3. Host edits it before the start; everyone else just sees it. */
+  bots?: LobbyBotsVM;
 }
 
-export function lobbyViewModel(input: { code: string; members: Member[]; isHost: boolean; status: PeerStatus | 'hosting'; started: boolean }): LobbyVM {
+export interface LobbyBotsVM {
+  /** 0 = Off. For 'auto' this is how many bots fill the empty seats right now. */
+  count: number;
+  auto: boolean;
+  picked: boolean;
+  editable: boolean;
+}
+
+/** How many bots 'auto' brings for a crew this size (mirrors the roster: fill to three baristas). */
+const autoBots = (humans: number) => Math.max(0, ECONOMY.bots.names.length - humans);
+
+export function lobbyViewModel(input: {
+  code: string;
+  members: Member[];
+  isHost: boolean;
+  status: PeerStatus | 'hosting';
+  started: boolean;
+  bots?: { bots: BotsChoice; picked: boolean };
+}): LobbyVM {
   const { status, started } = input;
   let statusText = '';
   if (status === 'hosting') statusText = started ? 'Room open. Friends can still join.' : 'Share the code. Start when everyone is in.';
@@ -307,6 +327,7 @@ export function lobbyViewModel(input: { code: string; members: Member[]; isHost:
   else if (status === 'connected') statusText = started ? '' : 'Waiting for the host to start…';
   else if (status === 'hostAway') statusText = 'Waiting for the host to come back…';
   else if (status === 'rejected') statusText = 'Version mismatch. Both of you reload.';
+  else if (status === 'full') statusText = 'The café is full (four baristas). Could not join.';
   else if (status === 'failed') statusText = 'Could not connect.';
   return {
     code: input.code,
@@ -314,6 +335,16 @@ export function lobbyViewModel(input: { code: string; members: Member[]; isHost:
     isHost: input.isHost,
     canStart: input.isHost && !started,
     statusText,
+    ...(input.bots
+      ? {
+          bots: {
+            count: input.bots.bots === 'auto' ? autoBots(input.members.length) : input.bots.bots,
+            auto: input.bots.bots === 'auto',
+            picked: input.bots.picked,
+            editable: input.isHost && !started,
+          },
+        }
+      : {}),
   };
 }
 

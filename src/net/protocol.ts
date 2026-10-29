@@ -4,8 +4,8 @@ import type { GameState, PlayerInput } from '../sim/types';
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
 export const APP_ID = 'cafetycoon-v1';
 /** Bump when any message below changes shape; mismatched builds refuse each other politely. */
-export const PROTOCOL_VERSION = 3;
-export const ACTIONS = ['hello', 'join', 'input', 'snap', 'lobby', 'tele'] as const;
+export const PROTOCOL_VERSION = 4;
+export const ACTIONS = ['hello', 'join', 'input', 'snap', 'lobby', 'tele', 'seat'] as const;
 export type ActionKind = (typeof ACTIONS)[number];
 
 export interface Member {
@@ -16,14 +16,24 @@ export interface HelloMsg {
   t: 'hello';
   protocol: number;
   hostToken: string;
-  reject?: 'version';
+  /** 'full': four baristas are already in and there is no away seat to take. */
+  reject?: 'version' | 'full';
 }
 export interface JoinMsg {
   t: 'join';
   protocol: number;
   token: string;
   name: string;
+  /** The seat this browser held in this room before (a closed tab coming back). */
+  prev?: string;
 }
+/** Host to one peer: you are this barista now (an away seat was given back to you). */
+export interface SeatMsg {
+  t: 'seat';
+  token: string;
+}
+/** Off (0), a fixed count, or 'auto' (fill empty seats). */
+export type BotsChoice = number | 'auto';
 export interface InputMsg {
   t: 'input';
   input: PlayerInput;
@@ -37,6 +47,10 @@ export interface LobbyMsg {
   t: 'lobby';
   members: Member[];
   started: boolean;
+  /** The bots run setting the host will start with (absent from older hosts). */
+  bots?: BotsChoice;
+  /** True when the host picked it; false while it follows the default. */
+  botsPicked?: boolean;
 }
 export interface TeleMsg {
   t: 'tele';
@@ -61,16 +75,30 @@ function cleanName(v: unknown): string {
 
 export function parseHello(data: unknown): HelloMsg | null {
   if (!isObj(data) || data.t !== 'hello' || !finite(data.protocol) || !str(data.hostToken) || data.hostToken === '') return null;
-  if (data.reject !== undefined && data.reject !== 'version') return null;
+  if (data.reject !== undefined && data.reject !== 'version' && data.reject !== 'full') return null;
   const msg: HelloMsg = { t: 'hello', protocol: data.protocol, hostToken: data.hostToken };
-  if (data.reject === 'version') msg.reject = 'version';
+  if (data.reject === 'version' || data.reject === 'full') msg.reject = data.reject;
   return msg;
 }
 
 export function parseJoin(data: unknown): JoinMsg | null {
   if (!isObj(data) || data.t !== 'join' || !finite(data.protocol) || !str(data.token)) return null;
   if (data.token.length < 1 || data.token.length > MAX_TOKEN) return null;
-  return { t: 'join', protocol: data.protocol, token: data.token, name: cleanName(data.name) };
+  const msg: JoinMsg = { t: 'join', protocol: data.protocol, token: data.token, name: cleanName(data.name) };
+  if (str(data.prev) && data.prev.length >= 1 && data.prev.length <= MAX_TOKEN && data.prev !== data.token) msg.prev = data.prev;
+  return msg;
+}
+
+export function parseSeat(data: unknown): SeatMsg | null {
+  if (!isObj(data) || data.t !== 'seat' || !str(data.token) || data.token.length < 1 || data.token.length > MAX_TOKEN) return null;
+  return { t: 'seat', token: data.token };
+}
+
+const MAX_BOTS = 3;
+export function parseBots(v: unknown): BotsChoice | undefined {
+  if (v === 'auto') return 'auto';
+  if (finite(v) && Number.isInteger(v) && v >= 0 && v <= MAX_BOTS) return v;
+  return undefined;
 }
 
 export function parseInput(data: unknown): InputMsg | null {
@@ -91,7 +119,13 @@ export function parseLobby(data: unknown): LobbyMsg | null {
     if (!isObj(m) || !str(m.token) || !str(m.name)) return null;
     members.push({ token: m.token, name: m.name });
   }
-  return { t: 'lobby', members, started: data.started };
+  const msg: LobbyMsg = { t: 'lobby', members, started: data.started };
+  const bots = parseBots(data.bots);
+  if (bots !== undefined) {
+    msg.bots = bots;
+    msg.botsPicked = data.botsPicked === true;
+  }
+  return msg;
 }
 
 export function parseTele(data: unknown): TeleMsg | null {

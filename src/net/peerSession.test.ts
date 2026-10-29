@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createPeerSession, HOST_TIMEOUT_MESSAGE, VERSION_MISMATCH_MESSAGE, type PeerStatus } from './peerSession';
+import { createPeerSession, HOST_TIMEOUT_MESSAGE, ROOM_FULL_MESSAGE, VERSION_MISMATCH_MESSAGE, type PeerStatus } from './peerSession';
 import { PROTOCOL_VERSION } from './protocol';
 import { createFakeLink } from './testing/fakeLink';
 import type { HostToClient } from './transport';
@@ -25,10 +25,10 @@ function timers() {
   };
 }
 
-const setup = () => {
+const setup = (prev?: string) => {
   const link = createFakeLink();
   const t = timers();
-  const peer = createPeerSession(link, { token: 'T1', name: 'Sam', timeoutMs: 15000, setTimer: t.setTimer, clearTimer: t.clearTimer });
+  const peer = createPeerSession(link, { token: 'T1', name: 'Sam', prev, timeoutMs: 15000, setTimer: t.setTimer, clearTimer: t.clearTimer });
   const statuses: PeerStatus[] = [];
   peer.onStatus((s) => statuses.push(s));
   const errors: string[] = [];
@@ -148,5 +148,40 @@ describe('PeerSession', () => {
     expect(link.sent.at(-1)).toEqual({ kind: 'tele', target: 'hostPeer', data: { t: 'tele', token: 'T1', events } });
     peer.sendTele([]);
     expect(link.sent.filter((s) => s.kind === 'tele')).toHaveLength(1);
+  });
+
+  describe('seats', () => {
+    it('offers its previous seat on join and adopts the seat the host hands back', () => {
+      const { link, peer } = setup('OLD');
+      const seats: string[] = [];
+      peer.onSeat((t) => seats.push(t));
+      link.peerJoins('h');
+      link.receive('hello', hello(), 'h');
+      expect(link.sent.find((x) => x.kind === 'join')?.data).toMatchObject({ token: 'T1', prev: 'OLD' });
+      link.receive('seat', { t: 'seat', token: 'stranger-seat' }, 'someone-else');
+      expect(seats).toEqual([]);
+      link.receive('seat', { t: 'seat', token: 'OLD' }, 'h');
+      expect(seats).toEqual(['OLD']);
+      expect(peer.token()).toBe('OLD');
+      peer.sendTele([{ kind: 'x', data: null, at: 1 }]);
+      expect(link.sent.at(-1)?.data).toMatchObject({ t: 'tele', token: 'OLD' });
+      // the host comes back after a reload: rejoin as the adopted seat, without a prev
+      link.peerLeaves('h');
+      link.peerJoins('h2');
+      link.receive('hello', hello(), 'h2');
+      const rejoin = link.sent.filter((x) => x.kind === 'join').at(-1)!.data as Record<string, unknown>;
+      expect(rejoin.token).toBe('OLD');
+      expect(rejoin.prev).toBeUndefined();
+    });
+
+    it('a full room ends the session with a friendly message', () => {
+      const { link, peer, statuses, errors } = setup();
+      link.peerJoins('h');
+      link.receive('hello', hello(), 'h');
+      link.receive('hello', { ...hello(), reject: 'full' }, 'h');
+      expect(peer.status()).toBe('full');
+      expect(statuses.at(-1)).toBe('full');
+      expect(errors.at(-1)).toBe(ROOM_FULL_MESSAGE);
+    });
   });
 });
