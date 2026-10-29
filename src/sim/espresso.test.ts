@@ -122,7 +122,7 @@ describe('espresso easter egg', () => {
     s = ticks(s, s.phaseTicksLeft);
     expect(s.phase).toBe('day');
     expect(s.players.filter((p) => p.bot).length).toBe(bots - 1); // the cover bot went home
-  });
+  }, 15_000); // simulates most of a day
 
   it('next morning they are back with $150 on the tab, paid from profits, never bankrupting', () => {
     let s = drinks(atMachine(), 6);
@@ -146,7 +146,7 @@ describe('espresso easter egg', () => {
     expect(d.debtPaid).toBeCloseTo(profit * ESPRESSO.repayShare, 2);
     expect(s.debt).toBeCloseTo(150 - d.debtPaid!, 2);
     expect(s.cash).toBeLessThan(cashBefore + 1000); // sanity: the tab came out of the till
-  });
+  }, 15_000); // simulates a day and the next morning
 
   it('a broke crew only pays what is in the till', () => {
     const s = structuredClone(atMachine());

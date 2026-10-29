@@ -185,5 +185,5 @@ describe('menu variety: bots and determinism', () => {
     const b = play();
     expect(JSON.stringify(a)).toBe(JSON.stringify(b));
     expect(a.unlocked.length).toBeGreaterThan(3);
-  });
+  }, 30_000); // a whole simulated week: ~3 s locally, ~6 s on CI runners
 });

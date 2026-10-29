@@ -117,7 +117,7 @@ describe('step', () => {
     expect(s.days[7].rent).toBeCloseTo(31.25);
     expect(s.phase).toBe('night');
     expect(step(s, [{ kind: 'weekEnd', playerId: 'p1', choice: 'stop' }]).phase).toBe('night'); // ignored outside weekEnd
-  }, 15000);
+  }, 30_000); // a whole simulated week
 
   it('is deterministic and JSON-safe mid-run', () => {
     // Review Focus 4

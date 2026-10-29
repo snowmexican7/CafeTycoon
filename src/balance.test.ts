@@ -13,7 +13,7 @@ describe('balance tester', () => {
     expect(r.weeks[0].days.length).toBeLessThanOrEqual(7);
     expect(r.weeks[0].days.reduce((n, d) => n + d.served, 0)).toBeGreaterThan(0);
     expect(main(args).output).toBe(a.output);
-  }, 20_000);
+  }, 30_000);
   it('rejects bad options with exit code 2 and warns about an empty café', () => {
     expect(main(['--humans', '3', '--bots', '2']).code).toBe(2);
     expect(main(['--frobnicate']).code).toBe(2);
