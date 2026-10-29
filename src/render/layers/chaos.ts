@@ -199,6 +199,11 @@ export class Chaos {
     return { x: Math.sin(now * 90) * k, y: Math.cos(now * 70) * k * 0.6 };
   }
 
+  /** Juice pass: a brief screen punch (hat-trick, teamwork, storm-out). Strength 0.1..0.45. */
+  punch(strength = 0.22): void {
+    this.jolt = Math.max(this.jolt, Math.min(0.45, strength));
+  }
+
   private updateMesses(list: Mess[], dt: number): void {
     const seen = new Set<number>();
     for (const m of list) {

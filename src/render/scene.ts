@@ -9,7 +9,7 @@ import type { RenderView } from './interpolate';
 import { Actors } from './layers/actors';
 import { Chaos } from './layers/chaos';
 import { EventVisuals } from './layers/events';
-import { crewBursts, newCrewMemory, type CrewBurst } from './crewModel';
+import { crewBursts, newCrewMemory, vibeLabel, type CrewBurst } from './crewModel';
 import { buildDecor } from './layers/decor';
 import { EspressoGags, fellAtScreen, shakePx } from './layers/espresso';
 import { Effects } from './layers/fx';
@@ -132,7 +132,7 @@ export class Scene {
     this.fx.step(dt);
   }
 
-  /** Serve toasts (and the perfect-serve confetti), a bot's "Oops!", the influencer group photo. */
+  /** Serve toasts, combo cheers, fail feedback, and juice punches. */
   private crewBurst(b: CrewBurst, state: GameState, positions: Record<PlayerId, { x: number; y: number }>): void {
     const counter = LAYOUT.stations.find((s) => s.kind === 'counter')!;
     const cx = sx(counter.pos.x);
@@ -141,7 +141,8 @@ export class Scene {
       const color = b.playerIndex >= 0 ? PLAYER_COLORS[b.playerIndex % PLAYER_COLORS.length] : 0x9a8a7a;
       this.fx.toast(b.text, color, cx, cy - 74, b.perfect);
       if (b.perfect) {
-        this.fx.confetti(cx, cy - 40);
+        this.fx.confetti(cx, cy - 40, 18);
+        this.fx.sparkles(cx, cy - 50, 4);
         this.fx.spawn('Perfect!', cx + 70, cy - 50, 0x7fcfb4, 15);
       }
       if (b.customerKind === 'regular') {
@@ -149,16 +150,35 @@ export class Scene {
         if (b.regular) this.fx.spawn(`${b.regular}'s usual!`, cx - 78, cy - 36, 0xffd6e2, 14);
       }
     } else if (b.kind === 'teamwork') {
-      this.fx.spawn(`${b.from} + ${b.to}: teamwork!`, cx, cy - 150, 0xfff2b8, 14);
-      this.fx.sparkles(cx, cy - 30, 5);
+      this.fx.spawn(`${b.from} + ${b.to}: teamwork!`, cx, cy - 150, 0xfff2b8, 15);
+      this.fx.sparkles(cx, cy - 30, 8);
+      this.fx.confetti(cx, cy - 40, 12);
+      this.chaos.punch(0.2);
     } else if (b.kind === 'streak') {
-      this.fx.spawn(b.count === 3 ? 'Hat trick! 3 perfect in a row' : `${b.count} perfect in a row!`, cx, cy - 175, 0xf6c35b, 18);
-      this.fx.confetti(cx - 120, cy - 60, 18);
-      this.fx.confetti(cx + 120, cy - 60, 18);
+      const hat = b.count === 3;
+      this.fx.spawn(hat ? 'Hat trick! 3 perfect in a row' : `${b.count} combo!`, cx, cy - 175, 0xf6c35b, hat ? 20 : 18);
+      this.fx.confetti(cx - 120, cy - 60, 22);
+      this.fx.confetti(cx + 120, cy - 60, 22);
+      this.fx.sparkles(cx, cy - 80, 10);
+      this.chaos.punch(hat ? 0.32 : 0.26);
     } else if (b.kind === 'oops') {
       const p = state.players[b.playerIndex];
       const pos = positions[p.id] ?? p.pos;
       this.fx.spawn('Oops!', sx(pos.x), sy(pos.y) - 122, 0xf0a63a, 17);
+    } else if (b.kind === 'storm') {
+      this.fx.spawn(b.count > 1 ? `${b.count} stormed out!` : 'Stormed out!', cx, cy - 140, 0xe0564a, 17);
+      this.chaos.punch(0.28);
+    } else if (b.kind === 'slip') {
+      const p = state.players.find((x) => x.id === b.playerId);
+      const pos = p ? (positions[p.id] ?? p.pos) : { x: LAYOUT.width / 2, y: LAYOUT.height / 2 };
+      this.fx.spawn('Slip!', sx(pos.x), sy(pos.y) - 100, 0xf0a63a, 16);
+    } else if (b.kind === 'wrong') {
+      this.fx.spawn(b.text, cx, cy - 120, 0xe0564a, 15);
+    } else if (b.kind === 'challenge') {
+      this.fx.spawn(`Challenge! +$${b.reward}`, cx, cy - 160, 0x7fcfb4, 16);
+      this.fx.confetti(cx, cy - 50, 16);
+      this.fx.sparkles(cx, cy - 40, 6);
+      this.chaos.punch(0.18);
     } else {
       // the influencer's photo: flash, the whole crew sparkles, "Say latte!"
       this.eventFx.flashNow();
@@ -167,6 +187,7 @@ export class Scene {
         this.fx.sparkles(sx(pos.x), sy(pos.y) - 70);
       }
       this.fx.spawn('Say latte!', cx, cy - 120, 0xe98aa6, 22);
+      this.chaos.punch(0.22);
     }
   }
 
@@ -186,4 +207,11 @@ export class Scene {
       }
     }
   }
+  /** Juice pass HUD: vibe 0..100, combo streak, and label. */
+  getJuice(): { vibe: number; combo: number; label: string; tone: 'high' | 'mid' | 'low' } {
+    const v = this.crewMem.vibe;
+    const lab = vibeLabel(v);
+    return { vibe: v, combo: this.crewMem.streak, label: lab.text, tone: lab.tone };
+  }
+
 }

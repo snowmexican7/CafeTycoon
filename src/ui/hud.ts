@@ -36,6 +36,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
   toast(lines: string[]): void;
   setRoom(code: string | null): void;
   setMuted(muted: boolean): void;
+  setJuice(j: { vibe: number; combo: number; label: string; tone: 'high' | 'mid' | 'low' } | null): void;
   show(): void;
   hide(): void;
 } {
@@ -47,6 +48,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
       <div class="pill hud-clock" role="timer" aria-label="Time left today">${sun()}<span class="lab"></span><span class="clock"></span><span class="daybar"><i></i></span></div>
       <div class="pill hud-cash">${coin()}<span class="cash"></span><span class="plus" hidden></span></div>
       <div class="pill hud-rep"></div>
+      <div class="pill hud-vibe" hidden title="Crew vibe"><span class="vbar"><i></i></span><span class="vlab"></span><span class="vcombo" hidden></span></div>
       <div class="spacer"></div>
       <div class="pill hud-room" hidden></div>
       <div class="hud-crew"></div>
@@ -83,6 +85,10 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     cash: $('.hud-cash .cash'),
     plus: $('.hud-cash .plus'),
     rep: $('.hud-rep'),
+    vibe: $('.hud-vibe'),
+    vibeBar: $('.hud-vibe .vbar i'),
+    vibeLab: $('.hud-vibe .vlab'),
+    vibeCombo: $('.hud-vibe .vcombo'),
     room: $('.hud-room'),
     crew: $('.hud-crew'),
     count: $('.hud-side.left .n'),
@@ -429,6 +435,23 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
       lastKey = '';
       lastCrew = '';
       lastCash = null;
+    },
+    setJuice(j) {
+      if (!j) {
+        el.vibe.hidden = true;
+        return;
+      }
+      el.vibe.hidden = false;
+      el.vibe.dataset.tone = j.tone;
+      el.vibeBar.style.width = `${Math.max(4, Math.min(100, j.vibe))}%`;
+      el.vibeLab.textContent = j.label;
+      el.vibe.setAttribute('aria-label', `Crew vibe ${j.vibe}: ${j.label}`);
+      if (j.combo >= 2) {
+        el.vibeCombo.hidden = false;
+        el.vibeCombo.textContent = `×${j.combo}`;
+      } else {
+        el.vibeCombo.hidden = true;
+      }
     },
     show: () => show(container),
     hide: () => hide(container),

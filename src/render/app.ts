@@ -14,7 +14,7 @@ async function loadFonts(): Promise<void> {
 /** Mount a PixiJS canvas into `mount` and return a renderer that draws RenderViews. */
 export async function createRenderer(
   mount: HTMLElement,
-): Promise<{ update(view: RenderView): void; setLocalPlayer(id: PlayerId | null): void; destroy(): void }> {
+): Promise<{ update(view: RenderView): void; setLocalPlayer(id: PlayerId | null): void; getJuice(): { vibe: number; combo: number; label: string; tone: 'high' | 'mid' | 'low' }; destroy(): void }> {
   await loadFonts();
   const app = new Application();
   await app.init({
@@ -48,6 +48,7 @@ export async function createRenderer(
   return {
     update: (view) => scene.update(view),
     setLocalPlayer: (id) => scene.setLocalPlayer(id),
+    getJuice: () => scene.getJuice(),
     destroy: () => {
       window.removeEventListener('resize', fit);
       ro?.disconnect();

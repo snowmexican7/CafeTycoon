@@ -414,6 +414,7 @@ async function main(): Promise<void> {
     session = null;
     setUiTelemetrySink(null);
     hud.setRoom(null);
+    hud.setJuice(null);
     renderer.setLocalPlayer(null);
     lobby.hide();
     if (backToTitle) showTitle();
@@ -527,6 +528,7 @@ async function main(): Promise<void> {
     if (s?.next) {
       const alpha = (performance.now() - s.nextArrivedAt) / SNAPSHOT_INTERVAL_MS;
       renderer.update(interpolateView(s.prev, s.next, alpha));
+      hud.setJuice(renderer.getJuice());
       const vec = keyboard.read();
       interactPending = keyboard.takeInteract() || interactPending;
       const changed = vec.x !== lastSent.x || vec.y !== lastSent.y;
