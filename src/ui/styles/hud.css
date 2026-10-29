@@ -204,3 +204,13 @@
   background: #fff3d6; color: #6a4a18; font: 600 13px var(--font-ui);
 }
 .receipt-lines .line.challenge span:first-child { color: #2f6b3c; }
+
+/* B9 juice: crew vibe meter + combo chip */
+#hud .hud-vibe { gap: 8px; min-width: 118px; padding: 0 12px; }
+#hud .hud-vibe .vbar { flex: 1; height: 10px; border-radius: 99px; background: #ead7bb; overflow: hidden; min-width: 48px; }
+#hud .hud-vibe .vbar i { display: block; height: 100%; width: 55%; border-radius: 99px; background: linear-gradient(90deg, #f0a63a, #7fcfb4); transition: width .2s ease-out, background .2s; }
+#hud .hud-vibe[data-tone=high] .vbar i { background: linear-gradient(90deg, #4fae7b, #7fcfb4); }
+#hud .hud-vibe[data-tone=mid] .vbar i { background: linear-gradient(90deg, #f6c35b, #f0a63a); }
+#hud .hud-vibe[data-tone=low] .vbar i { background: linear-gradient(90deg, #e0564a, #f0a63a); }
+#hud .hud-vibe .vlab { font-size: 13px; letter-spacing: .04em; color: var(--ink-soft); }
+#hud .hud-vibe .vcombo { font-size: 12px; font-weight: 700; color: #9a4a12; background: #fde3c8; padding: 2px 7px; border-radius: 99px; }

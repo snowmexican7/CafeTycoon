@@ -559,3 +559,37 @@ Deferred / didn't fit cleanly:
 Co-op fun:
 - Catching the cat, correcting "Kennedee", and kicking the camper are great shared bits; the secret
   code is a table-side whisper. None of them punish a busy crew hard enough to sink the day.
+
+## Block 9 reflection (juice pass)
+
+Shipped as client-side juice on top of B3 cheers — no save/protocol bump (vibe and combo live in
+`CrewMemory` like the hat-trick streak):
+- **Combo streaks** — perfect serves *and* pass hand-offs share one counter; hat-trick at 3, then
+  every 3 (`STREAK_AT`). Resets on slip, storm-out, bot oops, trash, name-mix refuse, or a non-perfect
+  serve.
+- **Screen punch** — `Chaos.punch` jolts the stage on streak / teamwork / storm / challenge / selfie.
+- **Particle bursts** — denser confetti + sparkles on perfects, combos, challenges; FX bits capped at
+  100 (was 140); chaos particles already capped at 80.
+- **Fail feedback** — pops for storm-outs (`today.lost` delta), slips, dumped drinks, wrong-name
+  refuse; challenge wins get a cheer + confetti (closes the B7 HUD gap).
+- **Crew vibe meter** — 0..100 on a HUD pill (Buzzing / Steady / Rough) with a combo ×N chip when
+  the streak is ≥2.
+
+493→~502 tests (+3 juice). Determinism untouched (visual-only).
+
+What could be better:
+- Vibe is per-client memory, so a late joiner starts at 55 mid-day; fine for friends, not for a
+  shared scoreboard.
+- Storm detection via `today.lost` can fire when the queue is cleared at closing — a tiny "closing
+  flush" suppress would quiet that.
+- Wrong-*order* (serving the wrong recipe) still isn't a distinct fail; trash is the proxy.
+- Particle look is still simple dots/stars; a dedicated juice sprite sheet would sell the punch.
+
+Deferred:
+- Shared host-authoritative vibe (would need a snapshot field).
+- Accessibility option to reduce motion / disable screen punch.
+- Per-player vibe contributions in co-op.
+
+Co-op fun:
+- Hand-off combos make parking a drink for a teammate feel as juicy as serving it yourself, and the
+  shared vibe meter is a quick glance at "are we cooking or are we drowning".

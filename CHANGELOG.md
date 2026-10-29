@@ -16,6 +16,11 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Juice pass.** Combo streaks now count perfect serves *and* teamwork hand-offs (hat-trick at 3,
+  then every 3). Big moments punch the screen and burst more particles (capped for performance).
+  Wrong dumps, slips and storm-outs get clearer pops; winning a daily challenge confettis. A **crew
+  vibe** meter on the HUD climbs with good play and dips with messes.
+
 - **Easter egg pack 2.** Rare, funny gags that never sink a day: the shop cat naps on a warm station
   (pet to shoo), a regular's cup gets the wrong name (correct at the counter), a Wi-Fi camper sits
   without ordering (kick politely), burnt espresso puffs smoke (dump the shot), a latte-art fail

@@ -2,7 +2,7 @@ import type { DrinkId, GameState, Personality } from '../sim/types';
 
 /**
  * Pure helpers for customer and crew personality visuals: serve toasts, perfect-serve celebrations,
- * bot looks and emotes. No Pixi here; Actors and Effects draw from it.
+ * bot looks and emotes, combo streaks, fail feedback, and the crew vibe meter. No Pixi here.
  */
 
 const DRINK_PHRASE: Record<DrinkId, string> = {
@@ -19,22 +19,60 @@ export type CrewBurst =
   | { kind: 'oops'; playerIndex: number; by: string }
   | { kind: 'selfie' }
   | { kind: 'teamwork'; from: string; to: string }
-  | { kind: 'streak'; count: number };
+  | { kind: 'streak'; count: number }
+  | { kind: 'storm'; count: number }
+  | { kind: 'slip'; playerId: string }
+  | { kind: 'wrong'; text: string }
+  | { kind: 'challenge'; label: string; reward: number };
 
-/** Visual-only memory between snapshots: who last parked each drink on the pass, and the perfect-serve streak. */
+/** Visual-only memory between snapshots: pass putters, combo streak, and crew vibe. */
 export interface CrewMemory {
   putters: Partial<Record<DrinkId, string[]>>;
+  /** Perfect serves + teamwork hand-offs in a row (resets on a mess). */
   streak: number;
+  /** 0..100 crew vibe — climbs with good play, dips with messes. */
+  vibe: number;
+  /** Last seen today.lost, so we can cheer/storm when someone walks out. */
+  lostSeen: number;
+  day: number;
 }
-export const newCrewMemory = (): CrewMemory => ({ putters: {}, streak: 0 });
+export const VIBE_START = 55;
+export const newCrewMemory = (): CrewMemory => ({ putters: {}, streak: 0, vibe: VIBE_START, lostSeen: 0, day: 0 });
 
-/** Perfect serves in a row that earn a streak shout-out (and every 3 after). */
+/** Perfect serves / hand-offs in a row that earn a streak shout-out (and every 3 after). */
 export const STREAK_AT = 3;
 
-/** New serve / bot-mistake / influencer-served log entries since `lastSeq`, as one-shot visuals. */
+const clampVibe = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
+
+function bumpVibe(mem: CrewMemory, delta: number): void {
+  mem.vibe = clampVibe(mem.vibe + delta);
+}
+
+function resetCombo(mem: CrewMemory): void {
+  mem.streak = 0;
+}
+
+function addCombo(mem: CrewMemory, bursts: CrewBurst[]): void {
+  mem.streak += 1;
+  if (mem.streak >= STREAK_AT && mem.streak % STREAK_AT === 0) {
+    bursts.push({ kind: 'streak', count: mem.streak });
+    bumpVibe(mem, 8);
+  }
+}
+
+/** New serve / bot-mistake / influencer / fail log entries since `lastSeq`, as one-shot visuals. */
 export function crewBursts(prev: GameState | null, next: GameState, lastSeq: number, mem: CrewMemory = newCrewMemory()): { bursts: CrewBurst[]; lastSeq: number } {
   const cursor = next.nextLogSeq - 1;
   if (!prev || prev.seed !== next.seed || cursor < lastSeq) return { bursts: [], lastSeq: cursor };
+
+  // New day: soft-reset vibe toward the middle and clear the combo.
+  if (next.day !== mem.day) {
+    mem.day = next.day;
+    mem.streak = 0;
+    mem.lostSeen = next.today.lost;
+    mem.vibe = clampVibe(VIBE_START + (mem.vibe - VIBE_START) * 0.35);
+  }
+
   const bursts: CrewBurst[] = [];
   for (const e of next.log) {
     if (e.seq <= lastSeq) continue;
@@ -52,27 +90,70 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
         ...(typeof e.data.name === 'string' ? { regular: e.data.name } : {}),
         cid: Number(e.data.cid),
       });
-      mem.streak = e.data.perfect === true ? mem.streak + 1 : 0;
-      if (mem.streak >= STREAK_AT && mem.streak % STREAK_AT === 0) bursts.push({ kind: 'streak', count: mem.streak });
+      if (e.data.perfect === true) {
+        bumpVibe(mem, 3);
+        addCombo(mem, bursts);
+      } else {
+        resetCombo(mem);
+        bumpVibe(mem, 1);
+      }
     } else if (e.kind === 'bot.mistake') {
       const playerIndex = next.players.findIndex((p) => p.bot && p.name === e.data.bot);
       if (playerIndex >= 0) bursts.push({ kind: 'oops', playerIndex, by: next.players[playerIndex].id });
+      resetCombo(mem);
+      bumpVibe(mem, -5);
     } else if (e.kind === 'pass.put') {
       const item = e.data.item as DrinkId;
       (mem.putters[item] ??= []).push(String(e.data.by));
     } else if (e.kind === 'pass.serve' || e.kind === 'pass.take' || e.kind === 'pass.stale') {
-      // a drink one barista parked and another handed over: a hand-off worth a cheer
       const item = e.data.item as DrinkId;
       const from = mem.putters[item]?.shift();
       const to = String(e.data.by ?? '');
       if (e.kind === 'pass.serve' && from && to && from !== to) {
         const name = (id: string) => next.players.find((p) => p.id === id)?.name ?? '?';
         bursts.push({ kind: 'teamwork', from: name(from), to: name(to) });
+        bumpVibe(mem, 5);
+        addCombo(mem, bursts);
       }
     } else if (e.kind === 'influencer' && e.data.result === 'served') {
       bursts.push({ kind: 'selfie' });
+      bumpVibe(mem, 6);
+    } else if (e.kind === 'slip') {
+      bursts.push({ kind: 'slip', playerId: String(e.data.player ?? '') });
+      resetCombo(mem);
+      bumpVibe(mem, -4);
+    } else if (e.kind === 'trash') {
+      bursts.push({ kind: 'wrong', text: 'Dumped a drink' });
+      resetCombo(mem);
+      bumpVibe(mem, -2);
+    } else if (e.kind === 'egg.nameMix' && e.data.refuse === 1) {
+      bursts.push({ kind: 'wrong', text: 'Wrong name!' });
+      resetCombo(mem);
+      bumpVibe(mem, -3);
+    } else if (e.kind === 'challenge.won') {
+      bursts.push({ kind: 'challenge', label: String(e.data.label ?? e.data.id ?? 'Challenge'), reward: Number(e.data.reward) || 0 });
+      bumpVibe(mem, 6);
+    } else if (e.kind === 'rogue.stormed') {
+      bursts.push({ kind: 'storm', count: 1 });
+      resetCombo(mem);
+      bumpVibe(mem, -8);
     }
   }
+
+  // Storm-outs are tallied on today.lost (no dedicated log) — catch the delta.
+  const lostNow = next.today.lost;
+  if (lostNow > mem.lostSeen) {
+    const n = lostNow - mem.lostSeen;
+    // Rogue start also bumps lost; if we already emitted rogue.stormed this pass, skip double.
+    const already = bursts.some((b) => b.kind === 'storm');
+    if (!already) {
+      bursts.push({ kind: 'storm', count: n });
+      resetCombo(mem);
+      bumpVibe(mem, -8 * Math.min(n, 3));
+    }
+  }
+  mem.lostSeen = lostNow;
+
   return { bursts, lastSeq: Math.max(lastSeq, cursor) };
 }
 
@@ -107,3 +188,10 @@ export function emotePhase(t: number, index: number, every: number, length = 1.3
 
 /** Bot name tag text. */
 export const botTag = (name: string) => `${name} \u00b7 bot`;
+
+/** Label + tone for the HUD vibe chip. */
+export function vibeLabel(vibe: number): { text: string; tone: 'high' | 'mid' | 'low' } {
+  if (vibe >= 75) return { text: 'Buzzing', tone: 'high' };
+  if (vibe >= 45) return { text: 'Steady', tone: 'mid' };
+  return { text: 'Rough', tone: 'low' };
+}

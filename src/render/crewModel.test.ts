@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRun } from '../sim/run';
 import type { GameState, SimEvent } from '../sim/types';
-import { botLook, botTag, crewBursts, emotePhase, newCrewMemory, toastText } from './crewModel';
+import { botLook, botTag, crewBursts, emotePhase, newCrewMemory, toastText, vibeLabel, VIBE_START } from './crewModel';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }, { id: 'p2', name: 'Dev' }] });
 const clone = (s: GameState): GameState => structuredClone(s);
@@ -74,5 +74,56 @@ describe('co-op cheers', () => {
     const b = withLog(a, serve(true), serve(true), serve(false), serve(true), serve(true), serve(true), serve(true), serve(true), serve(true));
     const streaks = crewBursts(a, b, a.nextLogSeq - 1, mem).bursts.filter((x) => x.kind === 'streak');
     expect(streaks).toEqual([{ kind: 'streak', count: 3 }, { kind: 'streak', count: 6 }]);
+  });
+});
+
+
+describe('juice pass', () => {
+  it('counts teamwork hand-offs toward the combo streak', () => {
+    const a = run();
+    const mem = newCrewMemory();
+    const b = withLog(a, { kind: 'pass.put', data: { by: 'p1', item: 'latte' } });
+    let r = crewBursts(a, b, a.nextLogSeq - 1, mem);
+    const c = withLog(
+      b,
+      { kind: 'pass.serve', data: { by: 'p2', item: 'latte' } },
+      { kind: 'served', data: { by: 'p2', item: 'latte', amount: 5, kind: 'normal', cid: 1, perfect: true, left: 0 } },
+      { kind: 'served', data: { by: 'p1', item: 'latte', amount: 5, kind: 'normal', cid: 2, perfect: true, left: 0 } },
+    );
+    r = crewBursts(b, c, r.lastSeq, mem);
+    expect(r.bursts.filter((x) => x.kind === 'streak')).toEqual([{ kind: 'streak', count: 3 }]);
+    expect(mem.streak).toBe(3);
+    expect(mem.vibe).toBeGreaterThan(VIBE_START);
+  });
+
+  it('resets the combo and dips vibe on a slip or storm-out', () => {
+    const a = run();
+    const mem = newCrewMemory();
+    mem.streak = 2;
+    mem.vibe = 70;
+    mem.lostSeen = a.today.lost;
+    const b = withLog(a, { kind: 'slip', data: { player: 'p1', x: 1, y: 1 } });
+    let r = crewBursts(a, b, a.nextLogSeq - 1, mem);
+    expect(r.bursts.some((x) => x.kind === 'slip')).toBe(true);
+    expect(mem.streak).toBe(0);
+    expect(mem.vibe).toBeLessThan(70);
+
+    const c = clone(b);
+    c.today.lost = b.today.lost + 1;
+    mem.vibe = 60;
+    r = crewBursts(b, c, r.lastSeq, mem);
+    expect(r.bursts).toContainEqual({ kind: 'storm', count: 1 });
+    expect(mem.vibe).toBeLessThan(60);
+  });
+
+  it('cheers a won challenge and labels vibe bands', () => {
+    const a = run();
+    const mem = newCrewMemory();
+    const b = withLog(a, { kind: 'challenge.won', data: { id: 'perfect8', reward: 12, label: 'Serve 8 perfect' } });
+    const r = crewBursts(a, b, a.nextLogSeq - 1, mem);
+    expect(r.bursts).toContainEqual({ kind: 'challenge', label: 'Serve 8 perfect', reward: 12 });
+    expect(vibeLabel(80).tone).toBe('high');
+    expect(vibeLabel(50).tone).toBe('mid');
+    expect(vibeLabel(20).tone).toBe('low');
   });
 });

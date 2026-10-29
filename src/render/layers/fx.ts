@@ -29,7 +29,7 @@ interface Bit {
 }
 
 const MAX_TOASTS = 4;
-const MAX_BITS = 140;
+const MAX_BITS = 100;
 const TOAST_LIFE = 2.4;
 const CONFETTI = [0xe0564a, 0x4c8fd6, 0x4fae7b, 0xf6c35b, 0x8a6bbf, 0xe98aa6];
 
