@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRun } from './run';
 import { dayClock, expectedUse, nightBrief, runOutFraction } from './brief';
 import { profitOf } from './profit';
+import { restockCost } from './night';
 import { nextCheckout } from './checkout';
 import { ECONOMY } from '../data/economy';
 import type { DayStats, GameState } from './types';
@@ -103,6 +104,24 @@ describe('nightBrief alerts', () => {
     expect(fix.packs).toBeGreaterThanOrEqual(1);
   });
 
+  it('stock: a restock alert stays but drops its fix when the till cannot pay for the packs', () => {
+    const s = run();
+    s.supplies.milk = 0;
+    s.cash = 100;
+    expect(find(s, 'stock:milk:out')!.fix).toEqual({ kind: 'restock', supply: 'milk', packs: 1 });
+    s.cash = restockCost(s, 'milk', 1) - 0.01;
+    expect(find(s, 'stock:milk:out')).toMatchObject({ kind: 'stock', severity: 'danger' });
+    expect(find(s, 'stock:milk:out')!.fix).toBeUndefined();
+    s.cash = restockCost(s, 'milk', 1);
+    expect(find(s, 'stock:milk:out')!.fix).toEqual({ kind: 'restock', supply: 'milk', packs: 1 });
+    // Low stock and sold out follow the same rule.
+    const low = run();
+    low.supplies.beans = Math.ceil(expectedUse(low).beans / 4);
+    low.cash = 0.5;
+    expect(find(low, 'stock:beans:low')).toBeDefined();
+    expect(find(low, 'stock:beans:low')!.fix).toBeUndefined();
+  });
+
   it('stock: run-out fraction is have over expected use, clamped, null when unused', () => {
     const s = run();
     const use = expectedUse(s);
@@ -128,6 +147,14 @@ describe('nightBrief alerts', () => {
     expect(a).toMatchObject({ kind: 'soldOut', severity: 'warn' });
     expect(a.text).toBe('You sold out at 2:00 PM yesterday and 9 people walked away');
     expect(a.fix).toMatchObject({ kind: 'restock' });
+    // One supply drained: the fix names it and buys exactly enough packs to cover the day.
+    const use = expectedUse(s);
+    for (const k of Object.keys(use) as (keyof typeof use)[]) s.supplies[k] = use[k] * 2;
+    s.supplies.milk = 1;
+    s.cash = 1000;
+    expect(find(s, 'soldOut')!.fix).toEqual({
+      kind: 'restock', supply: 'milk', packs: Math.ceil((use.milk - 1) / ECONOMY.packs.milk.size),
+    });
     s.days[0].soldOutWalkouts = 1;
     expect(find(s, 'soldOut')!.text).toContain('1 person walked away');
     s.days[0].soldOutWalkouts = 0;

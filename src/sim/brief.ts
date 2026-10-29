@@ -10,7 +10,7 @@
  *     kind: 'cash' | 'stock' | 'soldOut' | 'spoil' | 'grow' | 'checkout' | 'rival' | 'signature';
  *     severity: 'info' | 'warn' | 'danger';
  *     text: string;
- *     fix?: NightFix;
+ *     fix?: NightFix;   // restock fixes are left off when state.cash < restockCost(state, supply, packs)
  *   }
  *   nightBrief(state): { profit: number | null; headline: string; alerts: NightAlert[] }
  *     profit = profitOf(days.at(-1)) or null on the first night; alerts sorted danger, warn, info,
@@ -27,16 +27,17 @@ import { DRINK_INFO } from '../data/drinks';
 import { CHECKOUT, nextCheckout } from './checkout';
 import { computeModifiers, rentForDay } from './effects';
 import { nextTier, TIERS } from './growth';
+import { restockCost } from './night';
 import { profitOf } from './profit';
 import { copyIsLive, RIVAL, sigPrice } from './rival';
 import { FRESH, spoilCount } from './spoilage';
 import { menuDrinks, neededSupplies, SUPPLY_IDS } from './unlocks';
-import type { CheckoutId, DrinkId, GameState, PlayerId, PlayerInput, SupplyId } from './types';
+import type { CheckoutId, DrinkId, GameState, PlayerInput, SupplyId } from './types';
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 /** A night input without its playerId: the UI adds its own. */
-export type NightFix = PlayerInput extends infer I ? (I extends { playerId: PlayerId } ? DistributiveOmit<I, 'playerId'> : never) : never;
+export type NightFix = DistributiveOmit<PlayerInput, 'playerId'>;
 
 export interface NightAlert {
   id: string;
@@ -107,6 +108,11 @@ export function runOutFraction(state: GameState, supply: SupplyId): number | nul
   return Math.min(1, Math.max(0, (state.supplies[supply] ?? 0) / use));
 }
 
+/** A restock fix, or nothing when the till cannot pay for it (applying it would be a silent no-op). */
+function restockFix(state: GameState, supply: SupplyId, packs: number): NightFix | undefined {
+  return state.cash < restockCost(state, supply, packs) ? undefined : { kind: 'restock', supply, packs };
+}
+
 function packsToCover(use: number, have: number, supply: SupplyId): number {
   return Math.max(1, Math.ceil((use - have) / ECONOMY.packs[supply].size));
 }
@@ -138,16 +144,16 @@ export function nightBrief(state: GameState): NightBrief {
   for (const s of needed) {
     const have = state.supplies[s] ?? 0;
     if (have <= 0) {
-      alerts.push({ id: `stock:${s}:out`, kind: 'stock', severity: 'danger', text: `${STOCK_NAME[s]} stock is out`, fix: { kind: 'restock', supply: s, packs: 1 } });
+      const alert: NightAlert = { id: `stock:${s}:out`, kind: 'stock', severity: 'danger', text: `${STOCK_NAME[s]} stock is out` };
+      const fix = restockFix(state, s, 1);
+      if (fix) alert.fix = fix;
+      alerts.push(alert);
     } else if (have < Math.ceil(use[s] * LOW_SUPPLY_SHARE)) {
       const when = dayClock(runOutFraction(state, s) ?? 0);
-      alerts.push({
-        id: `stock:${s}:low`,
-        kind: 'stock',
-        severity: 'warn',
-        text: `${STOCK_NAME[s]} stock runs out around ${when}`,
-        fix: { kind: 'restock', supply: s, packs: packsToCover(use[s], have, s) },
-      });
+      const alert: NightAlert = { id: `stock:${s}:low`, kind: 'stock', severity: 'warn', text: `${STOCK_NAME[s]} stock runs out around ${when}` };
+      const fix = restockFix(state, s, packsToCover(use[s], have, s));
+      if (fix) alert.fix = fix;
+      alerts.push(alert);
     }
   }
 
@@ -163,7 +169,8 @@ export function nightBrief(state: GameState): NightBrief {
       severity: 'warn',
       text: `You sold out${at} yesterday and ${walkouts} ${walkouts === 1 ? 'person' : 'people'} walked away`,
     };
-    if (thinnest) alert.fix = { kind: 'restock', supply: thinnest, packs: packsToCover(use[thinnest], state.supplies[thinnest] ?? 0, thinnest) };
+    const fix = thinnest ? restockFix(state, thinnest, packsToCover(use[thinnest], state.supplies[thinnest] ?? 0, thinnest)) : undefined;
+    if (fix) alert.fix = fix;
     alerts.push(alert);
   }
 
