@@ -92,6 +92,8 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       const name = typeof input.name === 'string' ? input.name.trim().slice(0, MAX_NAME) : '';
       return { kind: 'join', playerId: input.playerId, name: name || 'Barista' };
     }
+    case 'closeEarly':
+      return typeof input.on === 'boolean' ? { kind: 'closeEarly', playerId: input.playerId, on: input.on } : null;
     case 'drop':
       return { kind: 'drop', playerId: input.playerId };
     case 'secret': {

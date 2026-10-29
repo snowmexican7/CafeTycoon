@@ -19,7 +19,7 @@ import { accuracyTip, noteCup, starsFor } from './accuracy';
 import { comboTip, serveCombo, TASTE } from './taste';
 import { checkoutFee } from './checkout';
 import { tierInfo } from './growth';
-import { unlockedDrinks } from './unlocks';
+import { menuDrinks, unlockedDrinks } from './unlocks';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
 
@@ -38,10 +38,25 @@ export function queueCapacity(m: Modifiers, cap: number = ECONOMY.queueCapacity)
   return Math.max(Math.min(3, cap), Math.min(cap + m.queueRoom, cap + m.queue));
 }
 
+/**
+ * FB1 WP4: the board is on but nothing can be made. People still walk up, read it and leave: one arrival roll
+ * per tick (rush hour is inside `m.traffic`), counted as a walkout, never as a lost customer or a turn-away.
+ * Nothing on the board at all (menu all off) means nobody comes, as before.
+ */
+function soldOutWalkup(state: GameState): GameState {
+  if (menuDrinks(state).length === 0) return state;
+  const m = computeModifiers(state);
+  if (rngNext(state) >= (ECONOMY.baseArrivalsPerSecond * m.traffic) / TICK_RATE) return state;
+  tally(state.today, 'soldOutWalkouts');
+  emitLog(state, 'walkout', { reason: 'soldOut' });
+  state.today.soldOutAt ??= Math.round((secondsToTicks(state.settings.dayLengthSec) - state.phaseTicksLeft) / TICK_RATE);
+  return state;
+}
+
 /** One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. */
 export function spawnCustomers(state: GameState): GameState {
   const menu = availableDrinks(state);
-  if (menu.length === 0) return state;
+  if (menu.length === 0) return soldOutWalkup(state);
   const m = computeModifiers(state);
   const p = (ECONOMY.baseArrivalsPerSecond * m.traffic * priceTraffic(state, menu, m)) / TICK_RATE;
   if (rngNext(state) >= p) return state;

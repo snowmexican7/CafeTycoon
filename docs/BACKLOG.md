@@ -105,6 +105,45 @@ Written down from a voice note after the Phase 3 playtest. Only the first item i
   knob to turn. This pairs with recipe accuracy (P3 B5) and the taste map (P3 B6). Brainstorm
   only; nothing designed yet.
 
+## FB1 WP3+4 reflection
+
+- **What shipped (branch fb1-sim-day).** *Close early:* input `{ kind: 'closeEarly'; playerId; on: boolean }`
+  (a connected human, day phase, at least 15 s in; anything else is ignored). State `closeVotes?: PlayerId[]`
+  (absent = nobody; cleared in `startDay` and `startNight`; a `leave` removes the vote) and `emptySince?: number`
+  (tick stamp, set in `stepDay` when the queue empties, deleted when someone is queued). `stepDay` checks
+  unanimity every tick while the doors are open and at least one connected human exists, before the clock
+  decrements, so a vote that becomes unanimous because a partner left still closes the shop. Both that path and the
+  timer call the exported `enterClosing(state)` in `step.ts`; `finishDay` is untouched. `today.closedEarly` = whole
+  seconds left on the clock; log `closedEarly { votes, left }`; morning note "You closed early yesterday with M:SS
+  still on the clock." *Sold-out walk-ups:* with the menu on but nothing makeable, `spawnCustomers` rolls one arrival
+  per tick (`baseArrivalsPerSecond x m.traffic / TICK_RATE`, so rush hour counts); a hit tallies
+  `today.soldOutWalkouts`, logs `walkout { reason: 'soldOut' }` and sets `today.soldOutAt` (seconds into the day).
+  No customer, no `lost`, no `turnedAway`, so the rating is untouched. Menu all off: nobody comes, as before.
+  Morning note "N people walked away from a sold-out board yesterday."
+- **Final shapes.**
+  `closeEarlyState(state): { votes: number; needed: number; voted: PlayerId[]; open: boolean; hint: 'soldOut' | 'empty' | null }`
+  in `src/sim/closeEarly.ts` (`needed` = connected humans; `open` = day phase and the 15 s gate passed; `hint`
+  `'soldOut'` = menu on, nothing makeable; `'empty'` = no customer, no rogue, and nothing on the menu or the queue
+  empty for 10 s; `'soldOut'` wins). `enterClosing(state: GameState): void`. `DayStats.closedEarly?: number`,
+  `soldOutWalkouts?: number`, `soldOutAt?: number`. `GameState.closeVotes?: PlayerId[]`, `emptySince?: number`.
+  `SimEventKind` gains `'closedEarly'` and `'walkout'`.
+  Snapshot 22 to 23 (`soldOutWalkouts ??= 0` on `today` and every `days[]` entry), protocol 25 to 26.
+- **Numbers (40 weeks, seed 1, humans 2, bots 1, skill 3, pace 3).** Baseline (main e276359) vs after:
+  smart mean cash 260.53 / score 276.53 / loss 26.4% / profit 97.5% -> 260.53 / 276.53 / 26.4% / 97.5%;
+  taste 274.88 / 288.19 / 28.1% / 100% -> 274.88 / 288.19 / 28.1% / 100%. Unchanged to the cent: the balance bots
+  never vote, and the policies never sell out with the menu on, so the new RNG draw never fires. Suite: 86 files / 596 tests
+  on the baseline, now 87 files / 621 tests.
+- **`emptySince`.** The queue-empty tick stamp is set on every day run (it feeds the `'empty'` hint), so the whole-state
+  JSON of a day differs from a pre-FB1 save; accepted, the rule is that the RNG stream is unchanged, and the golden
+  `rng` tests pin it against e503518.
+- **Needs UI.** A "close early" button for the HUD (the open flag and the vote count are in `closeEarlyState`; show
+  the hint as a nudge when `hint` is not null), and a sold-out sign or a "walked away" puff driven by the `walkout`
+  log entries. The README controls list gets a line once the button has a key.
+- **What to watch.** The bots never vote, so a solo run with two bots closes on the human's single vote, and a
+  full-bot tester never closes early (use the input directly). `emptySince` is a plain tick stamp: a pause or a
+  resync does not reset it. A sold-out board now consumes one `rngNext` per tick, so seeds replay differently
+  from before only on days that sold out with the menu on.
+
 ## main.ts hook-ins (phase 2)
 
 Telemetry hook-ins in `src/main.ts` (slice 7); the UI agent should expect these when merging the title wiring.

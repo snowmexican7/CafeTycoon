@@ -112,7 +112,9 @@ export type SimEventKind =
   | 'egg.nameMix'
   | 'egg.smoke'
   | 'egg.latteArt'
-  | 'egg.secret';
+  | 'egg.secret'
+  | 'closedEarly'
+  | 'walkout';
 
 export interface SimEvent {
   seq: number;
@@ -383,6 +385,12 @@ export interface DayStats {
   challengeBonus?: number;
   /** Challenge ids won today. */
   challengesWon?: string[];
+  /** FB1 WP3: seconds that were left on the day clock when a unanimous vote closed the shop (absent = ran to the bell). */
+  closedEarly?: number;
+  /** FB1 WP4: people who walked up to a sold-out board and left (absent until it happens; migrated to 0). */
+  soldOutWalkouts?: number;
+  /** FB1 WP4: seconds into the day when the board first sold out. */
+  soldOutAt?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -414,6 +422,10 @@ export interface GameState {
   today: DayStats;
   days: DayStats[];
   morningNotes: string[];
+  /** FB1 WP3: connected humans who have voted to close early (absent = nobody; cleared each phase). */
+  closeVotes?: PlayerId[];
+  /** FB1 WP3: tick stamp of when the queue last emptied (absent while someone is queued). */
+  emptySince?: number;
   pass: PassItem[];
   menu: Record<DrinkId, boolean>;
   /** Phase 3 B2: price steps per drink ($0.25 each); absent or 0 = list price. */
@@ -488,6 +500,8 @@ export type PlayerInput =
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
   | { kind: 'espresso'; playerId: PlayerId }
+  /** FB1 WP3: vote (on) or withdraw (off) to close the shop early; every connected human must agree. */
+  | { kind: 'closeEarly'; playerId: PlayerId; on: boolean }
   | { kind: 'join'; playerId: PlayerId; name: string }
   | { kind: 'leave'; playerId: PlayerId }
   | { kind: 'drop'; playerId: PlayerId }
