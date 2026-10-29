@@ -19,6 +19,22 @@ keep going into harder weeks until the café can't make rent.
 - **Use a station:** E or Space (stand next to it)
 - **Pause and settings:** Esc
 - The seed shown in the HUD replays the same week: enter it on the title screen.
+- **The pass:** the little shelf on the counter. Press E with a drink nobody wants and it sits
+  there (up to three). Press E with empty hands to serve a waiting customer from the shelf, or
+  to pick up the oldest drink. Espresso goes stale after 45 seconds, latte after 60, cold brew
+  lasts the day. Binned and stale drinks count as waste, and at four the health inspector
+  fines you.
+- **Bots:** a solo run gets two bot coworkers, two humans get one, three or more get none. A
+  friend who joins mid-week replaces a bot the next morning. Bots take a moment to react,
+  sometimes botch a drink and remake it, and step around you.
+- **Day events** (from day 2): rush hour, power flicker, health inspector, influencer visit.
+- **Customers:** impatient tippers, groups ordering two or three drinks, and three named
+  regulars who come back.
+- **Night menu switch:** the sim supports it, but the toggle is still being built on the
+  screen side.
+- **Telemetry:** the host's browser records the run and nothing is uploaded. In the browser
+  console, `cafetycoon.telemetry.download()` saves an `.ndjson` file and
+  `cafetycoon.telemetry.rows()` shows the rows.
 
 ## Playing together
 
@@ -39,7 +55,12 @@ npm install
 npm run dev      # local game at http://localhost:5173/CafeTycoon/
 npm test         # simulation tests
 npm run build    # type-check and build into dist/
+npm run balance -- --weeks 10   # headless balance tester
 ```
+
+Balance tester options: `--seed`, `--humans`, `--bots`, `--skill`, `--pace`, `--scenario`,
+`--menu`, `--compare menus`, `--day`, `--json`. To capture JSON without npm's banner line, run
+`npx tsx scripts/balance.ts … --json` directly.
 
 - Everyone commits to `main` and pulls before pushing. Pushing to `main` runs the tests,
   builds, and republishes the site through GitHub Actions and GitHub Pages.
