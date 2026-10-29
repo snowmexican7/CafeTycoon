@@ -824,3 +824,35 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
     A compact two-column grid would fit better once pricing (B2) adds more to that column.
   - The balance numbers are first guesses. A playtest should show whether the Creator's
     +$0.75 beats the Host's +50% tips at higher prices.
+
+## P3 Block 02 reflection (per-item pricing)
+
+- **What shipped.** `src/sim/pricing.ts`: `priceSteps` per drink ($0.25 a step, −4…+8), a
+  `price` night input, and three demand levers taken from the price ratio (new price over list
+  price):
+  - the drink's order weight scales by ratio^−1.8 (clamped 0.25–1.8);
+  - walk-ins scale by the menu's weighted demand;
+  - patience moves by 0.6 × (1 − ratio) (clamped 0.7–1.25).
+
+  The night menu board shows the price, the change, the expected orders with their %, and the
+  profit per drink, with a total line. The newspaper's walk-ins follow the prices. Save v11,
+  protocol v14.
+- **Determinism.** No new RNG draws. With no steps every factor short-circuits to exactly 1, so
+  un-priced runs replay identically, and all of the earlier tests pass unchanged. One VM test now
+  maps the menu lines back to {drink, on}.
+- **Checks.** Six new tests (input, clamping and day lock; identity at list price; mix shift and
+  patience; the served price; fewer seeded walk-ins on a pricey menu; the forecast numbers):
+  535 tests in total. A 3-tab local-link run set the prices from a peer's night screen; all
+  tabs agreed.
+- **What went well.** The forecast reuses the same functions as the sim, so the night numbers
+  can't drift from what happens in the day.
+- **What to watch / deferred.**
+  - The forecast ignores group extras and rounds small numbers, so on short days "~3 orders"
+    is coarse. Playtest whether players trust it.
+  - The chalkboard menu on the café wall (render) still shows list prices. It's decorative, so
+    deferred.
+  - Elasticity of 1.8 makes a raise lose money over a whole menu, but a raise on one drink can
+    win: steady regulars (B3) should be less price-sensitive, and that is where pricing gets
+    its depth.
+  - The night's left column is getting long (Restock, Roles, Menu board). A tabbed or two-column
+    layout is worth doing before B7's menu designer.

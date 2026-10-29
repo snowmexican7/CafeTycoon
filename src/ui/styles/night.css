@@ -214,3 +214,4 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .mb-fc { font-size: 11.5px; color: #6b5640; } #night .mb-fc.off { opacity: .7; }
 #night .mb-fc em { font-style: normal; font-weight: 700; } #night .mb-fc em.up { color: #2f7a3e; } #night .mb-fc em.down { color: #a6462f; }
 #night .mb-total { margin-top: 6px; font-size: 12px; line-height: 1.35; color: #5a4632; background: #fff7ec; border-radius: 10px; padding: 6px 8px; }
+#night .menu-board .mb-row { flex-wrap: wrap; } #night .mb-row > .mb-fc { flex-basis: 100%; padding-left: 34px; }

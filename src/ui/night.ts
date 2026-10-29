@@ -114,13 +114,13 @@ function menuBoard(menu: MenuLineVM[] | undefined): string {
       const fc = m.orders === undefined
         ? '<span class="mb-fc off">not on the menu</span>'
         : `<span class="mb-fc">~${m.orders} orders${m.demandPct ? ` <em class="${m.demandPct > 0 ? 'up' : 'down'}">${m.demandPct > 0 ? '+' : ''}${m.demandPct}%</em>` : ''} · <b>$${m.profit!.toFixed(0)}</b> profit</span>`;
-      return `<div class="mb-row ${m.on ? '' : 'off'}" data-drink-row="${m.drink}">${itemIcon(m.drink, 26)}<div class="mb-txt"><b>${esc(info.name)}</b>${ticketChips(info.ticket)}${fc}</div>
+      return `<div class="mb-row ${m.on ? '' : 'off'}" data-drink-row="${m.drink}">${itemIcon(m.drink, 26)}<div class="mb-txt"><b>${esc(info.name)}</b>${ticketChips(info.ticket)}</div>
         <div class="mb-pricer">
           <button class="btn mini pr-btn" data-action="price" data-drink="${m.drink}" data-step="${m.step - 1}" ${m.canDown ? '' : 'disabled'} aria-label="Lower the ${esc(info.name)} price">−</button>
           <span class="mb-price">$${m.price.toFixed(2)}${delta}</span>
           <button class="btn mini pr-btn" data-action="price" data-drink="${m.drink}" data-step="${m.step + 1}" ${m.canUp ? '' : 'disabled'} aria-label="Raise the ${esc(info.name)} price">+</button>
         </div>
-        <button class="btn mini" data-action="menu" data-drink="${m.drink}" data-on="${m.on ? '0' : '1'}" ${last ? 'disabled title="Keep at least one drink on"' : ''} aria-pressed="${m.on}">${m.on ? 'On' : 'Off'}</button></div>`;
+        <button class="btn mini" data-action="menu" data-drink="${m.drink}" data-on="${m.on ? '0' : '1'}" ${last ? 'disabled title="Keep at least one drink on"' : ''} aria-pressed="${m.on}">${m.on ? 'On' : 'Off'}</button>${fc}</div>`;
     })
     .join('')}</div>
     <div class="mb-total">Tomorrow at these prices: <b>~${sum.orders} orders</b>, about <b>$${sum.profit.toFixed(0)}</b> profit before tips and rent. Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</div>`;
