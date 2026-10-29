@@ -38,7 +38,7 @@ import { createNight } from './ui/night';
 import { createPause } from './ui/pause';
 import { createRoadmap } from './ui/roadmap';
 import { createTitle, type StartChoice } from './ui/title';
-import { closingViewModel, hudViewModel, lobbyViewModel, migrateNightLength, nightLengthForSim, nightViewModel, titleViewModel, weekEndViewModel } from './ui/viewModels';
+import { closingViewModel, hudViewModel, lobbyViewModel, migrateNightLength, NIGHT_LENGTH_MIGRATION, nightLengthForSim, nightViewModel, titleViewModel, weekEndViewModel } from './ui/viewModels';
 import { createWeekEnd } from './ui/weekEnd';
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
@@ -65,13 +65,15 @@ const stores = {
   seats: createSeatStore(localStorage),
   records: createRecordsStore(localStorage),
 };
-// FB1 WP1: nights default to 2:00 now. Move a stored old default (60 s) up once; a later pick sticks.
+// FB1 WP1: nights default to 2:00 now, and Relaxed is a real 0. Migrate a stored old value once
+// per step (60 s default -> 120 s; the 600 s Relaxed stand-in -> 0); a later pick sticks.
 try {
   const FLAG = 'cafetycoon.fb1.nightLength';
-  if (!localStorage.getItem(FLAG)) {
-    const next = migrateNightLength(stores.settings.get().nightLengthSec);
+  const from = Number(localStorage.getItem(FLAG) ?? 0) || 0;
+  if (from < NIGHT_LENGTH_MIGRATION) {
+    const next = migrateNightLength(stores.settings.get().nightLengthSec, from);
     if (next !== stores.settings.get().nightLengthSec) stores.settings.set({ nightLengthSec: next });
-    localStorage.setItem(FLAG, '1');
+    localStorage.setItem(FLAG, String(NIGHT_LENGTH_MIGRATION));
   }
 } catch { /* storage blocked: the title picker still offers every length */ }
 /** A text box has focus, so letter keys belong to it (sliders and switches don't count). */

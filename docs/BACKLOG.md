@@ -227,6 +227,13 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
 - The planned sim shapes (`nightClock`, `state.lastCall`, `nightBrief` in the fb1 sim spec §3)
   fit these adapters: on merge, `nightTimerVM` reads `nightClock().mode`/`lastCallSecondsLeft`
   and `nightBriefVM` maps `nightBrief().alerts`.
+- **Status (fb1-ui-nightclock):** the clock adapter swap is done. `SIM_ACCEPTS_RELAXED` is true (Relaxed
+  is sent as 0), `nightTimerVM` reads `nightClock(state)` (mode, `lastCallSecondsLeft`) and the pill shows
+  "Last call m:ss" from `state.lastCall`. `LAST_CALL_SEC` is gone. The `main.ts` migration is now
+  versioned (flag value 2): it also moves the old 600 s stand-in to 0. Still open:
+  - `nightBriefVM` still builds Tonight alerts in the UI (it adds icons and one-tap UI fixes). Map
+    `nightBrief(state).alerts` into it and drop `nightWarnings.ts`'s copy of `expectedUse` (follow-up, UI).
+  - The pill doesn't show `ready / needed` yet.
 - **Check only:** a kerbside stand should never list a latte. `unlockedDrinks` already filters
   by `canMake` for non-café tiers, so this is probably fine; worth a quick test in the sim lane.
 

@@ -4,7 +4,7 @@ import { TICK_RATE } from '../sim/constants';
 import { nightExtras } from './live';
 import { nightHtml, type NightUiState } from './night';
 import {
-  DEFAULT_NIGHT_LENGTH, LAST_CALL_SEC, MAX_BRIEF_ALERTS, RELAXED_FALLBACK_SEC, migrateNightLength, nightBriefVM, nightLengthChoice,
+  DEFAULT_NIGHT_LENGTH, MAX_BRIEF_ALERTS, RELAXED_FALLBACK_SEC, migrateNightLength, nightBriefVM, nightLengthChoice,
   nightLengthForSim, nightStructureKey, nightTimerVM, nightViewModel,
 } from './viewModels';
 
@@ -16,34 +16,35 @@ export const words = (html: string) =>
 const between = (html: string, a: string, b: string) => html.slice(html.indexOf(a), b ? html.indexOf(b) : undefined);
 
 describe('FB1 WP1 night length', () => {
-  it('defaults to two minutes and maps Relaxed to the sim fallback until the sim accepts 0', () => {
+  it('defaults to two minutes and sends Relaxed to the sim as 0', () => {
     expect(DEFAULT_NIGHT_LENGTH).toBe(120);
     expect(nightLengthForSim(120)).toBe(120);
-    expect(nightLengthForSim(0)).toBe(RELAXED_FALLBACK_SEC);
-    expect(nightLengthChoice(RELAXED_FALLBACK_SEC)).toBe(0);
+    expect(nightLengthForSim(0)).toBe(0);
     expect(nightLengthChoice(0)).toBe(0);
     expect(nightLengthChoice(180)).toBe(180);
   });
   it('moves the old 60 s default up once and leaves other picks alone', () => {
     expect(migrateNightLength(60)).toBe(120);
     expect(migrateNightLength(180)).toBe(180);
-    expect(migrateNightLength(RELAXED_FALLBACK_SEC)).toBe(RELAXED_FALLBACK_SEC);
+    expect(migrateNightLength(RELAXED_FALLBACK_SEC)).toBe(0);
+    // A browser that already ran step 1 keeps a later 1:00 pick, but still loses the 600 s stand-in.
+    expect(migrateNightLength(60, 1)).toBe(60);
+    expect(migrateNightLength(RELAXED_FALLBACK_SEC, 1)).toBe(0);
+    expect(migrateNightLength(RELAXED_FALLBACK_SEC, 2)).toBe(RELAXED_FALLBACK_SEC);
   });
   it('a relaxed night has no clock until last call', () => {
     const s = run();
     expect(nightTimerVM(s)).toEqual({ relaxed: false, lastCall: false });
-    s.settings.nightLengthSec = RELAXED_FALLBACK_SEC;
-    s.phaseTicksLeft = 200 * TICK_RATE;
+    s.settings.nightLengthSec = 0;
     expect(nightTimerVM(s)).toEqual({ relaxed: true, lastCall: false });
-    s.phaseTicksLeft = (LAST_CALL_SEC - 1) * TICK_RATE;
-    expect(nightTimerVM(s)).toEqual({ relaxed: true, lastCall: true });
+    s.lastCall = 29 * TICK_RATE;
+    expect(nightTimerVM(s)).toEqual({ relaxed: true, lastCall: true, lastCallClock: '0:29' });
   });
   it('last call flipping does not rebuild the board, relaxed vs timed does', () => {
     const s = run();
-    s.settings.nightLengthSec = RELAXED_FALLBACK_SEC;
-    s.phaseTicksLeft = 200 * TICK_RATE;
+    s.settings.nightLengthSec = 0;
     const a = nightStructureKey(nightViewModel(s, 'p1'));
-    s.phaseTicksLeft = 10 * TICK_RATE;
+    s.lastCall = 10 * TICK_RATE;
     expect(nightStructureKey(nightViewModel(s, 'p1'))).toBe(a);
     s.settings.nightLengthSec = 120;
     expect(nightStructureKey(nightViewModel(s, 'p1'))).not.toBe(a);
@@ -109,7 +110,7 @@ describe('FB1 WP1 night board html', () => {
     }
   });
   it('a relaxed night shows Relaxed instead of a ring', () => {
-    const h = html({}, (s) => { s.settings.nightLengthSec = RELAXED_FALLBACK_SEC; });
+    const h = html({}, (s) => { s.settings.nightLengthSec = 0; });
     expect(h).toMatch(/pill timer relaxed/);
     expect(h).not.toMatch(/class="ring"/);
     expect(h).toMatch(/Relaxed night: opens when you are ready/);
