@@ -1,5 +1,5 @@
 import { SIG, sigShare } from '../sim/signature';
-import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TASTE_SEASON, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
+import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
 import { accuracyRating } from '../sim/accuracy';
 import { PRICING, menuPrice, priceForecast, priceTraffic } from '../sim/pricing';
 import { regularsViewModel, type RegularVM } from '../sim/regulars';
@@ -391,8 +391,7 @@ export function tasteLine(state: GameState): string | undefined {
   if (seasonStarts(state.day)) {
     const drink = menu[state.day % menu.length];
     const t = TWIST_INFO[risingTwist(state.seed, drink, state.day)];
-    const name = TASTE_SEASON.names[Math.min(seasonOf(state.day), TASTE_SEASON.names.length - 1)];
-    return `${name} season: tastes are turning. Word is ${t.name.toLowerCase()} is the new thing in ${DRINK_INFO[drink].short.toLowerCase()}s, and last season's hits may not land.`;
+    return `Season ${seasonOf(state.day) + 1} starts tomorrow and tastes are turning. Word is ${t.name.toLowerCase()} is the new thing in ${DRINK_INFO[drink].short.toLowerCase()}s, and last season's hits may not land.`;
   }
   if (seasonStarts(state.day + 1)) return 'Tastes turn the day after tomorrow: enjoy your hits while they last.';
   return undefined;

@@ -178,6 +178,24 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B8: a taste season turning tomorrow (day 4): last season's notebook reads stale, the paper tips the riser. */
+  seasons: {
+    night: true,
+    setup(s) {
+      s.cash = 236;
+      s.day = 4;
+      s.tasteBook = {
+        [`latte:vanilla`]: comboStars(s.seed, 'latte', 'vanilla'),
+        [`latte:cinnamon`]: comboStars(s.seed, 'latte', 'cinnamon'),
+        [`latte:honey`]: comboStars(s.seed, 'latte', 'honey'),
+        [`espresso:seaSalt`]: comboStars(s.seed, 'espresso', 'seaSalt'),
+        [`coldBrew:honey`]: comboStars(s.seed, 'coldBrew', 'honey'),
+      };
+      s.twists = { latte: 'cinnamon', espresso: 'seaSalt' };
+      s.today = { day: 3, served: 27, lost: 1, turnedAway: 0, sales: 146, tips: 25.2, rent: 25, comboStarSum: 6, twistCost: 3.6 };
+    },
+    timeline: [],
+  },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */

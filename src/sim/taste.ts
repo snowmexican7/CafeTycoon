@@ -36,7 +36,7 @@ function hash32(n: number): number {
 }
 
 /** P3 B8: seasons. Tastes drift every `TASTE_SEASON.days` days (season 0 is days 1..3). */
-export const TASTE_SEASON = { days: 3, names: ['Early', 'Turning', 'Late', 'Deep'] };
+export const TASTE_SEASON = { days: 3 };
 
 export function seasonOf(day: number): number {
   return Math.max(0, Math.floor((Math.max(1, day) - 1) / TASTE_SEASON.days));
