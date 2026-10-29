@@ -125,7 +125,7 @@ const FIXTURES: Record<string, Fixture> = {
     setup(s) {
       s.cash = 180;
       s.day = 2;
-      s.days = [{ day: 1, served: 22, lost: 3, turnedAway: 0, sales: 118.5, tips: 19.2, rent: 25, pastries: 4, spoiled: { milk: 4, pastry: 3 }, spoiledValue: 7.5 }];
+      s.today = { day: 1, served: 22, lost: 3, turnedAway: 0, sales: 118.5, tips: 19.2, rent: 25, pastries: 4, spoiled: { milk: 4, pastry: 3 }, spoiledValue: 7.5 };
       s.supplies = { ...s.supplies, milk: 9, pastry: 3 };
       const p = s.players.find((x) => !x.bot);
       if (p) p.role = 'manager';
