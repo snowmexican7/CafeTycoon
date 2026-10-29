@@ -9,7 +9,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 22;
+export const SNAPSHOT_VERSION = 24;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -85,6 +85,10 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   21: (s) => {
     s.tier ??= 'cafe';
   },
+  // filled by fb1-sim-day; replaced at rebase
+  22: () => {},
+  // FB1 WP1-sim: lastCall is optional (absent = no last call); nothing to migrate.
+  23: () => {},
 };
 
 /** Bring a saved state up to SNAPSHOT_VERSION, or null when no migration path exists. */

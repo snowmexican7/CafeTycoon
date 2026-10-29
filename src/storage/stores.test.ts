@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
 import { createHistoryStore } from './historyStore';
 import { createSettingsStore } from './settingsStore';
-import { SNAPSHOT_VERSION, createSnapshotStore } from './snapshotStore';
+import { SNAPSHOT_VERSION, createSnapshotStore, migrateSnapshot } from './snapshotStore';
 import { memoryStorage } from './storageLike';
 
 describe('stores', () => {
@@ -41,7 +41,14 @@ describe('stores', () => {
 
 describe('snapshot versioning', () => {
   it('is on version 9', () => {
-    expect(SNAPSHOT_VERSION).toBe(22);
+    expect(SNAPSHOT_VERSION).toBe(24);
+  });
+
+  it('migrates a version-23 save: lastCall stays absent', () => {
+    const old = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const out = migrateSnapshot(23, old)!;
+    expect(out).not.toBeNull();
+    expect(out.lastCall).toBeUndefined();
   });
 
   it('migrates a version-4 save (three drinks, no flavours) to the B5 menu', () => {
