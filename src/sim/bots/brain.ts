@@ -10,6 +10,8 @@ import { STATION_RECIPES } from '../stations';
 import { tally } from '../tally';
 import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Player, Station, StationKind, Vec2 } from '../types';
 import { findPath, idleNode, nodeOf, targetNodes } from './path';
+import { spillTiles } from '../floor';
+import { rogueNear, rogueTiles } from '../rogue';
 
 const BOTS = ECONOMY.bots;
 
@@ -69,6 +71,7 @@ function coveragePool(state: GameState): Coverage {
     else if (isDrink(p.holding)) drinks[p.holding] += 1;
   }
   for (const st of state.stations) {
+    if (st.occupiedBy !== null) continue; // a rogue's drink is not for the queue
     if (claimedAtStation(state, st)) continue;
     const brewing = st.busyTicksLeft > 0 && isRecipeKind(st.kind) ? STATION_RECIPES[st.kind].gives : null;
     for (const item of [st.output, brewing]) {
@@ -307,6 +310,7 @@ const hasYielded = (b: BotState): boolean => b.yields > 0 || b.nodeRank > 0;
 function shouldYield(state: GameState, self: Player, waypoint: Vec2, maxRank: number): boolean {
   const b = self.bot!;
   if (b.nodeRank >= maxRank && b.yields >= 2 * BOTS.yieldsBeforeRerank) return false;
+  if (rogueNear(state, waypoint)) return true;
   return state.players.some((p) => p !== self && p.connected && dist(p.pos, waypoint) <= BOTS.yieldRadius);
 }
 
@@ -326,14 +330,26 @@ function yieldWay(state: GameState, b: BotState, maxRank: number): void {
   }
 }
 
-/** A path to `node`; after a yield, around the nodes other players stand on when such a path exists. */
+/**
+ * A path to `node`, around spills when possible; after a yield, also around the nodes other players
+ * (and the rogue) stand on. Falls back to fewer avoided tiles, then the plain path.
+ */
 function planPath(state: GameState, p: Player, node: Vec2): Vec2[] | null {
-  if (hasYielded(p.bot!)) {
-    const avoid = state.players.filter((o) => o !== p && o.connected).map((o) => nodeOf(state, o.pos));
+  const spills = spillTiles(state);
+  const people = hasYielded(p.bot!)
+    ? [...state.players.filter((o) => o !== p && o.connected).map((o) => nodeOf(state, o.pos)), ...rogueTiles(state)]
+    : [];
+  for (const avoid of [[...spills, ...people], spills]) {
+    if (avoid.length === 0) continue;
     const around = findPath(state, p.pos, node, avoid);
     if (around !== null) return around;
   }
   return findPath(state, p.pos, node);
+}
+
+/** Track A: a floor step on arrival (take the mop, clean, return it). Until then it just pops. */
+export function stepFloor(_state: GameState, p: Player, _step: Extract<BotStep, { kind: 'floor' }>): void {
+  pop(p.bot!);
 }
 
 /** Head for `node` along a fresh A* path, one tile centre at a time. */
@@ -396,7 +412,7 @@ function stepBot(state: GameState, p: Player): void {
   let node: Vec2;
   let station: Station | null = null;
   let maxRank = 0;
-  if (current.kind === 'idle') node = current.node;
+  if (current.kind === 'idle' || current.kind === 'floor') node = current.node;
   else {
     station = state.stations.find((s) => s.id === current.station) ?? null;
     const nodes = station ? targetNodes(state, station, p.pos) : [];
@@ -408,6 +424,7 @@ function stepBot(state: GameState, p: Player): void {
   }
 
   if (dist(p.pos, node) > BOTS.arriveRadius) return walkToward(state, p, node, maxRank);
+  if (current.kind === 'floor') return stepFloor(state, p, current);
   if (current.kind === 'idle' || station === null) return pop(b);
   // Within arriveRadius of a node that ties between two stations, edge onto the node so "use" hits the right one.
   if (nearestStation(state, p.pos)?.id !== station.id) {
@@ -421,7 +438,7 @@ function stepBot(state: GameState, p: Player): void {
 /** Every connected bot, in players order, picks its moveDir and whether to press "use" this tick. */
 export function stepBots(state: GameState, _m: Modifiers): GameState {
   for (const p of state.players) {
-    if (p.bot && p.connected) stepBot(state, p);
+    if (p.bot && p.connected && p.stunTicksLeft === 0) stepBot(state, p);
   }
   return state;
 }

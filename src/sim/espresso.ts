@@ -94,6 +94,7 @@ function collapse(state: GameState, p: Player): void {
   e.fellAt = { ...p.pos };
   p.holding = null;
   p.moveDir = { x: 0, y: 0 };
+  p.heldDir = { x: 0, y: 0 };
   p.interactQueued = false;
   state.today.ambulance = round2((state.today.ambulance ?? 0) + ESPRESSO.ambulanceBill);
   emitLog(state, 'espresso.collapse', { by: p.id, name: p.name });
@@ -113,6 +114,7 @@ export function stepEspresso(state: GameState): void {
     }
     if (e.out) {
       p.moveDir = { x: 0, y: 0 };
+      p.heldDir = { x: 0, y: 0 }; // stepStuns re-applies heldDir each tick
       p.interactQueued = false;
       p.holding = null;
       // once the paramedics have wheeled them out, the body is off the floor

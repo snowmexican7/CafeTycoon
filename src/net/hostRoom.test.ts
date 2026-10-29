@@ -64,7 +64,7 @@ describe('HostRoom', () => {
     const local = fakeLocal();
     createHostRoom(link, local.t, { token: 'H', name: 'Host' });
     link.peerJoins('p1');
-    link.receive('join', join('T1', 'Sam', 1), 'p1');
+    link.receive('join', join('T1', 'Sam', 2), 'p1');
     expect(link.sent.at(-1)).toMatchObject({ kind: 'hello', target: 'p1', data: { reject: 'version' } });
     expect(local.inputs).toEqual([]);
   });

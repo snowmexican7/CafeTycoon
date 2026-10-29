@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hudStructureKey, hudViewModel, nightViewModel, receiptViewModel } from '../ui/viewModels';
+import { hudStructureKey, hudViewModel, nightViewModel, receiptViewModel, type HudVM } from '../ui/viewModels';
 import { createRun, startDay } from './run';
 
 describe('hud pass', () => {
@@ -12,6 +12,25 @@ describe('hud pass', () => {
     expect(hudStructureKey(hudViewModel(s))).toBe(key);
     s.pass.push({ item: 'espresso', ticksLeft: 60 });
     expect(hudStructureKey(hudViewModel(s))).not.toBe(key);
+  });
+});
+
+describe('hud chaos', () => {
+  it('hud key ignores per-tick chaos values', () => {
+    const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    const make = (o: { amount?: number; cleanliness?: number; secondsLeft?: number; rogueX?: number; kind?: 'spill' | 'grounds'; heldBy?: string | null; stage?: 'walking' | 'waiting' } = {}): HudVM => ({
+      ...hudViewModel(s),
+      messes: [{ id: 1, kind: o.kind ?? 'spill', x: 3, y: 4, amount: o.amount ?? 1 }],
+      cleanliness: o.cleanliness ?? 90,
+      mop: { x: 11, y: 7, heldBy: o.heldBy ?? null },
+      stuns: [{ playerId: 'p1', secondsLeft: o.secondsLeft ?? 3 }],
+      rogue: { stage: o.stage ?? 'walking', drink: 'latte', x: o.rogueX ?? 6, y: 7, secondsLeft: o.secondsLeft ?? 0 },
+    });
+    const key = hudStructureKey(make());
+    expect(hudStructureKey(make({ amount: 0.5, cleanliness: 40, secondsLeft: 9, rogueX: 8 }))).toBe(key);
+    expect(hudStructureKey(make({ kind: 'grounds' }))).not.toBe(key);
+    expect(hudStructureKey(make({ heldBy: 'p1' }))).not.toBe(key);
+    expect(hudStructureKey(make({ stage: 'waiting' }))).not.toBe(key);
   });
 });
 

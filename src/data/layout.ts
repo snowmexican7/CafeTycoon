@@ -8,6 +8,8 @@ export const LAYOUT: {
   spawnPoints: Vec2[];
   door: Vec2;
   queueSlots: Vec2[];
+  mopHome: Vec2;
+  rogueStart: Vec2;
 } = {
   width: 12,
   height: 8,
@@ -34,4 +36,6 @@ export const LAYOUT: {
     { x: 10, y: 7.6 },
     { x: 11, y: 7.6 },
   ],
+  mopHome: { x: 11, y: 7 },
+  rogueStart: { x: 6, y: 7 },
 };

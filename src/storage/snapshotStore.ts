@@ -4,7 +4,7 @@ import { readJson, type StorageLike } from './storageLike';
 const KEY = 'cafetycoon.run';
 
 /** Bump whenever GameState changes shape; older saves are then ignored instead of crashing the worker. */
-export const SNAPSHOT_VERSION = 2;
+export const SNAPSHOT_VERSION = 3;
 
 interface Envelope {
   version: number;

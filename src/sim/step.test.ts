@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { scenarioById } from '../data/scenarios';
+import { finishDay } from './closing';
 import { computeModifiers } from './effects';
-import { createRun } from './run';
+import { createRun, startDay } from './run';
 import { scoreRun, summarizeRun } from './score';
 import { step } from './step';
+import { validateInput } from './validate';
 import type { GameState, PlayerInput } from './types';
 
 const opts = { seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } };
@@ -201,5 +203,42 @@ describe('input validation', () => {
     s = step(day(), [{ kind: 'move', playerId: 'p1', x: NaN, y: 5, interact: 'yes' as never }]);
     expect(s.players[0].moveDir).toEqual({ x: 0, y: 1 });
     expect(s.players[0].interactQueued).toBe(false);
+  });
+});
+
+describe('drop input', () => {
+  it('drop input validates, queues only by day and is cleared each tick', () => {
+    expect(validateInput({ kind: 'drop', playerId: 'p1' })).toEqual({ kind: 'drop', playerId: 'p1' });
+    const night = createRun(opts);
+    expect(step(night, [{ kind: 'drop', playerId: 'p1' }]).players[0].dropQueued).toBe(false);
+    const day = startDay(createRun(opts));
+    expect(step(day, [{ kind: 'drop', playerId: 'p1' }]).players[0].dropQueued).toBe(false);
+  });
+
+  it('a drop naming a bot is ignored', () => {
+    const s = startDay(createRun({ ...opts, settings: { bots: 1 } }));
+    const before = s.players.find((p) => p.id === 'bot-1')!;
+    const withDrop = step(s, [{ kind: 'drop', playerId: 'bot-1' }]).players.find((p) => p.id === 'bot-1')!;
+    const without = step(s, []).players.find((p) => p.id === 'bot-1')!;
+    expect(before.dropQueued).toBe(false);
+    expect(withDrop).toEqual(without);
+  });
+});
+
+describe('closing', () => {
+  it('day end clears floor and rogue state', () => {
+    const s = startDay(createRun(opts));
+    s.messes = [{ id: 1, kind: 'spill', x: 3, y: 4, amount: 1 }];
+    s.cleanliness = 40;
+    s.mop = { pos: { x: 4, y: 4 }, heldBy: 'p1' };
+    Object.assign(s.players[0], { tool: 'mop', stunTicksLeft: 50, cleaningTicksLeft: 10, cleaningMess: 1, dropQueued: true });
+    s.rogue = { customerId: 3, drink: 'latte', stage: 'making', pos: { x: 5, y: 2 }, path: [], station: 'steamer', ticksLeft: 100, waitTicks: 0 };
+    s.stations.find((st) => st.id === 'steamer')!.occupiedBy = 3;
+    const t = finishDay(s);
+    expect(t.messes).toEqual([]);
+    expect(t.rogue).toBeNull();
+    expect(t.mop).toEqual({ pos: LAYOUT.mopHome, heldBy: null });
+    expect(t.stations.every((st) => st.occupiedBy === null)).toBe(true);
+    expect(t.players[0]).toMatchObject({ tool: null, stunTicksLeft: 0, cleaningTicksLeft: 0, cleaningMess: null, dropQueued: false });
   });
 });

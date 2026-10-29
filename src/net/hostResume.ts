@@ -10,6 +10,7 @@ export function markPeersAway(state: GameState, hostId: PlayerId): GameState {
     if (p.id === hostId || p.bot) continue;
     p.connected = false;
     p.moveDir = { x: 0, y: 0 };
+    p.heldDir = { x: 0, y: 0 };
     p.interactQueued = false;
   }
   return s;

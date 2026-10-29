@@ -454,6 +454,11 @@ async function main(): Promise<void> {
       });
       pause.toggle();
     }
+    const field = document.activeElement?.tagName ?? '';
+    if (e.code === 'KeyR' && !e.repeat && session?.next && !['INPUT', 'TEXTAREA', 'SELECT'].includes(field)) {
+      e.preventDefault();
+      session.transport.sendInput({ kind: 'drop', playerId: session.me });
+    }
   });
 
   function frame(): void {
