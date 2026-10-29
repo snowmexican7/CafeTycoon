@@ -16,10 +16,10 @@
 - `src/ui/viewModels.ts`: additive only (new optional fields, new functions; never rename or remove). `src/ui/viewModels.test.ts` and `src/ui/live.test.ts` stay green and unchanged. Never any other `src/ui/*`, never `src/render/*`, never `keys.ts`/`keyboard.ts`.
 - `src/main.ts`: only the `KeyR` branch inside the existing `window.addEventListener('keydown', …)` near the Escape handler. The title wiring stays untouched.
 - No new `StationKind`. No new `ItemKind` value (`ITEM_LABEL: Record<ItemKind, string>` in `src/ui/live.ts` would break), so the mop is `Player.tool`. Never change the meaning of `Customer.drink`, `Player.holding`, `Station.output`, `Player.pos`, `Player.connected`.
-- Every number comes from `ECONOMY.mess` / `ECONOMY.rogue` (spec §9 plus the three keys in Task 1) or `LAYOUT.mopHome` / `LAYOUT.rogueStart`. No numeric literals in sim code other than 0, 1 and 60 for tick conversion via `secondsToTicks`.
-- Every random draw goes through `rngNext`/`rngInt` on `state.rng`, in a fixed order: tile-entry events in `players` order, then drops, then customers, then the rogue. Same seed and inputs give an identical state on every machine.
+- Every number comes from `ECONOMY.mess` / `ECONOMY.rogue` (spec §9 plus the four extra keys in Task 1) or `LAYOUT.mopHome` / `LAYOUT.rogueStart`. No numeric literals in sim code other than 0, 1 and 60 for tick conversion via `secondsToTicks`.
+- Every random draw goes through `rngNext`/`rngInt` on `state.rng`, in a fixed order: tile-entry events in `players` order, then drops, then interacts (the rogue roll happens inside `serveCustomer` during interacts, and a bot's spill roll where it would have binned a drink), then spawns, then the rogue. Same seed and inputs give an identical state on every machine.
 - State stays JSON-safe: plain arrays and objects, no `Map`/`Set` in `GameState`.
-- New fields on types that `src/ui`/`src/render` tests build as literals (`Customer`, `DayStats`) are **optional**, and sim code always sets them. `Player` and `Station` fields are required (only sim code builds them).
+- New fields on types that `src/ui`/`src/render` tests build as literals (`Customer`, `DayStats`) are **optional**, and sim code always sets them. `Player` and `Station` fields are required; every test literal that builds a `Player` (e.g. `boxedIn` in `src/sim/bots/brain.test.ts`) spreads `floorFields(pos)` — Task 1 updates them (grep `pos:` literals in `src/**/*.test.ts`).
 - `SNAPSHOT_VERSION = 3` and `PROTOCOL_VERSION = 3` from Task 1 on.
 - Bots keep the contracts in `brain.ts`/`path.ts`: extend, don't rewrite. Bot fixtures stop arrivals with the `test-no-traffic` owned item (`{ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] }`).
 - Every task ends with `npm test` and `npm run build` green (build runs `tsc --noEmit`; check its exit code).
@@ -41,7 +41,7 @@ These are the failure modes a player will hit that the spec implies but no featu
 ## File structure and ownership
 
 ```
-src/data/economy.ts          T1: mess + rogue blocks (§9 + mergeAdd, spreadLoss, minAmount)
+src/data/economy.ts          T1: mess + rogue blocks (§9 + mergeAdd, spreadLoss, minAmount, spreadFactor)
 src/data/layout.ts           T1: mopHome {11,7}, rogueStart {6,7}
 src/sim/types.ts             T1: every new type/field (table below)
 src/sim/tiles.ts      (new)  T1 only: tileOf, facingOf, tileAhead, floorFields, clearFloorFields, trackTiles, stepStuns
@@ -57,13 +57,13 @@ src/sim/validate.ts, tally.ts T1 only
 src/sim/effects.ts, events.ts Track A only (patience factor, inspector)
 src/sim/customers.ts, pass.ts, describe.ts  Track B only
 src/sim/bots/brain.ts        T1 (planPath slots, shouldYield slot, coverage skip, stepFloor stub, stun skip); Track A only after that
-src/sim/bots/path.ts         untouched
+src/sim/bots/path.ts         Track A only: exports `walkableNodes`, `byDistance` for `cleanNode`
 src/net/protocol.ts, src/storage/snapshotStore.ts, src/host/telemetry.ts  T1 only
 src/ui/viewModels.ts         T1 (fields, slots, key); Track A fills floorHud; Track B fills rogueHud + receipt rogues
 src/main.ts                  T1 only (KeyR)
 ```
 
-**Track B must not touch:** `floor.ts`, `drop.ts`, `mop.ts`, `tiles.ts`, `movement.ts`, `effects.ts`, `events.ts`, `bots/brain.ts`, `bots/path.ts`, `floorHud`.
+**Track B must not touch:** `floor.ts`, `drop.ts`, `mop.ts`, `tiles.ts`, `movement.ts`, `effects.ts`, `events.ts`, `bots/brain.ts`, `bots/path.ts` (Track A may only export `walkableNodes`/`byDistance` there), `floorHud`.
 **Track A must not touch:** `rogue.ts`, `customers.ts`, `pass.ts`, `closing.ts`, `describe.ts`, `rogueHud`, `receiptViewModel`, `src/sim/viewModels2.test.ts`.
 Test files: Track A adds `floor.test.ts`, `drop.test.ts`, `mop.test.ts`, `viewModelsFloor.test.ts` and appends to `bots/brain.test.ts`. Track B adds `rogue.test.ts` and `viewModelsRogue.test.ts`, and edits `customers.test.ts` and `viewModels2.test.ts`.
 
@@ -96,9 +96,9 @@ Test files: Track A adds `floor.test.ts`, `drop.test.ts`, `mop.test.ts`, `viewMo
 This is the first task that changes the shape of `GameState`, so it bumps `SNAPSHOT_VERSION` to 3 (a v2 save is discarded with the existing notice) and `PROTOCOL_VERSION` to 3 (a stale peer tab gets the version-mismatch message).
 
 **Files:**
-- Modify: `src/sim/types.ts`, `src/data/economy.ts`, `src/data/layout.ts`, `src/sim/run.ts`, `src/sim/step.ts`, `src/sim/stations.ts`, `src/sim/closing.ts`, `src/sim/validate.ts`, `src/sim/tally.ts`, `src/sim/bots/brain.ts`, `src/sim/bots/roster.ts` (`newBarista`), `src/net/protocol.ts:7`, `src/storage/snapshotStore.ts:7`, `src/host/telemetry.ts:41-44`, `src/ui/viewModels.ts`, `src/main.ts` (keydown listener only)
+- Modify: `src/sim/types.ts`, `src/data/economy.ts`, `src/data/layout.ts`, `src/sim/run.ts`, `src/sim/step.ts`, `src/sim/stations.ts`, `src/sim/closing.ts`, `src/sim/validate.ts`, `src/sim/tally.ts`, `src/sim/bots/brain.ts`, `src/sim/bots/roster.ts` (`newBarista`), `src/net/protocol.ts:7`, `src/net/hostResume.ts`, `src/storage/snapshotStore.ts:7`, `src/host/telemetry.ts:41-44`, `src/ui/viewModels.ts`, `src/main.ts` (keydown listener only)
 - Create: `src/sim/tiles.ts`, `src/sim/floor.ts`, `src/sim/drop.ts`, `src/sim/mop.ts`, `src/sim/rogue.ts` (stubs below)
-- Test: `src/sim/tiles.test.ts` (new), `src/sim/run.test.ts`, `src/sim/step.test.ts`, `src/sim/stations.test.ts`, `src/sim/bots/brain.test.ts`, `src/sim/viewModels2.test.ts` (structure key only), `src/net/protocol.test.ts`, `src/storage/stores.test.ts`, `src/host/telemetry.test.ts`
+- Test: `src/sim/tiles.test.ts` (new), `src/sim/run.test.ts`, `src/sim/step.test.ts`, `src/sim/stations.test.ts`, `src/sim/bots/brain.test.ts`, `src/sim/viewModels2.test.ts` (structure key only), `src/net/protocol.test.ts`, `src/net/hostRoom.test.ts`, `src/net/hostResume.test.ts`, `src/storage/stores.test.ts`, `src/host/telemetry.test.ts`
 
 **Interfaces:**
 - Produces (`types.ts`):
@@ -126,7 +126,7 @@ export type BotStep = { kind: 'use'; station: string; action: BotAction } | { ki
 // PlayerInput += { kind: 'drop'; playerId: PlayerId }
 ```
 
-- Produces (`economy.ts`): `mess: { max: 12, spreadChance: 0.25, spreadMin: 0.5, slipChance: 0.05, stunTicks: [180, 300], cleanTicks: 90, dirtPerMessPerTick: 0.0025, recoverPerTick: 0.01, inspectorMin: 60, botMopBelow: 70, botMopMesses: 3, botMopMax: 3, patienceFloor: 0.8, botSpillChance: 0.5, mergeAdd: 0.5, spreadLoss: 0.25, minAmount: 0.25 }` and `rogue: { chance: 0.015, remakeSeconds: 15, waitSeconds: 5, makeSeconds: 10, speed: 0.8, repHit: 0.1, minDay: 2 }`. `layout.ts`: `mopHome: Vec2 = { x: 11, y: 7 }`, `rogueStart: Vec2 = { x: 6, y: 7 }` (add both to the `LAYOUT` type).
+- Produces (`economy.ts`): `mess: { max: 12, spreadChance: 0.25, spreadMin: 0.5, slipChance: 0.05, stunTicks: [180, 300], cleanTicks: 90, dirtPerMessPerTick: 0.0025, recoverPerTick: 0.01, inspectorMin: 60, botMopBelow: 70, botMopMesses: 3, botMopMax: 3, patienceFloor: 0.8, botSpillChance: 0.5, mergeAdd: 0.5, spreadLoss: 0.25, minAmount: 0.25, spreadFactor: 0.5 }` and `rogue: { chance: 0.015, remakeSeconds: 15, waitSeconds: 5, makeSeconds: 10, speed: 0.8, repHit: 0.1, minDay: 2 }`. `layout.ts`: `mopHome: Vec2 = { x: 11, y: 7 }`, `rogueStart: Vec2 = { x: 6, y: 7 }` (add both to the `LAYOUT` type).
 - Produces (`tiles.ts`, foundation-only, both tracks import):
   - `tileOf(pos: Vec2): Vec2`
   - `facingOf(dir: Vec2): Vec2`: `|y| >= |x|` gives `{0, sign y}`, else `{sign x, 0}`. Never called with zero.
@@ -143,7 +143,8 @@ export type BotStep = { kind: 'use'; station: string; action: BotAction } | { ki
   - `brain.ts`: `stepFloor(state: GameState, p: Player, step: Extract<BotStep, { kind: 'floor' }>): void` pops the step (A)
   - `viewModels.ts`: `floorHud(state: GameState): Pick<HudVM, 'messes' | 'cleanliness' | 'mop' | 'stuns' | 'cleaning'>` returns `{}`, placed just above `hudViewModel` (A); `rogueHud(state: GameState): Pick<HudVM, 'rogue'>` returns `{}`, placed at the end of the file (B). `hudViewModel` spreads `...floorHud(state), ...rogueHud(state)`.
 - Produces (behaviour fully done here):
-  - `step.ts` `applyInput`: `'move'` sets `heldDir` always and `moveDir` only when `stunTicksLeft === 0`. `'drop'` sets `dropQueued = true` only in phase `day`/`closing` (the existing guard already ignores bot ids). `'leave'` also zeroes `heldDir`.
+  - `step.ts` `applyInput`: `'move'` sets `heldDir` always and `moveDir` only when `stunTicksLeft === 0`. `'drop'` sets `dropQueued = true` only in phase `day`/`closing` (the existing guard already ignores bot ids). `'leave'` also zeroes `heldDir`, calls `clearFloorFields(p)` and, if the player held the mop, sends it home (`mop.heldBy = null`, `pos = LAYOUT.mopHome`).
+  - `markPeersAway` (`src/net/hostResume.ts`) zeroes `heldDir` and `moveDir` of players it marks away.
   - `validate.ts`: `case 'drop': return { kind: 'drop', playerId }`.
   - `tally.ts`: `TallyKey += 'rogues'`.
   - `stations.ts` `stepStations`: when `busyTicksLeft` reaches 0 on a station with `occupiedBy !== null`, set `occupiedBy = null` and leave `output` null. `interact`: (a) `if (player.tool !== null) { mopInteract(state, player); return state; }` before the station lookup; (b) with no station in range, `if (player.holding === null) mopInteract(state, player)`; (c) `if (station.occupiedBy !== null) return state`.
@@ -186,9 +187,11 @@ expect(s.players[0]).toMatchObject({ facing: { x: 0, y: 1 }, heldDir: { x: 0, y:
 
 `brain.test.ts` `'an occupied station does not cover an order'`: `cafe(1)`, one espresso customer with `huge` patience, espresso station `busyTicksLeft = 600`, `occupiedBy = 99`; expect `uncoveredOrder(s, bot(s))?.drink === 'espresso'`.
 
-`closing` (in `step.test.ts`) `'day end clears floor and rogue state'`: before `finishDay`, set one mess, `cleanliness = 40`, `mop.heldBy = 'p1'`, p1 `tool = 'mop'`, `stunTicksLeft = 50`, `cleaningTicksLeft = 10`, a rogue record, and steamer `occupiedBy = 3`. After it, expect all cleared, the mop home, and `rogue === null`.
+`closing` (in `step.test.ts`) `'day end clears floor and rogue state'`: before `finishDay`, set one mess, `cleanliness = 40`, `mop.heldBy = 'p1'`, p1 `tool = 'mop'`, `stunTicksLeft = 50`, `cleaningTicksLeft = 10`, a rogue record, and steamer `occupiedBy = 3`. After it, expect messes, rogue, mop, stuns, cleaning, tool and occupancy all cleared, the mop home, and `rogue === null`. `cleanliness` is NOT reset by `finishDay` (it resets at `startDay`), so the assertion does not check it.
 
 `viewModels2.test.ts` `'hud key ignores per-tick chaos values'`: build two `HudVM`s with `{ ...hudViewModel(s), messes: [{id:1,kind:'spill',x:3,y:4,amount:1}], cleanliness: 90, mop: {x:11,y:7,heldBy:null}, stuns:[{playerId:'p1',secondsLeft:3}], rogue:{stage:'walking',drink:'latte',x:6,y:7,secondsLeft:0} }` that differ only in `amount`, `cleanliness`, `secondsLeft` and rogue `x`: keys are equal. Changing the mess `kind`, `mop.heldBy` or rogue `stage` changes the key.
+
+`hostResume.test.ts` `'markPeersAway zeroes heldDir and moveDir'`: a connected player with `heldDir {1,0}` and `moveDir {1,0}` is marked away; both are `{0,0}`.
 
 Versions: `protocol.test.ts` `expect(PROTOCOL_VERSION).toBe(3)`; `stores.test.ts` rename `'is on version 2'` to `'is on version 3'` and `toBe(3)`; `hostRoom.test.ts` `'rejects a different protocol version'` sends `2` instead of `1`; `telemetry.test.ts` `expect(RESERVED_TELE_KINDS).toEqual(expect.arrayContaining(['drop','slip','clean','rogue.upset','rogue.remade','rogue.made','rogue.stormed']))`.
 
@@ -196,6 +199,8 @@ Versions: `protocol.test.ts` `expect(PROTOCOL_VERSION).toBe(3)`; `stores.test.ts
 
 Run: `npx vitest run src/sim src/net src/storage src/host`
 Expected: FAIL, e.g. `expected 2 to be 3`, `Cannot find module './tiles'`, `expected undefined to deeply equal []`.
+
+Also update every test literal that builds a `Player` by spreading `floorFields(pos)` (at least `boxedIn` in `src/sim/bots/brain.test.ts`).
 
 - [ ] **Step 3: Implement the types, constants, defaults, `tiles.ts`, the stubs, the `stepDay` order above, occupancy, the interact guards, the brain slots, the version bumps, the HUD fields/slots/key, and the R key**
 
@@ -240,7 +245,7 @@ Merge to `main` and push. Then create the two worktrees (`chaos-a-floor`, `chaos
   - `placeMess(state: GameState, kind: MessKind, tile: Vec2): boolean`. With no mess on the tile: if `messes.length >= max`, return false; otherwise push `{ id: nextMessId++, kind, x, y, amount: 1 }`. If the tile already has a mess, `amount = min(1, amount + mergeAdd)`, and a spill landing on grounds turns that mess's `kind` to `'spill'` (it keeps its id). Grounds landing on a spill keep it a spill. **At the cap nothing is placed or merged** (return false).
   - `dropTile(state: GameState, p: Player): Vec2` (front, then own, then `nodeOf`).
   - `onTileEntry(state, entered)`: for each entered player whose tile holds a mess:
-    - **Grounds** with `amount >= spreadMin`: draw `rngNext < spreadChance`. On a hit, candidates are the 4 neighbours in fixed order `[+x, -x, +y, -y]` that are walkable and either empty (only while `messes.length < max`) or hold a grounds pile with `amount < half`. If there are any, `rngInt(candidates.length)` picks one, which gets `half = amount / 2` (new pile or raised to half). The source loses `spreadLoss`, and a source below `minAmount` is removed.
+    - **Grounds** with `amount >= spreadMin`: draw `rngNext < spreadChance`. On a hit, candidates are the 4 neighbours in fixed order `[+x, -x, +y, -y]` that are walkable and either empty (only while `messes.length < max`) or hold a grounds pile with `amount < half`. If there are any, `rngInt(candidates.length)` picks one, which gets `half = amount * ECONOMY.mess.spreadFactor` (new pile or raised to half). The source loses `spreadLoss`, and a source below `minAmount` is removed.
     - **Spill**: draw `rngNext < slipChance`. On a hit, `stunTicksLeft = stunTicks[0] + rngInt(stunTicks[1] - stunTicks[0] + 1)`, `moveDir` zeroed, `interactQueued`/`dropQueued` false, cleaning cancelled. If something is held and `placeMess(own tile, drink → 'spill', grounds → 'grounds')` succeeds, hands empty, and a drink tallies `wasted`. Log `slip { player, x, y, ticks, item? }`.
   - `stepCleanliness(state)`: `cleanliness -= dirtPerMessPerTick × messes.length`, or `+= recoverPerTick` when there are none; clamp to [0, 100].
   - `spillTiles(state)`: the tiles of `'spill'` messes.
@@ -261,7 +266,7 @@ Fixture `chaosCafe()` from Task 1 (copy into each new test file), plus `face(s, 
 `drop.test.ts`:
 - `'drop at an idle empty station places the item'`: p1 at `{3,2}` holding grounds; the espresso machine gets `output 'grounds'` and p1 holds null.
 - `'drop at a busy or full station does nothing'`: with espresso `busyTicksLeft = 5`, p1 keeps grounds and no mess appears. Do the same with `output = 'espresso'`.
-- `'drop at the counter puts a drink on the pass, grounds stay in hand'`: p1 at `{6,5}` with a latte gets `pass [{item:'latte', ticksLeft:3600}]`; grounds stay in hand.
+- `'drop at the counter puts a drink on the pass, grounds stay in hand'`: p1 at `{6,5}` with a latte gets `pass [{item:'latte', ticksLeft:3600}]`, calling `resolveDrops` directly (through `step()` the pass would show `ECONOMY.pass.staleSeconds.latte * 60 - 1`, because `stepPass` runs after drops); grounds stay in hand.
 - `'drop at the trash bins and counts drink waste'`: `today.wasted` goes 0 to 1 for a latte, and stays 1 for grounds.
 - `'floor drop lands on the tile in front'`: p1 at `{6,4}`, `face(s,{x:-1,y:0})`, holding espresso, then a drop tick. Expect `messes` to equal `[{id:1, kind:'spill', x:5, y:4, amount:1}]` (p1 drifted a tile fraction, so assert `x: 5`), and `wasted === 1`.
 - `'facing a station square or off the floor drops on the own tile'`: p1 at `{3,2.45}` with `facing = {0,-1}` holding grounds (front `{3,1}` is the espresso square, 1.45 tiles away so no station is in range); the pile lands on `{3,2}`. p1 at `{1,7}` facing `{-1,0}` (front `{0,7}` is off the floor) drops on `{1,7}`.
@@ -269,8 +274,8 @@ Fixture `chaosCafe()` from Task 1 (copy into each new test file), plus `face(s, 
 - `// Review Focus 1` `'nothing drops at the cap'`: fill 12 messes on distinct floor tiles; p1 with a latte drops on the floor and still holds the latte, `wasted === 0`, and no `drop` log.
 
 `floor.test.ts`:
-- `'grounds spread stays bounded'`: one grounds pile at `{5,4}`. Over 200 iterations, take the pile with the largest amount, set p1 `pos`/`tile` to a neighbour, then `pos` onto the pile, and call `onTileEntry(s, [p1])`. After each iteration, expect `messes.length <= 12` and every `amount` in `[0.25, 1]`.
-- `'slip rate is about 5% and stuns 180–300 ticks, dropping what is held'`: a spill at `{5,4}`. For 2000 iterations: reset `stunTicksLeft = 0`, `holding = null`, `tile = {4,4}`, then `pos = {5,4}`, then `onTileEntry`. Expect the slip count in `[60, 140]` and every observed stun in `[180, 300]`. Then one slip while holding grounds: record `rngBefore` each iteration; on the first slip, restore `s.rng = rngBefore`, give p1 grounds and repeat the entry. Expect a grounds-on-spill merge on `{5,4}` (still one mess, `'spill'`) and hands empty.
+- `'grounds spread stays bounded'`: one grounds pile at `{5,4}`. Over 200 iterations, take the pile with the largest amount, set p1 `pos` to a neighbour and call `trackTiles(s)`, then set `pos` onto the pile and call `onTileEntry(s, trackTiles(s))` (`onTileEntry` trusts `p.tile`, so tests never set `p.tile` by hand). After each iteration, expect `messes.length <= 12` and every `amount` in `[0.25, 1]`.
+- `'slip rate is about 5% and stuns 180–300 ticks, dropping what is held'`: a spill at `{5,4}`. For 2000 iterations: reset `stunTicksLeft = 0`, `holding = null`, set `pos = {4,4}` and call `trackTiles(s)`, then `pos = {5,4}` and `onTileEntry(s, trackTiles(s))`. Expect the slip count in `[60, 140]` and every observed stun in `[180, 300]`. Then one slip while holding grounds: record `rngBefore` each iteration; on the first slip, restore `s.rng = rngBefore`, give p1 grounds and repeat the entry. Expect a grounds-on-spill merge on `{5,4}` (still one mess, `'spill'`) and hands empty.
 - `// Review Focus 1` `'a slip at the cap keeps the item'`: 12 messes, p1 holding grounds slips (loop until slip). p1 still holds grounds and there are still 12 messes.
 - `'a slipped player does not interact this tick'`: force a slip via `stepDay`: p1 moves onto a spill with `interact: true` at the grinder. Loop seeds until a `slip` log appears; on that tick the grinder stays idle.
 
@@ -326,8 +331,8 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - `// Review Focus 2` `'a stun or R mid-clean cancels the channel'`:
   - (a) Start a clean, set `stunTicksLeft = 5`, step 5 ticks: no clean log, mess present, `cleaningTicksLeft === 0`. Then E and 90 still ticks clean it.
   - (b) Start a clean, then a drop tick: mop home, mess present.
-- `'a leaving holder sends the mop home'`: p1 holds the mop and sends `leave`; after one tick the mop is home.
-- `'cleanliness falls with messes and recovers without'`: 2 messes, 200 ticks give `cleanliness === 99`. Clear them and set 50; 100 ticks give 51. 100 + 100 ticks clamps at 100.
+- `'a leaving holder sends the mop home'`: p1 holds the mop and sends `leave`; after one tick the mop is home. A player who leaves (`leave` input) while holding the mop: Task 1's `leave` handling sends it home; `mopInteract` must cope with `mop.heldBy` naming a disconnected player (treat the mop as free).
+- `'cleanliness falls with messes and recovers without'`: 2 messes, 200 ticks give `cleanliness` `toBeCloseTo(99, 6)`. Clear them and set 50; 100 ticks give `toBeCloseTo(51, 6)`. Start from 99.5 with no messes: 200 recovery ticks reach the clamp, `toBeCloseTo(100, 6)` and never above. (All cleanliness assertions use `toBeCloseTo(value, 6)`.)
 
 `effects.test.ts` `'a dirty café makes new customers less patient'`: `computeModifiers` patience at cleanliness 50 divided by that at 100 is `0.9` (toBeCloseTo).
 `events.test.ts` `'the inspector fails a dirty café with one fine'`: (a) `cleanliness 59`, `wasted 0`: `'fail'`, `fines === 15`. (b) `cleanliness 59`, `wasted 4`: `fines === 15`. (c) `cleanliness 60`: `'pass'`.
@@ -335,7 +340,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - [ ] **Step 2: Run to see them fail**
 
 Run: `npx vitest run src/sim/mop.test.ts src/sim/effects.test.ts src/sim/events.test.ts`
-Expected: FAIL, e.g. `expected null to be 'mop'`.
+Expected: FAIL, e.g. `expected null to be 'mop'`. The cleanliness-guard test only exercises Task 2 code and passes before this task's code exists; report that honestly in the TDD evidence (guard-style tests are acceptable there).
 
 - [ ] **Step 3: Implement `nearestMess`, `mopInteract`, `returnMop`, `stepCleaning`, the drop branch, the patience factor and the inspector rule**
 
@@ -363,15 +368,15 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Consumes: `spillHeld`, `spillTiles` (Task 2); `nearestMess` (Task 3); `uncoveredOrder`, `setPlan`, `pop`, `walkToward` (existing brain internals).
 - Produces (`brain.ts`):
   - `mopPlan(state: GameState, p: Player): BotStep[]`: `takeMop` at `nodeOf(mop.pos)`, then up to `botMopMax` `clean` steps (messes greedy nearest-first from the previous node, ties `messes` index) at `cleanNode`, then `returnMop` at the last clean node.
-  - `cleanNode(state: GameState, mess: Mess, from: Vec2): Vec2`: the walkable tile within `interactRangeTiles` of the mess with no spill on it, nearest to `from` (ties lower y, then x), else the mess tile.
+  - `cleanNode(state: GameState, mess: Mess, from: Vec2): Vec2` (Track A may export `walkableNodes` and `byDistance` from `src/sim/bots/path.ts` and import them here instead of copying; Track B never touches `path.ts`): the walkable tile within `interactRangeTiles` of the mess with no spill on it, nearest to `from` (ties lower y, then x), else the mess tile.
   - `think` rule 0 adds `if (p.tool === 'mop') return [{ kind: 'floor', node: nodeOf(state, p.pos), action: 'returnMop' }]`. A new rule 3b (after prep, before idle) returns `mopPlan` when all of these hold:
     - `mop.heldBy === null`
     - `messes.length > 0`
     - `cleanliness < botMopBelow || messes.length >= botMopMesses`
     - no other bot's plan contains a `floor` step
   - `stepBot`:
-    - **Cleaning hold.** `if (p.cleaningTicksLeft > 0)` keep still and return; this is placed before reaction and yield.
-    - **Order interrupt.** When `b.plan` contains a `floor` step and `uncoveredOrder(state, p) !== null`, set `p.dropQueued = true` if `p.tool === 'mop'`, then `setPlan(b, [])` and `b.thinkTicksLeft = 0`.
+    - **Order interrupt (first).** Before executing any `floor` step, including while `cleaningTicksLeft > 0`, the bot checks `uncoveredOrder`. If one exists it cancels the clean (`cleaningTicksLeft = 0`, `cleaningMess = null`), returns the mop (`tool = null`, mop home), clears the plan (`setPlan(b, [])`, `b.thinkTicksLeft = 0`) and claims the order.
+    - **Cleaning hold (second).** `if (p.cleaningTicksLeft > 0)` keep still and return; this is placed after the order interrupt and before reaction and yield.
     - **Notice block.** When `noticeTicksLeft` hits 0 with a drink in hand, draw `rngNext(state) < botSpillChance`. On a hit where `spillHeld` succeeds, the plan is the remake chain only; otherwise `[trash, ...remake]` as today.
   - `stepFloor`:
     - `takeMop`: queue E if the mop is free, in range and hands are empty, and pop; otherwise `setPlan(b, [])`.
@@ -383,10 +388,10 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 - `'a bot avoids a spill when a dry route exists'`: `cafe(1)`, bot at `{6,4}`, spill at `{7,4}`, an espresso customer with `huge` patience. The bot's path is `findPath(...)` around the spill: `runUntil` serve, and assert the bot's `tile` never equals `{7,4}` (record tiles each tick).
 - `// Review Focus 5` `'spills on every approach to the counter: the bot walks through and still serves'`: spills on every walkable neighbour of `targetNodes(s, counter, bot.pos)[0]`, one espresso customer. Within 3000 ticks `today.served === 1`, and no bot stays stunned for more than 300 consecutive ticks.
-- `'a forced bot can slip and keeps its plan'`: bot plan `[use counter put]` holding a latte, spill on the only start tile route (bot at `{6,3}` with spills on all neighbours). Loop seeds until a `slip` log for the bot. During the stun its `plan` is unchanged and `pos` constant; after the stun it continues.
-- `'a bot mops when idle and the floor is dirty'`: `cafe(1)`, 3 spills, no customers. `runUntil` messes `=== 0` (≤ 3000 ticks), then the mop is home and the bot's `tool === null`.
+- `'a forced bot can slip and keeps its plan'`: bot plan `[use counter put]` holding a latte, spill on the only start tile route (bot at `{6,3}` with spills on all neighbours). Use explicit seeds passed to `createRun` in the fixture until a `slip` log for the bot appears. During the stun its `plan` is unchanged and `pos` constant; after the stun it continues.
+- `'a bot mops when idle and the floor is dirty'`: `cafe(1)`, 3 spills, no customers. `runUntil` messes `=== 0` (≤ 3000 ticks), then step one more tick: the mop is home and the bot's `tool === null`.
 - `'a bot does not mop a clean-enough floor'`: 1 mess with cleanliness 90: 600 ticks pass and `mop.heldBy` stays null.
-- `// Review Focus 4` `'an order interrupts a mop plan'`: bot mid-clean (`runUntil` `cleaningTicksLeft > 0`), then push an espresso customer with `huge` patience. Within `thinkTicks + 2` ticks, the mop is home (`heldBy === null`) and the bot's `claim` is that customer. Within 3000 ticks the customer is served, and on every tick `!(tool === 'mop' && holding !== null)`.
+- `// Review Focus 4` `'an order interrupts a mop plan'` (precedence: before executing any `floor` step, including while `cleaningTicksLeft > 0`, the bot checks `uncoveredOrder`): bot mid-clean (`runUntil` `cleaningTicksLeft > 0`), then push an espresso customer with `huge` patience. Within `thinkTicks + 2` ticks, the mop is home (`heldBy === null`) and the bot's `claim` is that customer. Within 3000 ticks the customer is served, and on every tick `!(tool === 'mop' && holding !== null)`.
 - `// Review Focus 1` `'a botched drink at the cap is binned, not spilled'`: 12 messes, force a mistake by setting the bot's `noticeTicksLeft = 1` while it holds a latte. After the notice, still 12 messes and plan[0] is trash.
 - Update the existing `'bot feel: mistakes, noticing and remaking'` expectations that assume a trash step: accept either a trash step or a `drop` log with the bot's tile (the remake chain is unchanged).
 
@@ -397,7 +402,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 Run: `npx vitest run src/sim/bots/brain.test.ts src/sim/viewModelsFloor.test.ts`
 Expected: FAIL, e.g. `condition not met within 3000 ticks` and `expected undefined to deeply equal [...]`.
 
-- [ ] **Step 3: Implement the bot floor logic and `floorHud`; add to `docs/BACKLOG.md` "Needs UI" (chaos pack: floor)**
+- [ ] **Step 3: Implement the bot floor logic and `floorHud`; add to `docs/BACKLOG.md` a new heading `## Needs UI (chaos pack: floor)` (do not append to the existing "Needs UI (phase 2)" section)**
 
 Add these lines:
 - piles and puddles from `HudVM.messes` (amount scales the size)
@@ -518,7 +523,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - `'walks at 0.8× the base speed'`: after 60 ticks the path distance covered is ≤ `4 × 0.8 + 0.01`.
 - `'makes for 10 s: occupied, supplies used, no output, then leaves and is removed at the door'`: latte with beans and milk. `runUntil` stage `making`: `occupiedBy === customerId`, `busyTicksLeft === 600`, beans −1, milk −1. `runUntil` `rogue === null`: steamer `output === null`, `occupiedBy === null`, and `rogue.made` logged.
 - `'out of milk: makes it anyway'`: milk 0 still reaches `making`; milk stays 0.
-- `'a player at the station: wait 5 s, then another station'`: p1 parked at the steamer. Arrival gives `waiting`. 299 ticks later still waiting; at 300 the station changes and the stage is `walking`.
+- `'a player at the station: wait 5 s, then another station'`: p1 is moved to the steamer AFTER the rogue has picked it (`isFreeForRogue` skips stations with a player in range at pick time). Arrival gives `waiting`. 299 ticks later still waiting; at 300 the station changes and the stage is `walking`.
 - `'the player steps away during the wait: making starts'`
 - `'nothing free at decision time or after the wait: storm out'`: all four recipe stations busy at going-rogue time gives `stormingOut` and a `rogue.stormed` log; removed at the door.
 - `'never two rogues'`: while `s.rogue` is set, 500 forced-eligible serves upset nobody.
@@ -555,7 +560,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - Test: `src/sim/bots/brain.test.ts` is Track A's file, so put these bot tests in `src/sim/rogue.test.ts`. Also `src/sim/viewModelsRogue.test.ts` (new), `src/sim/viewModels2.test.ts` (add `rogues: 0` to the two receipt `toEqual`s), `src/host/telemetry.test.ts`.
 
 **Interfaces:**
-- Produces: `rogueHud(state)` returns `{ rogue: { stage, drink, x, y, secondsLeft, name? } }`, or `{}` with no rogue. `secondsLeft` is `Math.ceil(ticksLeft / 60)` when making, `Math.ceil((secondsToTicks(waitSeconds) - waitTicks) / 60)` when waiting, else 0. Also `ReceiptVM.rogues: number` (`d.rogues ?? 0`).
+- Produces: `rogueHud(state)` returns `{ rogue: { stage, drink, x, y, secondsLeft, name? } }`, or `{}` with no rogue. `secondsLeft` is `Math.ceil(ticksLeft / 60)` when making, `Math.ceil((secondsToTicks(waitSeconds) - waitTicks) / 60)` when waiting, else 0. Also `ReceiptVM.rogues: number` is required (always set by `receiptViewModel`, `d.rogues ?? 0`); the two receipt `toEqual` literals in `src/sim/viewModels2.test.ts` gain `rogues: 0`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -573,9 +578,9 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 - [ ] **Step 2: Run to see them fail**
 
 Run: `npx vitest run src/sim/rogue.test.ts src/sim/viewModelsRogue.test.ts src/sim/viewModels2.test.ts src/host/telemetry.test.ts`
-Expected: FAIL, e.g. `expected undefined to be 2`.
+Expected: FAIL, e.g. `expected undefined to be 2`. The telemetry test and the three bot tests pass before this task's code exists (earlier tasks deliver them); report that honestly in the TDD evidence (guard-style tests are acceptable there).
 
-- [ ] **Step 3: Implement `rogueHud` and `receiptViewModel.rogues`; add to `docs/BACKLOG.md` "Needs UI" (chaos pack: rogue)**
+- [ ] **Step 3: Implement `rogueHud` and `receiptViewModel.rogues`; add to `docs/BACKLOG.md` a new heading `## Needs UI (chaos pack: rogue)` (do not append to the existing "Needs UI (phase 2)" section)**
 
 Add these lines:
 - the angry bubble on an upset customer (`Customer.upset`)
@@ -615,9 +620,9 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 `'a day with messes, a mop plan and a rogue is deterministic and JSON-safe'`:
 - day 2, 1 human + 1 bot, traffic on.
-- Script: p1 drops two drinks on the floor; at tick 200 an upset is forced on the head customer; run 4000 ticks.
-- Assert a `rogue.upset` log, at least one `clean` log, and `toEqual` across two runs.
-- `JSON.parse(JSON.stringify(a))` steps identically.
+- Force the scenario by state: place 3 messes (`placeMess` or direct `messes` entries), set `cleanliness = 60`, and set one queued customer's `upset = { ticksLeft: 60 }` directly.
+- Run 4000 ticks twice from the same state and assert `toEqual`; a JSON round-trip of the state steps identically.
+- Collect `state.log` per tick: at least one `clean` log row is seen, and `state.rogue` was non-null at some tick. No `rogue.upset` log assertion (a forced `upset` field never emits it).
 
 - [ ] **Step 2: Run it**
 
@@ -655,7 +660,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 Calls the spec left open, each with one line of reasoning. Spec §12 already lists the builder-check rulings.
 
-1. **Three extra mess keys** (`mergeAdd 0.5`, `spreadLoss 0.25`, `minAmount 0.25`) are added to `ECONOMY.mess`. The spec names these numbers in prose, and the no-literals rule needs them in economy.
+1. **Four extra mess keys** (`mergeAdd 0.5`, `spreadLoss 0.25`, `minAmount 0.25`, `spreadFactor 0.5`) are added to `ECONOMY.mess`. The spec names these numbers in prose, and the no-literals rule needs them in economy.
 2. **`LAYOUT.rogueStart = {6,7}`** is added for the same no-literals reason.
 3. **`GameState.nextMessId`** gives mess ids that stay stable for the HUD key, even when a tile is cleaned and dirtied again.
 4. **`Player.heldDir`** stores the latest move input. A stun zeroes `moveDir` (the renderer animates from it) and restores it from `heldDir` when the stun ends, which is how a held key survives the stun.
