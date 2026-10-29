@@ -15,6 +15,8 @@ import type { RegularVM } from '../sim/regulars';
 import { isEquipmentKind } from '../sim/slots';
 import type { EquipmentKind } from '../data/equipment';
 import type { StationsVM } from './stationsVM';
+import type { TipVM } from './tipsVM';
+import type { NightFix } from '../sim/brief';
 import { isRole, type RoleId } from '../sim/roles';
 
 /*
@@ -243,6 +245,12 @@ function alertRow(a: BriefAlert): string {
     ${a.fix ? `<button class="btn mini" data-action="${a.fix.action}" ${data}>${esc(a.fix.label)}</button>` : ''}</li>`;
 }
 
+/** FB1 WP6: a bot's tip as one big tap-to-apply chip ("💬 Bo · hurried: Raise the latte to $5.50 ✓"). */
+function tipChip(t: TipVM): string {
+  return `<button class="tip p-${t.personality}" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.by}: ${t.full}. Tap to do it.`)}">
+    <span class="tip-by"><span aria-hidden="true">💬</span> ${esc(t.by)}</span><span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Do it</span></button>`;
+}
+
 function rolesRow(roles: RoleVM[] | undefined): string {
   if (!roles?.length) return '';
   return roles
@@ -272,7 +280,8 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     ? `<div class="tn-card tm"><div class="tn-h">Tomorrow${extras ? ` · ${esc(extras.weekday)}` : ''}</div><div class="tm-row"><span class="tm-ic" aria-hidden="true">${h.icon}</span><b class="tm-head">${esc(h.text)}</b></div>
         <div class="tm-sub">${esc(h.sub)}</div><button class="btn mini ghost" data-action="drawer" data-d="paper">Read the paper ▸</button></div>`
     : '';
-  const alerts = `<div class="tn-card al-card"><div class="tn-h">Heads up</div>${b.alerts.length ? `<ul class="alerts">${b.alerts.map(alertRow).join('')}</ul>` : '<p class="al-none">✓ All set. Open when ready.</p>'}</div>`;
+  const tips = vm.tips.length ? `<div class="tips" aria-label="Crew tips"><div class="tips-h">Crew tips</div>${vm.tips.map(tipChip).join('')}</div>` : '';
+  const alerts = `<div class="tn-card al-card"><div class="tn-h">Heads up</div>${b.alerts.length ? `<ul class="alerts">${b.alerts.map(alertRow).join('')}</ul>` : tips ? '' : '<p class="al-none">✓ All set. Open when ready.</p>'}${tips}</div>`;
   const warned = new Map(vm.warnings.filter((w) => w.supply).map((w) => [w.supply!, w.level]));
   const stock = vm.restock
     .map((r) => {
@@ -488,7 +497,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onTip?(input: NightFix): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
   let lastVm: NightVM | null = null;
@@ -532,6 +541,10 @@ export function createNight(
       handlers.onSlot?.(Number(el.dataset.index), isEquipmentKind(el.dataset.station) ? el.dataset.station : null);
       ui.slotSel = null;
     } else if (action === 'equip' && isEquipmentKind(el.dataset.station)) handlers.onEquip?.(el.dataset.station);
+    else if (action === 'tip') {
+      const tip = lastVm?.tips.find((t) => t.id === el.dataset.tip);
+      if (tip) handlers.onTip?.(tip.input);
+    }
     else if (action === 'pitch-kind') {
       ui.pitch = { ...ui.pitch, kind: el.dataset.kind === 'item' ? 'item' : 'promo' };
       redrawPitch();

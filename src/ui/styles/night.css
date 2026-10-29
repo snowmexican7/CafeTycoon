@@ -256,3 +256,16 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .st-shop-h small { font: 600 var(--fs-s) var(--font-body); color: var(--ink-soft); }
 #night .st-shop { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 @media (max-width: 1360px) { #night .st-slot { min-height: 96px; } #night .st-slot .st-ic { font-size: 30px; } }
+
+/* ---------- FB1 WP6: crew tips (tap to apply) */
+#night .tips { display: flex; flex-direction: column; gap: 8px; width: 100%; margin-top: 4px; }
+#night .tips-h { font: 700 var(--fs-xs) var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+#night .tip { all: unset; box-sizing: border-box; cursor: pointer; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 8px 10px 8px 8px;
+  border-radius: 14px; background: #f3f7fb; box-shadow: inset 0 0 0 2px #cfe0ee, 0 3px 0 #cfe0ee; --who: #4b8fc4; }
+#night .tip:hover { background: #e8f1f9; } #night .tip:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px #cfe0ee; }
+#night .tip:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
+#night .tip.p-hurried { --who: #d2493d; } #night .tip.p-veteran { --who: #3a2f4a; } #night .tip.p-rookie { --who: #3f9a69; } #night .tip.p-steady { --who: #2f8f8a; }
+#night .tip-by { flex: none; display: inline-flex; align-items: center; gap: 4px; font: 700 var(--fs-s) var(--font-display); color: #fff; background: var(--who); padding: 4px 10px; border-radius: 99px; }
+#night .tip-ic { flex: none; font-size: 20px; }
+#night .tip-t { flex: 1; min-width: 0; font: 600 var(--fs-m)/1.2 var(--font-display); color: var(--ink); }
+#night .tip-go { flex: none; font: 700 var(--fs-s) var(--font-display); color: #fff; background: var(--caramel); padding: 6px 12px; border-radius: 99px; box-shadow: 0 2px 0 var(--caramel-dk); }

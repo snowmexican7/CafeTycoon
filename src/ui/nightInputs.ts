@@ -26,5 +26,7 @@ export function nightInputHandlers(send: (input: PlayerInput) => void, me: () =>
     // FB1 WP5: swap a slot (free) or buy a station at its fixed price.
     onSlot: (index, station) => send({ kind: 'slot', playerId: me(), index, station }),
     onEquip: (station) => send({ kind: 'equip', playerId: me(), station }),
+    // FB1 WP6: a crew tip chip sends its advice's input as the local player.
+    onTip: (input) => send({ ...input, playerId: me() } as PlayerInput),
   };
 }
