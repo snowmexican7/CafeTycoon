@@ -110,6 +110,7 @@ The data exists; the visuals are the UI agent's.
 - `uiTelemetry.ui(kind, data)` calls from the night screen (cards hovered or opened but not bought).
 - Title or pause settings for `bots` (0 to 3 or 'auto') and `botSkill` (1 to 5), through the existing `settings` input.
 - `nightViewModel.ready` now omits bots; `hudStructureKey` ignores per-tick `secondsLeft` fields (pass, events).
+- Show the version from `package.json` (e.g. `v1.0.0`) on the title screen, and have the Roadmap drawer's Changelog tab read `CHANGELOG.md` (or a generated copy) instead of the short `changelog` array in `roadmap.json`.
 
 ## Deferred (phase 2)
 

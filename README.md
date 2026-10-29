@@ -76,6 +76,7 @@ Balance tester options: `--seed`, `--humans`, `--bots`, `--skill`, `--pace`, `--
 
 ## Where things are
 
+- **Changelog and version numbers:** [`CHANGELOG.md`](CHANGELOG.md)
 - **Roadmap:** [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - **UI overhaul plan:** [`docs/UI_OVERHAUL.md`](docs/UI_OVERHAUL.md)
 - **Backlog, known limitations, decisions:** [`docs/BACKLOG.md`](docs/BACKLOG.md)

@@ -1,0 +1,71 @@
+# Changelog
+
+What changed in each build of CafeTycoon, written for the people who play it. The live
+site at https://snowmexican7.github.io/CafeTycoon/ always runs the newest version listed
+here; each version is also a git tag (`v1.0.0`, …).
+
+**How versions are numbered.** Three numbers, `major.minor.patch`:
+
+- **patch** (`1.0.0` → `1.0.1`): a small change. A fix, a tweak to a number, a wording change.
+- **minor** (`1.0.1` → `1.1.0`): a big change. A new feature or system, a new screen, new content.
+- **major** (`1.1.0` → `2.0.0`): a phase of the roadmap finished, or an overhaul of something
+  that already existed.
+
+Every pull request or push that changes what players see adds a line under **Unreleased**;
+when a build goes out, the line moves under its version with the date.
+
+## Unreleased
+
+_Nothing yet._
+
+## 1.0.0 — 2026-10-28
+
+The first build friends can play together. Everything below went live today.
+
+### Playing
+
+- A seven-day café week, about thirty minutes, then "keep going" or see your score. Each
+  run is fresh: new seed, new scenario (normal week, campus town, rainy week, tourist season).
+- **Days** are a scramble: customers queue at the counter, you grind, pull shots, steam milk
+  and tap cold brew, and press E at a station to use it.
+- **Nights** are a sixty-second draft: a hand of five cards from the catalogue (machines,
+  marketing, odd gambles), a restock of beans, milk and concentrate, and rent due at dawn.
+- **The pass.** Set a drink nobody wants on the counter (three slots) and pick it up or serve
+  it later. Espresso goes stale in 45 seconds, latte in 60, cold brew lasts the day. Stale and
+  binned drinks count as waste.
+- **Day events** from day two: rush hour, a power flicker that pauses the machines, a health
+  inspector who fines you at four wasted drinks, and an influencer who jumps the queue and
+  brings a crowd if you serve them.
+- **Customers** now vary: impatient ones tip well but leave fast, groups order two or three
+  drinks, and three regulars (Ada, Ravi, June) keep coming back and hurt twice as much to lose.
+- **Bot coworkers.** Play solo and Bo and Lu work beside you; two friends get one bot, three
+  or more get none, and a friend who joins mid-week sends a bot home the next morning. Bots
+  take a moment to react, sometimes botch a drink and remake it, step around you, and leave
+  the drink you're halfway through making alone.
+
+### Playing together
+
+- Host a room and read out a five-letter code; friends join from the title screen. No
+  accounts, no server: browsers talk to each other directly.
+- Refresh and rejoin mid-run; the host can resume a saved week.
+
+### Look
+
+- A cozy diorama café with lamp-lit nights, chunky baristas with name tags, patience bubbles
+  over customers, and coin pops when a sale lands.
+- A storefront title screen with the Roadmap drawer (phases, ideas, this changelog), a pill
+  HUD with order tickets and pantry jars, a cork-board night shop, and paper-card menus.
+
+### Behind the scenes
+
+- The host's browser records every run (nothing is uploaded). In the browser console,
+  `cafetycoon.telemetry.download()` saves the log as a file for the design-analysis pass.
+- A headless balance tester (`npm run balance`) plays hundreds of simulated days so numbers
+  get tuned by evidence, not by hand-playing.
+
+### Known limits in this build
+
+- The night menu switch, pass contents, event banners, customer and bot name tags, the
+  receipt details and the telemetry button exist in the game's data but are not drawn yet.
+- Syrups and a flavour picker wait for a later build. Buying new machines is phase 3.
+- If two homes cannot connect directly, there is no relay yet.

@@ -5,7 +5,7 @@
 
 ## Release approach
 - **`main` is always the stable, playable build.** The live GitHub Pages site deploys from `main`, so game night always runs on it.
-- **Each finished phase gets a git tag** (`v1`, `v2`, …) when it passes its "done when", so any earlier stable build can be checked out or rebuilt if needed.
+- **Every build has a version and a changelog entry** in [`CHANGELOG.md`](../CHANGELOG.md), written for players, and a git tag (`v1.0.0`, …). Numbers are `major.minor.patch`: patch for a small change (fix, number tweak, wording), minor for a big change (new feature, system, screen or content), major for a finished roadmap phase or an overhaul of something that already existed. `1.0.0` is the 2026-10-28 build. Any earlier version can be checked out from its tag.
 - **Risky phase work happens on branches** and merges into `main` only when tests and the build are green and it has been playtested. Nothing in progress can break a game night. (No versioned `/vN/` paths; that would mean extra CI for the same guarantee.)
 
 ## Phases
