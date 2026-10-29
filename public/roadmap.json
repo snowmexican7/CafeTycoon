@@ -128,6 +128,7 @@
     { "date": "2026-10-28", "text": "UI overhaul round 1: cozy diorama café scene" },
     { "date": "2026-10-28", "text": "Roadmap reordered into 6 phases by difficulty; scripted station bots moved to Phase 2" },
     { "date": "2026-10-28", "text": "Telemetry restored to Phase 2: host-recorded run log and peer UI events, downloaded as a file; no new accounts" },
-    { "date": "2026-10-28", "text": "Phase 2 sim side: pass, menu switch, day events, customer kinds, scripted bots, telemetry, balance tester" }
+    { "date": "2026-10-28", "text": "Phase 2 sim side: pass, menu switch, day events, customer kinds, scripted bots, telemetry, balance tester" },
+    { "date": "2026-10-28", "text": "Chaos pack sim side: drop key, floor messes, mop and cleanliness, rogue customer" }
   ]
 }

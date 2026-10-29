@@ -4,6 +4,7 @@ import { LAYOUT } from '../data/layout';
 import { scenarioById } from '../data/scenarios';
 import { finishDay } from './closing';
 import { computeModifiers } from './effects';
+import { placeMess } from './floor';
 import { createRun, startDay } from './run';
 import { scoreRun, summarizeRun } from './score';
 import { step } from './step';
@@ -282,5 +283,52 @@ describe('floor day', () => {
     }
     expect(y).toEqual(x);
     expect(floorDay(6).s).not.toEqual(a.s);
+  });
+});
+
+describe('chaos pack', () => {
+  it('a day with messes, a mop plan and a rogue is deterministic and JSON-safe', () => {
+    /** Day 2, 1 human + 1 bot, traffic on; three messes, a dirty café and one customer already upset. */
+    const makeDay = () => {
+      const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 600 } });
+      s.day = 2;
+      const day = startDay(s);
+      for (const tile of [{ x: 4, y: 4 }, { x: 6, y: 5 }, { x: 8, y: 4 }]) placeMess(day, 'grounds', tile);
+      day.cleanliness = 60;
+      if (day.customers.length === 0) day.customers.push({ id: 900, drink: 'latte', patienceLeft: 1200, patienceMax: 1200 });
+      day.customers[0].upset = { ticksLeft: 60 };
+      return day;
+    };
+    const run = (start: GameState) => {
+      let s = start;
+      let cleans = 0;
+      let rogueTick = -1;
+      let lastSeq = -1;
+      for (let i = 0; i < 4000; i++) {
+        s = step(s, []);
+        for (const e of s.log) {
+          if (e.seq <= lastSeq) continue;
+          lastSeq = e.seq;
+          if (e.kind === 'clean') cleans += 1;
+        }
+        if (s.rogue && rogueTick < 0) rogueTick = i;
+      }
+      return { s, cleans, rogueTick };
+    };
+    const a = run(makeDay());
+    const b = run(makeDay());
+    expect(b.s).toEqual(a.s);
+    expect(a.cleans).toBeGreaterThan(0);
+    expect(a.rogueTick).toBeGreaterThanOrEqual(0);
+
+    const mid = makeDay();
+    let x = mid;
+    for (let i = 0; i < 1500; i++) x = step(x, []);
+    let y = JSON.parse(JSON.stringify(x)) as GameState;
+    for (let i = 0; i < 2500; i++) {
+      x = step(x, []);
+      y = step(y, []);
+    }
+    expect(y).toEqual(x);
   });
 });
