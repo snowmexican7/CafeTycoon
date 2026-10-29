@@ -104,6 +104,21 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B3: regulars on the night board: Ada loyal, Ravi's cold brew off the menu, June's latte pricey. */
+  regulars: {
+    night: true,
+    setup(s) {
+      s.cash = 260;
+      s.regulars = [
+        { name: 'Ada', drink: 'espresso', visits: 6, lost: 0, loyalty: 4 },
+        { name: 'Ravi', drink: 'coldBrew', visits: 3, lost: 1, loyalty: 2 },
+        { name: 'June', drink: 'latte', visits: 2, lost: 0, loyalty: 1 },
+      ];
+      s.menu.coldBrew = false;
+      s.priceSteps = { latte: 4 };
+    },
+    timeline: [],
+  },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */
