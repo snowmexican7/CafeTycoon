@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createRun } from '../sim/run';
 import { ECONOMY } from '../data/economy';
-import { cutsIntoRent, expectedUse, LOW_SUPPLY_SHARE, nightWarnings, rentTomorrow } from './nightWarnings';
+import { cutsIntoRent, expectedUse, nightWarnings, rentTomorrow } from './nightWarnings';
+
+/** The sim brief's "low" line (src/sim/brief.ts): stock under this share of a day's use. */
+const LOW_SUPPLY_SHARE = 0.75;
 import { nightStructureKey, nightViewModel } from './viewModels';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
@@ -38,7 +41,7 @@ describe('night warnings', () => {
     const s = run();
     s.supplies.milk = 0;
     const w = nightWarnings(s).find((x) => x.supply === 'milk')!;
-    expect(w).toMatchObject({ id: 'supply:milk:out', level: 'danger', title: 'Out of milk!' });
+    expect(w).toMatchObject({ id: 'stock:milk:out', level: 'danger', title: 'Out of milk!' });
     expect(w.detail).toMatch(/Lattes can't be made/);
     s.supplies.beans = 0;
     expect(nightWarnings(s).find((x) => x.supply === 'beans')!.detail).toMatch(/Espressos and Lattes/);
@@ -48,7 +51,7 @@ describe('night warnings', () => {
     const s = run();
     s.supplies.milk = 0;
     s.menu.latte = false;
-    expect(ids(s).filter((id) => id.startsWith('supply:milk'))).toEqual([]);
+    expect(ids(s).filter((id) => id.startsWith('stock:milk'))).toEqual([]);
   });
 
   it('flags a supply that will not last the day', () => {
@@ -57,13 +60,13 @@ describe('night warnings', () => {
     expect(use.beans).toBeGreaterThan(use.milk);
     const line = Math.ceil(use.beans * LOW_SUPPLY_SHARE);
     s.supplies.beans = line - 1;
-    expect(ids(s)).toEqual(['supply:beans:low']);
+    expect(ids(s)).toEqual(['stock:beans:low']);
     s.supplies.beans = line;
     expect(ids(s)).toEqual([]);
   });
 
   it('does not nag about the starting stock on a fresh run', () => {
-    expect(ids(run()).filter((id) => id.startsWith('supply:'))).toEqual([]);
+    expect(ids(run()).filter((id) => id.startsWith('stock:'))).toEqual([]);
   });
 
   it('says when a pack is unaffordable', () => {

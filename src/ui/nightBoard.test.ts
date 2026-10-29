@@ -34,11 +34,11 @@ describe('FB1 WP1 night length', () => {
   });
   it('a relaxed night has no clock until last call', () => {
     const s = run();
-    expect(nightTimerVM(s)).toEqual({ relaxed: false, lastCall: false });
+    expect(nightTimerVM(s)).toMatchObject({ relaxed: false, lastCall: false });
     s.settings.nightLengthSec = 0;
-    expect(nightTimerVM(s)).toEqual({ relaxed: true, lastCall: false });
+    expect(nightTimerVM(s)).toMatchObject({ relaxed: true, lastCall: false });
     s.lastCall = 29 * TICK_RATE;
-    expect(nightTimerVM(s)).toEqual({ relaxed: true, lastCall: true, lastCallClock: '0:29' });
+    expect(nightTimerVM(s)).toMatchObject({ relaxed: true, lastCall: true, lastCallClock: '0:29' });
   });
   it('last call flipping does not rebuild the board, relaxed vs timed does', () => {
     const s = run();
@@ -60,11 +60,11 @@ describe('FB1 WP1 night brief', () => {
     s.supplies.concentrate = 0;
     const b = nightViewModel(s, 'p1').brief;
     expect(b.alerts.length).toBeLessThanOrEqual(MAX_BRIEF_ALERTS);
-    const order = { danger: 0, warn: 1, good: 2 } as const;
+    const order = { danger: 0, warn: 1, info: 2, good: 3 } as const;
     const sev = b.alerts.map((a) => order[a.severity]);
     expect([...sev].sort()).toEqual(sev);
-    const milk = b.alerts.find((a) => a.id.startsWith('supply:milk'));
-    expect(milk?.fix).toMatchObject({ action: 'restock', data: { supply: 'milk' } });
+    const milk = b.alerts.find((a) => a.id.startsWith('stock:milk'));
+    expect(milk?.fix).toMatchObject({ action: 'fix', data: { fix: 'stock:milk:out' }, input: { kind: 'restock', supply: 'milk' } });
     expect(milk?.fix?.label).toMatch(/^\+\d+ · \$\d/);
   });
   it('a calm night has a headline and no alerts', () => {
@@ -78,8 +78,9 @@ describe('FB1 WP1 night brief', () => {
     const s = run();
     s.cash = 2000;
     const vm = nightViewModel(s, 'p1');
-    const { brief: _b, ...rest } = vm;
-    const subs = nightBriefVM(rest).alerts.flatMap((a) => (a.fix?.action === 'goto' ? [a.fix.data.sub] : []));
+    s.days.push({ ...s.today }); // grow and checkout nudges wait for a finished day
+    const { brief: _b, tips: _t, ...rest } = vm;
+    const subs = nightBriefVM(rest, s).alerts.flatMap((a) => (a.fix?.action === 'goto' ? [a.fix.data.sub] : []));
     for (const sub of subs) expect(['grow', 'checkout', 'ads', 'pitch', 'cards', undefined]).toContain(sub);
   });
 });

@@ -56,7 +56,7 @@ function coveredBy(id: string): string[] {
   const [kind, arg] = id.split(':');
   if (kind === 'grow') return ['grow', id];
   if (kind === 'checkout') return ['checkout', id];
-  if (kind === 'restock' && arg) return [`stock:${arg}:out`, `stock:${arg}:low`, `supply:${arg}:out`, `supply:${arg}:low`];
+  if (kind === 'restock' && arg) return [`stock:${arg}:out`, `stock:${arg}:low`];
   return [];
 }
 

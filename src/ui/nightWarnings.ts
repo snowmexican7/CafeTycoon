@@ -1,7 +1,7 @@
 import { ECONOMY } from '../data/economy';
-import { computeModifiers, rentForDay } from '../sim/effects';
+import { expectedUse, nightBrief } from '../sim/brief';
+import { rentForDay } from '../sim/effects';
 import { restockCost } from '../sim/night';
-import { DRINK_INFO } from '../data/drinks';
 import { SUPPLY_IDS, menuDrinks } from '../sim/unlocks';
 import type { DrinkId, GameState, SupplyId } from '../sim/types';
 
@@ -34,33 +34,18 @@ export function rentTomorrow(state: GameState): number {
 }
 
 /**
- * Roughly how many of each supply tomorrow will use: expected arrivals over the day, split across
- * the drinks on the menu by order bias. Each drink uses one unit of each supply it needs.
+ * Tomorrow's expected use per supply, and the "low" line, come from the sim's night brief
+ * (src/sim/brief.ts): the warnings below only add the longer wording and the drinks a supply stops.
  */
-export function expectedUse(state: GameState): Record<SupplyId, number> {
-  const m = computeModifiers(state);
-  const arrivals = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
-  const menu = menuDrinks(state);
-  const w = (d: DrinkId) => m.orderBias[d] * DRINK_INFO[d].bias;
-  const total = menu.reduce((s, d) => s + w(d), 0) || 1;
-  const use: Record<SupplyId, number> = { beans: 0, milk: 0, concentrate: 0, flavour: 0, pastry: 0 };
-  for (const d of menu) for (const s of ECONOMY.drinkSupplies[d]) use[s] += (arrivals * w(d)) / total;
-  for (const s of SUPPLY_IDS) use[s] = Math.ceil(use[s]);
-  return use;
-}
-
-/**
- * Not every arrival gets served (some walk out), so a supply only counts as "low" when it would not
- * cover this share of the expected orders. Keeps a fresh run's starting stock from nagging.
- */
-export const LOW_SUPPLY_SHARE = 0.75;
+export { expectedUse };
 
 export function nightWarnings(state: GameState): NightWarning[] {
   const out: NightWarning[] = [];
   const rent = rentTomorrow(state);
   const after = Math.round((state.cash - rent) * 100) / 100;
   const opening = state.days.length === 0;
-  if (after < 0) {
+  const brief = new Set(nightBrief(state).alerts.map((a) => a.id));
+  if (brief.has('cash:short')) {
     out.push({
       id: 'cash:short',
       kind: 'cash',
@@ -68,7 +53,7 @@ export function nightWarnings(state: GameState): NightWarning[] {
       title: `You'll be ${dollars(after)} short on rent`,
       detail: `Rent is ${dollars(rent)} at closing. Tomorrow's sales have to cover the gap, or the landlord changes the locks.`,
     });
-  } else if (after < rent) {
+  } else if (brief.has('cash:low')) {
     out.push({
       id: 'cash:low',
       kind: 'cash',
@@ -87,18 +72,18 @@ export function nightWarnings(state: GameState): NightWarning[] {
     const have = state.supplies[s] ?? 0;
     const afford = state.cash >= restockCost(state, s, 1);
     const fix = afford ? 'Restock before you open.' : `A pack costs ${dollars(restockCost(state, s, 1))}, more than you have.`;
-    if (have <= 0) {
+    if (brief.has(`stock:${s}:out`)) {
       out.push({
-        id: `supply:${s}:out`,
+        id: `stock:${s}:out`,
         kind: 'supply',
         level: 'danger',
         supply: s,
         title: `Out of ${NAME[s]}!`,
         detail: `${listJoin(needs.map((d) => DRINK_PLURAL[d]))} can't be made. ${fix}`,
       });
-    } else if (have < Math.ceil(use[s] * LOW_SUPPLY_SHARE)) {
+    } else if (brief.has(`stock:${s}:low`)) {
       out.push({
-        id: `supply:${s}:low`,
+        id: `stock:${s}:low`,
         kind: 'supply',
         level: 'low',
         supply: s,

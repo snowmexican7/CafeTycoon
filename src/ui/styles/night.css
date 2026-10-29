@@ -14,6 +14,7 @@
 #night .pill { white-space: nowrap; background: #fff; color: var(--ink); border-radius: 14px; height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 14px; box-shadow: var(--sh-1); font: 600 var(--fs-l) var(--font-display); }
 #night .pill.timer { background: var(--night-2); color: #fff; font-variant-numeric: tabular-nums; } #night .timer .ring { width: 30px; height: 30px; }
 #night .pill.timer.relaxed { background: #3b3160; color: #e9e0ff; } #night .pill.timer.last-call { background: #a8442f; color: #fff; }
+#night .timer .rd { margin-left: 8px; padding: 2px 9px; border-radius: 999px; background: #ffffff1f; font-size: 14px; font-weight: 800; white-space: nowrap; } #night .timer .rd.all { background: #3f9a69; color: #fff; }
 #night .pill.room { font-size: var(--fs-s); background: #33294a; color: #efe7ff; } #night .room small { opacity: .75; letter-spacing: .1em; font-size: var(--fs-xs); } #night .room b { letter-spacing: .14em; }
 
 #night .board { position: absolute; left: 32px; right: 32px; top: 80px; bottom: 20px; border-radius: 26px; background: #fbf1e1;
@@ -59,7 +60,7 @@
 #night .tm-sub { font: 600 var(--fs-m) var(--font-display); color: var(--ink-soft); }
 #night .alerts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; width: 100%; }
 #night .al { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: #fff8e6; border-left: 5px solid var(--warn); }
-#night .al.danger { background: #fff1ee; border-left-color: var(--bad); } #night .al.good { background: #ecf7f0; border-left-color: var(--mint-dk); }
+#night .al.danger { background: #fff1ee; border-left-color: var(--bad); } #night .al.info { background: #f1f5fa; border-left-color: #8fb3d6; } #night .al.good { background: #ecf7f0; border-left-color: var(--mint-dk); }
 #night .al-ic { font-size: 22px; flex: none; } #night .al-t { flex: 1; font: 600 var(--fs-m)/1.2 var(--font-display); }
 #night .al .btn { flex: none; white-space: nowrap; }
 #night .al-none { margin: 0; font: 600 var(--fs-m) var(--font-display); color: var(--good); }
