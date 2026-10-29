@@ -1,3 +1,4 @@
+import type { EggsState } from './eggs';
 import type { EspressoState } from './espresso';
 import type { ForecastId } from '../data/forecasts';
 
@@ -96,7 +97,13 @@ export type SimEventKind =
   | 'rogue.made'
   | 'rogue.stormed'
   | 'served'
-  | 'challenge.won';
+  | 'challenge.won'
+  | 'egg.cat'
+  | 'egg.camper'
+  | 'egg.nameMix'
+  | 'egg.smoke'
+  | 'egg.latteArt'
+  | 'egg.secret';
 
 export interface SimEvent {
   seq: number;
@@ -151,6 +158,10 @@ export interface Customer {
   extra?: DrinkId[];
   name?: string;
   upset?: { ticksLeft: number };
+  /** Easter egg pack 2 (B8): Wi-Fi camper or a name mix-up. */
+  egg?: 'camper' | 'nameMix';
+  /** Name printed on the cup when `egg === 'nameMix'`. */
+  wrongName?: string;
 }
 
 export type Effect =
@@ -330,6 +341,8 @@ export interface GameState {
   challenges?: ChallengeProgress[];
   /** Preview of tomorrow's challenges, shown on the night paper (B7). */
   challengePreview?: ChallengeProgress[];
+  /** Easter egg pack 2 (B8): cat, camper, smoke, latte art, secret menu. */
+  eggs?: EggsState;
 }
 
 export type PlayerInput =
@@ -344,7 +357,9 @@ export type PlayerInput =
   | { kind: 'espresso'; playerId: PlayerId }
   | { kind: 'join'; playerId: PlayerId; name: string }
   | { kind: 'leave'; playerId: PlayerId }
-  | { kind: 'drop'; playerId: PlayerId };
+  | { kind: 'drop'; playerId: PlayerId }
+  /** Secret menu code (B8): short word or Konami-style sequence. */
+  | { kind: 'secret'; playerId: PlayerId; code: string };
 
 export interface CreateRunOptions {
   seed: number;
