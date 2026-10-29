@@ -206,6 +206,29 @@ Written down from a voice note after the Phase 3 playtest. Only the first item i
   - `viewModels.ts` now imports `profitOf` from the sim (re-export kept for old imports).
   - Changing `nightLengthSec` from 0 to a timed value mid-night leaves `phaseTicksLeft` at 0 and opens the day at once;
     only reachable if the UI exposes the setting during a night.
+## FB1 WP1 (UI lane): needs from Claude (sim lane)
+
+The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin adapters in
+`src/ui/viewModels.ts` (search `TODO(fb1 WP1-sim, Claude)`). When these land, swap the adapters:
+- **Relaxed nights:** `validate.ts` clamps `nightLengthSec` to 30..600, so the UI sends 600 s
+  for Relaxed (`RELAXED_FALLBACK_SEC`) and reads ≥600 back as Relaxed. Please accept
+  `nightLengthSec: 0` as "untimed, ends on ready-up", then flip `SIM_ACCEPTS_RELAXED` to true.
+- **Last call:** the UI shows "Last call m:ss" in the final 30 s (`LAST_CALL_SEC`) of a relaxed
+  night. Once the sim has a real last-call trigger (e.g. 30 s once most of the crew is ready),
+  expose it on state (e.g. `state.lastCallTicksLeft`) and `nightTimerVM` will read it.
+- **Default length:** `ECONOMY.nightLengthSec` is still 60. The UI default is 120 and a one-time
+  settings migration in `main.ts` (flag `cafetycoon.fb1.nightLength`) moves a stored 60 to
+  120. Please move the ECONOMY default to 120 too (and update `stores.test.ts`).
+- **nightBrief selector:** `nightBriefVM` builds the Tonight alerts (top 3, worst first) from
+  the existing night VM. If a sim-side `nightBrief(state)` lands, map it into `NightBriefVM`.
+- **Branch names:** a branch called `fb1` exists, so git can't create `fb1/...` refs (a
+  directory/file clash). UI branches use dashes: `fb1-ui-night`, `fb1-ui-tickets` (the sim
+  lane already does the same).
+- The planned sim shapes (`nightClock`, `state.lastCall`, `nightBrief` in the fb1 sim spec §3)
+  fit these adapters: on merge, `nightTimerVM` reads `nightClock().mode`/`lastCallSecondsLeft`
+  and `nightBriefVM` maps `nightBrief().alerts`.
+- **Check only:** a kerbside stand should never list a latte. `unlockedDrinks` already filters
+  by `canMake` for non-café tiers, so this is probably fine; worth a quick test in the sim lane.
 
 ## main.ts hook-ins (phase 2)
 
