@@ -726,3 +726,44 @@ Final-code check (8 seeds per policy, `/workspace/overnight/b11/bal/r5.txt`): sm
 simple 356.70 / 27.9%, speed 318.87 / 24.4%, quality 422.88 / 24.1%, reach 307.18 / 29.8%, none
 361.03 / 30.7%. Quality leads on a small sample (370 vs 348 for none over 56 seeds). Watch it in
 playtests; a nerf of Quality's reputation cards is the first lever if it holds.
+
+## Block 12 reflection (Phase 2 integration, 2.0.0)
+
+Shipped:
+- **Version 2.0.0**, baked into the build from `package.json` (`__APP_VERSION__`). It shows at
+  the bottom of *Past runs & controls* and as `window.cafetycoon.version`.
+- **A real Phase 1 save fixture** (`src/storage/phase1-save.fixture.json`, a v3 envelope from
+  `phase1-final`). A test loads it, plays night → day → night, scores the run and re-saves it at the
+  current snapshot version.
+- **`?link=local`** (`src/net/localLink.ts`): a dev-only BroadcastChannel room link, so several
+  tabs of one browser can play a real room without WebRTC. The default is still Trystero/nostr.
+- **A perf probe** (`scripts/perf4.ts`, `npx tsx scripts/perf4.ts`): a week with four stand-in
+  baristas, timing `step()` and measuring snapshot size.
+- Docs: a "What's new" section in the CHANGELOG, README, ROADMAP (Phase 1 and Phase 2 done, Phase
+  3 next) and `public/roadmap.json`. R (drop) is in the controls help.
+
+Review findings:
+- **Determinism:** there's no `Math.random`, `Date.now` or `performance.now` in `src/sim` or
+  `src/data`. Every draw goes through the seeded RNG.
+- **localStorage keys:** all of them are `cafetycoon.*` (audio, history, records, roadmap.seen,
+  room, room.host, room.peer, run, seat.*, settings, tab). They don't conflict.
+- **Sync:** four local-link tabs stay within about 12 ticks (≈0.2 s at 60 Hz) of the host.
+- **Perf** (4 baristas, a 120 s day, a whole week): `step()` takes p50 0.10 ms, p99 0.26 ms and at
+  most 6.6 ms. Snapshots average 8.5 KB and peak at 11.3 KB of JSON. There are at most 6 customers
+  on screen.
+- **Bandwidth:** 20 Hz × 3 peers × about 8.5 KB comes to about 510–680 KB/s (4–5 Mbit/s) of host
+  upload. That's fine on home broadband but heavy on a phone hotspot.
+
+Decisions:
+- **This box's Chrome has a managed policy** (`WebRtcIPHandling: disable_non_proxied_udp`). WebRTC
+  gathers no ICE candidates, so real-network rooms can't connect here. I didn't override the
+  policy. Instead I added the local link, which uses the same sim and messages with a different
+  transport. Real-network play is left for the human game night.
+- The multi-tab playtest caps animation frames in the harness, because software GL can't draw four
+  Pixi canvases. That's a test-only change; the game itself is unchanged.
+
+Deferred:
+- Delta or binary snapshots, or a lower peer snapshot rate, to cut host upload. This is the first
+  lever if game night shows lag.
+- A real-network smoke test from a machine without the WebRTC policy.
+- Phase 2's game night and the telemetry review carry over (see ROADMAP).
