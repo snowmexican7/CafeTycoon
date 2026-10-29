@@ -61,6 +61,7 @@ playtest complains about it.
   `public/roadmap.json` in `src/ui/roadmapModel.ts`.
 
 ## Decisions not recorded elsewhere
+- 2026-10-28: The first balance pass met every spec §11 target, so `economy.ts` is unchanged. Re-run the two commands in spec §16 ("Balance pass") after any sim change.
 - 2026-10-28: Telemetry is a phase 2 goal. The roadmap rewrite had dropped it; Kennedy wants
   it. Host-recorded, downloaded as a file, no new accounts; see design spec §13.
 - 2026-10-28: Saves and unlocks carried between game nights are a nice-to-have, not phase 1;
@@ -94,3 +95,28 @@ Telemetry hook-ins in `src/main.ts` (slice 7); the UI agent should expect these 
 - `frame()`: tracks the previous frame time and records `frame.long { ms }` through `uiTelemetry.ui` when the gap exceeds 250 ms (first frame skipped).
 - End of `main()`: `window.cafetycoon = { telemetry: { download, rows } }`; wire `downloadTelemetry` / `telemetryRows` to UI buttons if wanted.
 - `endSession`: clears `teleTimer` and calls `setUiTelemetrySink(null)`.
+
+## Needs UI (phase 2)
+
+The data exists; the visuals are the UI agent's.
+
+- `HudVM.pass`: items on the counter, plus a HUD list.
+- `NightVM.menu` toggles, and the `menu` input `{ kind: 'menu', playerId, drink, on }` (night only).
+- `HudVM.events`: banners and toasts for `state.log` kinds `inspection` and `influencer`.
+- Customer kind tells: `Customer.kind`, `name`, `extra.length`.
+- Bot tells: `Player.bot` present means a name tag "(bot)"; `bot.personality`.
+- Receipt fields via `receiptViewModel(dayStats)`: wasted, fines, bonus, inspection, events, botMistakes, lostRegulars, drinks.
+- Telemetry download button on the pause and week-end screens, calling `downloadTelemetry()` in `main.ts`.
+- `uiTelemetry.ui(kind, data)` calls from the night screen (cards hovered or opened but not bought).
+- Title or pause settings for `bots` (0 to 3 or 'auto') and `botSkill` (1 to 5), through the existing `settings` input.
+- `nightViewModel.ready` now omits bots; `hudStructureKey` ignores per-tick `secondsLeft` fields (pass, events).
+
+## Deferred (phase 2)
+
+- Syrups and a flavour picker wait for Group B (sketch: a syrup station, number keys 1 to 9 to pick a flavour, flavoured orders on tickets).
+- Buying and placing stations, and a one-machine start, are phase 3.
+- Telemetry rows are never capped in memory; a long four-player run may reach tens of MB. Coalesce repeated move rows later.
+- `frame.long` should be suppressed while `document.hidden`.
+- A human standing idle within reach of a machine holding a finished drink blocks bots from collecting it; add an idle grace.
+- After a host resume, bots added before friends rejoin can give a six-barista day until the next morning; trim on join.
+- `tele` batches have no host-side rate limit.
