@@ -93,8 +93,8 @@ describe('drop key', () => {
     p1(s).holding = 'latte';
     s = drop(s);
     expect(s.log.filter((e) => e.kind === 'drop').map((e) => e.data)).toEqual([
-      { item: 'grounds', station: 'espresso' },
-      { item: 'latte', station: 'counter' },
+      { item: 'grounds', station: 'espresso', by: 'p1' },
+      { item: 'latte', station: 'counter', by: 'p1' },
     ]);
   });
 

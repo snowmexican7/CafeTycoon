@@ -1,6 +1,7 @@
 import type { EggsState } from './eggs';
 import type { EspressoState } from './espresso';
 import type { ForecastId } from '../data/forecasts';
+import type { CrewStats } from './stats';
 
 export type PlayerId = string;
 export type DrinkId = 'espresso' | 'latte' | 'coldBrew' | 'icedLatte' | 'mocha' | 'matcha' | 'special';
@@ -343,6 +344,8 @@ export interface GameState {
   challengePreview?: ChallengeProgress[];
   /** Easter egg pack 2 (B8): cat, camper, smoke, latte art, secret menu. */
   eggs?: EggsState;
+  /** Per-player counters for the week's awards (B10), tallied from the log. Absent on old saves. */
+  crew?: CrewStats;
 }
 
 export type PlayerInput =

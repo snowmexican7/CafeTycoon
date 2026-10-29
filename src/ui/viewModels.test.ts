@@ -70,7 +70,10 @@ describe('view models', () => {
     after.cash = 160;
     after.days.push({ day: 2, served: 9, lost: 1, turnedAway: 0, sales: 40, tips: 8, rent: 25 });
     after.owned = [{ itemId: 'streetSign', effects: [] }];
-    const w = weekEndViewModel(after, 'p2');
+    const { awards, awardsText, lostPct, ...w } = weekEndViewModel(after, 'p2');
+    expect(lostPct).toBe('20%'); // 4 walked out of 20
+    expect(awards.length).toBeGreaterThan(0);
+    expect(awardsText).toContain('CafeTycoon');
     expect(w).toEqual({
       score: '$60.00',
       cash: '$160.00',

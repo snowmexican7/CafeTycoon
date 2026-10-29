@@ -16,6 +16,12 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **End-of-week awards.** The week-end screen now holds an awards ceremony. One person is crowned
+  Crew MVP, then trophies go out like Slip King, Mop Hero, Caffeine Gremlin, Hand-off Hero, Speed
+  Demon, Cat Whisperer and Frequent Flyer (ambulance rides). Anyone left over gets a deadpan joke
+  award, so everybody gets named. A button copies the list for your group chat.
+- **Café records.** A 🏆 Records button on the title screen shows your best week, busiest day,
+  lifetime totals and a hall of fame. They're kept in this browser.
 - **Juice pass.** Combo streaks now count perfect serves *and* teamwork hand-offs (hat-trick at 3,
   then every 3). Big moments punch the screen and burst more particles (capped for performance).
   Wrong dumps, slips and storm-outs get clearer pops; winning a daily challenge confettis. A **crew

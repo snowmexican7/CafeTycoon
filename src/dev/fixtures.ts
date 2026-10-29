@@ -12,9 +12,14 @@ import type { GameState, SimEvent } from '../sim/types';
 import { createClosing } from '../ui/closing';
 import { createHud } from '../ui/hud';
 import { hudLive } from '../ui/live';
-import { closingViewModel, hudViewModel } from '../ui/viewModels';
+import { closingViewModel, hudViewModel, weekEndViewModel } from '../ui/viewModels';
+import { createWeekEnd } from '../ui/weekEnd';
+import { createRecordsDialog } from '../ui/records';
+import { awardsFor } from '../sim/awards';
+import { blank } from '../sim/stats';
+import { emptyRecords, foldRecords } from '../storage/recordsStore';
 
-type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean };
+type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; records?: boolean };
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
@@ -44,7 +49,33 @@ function base(): GameState {
   return s;
 }
 
+/** Seven days played, with a busy, chaotic crew for the awards. */
+function weekPlayed(s: GameState): void {
+  const served = [14, 19, 22, 18, 27, 24, 31];
+  s.days = served.map((n, i) => ({ day: i + 1, served: n, lost: Math.round(n * 0.3), turnedAway: 0, sales: n * 5.2, tips: n * 0.9, rent: 25 + i * 5, perfect: Math.round(n * 0.4), slips: 2 + (i % 3) }));
+  s.cash = 412;
+  s.day = 7;
+  s.phase = 'weekEnd';
+  s.owned = [{ itemId: 'streetSign', effects: [] }];
+  const row = (id: string, name: string, v: Partial<ReturnType<typeof blank>>, bot = false) => ({ ...blank(id, name, bot), ...v });
+  s.players.push({ ...s.players[3], id: 'bot1', name: 'Bo', bot: { personality: 'steady' } } as GameState['players'][number]);
+  s.crew = {
+    seen: 0,
+    players: [
+      row('ana', 'Ana', { serves: 52, perfect: 31, earned: 296, handoffs: 9, mopped: 4, rescues: 2, espressos: 3 }),
+      row('ben', 'Ben', { serves: 34, perfect: 11, earned: 171, handoffs: 21, slips: 9, messes: 7, catPets: 6, cardsBought: 4 }),
+      row('cleo', 'Cleo', { serves: 28, perfect: 9, earned: 140, mopped: 17, alarmsStopped: 2, campersShooed: 3, binned: 5 }),
+      row('dev', 'Dev', { serves: 21, perfect: 8, earned: 104, espressos: 11, collapses: 2, rerolls: 5 }),
+      row('bot1', 'Bo', { serves: 20, perfect: 6, earned: 93 }, true),
+    ],
+  };
+}
+
 const FIXTURES: Record<string, Fixture> = {
+  /** Block 10: the week-end awards ceremony. */
+  weekEnd: { weekEnd: true, setup: weekPlayed, timeline: [] },
+  /** Block 10: lifetime records from the title screen. */
+  records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */
   floor: {
     setup(s) {
@@ -237,6 +268,21 @@ async function main(): Promise<void> {
     const closing = createClosing($('#closing'));
     closing.render(closingViewModel(state, after));
     closing.show();
+  }
+  if (fx.weekEnd) {
+    const we = createWeekEnd($('#weekEnd'), { onContinue() {}, onStop() {}, onBackToTitle() {} });
+    we.render(weekEndViewModel(state, 'ana'), false);
+    we.show();
+  }
+  if (fx.records) {
+    let r = emptyRecords();
+    for (const [seed, cut, score] of [[3, 5, 140], [9, 7, 228], [7, 7, 0]] as const) {
+      const w = structuredClone(state);
+      w.seed = seed;
+      w.days = w.days.slice(0, cut);
+      r = foldRecords(r, w, awardsFor(w), `2026-10-${20 + seed}`, score || w.cash - 100);
+    }
+    createRecordsDialog(() => r).open();
   }
   const renderer = await createRenderer($('#game'));
   const me = fx.me ?? 'ana';

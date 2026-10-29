@@ -593,3 +593,58 @@ Deferred:
 Co-op fun:
 - Hand-off combos make parking a drink for a teammate feel as juicy as serving it yourself, and the
   shared vibe meter is a quick glance at "are we cooking or are we drowning".
+
+## Block 10 reflection (local stats + end-of-week awards)
+
+Shipped:
+- **Per-player crew stats** (`src/sim/stats.ts`, `state.crew`): serves, perfect, tips brought in,
+  hand-offs, slips, messes, mopped, espressos, collapses, rescues (rogue remakes + fixed name
+  mix-ups), cat pets, campers shooed, alarms stopped, binned, cards bought, re-rolls, idle. They're
+  counted from the sim log on every tick, before `pruneLog` (the log only keeps 120 ticks, so
+  nothing can be worked out afterwards). Drop logs and `rogue.remade` now say who did it (`by`).
+- **Awards ceremony** on the week-end screen (`src/sim/awards.ts`, `src/ui/weekEnd.ts`):
+  - A Crew MVP podium, then up to 9 more trophies: Speed Demon, Slip King, Mop Hero, Caffeine
+    Gremlin, Hand-off Hero, Cat Whisperer, Agent of Chaos, Customer Whisperer, Frequent Flyer,
+    Wi-Fi Bouncer, Fire Marshal, Latte Laureate, Tip Magnet, Bin Diver, Shopaholic, Professional
+    Gambler, and Best Supporting Bot.
+  - Every person who goes home without a trophy gets a deadpan joke award (Professional Statue,
+    Vibes Manager, …).
+  - There's a "walked out %" chip and a **Copy awards for the group chat** button.
+  - The card is two columns (about 940 px wide) and fits 1280x800 without scrolling.
+- **Lifetime records** (`src/storage/recordsStore.ts`, key `cafetycoon.records`, `src/ui/records.ts`):
+  - Best week, busiest day (most served), best day profit, weeks run, longest run, walked-out %,
+    lifetime totals, a hall of fame and recent MVPs.
+  - Opened from a 🏆 Records pill beside Roadmap on the title screen.
+- Snapshot v9 (a migration adds an empty `crew`); protocol v10.
+
+Decisions (made overnight, Kennedy can overrule):
+- Stats cover the **whole run**, not just a week, because the week-end only happens once (after day
+  7) and unlimited play keeps going.
+- Bots get stats and can win trophies, but the **MVP always goes to a person**. Bots get "Best
+  Supporting Bot" instead. MVP score = serves×3 + perfect×2 + hand-offs×2 + mopped×2 + rescues×3 +
+  alarms×2 + campers − messes.
+- Nobody holds **more than two trophies** (MVP included), and the award list order is the
+  priority. That keeps the ceremony on one screen and spreads the glory around, so a strong player
+  can lose "Latte Laureate" to the runner-up.
+- Records live **per browser**: peers record the week too, so everyone has their own wall. A run
+  counts once (keyed by seed and host); stopping later only adds the new days. Joke and bot awards
+  stay out of the hall of fame.
+- Saves migrated from v8 start counting from the moment they're loaded, so their earlier days
+  don't credit anyone.
+
+504 tests (+8: stats, awards, records).
+
+What could be better:
+- Ties go to whoever joined first. A shared trophy ("Ana & Ben") would feel fairer.
+- "Speed Demon" is really "most serves", not speed. Per-serve timing would need a new log field.
+- Records are lost if you clear the site data, and there's no export or import.
+- Idle is tracked but not used for anything yet. A "Professional Statue" award based on real idle
+  time could replace the random joke award.
+
+Deferred:
+- Per-day awards on the closing receipt ("today's Slip King").
+- An award screenshot or share-card generator.
+
+Co-op fun:
+- The ceremony is the screenshot moment. It's built so everyone gets named, the clumsy friend is
+  crowned Slip King, and the copy button drops the whole list into the group chat.

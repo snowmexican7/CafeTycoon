@@ -116,6 +116,6 @@ export function spillHeld(state: GameState, p: Player): boolean {
   if (!placeMess(state, 'spill', tile)) return false;
   tally(state.today, 'wasted');
   p.holding = null;
-  emitLog(state, 'drop', { item, x: tile.x, y: tile.y });
+  emitLog(state, 'drop', { item, x: tile.x, y: tile.y, by: p.id });
   return true;
 }

@@ -16,7 +16,10 @@ import type { HostToClient, Transport } from './net/transport';
 import { createRenderer } from './render/app';
 import { interpolateView } from './render/interpolate';
 import { createKeyboard } from './render/keyboard';
-import { summarizeRun } from './sim/score';
+import { scoreRun, summarizeRun } from './sim/score';
+import { awardsFor } from './sim/awards';
+import { createRecordsStore } from './storage/recordsStore';
+import { createRecordsDialog } from './ui/records';
 import type { CreateRunOptions, GameState, Phase, PlayerId, PlayerInput } from './sim/types';
 import { createHistoryStore } from './storage/historyStore';
 import { createRoomStore } from './storage/roomStore';
@@ -57,6 +60,7 @@ const stores = {
   hostRoom: createRoomStore(localStorage, 'cafetycoon.room.host'),
   peerRoom: createRoomStore(localStorage, 'cafetycoon.room.peer'),
   seats: createSeatStore(localStorage),
+  records: createRecordsStore(localStorage),
 };
 /** A text box has focus, so letter keys belong to it (sliders and switches don't count). */
 function typingText(): boolean {
@@ -155,12 +159,14 @@ async function main(): Promise<void> {
   );
 
   const roadmap = createRoadmap();
+  const records = createRecordsDialog(() => stores.records.get());
   const title = createTitle($('#title'), {
     onStart: (choice) => startSolo(choice),
     onHost: (choice) => startHost(choice),
     onJoin: (code, name) => startPeer(code, name),
     onResume: () => resume(),
     onRejoin: (code) => startPeer(code, stores.settings.get().playerName),
+    onRecords: () => records.open(),
   }, roadmap);
   const hud = createHud($('#hud'), { onMute: () => audio.toggleMute() });
   const night = createNight($('#night'), {
@@ -460,6 +466,8 @@ async function main(): Promise<void> {
       if (state.phase === 'weekEnd' || state.phase === 'ended') {
         weekEnd.render(weekEndViewModel(state, s.me), state.phase === 'ended');
         weekEnd.show();
+        // Lifetime records (this browser): a week counts once; a later stop adds only the new days.
+        stores.records.record(state, awardsFor(state), today(), scoreRun(state));
       } else {
         weekEnd.hide();
       }

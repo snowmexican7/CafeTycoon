@@ -189,7 +189,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   }
   if (customer.upset) {
     delete customer.upset;
-    emitLog(state, 'rogue.remade', { drink });
+    emitLog(state, 'rogue.remade', { drink, by: by ?? '' });
   } else if (rollsUpset(state, customer)) {
     // The drink is consumed: no pay, no serve, no waste; they stay queued with patience frozen.
     customer.upset = { ticksLeft: secondsToTicks(ECONOMY.rogue.remakeSeconds) };
