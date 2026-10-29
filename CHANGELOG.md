@@ -16,6 +16,10 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+## 2.2.0 — 2026-10-29 · Feedback round 1 (game-night build)
+
+Everything from Kennedy's first playtest notes, in one build: readable nights, bigger tickets, close early, sold out, station slots and crew tips.
+
 - Everyone can vote to close early when the day is dead: once every barista agrees, the doors lock and whoever is inside gets served.
 - **Close early button.** Hold the button by the clock (or hold C) for a second to vote. It shows how many of the crew have voted, a second tap takes your vote back, and it pulses when you're sold out or the shop has been empty for a while.
 - **Sold out.** a SOLD OUT sign on the menu board and the wall chalkboard, a "Sold out?!" puff when a customer walks away, and the rush-hour banner reads "Rush hour, but you're sold out". The right rail fits at 1280x800.
