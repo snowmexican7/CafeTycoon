@@ -85,6 +85,11 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   const m = computeModifiers(s);
   stepBots(s, m);
   applyMovement(s, m.moveSpeed);
+  // Idle total (not a streak): a connected person's ticks with no movement and no interact.
+  for (const p of s.players) {
+    if (p.bot || !p.connected) continue;
+    if (p.moveDir.x === 0 && p.moveDir.y === 0 && !p.interactQueued) p.idleTicks += 1;
+  }
   for (const p of s.players) {
     if (!p.interactQueued) continue;
     const held = p.holding;
@@ -96,10 +101,6 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepPass(s);
   if (doorsOpen) spawnCustomers(s);
   stepCustomers(s);
-  for (const p of s.players) {
-    if (p.moveDir.x === 0 && p.moveDir.y === 0) p.idleTicks += 1;
-    else p.idleTicks = 0;
-  }
   s.phaseTicksLeft -= 1;
   if (s.phaseTicksLeft > 0) return;
   if (doorsOpen) {

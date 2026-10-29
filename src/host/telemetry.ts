@@ -134,6 +134,7 @@ export function createTelemetry(
   let lastPhase: Phase | null = null;
   let lastSeq = 0;
   let summarized = false;
+  let weekSummarized = false;
 
   const record = (kind: string, data: unknown, tick?: number) => {
     rows.push(tick === undefined ? { kind, at: at(), data } : { kind, at: at(), tick, data });
@@ -169,6 +170,11 @@ export function createTelemetry(
       if (state.phase === 'night') {
         const offered = [...new Set([...state.hand, ...state.boughtTonight])];
         cards.set(state.day, { offered, bought: [...state.boughtTonight] });
+      }
+      // A summary at the scored week's end and again when the run ends; the last one is authoritative.
+      if (state.phase === 'weekEnd' && !weekSummarized) {
+        weekSummarized = true;
+        record('summary', tele.summary(state), state.tick);
       }
       if (state.phase === 'ended' && !summarized) {
         summarized = true;
