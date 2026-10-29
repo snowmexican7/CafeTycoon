@@ -50,7 +50,14 @@ Nothing yet.
   for $7 and sell on the side ($3, about one serve in three) while the case has any. A Manager
   halves spoilage, and a new Walk-in fridge card ($25) cuts it by 60%. Save v13 (adds an empty
   pastry case), protocol v16.
-
+- **Recipe accuracy (P3 B5).** Every cup starts at 3 stars and loses one for each sloppy step:
+  rushing a drink off a machine in the last 40% of its run (empty hands + E; quicker, but −1★),
+  leaving a finished drink sitting on the machine for more than 8 s, or taking a cup to a station
+  with no step for it (the wrong order). Marks follow the cup through machines and the pass.
+  Stars scale the tip (0★ ×0.6, 1★ ×0.8, 2★ ×0.95, 3★ ×1.05), show on the served toast
+  (★★☆), and the night receipt shows "Cups ★avg · N perfect"; a day averaging under 3 stars
+  costs up to 0.45 rating at closing. The hand hint warns before a rush, a sat drink or a fumble.
+  Save v14 (migration), protocol v17.
 
 ## 2.0.1 — 2026-10-29
 

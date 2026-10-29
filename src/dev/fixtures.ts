@@ -132,6 +132,16 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B5: recipe accuracy on the night receipt. */
+  accuracy: {
+    night: true,
+    setup(s) {
+      s.cash = 170;
+      s.day = 2;
+      s.today = { day: 1, served: 22, lost: 2, turnedAway: 0, sales: 116, tips: 17.4, rent: 25, cups: 22, cupStars: 53, perfectCups: 12 };
+    },
+    timeline: [],
+  },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */
@@ -279,6 +289,15 @@ const FIXTURES: Record<string, Fixture> = {
       [1.1, (s) => { emit(s, 'served', { by: 'ana', item: 'latte', amount: 6.4, kind: 'regular', name: 'Ada', cid: 61, perfect: true, left: 0 }); s.customers.shift(); }],
       [1.3, (s) => emit(s, 'bot.mistake', { bot: 'Bo', drink: 'latte' })],
       [3.2, (s) => emit(s, 'influencer', { result: 'served' })],
+    ],
+  },
+  /** P3 B5: served toasts with the cup's accuracy stars. */
+  stars: {
+    setup() {},
+    timeline: [
+      [0.3, (s) => emit(s, 'served', { by: 'ana', item: 'latte', amount: 6.3, kind: 'normal', cid: 90, perfect: true, left: 0, stars: 3 })],
+      [0.6, (s) => emit(s, 'served', { by: 'ben', item: 'espresso', amount: 3.1, kind: 'normal', cid: 91, perfect: false, left: 0, stars: 2 })],
+      [0.9, (s) => emit(s, 'served', { by: 'cleo', item: 'coldBrew', amount: 4.2, kind: 'normal', cid: 92, perfect: false, left: 0, stars: 1 })],
     ],
   },
   /** Block 3 (folded in): a pass hand-off cheer and a perfect-serve streak. */
