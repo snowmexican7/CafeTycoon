@@ -1,7 +1,7 @@
 import { ECONOMY } from '../data/economy';
 import type { DrinkId } from '../sim/types';
 import { esc, hide, show } from './dom';
-import { coin, itemIcon, jar, logoCup, pauseGlyph, stars, sun, SUPPLY_COLOR } from './icons';
+import { coin, itemIcon, jar, logoCup, pauseGlyph, speakerGlyph, stars, sun, SUPPLY_COLOR } from './icons';
 import { crewKey, DRINK_STEPS, handKey, ITEM_LABEL, ordersKey, type HudLive } from './live';
 import { hudStructureKey, type HudVM } from './viewModels';
 
@@ -20,10 +20,11 @@ const tilt = (id: number) => (((id * 37) % 7) - 3) * 0.3;
  * The in-day HUD: a top bar of pills, order tickets on the left, pantry/menu/note on the right and
  * what you hold along the bottom. Every block renders once, then only per-tick values are patched.
  */
-export function createHud(container: HTMLElement): {
+export function createHud(container: HTMLElement, handlers: { onMute?(): void } = {}): {
   render(vm: HudVM, live?: HudLive): void;
   toast(lines: string[]): void;
   setRoom(code: string | null): void;
+  setMuted(muted: boolean): void;
   show(): void;
   hide(): void;
 } {
@@ -38,6 +39,7 @@ export function createHud(container: HTMLElement): {
       <div class="spacer"></div>
       <div class="pill hud-room" hidden></div>
       <div class="hud-crew"></div>
+      <button class="iconbtn mute" data-action="mute" aria-label="Mute sound (M)" title="Mute sound (M)" aria-pressed="false">${speakerGlyph(false)}</button>
       <button class="iconbtn" data-action="pause" aria-label="Pause (Esc)" title="Pause (Esc)">${pauseGlyph()}</button>
     </div>
     <aside class="hud-side left" aria-label="Orders">
@@ -53,7 +55,7 @@ export function createHud(container: HTMLElement): {
       <div class="hold hand"></div>
       <div class="hold hint"></div>
       <div class="spacer"></div>
-      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">Esc</span> pause <span class="seed"></span></div>
+      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
     </div>
     <div class="toast" role="status" hidden></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(sel: string) => container.querySelector<T>(sel)!;
@@ -77,9 +79,14 @@ export function createHud(container: HTMLElement): {
     seed: $('.keys .seed'),
     toast: $('.toast'),
   };
-  $('.iconbtn').addEventListener('click', (ev) => {
+  $('[data-action=pause]').addEventListener('click', (ev) => {
     (ev.currentTarget as HTMLElement).blur();
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' }));
+  });
+  const muteBtn = $('[data-action=mute]');
+  muteBtn.addEventListener('click', (ev) => {
+    (ev.currentTarget as HTMLElement).blur();
+    handlers.onMute?.();
   });
 
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -228,6 +235,14 @@ export function createHud(container: HTMLElement): {
       show(el.toast);
       if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(() => hide(el.toast), 6000);
+    },
+    setMuted(muted) {
+      if (muteBtn.getAttribute('aria-pressed') === String(muted)) return;
+      muteBtn.setAttribute('aria-pressed', String(muted));
+      muteBtn.innerHTML = speakerGlyph(muted);
+      const label = muted ? 'Unmute sound (M)' : 'Mute sound (M)';
+      muteBtn.setAttribute('aria-label', label);
+      muteBtn.title = label;
     },
     setRoom(code) {
       roomCode = code;

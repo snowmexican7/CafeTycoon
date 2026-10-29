@@ -1,4 +1,6 @@
 import './style.css';
+import { ambienceFor, diffCues } from './audio/cues';
+import { createAudioEngine } from './audio/engine';
 import { SNAPSHOT_INTERVAL_MS } from './host/loop';
 import { createTelemetry, withTelemetry, createUiBuffer, setUiTelemetrySink, uiTelemetry, type Telemetry } from './host/telemetry';
 import { createHostRoom, type HostRoom } from './net/hostRoom';
@@ -53,6 +55,13 @@ const stores = {
   hostRoom: createRoomStore(localStorage, 'cafetycoon.room.host'),
   peerRoom: createRoomStore(perTab, 'cafetycoon.room.peer'),
 };
+/** A text box has focus, so letter keys belong to it (sliders and switches don't count). */
+function typingText(): boolean {
+  const el = document.activeElement as HTMLInputElement | null;
+  if (!el) return false;
+  if (el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable) return true;
+  return el.tagName === 'INPUT' && !['range', 'checkbox', 'radio', 'button'].includes(el.type);
+}
 const today = () => new Date().toISOString().slice(0, 10);
 
 /**
@@ -90,6 +99,8 @@ interface Session {
   lastClosing: GameState | null;
   lastSaveMs: number;
   recorded: boolean;
+  /** Highest log seq already turned into sound (client-side only). */
+  soundSeq: number;
   members: Member[];
   peerStatus: PeerStatus | 'hosting';
   started: boolean;
@@ -118,6 +129,26 @@ async function main(): Promise<void> {
   const send = (input: PlayerInput) => session?.transport.sendInput(input);
   const me = () => session?.me ?? '';
 
+  // Sound is per browser and derived from snapshots only; it never sends anything to the host.
+  const audio = createAudioEngine({ storage: localStorage, baseUrl: import.meta.env.BASE_URL });
+  const unlockAudio = () => audio.unlock();
+  window.addEventListener('pointerdown', unlockAudio, { capture: true });
+  window.addEventListener('keydown', unlockAudio, { capture: true });
+  const syncMute = () => hud.setMuted(audio.settings().muted);
+  audio.onChange((a) => {
+    syncMute();
+    pause.setAudio(a);
+  });
+  // UI clicks: any button, choice chip or action control, in every overlay
+  document.addEventListener(
+    'click',
+    (ev) => {
+      const el = (ev.target as Element | null)?.closest?.('button, .seg label, [data-action], summary');
+      if (el && !(el as HTMLButtonElement).disabled) audio.play({ id: 'click' });
+    },
+    { capture: true },
+  );
+
   const roadmap = createRoadmap();
   const title = createTitle($('#title'), {
     onStart: (choice) => startSolo(choice),
@@ -126,7 +157,7 @@ async function main(): Promise<void> {
     onResume: () => resume(),
     onRejoin: (code) => startPeer(code, stores.settings.get().playerName),
   }, roadmap);
-  const hud = createHud($('#hud'));
+  const hud = createHud($('#hud'), { onMute: () => audio.toggleMute() });
   const night = createNight($('#night'), {
     onBuy: (itemId) => send({ kind: 'buy', playerId: me(), itemId }),
     onRestock: (supply) => send({ kind: 'restock', playerId: me(), supply, packs: 1 }),
@@ -141,6 +172,7 @@ async function main(): Promise<void> {
   const pause = createPause($('#pause'), {
     onSettings: (patch) => send({ kind: 'settings', playerId: me(), settings: patch }),
     onQuit: () => endSession(),
+    onAudio: (patch) => audio.update(patch),
   }, roadmap);
   const lobby = createLobby($('#lobby'), {
     onStart: () => startHostedRun(),
@@ -155,6 +187,7 @@ async function main(): Promise<void> {
     title.render(titleViewModel(stores.history.list(), stores.snapshot.load(), stores.peerRoom.load()), stores.settings.get(), notice);
     title.show();
     for (const o of [hud, night, closing, weekEnd, pause, lobby]) o.hide();
+    audio.setAmbience(ambienceFor(null));
   }
 
   function runOptions(choice: StartChoice, hostId: PlayerId, players: Member[]): CreateRunOptions {
@@ -186,6 +219,7 @@ async function main(): Promise<void> {
       lastClosing: null,
       lastSaveMs: 0,
       recorded: false,
+      soundSeq: 0,
       members: [],
       peerStatus: 'hosting',
       started: false,
@@ -350,6 +384,10 @@ async function main(): Promise<void> {
     }
     const state = snap.state;
     const now = performance.now();
+    const sound = diffCues(s.next, state, s.me, s.soundSeq);
+    s.soundSeq = sound.lastSeq;
+    for (const cue of sound.cues) audio.play(cue);
+    audio.setAmbience(ambienceFor(state));
     s.prev = s.next;
     s.next = state;
     s.nextArrivedAt = now;
@@ -400,10 +438,15 @@ async function main(): Promise<void> {
   }
 
   window.addEventListener('keydown', (e) => {
+    if (e.code === 'KeyM' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !typingText()) {
+      audio.toggleMute();
+      return;
+    }
     if (e.code === 'Escape' && session?.next) {
       e.preventDefault();
       const s = session;
       pause.render({
+        audio: audio.settings(),
         pace: s.next!.settings.pace,
         dayLengthSec: s.next!.settings.dayLengthSec,
         isHost: s.me === s.next!.hostId,
@@ -445,6 +488,7 @@ async function main(): Promise<void> {
     }
   }
 
+  syncMute();
   window.cafetycoon = { telemetry: { download: downloadTelemetry, rows: telemetryRows } };
   showTitle();
   requestAnimationFrame(frame);

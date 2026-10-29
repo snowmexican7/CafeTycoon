@@ -60,4 +60,12 @@ export const logoCup = (s = 30): string =>
 export const pauseGlyph = (s = 18): string =>
   `<svg width="${s}" height="${s}" viewBox="0 0 18 18" aria-hidden="true"><rect x="3" y="2" width="4" height="14" rx="2" fill="currentColor"/><rect x="11" y="2" width="4" height="14" rx="2" fill="currentColor"/></svg>`;
 
+/** A speaker, with sound waves or (muted) a cross. */
+export const speakerGlyph = (muted: boolean, s = 18): string =>
+  `<svg width="${s}" height="${s}" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 6.5h3l4-3.5v12l-4-3.5H2z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>${
+    muted
+      ? '<path d="M12 6.5l4 5M16 6.5l-4 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>'
+      : '<path d="M11.5 6.5a3.5 3.5 0 0 1 0 5M13.5 4.5a6.4 6.4 0 0 1 0 9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>'
+  }</svg>`;
+
 export const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];

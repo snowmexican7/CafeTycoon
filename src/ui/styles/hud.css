@@ -98,3 +98,4 @@
 @media (max-width: 1000px) { #hud .hud-clock { min-width: 170px; } #hud .hud-rep svg { width: 14px; } }
 @media (max-height: 700px) { #hud .note { display: none; } }
 @media (prefers-reduced-motion: reduce) { #hud * { animation: none !important; transition: none !important; } }
+#hud .iconbtn.mute[aria-pressed="true"] { background: var(--latte); color: var(--ink-soft); }
