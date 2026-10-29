@@ -193,3 +193,15 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
   #night .icard .art { height: 100px; } #night .icard .rib { top: 80px; } #night .icard .body { gap: 6px; padding-top: 10px; }
 }
 @media (max-height: 760px) { #night .icard .art { height: 92px; } #night .icard .rib { top: 70px; } }
+
+/* Phase 3 B1: roles */
+#night .roles { display: flex; flex-direction: column; gap: 6px; }
+#night .rl-row { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 12px; padding: 6px 8px; box-shadow: var(--sh-1); }
+#night .rl-row.mine { outline: 2px solid #e0893a; background: #fff7ec; } #night .rl-row.taken { opacity: .7; }
+#night .rl-ic { font-size: 22px; width: 28px; text-align: center; }
+#night .rl-txt { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+#night .rl-txt b { font: 600 14px var(--font-display); }
+#night .rl-perk { font-size: 12px; color: #2f7a3e; } #night .rl-weak { font-size: 12px; color: #a6462f; }
+#night .rl-who { font: 600 12px var(--font-display); color: #6b5640; }
+#night .rl-badge { margin-right: 3px; }
+#night .sec small { font-weight: 400; opacity: .7; margin-left: 6px; }

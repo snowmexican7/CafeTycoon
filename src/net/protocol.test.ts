@@ -3,8 +3,8 @@ import { RESERVED_TELE_KINDS } from '../host/telemetry';
 import { ACTIONS, parseHello, parseInput, parseJoin, parseLobby, parseSeat, parseResync, parseSnap, parseSnapDelta, parseTele, PROTOCOL_VERSION } from './protocol';
 
 describe('protocol parsers', () => {
-  it('is on version 12 (seat reclaim, room cap, lobby bots, forecasts, re-roll, challenges, eggs, crew stats, B11 balance, 2.0.1 deltas)', () => {
-    expect(PROTOCOL_VERSION).toBe(12);
+  it('is on version 13 (seat reclaim, room cap, lobby bots, forecasts, re-roll, challenges, eggs, crew stats, B11 balance, 2.0.1 deltas, P3 roles)', () => {
+    expect(PROTOCOL_VERSION).toBe(13);
     expect(ACTIONS).toContain('snapd');
     expect(ACTIONS).toContain('resync');
     expect(ACTIONS).toContain('seat');

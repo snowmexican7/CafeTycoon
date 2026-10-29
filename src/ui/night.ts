@@ -8,7 +8,8 @@ import { esc, hide, onAction, show } from './dom';
 import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
-import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type NightVM } from './viewModels';
+import { nightStructureKey, type ForecastVM, type FreshDrinkVM, type HandCardVM, type NightVM, type RoleVM } from './viewModels';
+import { isRole, type RoleId } from '../sim/roles';
 
 const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours' } as const;
 const LOW_AT = 5;
@@ -115,6 +116,22 @@ function menuBoard(menu: { drink: DrinkId; on: boolean }[] | undefined): string 
     .join('')}</div>`;
 }
 
+/** Phase 3 B1: pick a role for the week. Each card names the perk and the weakness. */
+function rolesBoard(roles: RoleVM[] | undefined): string {
+  if (!roles?.length) return '';
+  return `<div class="sec">Roles <small>one each · perk and weakness</small></div><div class="roles">${roles
+    .map((r) => {
+      const btn = r.mine
+        ? `<button class="btn mini" data-action="role" data-role="" aria-pressed="true">Drop</button>`
+        : r.holder
+          ? `<span class="rl-who">${esc(r.holder)}</span>`
+          : `<button class="btn mini" data-action="role" data-role="${r.id}">Take</button>`;
+      return `<div class="rl-row ${r.mine ? 'mine' : r.holder ? 'taken' : ''}" data-role-id="${r.id}"><span class="rl-ic" aria-hidden="true">${r.icon}</span>
+        <div class="rl-txt"><b>${esc(r.name)}</b><span class="rl-perk">＋ ${esc(r.perk)}</span><span class="rl-weak">－ ${esc(r.weakness)}</span></div>${btn}</div>`;
+    })
+    .join('')}</div>`;
+}
+
 /** The heads-up card above the receipt: a friendly paper note, never a blocker. */
 function warningCard(ws: NightWarning[]): string {
   if (ws.length === 0) return '';
@@ -147,7 +164,7 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -155,6 +172,7 @@ export function createNight(
     else if (action === 'restock') handlers.onRestock(el.dataset.supply as SupplyId);
     else if (action === 'ready') handlers.onReady();
     else if (action === 'menu') handlers.onMenu?.(el.dataset.drink as DrinkId, el.dataset.on === '1');
+    else if (action === 'role') handlers.onRole?.(isRole(el.dataset.role) ? el.dataset.role : null);
     else if (action === 'jump-restock') jumpToRestock();
     else if (action === 'jump-warn') flash(container.querySelector<HTMLElement>('.warn-card'));
   });
@@ -242,7 +260,7 @@ export function createNight(
       const ready = vm.ready
         .map((p) => {
           const c = colors.get(p.id);
-          return `<span class="rp"><span class="av" style="background:${c?.color ?? '#c9b294'}">${esc(c?.initial ?? p.name[0] ?? '?')}</span>${esc(p.name)}${c?.me ? ' <em>(you)</em>' : ''}
+          return `<span class="rp"><span class="av" style="background:${c?.color ?? '#c9b294'}">${esc(c?.initial ?? p.name[0] ?? '?')}</span>${p.role ? `<span class="rl-badge" aria-hidden="true">${p.role}</span>` : ''}${esc(p.name)}${c?.me ? ' <em>(you)</em>' : ''}
             ${p.ready ? '<span class="ok">✓ ready</span>' : '<span class="wait">browsing…</span>'}</span>`;
         })
         .join('');
@@ -264,6 +282,7 @@ export function createNight(
             <div class="paper">${receipt}${stats}</div>
             <div class="sec">Restock</div>
             <div class="restocks">${restock}</div>
+            ${rolesBoard(vm.roles)}
             ${menuBoard(vm.menu)}
           </div>
           <div class="tabs" role="tablist"><span class="tab on" role="tab" aria-selected="true">Tonight's hand · ${vm.hand.length}</span>

@@ -1,3 +1,4 @@
+import { ROLE_IDS, ROLES, roleHolders, type RoleId } from '../sim/roles';
 import { awardsFor, awardsText, type Award } from '../sim/awards';
 import { catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
@@ -247,7 +248,9 @@ export interface NightVM {
   tab?: string;
   hand: HandCardVM[];
   restock: { supply: SupplyId; count: number; packSize: number; packCost: string; affordable: boolean }[];
-  ready: { id: PlayerId; name: string; ready: boolean }[];
+  ready: { id: PlayerId; name: string; ready: boolean; role?: string }[];
+  /** Phase 3 B1: the four roles, who holds each, and whether this barista can take it. */
+  roles?: RoleVM[];
   meReady: boolean;
   menu?: { drink: DrinkId; on: boolean }[];
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
@@ -331,6 +334,26 @@ export function forecastViewModel(state: GameState): ForecastVM {
   };
 }
 
+export interface RoleVM {
+  id: RoleId;
+  name: string;
+  icon: string;
+  perk: string;
+  weakness: string;
+  /** Holder's name, or null when free. */
+  holder: string | null;
+  mine: boolean;
+}
+
+export function rolesViewModel(state: GameState, me: PlayerId): RoleVM[] {
+  const holders = roleHolders(state);
+  return ROLE_IDS.map((id) => {
+    const r = ROLES[id];
+    const h = holders[id];
+    return { id, name: r.name, icon: r.icon, perk: r.perk, weakness: r.weakness, holder: h ? (state.players.find((p) => p.id === h)?.name ?? null) : null, mine: h === me };
+  });
+}
+
 export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   const last = state.days[state.days.length - 1];
   const takings =
@@ -352,7 +375,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
       const cost = restockCost(state, supply, 1);
       return { supply, count: state.supplies[supply] ?? 0, packSize: ECONOMY.packs[supply].size, packCost: money(cost), affordable: state.cash >= cost };
     }),
-    ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
+    ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id), ...(p.role ? { role: ROLES[p.role].icon } : {}) })),
+    roles: rolesViewModel(state, me),
     meReady: state.ready.includes(me),
     menu: unlockedDrinks(state).map((drink) => ({ drink, on: state.menu[drink] })),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),

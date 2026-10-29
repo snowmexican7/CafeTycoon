@@ -803,3 +803,24 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
 - **What to watch.** A rewritten array is sent whole when that is smaller; bot `path`/`plan` arrays
   are the biggest remaining churn. If a bigger café pushes deltas up, strip bot brain fields
   (render never reads them) before diffing. Real-network P2P is still untested from this box.
+
+## P3 Block 01 reflection (barista roles)
+
+- **What shipped.** `src/sim/roles.ts`: Chef, Creator, Host and Manager, each a perk paired with a
+  weakness, as plain multipliers in one table (machine time, walk speed, tips, a flat craft bonus,
+  restock cost). A `role` input is night-only and one-holder-per-role, so two baristas can't race
+  for the same role. The four roles hook into existing code paths (stations, movement, customers,
+  night restock), so they need no new state beyond `Player.role`. Save v10 (no-op migration),
+  protocol v13.
+- **Checks.** Six new tests (pick/swap/drop, day lock and validation, machine time, tips and craft,
+  Manager discount, walk speed): 529 tests in total. A 3-tab local-link run picked three roles
+  from the night screen; the night sync check (now including roles) said `same` on every tab.
+- **What went well.** The perks are visible numbers, which leaves the strategy decision to the
+  players. A Host on the register and a Chef on the machines is an obvious plan, but the Chef's
+  tip penalty punishes a Chef who also runs the pass.
+- **What to watch / deferred.**
+  - Bots never take roles; when bots become hired staff (B15) they could come with one.
+  - The role list makes the night's left column longer. At 1280x800 it scrolls under Restock.
+    A compact two-column grid would fit better once pricing (B2) adds more to that column.
+  - The balance numbers are first guesses. A playtest should show whether the Creator's
+    +$0.75 beats the Host's +50% tips at higher prices.

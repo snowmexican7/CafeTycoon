@@ -1,3 +1,4 @@
+import type { RoleId } from './roles';
 import type { EggsState } from './eggs';
 import type { EspressoState } from './espresso';
 import type { ForecastId } from '../data/forecasts';
@@ -136,6 +137,8 @@ export interface Player {
   dropQueued: boolean;
   /** tileOf(pos) as of the last tile-entry check. */
   tile: Vec2;
+  /** Phase 3 B1: this barista's role (src/sim/roles.ts). Absent = no role. */
+  role?: RoleId;
 }
 
 export interface Station {
@@ -356,6 +359,7 @@ export type PlayerInput =
   | { kind: 'ready'; playerId: PlayerId }
   | { kind: 'weekEnd'; playerId: PlayerId; choice: 'stop' | 'continue' }
   | { kind: 'menu'; playerId: PlayerId; drink: DrinkId; on: boolean }
+  | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
   | { kind: 'espresso'; playerId: PlayerId }
   | { kind: 'join'; playerId: PlayerId; name: string }

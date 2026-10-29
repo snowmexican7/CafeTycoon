@@ -1,3 +1,4 @@
+import { roleCraft, roleTip } from './roles';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE, secondsToTicks } from './constants';
 import { computeModifiers, type Modifiers } from './effects';
@@ -199,7 +200,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   const m = computeModifiers(state);
   const price = round2(ECONOMY.prices[drink] * m.price[drink]);
   const kindTip = customer.kind === 'impatient' ? ECONOMY.customers.impatient.tip : customer.kind === 'regular' ? ECONOMY.customers.regular.tip : 1;
-  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip);
+  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) + roleCraft(state, by));
   state.cash = round2(state.cash + price + tip);
   state.today.sales = round2(state.today.sales + price);
   state.today.tips = round2(state.today.tips + tip);
