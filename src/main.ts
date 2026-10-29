@@ -31,13 +31,14 @@ import { createSnapshotStore } from './storage/snapshotStore';
 import { APP_VERSION } from './version';
 import { createClosing } from './ui/closing';
 import { createHud } from './ui/hud';
+import { loadRecipeHints, saveRecipeHints } from './ui/tickets';
 import { hudLive, nightExtras } from './ui/live';
 import { createLobby } from './ui/lobby';
 import { createNight } from './ui/night';
 import { createPause } from './ui/pause';
 import { createRoadmap } from './ui/roadmap';
 import { createTitle, type StartChoice } from './ui/title';
-import { closingViewModel, hudViewModel, lobbyViewModel, nightViewModel, titleViewModel, weekEndViewModel } from './ui/viewModels';
+import { closingViewModel, hudViewModel, lobbyViewModel, migrateNightLength, NIGHT_LENGTH_MIGRATION, nightLengthForSim, nightViewModel, titleViewModel, weekEndViewModel } from './ui/viewModels';
 import { createWeekEnd } from './ui/weekEnd';
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
@@ -64,6 +65,17 @@ const stores = {
   seats: createSeatStore(localStorage),
   records: createRecordsStore(localStorage),
 };
+// FB1 WP1: nights default to 2:00 now, and Relaxed is a real 0. Migrate a stored old value once
+// per step (60 s default -> 120 s; the 600 s Relaxed stand-in -> 0); a later pick sticks.
+try {
+  const FLAG = 'cafetycoon.fb1.nightLength';
+  const from = Number(localStorage.getItem(FLAG) ?? 0) || 0;
+  if (from < NIGHT_LENGTH_MIGRATION) {
+    const next = migrateNightLength(stores.settings.get().nightLengthSec, from);
+    if (next !== stores.settings.get().nightLengthSec) stores.settings.set({ nightLengthSec: next });
+    localStorage.setItem(FLAG, String(NIGHT_LENGTH_MIGRATION));
+  }
+} catch { /* storage blocked: the title picker still offers every length */ }
 /** A text box has focus, so letter keys belong to it (sliders and switches don't count). */
 function typingText(): boolean {
   const el = document.activeElement as HTMLInputElement | null;
@@ -170,7 +182,9 @@ async function main(): Promise<void> {
     onRejoin: (code) => startPeer(code, stores.settings.get().playerName),
     onRecords: () => records.open(),
   }, roadmap);
-  const hud = createHud($('#hud'), { onMute: () => audio.toggleMute() });
+  const hintStore = (() => { try { return window.localStorage; } catch { return undefined; } })();
+  let recipeHints = loadRecipeHints(hintStore);
+  const hud = createHud($('#hud'), { onMute: () => audio.toggleMute() }, { recipeHints });
   const night = createNight($('#night'), {
     onBuy: (itemId) => send({ kind: 'buy', playerId: me(), itemId }),
     onRestock: (supply) => send({ kind: 'restock', playerId: me(), supply, packs: 1 }),
@@ -197,6 +211,11 @@ async function main(): Promise<void> {
     onSettings: (patch) => send({ kind: 'settings', playerId: me(), settings: patch }),
     onQuit: () => endSession(),
     onAudio: (patch) => audio.update(patch),
+    onRecipeHints: (mode) => {
+      recipeHints = mode;
+      saveRecipeHints(hintStore, mode);
+      hud.setRecipeHints(mode);
+    },
   }, roadmap);
   const lobby = createLobby($('#lobby'), {
     onStart: () => startHostedRun(),
@@ -291,7 +310,7 @@ async function main(): Promise<void> {
   }
 
   function startSolo(choice: StartChoice): void {
-    const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec });
+    const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: nightLengthForSim(choice.nightLengthSec) });
     stores.hostRoom.clear(); // a solo run never reopens an old room
     const tele = newTelemetry(settings.playerName);
     const local = withTelemetry(createLocalTransport(), tele);
@@ -314,7 +333,7 @@ async function main(): Promise<void> {
   }
 
   function startHost(choice: StartChoice): void {
-    const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec });
+    const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: nightLengthForSim(choice.nightLengthSec) });
     const code = makeRoomCode(Math.random);
     stores.hostRoom.save({ code, role: 'host' });
     const tele = newTelemetry(settings.playerName);
@@ -514,6 +533,7 @@ async function main(): Promise<void> {
       const s = session;
       pause.render({
         audio: audio.settings(),
+        recipeHints,
         pace: s.next!.settings.pace,
         dayLengthSec: s.next!.settings.dayLengthSec,
         isHost: s.me === s.next!.hostId,

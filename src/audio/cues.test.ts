@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ECONOMY } from '../data/economy';
 import { createRun } from '../sim/run';
 import { step } from '../sim/step';
 import type { GameState, SimEvent } from '../sim/types';
@@ -119,7 +120,7 @@ describe('diffCues', () => {
     let prev: GameState | null = null;
     let seq = 0;
     const heard: CueId[] = [];
-    for (let t = 0; t < 60 * 90; t++) {
+    for (let t = 0; t < 60 * (ECONOMY.nightLengthSec + 30); t++) {
       s = step(s, []);
       if (t % 3 === 0) {
         const before = JSON.stringify(s);

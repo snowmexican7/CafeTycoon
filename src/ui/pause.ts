@@ -5,6 +5,7 @@ import { pauseGlyph } from './icons';
 import { PLAYER_HEX } from './live';
 import { roadmapIcon, type RoadmapDrawer } from './roadmap';
 import { dayOptions, paceSeg } from './title';
+import { RECIPE_HINTS, type RecipeHints } from './tickets';
 
 export interface PauseInfo {
   pace: Pace;
@@ -12,6 +13,8 @@ export interface PauseInfo {
   isHost: boolean;
   room?: { code: string; members: string[] };
   audio: AudioSettings;
+  /** FB1 WP2: recipe steps on order tickets (this browser only). */
+  recipeHints?: RecipeHints;
 }
 
 type Level = 'master' | 'music' | 'sfx';
@@ -33,12 +36,19 @@ export function soundSection(a: AudioSettings): string {
     ${sliders}`;
 }
 
+/** Recipe hints are per player, like sound: never host-only. */
+export function recipeHintsField(current: RecipeHints): string {
+  const opts = RECIPE_HINTS.map((h) => `<option value="${h.id}" ${h.id === current ? 'selected' : ''}>${h.label}</option>`).join('');
+  return `<label class="fld" title="Show each order's recipe steps when you click its ticket, all the time, or never."><span class="lbl">Recipe hints on tickets <em>(just you)</em></span><select class="inp" name="recipeHints">${opts}</select></label>`;
+}
+
 export function createPause(
   container: HTMLElement,
   handlers: {
     onSettings(patch: { pace?: Pace; dayLengthSec?: number }): void;
     onQuit(): void;
     onAudio?(patch: Partial<AudioSettings>): void;
+    onRecipeHints?(mode: RecipeHints): void;
   },
   roadmap?: RoadmapDrawer,
 ): { render(current: PauseInfo): void; setAudio(a: AudioSettings): void; toggle(): void; show(): void; hide(): void } {
@@ -51,6 +61,7 @@ export function createPause(
     const el = ev.target as HTMLInputElement | HTMLSelectElement;
     if (el.name === 'pace') handlers.onSettings({ pace: Number(el.value) as Pace });
     if (el.name === 'dayLength') handlers.onSettings({ dayLengthSec: Number(el.value) });
+    if (el.name === 'recipeHints') handlers.onRecipeHints?.(el.value as RecipeHints);
     if (el.name === 'muted') handlers.onAudio?.({ muted: (el as HTMLInputElement).checked });
   });
   // Sliders report while dragging; only the slider's own label is patched, never a re-render.
@@ -92,6 +103,7 @@ export function createPause(
           <div class="sec-h">Settings${current.isHost ? '' : ' <span class="chip">host only</span>'}</div>
           <div class="fld"><span class="lbl">Pace</span>${paceSeg(current.pace, !current.isHost)}</div>
           <label class="fld"><span class="lbl">Day length <em>(from tomorrow)</em></span><select class="inp" name="dayLength" ${dis}>${dayOptions(current.dayLengthSec)}</select></label>
+          ${recipeHintsField(current.recipeHints ?? 'click')}
           ${soundSection(current.audio)}
           <div class="menu-btns">
             <button class="btn primary big block" data-action="resume">Back to the café</button>

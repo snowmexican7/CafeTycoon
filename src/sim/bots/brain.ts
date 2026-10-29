@@ -67,6 +67,21 @@ function binStep(state: GameState, p: Player): BotStep {
 }
 
 /**
+ * Getting rid of grounds in hand. To the bin; with no bin, on the floor. With no bin and the floor
+ * at the mess cap (a floor drop would fail, so the bot would hold them for good, unable to take an
+ * order or the mop), pull them through an espresso machine and park the shot on the pass instead;
+ * with no espresso machine either, the floor drop stays (it is re-planned until a mess is cleaned).
+ */
+function groundsPlan(state: GameState, p: Player): BotStep[] {
+  const bin = binStep(state, p);
+  if (bin.kind === 'use' || state.messes.length < MESS.max) return [bin];
+  const insert = use(state, p, 'espresso', 'insert');
+  const put = use(state, p, 'counter', 'put');
+  if (insert === null || insert.kind !== 'use' || put === null) return [bin];
+  return [insert, { kind: 'use', station: insert.station, action: 'take' }, put];
+}
+
+/**
  * The steps to make `drink` from scratch and hand it over (`serve`) or park it on the pass (`put`).
  * Each insert/take pair keeps one resolved station. [] when the shop lacks a station the drink needs.
  */
@@ -85,6 +100,7 @@ export function chainFor(state: GameState, p: Player, drink: DrinkId, finish: 's
 /** What to do with whatever is in hand when the plan falls through: park a drink, bin anything else (floor if no bin). */
 export function dropPlan(state: GameState, p: Player): BotStep[] {
   if (p.holding === null) return [];
+  if (p.holding === 'grounds') return groundsPlan(state, p);
   const put = isDrink(p.holding) ? use(state, p, 'counter', 'put') : null;
   return [put ?? binStep(state, p)];
 }
@@ -238,7 +254,7 @@ export function think(state: GameState, p: Player): BotStep[] {
   b.claimDrink = null;
   // 0. Deal with whatever is in hand (the mop goes back first: it fills the hands).
   if (p.tool === 'mop') return [{ kind: 'floor', node: nodeOf(state, p.pos), action: 'returnMop' }];
-  if (p.holding === 'grounds') return [binStep(state, p)];
+  if (p.holding === 'grounds') return groundsPlan(state, p);
   if (isDrink(p.holding)) {
     const drink = p.holding;
     const serve = state.customers.some((c) => c.drink === drink) ? use(state, p, 'counter', 'serve') : null;

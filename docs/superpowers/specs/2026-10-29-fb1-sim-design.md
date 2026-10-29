@@ -188,6 +188,9 @@ code landed.
 
 ## 6. Reversible calls made by this lane
 
+- The `'empty'` hint needs `state.emptySince`, a tick stamp written on every day run, so whole-state
+  JSON differs from pre-FB1 saves even when nobody votes; the RNG stream is unchanged, which is the
+  rule that matters (goldens pinned in tests).
 - `closeEarlyState` carries `voted` and `open` beyond the plan's `{ votes, needed, hint }`.
 - The `'empty'` hint uses "empty for 10 s" rather than an arrival forecast; a forecast would
   almost never fire under normal traffic.

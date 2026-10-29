@@ -89,6 +89,8 @@ export interface HandHint {
 }
 
 export interface HudLive {
+  /** Run day (1-based): day 1 auto-opens the first ticket's recipe steps. */
+  day?: number;
   dayInWeek: number;
   /** 0..1 through today's opening hours (or through the closing grace). */
   progress: number;
@@ -157,6 +159,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
   const progress = total > 0 ? Math.max(0, Math.min(1, 1 - state.phaseTicksLeft / total)) : 0;
   const player = state.players.find((p) => p.id === me);
   return {
+    day: state.day,
     dayInWeek: (state.day - 1) % 7,
     progress,
     open: state.phase === 'day',

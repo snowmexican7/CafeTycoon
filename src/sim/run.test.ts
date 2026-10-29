@@ -15,8 +15,8 @@ describe('createRun', () => {
     expect(s.reputation).toBe(2.5);
     expect(s.supplies).toEqual({ beans: 20, milk: 10, concentrate: 15, flavour: 0, pastry: 0 });
     expect(s.unlocked).toEqual(['espresso', 'latte', 'coldBrew']);
-    expect(s.phaseTicksLeft).toBe(60 * 60);
-    expect(s.settings).toEqual({ dayLengthSec: 150, nightLengthSec: 60, pace: 3, bots: 'auto', botSkill: 3 });
+    expect(s.phaseTicksLeft).toBe(ECONOMY.nightLengthSec * 60);
+    expect(s.settings).toEqual({ dayLengthSec: 150, nightLengthSec: 120, pace: 3, bots: 'auto', botSkill: 3 });
     expect(s.stations.map((st) => st.kind)).toEqual(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash', 'counter']);
     expect(s.players.map((p) => p.pos)).toEqual(LAYOUT.spawnPoints.slice(0, 2));
     expect(s.players.every((p) => p.holding === null && p.connected && !p.interactQueued)).toBe(true);

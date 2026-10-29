@@ -22,8 +22,9 @@ import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { EVENT_LABELS } from '../sim/events';
 import { challengeChipText } from '../sim/challenges';
 import { activeSets, fullSets, computeModifiers, setCounts, weekOf } from '../sim/effects';
-import { rerollCost, restockCost } from '../sim/night';
+import { nightClock, rerollCost, restockCost } from '../sim/night';
 import { spoilRate } from '../sim/spoilage';
+import { profitOf } from '../sim/profit';
 import { fittingsValue, scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
@@ -63,10 +64,7 @@ function espressoLines(d: DayStats): { ambulance?: string; tabPaid?: string } {
   return { ...(d.ambulance ? { ambulance: money(d.ambulance) } : {}), ...(d.debtPaid ? { tabPaid: money(d.debtPaid) } : {}) };
 }
 
-/** The day's net: everything that moved the till during the day (sales, tips, bonuses, minus rent, fines and tab paid). */
-export function profitOf(d: DayStats): number {
-  return Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0) - (d.twistCost ?? 0) - (d.checkoutFees ?? 0)) * 100) / 100;
-}
+export { profitOf } from '../sim/profit';
 
 export interface HudVM {
   dayLabel: string;
@@ -288,6 +286,10 @@ export interface NightVM {
   reroll: { cost: string; affordable: boolean; count: number };
   /** Card sets switched on, for the hand's header. */
   sets: string[];
+  /** FB1 WP1: the Tonight tab's at-a-glance brief (UI adapter until the sim's nightBrief lands). */
+  brief: NightBriefVM;
+  /** FB1 WP1: timed night or Relaxed (no clock, ready-up). */
+  timer: NightTimerVM;
 }
 
 export interface FreshDrinkVM {
@@ -380,6 +382,8 @@ export interface MenuLineVM {
   /** P3 B6: tonight's twist and the taste notebook for this drink (stars, or null if not yet tried). */
   twist?: TwistId;
   book: { twist: TwistId; stars: number | null; stale?: true }[];
+  /** FB1 WP1: a supply this drink needs is out ('out') or running low ('low'). */
+  stock?: 'out' | 'low';
 }
 
 /** P3 B7: the signature designer's options and the current signature. */
@@ -612,6 +616,7 @@ export function menuLines(state: GameState): MenuLineVM[] {
   const on = menuDrinks(state);
   const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
   const fc = new Map(priceForecast(state, on, m, walkIns).map((l) => [l.drink, l]));
+  const lowSupplies = new Set(nightWarnings(state).filter((w) => w.supply && w.level === 'low').map((w) => w.supply!));
   return unlockedDrinks(state).map((drink) => {
     const step = state.priceSteps?.[drink] ?? 0;
     const l = fc.get(drink);
@@ -628,6 +633,7 @@ export function menuLines(state: GameState): MenuLineVM[] {
       ...(fans.length ? { fans } : {}),
       ...(state.twists?.[drink] ? { twist: state.twists[drink] } : {}),
       book: bookOf(state, drink),
+      ...(stockOf(state, drink, lowSupplies) ? { stock: stockOf(state, drink, lowSupplies)! } : {}),
     };
   });
 }
@@ -686,7 +692,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           } : {}),
         }
       : null;
-  return {
+  const vm: Omit<NightVM, 'brief'> = {
     clock: clockFor(state.phaseTicksLeft),
     cash: money(state.cash),
     takings,
@@ -717,7 +723,9 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),
     forecast: forecastViewModel(state),
+    timer: nightTimerVM(state),
   };
+  return { ...vm, brief: nightBriefVM(vm) };
 }
 
 export interface ClosingVM {
@@ -860,9 +868,12 @@ export function titleViewModel(history: RunRecord[], snapshot: GameState | null,
 
 /** Everything about the night screen except the two values that change every snapshot. */
 export function nightStructureKey(vm: NightVM): string {
-  const { clock: _clock, cash: _cash, warnings, ...rest } = vm;
-  // warning text carries dollar amounts that move with cash; it is patched, so only ids and levels key a rebuild
-  return JSON.stringify({ ...rest, warnings: warnings.map((w) => `${w.id}:${w.level}`) });
+  const { clock: _clock, cash: _cash, warnings, timer, brief, ...rest } = vm;
+  // warning text carries dollar amounts that move with cash; it is patched, so only ids and levels key a rebuild.
+  // The timer's last-call flag flips mid-night and is patched; only timed vs relaxed is structure.
+  // brief alert text is patched by id too; its ids, severities and fix buttons are structure.
+  const briefKey = { profit: brief.profit, loss: brief.loss, headline: brief.headline, alerts: brief.alerts.map((a) => ({ id: a.id, severity: a.severity, icon: a.icon, fix: a.fix })) };
+  return JSON.stringify({ ...rest, brief: briefKey, warnings: warnings.map((w) => `${w.id}:${w.level}`), relaxed: timer.relaxed });
 }
 
 /** Everything about the HUD except the clock and cash. */
@@ -979,5 +990,124 @@ export function rogueHud(state: GameState): Pick<HudVM, 'rogue'> {
   else if (r.stage === 'waiting') secondsLeft = Math.ceil((secondsToTicks(ECONOMY.rogue.waitSeconds) - r.waitTicks) / TICK_RATE);
   return {
     rogue: { stage: r.stage, drink: r.drink, x: r.pos.x, y: r.pos.y, secondsLeft, ...(r.name !== undefined ? { name: r.name } : {}) },
+  };
+}
+
+
+// ---------------------------------------------------------------------------------------------
+// FB1 WP1 (UI lane): the night brief and the night timer.
+//
+// The clock now reads the sim's `nightClock` (relaxed mode, last call). The brief is still built
+// here from the night VM (icons and one-tap UI actions); TODO(fb1, UI): map the sim's
+// `nightBrief(state).alerts` (src/sim/brief.ts) in when its fixes can drive the same buttons.
+// ---------------------------------------------------------------------------------------------
+
+/** What the night length picker offers; 0 = Relaxed (no clock: the doors open when everyone is ready). */
+export const NIGHT_LENGTHS = [60, 120, 180, 0] as const;
+/** FB1: the new default night (Claude's WP1-sim moves ECONOMY.nightLengthSec to match). */
+export const DEFAULT_NIGHT_LENGTH = 120;
+/** The old stand-in for Relaxed (the longest timed night), sent before the sim accepted 0. */
+export const RELAXED_FALLBACK_SEC = 600;
+/** The sim accepts nightLengthSec 0 (fb1 WP1-sim): Relaxed is sent as 0. */
+export const SIM_ACCEPTS_RELAXED = true;
+
+/** The night length to put in the run settings for a picker value. */
+export function nightLengthForSim(sec: number): number {
+  return sec === 0 && !SIM_ACCEPTS_RELAXED ? RELAXED_FALLBACK_SEC : sec;
+}
+
+/**
+ * One-time settings migration (main.ts), by the version already applied: from 0, the old 60 s
+ * default becomes 120 s; from 0 or 1, the old Relaxed stand-in (600 s) becomes a real Relaxed (0).
+ */
+export function migrateNightLength(stored: number, from = 0): number {
+  if (from < 1 && stored === 60) return DEFAULT_NIGHT_LENGTH;
+  if (from < 2 && stored === RELAXED_FALLBACK_SEC) return 0;
+  return stored;
+}
+export const NIGHT_LENGTH_MIGRATION = 2;
+
+/** The picker value for a stored or live night length. */
+export function nightLengthChoice(sec: number): number {
+  return sec === 0 ? 0 : sec;
+}
+
+export interface NightTimerVM {
+  relaxed: boolean;
+  /** Relaxed nights only: the sim's last call is running (patched, not structure). */
+  lastCall: boolean;
+  /** The last-call countdown, m:ss, while it runs. */
+  lastCallClock?: string;
+}
+
+export function nightTimerVM(state: GameState): NightTimerVM {
+  const c = nightClock(state);
+  const relaxed = c.mode === 'relaxed';
+  const left = relaxed ? c.lastCallSecondsLeft : null;
+  return left === null ? { relaxed, lastCall: false } : { relaxed, lastCall: true, lastCallClock: clockFor(left * TICK_RATE) };
+}
+
+export type BriefSeverity = 'danger' | 'warn' | 'good';
+/** A one-tap fix: a night action and its data attributes (restock, go to a tab). */
+export interface BriefFix { label: string; action: 'restock' | 'goto' | 'scout'; data: Record<string, string> }
+export interface BriefAlert { id: string; severity: BriefSeverity; icon: string; text: string; fix?: BriefFix }
+export interface NightBriefVM {
+  /** Yesterday's profit, signed ('+$12.84' / '-$3.10'); null on the opening night. */
+  profit: string | null;
+  loss: boolean;
+  /** Tomorrow in one line, from the paper. */
+  headline: { icon: string; text: string; sub: string } | null;
+  /** At most three, most urgent first. */
+  alerts: BriefAlert[];
+}
+
+export const MAX_BRIEF_ALERTS = 3;
+const SEVERITY_RANK: Record<BriefSeverity, number> = { danger: 0, warn: 1, good: 2 };
+const SUPPLY_ICON: Record<SupplyId, string> = { beans: '🫘', milk: '🥛', concentrate: '🧊', flavour: '🍯', pastry: '🥐' };
+
+function stockOf(state: GameState, drink: DrinkId, low: Set<SupplyId>): 'out' | 'low' | null {
+  const needs = ECONOMY.drinkSupplies[drink];
+  if (needs.some((s) => (state.supplies[s] ?? 0) <= 0)) return 'out';
+  return needs.some((s) => low.has(s)) ? 'low' : null;
+}
+
+/** The Tonight tab's brief, worked out from the rest of the night view (no sim changes). */
+export function nightBriefVM(vm: Omit<NightVM, 'brief'>): NightBriefVM {
+  const t = vm.takings;
+  const out: BriefAlert[] = [];
+  const goto = (tab: string, sub = ''): BriefFix['data'] => (sub ? { tab, sub } : { tab });
+  for (const w of vm.warnings) {
+    if (w.supply) {
+      const r = vm.restock.find((x) => x.supply === w.supply);
+      out.push({
+        id: w.id, severity: w.level === 'danger' ? 'danger' : 'warn', icon: SUPPLY_ICON[w.supply], text: w.title,
+        ...(r?.affordable ? { fix: { label: `+${r.packSize} · ${r.packCost.replace('.00', '')}`, action: 'restock', data: { supply: r.supply } } } : {}),
+      });
+    } else out.push({ id: w.id, severity: w.level === 'danger' ? 'danger' : 'warn', icon: '🏠', text: w.title });
+  }
+  const g = vm.growth;
+  if (g.milestone) out.push({ id: 'grow:done', severity: 'good', icon: g.milestone.icon, text: `We're a ${g.milestone.name.replace(/^The /, '').toLowerCase()} now!` });
+  const nextTier = g.tiers.find((x) => x.next && x.affordable);
+  if (nextTier) out.push({ id: `grow:${nextTier.id}`, severity: 'good', icon: nextTier.icon, text: `Can grow to the ${nextTier.name.replace(/^The /, '').toLowerCase()} (${nextTier.cost.replace('.00', '')})`, fix: { label: 'See it', action: 'goto', data: goto('spend', 'grow') } });
+  const r = vm.rival;
+  if (r.copy && !r.copy.matched) out.push({ id: 'rival:copy', severity: 'warn', icon: '☕', text: `${r.name} copied “${r.copy.of}” at ${r.copy.price}`, fix: { label: 'Prices', action: 'goto', data: goto('menu') } });
+  for (const reg of vm.regulars ?? []) {
+    if (reg.status === 'off') out.push({ id: `reg:${reg.name}`, severity: 'warn', icon: '♥', text: `${reg.name}'s ${reg.drinkName.toLowerCase()} is off the menu`, fix: { label: 'Menu', action: 'goto', data: goto('menu') } });
+  }
+  if (vm.signature?.current && !vm.signature.current.onMenu) out.push({ id: 'sig:off', severity: 'warn', icon: '⭐', text: `“${vm.signature.current.name}” can't be ordered`, fix: { label: 'Menu', action: 'goto', data: goto('menu') } });
+  for (const f of vm.fresh ?? []) out.push({ id: `fresh:${f.drink}`, severity: 'good', icon: f.icon, text: `New on the menu: ${f.name}`, fix: { label: 'Menu', action: 'goto', data: goto('menu') } });
+  const next = vm.checkout.options.find((o) => o.next && o.affordable);
+  if (next) out.push({ id: `checkout:${next.id}`, severity: 'good', icon: next.icon, text: `Can afford the ${next.name} (${next.cost.replace('.00', '')})`, fix: { label: 'See it', action: 'goto', data: goto('spend', 'checkout') } });
+  const alerts = out
+    .map((a, i) => ({ a, i }))
+    .sort((x, y) => SEVERITY_RANK[x.a.severity] - SEVERITY_RANK[y.a.severity] || x.i - y.i)
+    .slice(0, MAX_BRIEF_ALERTS)
+    .map((x) => x.a);
+  const f = vm.forecast;
+  return {
+    profit: t ? (t.profit.startsWith('-') ? t.profit : `+${t.profit}`) : null,
+    loss: !!t?.profit.startsWith('-'),
+    headline: f ? { icon: f.icon, text: f.headline, sub: `~${f.customers} walk-ins · ${f.hotPct}% hot` } : null,
+    alerts,
   };
 }

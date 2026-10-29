@@ -94,7 +94,10 @@ Written down from a voice note after the Phase 3 playtest. Only the first item i
   is a floor mess. The strategy is throughput against mess risk: more machines pump out more
   coffee, but a crowded floor spills more. FB1 package 3 builds the sim side (slots, equipment,
   a `slot` night input, second machines, no-bin drops); Phase 3 Block 14 (layout editor) is the
-  same idea from the roadmap side.
+  same idea from the roadmap side. *2026-10-29: FB1 delivered the sim side of this (slots per tier,
+  the `slot` and `equip` inputs, a fixed-price stations shop incl. a second espresso machine and a
+  bin, bots that cope with duplicate or missing stations); the mop bucket as purchasable equipment is
+  deferred (the render reads `state.mop`), and the stations tab UI is the UI lane's. See "FB1 WP5 reflection".*
 - **Collisions should cause spills.** Once player collisions exist, a bump while someone carries a
   drink should have a decent chance of a spill (Kennedy's first guess: around 60%), so the mop
   actually matters and the floor feels like Overcooked. Not in FB1; needs collisions first.
@@ -104,6 +107,307 @@ Written down from a voice note after the Phase 3 playtest. Only the first item i
   lines through the day ("espresso is bitter", "cold brew needs more ice") that tell you which
   knob to turn. This pairs with recipe accuracy (P3 B5) and the taste map (P3 B6). Brainstorm
   only; nothing designed yet.
+
+## FB1 WP3+4 reflection
+
+- **What shipped (branch fb1-sim-day).** *Close early:* input `{ kind: 'closeEarly'; playerId; on: boolean }`
+  (a connected human, day phase, at least 15 s in; anything else is ignored). State `closeVotes?: PlayerId[]`
+  (absent = nobody; cleared in `startDay` and `startNight`; a `leave` removes the vote) and `emptySince?: number`
+  (tick stamp, set in `stepDay` when the queue empties, deleted when someone is queued). `stepDay` checks
+  unanimity every tick while the doors are open and at least one connected human exists, before the clock
+  decrements, so a vote that becomes unanimous because a partner left still closes the shop. Both that path and the
+  timer call the exported `enterClosing(state)` in `step.ts`; `finishDay` is untouched. `today.closedEarly` = whole
+  seconds left on the clock; log `closedEarly { votes, left }`; morning note "You closed early yesterday with M:SS
+  still on the clock." *Sold-out walk-ups:* with the menu on but nothing makeable, `spawnCustomers` rolls one arrival
+  per tick (`baseArrivalsPerSecond x m.traffic / TICK_RATE`, so rush hour counts); a hit tallies
+  `today.soldOutWalkouts`, logs `walkout { reason: 'soldOut' }` and sets `today.soldOutAt` (seconds into the day).
+  No customer, no `lost`, no `turnedAway`, so the rating is untouched. Menu all off: nobody comes, as before.
+  Morning note "N people walked away from a sold-out board yesterday."
+- **Final shapes.**
+  `closeEarlyState(state): { votes: number; needed: number; voted: PlayerId[]; open: boolean; hint: 'soldOut' | 'empty' | null }`
+  in `src/sim/closeEarly.ts` (`needed` = connected humans; `open` = day phase and the 15 s gate passed; `hint`
+  `'soldOut'` = menu on, nothing makeable; `'empty'` = no customer, no rogue, and nothing on the menu or the queue
+  empty for 10 s; `'soldOut'` wins). `enterClosing(state: GameState): void`. `DayStats.closedEarly?: number`,
+  `soldOutWalkouts?: number`, `soldOutAt?: number`. `GameState.closeVotes?: PlayerId[]`, `emptySince?: number`.
+  `SimEventKind` gains `'closedEarly'` and `'walkout'`.
+  Snapshot 22 to 23 (`soldOutWalkouts ??= 0` on `today` and every `days[]` entry), protocol 25 to 26.
+- **Numbers (40 weeks, seed 1, humans 2, bots 1, skill 3, pace 3).** Baseline (main e276359) vs after:
+  smart mean cash 260.53 / score 276.53 / loss 26.4% / profit 97.5% -> 260.53 / 276.53 / 26.4% / 97.5%;
+  taste 274.88 / 288.19 / 28.1% / 100% -> 274.88 / 288.19 / 28.1% / 100%. Unchanged to the cent: the balance bots
+  never vote, and the policies never sell out with the menu on, so the new RNG draw never fires. Suite: 86 files / 596 tests
+  on the baseline, now 87 files / 621 tests.
+- **`emptySince`.** The queue-empty tick stamp is set on every day run (it feeds the `'empty'` hint), so the whole-state
+  JSON of a day differs from a pre-FB1 save; accepted, the rule is that the RNG stream is unchanged, and the golden
+  `rng` tests pin it against e503518.
+- **Needs UI.** A "close early" button for the HUD (the open flag and the vote count are in `closeEarlyState`; show
+  the hint as a nudge when `hint` is not null), and a sold-out sign or a "walked away" puff driven by the `walkout`
+  log entries. The README controls list gets a line once the button has a key.
+- **What to watch.** The bots never vote, so a solo run with two bots closes on the human's single vote, and a
+  full-bot tester never closes early (use the input directly). `emptySince` is a plain tick stamp: a pause or a
+  resync does not reset it. A sold-out board now consumes one `rngNext` per tick, so seeds replay differently
+  from before only on days that sold out with the menu on.
+
+## FB1 WP1-sim reflection
+
+- **What shipped (night side of FB1 work package 1, sim only).**
+  - A relaxed night: `settings.nightLengthSec === 0` never counts down. The doors open when every connected
+    human is ready, or when the 30 s last call runs out. The last call starts once more than half the
+    connected humans are ready (or at once when none is connected), and keeps running if the ready share drops.
+    Only connected humans count, so someone who readied and then left does not start it. A timed night is unchanged.
+  - `nightClock(state)` for the UI, and the default night is now 120 s (`ECONOMY`).
+  - `nightBrief(state)` in `src/sim/brief.ts`, with `dayClock`, `expectedUse` and `runOutFraction`. A restock
+    fix is left off an alert when the till cannot pay for it (the alert stays).
+  - `profitOf` moved into the sim (`src/sim/profit.ts`); `viewModels.ts` re-exports it.
+  - Save version 24 (migration 23 is a no-op; migration 22, the `soldOutWalkouts` backfill, came in with fb1-sim-day and is real now),
+    network protocol 27.
+- **Final shapes.**
+
+  ```
+  nightClock(state): {
+    mode: 'timed' | 'relaxed';          // relaxed when settings.nightLengthSec === 0
+    secondsLeft: number | null;         // ceil(phaseTicksLeft / TICK_RATE) when timed, null when relaxed
+    lastCallSecondsLeft: number | null; // ceil(lastCall / TICK_RATE) once a relaxed last call runs, else null
+    ready: PlayerId[];                  // connected humans who have readied up tonight
+    needed: number;                     // connected humans (the ready count that opens the shop)
+  }
+  type NightFix = DistributiveOmit<PlayerInput, 'playerId'>
+  interface NightAlert {
+    id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | signature
+    kind: 'cash' | 'stock' | 'soldOut' | 'spoil' | 'grow' | 'checkout' | 'rival' | 'signature';
+    severity: 'info' | 'warn' | 'danger';
+    text: string;
+    fix?: NightFix;   // restock fixes are left off when state.cash < restockCost(state, supply, packs)
+  }
+  nightBrief(state): { profit: number | null; headline: string; alerts: NightAlert[] }
+    // profit = profitOf(days.at(-1)) or null on the first night; alerts sorted danger, warn, info,
+    // then in the order cash, stock (pantry order), soldOut, spoil, grow, checkout, rival, signature.
+  dayClock(fraction: number): string                    // 0..1 -> "8:00 AM".."6:00 PM", ten-minute steps
+  expectedUse(state): Record<SupplyId, number>          // supplies a normal day should use
+  runOutFraction(state, supply): number | null          // have / expectedUse clamped 0..1, null when unused
+  ```
+
+  `GameState.lastCall?: number` (ticks left; absent = no last call). `DayStats` gains optional
+  `soldOutWalkouts?` and `soldOutAt?` (filled by Track A; until it lands the soldOut alert only fires from test setup).
+- **Checks.** 596 tests before this package, 630 after (87 files); `tsc` and `npm run build` clean.
+- **Balance, before and after** (40 weeks, seed 1, 2 humans + 1 bot, 150 s days). The balance script passes its own
+  30 s night to the sim, so the 120 s default and the relaxed night cannot move it; the numbers are identical, as intended.
+
+  | policy | mean cash | score | loss | profitable weeks |
+  | ------ | --------- | ----- | ---- | ---------------- |
+  | smart, before | 260.53 | 276.53 | 26.4% | 97.5% |
+  | smart, after  | 260.53 | 276.53 | 26.4% | 97.5% |
+  | taste, before | 274.88 | 288.19 | 28.1% | 100% |
+  | taste, after  | 274.88 | 288.19 | 28.1% | 100% |
+
+  Logs: `.superpowers/sdd/2026-10-29-fb1-sim/balance-B-smart.log` and `balance-B-taste.log`.
+- **Open questions for the UI lane.**
+  - The UI view models still show 0:00 on a relaxed night (`viewModels.ts` `clockFor(phaseTicksLeft)`, `live.ts`
+    `nightExtras.left`); they should read `nightClock`, and show ready as `ready.length / needed`.
+  - `src/ui/nightWarnings.ts` duplicates `expectedUse` (and the low-stock threshold) from `brief.ts`. Nothing pins the
+    two together; the night screen should move to `nightBrief` and delete its copy.
+  - Stored browser settings keep `nightLengthSec: 60` until the lobby offers a night-length choice (including 0 for relaxed).
+  - `viewModels.ts` now imports `profitOf` from the sim (re-export kept for old imports).
+  - Changing `nightLengthSec` from 0 to a timed value mid-night leaves `phaseTicksLeft` at 0 and opens the day at once;
+    only reachable if the UI exposes the setting during a night.
+## FB1 WP1 (UI lane): needs from Claude (sim lane)
+
+The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin adapters in
+`src/ui/viewModels.ts` (search `TODO(fb1 WP1-sim, Claude)`). When these land, swap the adapters:
+- **Relaxed nights:** `validate.ts` clamps `nightLengthSec` to 30..600, so the UI sends 600 s
+  for Relaxed (`RELAXED_FALLBACK_SEC`) and reads ≥600 back as Relaxed. Please accept
+  `nightLengthSec: 0` as "untimed, ends on ready-up", then flip `SIM_ACCEPTS_RELAXED` to true.
+- **Last call:** the UI shows "Last call m:ss" in the final 30 s (`LAST_CALL_SEC`) of a relaxed
+  night. Once the sim has a real last-call trigger (e.g. 30 s once most of the crew is ready),
+  expose it on state (e.g. `state.lastCallTicksLeft`) and `nightTimerVM` will read it.
+- **Default length:** `ECONOMY.nightLengthSec` is still 60. The UI default is 120 and a one-time
+  settings migration in `main.ts` (flag `cafetycoon.fb1.nightLength`) moves a stored 60 to
+  120. Please move the ECONOMY default to 120 too (and update `stores.test.ts`).
+- **nightBrief selector:** `nightBriefVM` builds the Tonight alerts (top 3, worst first) from
+  the existing night VM. If a sim-side `nightBrief(state)` lands, map it into `NightBriefVM`.
+- **Branch names:** a branch called `fb1` exists, so git can't create `fb1/...` refs (a
+  directory/file clash). UI branches use dashes: `fb1-ui-night`, `fb1-ui-tickets` (the sim
+  lane already does the same).
+- The planned sim shapes (`nightClock`, `state.lastCall`, `nightBrief` in the fb1 sim spec §3)
+  fit these adapters: on merge, `nightTimerVM` reads `nightClock().mode`/`lastCallSecondsLeft`
+  and `nightBriefVM` maps `nightBrief().alerts`.
+- **Status (fb1-ui-nightclock):** the clock adapter swap is done. `SIM_ACCEPTS_RELAXED` is true (Relaxed
+  is sent as 0), `nightTimerVM` reads `nightClock(state)` (mode, `lastCallSecondsLeft`) and the pill shows
+  "Last call m:ss" from `state.lastCall`. `LAST_CALL_SEC` is gone. The `main.ts` migration is now
+  versioned (flag value 2): it also moves the old 600 s stand-in to 0. Still open:
+  - `nightBriefVM` still builds Tonight alerts in the UI (it adds icons and one-tap UI fixes). Map
+    `nightBrief(state).alerts` into it and drop `nightWarnings.ts`'s copy of `expectedUse` (follow-up, UI).
+  - The pill doesn't show `ready / needed` yet.
+- **Check only:** a kerbside stand should never list a latte. `unlockedDrinks` already filters
+  by `canMake` for non-café tiers, so this is probably fine; worth a quick test in the sim lane.
+
+## FB1 WP2 (UI lane): order tickets
+
+- WP2 needs nothing from the sim. The "Recipe hints" setting (on click, always, off) is kept per browser in
+  localStorage (`cafetycoon.recipeHints`), like sound. It isn't a run setting, so saves and the protocol are unchanged.
+- The next-step highlight is a guess based on what you're holding (`nextStepIndex` in `src/ui/tickets.ts`).
+  If recipes change (new drinks or steps), update `DRINK_STEPS` and that mapping together.
+- The left gutter now has its own width, `--gutter-l: clamp(230px, 21vw, 330px)` (panel 284 px at 1512 wide).
+  The café stage is narrower by the same amount, and the canvas scales to fit.
+- Still open on the UI side (WP3 and WP4, not in this pass): the press-and-hold "Close early" button in the clock
+  pill, which reads `closeEarlyState`, and a sold-out sign.
+## FB1 WP5 reflection
+
+- **What shipped (branch fb1-sim-slots, sim side of FB1 package 3).**
+  - *Slots per tier:* the back bar is a row of fixed slots (`SLOT_POSITIONS`, `src/data/layout.ts`): stand 4 at x 1,3,5,7;
+    cart 5 at x 1,3,5,7,9; café 6 at x 1,3,5,8,10 and a sixth, empty by default, at (11,1). The café keeps its five old
+    positions (they are not on an even grid and moving them would change every bot path). The counter is not a slot.
+  - *State:* `state.slots` (one `StationKind | null` per slot), `state.equipment` (owned, unplaced), `state.equipLog`
+    (`{ station, day, by }` per purchase). `state.stations` is rebuilt from the slots after every slot change: ids `grinder`,
+    `espresso`, … for the first of a kind and `espresso-2`, … for the next; positions come from `SLOT_POSITIONS`; the counter is last.
+    Default slots reproduce the pre-slots stations exactly (deep-equal and JSON-equal tests, and golden rng/hash tests for bots 0..3).
+  - *Inputs:* `slot` (put an owned station into a slot, or empty it; free rearranging) and `equip` (buy a station), both night-only,
+    connected humans only. Any station can be removed, the grinder and the bin included.
+  - *The fixed-price EQUIPMENT shop replaces the plan's two dealt cards.* Cards in the deck change every seed's dealt hands, which
+    breaks the "unchanged runs keep their stream" rule, and a fixed stations shop is what Kennedy asked for. Prices: espresso $45,
+    grinder $30, steamer $40, cold-brew tap $35, bin $15; they count in `fittingsValue` at half, like cards.
+  - *`reasonOff(state, drink)`* (`'noStation' | 'noStock' | 'off' | null`): why a drink is off the board. `hasStation` and `canMake`
+    now read `state.stations` (the café shortcut is gone), so removing the steamer takes lattes, mochas, matcha and the special off
+    the menu through `unlockedDrinks`, `menuDrinks` and `uselessAtTier`.
+  - *Bots:* `use(kind, action)` resolves to the nearest idle, unclaimed station of the kind (else the first); at insert time a busy
+    machine re-targets to an idle twin. With no bin a bot walks to the nearest walkable node with no station in reach and no spill
+    (`floorDropNode`) and drops there (floor action `'drop'`). *Mess-cap fallback:* with no bin and the floor at `ECONOMY.mess.max`,
+    grounds go through the espresso machine (`insert`, `take`, `counter put`) instead of failing to drop. Rogue customers
+    (`ROGUE_STATION`, `pickStation`) prefer any free station of the drink's kind, and `canDrinkEspresso` accepts any espresso machine in range.
+  - *Growing conserves what the crew owns* (`growSlots`): per kind, `equipmentAfter = ownedBefore + max(0, defaults(to) - defaults(from)) - defaults(to)`,
+    clamped at 0 (ownedBefore = placed + equipment). A steamer bought on the stand survives the move to the cart (the cart's own
+    steamer is a gift on top), and a grinder removed into equipment is not duplicated. Surplus is kept in kind order grinder, espresso,
+    steamer, coldBrewTap, trash. (An earlier version, `owned - defaults(to)`, swallowed a bought steamer; fixed in `40396e3`.)
+  - *Save version 25, network protocol 28.* Migration 24→25 sets `slots = defaultSlots(tier)` and `equipment = []`; the 22 and 23
+    steps are real (`soldOutWalkouts` backfill and a no-op); the day/night branches filled them at merge.
+- **Final shapes** (header comments, verbatim in spirit).
+  - `src/sim/slots.ts`: `slotCount(tier): number`; `defaultSlots(tier): (StationKind | null)[]`; `stationsFromSlots(tier, slots): Station[]`
+    (slot order, empty slots skipped, counter last); `growSlots(state, to)` (called before `state.tier` changes);
+    `applySlotInput(state, input)`, `applyEquipInput(state, input)`, `equipmentSpent(state)`; `reasonOff(state, drink)`.
+    Pure, no RNG, everything in slot order.
+  - `src/data/equipment.ts`: `EquipmentKind = Exclude<StationKind, 'counter'>`; `EQUIPMENT_KINDS = ['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash']`;
+    `EQUIPMENT: Record<EquipmentKind, { name, cost, blurb }>`.
+  - Inputs: `{ kind: 'slot'; playerId; index: number; station: StationKind | null }` (night, connected human, `index` within `slotCount(tier)`,
+    `station` from `state.equipment` or `null`; the old content goes to equipment) and `{ kind: 'equip'; playerId; station: StationKind }`
+    (night, connected human, cash in hand, not `'counter'`; goes into the first empty slot, else into `state.equipment`; logged in `equipLog`).
+  - Tester: `--layout default | twinEspresso | noColdBrew | noTrash` (`BalanceOptions.layout`, `applyLayout(state, layout)` in `scripts/balanceCore.ts`),
+    applied right after `createRun` and `addStandIns` by editing slots and equipment and rebuilding the stations. Under the `grow` policy the
+    layout only shapes the stand: growing hands the new tier's defaults back (the bin comes back as a default), so use it with the café-start policies.
+- **Tests.** 596 before FB1; 787 now (92 files) on `fb1-sim-fixes` with the whole fb1 sim lane merged in, of which the slots work adds
+  48 in `slots.test.ts`, the bots work about 16 in `brain.test.ts`/`rogue.test.ts`/`espresso.test.ts`, and C4 adds three in `balance.test.ts` plus the grow-formula tests.
+- **Balance (40 weeks from seed 1, smart policy, 2 stand-in humans + 1 bot, café start).**
+
+  | layout | mean cash | score | loss | profit | loss by day 1..7 |
+  |---|---|---|---|---|---|
+  | default (baseline) | 260.53 | 276.53 | 26.4% | 97.5% | 11/16/23/27/29/36/32 |
+  | twinEspresso | 301.94 | 329.63 | 23.2% | 100% | 10/15/18/24/26/31/28 |
+  | noColdBrew | 151.36 | 92.05 | 43.7% | 87.5% | 27/38/39/44/48/55/48 |
+  | noTrash | 260.62 | 275.75 | 26.7% | 100% | 10/18/21/29/32/35/33 |
+  | taste, default | 274.88 | 288.19 | 28.1% | 100% | 11/17/24/26/34/39/35 |
+
+  The default and taste rows equal the pre-slots baselines (smart 260.53 / 276.53 / 26.4% / 97.5%, taste 274.88 / 288.19 / 28.1% / 100%), so the
+  slots change nothing until a crew rearranges them. A second espresso machine helps a lot (+$41 mean cash, score +$53, 3 points less loss, and the tester gets it
+  free, so read the real gain as that minus the $45), which says the price is not too low. Losing the cold-brew tap
+  is the heavy one (-$109, loss 43.7%) because the tester keeps cold brew on the menu and those orders walk away. A missing bin is currently free: bots
+  drop grounds on the floor and the mop keeps up, so "throughput against mess risk" needs a harsher floor (see below) before no-bin is a real choice.
+  Logs: `.superpowers/sdd/2026-10-29-fb1-sim/balance-C-<layout>.log`, `balance-C-taste.log`.
+- **Open questions for the UI lane.**
+  - Render reads `layoutFor(tier).stations` (viewModels.ts, scene.ts). It must draw from `state.stations` instead, including duplicates with ids
+    `kind-2` and empty slots (draw an empty bracket or plinth at `SLOT_POSITIONS[tier][i]` where `state.slots[i] === null`).
+  - The Spend/Shopfront slots strip needs `slotCount(tier)`, `state.slots`, `state.equipment`, `EQUIPMENT` and the two inputs (`slot`, `equip`).
+  - `reasonOff(state, drink)` is for the "lattes off: no steamer" note on the Menu tab.
+  - A mop bucket as purchasable equipment was deferred because the render reads `state.mop` (see Kennedy's design notes, first bullet): no mop bucket
+    should mean spills stay all day, which needs a `state.mop` that can be absent and a render that tolerates it.
+  - Tuning for later: with a bin gone the floor should punish (grounds piles and spills mop-cost more, or slow walkers); today the tester says it does not.
+  - A `slot` input can put any kind into any slot, including a steamer on the stand, so a kerbside stand can sell lattes once it owns one (tested).
+
+## FB1 WP6 reflection
+
+- **What shipped (branch fb1-sim-bots, sim side of FB1 package 6, the planner half).**
+  - *The night planner* (`src/sim/bots/planner.ts`, pure and RNG-free, reads only what the crew can see: never `comboStars`,
+    `adOutcome` or `rivalMenu`). Final shapes:
+    ```ts
+    interface Advice {
+      id: string;   // restock:<supply> | price:<drink> | twist:<drink> | signature | scout | rival |
+                    // grow:<tier> | checkout:<id> | slot:<index> | equip:espresso | menu:<drink>
+      kind: 'restock' | 'price' | 'twist' | 'signature' | 'scout' | 'rival' | 'grow' | 'checkout' | 'slot' | 'equip' | 'menu';
+      text: string;
+      input: NightFix;   // the input without its playerId
+      priority: number;  // restock out 100, low 90; rival 80; grow 70; checkout 60; slot 55; price 50;
+                         // twist 40; signature 35; equip 30; scout 20; menu 10
+    }
+    planNight(state): Advice[]                                   // priority desc, then id asc
+    crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots
+    restockAdvice(state, budget?): Advice[]                      // exported for the tester
+    ```
+  - *Rules.* Restock every supply a menu drink needs to the day's expected use x 1.25 (out of stock first). Price: each drink
+    at the step in -2..+4 that maximises its own `priceForecast` profit; the signature drink is left to the rival rule while the knock-off is live. Twists: set a known 4-5 star
+    twist, drop a known 2-star-or-worse one, otherwise try the first untried twist on yesterday's best seller (and wait while one is
+    being explored). Signature: propose the best known 4-star-plus combo at premium 2 when none exists. Rival: when the copy
+    undercuts, cut the signature drink's menu step just enough, else lower the premium. Grow when cash after tonight's restock and
+    rent covers the tier; otherwise the next checkout; place unplaced equipment into the first empty slot; buy a second espresso
+    machine when yesterday lost more than it served at a one-machine bar; scout from day 2 when $20 is spare; switch off a drink the
+    bar has no station for, unless the plan grows, the station sits unplaced in equipment, or it would leave the board empty.
+    Opening night is for stocking: grow, checkout and equip wait for a finished day. One day's rent is held back and every spending
+    advice draws on the rest in priority order, so applying the whole list never overdraws the till.
+  - *`--policy planner`* (`scripts/balanceCore.ts`): opens as the stand (like `grow`), and at night stage 0 `plannerNight` applies
+    every advice from `planNight(state)` in list order with `applyAdvice`, `grow` last, then re-plans once (growing resets the
+    slots) and applies what the bigger shop calls for. `applyAdvice` mirrors the sim's apply functions by direct mutation, as
+    `tasteNight`/`growNight` do (the tester has no human player): restock, price, twist, signature, scout, grow (`growSlots`),
+    checkout, slot, equip (with `equipLog`), menu (never the last drink); the rival advice is a price or signature input and goes
+    through the same code. Nothing it cannot pay for or the sim would refuse is applied. Card buys still come from
+    `smartNightInputs(state, 'smart', stage)` after stage 0 (stage 0's smart restock is skipped: the planner already restocked).
+  - *Hurried personality.* `Personality` gains `'hurried'` (`ECONOMY.bots.personalities.hurried`:
+    speed 1.15, reaction 0.85, mistake 0.08, no cold-brew prep) and the roster grows to four bots
+    (`BOT_IDS` ×4, `BOT_PERSONALITIES = ['steady', 'hurried', 'veteran', 'rookie']`, named Bo, Lu, Mo, Zip), so any game
+    with two or more bots has a hurried one and the veteran (Mo, shades and espresso) stays in the three-bot
+    crews the lobby can ask for; the rookie is the fourth, tester-only bot (`--bots 4`). In `act` for a `take` step, a hurried bot whose machine is in
+    the last 40% of its run (`ACCURACY.earlyShare`) with `ECONOMY.bots.hurriedQueue` (3) or more
+    customers queued presses use: the existing early pull takes the cup one star down and logs
+    `cup.early`. `ECONOMY.bots.autoCrew = 3` keeps `bots: 'auto'` at three bots; the lobby cap stays
+    at spawn points − 1 and the tester accepts `--bots 0..4`. Runs with `bots: 0` or one bot keep the
+    base RNG stream (goldens); two- and three-bot runs change by design (the roster is the feature).
+    Open: the render's `botLook` gives hurried the steady look (UI lane); no `cup.early` showed up in
+    the seed-5 900-tick runs, so telemetry from a game night should confirm hurried bots do rush.
+- **Final fix wave (fb1-sim-fixes).** `crewTips` names the ids the roster will spawn (`BOT_IDS.slice(0, botsFor(...))`) on the
+  opening night, before any bot has clocked in; the roster order keeps the veteran in three-bot crews; the planner switches a
+  drink off while at least one other stays on (it used to keep two); the early-close note reads whole seconds rounded up (never
+  0:00); wheeled-out players are not counted as close-early voters.
+- **Suite.** 86 files / 596 tests before FB1; after this branch and the final fix wave 92 files / 787 tests. `tsc` and `npm run build` clean.
+- **Balance (40 weeks, seed 1, humans 2, bots 1, skill 3, pace 3, scenario random, day 150 s).**
+
+  | policy | start | mean cash | score | loss | profitable | bankrupt |
+  |---|---|---|---|---|---|---|
+  | smart | cafe | 260.53 | 276.53 | 26.4% | 97.5% | 0% |
+  | taste | cafe | 274.88 | 288.19 | 28.1% | 100% | 0% |
+  | grow | stand | 186.10 | 173.42 | 17.9% | 100% | 0% |
+  | planner | stand | 183.37 | 222.87 | 15.9% | 100% | 0% |
+
+  smart and taste reproduce the pre-FB1 baselines to the cent. `grow` at 40 weeks is 186.10 / 173.42 (the 20-week figure in the
+  C1 report, 194.08 / 185.21, is the same code on fewer seeds). Logs: `.superpowers/sdd/2026-10-29-fb1-sim/balance-D-*.log`.
+- **Growth days (stand start, 40 weeks).** planner: cart in 38 of 40 weeks at a mean of day 2.68, café in 10 of 40 at day 6.30;
+  weeks end as 28 cart, 10 café, 2 stand. grow: cart in 35 of 40 at day 4.71, café in 6 of 40 at day 6.67; 29 cart, 6 café, 5 stand.
+  The planner grows two days sooner because it spends only what is above the rent reserve and its own restock, not "price + $60".
+- **Reading.** The planner is a bit behind `grow` on cash (-2.73) and well ahead on score (+49.45), which counts fittings at
+  resale value: it turns cash into stations and tiers (a café in a quarter of its weeks, against 15%) and loses fewer customers (15.9%
+  against 17.9%, and a flatter loss curve: 3/9/15/15/19/27/18 against 4/3/13/16/23/31/24 by day). It is far below the café-start
+  policies in cash (260-275), but those start with the full bar and a bigger room, so the fair comparison is `grow`, and there it
+  is level on cash and clearly better on score. What it does badly: it cuts the drinks to -2 (at the three openings I checked; the forecast says that is
+  where profit peaks, and it never tests the crowd's actual reaction), and it explores twists one drink a night, so a short week
+  may not find a signature (not measured; the telemetry would say how often it did). Its card buying is smart's, but it starts
+  poorer, so it rerolls rarely (0.3 a week against 2.7 for smart).
+  *Pricing:* a one-pass menu-total objective (each drink at the step that maximises the profit summed over the whole menu) was
+  tried and produced identical steps in every one of 1029 states the reviewer brute-forced (stand, cart and café, every step
+  combination) and the same 40-week result (183.37), so the per-drink rule stays. The planner still prices most drinks at step -2
+  because `priceForecast`'s demand model (elasticity 1.8) puts the profit peak there, which is a balance question for the pricing
+  model, not the planner.
+- **Open questions for the UI lane.**
+  - Show `crewTips(state, 2)` as chips on Tonight (attributed to the bot in `by`; `[]` with no connected bot). The UI applies an
+    advice by sending `{ ...advice.input, playerId: me() }`; the sim re-checks everything, so a stale chip is a no-op.
+  - Advice is suggestions only until P3 B15 (the planner never spends a real player's money). Should a chip vanish once its input
+    has been applied (planNight will stop listing it) or stay as "done"?
+  - The planner proposes grow and checkout from the first finished day; the nightBrief alerts also say so. Pick one place to show
+    them, or dedupe by `id` (`grow:<tier>` against the brief's `grow` alert).
+  - `crewTips` text uses the café's own words ("walked out to ... served"); the UI may want to shorten it for a chip.
 
 ## main.ts hook-ins (phase 2)
 
