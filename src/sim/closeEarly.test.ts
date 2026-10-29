@@ -186,15 +186,23 @@ describe('closeEarlyState hint', () => {
 });
 
 describe('closeEarly determinism', () => {
-  it('two identical runs without a vote are identical and carry no closeVotes', () => {
-    let a = two();
-    let b = two();
-    for (let i = 0; i < 900; i++) {
-      a = step(a, []);
-      b = step(b, []);
-    }
-    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
-    expect(a.closeVotes).toBeUndefined();
+  const run900 = (s: GameState) => {
+    for (let i = 0; i < 900; i++) s = step(s, []);
+    return s;
+  };
+
+  it('a run with no vote keeps the RNG stream of the base commit and carries no closeVotes', () => {
+    const s = run900(two());
+    // golden measured on e503518 (before FB1): seed 5, p1+p2, bots 0, scenario normal, 900 ticks after startDay
+    expect(s.rng).toBe(1798888878);
+    expect(s.closeVotes).toBeUndefined();
+  });
+
+  it('keeps the base RNG stream with a bot on the floor', () => {
+    const b = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'A' }], settings: { bots: 1 } });
+    b.scenario = 'normal';
+    // golden measured on e503518: seed 5, p1 + one bot, scenario normal, 900 ticks after startDay
+    expect(run900(startDay(b)).rng).toBe(-1928183945);
   });
 });
 

@@ -234,14 +234,11 @@ describe('sold-out walk-ups (FB1 WP4)', () => {
     expect(run(rush, 3600).today.soldOutWalkouts ?? 0).toBeGreaterThan(run(base, 3600).today.soldOutWalkouts ?? 0);
   });
 
-  it('with stock nothing changes: identical runs, no walkouts', () => {
+  it('with stock nothing changes: the base RNG stream, no walkouts', () => {
     let a = day();
-    let b = day();
-    for (let i = 0; i < 900; i++) {
-      a = step(a, []);
-      b = step(b, []);
-    }
-    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    for (let i = 0; i < 900; i++) a = step(a, []);
+    // golden measured on e503518 (before FB1): seed 3, p1, bots 0, scenario normal, 900 ticks after startDay
+    expect(a.rng).toBe(-2058150776);
     expect(a.today.soldOutWalkouts).toBeUndefined();
     expect(a.today.soldOutAt).toBeUndefined();
   });

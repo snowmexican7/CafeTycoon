@@ -125,13 +125,17 @@ Written down from a voice note after the Phase 3 playtest. Only the first item i
   in `src/sim/closeEarly.ts` (`needed` = connected humans; `open` = day phase and the 15 s gate passed; `hint`
   `'soldOut'` = menu on, nothing makeable; `'empty'` = no customer, no rogue, and nothing on the menu or the queue
   empty for 10 s; `'soldOut'` wins). `enterClosing(state: GameState): void`. `DayStats.closedEarly?: number`,
-  `soldOutWalkouts?: number`, `soldOutAt?: number`. `SimEventKind` gains `'closedEarly'` and `'walkout'`.
+  `soldOutWalkouts?: number`, `soldOutAt?: number`. `GameState.closeVotes?: PlayerId[]`, `emptySince?: number`.
+  `SimEventKind` gains `'closedEarly'` and `'walkout'`.
   Snapshot 22 to 23 (`soldOutWalkouts ??= 0` on `today` and every `days[]` entry), protocol 25 to 26.
 - **Numbers (40 weeks, seed 1, humans 2, bots 1, skill 3, pace 3).** Baseline (main e276359) vs after:
   smart mean cash 260.53 / score 276.53 / loss 26.4% / profit 97.5% -> 260.53 / 276.53 / 26.4% / 97.5%;
   taste 274.88 / 288.19 / 28.1% / 100% -> 274.88 / 288.19 / 28.1% / 100%. Unchanged to the cent: the balance bots
   never vote, and the policies never sell out with the menu on, so the new RNG draw never fires. Suite: 86 files / 596 tests
   on the baseline, now 87 files / 621 tests.
+- **`emptySince`.** The queue-empty tick stamp is set on every day run (it feeds the `'empty'` hint), so the whole-state
+  JSON of a day differs from a pre-FB1 save; accepted, the rule is that the RNG stream is unchanged, and the golden
+  `rng` tests pin it against e503518.
 - **Needs UI.** A "close early" button for the HUD (the open flag and the vote count are in `closeEarlyState`; show
   the hint as a nudge when `hint` is not null), and a sold-out sign or a "walked away" puff driven by the `walkout`
   log entries. The README controls list gets a line once the button has a key.
