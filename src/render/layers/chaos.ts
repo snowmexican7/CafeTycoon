@@ -76,12 +76,16 @@ function drawGrounds(g: Graphics, id: number): void {
   }
 }
 
+const SPILL_TINT: Record<DrinkId, [number, number]> = {
+  espresso: [0x5a3320, 0x7a4a30], latte: [0xd9ad80, 0xf3dfc1], coldBrew: [0x6b4026, 0x8a5a3a], icedLatte: [0xc89a6a, 0xe8d2b4],
+  mocha: [0x7a4430, 0xfff8ee], matcha: [0x8fbf5a, 0xd8ecc0], special: [0x5b3420, 0xf2c48d],
+};
+
 /** Latte puddle: a lumpy blob with a foam rim and a shine. Drawn at UNIT_R around (0, 0). */
 function drawSpill(g: Graphics, id: number, item: DrinkId | 'spill' = 'latte'): void {
   const h = hash32(id);
   const R = UNIT_R;
-  const body = item === 'coldBrew' ? 0x6b4026 : item === 'espresso' ? 0x5a3320 : 0xd9ad80;
-  const rim = item === 'coldBrew' ? 0x8a5a3a : item === 'espresso' ? 0x7a4a30 : 0xf3dfc1;
+  const [body, rim] = SPILL_TINT[item === 'spill' ? 'latte' : item] ?? SPILL_TINT.latte;
   const lobes: [number, number, number][] = [[0, 0, 1]];
   for (let i = 0; i < 5; i++) {
     const a = (i / 5) * Math.PI * 2 + ((h >>> (i * 4)) & 15) / 8;
@@ -415,9 +419,9 @@ export class Chaos {
         break;
       case 'splash': {
         const m = state.messes.find((mm) => mm.x === b.at.x && mm.y === b.at.y && mm.kind === 'spill');
-        if (m && (b.item === 'espresso' || b.item === 'coldBrew' || b.item === 'latte')) this.spillItem.set(m.id, b.item);
+        if (m && b.item in SPILL_TINT) this.spillItem.set(m.id, b.item as DrinkId);
         this.comic('Splosh!', x, y - 40, 0xd9ad80, false);
-        this.puffs(x, y + 8, b.item === 'coldBrew' ? 0x6b4026 : 0xd9ad80, 12, 'dot');
+        this.puffs(x, y + 8, (SPILL_TINT[b.item as DrinkId] ?? SPILL_TINT.latte)[0], 12, 'dot');
         break;
       }
       case 'scatter':

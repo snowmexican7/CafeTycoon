@@ -2,8 +2,8 @@ import type { EspressoState } from './espresso';
 import type { ForecastId } from '../data/forecasts';
 
 export type PlayerId = string;
-export type DrinkId = 'espresso' | 'latte' | 'coldBrew';
-export type SupplyId = 'beans' | 'milk' | 'concentrate';
+export type DrinkId = 'espresso' | 'latte' | 'coldBrew' | 'icedLatte' | 'mocha' | 'matcha' | 'special';
+export type SupplyId = 'beans' | 'milk' | 'concentrate' | 'flavour';
 export type ItemKind = 'grounds' | DrinkId;
 export type StationKind = 'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'counter' | 'trash';
 export type Phase = 'night' | 'day' | 'closing' | 'weekEnd' | 'ended';
@@ -137,6 +137,8 @@ export interface Station {
   output: ItemKind | null;
   /** A rogue customer's id while they use the station. */
   occupiedBy: number | null;
+  /** What the station is brewing (a station has several recipes since B5); null when idle. */
+  making?: ItemKind | null;
 }
 
 export interface Customer {
@@ -167,7 +169,9 @@ export type Effect =
   /** Make one event likelier (or rarer) when today's events are drawn. */
   | { kind: 'eventOdds'; event: EventKind; mul: number }
   /** Spots in the queue (campers take tables, so the line fills sooner). */
-  | { kind: 'queue'; add: number };
+  | { kind: 'queue'; add: number }
+  /** Menu variety (B5): put a drink on the menu for good, from the night it is bought. */
+  | { kind: 'unlock'; drink: DrinkId };
 
 export interface CatalogueItem {
   id: string;
@@ -272,6 +276,10 @@ export interface GameState {
   rogue: Rogue | null;
   /** Neighbourhood forecast for state.day (at night: the coming day), from src/sim/forecast.ts. */
   forecast: ForecastId;
+  /** Drinks the café knows how to make (B5): base drinks, day unlocks and card unlocks, in DRINK_IDS order. */
+  unlocked: DrinkId[];
+  /** Drinks that joined the menu tonight (day unlocks and cards), for the night banner. */
+  freshDrinks?: DrinkId[];
 }
 
 export type PlayerInput =

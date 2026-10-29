@@ -29,17 +29,19 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+const ones = (): Record<DrinkId, number> => Object.fromEntries(DRINKS.map((d) => [d, 1])) as Record<DrinkId, number>;
+
 /** Neutral modifiers: every multiplier 1, tipRate 0. */
 export function baseModifiers(): Modifiers {
   return {
     stationSpeed: { grinder: 1, espresso: 1, steamer: 1, coldBrewTap: 1, counter: 1, trash: 1 },
     moveSpeed: 1,
-    price: { espresso: 1, latte: 1, coldBrew: 1 },
+    price: ones(),
     traffic: 1,
     patience: 1,
     tipRate: 0,
-    orderBias: { espresso: 1, latte: 1, coldBrew: 1 },
-    supplyCost: { beans: 1, milk: 1, concentrate: 1 },
+    orderBias: ones(),
+    supplyCost: { beans: 1, milk: 1, concentrate: 1, flavour: 1 },
     mix: { impatient: 1, group: 1, regular: 1 },
     eventOdds: { rushHour: 1, powerFlicker: 1, influencerVisit: 1, healthInspector: 1 },
     queue: 0,
@@ -88,6 +90,7 @@ export function itemModifiers(effects: Effect[]): Modifiers {
         m.queue += e.add;
         break;
       case 'gamble':
+      case 'unlock':
         break;
     }
   }

@@ -40,8 +40,27 @@ describe('stores', () => {
 });
 
 describe('snapshot versioning', () => {
-  it('is on version 4', () => {
-    expect(SNAPSHOT_VERSION).toBe(4);
+  it('is on version 5', () => {
+    expect(SNAPSHOT_VERSION).toBe(5);
+  });
+
+  it('migrates a version-4 save (three drinks, no flavours) to the B5 menu', () => {
+    const st = memoryStorage();
+    const store = createSnapshotStore(st);
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+    s.day = 4;
+    const old = JSON.parse(JSON.stringify(s));
+    delete old.unlocked;
+    delete old.freshDrinks;
+    delete old.supplies.flavour;
+    old.menu = { espresso: true, latte: false, coldBrew: true };
+    old.today.drinks = { espresso: 2, latte: 0, coldBrew: 1 };
+    st.setItem('cafetycoon.run', JSON.stringify({ version: 4, state: old }));
+    const got = store.load()!;
+    expect(got.unlocked).toEqual(['espresso', 'latte', 'coldBrew', 'icedLatte']);
+    expect(got.menu).toMatchObject({ latte: false, icedLatte: true, mocha: true });
+    expect(got.supplies.flavour).toBe(0);
+    expect(got.today.drinks?.mocha).toBe(0);
   });
 
   it('migrates a version-3 save (no forecast) instead of dropping it', () => {

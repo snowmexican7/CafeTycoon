@@ -6,7 +6,9 @@ import type { Modifiers } from '../effects';
 import { nearestStation } from '../movement';
 import { emitLog } from '../log';
 import { rngInt, rngNext } from '../rng';
-import { STATION_RECIPES } from '../stations';
+import { STATION_RECIPES, recipeFor, stocked } from '../stations';
+import { RECIPES, recipeChain, usesShot } from '../../data/drinks';
+import { zeroDrinks } from '../tally';
 import { tally } from '../tally';
 import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Mess, Player, Station, StationKind, Vec2 } from '../types';
 import { byDistance, findPath, idleNode, nodeOf, targetNodes, walkableNodes } from './path';
@@ -33,11 +35,8 @@ function use(kind: StationKind, action: BotAction): BotStep {
 
 /** The steps to make `drink` from scratch and hand it over (`serve`) or park it on the pass (`put`). */
 export function chainFor(drink: DrinkId, finish: 'serve' | 'put'): BotStep[] {
-  const make = (kind: StationKind): BotStep[] => [use(kind, 'insert'), use(kind, 'take')];
-  const prep =
-    drink === 'coldBrew'
-      ? make('coldBrewTap')
-      : [...make('grinder'), ...make('espresso'), ...(drink === 'latte' ? make('steamer') : [])];
+  // Every station on the drink's recipe ticket, in order (a mocha visits the steamer twice).
+  const prep = recipeChain(drink).flatMap(({ station }): BotStep[] => [use(station, 'insert'), use(station, 'take')]);
   return [...prep, use('counter', finish)];
 }
 
@@ -66,7 +65,7 @@ interface Coverage { drinks: Record<DrinkId, number>; pending: number }
  * parked anywhere but the grinder count for nothing.
  */
 function coveragePool(state: GameState): Coverage {
-  const drinks: Record<DrinkId, number> = { espresso: 0, latte: 0, coldBrew: 0 };
+  const drinks: Record<DrinkId, number> = zeroDrinks();
   let pending = 0;
   for (const p of state.players) {
     if (p.bot?.claim != null) continue;
@@ -76,7 +75,7 @@ function coveragePool(state: GameState): Coverage {
   for (const st of state.stations) {
     if (st.occupiedBy !== null) continue; // a rogue's drink is not for the queue
     if (claimedAtStation(state, st)) continue;
-    const brewing = st.busyTicksLeft > 0 && isRecipeKind(st.kind) ? STATION_RECIPES[st.kind].gives : null;
+    const brewing = st.busyTicksLeft > 0 && isRecipeKind(st.kind) ? (st.making ?? STATION_RECIPES[st.kind].gives) : null;
     for (const item of [st.output, brewing]) {
       if (item === null) continue;
       // Only the machine's own product is a shot-to-be: grounds dropped on the espresso machine are not.
@@ -101,7 +100,7 @@ export function uncoveredOrder(state: GameState, self: Player): Customer | null 
       drinks[c.drink] -= 1;
       continue;
     }
-    if (c.drink !== 'coldBrew' && shots > 0) {
+    if (usesShot(c.drink) && shots > 0) {
       shots -= 1;
       continue;
     }
@@ -114,7 +113,7 @@ function coldBrewsAhead(state: GameState): number {
   const onPass = state.pass.filter((i) => i.item === 'coldBrew').length;
   const held = state.players.filter((p) => p.holding === 'coldBrew').length;
   const inTap = state.stations.filter(
-    (st) => st.kind === 'coldBrewTap' && (st.busyTicksLeft > 0 || st.output === 'coldBrew'),
+    (st) => st.kind === 'coldBrewTap' && ((st.busyTicksLeft > 0 && (st.making ?? 'coldBrew') === 'coldBrew') || st.output === 'coldBrew'),
   ).length;
   return onPass + held + inTap;
 }
@@ -321,11 +320,14 @@ function act(state: GameState, p: Player, action: BotAction, st: Station): void 
       if (!isRecipeKind(st.kind)) return abandon(state, p);
       // A drink not yet checked stays in hand: a botched espresso must not become a latte.
       if (b.noticeTicksLeft > 0 && isDrink(p.holding)) return wait(state, p);
-      const r = STATION_RECIPES[st.kind];
+      const r = recipeFor(state, st.kind, p.holding);
       const idle = st.busyTicksLeft === 0 && st.output === null;
-      const stocked = r.consumes === null || state.supplies[r.consumes] >= 1;
-      if (idle && p.holding === r.takes && stocked) return execute(p);
-      if (p.holding === null && st.output === r.gives) {
+      if (idle && r && stocked(state, r)) return execute(p);
+      const kind = st.kind;
+      const leftover =
+        st.output !== null &&
+        (st.output === STATION_RECIPES[kind].gives || RECIPES[kind].some((x) => x.takes === null && x.gives === st.output));
+      if (p.holding === null && leftover) {
         execute(p); // takes the leftover: this step and the following take are both done
         if (isTakeAt(b.plan[0], st)) b.plan.shift();
         return;

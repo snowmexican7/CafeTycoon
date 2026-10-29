@@ -1,3 +1,6 @@
+import { DRINK_IDS } from '../src/data/drinks';
+import { zeroDrinks } from '../src/sim/tally';
+import { SUPPLY_IDS, menuDrinks } from '../src/sim/unlocks';
 /**
  * Headless balance tester: plays whole weeks with stand-ins and bots, no browser.
  * No Node APIs here, so tsc checks it through src/balance.test.ts; scripts/balance.ts is the CLI shell.
@@ -22,10 +25,10 @@ export interface BalanceReport { options: BalanceOptions; weeks: WeekResult[]; w
 
 export class UsageError extends Error {}
 
-const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
-const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate'];
+const DRINKS: DrinkId[] = DRINK_IDS;
+const SUPPLIES: SupplyId[] = SUPPLY_IDS;
 const SCENARIO_IDS = SCENARIOS.map((s) => s.id);
-const RESTOCK_TARGET: Record<SupplyId, number> = { beans: 40, milk: 20, concentrate: 30 };
+const RESTOCK_TARGET: Record<SupplyId, number> = { beans: 40, milk: 20, concentrate: 30, flavour: 10 };
 const NIGHT_SECONDS = 30;
 const TESTER = 'tester';
 const NO_BARISTAS = 'No baristas: nothing will be served.';
@@ -107,10 +110,10 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 export function nightInputs(state: GameState): PlayerInput[] {
   const inputs: PlayerInput[] = [];
   let cash = state.cash;
-  const onMenu = DRINKS.filter((d) => state.menu[d]);
+  const onMenu = menuDrinks(state);
   for (const supply of SUPPLIES) {
     if (!onMenu.some((d) => ECONOMY.drinkSupplies[d].includes(supply))) continue;
-    let packs = Math.ceil((RESTOCK_TARGET[supply] - state.supplies[supply]) / ECONOMY.packs[supply].size);
+    let packs = Math.ceil((RESTOCK_TARGET[supply] - (state.supplies[supply] ?? 0)) / ECONOMY.packs[supply].size);
     while (packs > 0 && restockCost(state, supply, packs) > cash) packs -= 1;
     if (packs <= 0) continue;
     cash = round2(cash - restockCost(state, supply, packs));
@@ -144,6 +147,8 @@ export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[]): We
   let ticks = 0;
   while (state.phase !== 'weekEnd' && state.phase !== 'ended') {
     if (++ticks > cap) throw new Error(`week on seed ${seed} did not finish within ${cap} ticks`);
+    // A fixed test menu stays fixed even as drinks unlock through the week ("all" takes them as they come).
+    if (state.phase === 'night' && menu.length < DRINKS.length) for (const d of DRINKS) state.menu[d] = menu.includes(d);
     const inputs = state.phase === 'night' && lastPhase !== 'night' ? nightInputs(state) : [];
     lastPhase = state.phase;
     state = step(state, inputs);
@@ -154,7 +159,7 @@ export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[]): We
       });
     }
   }
-  const drinks: Record<DrinkId, number> = { espresso: 0, latte: 0, coldBrew: 0 };
+  const drinks: Record<DrinkId, number> = zeroDrinks();
   for (const d of state.days) for (const k of DRINKS) drinks[k] += d.drinks?.[k] ?? 0;
   return { seed, menu: [...menu], days, finalCash: state.cash, bankrupt: state.bankrupt, drinks };
 }

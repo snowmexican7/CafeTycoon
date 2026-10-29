@@ -3,7 +3,9 @@ import { scenarioById } from '../data/scenarios';
 import { forecastName, forecastOf } from './forecast';
 import type { DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
 
-const DRINK_NAMES: Record<DrinkId, string> = { espresso: 'espresso', latte: 'latte', coldBrew: 'cold brew' };
+const DRINK_NAMES: Record<DrinkId, string> = {
+  espresso: 'espresso', latte: 'latte', coldBrew: 'cold brew', icedLatte: 'iced latte', mocha: 'mocha', matcha: 'matcha latte', special: 'maple cold foam',
+};
 const STATION_NAMES: Record<StationKind, string> = {
   grinder: 'grinder',
   espresso: 'espresso machine',
@@ -12,7 +14,7 @@ const STATION_NAMES: Record<StationKind, string> = {
   counter: 'counter',
   trash: 'trash',
 };
-const SUPPLY_NAMES: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'concentrate' };
+const SUPPLY_NAMES: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'concentrate', flavour: 'flavours' };
 
 const EVENT_NAMES: Record<EventKind, string> = {
   rushHour: 'rush hour', powerFlicker: 'power flicker', influencerVisit: 'influencer', healthInspector: 'inspector',
@@ -59,6 +61,8 @@ function describeOne(e: Effect): string {
       return `${EVENT_NAMES[e.event]} ${e.mul >= 1 ? 'likelier' : 'rarer'} (${times(e.mul)})`;
     case 'queue':
       return `${e.add > 0 ? '+' : '−'}${Math.abs(e.add)} queue spot${Math.abs(e.add) === 1 ? '' : 's'}`;
+    case 'unlock':
+      return `adds ${DRINK_NAMES[e.drink]} to the menu`;
   }
 }
 

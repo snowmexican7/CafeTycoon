@@ -190,6 +190,40 @@ export const CATALOGUE: CatalogueItem[] = [
     effects: [{ kind: 'traffic', mul: 1.05 }],
     flavor: 'A chalkboard with a pun. People stop to groan, then stay.',
   },
+  // Menu variety (B5): cards that put a new drink on the menu for good.
+  {
+    id: 'cocoaTin',
+    name: 'Tin of cocoa',
+    category: 'oddball',
+    cost: 15,
+    rarity: 'common',
+    duration: 'permanent',
+    effects: [{ kind: 'unlock', drink: 'mocha' }],
+    flavor: 'Mochas before Friday. Steam a latte twice and look busy.',
+  },
+  {
+    id: 'matchaWhisk',
+    name: 'Bamboo matcha whisk',
+    category: 'equipment',
+    cost: 25,
+    rarity: 'uncommon',
+    duration: 'permanent',
+    effects: [{ kind: 'unlock', drink: 'matcha' }],
+    flavor: 'Empty hands at the steamer now make something green and smug.',
+  },
+  {
+    id: 'seasonalBoard',
+    name: 'Seasonal menu board',
+    category: 'decor',
+    cost: 30,
+    rarity: 'uncommon',
+    duration: 'permanent',
+    effects: [
+      { kind: 'unlock', drink: 'special' },
+      { kind: 'traffic', mul: 1.03 },
+    ],
+    flavor: 'Maple cold foam, in chalk, with a leaf. People photograph it.',
+  },
 ];
 
 export const catalogueById: Record<string, CatalogueItem> = Object.fromEntries(CATALOGUE.map((i) => [i.id, i]));

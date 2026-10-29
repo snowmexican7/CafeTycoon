@@ -6,17 +6,19 @@ import { rngInt, rngNext } from './rng';
 import { rogueActive, startRogue } from './rogue';
 import { tally } from './tally';
 import { tallyDrink } from './tally';
+import { BASE_DRINKS, DRINK_IDS, DRINK_INFO } from '../data/drinks';
 import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, SimEvent } from './types';
 
-const DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
+const DRINKS: DrinkId[] = DRINK_IDS;
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** Drinks the café can still make: every supply the recipe needs has at least one unit. */
+/** Drinks the café can still make: unlocked, on the menu, and every supply the recipe needs has at least one unit. */
 export function availableDrinks(state: GameState): DrinkId[] {
-  return DRINKS.filter((d) => state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => state.supplies[s] >= 1));
+  const unlocked = state.unlocked ?? BASE_DRINKS;
+  return DRINKS.filter((d) => unlocked.includes(d) && state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => (state.supplies[s] ?? 0) >= 1));
 }
 
 /** Spots in the queue today: the layout's six, less any a forecast takes (never below three). */
@@ -41,7 +43,7 @@ export function spawnCustomers(state: GameState): GameState {
 
 /** Weighted drink draw over the menu, biased by the café's order modifiers (one rngNext). */
 export function drawDrink(state: GameState, menu: DrinkId[], m: Modifiers): DrinkId {
-  const weights = menu.map((d) => m.orderBias[d]);
+  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias);
   let roll = rngNext(state) * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < menu.length; i++) {
     roll -= weights[i];
@@ -92,7 +94,9 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const count = kind === 'group' ? g.min + rngInt(state, g.max - g.min + 1) : 1;
   const drinks = regular ? [regular.drink] : Array.from({ length: count }, () => drawDrink(state, menu, m));
   const mul = kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1;
-  const patienceMax = patienceFor(m, mul);
+  // fancy drinks buy a little patience; a group waits as long as its fanciest order
+  const wait = Math.max(...drinks.map((d) => DRINK_INFO[d].wait ?? 1));
+  const patienceMax = patienceFor(m, mul * wait);
   const customer: Customer = { id: state.nextCustomerId++, drink: drinks[0], patienceLeft: patienceMax, patienceMax };
   if (kind === 'impatient' || kind === 'group') customer.kind = kind;
   if (kind === 'group') customer.extra = drinks.slice(1);

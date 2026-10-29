@@ -30,6 +30,7 @@ export function finishDay(state: GameState): GameState {
     s.busyTicksLeft = 0;
     s.output = null;
     s.occupiedBy = null;
+    s.making = null;
   }
   for (const p of state.players) {
     p.holding = null;

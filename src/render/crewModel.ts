@@ -5,7 +5,9 @@ import type { DrinkId, GameState, Personality } from '../sim/types';
  * bot looks and emotes. No Pixi here; Actors and Effects draw from it.
  */
 
-const DRINK_PHRASE: Record<DrinkId, string> = { espresso: 'an espresso', latte: 'a latte', coldBrew: 'a cold brew' };
+const DRINK_PHRASE: Record<DrinkId, string> = {
+  espresso: 'an espresso', latte: 'a latte', coldBrew: 'a cold brew', icedLatte: 'an iced latte', mocha: 'a mocha', matcha: 'a matcha latte', special: 'a maple cold foam',
+};
 
 /** "Dev served a latte +$6.10" (amount is price plus tip). */
 export function toastText(name: string, item: DrinkId, amount: number): string {

@@ -4,7 +4,7 @@ import { ACTIONS, parseHello, parseInput, parseJoin, parseLobby, parseSeat, pars
 
 describe('protocol parsers', () => {
   it('is on version 5 (seat reclaim, room cap, lobby bots, forecasts in state)', () => {
-    expect(PROTOCOL_VERSION).toBe(5);
+    expect(PROTOCOL_VERSION).toBe(6);
     expect(ACTIONS).toContain('seat');
     for (const a of ACTIONS) expect(new TextEncoder().encode(a).length).toBeLessThanOrEqual(12); // trystero action names
   });

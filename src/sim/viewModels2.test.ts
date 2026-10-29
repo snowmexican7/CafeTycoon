@@ -1,3 +1,4 @@
+import { zeroDrinks } from './tally';
 import { describe, it, expect } from 'vitest';
 import { hudStructureKey, hudViewModel, nightViewModel, receiptViewModel, type HudVM } from '../ui/viewModels';
 import { createRun, startDay } from './run';
@@ -83,7 +84,7 @@ describe('receipt vm', () => {
       receiptViewModel({
         day: 2, served: 3, lost: 1, turnedAway: 0, sales: 10, tips: 1, rent: 5,
         wasted: 4, fines: 15, bonus: 25.5, botMistakes: 2, lostRegulars: 1, inspection: 'fail',
-        events: ['rushHour', 'healthInspector'], drinks: { espresso: 1, latte: 2, coldBrew: 0 },
+        events: ['rushHour', 'healthInspector'], drinks: { ...zeroDrinks(), espresso: 1, latte: 2, coldBrew: 0 },
       }),
     ).toEqual({
       wasted: 4,

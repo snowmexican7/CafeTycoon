@@ -15,7 +15,7 @@ describe('effects', () => {
       { kind: 'orderBias', drink: 'latte', mul: 2 },
     ]);
     expect(m.stationSpeed.espresso).toBeCloseTo(1.3 * 1.55);
-    expect(m.price).toEqual({ espresso: 1.08, latte: 1.08, coldBrew: 1.08 });
+    expect(m.price).toMatchObject({ espresso: 1.08, latte: 1.08, coldBrew: 1.08, mocha: 1.08 });
     expect(m.tipRate).toBeCloseTo(0.25);
     expect(m.orderBias.latte).toBe(2);
     expect(m.orderBias.espresso).toBe(1);

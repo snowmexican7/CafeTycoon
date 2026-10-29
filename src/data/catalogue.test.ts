@@ -3,9 +3,9 @@ import { CATALOGUE, catalogueById } from './catalogue';
 import { SCENARIOS, scenarioById } from './scenarios';
 
 describe('catalogue and scenarios data', () => {
-  it('has 16 unique ids and valid references', () => {
-    expect(CATALOGUE).toHaveLength(16);
-    expect(new Set(CATALOGUE.map((i) => i.id)).size).toBe(16);
+  it('has unique ids and valid references', () => {
+    expect(CATALOGUE.length).toBeGreaterThanOrEqual(19);
+    expect(new Set(CATALOGUE.map((i) => i.id)).size).toBe(CATALOGUE.length);
     for (const i of CATALOGUE) {
       for (const r of [...(i.requires ?? []), ...(i.excludes ?? [])]) expect(catalogueById[r]).toBeDefined();
     }

@@ -1,3 +1,4 @@
+import { BASE_DRINKS } from '../data/drinks';
 import type { GameState, PlayerInput } from './types';
 
 /**
@@ -8,7 +9,9 @@ export function applyMenuInput(state: GameState, input: Extract<PlayerInput, { k
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
   if (!p || !p.connected || p.bot) return state;
-  if (!input.on && state.menu[input.drink] && Object.values(state.menu).filter(Boolean).length === 1) return state;
+  const unlocked = state.unlocked ?? BASE_DRINKS;
+  if (!unlocked.includes(input.drink)) return state;
+  if (!input.on && state.menu[input.drink] && unlocked.filter((d) => state.menu[d]).length === 1) return state;
   state.menu[input.drink] = input.on;
   return state;
 }

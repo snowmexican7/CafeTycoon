@@ -6,9 +6,11 @@ import { crewKey, DRINK_STEPS, handKey, ITEM_LABEL, ordersKey, type HudLive } fr
 import { cleanMeter, EVENT_INTRO, hudStructureKey, type HudVM } from './viewModels';
 import type { EventKind } from '../sim/types';
 
-const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew' } as const;
-const SUPPLY_UNIT = { beans: 'shots', milk: 'steams', concentrate: 'pours' } as const;
-const DRINK_LABEL = { espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew' } as const;
+const SUPPLY_LABEL = { beans: 'Beans', milk: 'Milk', concentrate: 'Cold brew', flavour: 'Flavours' } as const;
+const SUPPLY_UNIT = { beans: 'shots', milk: 'steams', concentrate: 'pours', flavour: 'pumps' } as const;
+const DRINK_LABEL = {
+  espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew', icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha', special: 'Maple foam',
+} as const;
 const LOW_AT = 5;
 const URGENT = 0.28;
 

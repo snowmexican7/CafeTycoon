@@ -1,3 +1,4 @@
+import { zeroDrinks } from '../sim/tally';
 import type { HostToClient, Transport } from '../net/transport';
 import { isBot } from '../sim/bots/roster';
 import { validateInput } from '../sim/validate';
@@ -94,7 +95,7 @@ function summaryDays(state: GameState): DayStats[] {
 
 function buildSummary(state: GameState, rows: TelemetryRow[], cards: Map<number, { offered: string[]; bought: string[] }>): TelemetrySummary {
   const days = summaryDays(state);
-  const drinks: Record<DrinkId, number> = { espresso: 0, latte: 0, coldBrew: 0 };
+  const drinks: Record<DrinkId, number> = zeroDrinks();
   for (const d of days) for (const k of Object.keys(drinks) as DrinkId[]) drinks[k] += d.drinks?.[k] ?? 0;
   const idleTicks: Record<string, number> = {};
   const botMistakes: Record<string, number> = {};

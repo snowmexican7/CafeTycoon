@@ -1,17 +1,19 @@
 import type { DrinkId, StationKind, SupplyId } from '../sim/types';
+import { DRINK_IDS, suppliesFor } from './drinks';
 
 /** Every tunable number in one place. Balance lives here, rules live in src/sim. */
 export const ECONOMY = {
   startingCash: 100,
   startingReputation: 2.5,
   rentPerDay: 25,
-  startingSupplies: { beans: 20, milk: 10, concentrate: 15 } as Record<SupplyId, number>,
+  startingSupplies: { beans: 20, milk: 10, concentrate: 15, flavour: 0 } as Record<SupplyId, number>,
   packs: {
     beans: { size: 10, cost: 8 },
     milk: { size: 10, cost: 10 },
     concentrate: { size: 10, cost: 9 },
+    flavour: { size: 10, cost: 9 },
   } as Record<SupplyId, { size: number; cost: number }>,
-  prices: { espresso: 3, latte: 4.75, coldBrew: 4 } as Record<DrinkId, number>,
+  prices: { espresso: 3, latte: 4.75, coldBrew: 4, icedLatte: 5.25, mocha: 6, matcha: 5.5, special: 6.25 } as Record<DrinkId, number>,
   stationSeconds: { grinder: 2.5, espresso: 5, steamer: 3.5, coldBrewTap: 1.5 } as Record<
     Exclude<StationKind, 'counter' | 'trash'>,
     number
@@ -42,12 +44,11 @@ export const ECONOMY = {
   handSize: 5,
   rarityWeights: { common: 60, uncommon: 30, rare: 10 },
   cheapThreshold: 30,
-  drinkSupplies: {
-    espresso: ['beans'],
-    latte: ['beans', 'milk'],
-    coldBrew: ['concentrate'],
-  } as Record<DrinkId, SupplyId[]>,
-  pass: { slots: 3, staleSeconds: { espresso: 45, latte: 60, coldBrew: 600 } as Record<DrinkId, number> },
+  /** Every supply a drink needs from scratch (derived from the station recipes in src/data/drinks.ts). */
+  drinkSupplies: Object.fromEntries(DRINK_IDS.map((d) => [d, suppliesFor(d)])) as Record<DrinkId, SupplyId[]>,
+  /** Free flavour packs when the first drink that needs them joins the menu (cocoa, matcha, maple). */
+  flavourStarter: 10,
+  pass: { slots: 3, staleSeconds: { espresso: 45, latte: 60, coldBrew: 600, icedLatte: 180, mocha: 60, matcha: 60, special: 180 } as Record<DrinkId, number> },
   events: {
     scheduleWeights: [0.35, 0.45, 0.2],
     windowStart: 0.15,

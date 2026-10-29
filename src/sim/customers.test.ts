@@ -26,7 +26,7 @@ describe('customers', () => {
 
   it('only orders drinks with supplies, and never past the queue cap', () => {
     let s = day();
-    s.supplies = { beans: 0, milk: 5, concentrate: 3 };
+    s.supplies = { beans: 0, milk: 5, concentrate: 3, flavour: 0 };
     expect(availableDrinks(s)).toEqual(['coldBrew']);
     s.customers = Array.from({ length: 6 }, (_, i) => ({ id: i, drink: 'coldBrew' as const, patienceLeft: 100, patienceMax: 100 }));
     for (let i = 0; i < 60 * 60; i++) s = spawnCustomers(s);

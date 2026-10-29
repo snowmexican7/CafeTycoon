@@ -166,7 +166,7 @@ const quietCafe = (bots = 0): GameState => {
   s.phaseTicksLeft = 100000;
   s.events = [];
   s.eventSchedule = [];
-  s.supplies = { beans: 10, milk: 10, concentrate: 10 };
+  s.supplies = { beans: 10, milk: 10, concentrate: 10, flavour: 0 };
   return s;
 };
 
@@ -232,7 +232,7 @@ describe('the rogue entity', () => {
     expect(station(s, 'steamer').occupiedBy).toBe(id);
     expect(station(s, 'steamer').busyTicksLeft).toBe(600);
     expect(s.rogue!.ticksLeft).toBe(600);
-    expect(s.supplies).toEqual({ beans: beans - 1, milk: milk - 1, concentrate });
+    expect(s.supplies).toEqual({ beans: beans - 1, milk: milk - 1, concentrate, flavour: 0 });
     seen.clear();
     s = runUntil(s, (t) => t.rogue === null);
     expect(station(s, 'steamer').output).toBeNull();
