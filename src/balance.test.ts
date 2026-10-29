@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cardValue, main, summarize, type BalanceReport, type WeekResult } from '../scripts/balanceCore';
+import { applyLayout, cardValue, main, summarize, type BalanceReport, type Layout, type WeekResult } from '../scripts/balanceCore';
 import { catalogueById } from './data/catalogue';
 import { zeroDrinks } from './sim/tally';
 import { createRun } from './sim/run';
@@ -32,6 +32,32 @@ describe('balance tester', () => {
     expect(main(args).output).toBe(main(args).output);
     expect(main(['--weeks', '1', '--day', '30', '--humans', '1', '--bots', '0', '--policy', 'nope']).code).toBe(2);
   }, 30_000);
+  it('--layout noTrash opens without a bin, and an unknown layout is a usage error', () => {
+    const args = ['--weeks', '1', '--seed', '3', '--day', '30', '--humans', '1', '--bots', '1', '--layout', 'noTrash', '--summary'];
+    const r = main(args);
+    expect(r.code).toBe(0);
+    expect(r.output).toContain('smart');
+    expect(main(['--weeks', '1', '--layout', 'nope']).code).toBe(2);
+    expect(main(['--layout']).code).toBe(2);
+  }, 60_000);
+  it('applyLayout rearranges the opening slots', () => {
+    const open = (layout: Layout) => {
+      const s = createRun({ seed: 1, hostId: 'tester', players: [] });
+      applyLayout(s, layout);
+      return s;
+    };
+    expect(open('default').equipment).toEqual([]);
+    const twin = open('twinEspresso');
+    expect(twin.slots).toEqual(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash', 'espresso']);
+    expect(twin.stations.map((x) => x.id)).toContain('espresso-2');
+    const nc = open('noColdBrew');
+    expect(nc.slots).toContain(null);
+    expect(nc.equipment).toEqual(['coldBrewTap']);
+    expect(nc.stations.some((x) => x.kind === 'coldBrewTap')).toBe(false);
+    const nt = open('noTrash');
+    expect(nt.equipment).toEqual(['trash']);
+    expect(nt.stations.some((x) => x.kind === 'trash')).toBe(false);
+  });
   it('values on-path cards and set completions above strays', () => {
     const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     s.day = 2;

@@ -30,9 +30,9 @@ export function eligibleItems(state: GameState, pool: CatalogueItem[] = CATALOGU
   );
 }
 
-/** P3 B13: a card that only speeds up a station the shop does not have, or only teaches drinks it cannot make yet (never at the café). */
+/** P3 B13: a card that only speeds up a station the shop does not have, or only teaches drinks it cannot make yet (FB1 WP5: read from the floor, so a full café hides nothing). */
 function uselessAtTier(state: GameState, item: CatalogueItem): boolean {
-  if (state.tier === undefined || state.tier === 'cafe' || item.effects.length === 0) return false;
+  if (item.effects.length === 0) return false;
   return item.effects.every(
     (e) => (e.kind === 'stationSpeed' && !hasStation(state, e.station)) || (e.kind === 'unlock' && !canMake(state, e.drink)),
   );

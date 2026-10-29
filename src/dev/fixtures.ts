@@ -12,7 +12,7 @@ import { EVENT_FORESHADOW } from '../sim/describe';
 import { createRun, startDay, startNight } from '../sim/run';
 import { createNight } from '../ui/night';
 import type { GameState, SimEvent, TierId } from '../sim/types';
-import { stationsFor } from '../sim/growth';
+import { defaultSlots, stationsFromSlots } from '../sim/slots';
 import { createClosing } from '../ui/closing';
 import { createHud } from '../ui/hud';
 import { hudLive } from '../ui/live';
@@ -37,7 +37,8 @@ function counterLine(s: GameState, active: 'register' | 'kiosk' | 'squarely', n:
 /** P3 B13: the shop at a tier, the crew inside its floor and a line as long as it allows. */
 function atTier(s: GameState, tier: TierId, n: number): void {
   s.tier = tier;
-  s.stations = stationsFor(tier);
+  s.slots = defaultSlots(tier);
+  s.stations = stationsFromSlots(tier, s.slots);
   s.mop = { pos: { ...layoutFor(tier).mopHome }, heldBy: null };
   const spots = tier === 'stand' ? [{ x: 1.4, y: 2.2 }, { x: 3, y: 2.3 }, { x: 5, y: 2.2 }, { x: 6.6, y: 4.6 }] : tier === 'cart' ? [{ x: 2, y: 2.3 }, { x: 4, y: 2.3 }, { x: 7, y: 2.4 }, { x: 6.5, y: 4.7 }] : [{ x: 2, y: 2.3 }, { x: 5, y: 2.3 }, { x: 8.5, y: 2.4 }, { x: 6.5, y: 4.7 }];
   s.players.forEach((p, i) => (p.pos = { ...spots[i] }));
@@ -289,7 +290,8 @@ const FIXTURES: Record<string, Fixture> = {
       s.cash = 128;
       s.day = 3;
       s.tier = 'stand';
-      s.stations = stationsFor('stand');
+      s.slots = defaultSlots('stand');
+      s.stations = stationsFromSlots('stand', s.slots);
       s.today = { day: 2, served: 22, lost: 3, turnedAway: 4, sales: 98.5, tips: 9.1, rent: 10 };
     },
     timeline: [],
@@ -300,7 +302,8 @@ const FIXTURES: Record<string, Fixture> = {
       s.cash = 61;
       s.day = 3;
       s.tier = 'cart';
-      s.stations = stationsFor('cart');
+      s.slots = defaultSlots('cart');
+      s.stations = stationsFromSlots('cart', s.slots);
       s.tierLog = [{ tier: 'cart', day: 3, by: 'Ben' }];
       s.today = { day: 2, served: 24, lost: 2, turnedAway: 5, sales: 104.2, tips: 10.4, rent: 10 };
     },

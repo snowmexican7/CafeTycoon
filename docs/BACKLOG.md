@@ -94,7 +94,10 @@ Written down from a voice note after the Phase 3 playtest. Only the first item i
   is a floor mess. The strategy is throughput against mess risk: more machines pump out more
   coffee, but a crowded floor spills more. FB1 package 3 builds the sim side (slots, equipment,
   a `slot` night input, second machines, no-bin drops); Phase 3 Block 14 (layout editor) is the
-  same idea from the roadmap side.
+  same idea from the roadmap side. *2026-10-29: FB1 delivered the sim side of this (slots per tier,
+  the `slot` and `equip` inputs, a fixed-price stations shop incl. a second espresso machine and a
+  bin, bots that cope with duplicate or missing stations); the mop bucket as purchasable equipment is
+  deferred (the render reads `state.mop`), and the stations tab UI is the UI lane's. See "FB1 WP5 reflection".*
 - **Collisions should cause spills.** Once player collisions exist, a bump while someone carries a
   drink should have a decent chance of a spill (Kennedy's first guess: around 60%), so the mop
   actually matters and the floor feels like Overcooked. Not in FB1; needs collisions first.
@@ -247,6 +250,75 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
   The café stage is narrower by the same amount, and the canvas scales to fit.
 - Still open on the UI side (WP3 and WP4, not in this pass): the press-and-hold "Close early" button in the clock
   pill, which reads `closeEarlyState`, and a sold-out sign.
+## FB1 WP5 reflection
+
+- **What shipped (branch fb1-sim-slots, sim side of FB1 package 3).**
+  - *Slots per tier:* the back bar is a row of fixed slots (`SLOT_POSITIONS`, `src/data/layout.ts`): stand 4 at x 1,3,5,7;
+    cart 5 at x 1,3,5,7,9; café 6 at x 1,3,5,8,10 and a sixth, empty by default, at (11,1). The café keeps its five old
+    positions (they are not on an even grid and moving them would change every bot path). The counter is not a slot.
+  - *State:* `state.slots` (one `StationKind | null` per slot), `state.equipment` (owned, unplaced), `state.equipLog`
+    (`{ station, day, by }` per purchase). `state.stations` is rebuilt from the slots after every slot change: ids `grinder`,
+    `espresso`, … for the first of a kind and `espresso-2`, … for the next; positions come from `SLOT_POSITIONS`; the counter is last.
+    Default slots reproduce the pre-slots stations exactly (deep-equal and JSON-equal tests, and golden rng/hash tests for bots 0..3).
+  - *Inputs:* `slot` (put an owned station into a slot, or empty it; free rearranging) and `equip` (buy a station), both night-only,
+    connected humans only. Any station can be removed, the grinder and the bin included.
+  - *The fixed-price EQUIPMENT shop replaces the plan's two dealt cards.* Cards in the deck change every seed's dealt hands, which
+    breaks the "unchanged runs keep their stream" rule, and a fixed stations shop is what Kennedy asked for. Prices: espresso $45,
+    grinder $30, steamer $40, cold-brew tap $35, bin $15; they count in `fittingsValue` at half, like cards.
+  - *`reasonOff(state, drink)`* (`'noStation' | 'noStock' | 'off' | null`): why a drink is off the board. `hasStation` and `canMake`
+    now read `state.stations` (the café shortcut is gone), so removing the steamer takes lattes, mochas, matcha and the special off
+    the menu through `unlockedDrinks`, `menuDrinks` and `uselessAtTier`.
+  - *Bots:* `use(kind, action)` resolves to the nearest idle, unclaimed station of the kind (else the first); at insert time a busy
+    machine re-targets to an idle twin. With no bin a bot walks to the nearest walkable node with no station in reach and no spill
+    (`floorDropNode`) and drops there (floor action `'drop'`). *Mess-cap fallback:* with no bin and the floor at `ECONOMY.mess.max`,
+    grounds go through the espresso machine (`insert`, `take`, `counter put`) instead of failing to drop. Rogue customers
+    (`ROGUE_STATION`, `pickStation`) prefer any free station of the drink's kind, and `canDrinkEspresso` accepts any espresso machine in range.
+  - *Growing conserves what the crew owns* (`growSlots`): per kind, `equipmentAfter = ownedBefore + max(0, defaults(to) - defaults(from)) - defaults(to)`,
+    clamped at 0 (ownedBefore = placed + equipment). A steamer bought on the stand survives the move to the cart (the cart's own
+    steamer is a gift on top), and a grinder removed into equipment is not duplicated. Surplus is kept in kind order grinder, espresso,
+    steamer, coldBrewTap, trash. (An earlier version, `owned - defaults(to)`, swallowed a bought steamer; fixed in `40396e3`.)
+  - *Save version 25, network protocol 28.* Migration 24→25 sets `slots = defaultSlots(tier)` and `equipment = []`; the 22 and 23
+    steps are placeholders that the day/night branches fill at merge.
+- **Final shapes** (header comments, verbatim in spirit).
+  - `src/sim/slots.ts`: `slotCount(tier): number`; `defaultSlots(tier): (StationKind | null)[]`; `stationsFromSlots(tier, slots): Station[]`
+    (slot order, empty slots skipped, counter last); `growSlots(state, to)` (called before `state.tier` changes);
+    `applySlotInput(state, input)`, `applyEquipInput(state, input)`, `equipmentSpent(state)`; `reasonOff(state, drink)`.
+    Pure, no RNG, everything in slot order.
+  - `src/data/equipment.ts`: `EquipmentKind = Exclude<StationKind, 'counter'>`; `EQUIPMENT_KINDS = ['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash']`;
+    `EQUIPMENT: Record<EquipmentKind, { name, cost, blurb }>`.
+  - Inputs: `{ kind: 'slot'; playerId; index: number; station: StationKind | null }` (night, connected human, `index` within `slotCount(tier)`,
+    `station` from `state.equipment` or `null`; the old content goes to equipment) and `{ kind: 'equip'; playerId; station: StationKind }`
+    (night, connected human, cash in hand, not `'counter'`; goes into the first empty slot, else into `state.equipment`; logged in `equipLog`).
+  - Tester: `--layout default | twinEspresso | noColdBrew | noTrash` (`BalanceOptions.layout`, `applyLayout(state, layout)` in `scripts/balanceCore.ts`),
+    applied right after `createRun` and `addStandIns` by editing slots and equipment and rebuilding the stations. Under the `grow` policy the
+    layout only shapes the stand: growing hands the new tier's defaults back (the bin comes back as a default), so use it with the café-start policies.
+- **Tests.** 596 before FB1; 736 now (90 files) on this branch with the whole fb1 sim lane merged in, of which the slots work adds
+  48 in `slots.test.ts`, the bots work about 16 in `brain.test.ts`/`rogue.test.ts`/`espresso.test.ts`, and C4 adds three in `balance.test.ts` plus the grow-formula tests.
+- **Balance (40 weeks from seed 1, smart policy, 2 stand-in humans + 1 bot, café start).**
+
+  | layout | mean cash | score | loss | profit | loss by day 1..7 |
+  |---|---|---|---|---|---|
+  | default (baseline) | 260.53 | 276.53 | 26.4% | 97.5% | 11/16/23/27/29/36/32 |
+  | twinEspresso | 301.94 | 329.63 | 23.2% | 100% | 10/15/18/24/26/31/28 |
+  | noColdBrew | 151.36 | 92.05 | 43.7% | 87.5% | 27/38/39/44/48/55/48 |
+  | noTrash | 260.62 | 275.75 | 26.7% | 100% | 10/18/21/29/32/35/33 |
+  | taste, default | 274.88 | 288.19 | 28.1% | 100% | 11/17/24/26/34/39/35 |
+
+  The default and taste rows equal the pre-slots baselines (smart 260.53 / 276.53 / 26.4% / 97.5%, taste 274.88 / 288.19 / 28.1% / 100%), so the
+  slots change nothing until a crew rearranges them. A second espresso machine helps a lot (+$41 mean cash, score +$53, 3 points less loss, and the tester gets it
+  free, so read the real gain as that minus the $45), which says the price is not too low. Losing the cold-brew tap
+  is the heavy one (-$109, loss 43.7%) because the tester keeps cold brew on the menu and those orders walk away. A missing bin is currently free: bots
+  drop grounds on the floor and the mop keeps up, so "throughput against mess risk" needs a harsher floor (see below) before no-bin is a real choice.
+  Logs: `.superpowers/sdd/2026-10-29-fb1-sim/balance-C-<layout>.log`, `balance-C-taste.log`.
+- **Open questions for the UI lane.**
+  - Render reads `layoutFor(tier).stations` (viewModels.ts, scene.ts). It must draw from `state.stations` instead, including duplicates with ids
+    `kind-2` and empty slots (draw an empty bracket or plinth at `SLOT_POSITIONS[tier][i]` where `state.slots[i] === null`).
+  - The Spend/Shopfront slots strip needs `slotCount(tier)`, `state.slots`, `state.equipment`, `EQUIPMENT` and the two inputs (`slot`, `equip`).
+  - `reasonOff(state, drink)` is for the "lattes off: no steamer" note on the Menu tab.
+  - A mop bucket as purchasable equipment was deferred because the render reads `state.mop` (see Kennedy's design notes, first bullet): no mop bucket
+    should mean spills stay all day, which needs a `state.mop` that can be absent and a render that tolerates it.
+  - Tuning for later: with a bin gone the floor should punish (grounds piles and spills mop-cost more, or slow walkers); today the tester says it does not.
+  - A `slot` input can put any kind into any slot, including a steamer on the stand, so a kerbside stand can sell lattes once it owns one (tested).
 
 ## main.ts hook-ins (phase 2)
 

@@ -33,7 +33,8 @@ export interface Rogue {
   customerId: number; name?: string; drink: DrinkId; stage: RogueStage;
   pos: Vec2; path: Vec2[]; station: string | null; ticksLeft: number; waitTicks: number;
 }
-export type FloorAction = 'takeMop' | 'clean' | 'returnMop';
+/** Mop steps (takeMop, clean, returnMop), and `drop`: put what is in hand on the floor (no bin in the shop). */
+export type FloorAction = 'takeMop' | 'clean' | 'returnMop' | 'drop';
 export type BotStep = { kind: 'use'; station: string; action: BotAction } | { kind: 'idle'; node: Vec2 }
   | { kind: 'floor'; node: Vec2; action: FloorAction };
 
@@ -449,6 +450,12 @@ export interface GameState {
   tier?: TierId;
   /** P3 B13: each time the crew grew the shop this run (the tier grown into, the coming day, who did it). */
   tierLog?: { tier: TierId; day: number; by: string }[];
+  /** FB1 WP5: what stands in each back-bar slot, left to right (absent = the tier's defaults; see sim/slots.ts). */
+  slots?: (StationKind | null)[];
+  /** FB1 WP5: stations the crew owns but has not placed (absent = none). */
+  equipment?: StationKind[];
+  /** FB1 WP5: each station bought from the stations shop (what, the coming day, who bought it). */
+  equipLog?: { station: StationKind; day: number; by: string }[];
   /** P3 B11: the latest pitch to the panel (it applies on its `day` when green-lit). */
   pitch?: PitchResult;
   eventSchedule: ScheduledEvent[];
@@ -497,6 +504,8 @@ export type PlayerInput =
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
   | { kind: 'grow'; playerId: PlayerId; tier: TierId }
+  | { kind: 'slot'; playerId: PlayerId; index: number; station: StationKind | null }
+  | { kind: 'equip'; playerId: PlayerId; station: StationKind }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }

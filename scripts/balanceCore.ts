@@ -1,6 +1,7 @@
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../src/sim/checkout';
 import type { CheckoutId } from '../src/sim/types';
-import { nextTier, stationsFor, TIERS } from '../src/sim/growth';
+import { nextTier, TIERS } from '../src/sim/growth';
+import { defaultSlots, growSlots, stationsFromSlots } from '../src/sim/slots';
 import { layoutFor } from '../src/data/layout';
 import { ADS } from '../src/sim/ads';
 import { judgePitch } from '../src/sim/pitch';
@@ -27,16 +28,22 @@ import type { CardPath, CatalogueItem } from '../src/sim/types';
 import { createRun } from '../src/sim/run';
 import { step } from '../src/sim/step';
 import { scoreRun } from '../src/sim/score';
-import type { BotSkill, DrinkId, EventKind, GameState, Pace, PlayerInput, ScenarioId, SupplyId } from '../src/sim/types';
+import type { BotSkill, DrinkId, EventKind, GameState, Pace, PlayerInput, ScenarioId, StationKind, SupplyId } from '../src/sim/types';
 
 /** How the tester shops at night: `simple` is the spec's original rule; `smart` plays like a sensible crew (B11). */
 export type Policy = 'simple' | 'smart' | 'speed' | 'quality' | 'reach' | 'none' | 'taste' | 'promo' | 'kiosk' | 'squarely' | 'stand' | 'grow';
 export const POLICIES: Policy[] = ['simple', 'smart', 'speed', 'quality', 'reach', 'none', 'taste', 'promo', 'kiosk', 'squarely', 'stand', 'grow'];
 
+/** Back-bar loadouts the tester can open with (applied to the slots right after the run is created). */
+export type Layout = 'default' | 'twinEspresso' | 'noColdBrew' | 'noTrash';
+export const LAYOUTS: Layout[] = ['default', 'twinEspresso', 'noColdBrew', 'noTrash'];
+
 export interface BalanceOptions {
   weeks: number; seed: number; humans: number; bots: number; skill: BotSkill; pace: Pace;
   scenario: ScenarioId | 'random'; menus: DrinkId[][]; compare: boolean; json: boolean; daySeconds: number;
   policies: Policy[];
+  /** FB1 WP5: the opening back-bar layout (default = the tier's own). */
+  layout: Layout;
   /** Print only the aggregate summary (B11), not every week's table. */
   summary: boolean;
 }
@@ -77,6 +84,7 @@ export const USAGE = `Usage: npm run balance -- [options]
   --compare policies run every night policy on the same seeds (overrides --policy)
   --policy P         night shopping: smart (default) | simple | speed | quality | reach | none | taste (smart + twists and a signature) | promo (taste + an ad and a pitch every night) | kiosk / squarely (smart + install that checkout, and the ones before it, once there's $60 spare) | stand (smart, opens as the stand and never grows) | grow (smart, opens as the stand and grows once there's $60 spare)
                      (simple = cheapest permanent card; speed/quality/reach = smart, locked to a path)
+  --layout L         opening back-bar: default | twinEspresso (a second espresso machine in the first empty slot) | noColdBrew (no cold-brew tap) | noTrash (no bin)
   --day N            day length in seconds (30-600, default 150)
   --json             print the report as JSON
   --summary          print only the aggregate summary (per-day loss, card buys, policies)
@@ -85,7 +93,7 @@ export const USAGE = `Usage: npm run balance -- [options]
 export function defaultOptions(): BalanceOptions {
   return {
     weeks: 10, seed: 1, humans: 2, bots: 1, skill: 3, pace: 3, scenario: 'random',
-    menus: [[...DRINKS]], compare: false, json: false, daySeconds: 150, policies: ['smart'], summary: false,
+    menus: [[...DRINKS]], compare: false, json: false, daySeconds: 150, policies: ['smart'], layout: 'default', summary: false,
   };
 }
 
@@ -136,6 +144,12 @@ export function parseArgs(argv: string[]): BalanceOptions {
       case '--summary':
         o.summary = true;
         break;
+      case '--layout': {
+        const v = next() as Layout;
+        if (!LAYOUTS.includes(v)) throw new UsageError(`unknown layout '${v ?? ''}'`);
+        o.layout = v;
+        break;
+      }
       case '--policy': {
         const v = next() as Policy;
         if (!POLICIES.includes(v)) throw new UsageError(`unknown policy '${v ?? ''}'`);
@@ -310,10 +324,31 @@ export function growNight(state: GameState): void {
   const next = nextTier(state);
   if (!next || state.cash < TIERS[next].cost + 60) return;
   state.cash = Math.round((state.cash - TIERS[next].cost) * 100) / 100;
+  growSlots(state, next);
   state.tier = next;
   state.tierLog = [...(state.tierLog ?? []), { tier: next, day: state.day, by: 'tester' }];
-  state.stations = stationsFor(next);
   state.mop = { pos: { ...layoutFor(next).mopHome }, heldBy: null };
+}
+
+/** FB1 WP5: set the opening back-bar. Mutates slots/equipment directly (the tester has no human to send inputs) and rebuilds the stations. */
+export function applyLayout(state: GameState, layout: Layout): void {
+  if (layout === 'default') return;
+  const slots = [...(state.slots ?? defaultSlots(state.tier))];
+  const equipment = [...(state.equipment ?? [])];
+  const remove = (kind: StationKind) => {
+    const i = slots.indexOf(kind);
+    if (i >= 0) { slots[i] = null; equipment.push(kind); }
+  };
+  if (layout === 'noColdBrew') remove('coldBrewTap');
+  else if (layout === 'noTrash') remove('trash');
+  else if (layout === 'twinEspresso') {
+    const free = slots.indexOf(null);
+    if (free >= 0) slots[free] = 'espresso';
+    else equipment.push('espresso');
+  }
+  state.slots = slots;
+  state.equipment = equipment;
+  state.stations = stationsFromSlots(state.tier, slots);
 }
 
 /** Most ticks a week can take: seven nights, days and closing graces, plus slack. Exceeding it means a stuck sim. */
@@ -330,6 +365,7 @@ export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[], pol
     settings: { bots: opts.bots, botSkill: opts.skill, pace: opts.pace, dayLengthSec: opts.daySeconds, nightLengthSec: NIGHT_SECONDS },
   });
   addStandIns(state, opts.humans);
+  applyLayout(state, opts.layout);
   if (opts.scenario !== 'random') state.scenario = opts.scenario;
   for (const d of DRINKS) state.menu[d] = menu.includes(d);
 

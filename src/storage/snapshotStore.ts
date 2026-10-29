@@ -1,6 +1,7 @@
 import { DRINK_IDS, dayUnlocks } from '../data/drinks';
 import type { GameState } from '../sim/types';
 import { forecastFor } from '../sim/forecast';
+import { defaultSlots } from '../sim/slots';
 import { readJson, type StorageLike } from './storageLike';
 
 const KEY = 'cafetycoon.run';
@@ -9,7 +10,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 24;
+export const SNAPSHOT_VERSION = 25;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -91,6 +92,11 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   },
   // FB1 WP1-sim: lastCall is optional (absent = no last call); nothing to migrate.
   23: () => {},
+  // FB1 WP5: station slots. Every older run has its tier's default stations, so its slots are the defaults and nothing is spare.
+  24: (s) => {
+    s.slots ??= defaultSlots(s.tier);
+    s.equipment ??= [];
+  },
 };
 
 /** Bring a saved state up to SNAPSHOT_VERSION, or null when no migration path exists. */
