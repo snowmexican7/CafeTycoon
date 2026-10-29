@@ -5,6 +5,9 @@ import { catalogueById } from '../data/catalogue';
 import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { eventActive } from './events';
 import { rngNext } from './rng';
+import { applyAd } from './ads';
+import { applyPitch } from './pitch';
+import { applyCheckout } from './checkout';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
 import { dayProgress, forecastOf, shapeAt } from './forecast';
 import type { CardSetId, DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
@@ -19,11 +22,15 @@ export interface Modifiers {
   tipRate: number;
   orderBias: Record<DrinkId, number>;
   supplyCost: Record<SupplyId, number>;
+  /** P3 B4: multiplier on overnight spoilage of fresh stock. */
+  spoil: number;
   /** Weights on the customer mix's non-normal kinds. */
   mix: Record<'impatient' | 'group' | 'regular', number>;
   eventOdds: Record<EventKind, number>;
   /** Added to the queue's capacity. */
   queue: number;
+  /** P3 B12: extra room past the layout's queue spots (the kiosk's waiting spot). */
+  queueRoom: number;
   /** Stars added to the rating at closing (upgrade cards, B6). */
   quality: number;
   /** Temp baristas hired for today. */
@@ -50,10 +57,12 @@ export function baseModifiers(): Modifiers {
     patience: 1,
     tipRate: 0,
     orderBias: ones(),
-    supplyCost: { beans: 1, milk: 1, concentrate: 1, flavour: 1 },
+    supplyCost: { beans: 1, milk: 1, concentrate: 1, flavour: 1, pastry: 1 },
+    spoil: 1,
     mix: { impatient: 1, group: 1, regular: 1 },
     eventOdds: { rushHour: 1, powerFlicker: 1, influencerVisit: 1, healthInspector: 1 },
     queue: 0,
+    queueRoom: 0,
     quality: 0,
     temps: 0,
     reveal: false,
@@ -88,6 +97,9 @@ export function itemModifiers(effects: Effect[]): Modifiers {
         break;
       case 'supplyCost':
         m.supplyCost[e.supply] *= e.mul;
+        break;
+      case 'spoil':
+        m.spoil *= e.mul;
         break;
       case 'orderTag':
         for (const d of DRINKS) if (DRINK_TEMP[d] === e.tag) m.orderBias[d] *= e.mul;
@@ -175,6 +187,9 @@ export function computeModifiers(state: GameState): Modifiers {
   // A dirty floor wears on patience; read once when a customer arrives, so waiting ones keep theirs.
   const { patienceFloor } = ECONOMY.mess;
   m.patience *= patienceFloor + ((1 - patienceFloor) * state.cleanliness) / 100;
+  applyAd(state, m);
+  applyPitch(state, m);
+  applyCheckout(state, m);
   return m;
 }
 

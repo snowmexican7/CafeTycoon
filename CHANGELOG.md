@@ -18,6 +18,119 @@ when a build goes out, the line moves under its version with the date.
 
 Nothing yet.
 
+## Unreleased (Phase 3, on the phase3 branch)
+
+- **Barista roles (P3 B1).** At night each barista can take one of four roles (kept until they change it on a later night),
+  one barista per role. Chef: machines run 25% faster, but half tips on drinks they hand over.
+  Creator: +$0.75 craft bonus per drink handed over, but walks 15% slower. Host: +50% tips, but
+  machines take 25% longer. Manager: restocks cost the whole crew 20% less, but walks 10% and
+  works 10% slower. The night screen lists the roles with their perk, weakness and holder; your
+  role icon shows on the ready chips and next to your name in the hands panel. Save version 10,
+  network protocol 13.
+- **Per-item pricing (P3 B2).** On the night menu board every drink has − and + buttons that move
+  its price in $0.25 steps (from $1.00 under to $2.00 over the list price). Customers react: a
+  pricier drink gets fewer orders, the whole café gets fewer walk-ins if the menu is pricey, and
+  customers ordering a pricey drink lose patience sooner (cheaper drinks win orders and patience).
+  Each line shows tomorrow's expected orders, the change against list price and the profit before
+  tips. A total line sums the menu, and the newspaper's walk-in count follows the prices. Save
+  version 11, network protocol 14.
+- **Regulars with favourites (P3 B3).** Each regular comes back for one favourite drink and has
+  loyalty (0–5 hearts). A fair-priced serve earns a heart (up to 6% over list counts as fair);
+  every heart adds 8% to their tip. Overcharging cuts the tip (to half at 25% over) and costs a
+  heart, and so does a regular storming out or their favourite being off the menu for a day. The
+  night screen lists the regulars with their hearts and a warning when their favourite is off or
+  pricey, and each menu line shows whose favourite it is. Save version 12, network protocol 15.
+- **Tabbed night board (P3 B4).** The night screen's right side has tabs: Shop (tonight's hand,
+  with the paper in one line), Menu & prices, Crew & roles, Regulars (shown once you have one,
+  flagged when one is unhappy) and Paper. The left column keeps the receipt and the restock list,
+  and the ready row and Open the shop stay put. Checked at 1280x800 and 1920x1080.
+- **Supplies that spoil (P3 B4).** Milk and the new pastries are fresh stock: at each closing 30%
+  of the leftover milk and 50% of the leftover pastries go off. The restock rows show the share and
+  how much went off last night, and the receipt has a "Went off" line. Pastries come in packs of 6
+  for $7 and sell on the side ($3, about one serve in three) while the case has any. A Manager
+  halves spoilage, and a new Walk-in fridge card ($25) cuts it by 60%. Save v13 (adds an empty
+  pastry case), protocol v16.
+- **Recipe accuracy (P3 B5).** Every cup starts at 3 stars and loses one for each sloppy step:
+  rushing a drink off a machine in the last 40% of its run (empty hands + E; quicker, but −1★),
+  leaving a finished drink sitting on the machine for more than 8 s, or taking a cup to a station
+  with no step for it (the wrong order). Marks follow the cup through machines and the pass.
+  Stars scale the tip (0★ ×0.6, 1★ ×0.8, 2★ ×0.95, 3★ ×1.05), show on the served toast
+  (★★☆), and the night receipt shows "Cups ★avg · N perfect"; a day averaging under 3 stars
+  costs up to 0.45 rating at closing. The hand hint warns before a rush, a sat drink or a fumble.
+  Save v14 (migration), protocol v17.
+- **Taste map (P3 B6).** At night, each drink on the menu board has a row of house twists
+  (cinnamon, vanilla, sea salt, honey, oat milk, or plain). Every run hides a different star
+  rating for each drink+twist pair, from the run seed: each drink has exactly one 5★ combo and one
+  1★ flop. You only learn a combo's stars by serving it, and from then on the chip shows them, so
+  the board doubles as the crew's taste notebook. A twisted cup costs $0.20; the combo's stars scale
+  the tip (1★ ×0.7 … 5★ ×1.4) and nudge the closing rating (±0.004 per cup per star from 3, capped at
+  ±0.25 a day). The served toast names the twist ("· new: vanilla ★★★★★"), and the receipt lists
+  new combos and the twist spend, which profit now includes. Save v15 (migration), protocol v18.
+- **Signature drink (P3 B7).** A signature card on the night menu tab lets the crew name a drink
+  (up to 20 characters), pick a base and a twist from the taste map (known stars shown), and set a
+  premium in $0.50 steps up to $3. About one walk-in in five then asks for it by name (each premium
+  step trims that share by a tenth). Signature cups sell at the premium, use the signature twist,
+  and earn a star bonus: +$0.75 a cup at 4★, +$1.50 at 5★. A 2★ or worse signature costs rating
+  instead (capped). The receipt shows "Signature: N sold +$X bonus", and crew cards show the name.
+  Changing the base or twist makes it a new recipe; Retire takes it off the board. The 1★ twist
+  risk is sharper: a flop now tips ×0.55 (was ×0.7), and a 5★ hit ×1.45 (was ×1.4).
+  Save v16 (migration), protocol v19.
+- **Taste seasons (P3 B8).** Tastes drift every three days (days 1–3, 4–6, 7–9). When a new season
+  starts, each drink's 5★ twist slips to 4★ or 3★ and a former 4★ or 3★ twist becomes the new hit;
+  the 1★ flop stays put, so a run is never a full reshuffle. The paper's new taste column warns two
+  nights ahead ("Tastes turn the day after tomorrow") and, the night before, names one drink's rising
+  twist. Notebook stars from an earlier season show as ~★★★★★ in grey (and "(last season)" in the
+  signature picker) until someone serves that combo again, which re-learns it and lists it on the
+  receipt. Save v17 (migration), protocol v20.
+- **Rival café (P3 B9).** Starbuck$ has opened down the street. A Starbuck$ card under the paper
+  lets one barista scout it at night ($5, once a night): you see three of its drinks for tomorrow
+  with its prices next to ours, and whether it's eyeing your signature ("in 2 days"). Three days
+  after a signature goes up, Starbuck$ launches a knock-off $0.50 cheaper (never below 75% of
+  list), and only half as many walk-ins ask for yours. Counter-moves: price your signature at or
+  under the knock-off to keep 85% of the asks (Starbuck$ cuts again every three days, down to its
+  floor), or design a new signature, which it then needs another three days to copy. Copies and
+  cuts are announced in the morning notes. Save v18 (migration), protocol v21.
+- **Parody ads (P3 B10).** A new 📣 Ads tab at night lets one barista book tomorrow's campaign on
+  one of five platforms: Palm Book (families and groups, $14), Nextdoorish (locals and regulars,
+  $10), LinkedOut (commuters in a hurry, $12), Glimpse (influencers, $18) or Tik Tak (everyone,
+  $16). Each comes with its own ad copy. You can switch or cancel for a full refund until the
+  doors open. Results are mixed and hidden until morning: a flop does nothing (Tik Tak's flop even
+  puts people off a little), a fine run brings a few more of that crowd, and a viral one brings a
+  lot more, plus a small traffic bump. The morning note and the next night's receipt say how it
+  landed. Save v19 (migration), protocol v22.
+- **Pitch an idea (P3 B11).** The Ads tab is now "Ads & pitch". Once a night one barista can type a
+  pitch for tomorrow (up to 140 characters), either a promo or a new item, and a three-judge panel
+  scores it on the spot:
+  - 👨‍🍳 Gordon Grind wants craft and quality.
+  - 👵 Auntie Foam wants cozy, family and local.
+  - 😎 Chad from Marketing wants deals, hype and loyalty.
+
+  Each judge gives a score out of 10 and a one-line verdict. Naming your twists, drinks or
+  signature earns bonus points. Buzzwords (crypto, NFT, synergy…) make the panel groan, though
+  Chad secretly loves them. ALL CAPS, very short pitches, and repeating last night's pitch all
+  cost points. 18/30 is green-lit and gives a small boost tomorrow: a promo brings about 4% more
+  walk-ins and an item about 2% more tips. 24/30 or more is a standing ovation and doubles that.
+  The judging is scripted keyword matching with no AI, so the same pitch always gets the same
+  verdict. Save v20 (migration), protocol v23.
+- **Ads tune (P3 B11).** Ads were a money sink, because a busy café can't serve the extra crowd.
+  Campaigns are now about 40% cheaper: Palm Book $8, Nextdoorish $6, LinkedOut $7, Glimpse $10,
+  Tik Tak $9. A fine or viral run also puts people in a tipping mood: +1.5 or +3 tip points.
+- **Checkout path (P3 B12).** A new 🏪 Shopfront tab at night upgrades how customers pay, in
+  order: the old 🧾 Ka-Ching 3000 register → a 🖥️ OrderBot kiosk ($40) → a 📱 "Squarely" tap
+  terminal ($75). Each one is a real trade-off:
+  - Register: free, no fees, a tip jar.
+  - Kiosk: the line holds one more customer, waits are calmer (+12% patience) and it upsells an
+    extra shot (+4% prices), but nobody tips a screen (−4 tip points) and the licence costs $2 a
+    day.
+  - Squarely: the screen swivels to the customer with 18% · 20% · 25%, so tips jump (+8 points)
+    and tap-to-pay is quick (+5% patience), but Squarely keeps 3% of every sale.
+
+  You can switch back to anything you own for free. The counter changes to match: a beige till,
+  a card reader with an "ORDER HERE" totem, or the white swivel terminal. The receipt shows the
+  "Checkout fees" line, and there's a morning note on the first day with a new checkout. The old
+  Digital kiosk and Squarely terminal cards are gone from the shop; saves that owned them get the
+  matching checkout instead. Save v21 (migration), protocol v24.
+
 ## 2.0.1 — 2026-10-29
 
 - **Lighter network updates.** The host now sends a full picture of the café every 5 seconds and,

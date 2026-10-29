@@ -1,6 +1,12 @@
+import { sigRating } from './signature';
+import { comboRating } from './taste';
+import { accuracyRating } from './accuracy';
+import { spoilOvernight } from './spoilage';
+import { noteMissedFavourites } from './regulars';
 import { ECONOMY } from '../data/economy';
 import { loseCustomer } from './customers';
 import { computeModifiers, rentForDay } from './effects';
+import { activeCheckout } from './checkout';
 import { eventActive, judgeInspection } from './events';
 import { emitLog } from './log';
 import { startNight } from './run';
@@ -43,6 +49,11 @@ export function finishDay(state: GameState): GameState {
   const rent = rentForDay(state);
   state.today.rent = rent;
   state.cash = round2(state.cash - rent);
+  const licence = activeCheckout(state).daily;
+  if (licence > 0) {
+    state.cash = round2(state.cash - licence);
+    state.today.checkoutFees = round2((state.today.checkoutFees ?? 0) + licence);
+  }
   settleEspresso(state);
 
   const { served, lost } = state.today;
@@ -51,9 +62,11 @@ export function finishDay(state: GameState): GameState {
   const r = ECONOMY.reputation;
   const bonus = state.today.inspection === 'pass' ? ECONOMY.events.inspector.reputationBonus : 0;
   const rogueHit = ECONOMY.rogue.repHit * (state.today.rogues ?? 0);
-  const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus - rogueHit + computeModifiers(state).quality;
+  const next = state.reputation + (ratio >= r.threshold ? r.delta : -r.delta) + bonus - rogueHit + computeModifiers(state).quality + accuracyRating(state.today) + comboRating(state.today) + sigRating(state.today);
   state.reputation = round2(Math.min(r.max, Math.max(r.min, next)));
 
+  noteMissedFavourites(state);
+  spoilOvernight(state);
   state.days.push(state.today);
   state.activeTomorrow = [];
 

@@ -54,7 +54,7 @@ describe('hud live helpers', () => {
     p.pos = { ...grinder.pos };
     expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Grind beans' });
     p.holding = 'latte';
-    expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Hands full' });
+    expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Wrong station: E fumbles it (−1★)' }); // P3 B5
     const espresso = s.stations.find((st) => st.kind === 'espresso')!;
     p.pos = { ...espresso.pos };
     p.holding = 'grounds';

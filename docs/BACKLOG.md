@@ -803,3 +803,429 @@ Playtests (built game, Playwright, `/workspace/overnight/b12/`):
 - **What to watch.** A rewritten array is sent whole when that is smaller; bot `path`/`plan` arrays
   are the biggest remaining churn. If a bigger café pushes deltas up, strip bot brain fields
   (render never reads them) before diffing. Real-network P2P is still untested from this box.
+
+## P3 Block 01 reflection (barista roles)
+
+- **What shipped.** `src/sim/roles.ts`: Chef, Creator, Host and Manager, each a perk paired with a
+  weakness, as plain multipliers in one table (machine time, walk speed, tips, a flat craft bonus,
+  restock cost). A `role` input is night-only and one-holder-per-role, so two baristas can't race
+  for the same role. The four roles hook into existing code paths (stations, movement, customers,
+  night restock), so they need no new state beyond `Player.role`. Save v10 (no-op migration),
+  protocol v13.
+- **Checks.** Six new tests (pick/swap/drop, day lock and validation, machine time, tips and craft,
+  Manager discount, walk speed): 529 tests in total. A 3-tab local-link run picked three roles
+  from the night screen; the night sync check (now including roles) said `same` on every tab.
+- **What went well.** The perks are visible numbers, which leaves the strategy decision to the
+  players. A Host on the register and a Chef on the machines is an obvious plan, but the Chef's
+  tip penalty punishes a Chef who also runs the pass.
+- **What to watch / deferred.**
+  - Bots never take roles; when bots become hired staff (B15) they could come with one.
+  - The role list makes the night's left column longer. At 1280x800 it scrolls under Restock.
+    A compact two-column grid would fit better once pricing (B2) adds more to that column.
+  - The balance numbers are first guesses. A playtest should show whether the Creator's
+    +$0.75 beats the Host's +50% tips at higher prices.
+
+## P3 Block 02 reflection (per-item pricing)
+
+- **What shipped.** `src/sim/pricing.ts`: `priceSteps` per drink ($0.25 a step, −4…+8), a
+  `price` night input, and three demand levers taken from the price ratio (new price over list
+  price):
+  - the drink's order weight scales by ratio^−1.8 (clamped 0.25–1.8);
+  - walk-ins scale by the menu's weighted demand;
+  - patience moves by 0.6 × (1 − ratio) (clamped 0.7–1.25).
+
+  The night menu board shows the price, the change, the expected orders with their %, and the
+  profit per drink, with a total line. The newspaper's walk-ins follow the prices. Save v11,
+  protocol v14.
+- **Determinism.** No new RNG draws. With no steps every factor short-circuits to exactly 1, so
+  un-priced runs replay identically, and all of the earlier tests pass unchanged. One VM test now
+  maps the menu lines back to {drink, on}.
+- **Checks.** Six new tests (input, clamping and day lock; identity at list price; mix shift and
+  patience; the served price; fewer seeded walk-ins on a pricey menu; the forecast numbers):
+  535 tests in total. A 3-tab local-link run set the prices from a peer's night screen; all
+  tabs agreed.
+- **What went well.** The forecast reuses the same functions as the sim, so the night numbers
+  can't drift from what happens in the day.
+- **What to watch / deferred.**
+  - The forecast ignores group extras and rounds small numbers, so on short days "~3 orders"
+    is coarse. Playtest whether players trust it.
+  - The chalkboard menu on the café wall (render) still shows list prices. It's decorative, so
+    deferred.
+  - Elasticity of 1.8 makes a raise lose money over a whole menu, but a raise on one drink can
+    win: steady regulars (B3) should be less price-sensitive, and that is where pricing gets
+    its depth.
+  - The night's left column is getting long (Restock, Roles, Menu board). A tabbed or two-column
+    layout is worth doing before B7's menu designer.
+
+## P3 Block 03 reflection (regulars with favourites)
+
+- **What shipped.** `src/sim/regulars.ts`: loyalty from 0 to 5 hearts on each regular.
+  - A fair serve earns +1 heart (fair means at most 6% over list, so one $0.25 step on a $4+ drink).
+  - Each heart adds 8% to the regular's tip.
+  - A gouge (half tip at 25% over) costs a heart, and so does a storm-out or the favourite being
+    off the menu at close.
+  - The night screen shows a Regulars board with hearts and an off/pricey warning, and the menu
+    lines show "♥ Ada" on that regular's favourite.
+  - Save v12, protocol v15.
+- **Checks.** Four new tests (loyalty cap and the tip it pays; gouge and the fair edge; storm-outs
+  and off-menu days; the night VM and fans): 539 in total. Balance sim over 10 seeds: mean final
+  cash 291.59 → 283.62, loss rate 27.2% → 27.5%, 0 bankruptcies in both. That is within seed
+  noise; the change is the tip, which moves cash, so the bots' later buys diverge.
+- **What went well.** Pricing (B2) and the regulars now pull against each other: raising the
+  latte costs June's hearts. That is the "choices over repetition" Kennedy asked for.
+- **What to watch / deferred.**
+  - Hearts never make a regular leave for good. A "lost regular" at 0 hearts after N misses
+    could raise the stakes, but it's a balance question for the integration block.
+  - Regulars are still immune to the B2 demand curve: they come for the favourite anyway. That's
+    intended, but it's worth saying so in the PLAYTEST_GUIDE.
+  - The night left column now has Restock, Roles, Regulars and Menu board. It needs the
+    two-column or tabbed layout soon (noted under B2).
+
+## P3 Block 04 reflection (tabbed night board, supplies that spoil)
+
+- **What shipped.**
+  - The night board is tabbed: Shop / Menu & prices / Crew & roles / Regulars / Paper. The tab
+    state lives in the UI only (no sim or protocol change) and survives rebuilds.
+  - `src/sim/spoilage.ts`: milk 30% and pastries 50% of leftovers go off at closing (floors, no
+    RNG); a Manager ×0.5; a `spoil` effect and the Walk-in fridge card ×0.4.
+  - Pastries are a new supply sold on the side with a served drink (seeded 35% roll, only when
+    the case is not empty, so runs without pastries keep the exact same RNG stream).
+  - The night board shows what went off and the share per fresh row. Save v13, protocol v16.
+- **Checks.** Six new tests (spoil shares; Manager and fridge; pastry sales deterministic and
+  capped by stock; RNG untouched with no pastries; night VM; v12→v13 migration): 545 in total.
+  Balance over 10 seeds: mean final cash 283.62 → 288.48, loss rate 27.5% → 25.6%, 0 bankruptcies.
+  Pastry sales roughly pay for the extra milk waste, so it's within noise.
+- **What went well.** The tabs fixed the overlong left column without touching the sim, and the
+  fresh-stock trade-off is visible right on the restock row where the decision is made.
+- **What to watch / deferred.**
+  - The weather-radio test assumed the deal consumed a fixed amount of RNG. A new card broke
+    that, so the test now holds the deck equal. Dealing from its own seeded stream would make
+    this robust; that's a candidate for the integration block.
+  - Pastries have no station or art beyond the jar colour; a counter case sprite would help.
+  - There's no over-order warning yet. The night warnings only flag running out.
+
+## P3 Block 05 reflection (recipe accuracy)
+
+- **What shipped.**
+  - `src/sim/accuracy.ts`: cups carry sloppy marks (`Player.cupSlips`, `Station.cupSlips`,
+    `PassItem.slips`). Three marks: rushing (empty-handed E in the last 40% of a run takes the
+    drink now), left sitting (picked up more than 8 s after `Station.doneAt`), and fumbling (a cup
+    offered to an idle station that has no recipe for it). Stars = 3 − marks.
+  - Stars multiply the tip, tally `today.cups`, `today.cupStars` and `today.perfectCups`, and at
+    closing the rating moves by −0.15 × (3 − avg). It is never a bonus, so careful play costs
+    nothing it had before. There's no RNG anywhere in the block.
+  - UI: stars on the served toast, a receipt line with a tooltip explaining the three marks, and
+    the hand hint ("Rush it out now (−1★)", "sat too long, −1★", "Wrong station: E fumbles it").
+  - Save v14 (busy machines get a `busyTotal` so they can still be rushed), protocol v17.
+- **Checks.** Seven new tests (scoring maths; perfect cup; rush window; sitting and marks
+  following the cup; fumble; pass carry, tip, rating and receipt; migration), with two existing
+  expectations updated: the perfect-cup tip and the wrong-station hint. 552 in total.
+  Balance over 10 seeds: mean final cash 288.48 → 291.28, loss rate 25.6% → 25.4%, 0 bankrupt.
+  The bots never rush or fumble (they only press E on a ready output with a valid recipe), so
+  they earn the ×1.05 perfect-cup tip almost every time. That's within noise.
+- **What went well.** The tension is spatial and immediate: you're standing at the machine,
+  the hint tells you that you could rush it now, and you choose. Nothing new to learn at night.
+- **What to watch / deferred.**
+  - The bots are always careful. A "hurried" bot personality that rushes when the queue is long
+    would show the trade-off in solo games.
+  - The 8 s sitting window is generous on purpose. Playtests should tell whether drinks left
+    sitting happen at all in 3–4 player crews.
+  - There's no star mark on the held cup sprite yet; the hint and toast carry it for now.
+
+## P3 Block 06 reflection (taste map)
+
+- **What shipped.**
+  - `src/sim/taste.ts`: five twists, with `comboStars(seed, drink, twist)` as a pure integer
+    hash that shuffles the ladder [5,4,3,2,1] per drink. It makes no RNG draws, so runs without
+    twists are byte-identical to before (there's a test for that), and peers agree without syncing
+    the map.
+  - New state: `GameState.twists` (the night choice per drink) and `GameState.tasteBook`
+    (discovered stars, keyed `drink:twist`). New input: `{kind:'twist'}`, night-only, humans only,
+    and validated.
+  - At serve, `serveCombo` records a discovery (`today.combosFound`), adds stars − 3 to
+    `today.comboStarSum`, and charges $0.20 (`today.twistCost`, now subtracted in `profitOf`).
+    The tip is ×`TASTE.tip[stars]`, and closing adds the capped `comboRating`.
+  - UI: twist chips under each menu-board row (icon and name, with ★★★★☆ or "?"), an explainer
+    line, receipt lines ("New combo: 🌼 Vanilla latte ★★★★★", "Twists −$2.80"), and the toast
+    suffix.
+  - Save v15 (no-op migration from 14), protocol v18.
+- **Checks.** Five new tests: the ladder is a permutation and pure, and differs across seeds; the
+  input is night-only and validated; first-serve discovery, tip and cost; the rating cap, the
+  notebook and the receipt; no-twist determinism. 557 in total. Balance over 10 seeds is
+  unchanged at 291.28 / 25.4% / 0 bankrupt, because bots never set twists. That confirms the
+  plain path didn't move.
+- **The economics by hand** (average tip about $0.90 a cup):
+  - A 5★ combo nets about +$0.16 a cup, plus up to +0.25 rating a day.
+  - A 1★ flop nets about −$0.47 a cup, and some rating.
+  - Picking blind averages about −$0.17 a cup.
+  - So exploring has a real price and finding the hit pays back over a run. That's the "plan,
+    don't grind" choice the phase is after: test one twist on a low-volume drink, or commit a hit
+    to your best seller.
+- **What to watch / deferred.**
+  - Bots don't use twists. A night-planner bot could adopt the best-known combo for solo runs.
+  - Cash gains are small next to the rating lever. If playtests shrug, try a 5★ tip of ×1.6 or a
+    regulars' "favourite combo" hook.
+  - The chips are dense at 1280×800 (six per drink). A collapsed "notebook" popover might read
+    better once more drinks unlock.
+  - There's no hint on the day screen showing which twist is on. The toast is the only in-shift
+    cue.
+
+
+## P3 Block 07 reflection (signature drink)
+
+- **What shipped.**
+  - `src/sim/signature.ts`: the `SIG` tuning table, plus draft cleaning, the ask share, the
+    premium, `applySignatureInput` (night-only, humans only, unlocked drinks; `since` resets only
+    when the base or twist changes), `signatureServed` and a capped `sigRating`.
+  - New state: `GameState.signature {name, drink, twist, premium, since}`. New input:
+    `{kind:'signature'}` (null retires it), validated. New day stats: `sigServed`,
+    `sigStarSum`, `sigBonus`.
+  - Customers: a single non-regular walk-in draws one extra RNG value, but only while a
+    signature exists and its drink is on the menu. On a hit, the first drink becomes the
+    signature and the customer is tagged `sig`. With no signature the RNG stream is untouched.
+  - Serving a signature cup charges the premium, forces the signature twist (`serveCombo`
+    override, so the house twist on that drink is independent), and adds the star bonus to cash
+    and to `today.bonus`.
+  - UI: the signature card at the top of the menu tab (name, base, twist with known stars,
+    premium −/+, Save/Update, Retire, and "~N asks tomorrow"). The draft lives in the closure, so
+    re-renders don't eat typing. Also a receipt line and the name on crew cards.
+  - The 1★ risk lever: tips are now [–, ×0.55, ×0.85, ×1, ×1.2, ×1.45].
+  - Save v16 (no-op migration), protocol v19.
+- **Checks.** Four new tests (561 total): the design input, the asks share, the sale with bonus
+  and receipt, and the rating cap.
+  - Default balance is unchanged at 291.28 / 25.4% / 0 bankrupt (bots don't touch signatures).
+  - A new `--policy taste` balance bot explores one untried twist per night, keeps a known 4–5★
+    one, and makes the best known ≥4★ combo a "House special" at a +$1 premium. Over 10 seeds it
+    gets mean cash 294.35, score 334.35 vs 319.53, and a 28.1% loss rate vs 25.4%. So the taste
+    and signature layer pays a little, and early exploring costs a few days. That's the intended
+    shape.
+- **Deferred.**
+  - **Hurried bot personality: not done.** The cheap route is a `settings.hurriedBots` toggle,
+    so personality assignment isn't touched. In `brain.ts` `take`, the bot pulls a cup early under
+    pressure once `busyTicksLeft ≤ busyTotal × ACCURACY.earlyShare`, which costs it a star. It's
+    left for a quiet block because it needs sanitizeSettings and a settings UI row.
+  - Only one signature at a time and one twist per signature. "Twist(s)" stacking would need a
+    combo ladder over pairs.
+  - The fixture harness renders night with no `extras`, so the header always says "Opening
+    night · Day 0". That's cosmetic and only happens in the dev harness.
+  - Mobile (390 wide): the night tabs become a narrow side rail and the menu board is squeezed
+    into it. That predates B7, but the signature card makes it worse. It needs a stacked mobile
+    night layout.
+
+## P3 Block 08 reflection (taste seasons)
+
+- **What shipped.**
+  - `taste.ts`: `seasonOf(day)` (3-day seasons) and `seasonStarts(day)`. `comboStars` now takes a
+    `day` (default 1, so season 0 and every B6 test are unchanged).
+  - The season ladder is built from the base ladder. For each season k it swaps the reigning 5★
+    with a hash-chosen 4★ or 3★. Everything is a pure integer hash with no RNG, so peers agree
+    without syncing it and runs without twists are untouched.
+  - `risingTwist` names the new hit. `knownStale` compares `GameState.tasteSeason[key]` (absent
+    means season 0) with tomorrow's season.
+  - On serve, a stale entry is re-learned: new stars and season, and it's listed in
+    `combosFound` again.
+  - UI: a grey `~` on stale chips with a "last season" tooltip, "(last season)" in the signature
+    twist picker, a taste column in the paper (two nights out, then the night before with one
+    drink's riser named), and an updated explainer line.
+  - Save v17 (no-op migration: old entries read as season 0, which is correct), protocol v20.
+- **Checks.**
+  - Four new tests (565 total): the season maths; the ladder invariants over seeds (a
+    permutation each season, the 5★ moves every season, the riser is named correctly, the flop
+    stays put, day 1 equals B6, the old hit only slips to 3–4★); stale marking and re-learning; the
+    paper line timing.
+  - Default balance is unchanged at 291.28 / 25.4%.
+  - The taste bot, which keeps a stale 4–5★ until it re-learns, drops from 294.35 / score 334.35 (B7)
+    to 287.30 / 321.80, with loss 28.8%. Seasons cost a complacent crew about 12 score points
+    over a week, and the layer still edges the smart bot (319.53). That's the size of nudge
+    intended: worth reading the paper, not a punishment.
+- **Deferred / watch.**
+  - The bot doesn't read the paper. A smarter planner would switch to the named riser on turn
+    night.
+  - Seasons are fixed at 3 days. A "short seasons" difficulty or event card ("Food blogger: tastes
+    turn tonight") would be easy to add.
+  - The signature isn't warned specifically when its combo goes stale. A receipt line ("Your
+    signature tasted ★★★ this season") would make the cause and effect clearer. B9's rival
+    pressure makes this more relevant.
+
+## P3 Block 09 reflection (rival Starbuck$)
+
+- **What shipped.**
+  - `src/sim/rival.ts`: a `RIVAL` tuning table (scout $5, copy after 3 days, undercut $0.50,
+    asks ×0.5 while the copy is cheaper and ×0.85 when matched, a floor at 75% of list, a menu of 3).
+  - `rivalMenu` is a pure hash of seed and day: three unlocked drinks at 85–105% of list, rounded
+    to $0.25. It never touches the RNG.
+  - `rivalMorning` runs in `startDay` after the morning notes. It copies a signature that has
+    stood for 3 days, or re-undercuts a matched copy every 3 days down to the floor. Both write a
+    morning note.
+  - `rivalAskFactor` scales the signature ask share inside the existing draw, so there's no extra
+    RNG draw.
+  - A new `scout` input works at night, for humans only, once a night, and costs $5.
+  - UI: a Starbuck$ card under the paper. It has the Scout button; once scouted, it shows the
+    menu table with our prices (theirs in red when cheaper) and an "eyeing your signature in N
+    days" line. When a knock-off is live it shows a red status line with the counter-move hints,
+    or a green one when we match it.
+  - Save v18 (no-op migration, since `rival` is optional) and protocol v21.
+- **Checks.**
+  - Four new tests (569 total): menu determinism and price bands; the copy timing, undercut and
+    floor; the ask factor, matching, and a new recipe dropping the copy; scout rules (night only,
+    once, cost, bots refused). A game with no signature has an identical state and RNG stream.
+  - Default balance is unchanged at 291.28 / 319.53 / 25.4%.
+  - The taste bot, which re-picks its best combo as the signature whenever the best combo changes
+    and so counters by accident, scores 289.08 / 323.58 / loss 28.6%. B8 was 287.30 / 321.80 /
+    28.8%.
+  - The rival didn't cost the bot anything, and it gained slightly. The likely reason is fewer
+    premium-price signature asks while its stale signature was 3★, which earns no bonus and costs
+    patience. So the rival is a mild pressure, and it bites hardest on a good signature the crew
+    leaves standing. That's the intent, but watch it in playtest; `askCut` is the lever.
+  - The 4-tab week run synced all 3 nights (see p3/b09/week.log).
+- **Deferred / watch.**
+  - Bots never scout and never deliberately counter. A price-match counter in `tasteNight` is a
+    few lines.
+  - There's no general traffic pressure. The rival only affects signature asks; its menu prices
+    are information only for now. A follow-up could shave walk-ins when our list price for a
+    drink is well above theirs.
+  - There's only one copy at a time and no escalation. Ideas: rival loyalty cards, or a rival
+    event card in the paper.
+  - The scout result lasts for that night only. There's no history of past rival menus.
+
+## P3 Block 10 reflection (parody ads)
+
+- **What shipped.**
+  - `src/sim/ads.ts` has five parody platforms, each with a target crowd (group, regular,
+    impatient, influencer, or everyone), a cost, ad copy, and odds for flop, fine and viral.
+  - The outcome is a pure `hash32(seed, day, platform)`, so there are no new RNG draws. It is
+    resolved in `startDay` and kept hidden at night, so the forecast and the paper can't leak it.
+  - When an ad runs, `applyAd` changes `computeModifiers`: it multiplies the target's share of
+    the crowd mix (×1.5 for fine, ×2.2 for viral), and influencer ads multiply
+    `eventOdds.influencerVisit` instead (×2.5 / ×6). Traffic goes up a little (×1.04 / ×1.1).
+    Tik Tak changes overall traffic only: ×0.95 on a flop, ×1.08 fine, ×1.22 viral.
+  - A new `ad` input works at night, for humans only. It books, switches (with a refund) or
+    cancels (`ad: null`, refunded).
+  - UI: a 📣 Ads tab with ad cards (copy, reach, odds, Run it / Switch), a booked strip with a
+    Cancel button, yesterday's result banner, and a line on the receipt.
+  - Save v19 (no-op migration) and protocol v22.
+- **Checks.**
+  - Four new tests (573 total): outcome odds and determinism; book, switch and cancel cash, plus
+    poor, bot and day-phase refusals and validation; the result stays hidden at night, then the
+    reveal, morning note, `today.ad`, mix change, receipt line, and the ad expiring the next day;
+    a no-ad run has an identical state and RNG stream.
+  - Balance is unchanged: default 291.28 / 319.53 / 25.4%, taste 289.08 / 323.58 / 28.6%. Bots
+    and the policies don't buy ads.
+  - Screenshots are in p3/b10. The 4-tab week sync results are in p3/b10/week.log.
+- **Deferred / watch.**
+  - Ads are never worth measuring in balance yet, because no policy buys them. B11 adds a promo
+    policy.
+  - The EV is roughly break-even by design: fine plus viral is about 65–75%, and a group- or
+    regular-heavy mix pays mostly through bigger orders and tips. Tune the costs after playtest.
+  - Only one campaign per night, with no stacking and no multi-day campaigns.
+  - The ad copy is static, one line per platform. A rotating pool chosen by `hash32` would keep
+    it fresh across a week.
+  - Influencer ads stack with the influencer-scouting goal. Watch for that being too strong.
+
+## P3 Block 11 reflection (pitch an idea)
+
+- **What shipped.**
+  - `src/sim/pitch.ts` has three scripted judges, each with a keyword list and verdict lines in
+    three bands: low (0–3), mid (4–6) and high (7–10).
+  - A judge scores `2 + 2 × min(3, hits)`, plus menu context (twist, drink or signature names,
+    capped at +3), plus 1 when the pitch suits the judge (Gordon likes items, Chad likes
+    promos). Each buzzword costs 3 points, except with Chad, who gains 1. ALL CAPS costs 2, fewer
+    than 4 words costs 3, and a repeat of last night's pitch costs 4. Scores are clamped to 0–10.
+  - Tiers: passed under 12, meh 12–17, green-lit 18+, ovation 24+.
+  - Lines are chosen by `strHash(kind:text)`, so they're pure and stable with no RNG.
+  - The input is cleaned (control characters, whitespace, 140 characters) and validated. It
+    allows one pitch a night, at night, by humans only. It is scored at submit time and stored as
+    `state.pitch`. Like ads, it only applies when `pitch.day === state.day`.
+  - A green-lit promo multiplies traffic (×1.04, or ×1.08 for an ovation); a green-lit item adds
+    to the tip rate (+0.02 / +0.04). There's a morning note.
+  - UI: the panel card on the "Ads & pitch" tab has promo/item toggles, a textarea whose draft
+    survives re-renders, and a result card with per-judge scores, verdicts, the boost pill and
+    notes.
+  - Save v20 and protocol v23.
+- **Ads tune.**
+  - A new `promo` balance policy plays taste plus an ad (Palm Book and Nextdoorish alternating,
+    only with $60 to spare) and a stock pitch every night.
+  - It showed that B10 ads were a trap: ads alone scored 211.89 against taste's 289.08, with
+    loss up from 28.6% to 33.5%. The café is capacity-bound, so more and bigger crowds didn't
+    convert.
+  - Fix: costs were cut by about 40%, and fine/viral runs add +0.015/+0.03 to the tip rate.
+    Ads alone now score 312.47 (+$23 over taste).
+  - Pitches alone score 305.73. The full promo policy scores 299.20 / 317.95 / loss 29.0%,
+    against taste's 289.08 / 323.58 / 28.6%. The two traffic boosts stack poorly on a full
+    café, so the payoff of doing both is modest. That's fine for a fun side system.
+- **Checks.**
+  - Five pitch tests plus one ad-tip assertion (578 total). They cover pure scoring and tiers,
+    the Chad buzzword quirk, caps and repeat penalties, cleaning and validation, one pitch a
+    night and humans only, promo/item/flop modifiers, the morning note and expiry, the VM, and an
+    identical stream with no pitch.
+  - Default balance is unchanged at 291.28 / 319.53 / 25.4%.
+  - Screenshots are in p3/b11. The 4-tab week sync results are in p3/b11/week.log.
+- **Bug caught.** B11's first cut put its CSS in a stray `src/ui/night.css` that nothing imports.
+  The screenshots showed the panel unstyled. The rules moved into `src/ui/styles/night.css`
+  under `#night`.
+- **Deferred / watch.**
+  - Keyword-stuffing is the dominant strategy. That's half the joke, but a "word salad" penalty
+    (judges docking points when hits exceed about 40% of the words) would reward real sentences.
+  - Pitches are text-only. Nothing on the menu changes yet: there's no real new item and no
+    named promo on the receipt. A follow-up could let a green-lit item become a limited-time
+    menu entry.
+  - There's no per-player credit or history wall of past pitches. A "Pitch of the week" award
+    would fit the awards screen.
+  - The judges aren't seasonal. Rotating a guest judge (Starbuck$'s regional manager?) per
+    season would keep it fresh.
+
+## P3 Block 12 reflection (checkout path)
+
+- **What shipped.**
+  - `src/sim/checkout.ts` defines a three-step path: register (free) → OrderBot kiosk ($40,
+    $2/day licence, patience ×1.12, line +1, tips −0.04, prices ×1.04) → "Squarely" tap
+    terminal ($75, 3% of price + tip, patience ×1.05, tips +0.08). It's pure arithmetic with no
+    RNG, so a run that stays on the register keeps an identical stream (tested).
+  - The night input `checkout` installs the next step (in order, humans only, with enough cash)
+    or switches back to any owned checkout for free. Install spend counts as fittings.
+  - "Line holds one more" needed a new `Modifiers.queueRoom`. The queue cap was
+    `min(6, 6 + queue)`, so a +1 could never raise it. There's also a 7th queue slot left of the
+    counter, where the kiosk stands.
+  - UI: a 🏪 Shopfront tab with a three-card path (pros/cons, install / switch / locked / "On the
+    counter"), a "Checkout fees" receipt line, and a morning note.
+  - Render: the counter art is rebuilt when the active checkout changes. The register is a beige
+    till, the kiosk is a card reader plus an "ORDER HERE" totem, and Squarely is a white swivel
+    screen with tip buttons. The rebuild (`Scene.buildStations(key)`) is generic, so B13 tiers
+    reuse it.
+  - The old `digitalKiosk` / `squarelyTerminal` shop cards are removed. The v20→v21 migration
+    turns owned copies into the matching checkout and strips them from hand and bought-tonight.
+    Save v21, protocol v24.
+- **Balance (40 weeks, seed 1).**
+
+  | Policy | Cash | Score | Loss |
+  |---|---|---|---|
+  | Baseline smart | 266.17 | 277.11 | 26.7% |
+  | B12 smart | 260.53 | 276.53 | 26.4% |
+  | Kiosk (smart + kiosk once there's $60 spare) | 269.91 | 290.03 | 26.2% |
+  | Squarely (smart + kiosk, then Squarely) | 246.90 | 269.97 | 26.3% |
+  | Baseline taste | 272.58 | 283.52 | 28.6% |
+  | B12 taste | 274.88 | 288.19 | 28.1% |
+
+  - The kiosk is a modest win (+$13.5). Squarely is roughly break-even inside a week (−$6.6):
+    the 3% cut eats most of the tip jump on cheap drinks. That's the intended "is it worth it?"
+    trade-off, and it pays more on pricier menus and with a Host.
+  - Removing the two cards shifted the deal pool slightly. Smart is unchanged within noise.
+- **Checks.**
+  - Six checkout tests (584 total). They cover path order and costs, free switching, refusals
+    (poor / bot / day), validation, modifiers, the Squarely fee per sale, the kiosk licence at
+    close, profit and VM, the morning note, fittings, the v20 migration, and an identical stream
+    on the register.
+  - Screenshots are in p3/b12: every night tab at 1280×800 and 1920×1080, plus the three
+    counters.
+  - The 4-tab week sync, with a peer installing the kiosk, is logged in p3/b12/week.log.
+- **Bug caught.** The first balance/week run was done with six 40-week balance runs hogging the
+  CPU. The night timer ran out before the week script could click, which looked like a UI
+  regression. It wasn't: a rerun on a quiet box is clean. Don't run the browser sync alongside
+  heavy batch jobs.
+- **Deferred / watch.**
+  - Bots never touch the checkout. A crew of bots stays on the register forever.
+  - There's no queue-speed difference yet. "Tap and go" is modelled as patience, not as faster
+    serving. A real per-sale pay time (register slow, Squarely instant) would make the speed
+    trade-off visible, but it would change the serve loop.
+  - Night fixtures show "YESTERDAY · DAY 0" on the receipt because the harness passes no
+    `extras.day`. This is cosmetic and harness-only.

@@ -1,6 +1,7 @@
 import { catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
 import type { GameState, RunRecord } from './types';
+import { checkoutSpent } from './checkout';
 
 /** B11: what the café's permanent fittings are worth at the week's end (half their price), so upgrades are not pure cost. */
 export function fittingsValue(state: GameState): number {
@@ -9,6 +10,7 @@ export function fittingsValue(state: GameState): number {
     const item = catalogueById[o.itemId];
     if (item?.duration === 'permanent') total += item.cost;
   }
+  total += checkoutSpent(state);
   return Math.round(total * ECONOMY.fittingsResale * 100) / 100;
 }
 

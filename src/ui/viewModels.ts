@@ -1,3 +1,13 @@
+import { SIG, sigShare } from '../sim/signature';
+import { AD_IDS, ADS } from '../sim/ads';
+import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../sim/checkout';
+import { JUDGES, PITCH } from '../sim/pitch';
+import { copyIsLive, daysToCopy, RIVAL, rivalAskFactor, rivalMenu, sigPrice } from '../sim/rival';
+import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
+import { accuracyRating } from '../sim/accuracy';
+import { PRICING, menuPrice, priceForecast, priceTraffic } from '../sim/pricing';
+import { regularsViewModel, type RegularVM } from '../sim/regulars';
+import { ROLE_IDS, ROLES, roleHolders, type RoleId } from '../sim/roles';
 import { awardsFor, awardsText, type Award } from '../sim/awards';
 import { catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
@@ -11,11 +21,12 @@ import { EVENT_LABELS } from '../sim/events';
 import { challengeChipText } from '../sim/challenges';
 import { activeSets, fullSets, computeModifiers, setCounts, weekOf } from '../sim/effects';
 import { rerollCost, restockCost } from '../sim/night';
+import { spoilRate } from '../sim/spoilage';
 import { fittingsValue, scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
 import type { BotsChoice, Member } from '../net/protocol';
-import type { CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
+import type { AdId, AdOutcome, PitchKind, PitchTier, CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 import { BASE_DRINKS, DRINK_IDS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
 import { menuDrinks, neededSupplies, unlockedDrinks } from '../sim/unlocks';
@@ -52,7 +63,7 @@ function espressoLines(d: DayStats): { ambulance?: string; tabPaid?: string } {
 
 /** The day's net: everything that moved the till during the day (sales, tips, bonuses, minus rent, fines and tab paid). */
 export function profitOf(d: DayStats): number {
-  return Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0)) * 100) / 100;
+  return Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0) - (d.twistCost ?? 0) - (d.checkoutFees ?? 0)) * 100) / 100;
 }
 
 export interface HudVM {
@@ -164,7 +175,7 @@ export function hudViewModel(state: GameState): HudVM {
     cash: money(state.cash),
     reputation: stars(state.reputation),
     supplies: neededSupplies(state).map((id) => ({ id, count: state.supplies[id] ?? 0 })),
-    menu: unlockedDrinks(state).map((id) => ({ id, price: money(ECONOMY.prices[id] * mods.price[id]), available: available.includes(id) })),
+    menu: unlockedDrinks(state).map((id) => ({ id, price: money(menuPrice(state, id) * mods.price[id]), available: available.includes(id) })),
     notes: state.morningNotes,
     phase: state.phase,
     seed: state.seed,
@@ -242,14 +253,27 @@ export function handCardViewModel(state: GameState, item: CatalogueItem): HandCa
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[] } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
-  restock: { supply: SupplyId; count: number; packSize: number; packCost: string; affordable: boolean }[];
-  ready: { id: PlayerId; name: string; ready: boolean }[];
+  /** P3 B4: fresh rows carry the share that goes off at each closing, and what went off last night. */
+  restock: { supply: SupplyId; count: number; packSize: number; packCost: string; affordable: boolean; spoilPct?: number; spoiled?: number }[];
+  ready: { id: PlayerId; name: string; ready: boolean; role?: string }[];
+  /** Phase 3 B1: the four roles, who holds each, and whether this barista can take it. */
+  roles?: RoleVM[];
+  /** Phase 3 B3: regulars, their favourite and loyalty. */
+  regulars?: RegularVM[];
   meReady: boolean;
-  menu?: { drink: DrinkId; on: boolean }[];
+  menu?: MenuLineVM[];
+  signature?: SignatureVM;
+  /** P3 B9: Starbuck$ down the street. */
+  rival: RivalVM;
+  /** P3 B10: parody ad campaigns for tomorrow. */
+  ads: AdsVM;
+  pitch: PitchVM;
+  /** P3 B12: the checkout path on the Shopfront tab. */
+  checkout: CheckoutVM;
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
@@ -303,6 +327,8 @@ export interface ForecastVM {
   radio?: string;
   /** Optional daily challenges for tomorrow (B7). */
   challenges?: string;
+  /** P3 B8: the taste column: a season turning. */
+  taste?: string;
 }
 
 /** Tomorrow's paper. At night `state.day` is already tomorrow. */
@@ -323,12 +349,261 @@ export function forecastViewModel(state: GameState): ForecastVM {
     plan: f.plan,
     effects: describeEffects(f.effects.filter((e) => e.kind !== 'orderBias' || unlockedDrinks(state).includes(e.drink))),
     ...(f.eventNote ? { eventNote: f.eventNote } : {}),
-    customers: Math.round(ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic),
+    customers: Math.round(ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic * priceTraffic(state, menu, m)),
     hotPct: Math.round((hot / total) * 100),
     later: { icon: next.icon, name: forecastName(next, state.day + 1) },
     ...(radioLine(state) ? { radio: radioLine(state) } : {}),
     ...(challengePaperLine(state) ? { challenges: challengePaperLine(state) } : {}),
+    ...(tasteLine(state) ? { taste: tasteLine(state) } : {}),
   };
+}
+
+/** Phase 3 B2: a menu board line with its price, the price steps and tomorrow's expected orders. */
+export interface MenuLineVM {
+  drink: DrinkId;
+  on: boolean;
+  price: number;
+  list: number;
+  step: number;
+  canUp: boolean;
+  canDown: boolean;
+  /** Only for drinks on the menu: order change vs. list price (%), expected orders, profit before tips. */
+  demandPct?: number;
+  orders?: number;
+  profit?: number;
+  /** Regulars whose favourite this is (P3 B3). */
+  fans?: string[];
+  /** P3 B6: tonight's twist and the taste notebook for this drink (stars, or null if not yet tried). */
+  twist?: TwistId;
+  book: { twist: TwistId; stars: number | null; stale?: true }[];
+}
+
+/** P3 B7: the signature designer's options and the current signature. */
+export interface SignatureVM {
+  current?: { name: string; drink: DrinkId; twist: TwistId; premium: number; stars: number | null; since: number; onMenu: boolean };
+  drinks: DrinkId[];
+  /** Per drink: each twist's known stars (null = not tried). */
+  book: Record<string, { twist: TwistId; stars: number | null; stale?: true }[]>;
+  /** Expected signature asks tomorrow at the current premium (0 without a signature). */
+  asks: number;
+  premiumStep: number;
+  maxPremium: number;
+}
+
+/** The taste notebook for a drink: stars once served, flagged stale when learned last season (B8). */
+function bookOf(state: GameState, drink: DrinkId): { twist: TwistId; stars: number | null; stale?: true }[] {
+  return TWISTS.map((twist) => ({ twist, stars: knownStars(state, drink, twist), ...(knownStale(state, drink, twist) ? { stale: true as const } : {}) }));
+}
+
+/** P3 B8: the paper's taste column: a season turning tomorrow (with a tip-off), or the day after. */
+export function tasteLine(state: GameState): string | undefined {
+  const menu = menuDrinks(state);
+  if (!menu.length) return undefined;
+  if (seasonStarts(state.day)) {
+    const drink = menu[state.day % menu.length];
+    const t = TWIST_INFO[risingTwist(state.seed, drink, state.day)];
+    return `Season ${seasonOf(state.day) + 1} starts tomorrow and tastes are turning. Word is ${t.name.toLowerCase()} is the new thing in ${DRINK_INFO[drink].short.toLowerCase()}s, and last season's hits may not land.`;
+  }
+  if (seasonStarts(state.day + 1)) return 'Tastes turn the day after tomorrow: enjoy your hits while they last.';
+  return undefined;
+}
+
+export interface RivalVM {
+  name: string;
+  cost: string;
+  affordable: boolean;
+  /** Scouted tonight: the menu and the signature watch are visible. */
+  scouted: boolean;
+  menu?: { drink: DrinkId; name: string; icon: string; price: string; ours: string; cheaper: boolean }[];
+  /** Their knock-off of our current signature (public: it's in the window). */
+  copy?: { of: string; price: string; ours: string; matched: boolean; keep: number };
+  /** Scouted only: days until they copy our signature (0 = tomorrow). */
+  eyeing?: number;
+}
+
+/** P3 B10: the Ads tab. */
+export interface AdsVM {
+  options: { id: AdId; name: string; icon: string; reach: string; cost: string; copy: string; odds: string; affordable: boolean; booked: boolean }[];
+  /** Booked for tomorrow (cost already paid; cancel refunds it). */
+  booked?: { id: AdId; name: string; icon: string; cost: string; by: string };
+  /** How yesterday's campaign landed. */
+  last?: { name: string; icon: string; outcome: AdOutcome; result: string };
+}
+
+export function adsVM(state: GameState): AdsVM {
+  const booked = state.ad && state.ad.day === state.day ? state.ad : undefined;
+  const refund = booked ? ADS[booked.id].cost : 0;
+  const prev = state.days[state.days.length - 1]?.ad;
+  return {
+    options: AD_IDS.map((id) => {
+      const a = ADS[id];
+      return {
+        id, name: a.name, icon: a.icon, reach: a.reach, cost: money(a.cost), copy: a.copy,
+        odds: `${a.odds.flop}% flop · ${100 - a.odds.flop - a.odds.viral}% fine · ${a.odds.viral}% viral`,
+        affordable: state.cash + refund >= a.cost, booked: booked?.id === id,
+      };
+    }),
+    ...(booked ? { booked: { id: booked.id, name: ADS[booked.id].name, icon: ADS[booked.id].icon, cost: money(ADS[booked.id].cost), by: booked.by } } : {}),
+    ...(prev && state.days.length === state.day - 1 ? { last: { name: ADS[prev.id].name, icon: ADS[prev.id].icon, outcome: prev.outcome, result: ADS[prev.id].result[prev.outcome] } } : {}),
+  };
+}
+
+/** P3 B12: the checkout path (register → kiosk → Squarely). */
+export interface CheckoutVM {
+  options: {
+    id: string; name: string; icon: string; blurb: string; pros: string[]; cons: string[];
+    cost: string; terms: string; owned: boolean; active: boolean; next: boolean; locked: boolean; affordable: boolean;
+  }[];
+  active: { name: string; icon: string; since?: number; by?: string };
+}
+
+export function checkoutVM(state: GameState): CheckoutVM {
+  const c = checkoutOf(state);
+  const next = nextCheckout(state);
+  const a = CHECKOUT[c.active];
+  return {
+    options: CHECKOUT_IDS.map((id) => {
+      const o = CHECKOUT[id];
+      const owned = c.owned.includes(id);
+      const terms = [
+        o.daily ? `${money(o.daily)}/day licence` : '',
+        o.fee ? `${Math.round(o.fee * 100)}% per tap` : '',
+      ].filter(Boolean).join(' · ') || 'no running costs';
+      return {
+        id, name: o.name, icon: o.icon, blurb: o.blurb, pros: o.pros, cons: o.cons,
+        cost: money(o.cost), terms, owned, active: c.active === id, next: next === id,
+        locked: !owned && next !== id, affordable: state.cash >= o.cost,
+      };
+    }),
+    active: { name: a.name, icon: a.icon, ...(c.since !== undefined ? { since: c.since } : {}), ...(c.by ? { by: c.by } : {}) },
+  };
+}
+
+/** P3 B11: the pitch panel. `result` is tonight's scored pitch; until then the form is open. */
+export interface PitchVM {
+  judges: { name: string; icon: string; likes: string }[];
+  maxLen: number;
+  greenlit: number;
+  ovation: number;
+  result?: {
+    by: string; kind: PitchKind; text: string; total: number; tier: PitchTier; panel: string; notes: string[];
+    scores: { name: string; icon: string; score: number; verdict: string }[];
+    /** What it does tomorrow, or '' when it didn't make it. */
+    boost: string;
+  };
+}
+
+export function pitchVM(state: GameState): PitchVM {
+  const p = state.pitch && state.pitch.day === state.day ? state.pitch : undefined;
+  const lit = p && (p.tier === 'greenlit' || p.tier === 'ovation');
+  return {
+    judges: JUDGES.map((j) => ({ name: j.name, icon: j.icon, likes: j.likes })),
+    maxLen: PITCH.maxLen,
+    greenlit: PITCH.greenlit,
+    ovation: PITCH.ovation,
+    ...(p ? {
+      result: {
+        by: p.by, kind: p.kind, text: p.text, total: p.total, tier: p.tier, panel: p.panel, notes: p.notes,
+        scores: JUDGES.map((j, i) => ({ name: j.name, icon: j.icon, score: p.scores[i] ?? 0, verdict: p.verdicts[i] ?? '' })),
+        boost: !lit ? '' : p.kind === 'promo' ? `+${Math.round((p.boost - 1) * 100)}% walk-ins tomorrow` : `+${Math.round(p.boost * 100)}% tips tomorrow`,
+      },
+    } : {}),
+  };
+}
+
+export function rivalVM(state: GameState): RivalVM {
+  const scouted = state.rival?.scouted === state.day;
+  const m = computeModifiers(state);
+  const sig = state.signature;
+  const c = state.rival?.copy;
+  const live = copyIsLive(state);
+  const eye = daysToCopy(state);
+  return {
+    name: RIVAL.name,
+    cost: money(RIVAL.scoutCost),
+    affordable: state.cash >= RIVAL.scoutCost,
+    scouted,
+    ...(scouted ? {
+      menu: rivalMenu(state).map(({ drink, price }) => {
+        const ours = Math.round(menuPrice(state, drink) * m.price[drink] * 100) / 100;
+        return { drink, name: DRINK_INFO[drink].name, icon: DRINK_INFO[drink].icon, price: money(price), ours: money(ours), cheaper: price < ours };
+      }),
+      ...(eye !== null ? { eyeing: eye } : {}),
+    } : {}),
+    ...(live && sig && c ? { copy: { of: sig.name, price: money(c.price), ours: money(sigPrice(state, sig)), matched: sigPrice(state, sig) <= c.price, keep: Math.round(rivalAskFactor(state) * 100) } } : {}),
+  };
+}
+
+export function signatureVM(state: GameState): SignatureVM {
+  const drinks = unlockedDrinks(state);
+  const book: SignatureVM['book'] = {};
+  for (const d of drinks) book[d] = bookOf(state, d);
+  const sig = state.signature;
+  const m = computeModifiers(state);
+  const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
+  return {
+    ...(sig
+      ? { current: { name: sig.name, drink: sig.drink, twist: sig.twist, premium: sig.premium, stars: knownStars(state, sig.drink, sig.twist), since: sig.since, onMenu: menuDrinks(state).includes(sig.drink) } }
+      : {}),
+    drinks,
+    book,
+    asks: sig && menuDrinks(state).includes(sig.drink) ? Math.round(walkIns * sigShare(sig) * rivalAskFactor(state) * 0.8) : 0,
+    premiumStep: SIG.premiumStep,
+    maxPremium: SIG.maxPremium,
+  };
+}
+
+export function menuLines(state: GameState): MenuLineVM[] {
+  const m = computeModifiers(state);
+  const on = menuDrinks(state);
+  const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
+  const fc = new Map(priceForecast(state, on, m, walkIns).map((l) => [l.drink, l]));
+  return unlockedDrinks(state).map((drink) => {
+    const step = state.priceSteps?.[drink] ?? 0;
+    const l = fc.get(drink);
+    const fans = state.regulars.filter((r) => r.drink === drink).map((r) => r.name);
+    return {
+      drink,
+      on: state.menu[drink],
+      price: l?.price ?? Math.round(menuPrice(state, drink) * m.price[drink] * 100) / 100,
+      list: ECONOMY.prices[drink],
+      step,
+      canUp: step < PRICING.maxStep,
+      canDown: step > PRICING.minStep,
+      ...(l ? { demandPct: l.demandPct, orders: l.orders, profit: l.profit } : {}),
+      ...(fans.length ? { fans } : {}),
+      ...(state.twists?.[drink] ? { twist: state.twists[drink] } : {}),
+      book: bookOf(state, drink),
+    };
+  });
+}
+
+export interface RoleVM {
+  id: RoleId;
+  name: string;
+  icon: string;
+  perk: string;
+  weakness: string;
+  /** Holder's name, or null when free. */
+  holder: string | null;
+  mine: boolean;
+}
+
+export function rolesViewModel(state: GameState, me: PlayerId): RoleVM[] {
+  const holders = roleHolders(state);
+  return ROLE_IDS.map((id) => {
+    const r = ROLES[id];
+    const h = holders[id];
+    return { id, name: r.name, icon: r.icon, perk: r.perk, weakness: r.weakness, holder: h ? (state.players.find((p) => p.id === h)?.name ?? null) : null, mine: h === me };
+  });
+}
+
+function spoiledWhat(s: Partial<Record<SupplyId, number>> | undefined): string {
+  if (!s) return '';
+  return Object.entries(s)
+    .filter(([, n]) => n)
+    .map(([k, n]) => `${n} ${k === 'pastry' ? (n === 1 ? 'pastry' : 'pastries') : k}`)
+    .join(', ');
 }
 
 export function nightViewModel(state: GameState, me: PlayerId): NightVM {
@@ -338,6 +613,23 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
       ? {
           sales: money(last.sales), tips: money(last.tips), rent: money(last.rent), profit: money(profitOf(last)), ...espressoLines(last),
           ...(last.fines ? { fines: money(last.fines) } : {}), ...(last.bonus ? { bonus: money(last.bonus) } : {}),
+          ...(last.spoiledValue ? { spoiled: money(last.spoiledValue), spoiledWhat: spoiledWhat(last.spoiled) } : {}),
+          ...(last.pastries ? { pastries: last.pastries } : {}),
+          ...(last.twistCost ? { twists: money(last.twistCost) } : {}),
+          ...(last.checkoutFees ? { checkoutFees: money(last.checkoutFees) } : {}),
+          ...(last.ad ? { ad: `${ADS[last.ad.id].icon} ${ADS[last.ad.id].name} ad ${last.ad.outcome === 'viral' ? 'went viral' : last.ad.outcome === 'ok' ? 'did fine' : 'flopped'}` } : {}),
+          ...(last.sigServed ? { sigSold: last.sigServed, sigBonus: money(last.sigBonus ?? 0) } : {}),
+          ...(last.combosFound?.length ? {
+            combos: last.combosFound.map((k) => {
+              const [drink, twist] = k.split(':') as [DrinkId, TwistId];
+              return { drink, twist, stars: state.tasteBook?.[k] ?? 0 };
+            }),
+          } : {}),
+          ...(last.cups ? {
+            cupStars: (last.cupStars! / last.cups).toFixed(1),
+            cupsPerfect: last.perfectCups ?? 0,
+            ...(accuracyRating(last) <= -0.01 ? { cupsRating: accuracyRating(last).toFixed(2) } : {}),
+          } : {}),
         }
       : null;
   return {
@@ -350,11 +642,23 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     sets: activeSets(state).map((id) => (fullSets(state).includes(id) ? `${CARD_SETS[id].name} (full)` : CARD_SETS[id].name)),
     restock: neededSupplies(state).map((supply) => {
       const cost = restockCost(state, supply, 1);
-      return { supply, count: state.supplies[supply] ?? 0, packSize: ECONOMY.packs[supply].size, packCost: money(cost), affordable: state.cash >= cost };
+      const rate = spoilRate(state, supply);
+      const lastSpoiled = takings ? last.spoiled?.[supply] ?? 0 : 0;
+      return {
+        supply, count: state.supplies[supply] ?? 0, packSize: ECONOMY.packs[supply].size, packCost: money(cost), affordable: state.cash >= cost,
+        ...(rate > 0 ? { spoilPct: Math.round(rate * 100) } : {}), ...(lastSpoiled ? { spoiled: lastSpoiled } : {}),
+      };
     }),
-    ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
+    ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id), ...(p.role ? { role: ROLES[p.role].icon } : {}) })),
+    roles: rolesViewModel(state, me),
+    ...(state.regulars.length ? { regulars: regularsViewModel(state) } : {}),
     meReady: state.ready.includes(me),
-    menu: unlockedDrinks(state).map((drink) => ({ drink, on: state.menu[drink] })),
+    menu: menuLines(state),
+    signature: signatureVM(state),
+    rival: rivalVM(state),
+    ads: adsVM(state),
+    checkout: checkoutVM(state),
+    pitch: pitchVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),
     forecast: forecastViewModel(state),

@@ -1,3 +1,5 @@
+import { ACCURACY, cupIntoStation, cupOutOfStation, markCup } from './accuracy';
+import { roleMachineTime } from './roles';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import { computeModifiers } from './effects';
@@ -50,6 +52,7 @@ export function stepStations(state: GameState): GameState {
       else if (s.busyTicksLeft === 0 && isRecipeStation(s.kind)) {
         s.output = s.making ?? STATION_RECIPES[s.kind].gives;
         s.making = null;
+        s.doneAt = state.tick;
         if (s.output) onStationFinished(state, s, s.output);
       }
     }
@@ -61,6 +64,7 @@ export function stepStations(state: GameState): GameState {
 export function interact(state: GameState, playerId: PlayerId): GameState {
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return state;
+  if (player.holding === null) delete player.cupSlips; // P3 B5: empty hands, no cup, no marks
   if (player.tool !== null) {
     mopInteract(state, player);
     return state;
@@ -90,17 +94,35 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   if (station.output !== null && player.holding === null) {
     player.holding = station.output;
     station.output = null;
+    cupOutOfStation(state, player, station, ACCURACY.sitSeconds * TICK_RATE);
+    return state;
+  }
+  // P3 B5: pull it early. Empty hands at a machine near the end of its run take the drink now, one star off.
+  if (player.holding === null && station.busyTicksLeft > 0 && station.making && station.busyTotal && station.busyTicksLeft <= station.busyTotal * ACCURACY.earlyShare) {
+    player.holding = station.making;
+    station.making = null;
+    station.busyTicksLeft = 0;
+    delete station.doneAt;
+    cupOutOfStation(state, player, station, Infinity);
+    markCup(player);
+    emitLog(state, 'cup.early', { by: playerId, item: player.holding });
     return state;
   }
   const idle = station.busyTicksLeft === 0 && station.output === null;
   const recipe = recipeFor(state, station.kind, player.holding);
   if (idle && recipe && stocked(state, recipe)) {
     for (const s of recipe.consumes) state.supplies[s] -= 1;
+    cupIntoStation(player, station);
     player.holding = null;
     station.making = recipe.gives;
     const speed = computeModifiers(state).stationSpeed[station.kind];
     const seconds = recipe.seconds ?? ECONOMY.stationSeconds[station.kind as RecipeStation];
-    station.busyTicksLeft = Math.round((seconds / speed) * TICK_RATE);
+    station.busyTicksLeft = Math.round(((seconds * roleMachineTime(state, playerId)) / speed) * TICK_RATE);
+    station.busyTotal = station.busyTicksLeft;
+  } else if (idle && !recipe && player.holding !== null && player.holding !== 'grounds' && isRecipeStation(station.kind)) {
+    // P3 B5: a cup offered to a station with no step for it: the wrong order, one star off.
+    markCup(player);
+    emitLog(state, 'cup.fumble', { by: playerId, item: player.holding, station: station.kind });
   }
   return state;
 }

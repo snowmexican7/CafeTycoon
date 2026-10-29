@@ -1,3 +1,11 @@
+import { applySignatureInput } from './signature';
+import { applyPitchInput } from './pitch';
+import { applyAdInput } from './ads';
+import { applyCheckoutInput } from './checkout';
+import { applyScoutInput } from './rival';
+import { applyTwistInput } from './taste';
+import { applyRoleInput } from './roles';
+import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { finishDay } from './closing';
@@ -99,6 +107,30 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'menu':
       applyMenuInput(s, input);
+      break;
+    case 'price':
+      applyPriceInput(s, input);
+      break;
+    case 'twist':
+      applyTwistInput(s, input);
+      break;
+    case 'signature':
+      applySignatureInput(s, input);
+      break;
+    case 'checkout':
+      applyCheckoutInput(s, input);
+      break;
+    case 'ad':
+      applyAdInput(s, input);
+      break;
+    case 'pitch':
+      applyPitchInput(s, input);
+      break;
+    case 'scout':
+      applyScoutInput(s, input);
+      break;
+    case 'role':
+      applyRoleInput(s, input);
       break;
     case 'espresso':
       drinkEspresso(s, input.playerId);

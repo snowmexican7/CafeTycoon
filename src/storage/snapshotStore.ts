@@ -9,7 +9,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 9;
+export const SNAPSHOT_VERSION = 21;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -39,6 +39,47 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   // v9 (Phase 2 B10): crew stats for the awards. Start counting from now (older days have no per-player stats; the few log entries still in the save are counted).
   8: (s) => {
     s.crew ??= { seen: 0, players: [] };
+  },
+  // v10 (Phase 3 B1): barista roles. Optional per player; absent = no role, so nothing to fill.
+  9: () => {},
+  // v11 (Phase 3 B2): per-drink price steps. Optional; absent = list prices.
+  10: () => {},
+  // v12 (Phase 3 B3): regular loyalty. Optional; absent = 0.
+  11: () => {},
+  // P3 B4: pastries join the pantry.
+  12: (s) => {
+    if (s.supplies && s.supplies.pastry === undefined) s.supplies.pastry = 0;
+  },
+  // P3 B5: recipe accuracy. Cup marks start clean; a machine mid-run counts its run from now.
+  13: (s) => {
+    for (const st of s.stations ?? []) if (st.busyTicksLeft > 0 && st.busyTotal === undefined) st.busyTotal = st.busyTicksLeft;
+  },
+  // P3 B6: taste map. No twists set and an empty notebook are both "absent", so nothing to fill in.
+  14: () => {},
+  // P3 B7: signature drink. No signature is "absent", so nothing to fill in.
+  15: () => {},
+  // P3 B8: taste seasons. A notebook entry with no season was learned in season 0, which is what
+  // "absent" means, so older entries correctly read as stale once a later season starts.
+  16: () => {},
+  // P3 B9: the rival. Never scouted and nothing copied are both "absent".
+  17: () => {},
+  // P3 B10: ad campaigns. No campaign booked is "absent".
+  18: () => {},
+  // P3 B11: pitch an idea. No pitch yet is "absent".
+  19: () => {},
+  // P3 B12: the checkout path. The old kiosk and Squarely shop cards become installed checkouts
+  // (their effects now come from the checkout, so the cards leave the owned list and the deal).
+  20: (s) => {
+    const had = (id: string) => (s.owned ?? []).some((o) => o.itemId === id);
+    const kiosk = had('digitalKiosk');
+    const squarely = had('squarelyTerminal');
+    if (kiosk || squarely) {
+      s.checkout ??= { owned: squarely ? ['register', 'kiosk', 'squarely'] : ['register', 'kiosk'], active: squarely ? 'squarely' : 'kiosk' };
+    }
+    const gone = (id: string) => id === 'digitalKiosk' || id === 'squarelyTerminal';
+    s.owned = (s.owned ?? []).filter((o) => !gone(o.itemId));
+    s.hand = (s.hand ?? []).filter((id) => !gone(id));
+    s.boughtTonight = (s.boughtTonight ?? []).filter((id) => !gone(id));
   },
 };
 

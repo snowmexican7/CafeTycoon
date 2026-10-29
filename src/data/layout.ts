@@ -35,6 +35,8 @@ export const LAYOUT: {
     { x: 9, y: 7.6 },
     { x: 10, y: 7.6 },
     { x: 11, y: 7.6 },
+    // P3 B12: the kiosk's waiting spot, left of the counter.
+    { x: 5, y: 7.6 },
   ],
   mopHome: { x: 11, y: 7 },
   rogueStart: { x: 6, y: 7 },

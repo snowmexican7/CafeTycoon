@@ -4,7 +4,7 @@ import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
-import type { GameState, PlayerId } from '../sim/types';
+import type { CheckoutId, GameState, PlayerId } from '../sim/types';
 import type { RenderView } from './interpolate';
 import { Actors } from './layers/actors';
 import { Chaos } from './layers/chaos';
@@ -57,7 +57,7 @@ export class Scene {
     const floor = buildFloor(SCENE_WIDTH, SCENE_HEIGHT, LAYOUT.door);
     floor.cacheAsTexture(true);
     this.depth.sortableChildren = true;
-    for (const s of LAYOUT.stations) this.depth.addChild(buildStation(s.kind, s.pos));
+    this.buildStations('register');
     for (const d of buildDecor(SCENE_WIDTH, LAYOUT.height)) this.depth.addChild(d);
     this.actors = new Actors(this.depth, this.tags);
     this.gags = new EspressoGags(this.depth);
@@ -67,6 +67,17 @@ export class Scene {
     this.root.addChild(this.wall.root, buildLamps(), floor, this.chaos.floor, this.depth, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
 
+  /** P3 B12: the station art, rebuilt when the checkout on the counter changes. */
+  private stationArt: Container[] = [];
+  private stationKey = '';
+  private buildStations(checkout: CheckoutId): void {
+    if (checkout === this.stationKey) return;
+    this.stationKey = checkout;
+    for (const c of this.stationArt) c.destroy({ children: true });
+    this.stationArt = LAYOUT.stations.map((s) => buildStation(s.kind, s.pos, checkout));
+    for (const c of this.stationArt) this.depth.addChild(c);
+  }
+
   /** Which barista is "me" (gets the ring and the station focus). Unset = the only player, if there's exactly one. */
   setLocalPlayer(id: PlayerId | null): void {
     this.localId = id;
@@ -74,6 +85,7 @@ export class Scene {
 
   update(view: RenderView): void {
     const { state } = view;
+    this.buildStations(state.checkout?.active ?? 'register');
     const now = performance.now() / 1000;
     const dt = Math.min(0.1, Math.max(0, now - this.lastTime));
     this.lastTime = now;

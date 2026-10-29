@@ -78,35 +78,7 @@ export const CATALOGUE: CatalogueItem[] = [
     effects: [{ kind: 'moveSpeed', mul: 1.15 }],
     flavor: 'Ugly. Fast. Dry socks.',
   },
-  {
-    id: 'digitalKiosk',
-    name: 'Digital kiosk',
-    category: 'pos',
-    cost: 65,
-    rarity: 'common',
-    path: 'quality',
-    duration: 'permanent',
-    effects: [
-      { kind: 'patience', mul: 1.15 },
-      { kind: 'tipRate', add: 0.05 },
-    ],
-    flavor: 'Customers tap their own orders and feel in control.',
-  },
-  {
-    id: 'squarelyTerminal',
-    name: '"Squarely" tap terminal',
-    category: 'pos',
-    cost: 160,
-    rarity: 'rare',
-    path: 'quality',
-    duration: 'permanent',
-    effects: [
-      { kind: 'patience', mul: 1.25 },
-      { kind: 'tipRate', add: 0.2 },
-    ],
-    excludes: ['digitalKiosk'],
-    flavor: 'The screen flips around. Everyone tips 20% out of shame.',
-  },
+  // P3 B12: the digital kiosk and the Squarely terminal moved to the checkout path (src/sim/checkout.ts).
   {
     id: 'chirperThread',
     name: 'Chirper thread',
@@ -279,6 +251,11 @@ export const CATALOGUE: CatalogueItem[] = [
     id: 'iceMachine', name: 'Ice machine', category: 'equipment', cost: 45, rarity: 'common', path: 'speed', set: 'coldBar',
     duration: 'permanent', effects: [{ kind: 'stationSpeed', station: 'coldBrewTap', mul: 1.3 }, { kind: 'orderTag', tag: 'iced', mul: 1.05 }],
     flavor: 'It hums all night and drops a scoop of ice like applause.',
+  },
+  {
+    id: 'walkInFridge', name: 'Walk-in fridge', category: 'equipment', cost: 25, rarity: 'common', path: 'quality',
+    duration: 'permanent', effects: [{ kind: 'spoil', mul: 0.4 }],
+    flavor: 'Cold, humming and roomy. Milk keeps, croissants stay croissants.',
   },
   {
     id: 'kegFridge', name: 'Under-counter keg fridge', category: 'equipment', cost: 30, rarity: 'common', path: 'speed', set: 'coldBar',

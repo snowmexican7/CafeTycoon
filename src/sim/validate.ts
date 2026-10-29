@@ -1,3 +1,9 @@
+import { cleanDraft } from './signature';
+import { cleanPitch, isPitchKind } from './pitch';
+import { isAdId } from './ads';
+import { isCheckoutId } from './checkout';
+import { TWISTS } from './taste';
+import { isRole } from './roles';
 import { ECONOMY } from '../data/economy';
 import { DRINK_IDS } from '../data/drinks';
 import type { BotSkill, Pace, PlayerInput, Settings, SupplyId } from './types';
@@ -41,14 +47,38 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       if (!Number.isInteger(input.packs) || input.packs < 1 || input.packs > MAX_PACKS) return null;
       return { kind: 'restock', playerId: input.playerId, supply: input.supply, packs: input.packs };
     case 'ready':
+    case 'scout':
     case 'reroll':
     case 'leave':
     case 'espresso':
       return { kind: input.kind, playerId: input.playerId };
+    case 'price':
+      return DRINK_IDS.includes(input.drink) && Number.isInteger(input.step) && Math.abs(input.step) <= 20
+        ? { kind: 'price', playerId: input.playerId, drink: input.drink, step: input.step }
+        : null;
+    case 'twist':
+      return DRINK_IDS.includes(input.drink) && (input.twist === null || TWISTS.includes(input.twist))
+        ? { kind: 'twist', playerId: input.playerId, drink: input.drink, twist: input.twist }
+        : null;
+    case 'checkout':
+      return isCheckoutId(input.checkout) ? { kind: 'checkout', playerId: input.playerId, checkout: input.checkout } : null;
+    case 'ad':
+      return input.ad === null || isAdId(input.ad) ? { kind: 'ad', playerId: input.playerId, ad: input.ad } : null;
+    case 'pitch':
+      return isPitchKind(input.pitchKind) && typeof input.text === 'string' && input.text.length <= 400 && cleanPitch(input.text)
+        ? { kind: 'pitch', playerId: input.playerId, pitchKind: input.pitchKind, text: cleanPitch(input.text) }
+        : null;
+    case 'signature': {
+      if (input.sig === null) return { kind: 'signature', playerId: input.playerId, sig: null };
+      const sig = cleanDraft(input.sig);
+      return sig ? { kind: 'signature', playerId: input.playerId, sig } : null;
+    }
     case 'menu':
       return DRINK_IDS.includes(input.drink) && typeof input.on === 'boolean'
         ? { kind: 'menu', playerId: input.playerId, drink: input.drink, on: input.on }
         : null;
+    case 'role':
+      return input.role === null || isRole(input.role) ? { kind: 'role', playerId: input.playerId, role: input.role } : null;
     case 'weekEnd':
       return input.choice === 'stop' || input.choice === 'continue' ? { kind: 'weekEnd', playerId: input.playerId, choice: input.choice } : null;
     case 'settings':

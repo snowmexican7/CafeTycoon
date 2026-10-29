@@ -1,3 +1,8 @@
+import { signatureServed, sigPremium, sigShare } from './signature';
+import { rivalAskFactor } from './rival';
+import { roleCraft, roleTip } from './roles';
+import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
+import { demandFactor, menuPrice, pricePatience, priceTraffic } from './pricing';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE, secondsToTicks } from './constants';
 import { computeModifiers, type Modifiers } from './effects';
@@ -9,6 +14,10 @@ import { tallyDrink } from './tally';
 import { BASE_DRINKS, DRINK_IDS, DRINK_INFO } from '../data/drinks';
 import { clearNameMixOnServe, maybeNameMix, maybeSpawnCamper, secretServeBonus } from './eggs';
 import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, SimEvent } from './types';
+import { sellPastry } from './spoilage';
+import { accuracyTip, noteCup, starsFor } from './accuracy';
+import { comboTip, serveCombo, TASTE } from './taste';
+import { checkoutFee } from './checkout';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
 
@@ -22,9 +31,9 @@ export function availableDrinks(state: GameState): DrinkId[] {
   return DRINKS.filter((d) => unlocked.includes(d) && state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => (state.supplies[s] ?? 0) >= 1));
 }
 
-/** Spots in the queue today: the layout's six, less any a forecast takes (never below three). */
+/** Spots in the queue today: the layout's six (plus the kiosk's spot), less any a forecast takes (never below three). */
 export function queueCapacity(m: Modifiers): number {
-  return Math.max(3, Math.min(ECONOMY.queueCapacity, ECONOMY.queueCapacity + m.queue));
+  return Math.max(3, Math.min(ECONOMY.queueCapacity + m.queueRoom, ECONOMY.queueCapacity + m.queue));
 }
 
 /** One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. */
@@ -32,7 +41,7 @@ export function spawnCustomers(state: GameState): GameState {
   const menu = availableDrinks(state);
   if (menu.length === 0) return state;
   const m = computeModifiers(state);
-  const p = (ECONOMY.baseArrivalsPerSecond * m.traffic) / TICK_RATE;
+  const p = (ECONOMY.baseArrivalsPerSecond * m.traffic * priceTraffic(state, menu, m)) / TICK_RATE;
   if (rngNext(state) >= p) return state;
   if (state.customers.length >= queueCapacity(m)) {
     state.today.turnedAway += 1;
@@ -46,7 +55,7 @@ export function spawnCustomers(state: GameState): GameState {
 
 /** Weighted drink draw over the menu, biased by the café's order modifiers (one rngNext). */
 export function drawDrink(state: GameState, menu: DrinkId[], m: Modifiers): DrinkId {
-  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias);
+  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d));
   let roll = rngNext(state) * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < menu.length; i++) {
     roll -= weights[i];
@@ -96,13 +105,18 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const g = ECONOMY.customers.group;
   const count = kind === 'group' ? g.min + rngInt(state, g.max - g.min + 1) : 1;
   const drinks = regular ? [regular.drink] : Array.from({ length: count }, () => drawDrink(state, menu, m));
+  // P3 B7: a single walk-in may ask for the signature by name (one rngNext, only when a signature is on the menu).
+  const sig = state.signature;
+  const asksSig = !regular && count === 1 && sig !== undefined && menu.includes(sig.drink) && rngNext(state) < sigShare(sig) * rivalAskFactor(state);
+  if (asksSig) drinks[0] = sig.drink;
   const mul = kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1;
   // fancy drinks buy a little patience; a group waits as long as its fanciest order
-  const wait = Math.max(...drinks.map((d) => DRINK_INFO[d].wait ?? 1));
+  const wait = Math.max(...drinks.map((d) => (DRINK_INFO[d].wait ?? 1) * pricePatience(state, d)));
   const patienceMax = patienceFor(m, mul * wait);
   const customer: Customer = { id: state.nextCustomerId++, drink: drinks[0], patienceLeft: patienceMax, patienceMax };
   if (kind === 'impatient' || kind === 'group') customer.kind = kind;
   if (kind === 'group') customer.extra = drinks.slice(1);
+  if (asksSig) customer.sig = true;
   if (regular) {
     regular.visits += 1;
     customer.kind = 'regular';
@@ -118,7 +132,10 @@ export function loseCustomer(state: GameState, c: Customer): void {
   state.today.lost += 1 + (c.extra?.length ?? 0);
   if (c.kind === 'regular') {
     const regular = state.regulars.find((r) => r.name === c.name);
-    if (regular) regular.lost += 1;
+    if (regular) {
+      regular.lost += 1;
+      noteRegularLost(regular);
+    }
     tally(state.today, 'lostRegulars');
   }
   if (c.kind === 'influencer') state.today.influencer = 'lost';
@@ -180,7 +197,7 @@ function rollsUpset(state: GameState, customer: Customer): boolean {
 export const PERFECT_PATIENCE = 0.75;
 
 /** Pay out one served customer: price, patience-scaled tip, cash, stats, and leave the queue. */
-export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId): void {
+export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId, slips = 0): void {
   if (customer.egg === 'nameMix' && !customer.upset) {
     // Wrong name on the cup — they refuse until remade or the name is corrected.
     customer.upset = { ticksLeft: secondsToTicks(ECONOMY.rogue.remakeSeconds) };
@@ -197,10 +214,22 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     return;
   }
   const m = computeModifiers(state);
-  const price = round2(ECONOMY.prices[drink] * m.price[drink]);
-  const kindTip = customer.kind === 'impatient' ? ECONOMY.customers.impatient.tip : customer.kind === 'regular' ? ECONOMY.customers.regular.tip : 1;
-  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip);
-  state.cash = round2(state.cash + price + tip);
+  const sig = customer.sig && state.signature?.drink === drink ? state.signature : undefined;
+  const price = round2(menuPrice(state, drink) * m.price[drink] + (sig ? sigPremium(sig) : 0));
+  const reg = customer.kind === 'regular' ? state.regulars.find((r) => r.name === customer.name && r.drink === drink) : undefined;
+  const kindTip =
+    customer.kind === 'impatient' ? ECONOMY.customers.impatient.tip : customer.kind === 'regular' ? ECONOMY.customers.regular.tip * (reg ? regularTipFactor(state, reg) : 1) : 1;
+  if (reg) noteRegularServed(state, reg);
+  const pastry = sellPastry(state, by);
+  const stars = starsFor(slips);
+  noteCup(state.today, stars);
+  const combo = serveCombo(state, drink, state.today, sig?.twist);
+  const sigBonus = sig && combo ? signatureServed(state.today, combo.stars) : 0;
+  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) + roleCraft(state, by));
+  // P3 B12: the card terminal's cut of the sale.
+  const fee = checkoutFee(state, price + tip);
+  if (fee > 0) state.today.checkoutFees = round2((state.today.checkoutFees ?? 0) + fee);
+  state.cash = round2(state.cash + price + tip + sigBonus - fee - (combo ? TASTE.cost : 0));
   state.today.sales = round2(state.today.sales + price);
   state.today.tips = round2(state.today.tips + tip);
   state.today.served += 1;
@@ -216,7 +245,16 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     cid: customer.id,
     perfect,
     left: customer.extra?.length ?? 0,
+    stars,
   };
+  if (combo) {
+    served.twist = combo.twist;
+    served.combo = combo.stars;
+    if (combo.found) served.found = true;
+  }
+  if (sig) served.sig = sig.name;
+  if (sigBonus) served.sigBonus = sigBonus;
+  if (pastry) served.pastry = pastry;
   if (customer.name !== undefined) served.name = customer.name;
   emitLog(state, 'served', served);
   clearNameMixOnServe(customer);
@@ -256,7 +294,8 @@ export function serveDrink(state: GameState, playerId: PlayerId): GameState {
   const drink = player.holding;
   const target = serveTarget(state, (c) => c.drink === drink);
   if (target === null) return state;
-  serveCustomer(state, target, drink, playerId);
+  serveCustomer(state, target, drink, playerId, player.cupSlips ?? 0);
   player.holding = null;
+  delete player.cupSlips;
   return state;
 }

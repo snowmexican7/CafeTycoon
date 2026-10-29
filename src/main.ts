@@ -176,6 +176,14 @@ async function main(): Promise<void> {
     onRestock: (supply) => send({ kind: 'restock', playerId: me(), supply, packs: 1 }),
     onReady: () => send({ kind: 'ready', playerId: me() }),
     onMenu: (drink, on) => send({ kind: 'menu', playerId: me(), drink, on }),
+    onPrice: (drink, step) => send({ kind: 'price', playerId: me(), drink, step }),
+    onTwist: (drink, twist) => send({ kind: 'twist', playerId: me(), drink, twist }),
+    onSignature: (sig) => send({ kind: 'signature', playerId: me(), sig }),
+    onScout: () => send({ kind: 'scout', playerId: me() }),
+    onAd: (ad) => send({ kind: 'ad', playerId: me(), ad }),
+    onCheckout: (checkout) => send({ kind: 'checkout', playerId: me(), checkout }),
+    onPitch: (pitchKind, text) => send({ kind: 'pitch', playerId: me(), pitchKind, text }),
+    onRole: (role) => send({ kind: 'role', playerId: me(), role }),
     onReroll: () => send({ kind: 'reroll', playerId: me() }),
   });
   const closing = createClosing($('#closing'));

@@ -26,7 +26,7 @@ describe('customers', () => {
 
   it('only orders drinks with supplies, and never past the queue cap', () => {
     let s = day();
-    s.supplies = { beans: 0, milk: 5, concentrate: 3, flavour: 0 };
+    s.supplies = { beans: 0, milk: 5, concentrate: 3, flavour: 0, pastry: 0 };
     expect(availableDrinks(s)).toEqual(['coldBrew']);
     s.customers = Array.from({ length: 6 }, (_, i) => ({ id: i, drink: 'coldBrew' as const, patienceLeft: 100, patienceMax: 100 }));
     for (let i = 0; i < 60 * 60; i++) s = spawnCustomers(s);
@@ -61,7 +61,7 @@ describe('customers', () => {
     ];
     s = interact(s, 'p1');
     expect(s.customers.map((c) => c.id)).toEqual([1, 3]);
-    expect(s.cash).toBeCloseTo(100 + 4.75 + 0.83, 2); // tip = 4.75 × 0.35 × 0.5 = 0.83125 -> 0.83
+    expect(s.cash).toBeCloseTo(100 + 4.75 + 0.87, 2); // ★★★ cup tips ×1.05 (P3 B5); tip = 4.75 × 0.35 × 0.5 = 0.83125 -> 0.83
     expect(s.today.served).toBe(1);
     expect(s.today.sales).toBe(4.75);
     expect(s.players[0].holding).toBeNull();

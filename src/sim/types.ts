@@ -1,3 +1,5 @@
+import type { TwistId } from './taste';
+import type { RoleId } from './roles';
 import type { EggsState } from './eggs';
 import type { EspressoState } from './espresso';
 import type { ForecastId } from '../data/forecasts';
@@ -5,7 +7,7 @@ import type { CrewStats } from './stats';
 
 export type PlayerId = string;
 export type DrinkId = 'espresso' | 'latte' | 'coldBrew' | 'icedLatte' | 'mocha' | 'matcha' | 'special';
-export type SupplyId = 'beans' | 'milk' | 'concentrate' | 'flavour';
+export type SupplyId = 'beans' | 'milk' | 'concentrate' | 'flavour' | 'pastry';
 export type ItemKind = 'grounds' | DrinkId;
 export type StationKind = 'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'counter' | 'trash';
 export type Phase = 'night' | 'day' | 'closing' | 'weekEnd' | 'ended';
@@ -38,6 +40,8 @@ export type BotStep = { kind: 'use'; station: string; action: BotAction } | { ki
 export interface PassItem {
   item: DrinkId;
   ticksLeft: number;
+  /** P3 B5: the cup's sloppy marks. */
+  slips?: number;
 }
 
 /** Absolute state.tick at which the event starts. */
@@ -57,6 +61,8 @@ export interface Regular {
   drink: DrinkId;
   visits: number;
   lost: number;
+  /** Phase 3 B3: 0..5; absent = 0. */
+  loyalty?: number;
 }
 
 export interface BotState {
@@ -78,6 +84,8 @@ export interface BotState {
 }
 
 export type SimEventKind =
+  | 'cup.early'
+  | 'cup.fumble'
   | 'pass.put'
   | 'pass.take'
   | 'pass.serve'
@@ -120,6 +128,8 @@ export interface Player {
   moveDir: Vec2;
   interactQueued: boolean;
   holding: ItemKind | null;
+  /** P3 B5: sloppy marks on the cup in hand (absent = 0). */
+  cupSlips?: number;
   connected: boolean;
   bot?: BotState;
   idleTicks: number;
@@ -136,6 +146,8 @@ export interface Player {
   dropQueued: boolean;
   /** tileOf(pos) as of the last tile-entry check. */
   tile: Vec2;
+  /** Phase 3 B1: this barista's role (src/sim/roles.ts). Absent = no role. */
+  role?: RoleId;
 }
 
 export interface Station {
@@ -148,6 +160,10 @@ export interface Station {
   occupiedBy: number | null;
   /** What the station is brewing (a station has several recipes since B5); null when idle. */
   making?: ItemKind | null;
+  /** P3 B5: sloppy marks on the cup inside; the length of the current run; the tick its drink finished. */
+  cupSlips?: number;
+  busyTotal?: number;
+  doneAt?: number;
 }
 
 export interface Customer {
@@ -163,6 +179,64 @@ export interface Customer {
   egg?: 'camper' | 'nameMix';
   /** Name printed on the cup when `egg === 'nameMix'`. */
   wrongName?: string;
+  /** P3 B7: asked for the signature drink by name. */
+  sig?: true;
+}
+
+/** P3 B7: the crew's signature drink. `premium` is in $0.50 steps; `since` is the day the recipe was set. */
+/** P3 B9: the rival café. `scouted` is the night (by `day`) the crew last peeked; `copy` is its knock-off of a signature. */
+export interface Rival {
+  scouted?: number;
+  copy?: { drink: DrinkId; twist: TwistId; since: number; price: number; day: number };
+}
+
+/** P3 B10: parody ad platforms, and how a campaign landed. */
+export type AdId = 'palmbook' | 'nextdoorish' | 'linkedout' | 'glimpse' | 'tiktak';
+export type AdOutcome = 'flop' | 'ok' | 'viral';
+/** A campaign booked at night for `day`; `outcome` is filled in when the doors open. */
+/** P3 B11: what a pitch is for. */
+export type PitchKind = 'promo' | 'item';
+export type PitchTier = 'passed' | 'meh' | 'greenlit' | 'ovation';
+/** P3 B11: a scored pitch for `day` (the coming day when pitched at night). */
+export interface PitchResult {
+  day: number;
+  by: string;
+  kind: PitchKind;
+  text: string;
+  /** One score (0-10) and one verdict line per judge. */
+  scores: number[];
+  verdicts: string[];
+  total: number;
+  tier: PitchTier;
+  panel: string;
+  notes: string[];
+  /** Promo: traffic multiplier. Item: tip rate added. */
+  boost: number;
+}
+
+/** P3 B12: the checkout path. */
+export type CheckoutId = 'register' | 'kiosk' | 'squarely';
+/** Owned checkouts (always the register) and the one in use; `since` is the day the latest was installed. */
+export interface CheckoutState {
+  owned: CheckoutId[];
+  active: CheckoutId;
+  since?: number;
+  by?: string;
+}
+
+export interface AdCampaign {
+  id: AdId;
+  day: number;
+  by: string;
+  outcome?: AdOutcome;
+}
+
+export interface Signature {
+  name: string;
+  drink: DrinkId;
+  twist: TwistId;
+  premium: number;
+  since: number;
 }
 
 export type Effect =
@@ -174,6 +248,8 @@ export type Effect =
   | { kind: 'tipRate'; add: number }
   | { kind: 'orderBias'; drink: DrinkId; mul: number }
   | { kind: 'supplyCost'; supply: SupplyId; mul: number }
+  /** P3 B4: fresh stock spoils at this multiple of the usual share overnight. */
+  | { kind: 'spoil'; mul: number }
   | { kind: 'gamble'; chance: number; win: Effect[]; lose: Effect[] }
   /** Neighbourhood days: tilt every hot or every iced drink at once (src/data/drinks.ts). */
   | { kind: 'orderTag'; tag: 'hot' | 'iced'; mul: number }
@@ -267,6 +343,11 @@ export interface DayStats {
   bonus?: number;
   botMistakes?: number;
   lostRegulars?: number;
+  /** P3 B4: fresh stock thrown out at closing, and what it had cost. */
+  spoiled?: Partial<Record<SupplyId, number>>;
+  spoiledValue?: number;
+  /** P3 B4: pastries sold on the side. */
+  pastries?: number;
   inspection?: 'pass' | 'fail' | null;
   events?: EventKind[];
   drinks?: Record<DrinkId, number>;
@@ -279,6 +360,22 @@ export interface DayStats {
   slips?: number;
   /** Perfect serves today (patience left ≥ threshold). */
   perfect?: number;
+  /** P3 B5: cups scored today and their stars summed. */
+  cups?: number;
+  cupStars?: number;
+  perfectCups?: number;
+  /** P3 B6: combos discovered today, the day's summed (stars − 3) over twisted cups, and twist cost. */
+  combosFound?: string[];
+  comboStarSum?: number;
+  twistCost?: number;
+  /** P3 B7: signature serves, their summed (stars − 3), and the bonus they earned. */
+  sigServed?: number;
+  sigStarSum?: number;
+  sigBonus?: number;
+  /** P3 B10: the ad that ran today and how it landed. */
+  ad?: { id: AdId; outcome: AdOutcome };
+  /** P3 B12: what the checkout cost today (card fees plus the kiosk licence). */
+  checkoutFees?: number;
   /** Challenge tip paid at closing (folded into bonus too). */
   challengeBonus?: number;
   /** Challenge ids won today. */
@@ -316,6 +413,23 @@ export interface GameState {
   morningNotes: string[];
   pass: PassItem[];
   menu: Record<DrinkId, boolean>;
+  /** Phase 3 B2: price steps per drink ($0.25 each); absent or 0 = list price. */
+  priceSteps?: Partial<Record<DrinkId, number>>;
+  /** P3 B6: tonight's house twist per drink, and the combos discovered so far ("drink:twist" -> stars). */
+  twists?: Partial<Record<DrinkId, TwistId>>;
+  tasteBook?: Record<string, number>;
+  /** P3 B8: the taste season each notebook entry was learned in (absent = season 0). */
+  tasteSeason?: Record<string, number>;
+  /** P3 B7: the signature drink, if the crew has designed one. */
+  signature?: Signature;
+  /** P3 B9: Starbuck$ down the street. */
+  rival?: Rival;
+  /** P3 B10: the ad campaign booked for tomorrow (or running today). */
+  ad?: AdCampaign;
+  /** P3 B12: the checkout path (absent = the register only). */
+  checkout?: CheckoutState;
+  /** P3 B11: the latest pitch to the panel (it applies on its `day` when green-lit). */
+  pitch?: PitchResult;
   eventSchedule: ScheduledEvent[];
   events: ActiveEvent[];
   regulars: Regular[];
@@ -356,6 +470,14 @@ export type PlayerInput =
   | { kind: 'ready'; playerId: PlayerId }
   | { kind: 'weekEnd'; playerId: PlayerId; choice: 'stop' | 'continue' }
   | { kind: 'menu'; playerId: PlayerId; drink: DrinkId; on: boolean }
+  | { kind: 'price'; playerId: PlayerId; drink: DrinkId; step: number }
+  | { kind: 'twist'; playerId: PlayerId; drink: DrinkId; twist: TwistId | null }
+  | { kind: 'scout'; playerId: PlayerId }
+  | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
+  | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
+  | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }
+  | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
+  | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
   | { kind: 'espresso'; playerId: PlayerId }
   | { kind: 'join'; playerId: PlayerId; name: string }

@@ -1,3 +1,5 @@
+import { judgePitch } from '../sim/pitch';
+import { comboStars } from '../sim/taste';
 /**
  * Dev-only visual fixtures (served by `vite` at /CafeTycoon/fixtures.html?f=<name>; never in the build).
  * Each fixture fakes a GameState and replays a small timeline into the real Scene and HUD, so the
@@ -24,6 +26,12 @@ type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) =>
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
+
+function counterLine(s: GameState, active: 'register' | 'kiosk' | 'squarely', n: number): void {
+  s.checkout = { owned: active === 'register' ? ['register'] : active === 'kiosk' ? ['register', 'kiosk'] : ['register', 'kiosk', 'squarely'], active };
+  const drinks = ['latte', 'espresso', 'coldBrew', 'latte', 'espresso', 'coldBrew', 'latte'] as const;
+  for (let i = 0; i < n; i++) s.customers.push({ id: 60 + i, drink: drinks[i], patienceLeft: 1400 - i * 120, patienceMax: 1800 });
+}
 
 function base(): GameState {
   let s = createRun({
@@ -84,6 +92,182 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B1: the night shop with roles picked (Ana is Chef, Cleo is Host; Ben and Dev free). */
+  roles: {
+    night: true,
+    setup(s) {
+      s.cash = 260;
+      s.players.find((p) => p.id === 'ana')!.role = 'chef';
+      s.players.find((p) => p.id === 'cleo')!.role = 'host';
+      s.ready = ['cleo'];
+    },
+    timeline: [],
+  },
+  /** P3 B2: the night menu board with prices moved (latte up $1, espresso down $0.50). */
+  pricing: {
+    night: true,
+    setup(s) {
+      s.cash = 260;
+      s.priceSteps = { latte: 4, espresso: -2 };
+    },
+    timeline: [],
+  },
+  /** P3 B3: regulars on the night board: Ada loyal, Ravi's cold brew off the menu, June's latte pricey. */
+  regulars: {
+    night: true,
+    setup(s) {
+      s.cash = 260;
+      s.regulars = [
+        { name: 'Ada', drink: 'espresso', visits: 6, lost: 0, loyalty: 4 },
+        { name: 'Ravi', drink: 'coldBrew', visits: 3, lost: 1, loyalty: 2 },
+        { name: 'June', drink: 'latte', visits: 2, lost: 0, loyalty: 1 },
+      ];
+      s.menu.coldBrew = false;
+      s.priceSteps = { latte: 4 };
+    },
+    timeline: [],
+  },
+  /** P3 B4: fresh stock: last night 4 milk and 3 pastries went off; a Manager is on the crew tonight. */
+  spoilage: {
+    night: true,
+    setup(s) {
+      s.cash = 180;
+      s.day = 2;
+      s.today = { day: 1, served: 22, lost: 3, turnedAway: 0, sales: 118.5, tips: 19.2, rent: 25, pastries: 4, spoiled: { milk: 4, pastry: 3 }, spoiledValue: 7.5 };
+      s.supplies = { ...s.supplies, milk: 9, pastry: 3 };
+      const p = s.players.find((x) => !x.bot);
+      if (p) p.role = 'manager';
+    },
+    timeline: [],
+  },
+  /** P3 B5: recipe accuracy on the night receipt. */
+  accuracy: {
+    night: true,
+    setup(s) {
+      s.cash = 170;
+      s.day = 2;
+      s.today = { day: 1, served: 22, lost: 2, turnedAway: 0, sales: 116, tips: 17.4, rent: 25, cups: 22, cupStars: 53, perfectCups: 12 };
+    },
+    timeline: [],
+  },
+  /** P3 B6: the taste notebook mid-run, a few combos found last night, twists set for tomorrow. */
+  taste: {
+    night: true,
+    setup(s) {
+      s.cash = 190;
+      s.day = 2;
+      s.tasteBook = {
+        [`latte:vanilla`]: comboStars(s.seed, 'latte', 'vanilla'),
+        [`latte:cinnamon`]: comboStars(s.seed, 'latte', 'cinnamon'),
+        [`espresso:seaSalt`]: comboStars(s.seed, 'espresso', 'seaSalt'),
+        [`coldBrew:honey`]: comboStars(s.seed, 'coldBrew', 'honey'),
+      };
+      s.twists = { latte: 'vanilla', espresso: 'honey' };
+      s.today = { day: 1, served: 24, lost: 2, turnedAway: 0, sales: 124, tips: 21.3, rent: 25, combosFound: ['latte:cinnamon', 'coldBrew:honey'], comboStarSum: 3, twistCost: 2.8 };
+    },
+    timeline: [],
+  },
+  /** P3 B7: a named signature on the board, last night's sales and star bonus on the receipt. */
+  signature: {
+    night: true,
+    setup(s) {
+      s.cash = 214;
+      s.day = 2;
+      s.tasteBook = {
+        [`latte:vanilla`]: comboStars(s.seed, 'latte', 'vanilla'),
+        [`latte:cinnamon`]: comboStars(s.seed, 'latte', 'cinnamon'),
+        [`espresso:seaSalt`]: comboStars(s.seed, 'espresso', 'seaSalt'),
+        [`coldBrew:honey`]: comboStars(s.seed, 'coldBrew', 'honey'),
+      };
+      s.twists = { latte: 'vanilla' };
+      s.signature = { name: 'Midnight Cinnamon', drink: 'latte', twist: 'cinnamon', premium: 3, since: 1 };
+      s.today = { day: 1, served: 26, lost: 1, turnedAway: 0, sales: 141, tips: 24.6, rent: 25, combosFound: ['latte:cinnamon'], comboStarSum: 4, twistCost: 3.2, sigServed: 6, sigStarSum: 24, sigBonus: 4.5 };
+    },
+    timeline: [],
+  },
+  /** P3 B8: a taste season turning tomorrow (day 4): last season's notebook reads stale, the paper tips the riser. */
+  seasons: {
+    night: true,
+    setup(s) {
+      s.cash = 236;
+      s.day = 4;
+      s.tasteBook = {
+        [`latte:vanilla`]: comboStars(s.seed, 'latte', 'vanilla'),
+        [`latte:cinnamon`]: comboStars(s.seed, 'latte', 'cinnamon'),
+        [`latte:honey`]: comboStars(s.seed, 'latte', 'honey'),
+        [`espresso:seaSalt`]: comboStars(s.seed, 'espresso', 'seaSalt'),
+        [`coldBrew:honey`]: comboStars(s.seed, 'coldBrew', 'honey'),
+      };
+      s.twists = { latte: 'cinnamon', espresso: 'seaSalt' };
+      s.today = { day: 3, served: 27, lost: 1, turnedAway: 0, sales: 146, tips: 25.2, rent: 25, comboStarSum: 6, twistCost: 3.6 };
+    },
+    timeline: [],
+  },
+  /** P3 B9: Starbuck$ scouted tonight, with a live knock-off of the signature undercutting it. */
+  rival: {
+    night: true,
+    setup(s) {
+      s.cash = 252;
+      s.day = 5;
+      s.tasteBook = {
+        [`latte:cinnamon`]: comboStars(s.seed, 'latte', 'cinnamon'),
+        [`latte:vanilla`]: comboStars(s.seed, 'latte', 'vanilla'),
+        [`espresso:seaSalt`]: comboStars(s.seed, 'espresso', 'seaSalt'),
+      };
+      s.signature = { name: 'Midnight Cinnamon', drink: 'latte', twist: 'cinnamon', premium: 3, since: 1 };
+      s.rival = { scouted: 5, copy: { drink: 'latte', twist: 'cinnamon', since: 1, price: 5.75, day: 4 } };
+      s.today = { day: 4, served: 25, lost: 2, turnedAway: 0, sales: 133, tips: 22.1, rent: 25, sigServed: 3, sigStarSum: 3, sigBonus: 2.25 };
+    },
+    timeline: [],
+  },
+  /** P3 B9: the rival card before scouting (the Scout button), signature set two days ago. */
+  rivalScout: {
+    night: true,
+    setup(s) {
+      s.cash = 180;
+      s.day = 3;
+      s.signature = { name: 'Honey Haze', drink: 'latte', twist: 'honey', premium: 2, since: 2 };
+    },
+    timeline: [],
+  },
+  /** P3 B10: the Ads tab with yesterday's viral Tik Tak on the receipt and Palm Book booked for tomorrow. */
+  ads: {
+    night: true,
+    setup(s) {
+      s.cash = 214;
+      s.day = 2;
+      s.ad = { id: 'palmbook', day: 2, by: 'Ana' };
+      s.today = { day: 1, served: 31, lost: 3, turnedAway: 1, sales: 151, tips: 24.6, rent: 25, ad: { id: 'tiktak', outcome: 'viral' } };
+    },
+    timeline: [],
+  },
+  /** P3 B11: the pitch panel after a standing ovation, on the Ads & pitch tab. */
+  pitch: {
+    night: true,
+    setup(s) {
+      s.cash = 188;
+      s.day = 2;
+      s.today = { day: 1, served: 27, lost: 2, turnedAway: 0, sales: 139, tips: 22.1, rent: 25 };
+      const text = 'Cozy rainy morning deal: bring a friend and family, fresh latte with vanilla, loyalty card double stamps';
+      s.pitch = { day: 2, by: 'Cleo', ...judgePitch(s, 'promo', text) };
+    },
+    timeline: [],
+  },
+  /** P3 B12: the Shopfront tab with the kiosk installed and the Squarely terminal next on the path. */
+  checkout: {
+    night: true,
+    setup(s) {
+      s.cash = 168;
+      s.day = 2;
+      s.checkout = { owned: ['register', 'kiosk'], active: 'kiosk', since: 1, by: 'Ben' };
+      s.today = { day: 1, served: 30, lost: 1, turnedAway: 0, sales: 162.4, tips: 14.2, rent: 25, checkoutFees: 2 };
+    },
+    timeline: [],
+  },
+  /** P3 B12: the counter with each checkout, a full line waiting. */
+  counterRegister: { setup: (s) => counterLine(s, 'register', 6), timeline: [] },
+  counterKiosk: { setup: (s) => counterLine(s, 'kiosk', 7), timeline: [] },
+  counterSquarely: { setup: (s) => counterLine(s, 'squarely', 6), timeline: [] },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */
@@ -231,6 +415,15 @@ const FIXTURES: Record<string, Fixture> = {
       [1.1, (s) => { emit(s, 'served', { by: 'ana', item: 'latte', amount: 6.4, kind: 'regular', name: 'Ada', cid: 61, perfect: true, left: 0 }); s.customers.shift(); }],
       [1.3, (s) => emit(s, 'bot.mistake', { bot: 'Bo', drink: 'latte' })],
       [3.2, (s) => emit(s, 'influencer', { result: 'served' })],
+    ],
+  },
+  /** P3 B5: served toasts with the cup's accuracy stars. */
+  stars: {
+    setup() {},
+    timeline: [
+      [0.3, (s) => emit(s, 'served', { by: 'ana', item: 'latte', amount: 6.3, kind: 'normal', cid: 90, perfect: true, left: 0, stars: 3 })],
+      [0.6, (s) => emit(s, 'served', { by: 'ben', item: 'espresso', amount: 3.1, kind: 'normal', cid: 91, perfect: false, left: 0, stars: 2 })],
+      [0.9, (s) => emit(s, 'served', { by: 'cleo', item: 'coldBrew', amount: 4.2, kind: 'normal', cid: 92, perfect: false, left: 0, stars: 1 })],
     ],
   },
   /** Block 3 (folded in): a pass hand-off cheer and a perfect-serve streak. */
