@@ -338,6 +338,9 @@ export interface DayStats {
   served: number;
   lost: number;
   turnedAway: number;
+  /** Night brief: people who walked away because the board was sold out, and when (seconds into the day) it first was. */
+  soldOutWalkouts?: number;
+  soldOutAt?: number;
   sales: number;
   tips: number;
   rent: number;
