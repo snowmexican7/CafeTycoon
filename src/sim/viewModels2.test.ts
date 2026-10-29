@@ -69,6 +69,7 @@ describe('receipt vm', () => {
       events: [],
       botMistakes: 0,
       lostRegulars: 0,
+      rogues: 0,
       drinks: [
         { drink: 'espresso', count: 0 },
         { drink: 'latte', count: 0 },
@@ -92,6 +93,7 @@ describe('receipt vm', () => {
       events: ['Rush hour', 'Health inspector'],
       botMistakes: 2,
       lostRegulars: 1,
+      rogues: 0,
       drinks: [
         { drink: 'espresso', count: 1 },
         { drink: 'latte', count: 2 },

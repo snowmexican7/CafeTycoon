@@ -179,3 +179,13 @@ Open items:
 - **Needs from sim: wages.** The night warning works out "cash after tomorrow's bills" from rent only (`rentForDay`), because there are no wages in the sim yet. When hired staff land (phase 3), expose the next day's wage bill (or a `billsForDay(state)` helper next to `rentForDay`) and `src/ui/nightWarnings.ts` will add it to `rentTomorrow`.
 - Supply "low" warnings use a UI-side estimate (`expectedUse`: base arrivals × day length × traffic, split by order bias over the drinks on the menu). A supply counts as low below 75% of that (`LOW_SUPPLY_SHARE`), since some customers walk out, so a fresh run's starting stock doesn't nag. If the sim ever tracks an expected-orders number, use that instead.
 - Warnings never block Ready. The structure key only includes each warning's `id:level`; titles and amounts are patched in place.
+
+## Needs UI (chaos pack: rogue)
+
+The data exists; the visuals are the UI agent's.
+
+- the angry bubble on an upset customer (`Customer.upset`)
+- the rogue walking behind the counter and out the door (`HudVM.rogue`)
+- the occupied-station tell (`Station.occupiedBy`)
+- the review in the morning notes
+- the receipt's `rogues` line

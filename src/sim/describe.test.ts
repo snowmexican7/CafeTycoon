@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { catalogueById } from '../data/catalogue';
-import { describeEffects, morningNotes } from './describe';
+import { ROGUE_REVIEW, describeEffects, morningNotes } from './describe';
 import { createRun } from './run';
 
 describe('describe', () => {
@@ -33,5 +33,16 @@ describe('describe', () => {
     ]);
     s.day = 2;
     expect(morningNotes(s)[0]).toContain('InstaGlam');
+  });
+
+  it('carries the rogue review the morning after a rogue day, once', () => {
+    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
+    s.day = 3;
+    s.days = [{ ...s.today, rogues: 0 }];
+    expect(morningNotes(s)).not.toContain(ROGUE_REVIEW);
+    s.days = [{ ...s.today, rogues: 0 }, { ...s.today, rogues: 2 }];
+    expect(morningNotes(s).filter((n) => n === ROGUE_REVIEW)).toHaveLength(1);
+    s.days = [{ ...s.today, rogues: 2 }, { ...s.today }];
+    expect(morningNotes(s)).not.toContain(ROGUE_REVIEW);
   });
 });

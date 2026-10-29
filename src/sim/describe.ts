@@ -54,6 +54,9 @@ export function describeEffects(effects: Effect[]): string {
   return effects.map(describeOne).join(', ');
 }
 
+/** Yesterday's one-line review when a customer went rogue. */
+export const ROGUE_REVIEW = 'Had to make it myself. Two stars. Good beans though.';
+
 /** What the day opens with: the scenario on day one, then everything bought last night. */
 export function morningNotes(state: GameState): string[] {
   const notes: string[] = [];
@@ -65,5 +68,6 @@ export function morningNotes(state: GameState): string[] {
     const item = catalogueById[id];
     if (item && item.duration === 'permanent') notes.push(`${item.name} installed`);
   }
+  if ((state.days.at(-1)?.rogues ?? 0) > 0) notes.push(ROGUE_REVIEW);
   return notes;
 }

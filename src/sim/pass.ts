@@ -1,6 +1,6 @@
 import { ECONOMY } from '../data/economy';
 import { emitLog } from './log';
-import { serveCustomer } from './customers';
+import { serveCustomer, serveTarget } from './customers';
 import { tally } from './tally';
 import type { GameState, PlayerId } from './types';
 
@@ -38,12 +38,9 @@ export function counterInteract(state: GameState, playerId: PlayerId): GameState
   return state;
 }
 
+/** The matching customer to serve: an upset one first, else the most impatient. */
 function mostImpatient(state: GameState, match: (c: GameState['customers'][number]) => boolean) {
-  let best = null as GameState['customers'][number] | null;
-  for (const c of state.customers) {
-    if (match(c) && (best === null || c.patienceLeft < best.patienceLeft)) best = c;
-  }
-  return best!;
+  return serveTarget(state, match)!;
 }
 
 function stalestIndex(state: GameState, drink?: string): number {

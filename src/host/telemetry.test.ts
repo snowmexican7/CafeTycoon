@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
+import { parseTele } from '../net/protocol';
 import type { HostToClient, Transport } from '../net/transport';
 import { createRun, freshDayStats, startDay } from '../sim/run';
 import { makeBotState } from '../sim/bots/roster';
@@ -109,6 +110,18 @@ describe('telemetry', () => {
       ['bot.mistake', 30],
     ]);
     expect(logged[0].data).toEqual({ item: 'latte' });
+  });
+
+  it('records rogue log rows from the sim', () => {
+    const { tele } = setup();
+    const s = run();
+    s.log = [logEntry(1, 'rogue.upset')];
+    tele.snapshot(s);
+    tele.snapshot(s);
+    const rows = tele.rows().filter((r) => r.kind === 'rogue.upset');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].tick).toBe(10);
+    expect(parseTele({ t: 'tele', token: 'T', events: [{ kind: 'rogue.made', data: { drink: 'latte' }, at: 1 }] })).toBeNull();
   });
 
   it('summarizes the run when it ends and serializes as ndjson', () => {
