@@ -4,7 +4,7 @@ import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
-import type { CheckoutId, GameState, PlayerId, TierId } from '../sim/types';
+import type { CheckoutId, GameState, PlayerId, Station, TierId } from '../sim/types';
 import type { RenderView } from './interpolate';
 import { Actors } from './layers/actors';
 import { Chaos } from './layers/chaos';
@@ -16,7 +16,8 @@ import { Effects } from './layers/fx';
 import { ESPRESSO } from '../sim/espresso';
 import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
-import { StationOverlay, buildStation, type StationOverlayState } from './layers/stations';
+import { StationOverlay, buildEmptySlot, buildStation, stationNumber, type StationOverlayState } from './layers/stations';
+import { emptySlotPositions } from './slotModel';
 import { buildWall } from './layers/wall';
 import { buildLot } from './layers/lot';
 import { layoutFor } from '../data/layout';
@@ -80,18 +81,26 @@ export class Scene {
   private stationKey = '';
   /** P3 B13: the hoarding and awning, rebuilt (with the stations and the line) when the shop grows. */
   private readonly lot = new Container();
-  private buildStations(checkout: CheckoutId, tier: TierId | undefined): void {
-    const key = `${tier ?? 'cafe'}:${checkout}`;
+  private buildStations(checkout: CheckoutId, tier: TierId | undefined, stations?: readonly Station[]): void {
+    // FB1 WP5: the art follows state.stations (bought duplicates, swapped slots), with a plinth in every empty slot.
+    const lay = layoutFor(tier);
+    const list = stations ?? lay.stations;
+    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}`).join('|')}`;
     if (key === this.stationKey) return;
     this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
-    const lay = layoutFor(tier);
-    this.stationArt = lay.stations.map((s) => buildStation(s.kind, s.pos, checkout));
+    this.stationArt = list.map((s) => buildStation(s.kind, s.pos, checkout, stationNumber(s.id)));
+    for (const pos of emptySlotPositions(tier, list)) this.stationArt.push(buildEmptySlot(pos));
     for (const c of this.stationArt) this.depth.addChild(c);
-    for (const c of this.lot.removeChildren()) c.destroy({ children: true });
-    this.lot.addChild(buildLot(tier));
+    const lotKey = tier ?? 'cafe';
+    if (lotKey !== this.lotKey) {
+      this.lotKey = lotKey;
+      for (const c of this.lot.removeChildren()) c.destroy({ children: true });
+      this.lot.addChild(buildLot(tier));
+    }
     if (this.actors) this.actors.queueSlots = lay.queueSlots;
   }
+  private lotKey = '';
 
   /** P3 B13: the milestone moment in the scene, once, when the bigger floor first appears. */
   private celebrated = '';
@@ -119,7 +128,7 @@ export class Scene {
 
   update(view: RenderView): void {
     const { state } = view;
-    this.buildStations(state.checkout?.active ?? 'register', state.tier);
+    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations);
     this.maybeCelebrate(state);
     const now = performance.now() / 1000;
     const dt = Math.min(0.1, Math.max(0, now - this.lastTime));

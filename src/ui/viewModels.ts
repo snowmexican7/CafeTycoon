@@ -3,6 +3,7 @@ import { AD_IDS, ADS } from '../sim/ads';
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../sim/checkout';
 import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
 import { layoutFor } from '../data/layout';
+import { stationMenuNote, stationsVM, type StationsVM } from './stationsVM';
 import { JUDGES, PITCH } from '../sim/pitch';
 import { copyIsLive, daysToCopy, RIVAL, rivalAskFactor, rivalMenu, sigPrice } from '../sim/rival';
 import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
@@ -283,6 +284,8 @@ export interface NightVM {
   checkout: CheckoutVM;
   /** P3 B13: the growth path (stand → cart → café) on the Shopfront tab. */
   growth: GrowthVM;
+  /** FB1 WP5: the Spend › Stations card. */
+  stations: StationsVM;
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
@@ -479,13 +482,9 @@ export interface GrowthVM {
 const STATION_ICON: Record<string, string> = { grinder: '⚙️ grinder', espresso: '☕ espresso', steamer: '🥛 steamer', coldBrewTap: '🧊 cold-brew tap' };
 
 function waitingNote(state: GameState): { waiting?: string } {
-  if (tierOf(state) === 'cafe') return {};
-  const have = layoutFor(state.tier).stations.map((s) => s.kind);
-  const known = state.unlocked ?? BASE_DRINKS;
-  const missing = known.filter((d) => !DRINK_STATIONS[d].every((k) => have.includes(k)));
-  if (missing.length === 0) return {};
-  const t = TIERS[tierOf(state)];
-  return { waiting: `${t.icon} No steamer at the ${t.short}: ${missing.map((d) => DRINK_INFO[d].short).join(', ')} ${missing.length > 1 ? 'wait' : 'waits'} until we grow (Shopfront tab).` };
+  // FB1 WP5: from reasonOff, so a swapped-out steamer reads the same as a stand that never had one.
+  const note = stationMenuNote(state);
+  return note ? { waiting: note } : {};
 }
 
 export function growthVM(state: GameState): GrowthVM {
@@ -726,6 +725,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     ads: adsVM(state),
     checkout: checkoutVM(state),
     growth: growthVM(state),
+    stations: stationsVM(state),
     pitch: pitchVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),

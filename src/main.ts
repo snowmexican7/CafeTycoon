@@ -35,6 +35,7 @@ import { loadRecipeHints, saveRecipeHints } from './ui/tickets';
 import { hudLive, nightExtras } from './ui/live';
 import { createLobby } from './ui/lobby';
 import { createNight } from './ui/night';
+import { nightInputHandlers } from './ui/nightInputs';
 import { createPause } from './ui/pause';
 import { createRoadmap } from './ui/roadmap';
 import { createTitle, type StartChoice } from './ui/title';
@@ -185,22 +186,7 @@ async function main(): Promise<void> {
   const hintStore = (() => { try { return window.localStorage; } catch { return undefined; } })();
   let recipeHints = loadRecipeHints(hintStore);
   const hud = createHud($('#hud'), { onMute: () => audio.toggleMute(), onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }) }, { recipeHints });
-  const night = createNight($('#night'), {
-    onBuy: (itemId) => send({ kind: 'buy', playerId: me(), itemId }),
-    onRestock: (supply) => send({ kind: 'restock', playerId: me(), supply, packs: 1 }),
-    onReady: () => send({ kind: 'ready', playerId: me() }),
-    onMenu: (drink, on) => send({ kind: 'menu', playerId: me(), drink, on }),
-    onPrice: (drink, step) => send({ kind: 'price', playerId: me(), drink, step }),
-    onTwist: (drink, twist) => send({ kind: 'twist', playerId: me(), drink, twist }),
-    onSignature: (sig) => send({ kind: 'signature', playerId: me(), sig }),
-    onScout: () => send({ kind: 'scout', playerId: me() }),
-    onAd: (ad) => send({ kind: 'ad', playerId: me(), ad }),
-    onCheckout: (checkout) => send({ kind: 'checkout', playerId: me(), checkout }),
-    onGrow: (tier) => send({ kind: 'grow', playerId: me(), tier }),
-    onPitch: (pitchKind, text) => send({ kind: 'pitch', playerId: me(), pitchKind, text }),
-    onRole: (role) => send({ kind: 'role', playerId: me(), role }),
-    onReroll: () => send({ kind: 'reroll', playerId: me() }),
-  });
+  const night = createNight($('#night'), nightInputHandlers(send, me));
   const closing = createClosing($('#closing'));
   const weekEnd = createWeekEnd($('#weekEnd'), {
     onContinue: () => send({ kind: 'weekEnd', playerId: me(), choice: 'continue' }),

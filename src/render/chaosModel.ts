@@ -85,6 +85,7 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
   if (!prev || prev.seed !== next.seed || cursor < lastSeq) return { bursts: [], lastSeq: cursor };
   const bursts: Burst[] = [];
   let walked = false;
+  let binless = false;
   for (const e of next.log) {
     if (e.seq <= lastSeq) continue;
     // One walk-away puff per snapshot, at the front of the line, however many turned round.
@@ -96,7 +97,14 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
     const d = e.data;
     const at = typeof d.x === 'number' && typeof d.y === 'number' ? { x: d.x, y: d.y } : null;
     if (e.kind === 'slip' && at) bursts.push({ kind: 'thud', at, playerId: String(d.player) });
-    else if (e.kind === 'drop' && at && d.item !== 'mop') bursts.push(d.item === 'grounds' ? { kind: 'scatter', at } : { kind: 'splash', at, item: String(d.item) });
+    else if (e.kind === 'drop' && at && d.item !== 'mop') {
+      bursts.push(d.item === 'grounds' ? { kind: 'scatter', at } : { kind: 'splash', at, item: String(d.item) });
+      // FB1 WP5: with no bin on the floor, everything binned lands here; say why once per snapshot.
+      if (!binless && !next.stations.some((s) => s.kind === 'trash')) {
+        binless = true;
+        bursts.push({ kind: 'walkout', at, text: 'No bin!' });
+      }
+    }
     else if (e.kind === 'clean' && at) bursts.push({ kind: 'sparkle', at });
     else if (e.kind === 'rogue.upset') bursts.push({ kind: 'hmph', at: queueFront(), text: 'That\u2019s not right\u2026' });
     else if (e.kind === 'rogue.stormed' && next.rogue) bursts.push({ kind: 'hmph', at: next.rogue.pos, text: 'HMPH!' });
