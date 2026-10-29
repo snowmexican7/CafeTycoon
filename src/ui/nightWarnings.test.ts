@@ -99,10 +99,10 @@ describe('night warnings', () => {
     const b = nightStructureKey(nightViewModel(s, 'p1'));
     expect(b).not.toBe(a);
     // the dollar amounts in a warning are patched in place, not rebuilt
-    s.cash = 40;
+    s.cash = 38; // P3 B12: clear of the $40 kiosk, whose button lights at 40
     const c = nightStructureKey(nightViewModel(s, 'p1'));
     expect(c).not.toBe(b);
-    s.cash = 39;
+    s.cash = 37;
     expect(nightStructureKey(nightViewModel(s, 'p1'))).toBe(c);
   });
 });
