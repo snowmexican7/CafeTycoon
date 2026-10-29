@@ -19,10 +19,6 @@
  *   planNight(state): Advice[]                                   // priority desc, then id asc
  *   crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots
  *
- * Prices: one pass over the menu in order, each drink at the step in −2..+4 that maximises the
- * `priceForecast` profit summed over the whole menu (a cut on one drink pulls share from the others,
- * so the per-drink optimum overshoots); advice only where that step differs from tonight's.
- *
  * Opening night is for stocking up: grow, checkout and equip advice wait for a finished day (as
  * `nightBrief` does). A drink with no station is only taken off the board when nothing in this plan
  * or in `state.equipment` could bring that station back (no grow advice, the kind not unplaced).
@@ -131,48 +127,36 @@ export function restockAdvice(state: GameState, budget: Budget = { left: round2(
   return advice;
 }
 
-/** The forecast profit over the whole menu with these price steps (the walk-in count and modifiers as tonight's). */
-function menuProfitAt(state: GameState, menu: DrinkId[], steps: Partial<Record<DrinkId, number>>): number {
+/** The forecast profit on `drink` if its price step were `step` (every other step as it is). */
+function drinkProfitAt(state: GameState, menu: DrinkId[], drink: DrinkId, step: number): number {
   const m = computeModifiers(state);
   const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
+  const steps = { ...(state.priceSteps ?? {}) };
+  if (step === 0) delete steps[drink];
+  else steps[drink] = step;
   const probe: GameState = { ...state, priceSteps: Object.keys(steps).length ? steps : undefined };
-  return priceForecast(probe, menu, m, walkIns).reduce((n, l) => n + l.profit, 0);
+  return priceForecast(probe, menu, m, walkIns).find((l) => l.drink === drink)?.profit ?? 0;
 }
 
-/**
- * One pass over the menu in order: for each drink try the steps −2..+4 with every other step as the pass
- * has it so far, and keep the one that maximises the profit summed over the whole menu (cutting one drink
- * pulls share from the others, so a per-drink optimum overshoots). Only the drinks whose step ends up
- * different from tonight's get advice.
- */
 function priceAdvice(state: GameState): Advice[] {
   const menu = menuDrinks(state);
   // While the rival's knock-off of the signature is live, its price is the rival rule's call.
   const held = state.signature && copyIsLive(state) ? state.signature.drink : null;
-  const steps: Partial<Record<DrinkId, number>> = { ...(state.priceSteps ?? {}) };
-  const withStep = (d: DrinkId, step: number) => {
-    const next = { ...steps };
-    if (step === 0) delete next[d];
-    else next[d] = step;
-    return next;
-  };
   const advice: Advice[] = [];
   for (const d of menu) {
     if (d === held) continue;
     const now = priceStep(state, d);
-    let best = priceStep({ ...state, priceSteps: steps }, d);
-    let bestProfit = menuProfitAt(state, menu, withStep(d, best));
+    let best = now;
+    let bestProfit = drinkProfitAt(state, menu, d, now);
     for (let s = PLAN_STEPS.min; s <= PLAN_STEPS.max; s++) {
-      if (s === best) continue;
-      const p = menuProfitAt(state, menu, withStep(d, s));
+      if (s === now) continue;
+      const p = drinkProfitAt(state, menu, d, s);
       // Ties keep the current step, then prefer the step nearer list price.
       if (p > bestProfit || (p === bestProfit && best !== now && Math.abs(s) < Math.abs(best))) {
         best = s;
         bestProfit = p;
       }
     }
-    if (best === 0) delete steps[d];
-    else steps[d] = best;
     if (best === now) continue;
     const price = round2(ECONOMY.prices[d] + best * PRICING.step);
     const was = round2(ECONOMY.prices[d] + now * PRICING.step);

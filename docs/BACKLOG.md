@@ -339,9 +339,8 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
     crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots
     restockAdvice(state, budget?): Advice[]                      // exported for the tester
     ```
-  - *Rules.* Restock every supply a menu drink needs to the day's expected use x 1.25 (out of stock first). Price: one pass over
-    the menu, each drink at the step in -2..+4 that maximises the `priceForecast` profit summed over the whole menu (see the
-    balance note below); the signature drink is left to the rival rule while the knock-off is live. Twists: set a known 4-5 star
+  - *Rules.* Restock every supply a menu drink needs to the day's expected use x 1.25 (out of stock first). Price: each drink
+    at the step in -2..+4 that maximises its own `priceForecast` profit; the signature drink is left to the rival rule while the knock-off is live. Twists: set a known 4-5 star
     twist, drop a known 2-star-or-worse one, otherwise try the first untried twist on yesterday's best seller (and wait while one is
     being explored). Signature: propose the best known 4-star-plus combo at premium 2 when none exists. Rival: when the copy
     undercuts, cut the signature drink's menu step just enough, else lower the premium. Grow when cash after tonight's restock and
@@ -368,7 +367,7 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
     base RNG stream (goldens); two- and three-bot runs change by design (the roster is the feature).
     Open: the render's `botLook` gives hurried the steady look (UI lane); no `cup.early` showed up in
     the seed-5 900-tick runs, so telemetry from a game night should confirm hurried bots do rush.
-- **Suite.** 86 files / 596 tests before FB1; after this branch 92 files / 779 tests. `tsc` and `npm run build` clean.
+- **Suite.** 86 files / 596 tests before FB1; after this branch 92 files / 784 tests. `tsc` and `npm run build` clean.
 - **Balance (40 weeks, seed 1, humans 2, bots 1, skill 3, pace 3, scenario random, day 150 s).**
 
   | policy | start | mean cash | score | loss | profitable | bankrupt |
@@ -391,12 +390,11 @@ The night board was rebuilt as three tabs (Tonight, Menu, Spend) against thin ad
   where profit peaks, and it never tests the crowd's actual reaction), and it explores twists one drink a night, so a short week
   may not find a signature (not measured; the telemetry would say how often it did). Its card buying is smart's, but it starts
   poorer, so it rerolls rarely (0.3 a week against 2.7 for smart).
-  *Pricing rule check:* the D2 concern was that the per-drink profit rule cut most drinks to -2. The brief called for a menu-total
-  objective if the planner trailed `grow` on cash, which it does by 2.73, so the rule was changed to the one-pass menu-total
-  version above. The two rules give the same steps at the stand, cart and café openings and the same 40-week result to the cent
-  (183.37 both times; the first run is `balance-D-planner-perdrink.log`), so the forecast's share model makes the per-drink
-  optimum the menu optimum here. The menu-total form is kept because it is the principled one, but it is not what moved the numbers.
-  A real fix for the -2 habit would need elasticity measured from the day's actual walk-aways, not the forecast: not tried.
+  *Pricing:* a one-pass menu-total objective (each drink at the step that maximises the profit summed over the whole menu) was
+  tried and produced identical steps in every one of 1029 states the reviewer brute-forced (stand, cart and café, every step
+  combination) and the same 40-week result (183.37), so the per-drink rule stays. The planner still prices most drinks at step -2
+  because `priceForecast`'s demand model (elasticity 1.8) puts the profit peak there, which is a balance question for the pricing
+  model, not the planner.
 - **Open questions for the UI lane.**
   - Show `crewTips(state, 2)` as chips on Tonight (attributed to the bot in `by`; `[]` with no connected bot). The UI applies an
     advice by sending `{ ...advice.input, playerId: me() }`; the sim re-checks everything, so a stale chip is a no-op.

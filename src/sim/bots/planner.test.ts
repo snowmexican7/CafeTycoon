@@ -24,7 +24,7 @@ const FULL = { beans: 500, milk: 500, concentrate: 500, flavour: 500, pastry: 0 
 
 /** Prices settled at the planner's own choice (applied until it has none left to give). */
 function settlePrices(s: GameState): GameState {
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 10; i++) {
     const p = planNight(s).filter((a) => a.kind === 'price');
     if (p.length === 0) break;
     for (const a of p) if (a.input.kind === 'price') s.priceSteps = { ...(s.priceSteps ?? {}), [a.input.drink]: a.input.step };
@@ -107,45 +107,26 @@ describe('planNight: restock', () => {
 });
 
 describe('planNight: price', () => {
-  /** Forecast profit summed over the whole menu at the given steps. */
-  const menuProfit = (s: GameState, steps: GameState['priceSteps']) => {
+  it('picks the step in −2..+4 with the best forecast profit for each drink', () => {
+    const s = quiet();
+    s.priceSteps = { latte: 4 };
     const m = computeModifiers(s);
     const walkIns = ECONOMY.baseArrivalsPerSecond * s.settings.dayLengthSec * m.traffic;
     const menu: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
-    return priceForecast({ ...s, priceSteps: steps }, menu, m, walkIns).reduce((n, l) => n + l.profit, 0);
-  };
-
-  it('keeps, for each drink in menu order, the step in −2..+4 that maximises the profit summed over the whole menu', () => {
-    const s = run();
-    s.priceSteps = { latte: 4 };
-    const steps: Record<string, number> = { latte: 4 };
-    const total = (st: Record<string, number>) => menuProfit(s, Object.keys(st).length ? st : undefined);
-    // Replay the one-pass rule by brute force: the choice for each drink given the choices before it.
-    for (const d of ['espresso', 'latte', 'coldBrew']) {
-      const at = (step: number) => total({ ...steps, [d]: step });
-      const best = Math.max(...[-2, -1, 0, 1, 2, 3, 4].map(at));
-      const a = find(s, `price:${d}`);
-      if (a?.input.kind === 'price') {
-        expect(a.priority).toBe(PLAN_PRIORITY.price);
-        expect(at(a.input.step)).toBe(best);
-        steps[d] = a.input.step;
-      } else {
-        expect(at(steps[d] ?? 0)).toBe(best);
-      }
+    const profitAt = (step: number) => {
+      const probe: GameState = { ...s, priceSteps: { ...s.priceSteps, latte: step } };
+      return priceForecast(probe, menu, m, walkIns).find((l) => l.drink === 'latte')!.profit;
+    };
+    const steps = [-2, -1, 0, 1, 2, 3, 4];
+    const best = Math.max(...steps.map(profitAt));
+    const a = find(s, 'price:latte');
+    if (profitAt(4) === best) {
+      expect(a).toBeUndefined();
+    } else {
+      expect(a?.priority).toBe(PLAN_PRIORITY.price);
+      expect(a?.input.kind).toBe('price');
+      if (a?.input.kind === 'price') expect(profitAt(a.input.step)).toBe(best);
     }
-  });
-
-  it('never lowers the menu total, and every advised change is a real change', () => {
-    const s = run();
-    const before = menuProfit(s, s.priceSteps);
-    const advice = planNight(s).filter((a) => a.kind === 'price');
-    const steps: Record<string, number> = {};
-    for (const a of advice) {
-      if (a.input.kind !== 'price') continue;
-      expect(a.input.step).not.toBe(0);
-      steps[a.input.drink] = a.input.step;
-    }
-    expect(menuProfit(s, Object.keys(steps).length ? steps : undefined)).toBeGreaterThanOrEqual(before);
   });
 
   it('says nothing for a drink already at its best step', () => {

@@ -6,6 +6,11 @@ import { createRun } from './sim/run';
 import { ECONOMY } from './data/economy';
 import { DRINK_IDS } from './data/drinks';
 import { nextTier } from './sim/growth';
+import { PRICING } from './sim/pricing';
+import { RIVAL } from './sim/rival';
+import { CHECKOUT, nextCheckout } from './sim/checkout';
+import { EQUIPMENT } from './data/equipment';
+import type { Advice } from './sim/bots/planner';
 import { restockCost } from './sim/night';
 
 describe('balance tester', () => {
@@ -85,6 +90,36 @@ describe('balance tester', () => {
     for (const d of DRINK_IDS) s.menu[d] = d === 'espresso';
     expect(applyAdvice(s, { id: 'menu:espresso', kind: 'menu', text: '', input: { kind: 'menu', drink: 'espresso', on: false }, priority: 1 })).toBe(false);
     expect(s.menu.espresso).toBe(true);
+    // a price step beyond the clamp lands on the clamp
+    applyAdvice(s, { id: 'price:latte', kind: 'price', text: '', input: { kind: 'price', drink: 'latte', step: 99 }, priority: 1 });
+    expect(s.priceSteps?.latte).toBe(PRICING.maxStep);
+    // the signature keeps `since` when drink and twist stay the same
+    const sig = { name: 'House', drink: 'latte' as const, twist: 'honey' as const, premium: 2 };
+    s.day = 3;
+    applyAdvice(s, { id: 'signature', kind: 'signature', text: '', input: { kind: 'signature', sig }, priority: 1 });
+    expect(s.signature).toMatchObject({ ...sig, since: 3 });
+    s.day = 4;
+    applyAdvice(s, { id: 'signature', kind: 'signature', text: '', input: { kind: 'signature', sig: { ...sig, premium: 1 } }, priority: 1 });
+    expect(s.signature).toMatchObject({ premium: 1, since: 3 });
+    // scouting costs the fee, once a night
+    s.cash = 100;
+    const scout: Advice = { id: 'scout', kind: 'scout', text: '', input: { kind: 'scout' }, priority: 1 };
+    expect(applyAdvice(s, scout)).toBe(true);
+    expect(s.cash).toBe(100 - RIVAL.scoutCost);
+    expect(s.rival?.scouted).toBe(s.day);
+    expect(applyAdvice(s, scout)).toBe(false);
+    // the next checkout, then an equip into the first empty slot
+    s.cash = 500;
+    const co = nextCheckout(s)!;
+    expect(applyAdvice(s, { id: `checkout:${co}`, kind: 'checkout', text: '', input: { kind: 'checkout', checkout: co }, priority: 1 })).toBe(true);
+    expect(s.checkout).toMatchObject({ active: co, since: s.day });
+    expect(s.cash).toBe(500 - CHECKOUT[co].cost);
+    s.cash = 500;
+    s.slots![0] = null;
+    expect(applyAdvice(s, { id: 'equip:espresso', kind: 'equip', text: '', input: { kind: 'equip', station: 'espresso' }, priority: 1 })).toBe(true);
+    expect(s.slots![0]).toBe('espresso');
+    expect(s.cash).toBe(500 - EQUIPMENT.espresso.cost);
+    expect(s.equipLog?.at(-1)).toMatchObject({ station: 'espresso', day: s.day, by: 'tester' });
   });
   it('applyLayout rearranges the opening slots', () => {
     const open = (layout: Layout) => {
