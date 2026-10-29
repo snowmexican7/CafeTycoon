@@ -1,3 +1,5 @@
+import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../src/sim/checkout';
+import type { CheckoutId } from '../src/sim/types';
 import { ADS } from '../src/sim/ads';
 import { judgePitch } from '../src/sim/pitch';
 import type { AdId, PitchKind } from '../src/sim/types';
@@ -26,8 +28,8 @@ import { scoreRun } from '../src/sim/score';
 import type { BotSkill, DrinkId, EventKind, GameState, Pace, PlayerInput, ScenarioId, SupplyId } from '../src/sim/types';
 
 /** How the tester shops at night: `simple` is the spec's original rule; `smart` plays like a sensible crew (B11). */
-export type Policy = 'simple' | 'smart' | 'speed' | 'quality' | 'reach' | 'none' | 'taste' | 'promo';
-export const POLICIES: Policy[] = ['simple', 'smart', 'speed', 'quality', 'reach', 'none', 'taste', 'promo'];
+export type Policy = 'simple' | 'smart' | 'speed' | 'quality' | 'reach' | 'none' | 'taste' | 'promo' | 'kiosk' | 'squarely';
+export const POLICIES: Policy[] = ['simple', 'smart', 'speed', 'quality', 'reach', 'none', 'taste', 'promo', 'kiosk', 'squarely'];
 
 export interface BalanceOptions {
   weeks: number; seed: number; humans: number; bots: number; skill: BotSkill; pace: Pace;
@@ -69,7 +71,7 @@ export const USAGE = `Usage: npm run balance -- [options]
   --menu M           all | a drink | comma list of ${DRINKS.join(',')} (default all)
   --compare menus    run all, espresso, latte, coldBrew on the same seeds (overrides --menu)
   --compare policies run every night policy on the same seeds (overrides --policy)
-  --policy P         night shopping: smart (default) | simple | speed | quality | reach | none | taste (smart + twists and a signature) | promo (taste + an ad and a pitch every night)
+  --policy P         night shopping: smart (default) | simple | speed | quality | reach | none | taste (smart + twists and a signature) | promo (taste + an ad and a pitch every night) | kiosk / squarely (smart + install that checkout, and the ones before it, once there's $60 spare)
                      (simple = cheapest permanent card; speed/quality/reach = smart, locked to a path)
   --day N            day length in seconds (30-600, default 150)
   --json             print the report as JSON
@@ -290,6 +292,15 @@ export function promoNight(state: GameState): void {
   }
 }
 
+/** P3 B12 'kiosk' / 'squarely' policies: smart shopping plus walking the checkout path up to the target. */
+export function checkoutNight(state: GameState, target: CheckoutId): void {
+  const next = nextCheckout(state);
+  if (!next || CHECKOUT_IDS.indexOf(next) > CHECKOUT_IDS.indexOf(target)) return;
+  if (state.cash < CHECKOUT[next].cost + 60) return;
+  state.cash = Math.round((state.cash - CHECKOUT[next].cost) * 100) / 100;
+  state.checkout = { owned: [...checkoutOf(state).owned, next], active: next, since: state.day, by: 'tester' };
+}
+
 /** Most ticks a week can take: seven nights, days and closing graces, plus slack. Exceeding it means a stuck sim. */
 function tickCap(daySeconds: number): number {
   const perDay = secondsToTicks(daySeconds) + secondsToTicks(ECONOMY.closingGraceSeconds) + secondsToTicks(NIGHT_SECONDS);
@@ -327,7 +338,8 @@ export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[], pol
       else if (stage >= 0) {
         if ((policy === 'taste' || policy === 'promo') && stage === 0) tasteNight(state);
         if (policy === 'promo' && stage === 0) promoNight(state);
-        inputs = smartNightInputs(state, policy === 'taste' || policy === 'promo' ? 'smart' : policy, stage);
+        if ((policy === 'kiosk' || policy === 'squarely') && stage === 0) checkoutNight(state, policy);
+        inputs = smartNightInputs(state, policy === 'taste' || policy === 'promo' || policy === 'kiosk' || policy === 'squarely' ? 'smart' : policy, stage);
         stage = inputs.length === 0 && stage > 0 ? -1 : stage + 1;
       }
     }

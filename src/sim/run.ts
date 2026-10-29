@@ -8,6 +8,7 @@ import { computeModifiers } from './effects';
 import { morningNotes } from './describe';
 import { rivalMorning } from './rival';
 import { adMorning } from './ads';
+import { checkoutMorning } from './checkout';
 import { pitchMorning } from './pitch';
 import { dealHand } from './night';
 import { forecastFor } from './forecast';
@@ -154,6 +155,8 @@ export function startDay(state: GameState): GameState {
   const rivalNote = rivalMorning(state);
   if (rivalNote) state.morningNotes.push(rivalNote);
   if (adNote) state.morningNotes.push(adNote);
+  const checkoutNote = checkoutMorning(state);
+  if (checkoutNote) state.morningNotes.push(checkoutNote);
   const pitchNote = pitchMorning(state);
   if (pitchNote) state.morningNotes.push(pitchNote);
   espressoMorning(state);

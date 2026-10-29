@@ -9,7 +9,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 20;
+export const SNAPSHOT_VERSION = 21;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -67,6 +67,20 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   18: () => {},
   // P3 B11: pitch an idea. No pitch yet is "absent".
   19: () => {},
+  // P3 B12: the checkout path. The old kiosk and Squarely shop cards become installed checkouts
+  // (their effects now come from the checkout, so the cards leave the owned list and the deal).
+  20: (s) => {
+    const had = (id: string) => (s.owned ?? []).some((o) => o.itemId === id);
+    const kiosk = had('digitalKiosk');
+    const squarely = had('squarelyTerminal');
+    if (kiosk || squarely) {
+      s.checkout ??= { owned: squarely ? ['register', 'kiosk', 'squarely'] : ['register', 'kiosk'], active: squarely ? 'squarely' : 'kiosk' };
+    }
+    const gone = (id: string) => id === 'digitalKiosk' || id === 'squarelyTerminal';
+    s.owned = (s.owned ?? []).filter((o) => !gone(o.itemId));
+    s.hand = (s.hand ?? []).filter((id) => !gone(id));
+    s.boughtTonight = (s.boughtTonight ?? []).filter((id) => !gone(id));
+  },
 };
 
 /** Bring a saved state up to SNAPSHOT_VERSION, or null when no migration path exists. */

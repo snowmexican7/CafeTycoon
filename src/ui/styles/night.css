@@ -318,3 +318,25 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .pr-total { font-size: 14px; }
 #night .pr-boost { background: #5aa469; color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 12px; margin-left: 4px; }
 #night .pr-notes { font-size: 12px; opacity: 0.75; }
+
+/* P3 B12: Shopfront tab, the checkout path */
+#night .co-board { display: flex; flex-direction: column; gap: 10px; font: 500 12.5px/1.35 var(--font-body); color: #4a3523; }
+#night .co-h { font: 800 15px var(--font-display, inherit); color: #4a3523; }
+#night .co-intro { background: #fffaf3; border: 1px dashed #d9c4a8; border-radius: 10px; padding: 8px 12px; }
+#night .co-path { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 6px; align-items: stretch; }
+#night .co-arrow { align-self: center; font: 800 20px var(--font-display, inherit); color: #b79a78; }
+#night .co-card { background: #fff; border: 1px solid #e2d3bf; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 0 #0000000d; }
+#night .co-card.active { outline: 2px solid #2f6b4a; background: #f4fbf6; }
+#night .co-card.next { outline: 2px dashed #c88a2e; }
+#night .co-card.locked { opacity: 0.6; }
+#night .co-top { display: flex; align-items: center; gap: 6px; }
+#night .co-top b { font: 800 14px var(--font-display, inherit); }
+#night .co-ic { font-size: 22px; }
+#night .co-blurb { margin: 0; font-style: italic; color: #6b5440; }
+#night .co-list { list-style: none; margin: 0; padding: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+#night .co-list .pro { color: #2f6b4a; } #night .co-list .con { color: #a3412b; }
+#night .co-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+#night .co-foot small { color: #8a7560; font-size: 10.5px; }
+#night .co-ok { color: #2f6b4a; font-weight: 800; }
+#night .co-lock { color: #8a7560; font-size: 11px; }
+@media (max-width: 1100px) { #night .co-path { grid-template-columns: 1fr; } #night .co-arrow { transform: rotate(90deg); justify-self: center; } }

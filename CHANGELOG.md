@@ -115,6 +115,21 @@ Nothing yet.
 - **Ads tune (P3 B11).** Ads were a money sink, because a busy café can't serve the extra crowd.
   Campaigns are now about 40% cheaper: Palm Book $8, Nextdoorish $6, LinkedOut $7, Glimpse $10,
   Tik Tak $9. A fine or viral run also puts people in a tipping mood: +1.5 or +3 tip points.
+- **Checkout path (P3 B12).** A new 🏪 Shopfront tab at night upgrades how customers pay, in
+  order: the old 🧾 Ka-Ching 3000 register → a 🖥️ OrderBot kiosk ($40) → a 📱 "Squarely" tap
+  terminal ($75). Each one is a real trade-off:
+  - Register: free, no fees, a tip jar.
+  - Kiosk: the line holds one more customer, waits are calmer (+12% patience) and it upsells an
+    extra shot (+4% prices), but nobody tips a screen (−4 tip points) and the licence costs $2 a
+    day.
+  - Squarely: the screen swivels to the customer with 18% · 20% · 25%, so tips jump (+8 points)
+    and tap-to-pay is quick (+5% patience), but Squarely keeps 3% of every sale.
+
+  You can switch back to anything you own for free. The counter changes to match: a beige till,
+  a card reader with an "ORDER HERE" totem, or the white swivel terminal. The receipt shows the
+  "Checkout fees" line, and there's a morning note on the first day with a new checkout. The old
+  Digital kiosk and Squarely terminal cards are gone from the shop; saves that owned them get the
+  matching checkout instead. Save v21 (migration), protocol v24.
 
 ## 2.0.1 — 2026-10-29
 

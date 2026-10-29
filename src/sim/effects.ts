@@ -7,6 +7,7 @@ import { eventActive } from './events';
 import { rngNext } from './rng';
 import { applyAd } from './ads';
 import { applyPitch } from './pitch';
+import { applyCheckout } from './checkout';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
 import { dayProgress, forecastOf, shapeAt } from './forecast';
 import type { CardSetId, DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
@@ -28,6 +29,8 @@ export interface Modifiers {
   eventOdds: Record<EventKind, number>;
   /** Added to the queue's capacity. */
   queue: number;
+  /** P3 B12: extra room past the layout's queue spots (the kiosk's waiting spot). */
+  queueRoom: number;
   /** Stars added to the rating at closing (upgrade cards, B6). */
   quality: number;
   /** Temp baristas hired for today. */
@@ -59,6 +62,7 @@ export function baseModifiers(): Modifiers {
     mix: { impatient: 1, group: 1, regular: 1 },
     eventOdds: { rushHour: 1, powerFlicker: 1, influencerVisit: 1, healthInspector: 1 },
     queue: 0,
+    queueRoom: 0,
     quality: 0,
     temps: 0,
     reveal: false,
@@ -185,6 +189,7 @@ export function computeModifiers(state: GameState): Modifiers {
   m.patience *= patienceFloor + ((1 - patienceFloor) * state.cleanliness) / 100;
   applyAd(state, m);
   applyPitch(state, m);
+  applyCheckout(state, m);
   return m;
 }
 

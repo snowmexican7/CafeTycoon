@@ -27,6 +27,12 @@ type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) =>
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
 
+function counterLine(s: GameState, active: 'register' | 'kiosk' | 'squarely', n: number): void {
+  s.checkout = { owned: active === 'register' ? ['register'] : active === 'kiosk' ? ['register', 'kiosk'] : ['register', 'kiosk', 'squarely'], active };
+  const drinks = ['latte', 'espresso', 'coldBrew', 'latte', 'espresso', 'coldBrew', 'latte'] as const;
+  for (let i = 0; i < n; i++) s.customers.push({ id: 60 + i, drink: drinks[i], patienceLeft: 1400 - i * 120, patienceMax: 1800 });
+}
+
 function base(): GameState {
   let s = createRun({
     seed: 7,
@@ -247,6 +253,21 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P3 B12: the Shopfront tab with the kiosk installed and the Squarely terminal next on the path. */
+  checkout: {
+    night: true,
+    setup(s) {
+      s.cash = 168;
+      s.day = 2;
+      s.checkout = { owned: ['register', 'kiosk'], active: 'kiosk', since: 1, by: 'Ben' };
+      s.today = { day: 1, served: 30, lost: 1, turnedAway: 0, sales: 162.4, tips: 14.2, rent: 25, checkoutFees: 2 };
+    },
+    timeline: [],
+  },
+  /** P3 B12: the counter with each checkout, a full line waiting. */
+  counterRegister: { setup: (s) => counterLine(s, 'register', 6), timeline: [] },
+  counterKiosk: { setup: (s) => counterLine(s, 'kiosk', 7), timeline: [] },
+  counterSquarely: { setup: (s) => counterLine(s, 'squarely', 6), timeline: [] },
   /** Block 10: lifetime records from the title screen. */
   records: { records: true, setup: weekPlayed, timeline: [] },
   /** Block 1: messes, a slip, the mop, the cleanliness meter. */

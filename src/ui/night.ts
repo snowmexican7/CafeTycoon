@@ -3,13 +3,13 @@ import { catalogueById } from '../data/catalogue';
 import { describeEffects } from '../sim/describe';
 import { DRINK_INFO } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
-import type { AdId, DrinkId, PitchKind, SupplyId } from '../sim/types';
+import type { AdId, CheckoutId, DrinkId, PitchKind, SupplyId } from '../sim/types';
 import { cardArt, CATEGORY_LABEL, CATEGORY_TINT } from './cardArt';
 import { esc, hide, onAction, show } from './dom';
 import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import type { NightWarning } from './nightWarnings';
-import { nightStructureKey, type AdsVM, type PitchVM, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM } from './viewModels';
+import { nightStructureKey, type AdsVM, type CheckoutVM, type PitchVM, type ForecastVM, type FreshDrinkVM, type HandCardVM, type MenuLineVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
 import { isRole, type RoleId } from '../sim/roles';
 
@@ -183,7 +183,7 @@ function menuBoard(menu: MenuLineVM[] | undefined): string {
     <div class="mb-total">Tomorrow at these prices: <b>~${sum.orders} orders</b>, about <b>$${sum.profit.toFixed(0)}</b> profit before tips and rent. Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</div>`;
 }
 
-export type NightTab = 'shop' | 'menu' | 'crew' | 'regulars' | 'paper' | 'ads';
+export type NightTab = 'shop' | 'menu' | 'crew' | 'regulars' | 'paper' | 'ads' | 'shopfront';
 /** P3 B4: the night board's right side is tabbed so the long lists don't stack in one column. */
 export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
   { id: 'shop', label: 'Shop', icon: '🛒' },
@@ -192,7 +192,35 @@ export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
   { id: 'regulars', label: 'Regulars', icon: '♥' },
   { id: 'paper', label: 'Paper', icon: '📰' },
   { id: 'ads', label: 'Ads & pitch', icon: '📣' },
+  { id: 'shopfront', label: 'Shopfront', icon: '🏪' },
 ];
+
+/** P3 B12: the Shopfront tab's checkout path: register → kiosk → Squarely, each a trade-off. */
+function checkoutBoard(c: CheckoutVM | undefined): string {
+  if (!c) return '';
+  const steps = c.options
+    .map((o, i) => {
+      const state = o.active ? 'active' : o.owned ? 'owned' : o.next ? 'next' : 'locked';
+      const btn = o.active
+        ? '<span class="co-ok">✓ On the counter</span>'
+        : o.owned
+          ? `<button class="btn mini" data-action="checkout" data-checkout="${o.id}">Switch back · free</button>`
+          : o.next
+            ? `<button class="btn mini" data-action="checkout" data-checkout="${o.id}" ${o.affordable ? '' : 'disabled'}>Install · ${esc(o.cost)}</button>`
+            : `<span class="co-lock">🔒 Install the ${esc(c.options[i - 1]?.name ?? '')} first</span>`;
+      return `${i ? '<div class="co-arrow" aria-hidden="true">→</div>' : ''}<div class="co-card ${state}" data-checkout-card="${o.id}">
+        <div class="co-top"><span class="co-ic" aria-hidden="true">${o.icon}</span><b>${esc(o.name)}</b></div>
+        <p class="co-blurb">${esc(o.blurb)}</p>
+        <ul class="co-list">${o.pros.map((p) => `<li class="pro">+ ${esc(p)}</li>`).join('')}${o.cons.map((p) => `<li class="con">− ${esc(p)}</li>`).join('')}</ul>
+        <div class="co-foot"><small>${o.cost === '$0.00' ? 'Came with the lease' : `${esc(o.cost)} to install`} · ${esc(o.terms)}</small>${btn}</div>
+      </div>`;
+    })
+    .join('');
+  const since = c.active.by ? ` Installed by ${esc(c.active.by)}${c.active.since ? ` for day ${c.active.since}` : ''}.` : '';
+  return `<div class="co-board"><div class="co-h">🧾 How customers pay</div>
+    <div class="co-intro">On the counter now: ${c.active.icon} <b>${esc(c.active.name)}</b>.${since} Each upgrade changes the line, the tips and the bills, and anything you've installed can be switched back for free.</div>
+    <div class="co-path">${steps}</div></div>`;
+}
 
 /** P3 B10: the Ads tab: one parody campaign for tomorrow, results hidden until the doors open. */
 function adsBoard(a: AdsVM | undefined): string {
@@ -314,7 +342,7 @@ function boughtCard(itemId: string, i: number): string {
  */
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -337,6 +365,7 @@ export function createNight(
     }
     else if (action === 'scout') handlers.onScout?.();
     else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);
+    else if (action === 'checkout' && el.dataset.checkout) handlers.onCheckout?.(el.dataset.checkout as CheckoutId);
     else if (action === 'pitch-kind') {
       pitch = { ...pitch, kind: el.dataset.kind === 'item' ? 'item' : 'promo' };
       redrawPitch();
@@ -469,6 +498,7 @@ export function createNight(
            ${t.combos ? t.combos.map((c) => `<div class="line combo"><span>New combo: ${TWIST_INFO[c.twist].icon} ${esc(TWIST_INFO[c.twist].name)} ${esc(DRINK_INFO[c.drink].short.toLowerCase())}</span><span class="stars">${starRow(c.stars)}</span></div>`).join('') : ''}
            ${t.ad ? `<div class="line"><span>${esc(t.ad)}</span><span></span></div>` : ''}
            ${t.sigSold ? `<div class="line"><span>Signature: ${t.sigSold} sold</span><span>${t.sigBonus !== '$0.00' ? `+${esc(t.sigBonus!)} bonus` : ''}</span></div>` : ''}
+           ${t.checkoutFees ? `<div class="line"><span>Checkout fees</span><span class="neg">−${esc(t.checkoutFees)}</span></div>` : ''}
            ${t.twists ? `<div class="line"><span>Twists</span><span class="neg">−${esc(t.twists)}</span></div>` : ''}
            ${t.cupStars ? `<div class="line cups" title="Each cup starts at 3 stars; pulling it early, leaving it sitting, or taking it to the wrong station costs one. Stars scale the tip."><span>Cups ★${esc(t.cupStars)} avg · ${t.cupsPerfect} perfect</span><span>${t.cupsRating ? `<span class="neg">${esc(t.cupsRating)} rating</span>` : '★★★ keeps the rating'}</span></div>` : ''}
            ${t.pastries ? `<div class="line"><span>Pastries sold (in sales)</span><span>${t.pastries}</span></div>` : ''}
@@ -505,6 +535,7 @@ export function createNight(
         regulars: regWarn ? `${regWarn} !` : `${vm.regulars?.length ?? 0}`,
         paper: vm.forecast ? `~${vm.forecast.customers}` : '',
         ads: [vm.ads?.booked ? '1 booked' : '', vm.pitch?.result ? `${vm.pitch.result.total}/30` : ''].filter(Boolean).join(' · '),
+        shopfront: vm.checkout?.active.icon ?? '',
       };
       const tabs = NIGHT_TABS.filter((t) => t.id !== 'regulars' || vm.regulars?.length)
         .map((t) => `<button class="tab ntab ${t.id === 'regulars' && regWarn ? 'alert' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="false">${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}</button>`)
@@ -546,6 +577,7 @@ export function createNight(
           <div class="pane regs-pane" data-pane="regulars" role="tabpanel">${regularsBoard(vm.regulars)}</div>
           <div class="pane paper-pane" data-pane="paper" role="tabpanel">${newspaper(vm.forecast)}${rivalCard(vm.rival)}</div>
           <div class="pane ads-pane" data-pane="ads" role="tabpanel">${pitchCard(vm.pitch, pitch)}${adsBoard(vm.ads)}</div>
+          <div class="pane shopfront-pane" data-pane="shopfront" role="tabpanel">${checkoutBoard(vm.checkout)}</div>
           <div class="foot">
             <div class="ready">${ready}</div>
             <div class="spacer"></div>

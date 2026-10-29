@@ -15,7 +15,8 @@ describe('catalogue and scenarios data', () => {
     expect(catalogueById.chirperThread.cost).toBe(0);
     expect(catalogueById.chirperThread.duration).toBe('tomorrow');
     expect(catalogueById.laMazzoccaPro.requires).toEqual(['dualBoiler']);
-    expect(catalogueById.squarelyTerminal.excludes).toEqual(['digitalKiosk']);
+    expect(catalogueById.singleOrigin.excludes).toEqual(['cheapBeans']);
+    expect(catalogueById.digitalKiosk).toBeUndefined(); // P3 B12: now the checkout path
     expect(catalogueById.streetSign).toMatchObject({ name: 'Street sign', cost: 15, effects: [{ kind: 'traffic', mul: 1.05 }] });
     expect(CATALOGUE.filter((i) => i.cost < 30).length).toBeGreaterThanOrEqual(5);
   });

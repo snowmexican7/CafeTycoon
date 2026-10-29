@@ -17,6 +17,7 @@ import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, Sim
 import { sellPastry } from './spoilage';
 import { accuracyTip, noteCup, starsFor } from './accuracy';
 import { comboTip, serveCombo, TASTE } from './taste';
+import { checkoutFee } from './checkout';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
 
@@ -30,9 +31,9 @@ export function availableDrinks(state: GameState): DrinkId[] {
   return DRINKS.filter((d) => unlocked.includes(d) && state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => (state.supplies[s] ?? 0) >= 1));
 }
 
-/** Spots in the queue today: the layout's six, less any a forecast takes (never below three). */
+/** Spots in the queue today: the layout's six (plus the kiosk's spot), less any a forecast takes (never below three). */
 export function queueCapacity(m: Modifiers): number {
-  return Math.max(3, Math.min(ECONOMY.queueCapacity, ECONOMY.queueCapacity + m.queue));
+  return Math.max(3, Math.min(ECONOMY.queueCapacity + m.queueRoom, ECONOMY.queueCapacity + m.queue));
 }
 
 /** One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. */
@@ -225,7 +226,10 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   const combo = serveCombo(state, drink, state.today, sig?.twist);
   const sigBonus = sig && combo ? signatureServed(state.today, combo.stars) : 0;
   const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) + roleCraft(state, by));
-  state.cash = round2(state.cash + price + tip + sigBonus - (combo ? TASTE.cost : 0));
+  // P3 B12: the card terminal's cut of the sale.
+  const fee = checkoutFee(state, price + tip);
+  if (fee > 0) state.today.checkoutFees = round2((state.today.checkoutFees ?? 0) + fee);
+  state.cash = round2(state.cash + price + tip + sigBonus - fee - (combo ? TASTE.cost : 0));
   state.today.sales = round2(state.today.sales + price);
   state.today.tips = round2(state.today.tips + tip);
   state.today.served += 1;

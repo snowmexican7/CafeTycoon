@@ -17,11 +17,11 @@ describe('night phase', () => {
 
   it('respects owned, requires, and excludes', () => {
     const s = run();
-    s.owned = [{ itemId: 'dualBoiler', effects: [] }, { itemId: 'digitalKiosk', effects: [] }];
+    s.owned = [{ itemId: 'dualBoiler', effects: [] }, { itemId: 'singleOrigin', effects: [] }];
     const ids = eligibleItems(s).map((i) => i.id);
     expect(ids).not.toContain('dualBoiler');
     expect(ids).toContain('laMazzoccaPro');
-    expect(ids).not.toContain('squarelyTerminal');
+    expect(ids).not.toContain('cheapBeans');
     expect(ids).toContain('chirperThread'); // tomorrow items are always eligible
   });
 
