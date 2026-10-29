@@ -180,6 +180,7 @@ async function main(): Promise<void> {
     onTwist: (drink, twist) => send({ kind: 'twist', playerId: me(), drink, twist }),
     onSignature: (sig) => send({ kind: 'signature', playerId: me(), sig }),
     onScout: () => send({ kind: 'scout', playerId: me() }),
+    onAd: (ad) => send({ kind: 'ad', playerId: me(), ad }),
     onRole: (role) => send({ kind: 'role', playerId: me(), role }),
     onReroll: () => send({ kind: 'reroll', playerId: me() }),
   });

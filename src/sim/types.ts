@@ -190,6 +190,17 @@ export interface Rival {
   copy?: { drink: DrinkId; twist: TwistId; since: number; price: number; day: number };
 }
 
+/** P3 B10: parody ad platforms, and how a campaign landed. */
+export type AdId = 'palmbook' | 'nextdoorish' | 'linkedout' | 'glimpse' | 'tiktak';
+export type AdOutcome = 'flop' | 'ok' | 'viral';
+/** A campaign booked at night for `day`; `outcome` is filled in when the doors open. */
+export interface AdCampaign {
+  id: AdId;
+  day: number;
+  by: string;
+  outcome?: AdOutcome;
+}
+
 export interface Signature {
   name: string;
   drink: DrinkId;
@@ -331,6 +342,8 @@ export interface DayStats {
   sigServed?: number;
   sigStarSum?: number;
   sigBonus?: number;
+  /** P3 B10: the ad that ran today and how it landed. */
+  ad?: { id: AdId; outcome: AdOutcome };
   /** Challenge tip paid at closing (folded into bonus too). */
   challengeBonus?: number;
   /** Challenge ids won today. */
@@ -379,6 +392,8 @@ export interface GameState {
   signature?: Signature;
   /** P3 B9: Starbuck$ down the street. */
   rival?: Rival;
+  /** P3 B10: the ad campaign booked for tomorrow (or running today). */
+  ad?: AdCampaign;
   eventSchedule: ScheduledEvent[];
   events: ActiveEvent[];
   regulars: Regular[];
@@ -422,6 +437,7 @@ export type PlayerInput =
   | { kind: 'price'; playerId: PlayerId; drink: DrinkId; step: number }
   | { kind: 'twist'; playerId: PlayerId; drink: DrinkId; twist: TwistId | null }
   | { kind: 'scout'; playerId: PlayerId }
+  | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }

@@ -1,4 +1,5 @@
 import { SIG, sigShare } from '../sim/signature';
+import { AD_IDS, ADS } from '../sim/ads';
 import { copyIsLive, daysToCopy, RIVAL, rivalAskFactor, rivalMenu, sigPrice } from '../sim/rival';
 import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
 import { accuracyRating } from '../sim/accuracy';
@@ -23,7 +24,7 @@ import { fittingsValue, scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
 import type { BotsChoice, Member } from '../net/protocol';
-import type { CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
+import type { AdId, AdOutcome, CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 import { BASE_DRINKS, DRINK_IDS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
 import { menuDrinks, neededSupplies, unlockedDrinks } from '../sim/unlocks';
@@ -250,7 +251,7 @@ export function handCardViewModel(state: GameState, item: CatalogueItem): HandCa
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[] } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[] } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -266,6 +267,8 @@ export interface NightVM {
   signature?: SignatureVM;
   /** P3 B9: Starbuck$ down the street. */
   rival: RivalVM;
+  /** P3 B10: parody ad campaigns for tomorrow. */
+  ads: AdsVM;
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
@@ -413,6 +416,33 @@ export interface RivalVM {
   eyeing?: number;
 }
 
+/** P3 B10: the Ads tab. */
+export interface AdsVM {
+  options: { id: AdId; name: string; icon: string; reach: string; cost: string; copy: string; odds: string; affordable: boolean; booked: boolean }[];
+  /** Booked for tomorrow (cost already paid; cancel refunds it). */
+  booked?: { id: AdId; name: string; icon: string; cost: string; by: string };
+  /** How yesterday's campaign landed. */
+  last?: { name: string; icon: string; outcome: AdOutcome; result: string };
+}
+
+export function adsVM(state: GameState): AdsVM {
+  const booked = state.ad && state.ad.day === state.day ? state.ad : undefined;
+  const refund = booked ? ADS[booked.id].cost : 0;
+  const prev = state.days[state.days.length - 1]?.ad;
+  return {
+    options: AD_IDS.map((id) => {
+      const a = ADS[id];
+      return {
+        id, name: a.name, icon: a.icon, reach: a.reach, cost: money(a.cost), copy: a.copy,
+        odds: `${a.odds.flop}% flop · ${100 - a.odds.flop - a.odds.viral}% fine · ${a.odds.viral}% viral`,
+        affordable: state.cash + refund >= a.cost, booked: booked?.id === id,
+      };
+    }),
+    ...(booked ? { booked: { id: booked.id, name: ADS[booked.id].name, icon: ADS[booked.id].icon, cost: money(ADS[booked.id].cost), by: booked.by } } : {}),
+    ...(prev && state.days.length === state.day - 1 ? { last: { name: ADS[prev.id].name, icon: ADS[prev.id].icon, outcome: prev.outcome, result: ADS[prev.id].result[prev.outcome] } } : {}),
+  };
+}
+
 export function rivalVM(state: GameState): RivalVM {
   const scouted = state.rival?.scouted === state.day;
   const m = computeModifiers(state);
@@ -518,6 +548,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           ...(last.spoiledValue ? { spoiled: money(last.spoiledValue), spoiledWhat: spoiledWhat(last.spoiled) } : {}),
           ...(last.pastries ? { pastries: last.pastries } : {}),
           ...(last.twistCost ? { twists: money(last.twistCost) } : {}),
+          ...(last.ad ? { ad: `${ADS[last.ad.id].icon} ${ADS[last.ad.id].name} ad ${last.ad.outcome === 'viral' ? 'went viral' : last.ad.outcome === 'ok' ? 'did fine' : 'flopped'}` } : {}),
           ...(last.sigServed ? { sigSold: last.sigServed, sigBonus: money(last.sigBonus ?? 0) } : {}),
           ...(last.combosFound?.length ? {
             combos: last.combosFound.map((k) => {
@@ -556,6 +587,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     menu: menuLines(state),
     signature: signatureVM(state),
     rival: rivalVM(state),
+    ads: adsVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),
     forecast: forecastViewModel(state),

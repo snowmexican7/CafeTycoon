@@ -5,6 +5,7 @@ import { catalogueById } from '../data/catalogue';
 import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { eventActive } from './events';
 import { rngNext } from './rng';
+import { applyAd } from './ads';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
 import { dayProgress, forecastOf, shapeAt } from './forecast';
 import type { CardSetId, DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
@@ -181,6 +182,7 @@ export function computeModifiers(state: GameState): Modifiers {
   // A dirty floor wears on patience; read once when a customer arrives, so waiting ones keep theirs.
   const { patienceFloor } = ECONOMY.mess;
   m.patience *= patienceFloor + ((1 - patienceFloor) * state.cleanliness) / 100;
+  applyAd(state, m);
   return m;
 }
 
