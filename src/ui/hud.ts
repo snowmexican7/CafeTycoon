@@ -147,9 +147,11 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void } 
     el.rep.setAttribute('aria-label', `Reputation ${vm.reputation}`);
     el.pantry.innerHTML = vm.supplies
       .map((s) => {
-        const low = s.count < LOW_AT;
-        const fill = Math.min(1, s.count / (ECONOMY.startingSupplies[s.id] * 1.5));
-        const sub = s.count === 0 ? 'all out!' : low ? 'running low' : `${s.count} ${SUPPLY_UNIT[s.id]} left`;
+        // Pastries are an optional side (P3 B4): never "low", and they start at 0, so size the jar by the pack.
+        const side = s.id === 'pastry';
+        const low = !side && s.count < LOW_AT;
+        const fill = Math.min(1, s.count / (Math.max(ECONOMY.startingSupplies[s.id], ECONOMY.packs[s.id].size) * 1.5));
+        const sub = s.count === 0 ? (side ? 'none in the case' : 'all out!') : low ? 'running low' : `${s.count} ${SUPPLY_UNIT[s.id]} left`;
         return `<div class="supply ${low ? 'low' : ''}">${jar(fill, SUPPLY_COLOR[s.id])}<div class="lab">${SUPPLY_LABEL[s.id]}<small>${sub}</small></div><div class="num">${s.count}</div></div>`;
       })
       .join('');
