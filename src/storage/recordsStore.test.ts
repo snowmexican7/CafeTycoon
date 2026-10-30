@@ -118,11 +118,22 @@ describe('records', () => {
     expect(html).toMatch(/Season board/);
     expect(html).toMatch(/3 of 3 targets/);
     expect(html).toMatch(/in progress \(week 3 of 4\)/);
+    // P6: each row keeps its weeks, and the board opens on tap to a week-by-week table
+    expect(r.seasons![0].weeks).toEqual([{ week: 1, target: null, profit: 100 }, { week: 2, target: 100, profit: 120 }, { week: 3, target: 115, profit: 130 }, { week: 4, target: 130, profit: 140 }]);
+    expect(html).toMatch(/<details><summary class="srow">/);
+    expect(html).toMatch(/<th>Week 3<\/th><td>\$115<\/td><td>\$130<\/td>/);
+    expect(html).toMatch(/sets the bar/);
+    const noWeeks = { ...r, seasons: r.seasons!.map(({ weeks: _w, ...x }) => x) };
+    expect(recordsHtml(recordsViewModel(noWeeks))).not.toMatch(/<details>/);
     expect(foldRecords(emptyRecords(), week(33, [10]), [], 'd', 1).seasons).toBeUndefined();
     expect(recordsHtml(recordsViewModel(emptyRecords()))).not.toMatch(/Season board/);
     const mem = memoryStorage();
     mem.setItem('cafetycoon.records', JSON.stringify({ version: 1, weeks: 2, totals: {}, hall: {}, mvps: [], counted: [], seasons: 'junk' }));
     const store = createRecordsStore(mem);
     expect(store.get().seasons).toBeUndefined();
+    mem.setItem('cafetycoon.records', JSON.stringify({ version: 1, weeks: 2, totals: {}, hall: {}, mvps: [], counted: [], split: true, seasons: [{ ...r.seasons![0], weeks: [{ week: 1, target: null, profit: 'x' }, { week: 2, target: 100, profit: 120 }] }, { ...r.seasons![1], weeks: 'junk' }] }));
+    const loaded = createRecordsStore(mem).get().seasons!;
+    expect(loaded[0].weeks).toEqual([{ week: 2, target: 100, profit: 120 }]);
+    expect(loaded[1].weeks).toBeUndefined();
   });
 });

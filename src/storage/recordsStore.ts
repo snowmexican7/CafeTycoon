@@ -15,7 +15,7 @@ const KEEP_MVPS = 8;
 const KEEP_SEASONS = 6;
 
 /** P4 follow-up: one row per season played (best first), updated at every season week-end. */
-export interface SeasonRecord { key: string; seed: number; date: string; crew: string[]; weeksPlayed: number; hit: number; made: number; medal: Medal; done: boolean }
+export interface SeasonRecord { key: string; seed: number; date: string; crew: string[]; weeksPlayed: number; hit: number; made: number; medal: Medal; done: boolean; /** P6: week-by-week profit vs target (optional: older records have none). */ weeks?: { week: number; target: number | null; profit: number }[] }
 
 export interface Totals {
   days: number;
@@ -61,6 +61,13 @@ export interface Records {
 }
 
 const ZERO: Totals = { days: 0, served: 0, perfect: 0, slips: 0, espressos: 0, mopped: 0, lost: 0 };
+
+/** P6: keep only well-formed week rows (a damaged or older row just shows no week table). */
+function cleanSeasonWeeks(x: SeasonRecord): SeasonRecord {
+  const weeks = Array.isArray(x.weeks) ? x.weeks.filter((w) => w && typeof w.week === 'number' && Number.isFinite(w.profit) && (w.target === null || Number.isFinite(w.target))) : [];
+  const { weeks: _drop, ...rest } = x;
+  return weeks.length ? { ...rest, weeks } : rest;
+}
 
 export function emptyRecords(): Records {
   return { version: 1, weeks: 0, totals: { ...ZERO }, bestWeek: null, bestDay: null, bestDayProfit: null, longestRun: null, hall: {}, mvps: [], counted: [], split: true };
@@ -114,7 +121,7 @@ export function foldRecords(prev: Records, state: GameState, awards: Award[], da
   if (state.season) {
     const s = state.season;
     const later = s.weeks.filter((w) => w.target !== null);
-    const row: SeasonRecord = { key, seed: state.seed, date, crew, weeksPlayed: later.length, hit: targetsHit(s), made: Math.round(later.reduce((n, w) => n + w.profit, 0) * 100) / 100, medal: seasonMedal(s), done: !!s.done || later.length >= SEASON.weeks - 1 };
+    const row: SeasonRecord = { key, seed: state.seed, date, crew, weeksPlayed: later.length, hit: targetsHit(s), made: Math.round(later.reduce((n, w) => n + w.profit, 0) * 100) / 100, medal: seasonMedal(s), done: !!s.done || later.length >= SEASON.weeks - 1, weeks: s.weeks.map((w) => ({ week: w.week, target: w.target, profit: Math.round(w.profit * 100) / 100 })) };
     r.seasons = [row, ...(r.seasons ?? []).filter((x) => x.key !== key)].sort(seasonOrder).slice(0, KEEP_SEASONS);
   }
   if (fresh) {
@@ -149,7 +156,7 @@ function sanitize(raw: unknown): Records {
     hall: r.hall && typeof r.hall === 'object' ? r.hall : {},
     mvps: Array.isArray(r.mvps) ? r.mvps : [],
     counted: Array.isArray(r.counted) ? r.counted : [],
-    seasons: Array.isArray(r.seasons) ? r.seasons.filter((x) => x && typeof x === 'object' && typeof x.key === 'string') : undefined,
+    seasons: Array.isArray(r.seasons) ? r.seasons.filter((x) => x && typeof x === 'object' && typeof x.key === 'string').map(cleanSeasonWeeks) : undefined,
     ...(classic ? { classic } : {}),
   } as Records);
 }

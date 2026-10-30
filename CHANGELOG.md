@@ -16,6 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Season details.** On the Season board in Café records, tap a season to see it week by week: each week's target, what you made, and whether you hit it. Seasons saved before this update just show their summary line.
 - **The phone rings.** When the second shop calls, you now hear an old desk phone trill when it starts and every 3 seconds until someone picks up or it rings out.
 
 ## 3.2.0 — 2026-10-30 · Phase 4 (franchise & rivals, lite)

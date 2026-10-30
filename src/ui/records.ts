@@ -37,7 +37,7 @@ export interface RecordsVM {
   /** G11: the retired v2 bests, shown small under "Classic (retired)". */
   classic: string[];
   /** P4 follow-up: the season board, best first. */
-  seasons: { medal: string; title: string; sub: string; live: boolean }[];
+  seasons: { medal: string; title: string; sub: string; live: boolean; weeks: { label: string; made: string; target: string; hit: boolean | null }[] }[];
 }
 
 const money = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
@@ -72,6 +72,12 @@ export function recordsViewModel(r: Records): RecordsVM {
       title: `${s.hit} of ${SEASON.weeks - 1} targets · ${money(s.made)} made`,
       sub: `${s.crew.join(', ') || 'Solo'} · ${s.date}${s.done ? '' : ` · in progress (week ${s.weeksPlayed + 2} of ${SEASON.weeks})`}`,
       live: !s.done,
+      weeks: (s.weeks ?? []).map((w) => ({
+        label: `Week ${w.week}`,
+        made: money(w.profit),
+        target: w.target === null ? 'sets the bar' : money(w.target),
+        hit: w.target === null ? null : w.profit >= w.target,
+      })),
     })),
     classic: r.classic
       ? [
@@ -100,7 +106,7 @@ export function recordsHtml(vm: RecordsVM, extra = ''): string {
         <p>${vm.empty ? 'No finished weeks yet. Records fill in at the end of each week.' : 'Kept in this browser. Bragging rights only.'}</p></div></div>
       <div class="rec-grid">${tiles}</div>
       ${vm.classic.length ? `<p class="hint rec-classic"><b>Classic (retired):</b> ${vm.classic.map(esc).join(' · ')}</p>` : ''}
-      ${vm.seasons.length ? `<div class="sec-h">Season board <small>four-week seasons, best first</small></div><ul class="seasons">${vm.seasons.map((s) => `<li class="${s.live ? 'live' : ''}"><span class="md" aria-hidden="true">${s.medal}</span><b>${esc(s.title)}</b><small>${esc(s.sub)}</small></li>`).join('')}</ul>` : ''}
+      ${vm.seasons.length ? `<div class="sec-h">Season board <small>four-week seasons, best first</small></div><ul class="seasons">${vm.seasons.map((s) => `<li class="${s.live ? 'live' : ''}">${seasonRowHtml(s)}</li>`).join('')}</ul>` : ''}
       <div class="sec-h">Lifetime totals</div>
       <div class="rec-tot">${totals}</div>
       <div class="sec-h">Hall of fame</div>
@@ -109,6 +115,16 @@ export function recordsHtml(vm: RecordsVM, extra = ''): string {
       ${extra}
       <div class="menu-btns"><button class="btn primary" data-rec="close">Close</button></div>
     </div>`;
+}
+
+/** P6: a season row; with week data it opens on tap to a week-by-week table (target vs made). */
+export function seasonRowHtml(s: RecordsVM['seasons'][number]): string {
+  const head = `<span class="md" aria-hidden="true">${s.medal}</span><b>${esc(s.title)}</b><small>${esc(s.sub)}</small>`;
+  if (!s.weeks.length) return `<div class="srow">${head}</div>`;
+  const rows = s.weeks
+    .map((w) => `<tr class="${w.hit === null ? '' : w.hit ? 'hit' : 'miss'}"><th>${esc(w.label)}</th><td>${esc(w.target)}</td><td>${esc(w.made)}</td><td aria-label="${w.hit === null ? 'no target' : w.hit ? 'hit' : 'missed'}">${w.hit === null ? '—' : w.hit ? '✅' : '✖️'}</td></tr>`)
+    .join('');
+  return `<details><summary class="srow">${head}</summary><table class="sweeks"><thead><tr><th></th><th>Target</th><th>Made</th><th></th></tr></thead><tbody>${rows}</tbody></table></details>`;
 }
 
 export function createRecordsDialog(get: () => Records, getMeta?: () => MetaSave | undefined): { open(): void; close(): void } {

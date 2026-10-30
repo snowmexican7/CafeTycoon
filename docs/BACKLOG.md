@@ -1802,6 +1802,11 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 6 polish P6-2 — season detail on tap (p6-season-detail, tag p6-02)
+
+- [x] `SeasonRecord.weeks?` (week, target, profit) folded by `foldRecords`; load drops malformed rows (`cleanSeasonWeeks`). Records store version unchanged. `seasonRowHtml` renders a `<details>` row with a Target / Made / ✅ table. Screens: `overnight/sprint/p6-02/records-{1512,1280}.png`.
+- [x] Resolves the F1 follow-up "per-season detail (week-by-week table) on tap". Still open: share a season card.
+
 ### Phase 6 polish P6-1 — phone ring (p6-phone-ring, tag p6-01)
 
 - [x] `phoneRing` cue (`src/audio/cues.ts`, synth `phone`): rings when `callRinging` starts and every `RING_EVERY_SEC` (3 s) while it rings; silent once answered. Client-side only (no sim, protocol or save change). Test in `src/sim/call.test.ts`.
@@ -1834,7 +1839,7 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - [x] UI `records.ts`: "Season board" section (medal, "N of 3 targets · $X made", crew · date, "in progress (week N of 4)" with a caramel ring), only when there is at least one season; `.seasons` in menus.css.
 - [x] Tests: `recordsStore.test.ts` +1 (upsert across weeks, gold at 3 hits, order, HTML, no seasons for plain runs / empty records, junk sanitised). 1043 tests.
 - [x] Shots: `/workspace/overnight/sprint/p4-f01/records-*` (fixture `records` now folds two seasons).
-- [ ] Follow-ups: per-season detail (week-by-week table) on tap; share a season card.
+- [ ] Follow-ups: ~~per-season detail (week-by-week table) on tap~~ (done in P6-2); share a season card.
 
 ### Phase 4 B6 — phone calls, lite (p4-b06-phone-calls, tag p4-b06)
 
