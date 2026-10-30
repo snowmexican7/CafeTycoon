@@ -23,6 +23,8 @@ import { unlockForDay } from './unlocks';
 import { dealChallenges, pruneChallenges } from './challenges';
 import { eggsMorning } from './eggs';
 import { gearMorning, gearStart } from './gear';
+import { potMorning } from './sink';
+import { settle } from './spawn';
 import { applyPerk } from './perks';
 import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
@@ -121,6 +123,7 @@ export function createRun(opts: CreateRunOptions): GameState {
   };
   state.scenario = SCENARIOS[rngInt(state, SCENARIOS.length)].id;
   if (opts.gear) gearStart(state);
+  for (const p of state.players) settle(state, p); // FB2 A3: the Gear fixtures (the sink) may cover a spawn point
   applyPerk(state, opts.perk);
   return startNight(state);
 }
@@ -164,6 +167,7 @@ export function startDay(state: GameState): GameState {
   state.mop = { pos: { ...layoutFor(state.tier).mopHome }, heldBy: null };
   state.rogue = null;
   syncBots(state);
+  for (const p of state.players) settle(state, p); // FB2 A3: old saves gain the sink on load; growing moves fixtures
   for (const p of state.players) p.tile = tileOf(p.pos);
   const adNote = adMorning(state);
   scheduleEvents(state);
@@ -185,5 +189,6 @@ export function startDay(state: GameState): GameState {
   if (pitchNote) state.morningNotes.push(pitchNote);
   espressoMorning(state);
   gearMorning(state);
+  potMorning(state); // FB2 A3: yesterday's stale pots
   return state;
 }

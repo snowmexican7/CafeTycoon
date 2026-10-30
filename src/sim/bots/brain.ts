@@ -22,8 +22,9 @@ import { rogueNear, rogueTiles } from '../rogue';
 import { passSlots } from '../pickup';
 import { heldCool, takeBackCold, slotCool, stationCool } from '../cooling';
 import { tillNext } from '../till';
-import { CONDIMENTS_ID, PICKUP_ID, layoutFor } from '../../data/layout';
+import { CONDIMENTS_ID, PICKUP_ID, SINK_ID, layoutFor } from '../../data/layout';
 import { CONDIMENTS, canTakeBox, returnBox } from '../condiments';
+import { isSink, needsDump } from '../sink';
 import { answerPhone } from './phone';
 import { heldByPerson, heldForPeople, ringsAtOnce } from './helper';
 
@@ -85,9 +86,19 @@ function finishStep(state: GameState, p: Player, finish: 'serve' | 'put'): BotSt
   return state.gear === true ? spotStep(state, PICKUP_ID, 'put') : use(state, p, 'counter', finish);
 }
 
-/** Put what is in hand in the bin; with no bin in the shop, on the floor away from every station. */
-function binStep(state: GameState, p: Player): BotStep {
-  return use(state, p, 'trash', 'trash') ?? { kind: 'floor', node: floorDropNode(state, p.pos), action: 'drop' };
+/**
+ * Put what is in hand in the bin; with no bin in the shop, on the floor away from every station. FB2 A3 (Gear runs): a
+ * drink goes down the back sink instead when the sink is as close as the bin or closer (no leak there).
+ */
+function binStep(state: GameState, p: Player, drink = isDrink(p.holding), from: Vec2 = p.pos): BotStep {
+  const bin = use(state, p, 'trash', 'trash');
+  // `drink`/`from`: a cup still to be picked up (A2: a cold cup off the pickup counter), judged from where it will be.
+  if (state.gear === true && drink) {
+    const sink = state.stations.find(isSink);
+    const binAt = bin?.kind === 'use' ? state.stations.find((st) => st.id === bin.station) : undefined;
+    if (sink && (!binAt || dist(sink.pos, from) <= dist(binAt.pos, from))) return { kind: 'use', station: sink.id, action: 'dump' };
+  }
+  return bin ?? { kind: 'floor', node: floorDropNode(state, p.pos), action: 'drop' };
 }
 
 /**
@@ -130,12 +141,15 @@ function reachable(state: GameState, st: Station): boolean {
   return reach.ids.has(st.id);
 }
 
+/** FB2 A3: the pot of `st` is out with someone who is not a bot (a person may keep it a while, or have collapsed). */
+const personHasPot = (state: GameState, st: Station): boolean =>
+  st.potOut !== undefined && !state.players.find((o) => o.id === st.potOut)?.bot;
+
 /** Gear G4d: a drip machine that brews pots (one press brews, each press after pours a cup). */
 export const hasPot = (st: Station): boolean => !!st.gear && !!GEAR[st.gear].pot;
 
-/** G4d: the pot in `st` would pour a too-hot or too-cold cup (a missed brew, or it sat past going cold). */
-const potBad = (state: GameState, st: Station): boolean =>
-  st.potOff !== undefined || (st.potColdAt !== undefined && state.tick >= st.potColdAt);
+/** G4d: the pot in `st` would pour a too-hot or too-cold cup (a missed brew). FB2 A3: a pot gone cold is not poured, it goes to the sink. */
+const potBad = (_state: GameState, st: Station): boolean => st.potOff !== undefined;
 
 /** Other bots with a step at `st` (each will take a cup from a pot). */
 const plannersAt = (state: GameState, self: Player, st: Station): number =>
@@ -143,13 +157,15 @@ const plannersAt = (state: GameState, self: Player, st: Station): number =>
 
 /**
  * G4d, a cup of drip from a pot machine: 0 pour from a hot pot that has a cup left for this bot; 1 brew a
- * pot in an empty machine nobody else is about to brew; 2 wait for a pot that is brewing (or about to);
- * 3 pour from a pot gone cold or brewed off (only plain drip minds: a steamer or a shot on top reheats it);
- * 4 something else sits in it. A cold pot can't be rebrewed until it is poured out, so with no hot pot and
- * no empty machine a cold cup (half tip) still beats a walk-out.
+ * pot in an empty machine nobody else is about to brew; 2 wait for a pot that is brewing (or about to), or
+ * (FB2 A3) out at the sink, or that another bot is about to dump; 3 dump a cold or stale pot at the sink and
+ * brew a fresh one (`route` adds the lift and the dump), or pour from a pot brewed off (only plain drip minds:
+ * a steamer or a shot on top reheats it); 4 something else sits in it.
  */
 function potScore(state: GameState, p: Player, st: Station, need: Need): number {
   const others = plannersAt(state, p, st);
+  if (st.potOut !== undefined) return 2;
+  if (needsDump(state, st)) return others === 0 ? 3 : 2;
   if (st.output === 'drip' && st.potLeft !== undefined) {
     if (need.last && potBad(state, st)) return 3;
     return others < st.potLeft ? 0 : 2;
@@ -180,6 +196,8 @@ const pair = (st: Station, gives: ItemKind, instant = false): BotStep[] => [
  */
 function canMake(state: GameState, st: Station, need: Need): boolean {
   if (st.kind !== need.kind) return false;
+  // FB2 A3 fix round 1 (I3): a pot a person walked off with may not come back soon; only a bot's carry is worth a wait.
+  if (personHasPot(state, st)) return false;
   // G5: a dead machine is gone until tonight; a jammed one is fine for empty hands (they whack it first).
   if (st.dead || (st.jammed && need.held !== null) || !reachable(state, st)) return false;
   const r = recipeAt(state, st, need.held);
@@ -220,6 +238,12 @@ function needsFrom(drink: DrinkId, held: ItemKind | null): Need[] | null {
   return out;
 }
 
+/** FB2 A3: lift the cold or stale pot off `st` and pour it down the sink; null when the shop has no sink. */
+function dumpSteps(state: GameState, st: Station): BotStep[] | null {
+  const dump = spotStep(state, SINK_ID, 'dump');
+  return dump && [{ kind: 'use', station: st.id, action: 'lift' }, dump];
+}
+
 /** Pick a station for every visit (each pair keeps its station); null when one has no station. */
 function route(state: GameState, p: Player, needs: Need[]): { steps: BotStep[]; scores: number[] } | null {
   const steps: BotStep[] = [];
@@ -227,6 +251,12 @@ function route(state: GameState, p: Player, needs: Need[]): { steps: BotStep[]; 
   for (const need of needs) {
     const got = pick(state, p, need);
     if (got === null) return null;
+    // FB2 A3: an old pot in the way goes to the sink first (only from empty hands: the drip is the first visit).
+    if (need.held === null && hasPot(got.st) && needsDump(state, got.st) && got.score === 3) {
+      const dump = dumpSteps(state, got.st);
+      if (dump === null) return null;
+      steps.push(...dump);
+    }
     steps.push(...pair(got.st, need.gives, pours(state, got.st, need.held)));
     scores.push(got.score);
   }
@@ -451,12 +481,15 @@ export function mopPlan(state: GameState, _p: Player): BotStep[] {
   return plan;
 }
 
-/** The mop is free, the floor is dirty enough, and no other bot is already on a mop plan. */
+/**
+ * The mop is free, the floor is dirty enough, and no other bot is already on a mop plan. FB2 A3: in a Gear run any mess
+ * will do (a quiet moment's job; the Gear floor meter barely moves until a mess has done its damage).
+ */
 function shouldMop(state: GameState, p: Player): boolean {
   return (
     state.mop.heldBy === null &&
     state.messes.length > 0 &&
-    (state.cleanliness < MESS.botMopBelow || state.messes.length >= MESS.botMopMesses) &&
+    (state.gear === true || state.cleanliness < MESS.botMopBelow || state.messes.length >= MESS.botMopMesses) &&
     !state.players.some((o) => o !== p && o.bot?.plan.some(isMopStep))
   );
 }
@@ -490,6 +523,26 @@ function shouldFetchBox(state: GameState, p: Player): boolean {
   return !state.players.some((o) => o !== p && (o.tool === 'box' || o.bot?.plan.some(isBoxStep)));
 }
 
+/** A step that lifts the pot off `st`. */
+const isLiftAt = (x: BotStep, st: Station): boolean => x.kind === 'use' && x.station === st.id && x.action === 'lift';
+
+/** Another bot already plans to lift the pot off `st`. */
+const liftPlanned = (state: GameState, self: Player, st: Station): boolean =>
+  state.players.some((o) => o !== self && o.bot?.plan.some((x) => isLiftAt(x, st)));
+
+/**
+ * FB2 A3: a pot machine (nearest first) whose pot needs the sink, that no other bot is on and (A1 helpers) no person is
+ * working (`heldByPerson`: they may be about to lift it themselves).
+ */
+function potToDump(state: GameState, p: Player): Station | null {
+  if (state.gear !== true) return null;
+  const pots = state.stations.filter((st) => needsDump(state, st) && reachable(state, st) && !liftPlanned(state, p, st) && !heldByPerson(state, p, st));
+  return pots.sort((a, b) => dist(a.pos, p.pos) - dist(b.pos, p.pos))[0] ?? null;
+}
+
+/** FB2 A3: extra wait at a pot machine while its pot is at the sink (the walk there and back). */
+const POT_TRIP_TICKS = secondsToTicks(10);
+
 /** Another bot is already on its way to ring up the queue. */
 function ringPlanned(state: GameState, self: Player): boolean {
   return state.players.some((o) => o !== self && o.bot?.plan.some((x) => x.kind === 'use' && x.action === 'ring'));
@@ -513,7 +566,7 @@ function tillHeld(state: GameState, p: Player): boolean {
  * A take (the bot's own cup) goes ahead. True when the bot should not walk on this tick.
  */
 function yieldToPerson(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }>, st: Station): boolean {
-  if ((step.action !== 'insert' && step.action !== 'ring') || !heldByPerson(state, p, st)) return false;
+  if ((step.action !== 'insert' && step.action !== 'ring' && step.action !== 'lift') || !heldByPerson(state, p, st)) return false;
   const b = p.bot!;
   if (step.action === 'ring') {
     setPlan(b, []);
@@ -537,6 +590,8 @@ export function think(state: GameState, p: Player): BotStep[] {
     const refill = barTakesBox(state) ? spotStep(state, CONDIMENTS_ID, 'refill') : null;
     return [refill ?? { kind: 'floor', node: nodeOf(state, p.pos), action: 'drop' }];
   }
+  // FB2 A3: a pot in hand goes down the sink (no sink: R sends it home, stale).
+  if (p.tool === 'pot') return [spotStep(state, SINK_ID, 'dump') ?? { kind: 'floor', node: nodeOf(state, p.pos), action: 'drop' }];
   if (p.holding === 'grounds') return groundsPlan(state, p);
   if (isDrink(p.holding)) {
     const drink = p.holding;
@@ -553,7 +608,8 @@ export function think(state: GameState, p: Player): BotStep[] {
   // up, or the next customer for that drink would take it cold. A few seconds' work.
   if (shouldClearCold(state, p)) {
     const take = spotStep(state, PICKUP_ID, 'take');
-    if (take) return [take, binStep(state, p)];
+    const counter = state.stations.find((st) => st.id === PICKUP_ID);
+    if (take && counter) return [take, binStep(state, p, true, counter.pos)]; // FB2 A3: the bin or the sink, whichever is nearer the counter
   }
   if (state.gear === true) {
     // 1. Gear (batch/pickup): ring up the queue when nobody else is on their way to the till. Only a thinking
@@ -584,6 +640,10 @@ export function think(state: GameState, p: Player): BotStep[] {
   }
   // 3b. Nothing waiting: mop a dirty floor.
   if (shouldMop(state, p)) return mopPlan(state, p);
+  // 3c. FB2 A3: still nothing: pour a cold or stale pot down the sink, so the machine is ready for the next drip.
+  const pot = potToDump(state, p);
+  const dump = pot ? dumpSteps(state, pot) : null;
+  if (dump) return dump;
   // 4. Wait near the counter.
   return [{ kind: 'idle', node: idleNode(state, p) }];
 }
@@ -794,7 +854,7 @@ function disposeStep(state: GameState, p: Player, warmDrink: boolean): BotStep {
 function binColdAndRemake(state: GameState, p: Player): void {
   const b = p.bot!;
   const remake = b.claim !== null && b.claimDrink ? chainFor(state, p, b.claimDrink, 'serve') : [];
-  setPlan(b, [binStep(state, p), ...remake]);
+  setPlan(b, [binStep(state, p, true), ...remake]); // the cold cup is in hand, or about to be
 }
 
 /** At the station: press "use" when the step can happen, wait while the machine is busy, else give up. */
@@ -803,6 +863,17 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
   switch (step.action) {
     case 'insert': {
       if (!isRecipeKind(st.kind)) return abandon(state, p);
+      // FB2 A3: a pot machine with its pot at the sink: wait for it. One that went cold or stale since the plan was
+      // made: lift it and take it to the sink first (or wait while another bot does).
+      if (hasPot(st) && p.holding === null && p.tool === null) {
+        if (personHasPot(state, st)) return abandon(state, p);
+        if (st.potOut !== undefined) return wait(state, p, POT_TRIP_TICKS);
+        if (needsDump(state, st)) {
+          if (liftPlanned(state, p, st)) return wait(state, p, POT_TRIP_TICKS);
+          const dump = dumpSteps(state, st);
+          return dump ? setPlan(b, [...dump, ...b.plan]) : abandon(state, p);
+        }
+      }
       // A drink not yet checked stays in hand: a botched espresso must not become a latte.
       if (b.noticeTicksLeft > 0 && isDrink(p.holding)) return wait(state, p);
       // The recipe `interact` will run here (gear recipe first: a pod machine pulls a shot from empty hands),
@@ -863,6 +934,8 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
     case 'take':
       // A2: empty hands at the pickup counter take back a cup, only while the one take-back grabs is cold (to bin it).
       if (st.id === PICKUP_ID) return p.holding === null && p.tool === null && takeBackCold(state) ? execute(p) : setPlan(b, []);
+      // FB2 A3: never press at a pot that needs the sink (the press would lift it, not pour).
+      if (needsDump(state, st) || st.potOut !== undefined) return abandon(state, p);
       // A2 fix round 2: its own cup went cold in the machine: take it, bin it, remake.
       if (st.output !== null && p.holding === null && state.gear === true && !hasPot(st) && stationCool(state, st) >= 1) {
         p.interactQueued = true;
@@ -900,6 +973,16 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       return setPlan(b, []);
     case 'trash':
       return execute(p);
+    case 'lift':
+      // FB2 A3: lift the old pot; already lifted (or fine again), skip the lift and its trip to the sink.
+      if (p.holding === null && p.tool === null && needsDump(state, st)) return execute(p);
+      pop(b);
+      if (b.plan[0]?.kind === 'use' && b.plan[0].action === 'dump' && p.tool !== 'pot') pop(b);
+      return;
+    case 'dump':
+      // FB2 A3: pour the pot or the drink in hand down the sink; nothing to pour, move on.
+      if (p.tool === 'pot' || isDrink(p.holding)) return execute(p);
+      return pop(b);
   }
 }
 

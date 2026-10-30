@@ -67,7 +67,10 @@ describe('bots ring up and set drinks on the pickup counter (Task 13)', () => {
     expect(think(s, p)).toEqual([{ kind: 'use', station: 'pickup', action: 'put' }]);
     expect(dropPlan(s, p)).toEqual([{ kind: 'use', station: 'pickup', action: 'put' }]);
     s.pass = Array.from({ length: 4 }, () => ({ item: 'coldBrew' as const, ticksLeft: 999 }));
+    p.pos = { x: 6, y: 1.8 }; // nearer the bin (7, 1) than the back sink (7, 3)
     expect(think(s, p)).toEqual([{ kind: 'use', station: 'trash', action: 'trash' }]);
+    p.pos = { x: 6, y: 3 }; // FB2 A3: the sink as close or closer: down the sink
+    expect(think(s, p)).toEqual([{ kind: 'use', station: 'sink', action: 'dump' }]);
   });
 
   it('the ring step drops itself when there is nobody left to ring', () => {

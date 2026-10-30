@@ -10,6 +10,8 @@ import { gearAfterUse, gearBlocked, gearMarks, gearPolish, gearPotFinished, gear
 import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
+import { dumpDrink, dumpPot, isSink, potPress } from './sink';
+import { rollBinLeak, rollStationMess } from './messes';
 import { BASE_DRINKS, RECIPES, type Recipe, type RecipeStation } from '../data/drinks';
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
 import type { GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from './types';
@@ -86,6 +88,10 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return state;
   if (player.holding === null) { delete player.cupSlips; delete player.cupTemp; } // P3 B5: empty hands, no cup, no marks
+  if (player.tool === 'pot') {
+    dumpPot(state, player); // FB2 A3: only the sink takes the pot
+    return state;
+  }
   if (player.tool !== null) {
     mopInteract(state, player);
     return state;
@@ -99,11 +105,18 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   }
   if (station.occupiedBy !== null) return state;
   if (catBlocking(state, station.id)) return state;
+  // FB2 A3: the back sink pours a drink away; a drip machine with its pot out, or a cold or stale pot, handles the press itself.
+  if (isSink(station) && state.gear === true) {
+    dumpDrink(state, player);
+    return state;
+  }
+  if (potPress(state, player, station)) return state;
 
   if (station.kind === 'trash') {
     if (player.holding !== null && player.holding !== 'grounds') {
       tally(state.today, 'wasted');
       emitLog(state, 'trash', { item: player.holding, by: playerId });
+      rollBinLeak(state, station, player, player.holding); // FB2 A3: 1% of binned drinks leak (Gear runs)
     }
     player.holding = null;
     return state;
@@ -159,6 +172,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     station.busyTicksLeft = Math.round(((seconds * roleMachineTime(state, playerId)) / (speed * gearSpeed(station, state.tick))) * TICK_RATE);
     station.busyTotal = station.busyTicksLeft;
     gearAfterUse(state, station, player);
+    rollStationMess(state, station, player); // FB2 A3: milk drips at the steamer, grounds by the grinder (Gear runs)
   } else if (idle && !recipe && player.holding !== null && player.holding !== 'grounds' && isRecipeStation(station.kind)) {
     // P3 B5: a cup offered to a station with no step for it: the wrong order, one star off.
     markCup(player);

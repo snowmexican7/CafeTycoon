@@ -39,6 +39,7 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
         ['counter', { x: 6, y: 6 }],
         ['pickup', { x: 5, y: 6 }],
         ['condiments', { x: 4, y: 6 }],
+        ['sink', layoutFor(tier).sink], // FB2 A3: the back sink is a counter-kind fixed spot too
       ]);
       const spot = s.stations.find((x) => x.id === 'pickup')!;
       expect(spot).toEqual({ id: 'pickup', kind: 'counter', pos: { x: 5, y: 6 }, busyTicksLeft: 0, output: null, occupiedBy: null });
@@ -82,15 +83,15 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
     expect(s.stations.some((x) => x.gear === 'c1')).toBe(true);
     const ids = () => s.stations.filter((x) => x.kind === 'counter').map((x) => x.id);
-    expect(ids()).toEqual(['counter', 'pickup', 'condiments']);
+    expect(ids()).toEqual(['counter', 'pickup', 'condiments', 'sink']);
 
-    s.stations = s.stations.filter((x) => x.id !== 'pickup' && x.id !== 'condiments');
+    s.stations = s.stations.filter((x) => x.id !== 'pickup' && x.id !== 'condiments' && x.id !== 'sink');
     ensureCounterSpots(s);
     ensureCounterSpots(s);
-    expect(ids()).toEqual(['counter', 'pickup', 'condiments']);
+    expect(ids()).toEqual(['counter', 'pickup', 'condiments', 'sink']);
     s.stations = s.stations.filter((x) => x.id !== 'condiments');
     ensureCounterSpots(s);
-    expect(ids()).toEqual(['counter', 'pickup', 'condiments']);
+    expect(ids()).toEqual(['counter', 'pickup', 'sink', 'condiments']);
 
     const classic = createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 } });
     ensureCounterSpots(classic);

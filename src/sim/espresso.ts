@@ -3,6 +3,7 @@ import { LAYOUT } from '../data/layout';
 import { secondsToTicks } from './constants';
 import { emitLog } from './log';
 import { syncBots } from './bots/roster';
+import { returnTool } from './mop';
 import type { GameState, Player, PlayerId, Vec2 } from './types';
 
 /**
@@ -98,6 +99,7 @@ function collapse(state: GameState, p: Player): void {
   e.collapsedAt = state.tick;
   e.fellAt = { ...p.pos };
   p.holding = null;
+  returnTool(state, p); // FB2 A3 fix round 1 (I3): a carried pot (or box, or mop) goes home, not out with them
   p.moveDir = { x: 0, y: 0 };
   p.heldDir = { x: 0, y: 0 };
   p.interactQueued = false;

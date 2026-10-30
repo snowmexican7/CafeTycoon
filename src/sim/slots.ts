@@ -13,8 +13,9 @@
  *  - `stationsFromSlots(tier, slots): Station[]`: fresh idle stations in slot order (empty slots
  *    skipped), ids `kind` for the first of a kind then `kind-2`, `kind-3`, …, positions from
  *    `SLOT_POSITIONS`, then the counter. Default slots give exactly the pre-WP5 stations. With `gear` (Gear runs),
- *    the pickup counter and the condiment bar follow the counter (kind 'counter', ids `pickup`, `condiments`).
- *  - `ensureCounterSpots(state)`: a Gear run gets whichever of those two spots is missing (old saves).
+ *    the pickup counter, the condiment bar and (FB2 A3) the back sink follow the counter (kind 'counter', ids
+ *    `pickup`, `condiments`, `sink`).
+ *  - `ensureCounterSpots(state)`: a Gear run gets whichever of those spots is missing (old saves).
  *  - `growSlots(state, to)`: on growing, owned stations (placed + equipment, per kind) and the tier's gifts are
  *    conserved: per kind `equipment = max(0, owned + max(0, defaults(to) - defaults(from)) - defaults(to))`, the new
  *    tier's defaults go on the floor, the surplus stays in `equipment` (kind order grinder, espresso, steamer,
@@ -34,7 +35,7 @@ import type { EquipmentKind } from '../data/equipment';
 import { GEAR, type GearId } from '../data/gear';
 import { batchOut, drinkSuppliesFor } from './gear';
 import { TAP_DRINKS } from '../data/drinks';
-import { CONDIMENTS_ID, PICKUP_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
+import { CONDIMENTS_ID, PICKUP_ID, SINK_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
 import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
@@ -95,12 +96,13 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
   return out;
 }
 
-/** The Gear-run counter spots beside the till: the pickup counter, then the condiment bar (fresh and idle). */
+/** The Gear-run fixed spots: the pickup counter, then the condiment bar beside the till, then the back sink (fresh and idle). */
 function counterSpots(tier: TierId | undefined): Station[] {
   const l = layoutFor(tier);
   return [
     { id: PICKUP_ID, kind: 'counter', pos: { ...l.pickup }, busyTicksLeft: 0, output: null, occupiedBy: null },
     { id: CONDIMENTS_ID, kind: 'counter', pos: { ...l.condiments }, busyTicksLeft: 0, output: null, occupiedBy: null },
+    { id: SINK_ID, kind: 'counter', pos: { ...l.sink }, busyTicksLeft: 0, output: null, occupiedBy: null },
   ];
 }
 

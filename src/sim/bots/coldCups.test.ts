@@ -39,7 +39,8 @@ describe('bots and cold cups', () => {
   it('an idle bot takes a cold cup back off the counter and bins it', () => {
     let s = botStand();
     s.pass = [cup('latte', s.tick - secs(70)), cup('icedLatte', s.tick - secs(20))];
-    expect(think(s, bot(s))).toEqual([{ kind: 'use', station: 'pickup', action: 'take' }, { kind: 'use', station: 'trash', action: 'trash' }]);
+    // FB2 A3: on the stand the back sink (7,4) is nearer the counter than the bin (7,1), so the cup goes down the sink.
+    expect(think(s, bot(s))).toEqual([{ kind: 'use', station: 'pickup', action: 'take' }, { kind: 'use', station: 'sink', action: 'dump' }]);
     for (let i = 0; i < secs(20) && s.pass.length > 1; i++) s = step(s, idle);
     expect(s.pass.map((i) => i.item)).toEqual(['icedLatte']);
     for (let i = 0; i < secs(20) && bot(s).holding !== null; i++) s = step(s, idle);
@@ -60,7 +61,7 @@ describe('bots and cold cups', () => {
     let s = botStand();
     s.pass = [cup('espresso', s.tick - secs(50))];
     s.customers = [{ id: 1, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'order' }];
-    expect(think(s, bot(s))).toEqual([{ kind: 'use', station: 'pickup', action: 'take' }, { kind: 'use', station: 'trash', action: 'trash' }]);
+    expect(think(s, bot(s))).toEqual([{ kind: 'use', station: 'pickup', action: 'take' }, { kind: 'use', station: 'sink', action: 'dump' }]); // FB2 A3: the nearer sink
     const kinds: string[] = [];
     for (let i = 0; i < secs(40) && !kinds.includes('till.rung'); i++) {
       s = step(s, idle);
@@ -101,6 +102,8 @@ describe('bots and cold cups', () => {
     p.holding = 'latte';
     p.heldSince = s.tick - secs(61);
     s.customers = [atPickup(1, 'latte', s.tick)];
+    const bin = s.stations.find((x) => x.kind === 'trash')!.pos;
+    p.pos = { x: bin.x - 0.4, y: bin.y + 0.9 }; // FB2 A3: by the bin (a nearer back sink would take it instead)
     expect(think(s, p)).toEqual([{ kind: 'use', station: 'trash', action: 'trash' }]);
     expect(dropPlan(s, p)).toEqual([{ kind: 'use', station: 'trash', action: 'trash' }]);
     p.heldSince = s.tick;
@@ -120,13 +123,15 @@ describe('bots and cold cups', () => {
     p.bot!.claimDrink = 'espresso';
     p.bot!.plan = [{ kind: 'use', station: 'pickup', action: 'put' }];
     p.bot!.thinkTicksLeft = 99;
+    // FB2 A3: the cold cup goes to the bin or the back sink, whichever is nearer (here the sink).
+    const discards = [{ kind: 'use', station: 'trash', action: 'trash' }, { kind: 'use', station: 'sink', action: 'dump' }];
     const trashFirst = (x: GameState) => {
       const st = bot(x).bot!.plan[0];
-      return st?.kind === 'use' && st.station === 'trash';
+      return st?.kind === 'use' && (st.station === 'trash' || st.station === 'sink');
     };
     for (let i = 0; i < secs(10) && s.pass.length === 0 && !trashFirst(s); i++) s = step(s, idle);
     expect(s.pass).toHaveLength(0);
-    expect(bot(s).bot!.plan[0]).toEqual({ kind: 'use', station: 'trash', action: 'trash' });
+    expect(discards).toContainEqual(bot(s).bot!.plan[0]);
     expect(bot(s).bot!.plan.length).toBeGreaterThan(1);
   });
 });
@@ -149,7 +154,7 @@ describe('cold cups with FB2 A1 helper bots', () => {
     let s = helperStand();
     s.pass = [cup('espresso', s.tick - secs(50))];
     s.customers = [{ id: 1, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'order' }];
-    expect(think(s, helper(s))).toEqual([{ kind: 'use', station: 'pickup', action: 'take' }, { kind: 'use', station: 'trash', action: 'trash' }]);
+    expect(think(s, helper(s))).toEqual([{ kind: 'use', station: 'pickup', action: 'take' }, { kind: 'use', station: 'sink', action: 'dump' }]); // FB2 A3: the nearer sink
     const kinds: string[] = [];
     for (let i = 0; i < secs(20) && !kinds.includes('pickup.takeBack'); i++) {
       s = step(s, idle);
