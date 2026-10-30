@@ -137,6 +137,17 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P4 F2: the night before Starbuck$ launches its loyalty card (the brief offers our stamp card). */
+  rivalLoyalty: {
+    night: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      s.cash = 140;
+      s.day = 15; // at night `day` is already tomorrow
+    },
+    timeline: [],
+  },
   /** P4 B2: end of week 1 of a Gear run: the screen offers the season. */
   seasonTeaser: { weekEnd: true, setup(s) { weekPlayed(s); s.gear = true; }, timeline: [] },
   /** P4 B2: end of season week 2 (target hit), next week's target in the sub-line. */

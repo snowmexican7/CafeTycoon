@@ -4,7 +4,7 @@ import { applyGearInput } from './gear';
 import { applyPitchInput } from './pitch';
 import { applyAdInput } from './ads';
 import { applyCheckoutInput } from './checkout';
-import { applyRivalCounterInput, applyScoutInput } from './rival';
+import { applyRivalCounterInput, applyScoutInput, applyStampCardInput } from './rival';
 import { beginSeason } from './season';
 import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
@@ -157,6 +157,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'rivalCounter':
       applyRivalCounterInput(s, input);
+      break;
+    case 'stampCard':
+      applyStampCardInput(s, input);
       break;
     case 'staff':
       applyStaffInput(s, input);

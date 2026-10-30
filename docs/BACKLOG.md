@@ -1802,6 +1802,13 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 4 follow-up F2 — rival loyalty card (p4-f02-rival-loyalty, tag p4-f02)
+
+- [x] Sim (`rival.ts`): Gear runs, from day 15 (`RIVAL.loyaltyDay`) the rival's loyalty card keeps `loyaltyTraffic` 0.93 of walk-ins; `stampCard` night input (humans, $30 once, from the launch night) sets `Rival.stamps` → walk-ins back, prices × `stampPrice` 0.97 from that day. Brief alert `rival:loyalty` (warn on launch night, info after; fix only when affordable); morning notes on launch / our card. PROTOCOL 39 → 40; optional field, old saves load.
+- [x] Tests: `src/sim/rivalLoyalty.test.ts` (3). 1046 tests.
+- [x] Shots: `/workspace/overnight/sprint/p4-f02/rivalLoyalty-*` (fixture `rivalLoyalty`).
+- [ ] Follow-ups: playtest the numbers (stamp card pays back in ~4–6 days at typical week-3 takings); bots never buy it (Claude prompt); a rival second shop near ours (needs the branch areas).
+
 ### Phase 4 follow-up F1 — season board (p4-f01-season-board, tag p4-f01)
 
 - [x] `recordsStore.ts`: optional `Records.seasons` (`SeasonRecord {key, seed, date, crew, weeksPlayed, hit, made, medal, done}`), upserted by `foldRecords` whenever the run has a `season` (one row per run, refreshed at each season week-end), sorted by medal → hits → made (`seasonOrder`), keeps the best 6; `sanitize` drops junk. No version bump: old records load with no seasons.

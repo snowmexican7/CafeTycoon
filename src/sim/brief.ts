@@ -6,7 +6,7 @@
  *
  *   type NightFix = DistributiveOmit<PlayerInput, 'playerId'>
  *   interface NightAlert {
- *     id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | rival:promo | signature
+ *     id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | rival:promo | rival:loyalty | signature
  *     kind: 'cash' | 'stock' | 'soldOut' | 'spoil' | 'grow' | 'checkout' | 'rival' | 'signature';
  *     severity: 'info' | 'warn' | 'danger';
  *     text: string;
@@ -30,7 +30,7 @@ import { billsForDay, wagesForDay } from './staff';
 import { nextTier, TIERS } from './growth';
 import { restockCost } from './night';
 import { profitOf } from './profit';
-import { copyIsLive, countered, isPromoDay, RIVAL, sigPrice } from './rival';
+import { copyIsLive, countered, isPromoDay, loyaltyLive, RIVAL, sigPrice } from './rival';
 import { FRESH, spoilCount } from './spoilage';
 import { menuDrinks, neededSupplies, SUPPLY_IDS } from './unlocks';
 import type { CheckoutId, DrinkId, GameState, PlayerInput, SupplyId } from './types';
@@ -217,6 +217,15 @@ export function nightBrief(state: GameState): NightBrief {
     alerts.push(countered(state)
       ? { id: 'rival:promo', kind: 'rival', severity: 'info', text: `${RIVAL.name} happy hour tomorrow: we match it with ${off}% off everything`, fix: { kind: 'rivalCounter', on: false } }
       : { id: 'rival:promo', kind: 'rival', severity: 'warn', text: `${RIVAL.name} runs happy hour tomorrow: ~${Math.round((1 - RIVAL.promoTraffic) * 100)}% fewer walk-ins unless we go ${off}% off`, fix: { kind: 'rivalCounter' } });
+  }
+
+  // 7c. P4 F2: the rival's loyalty card (answer it once with our stamp card)
+  if (loyaltyLive(state) && state.rival?.stamps === undefined) {
+    const lost = Math.round((1 - RIVAL.loyaltyTraffic) * 100);
+    const text = state.day === RIVAL.loyaltyDay
+      ? `${RIVAL.name} launches a loyalty card tomorrow: ~${lost}% fewer walk-ins every day unless we print our own stamp card`
+      : `${RIVAL.name}'s loyalty card keeps ~${lost}% of walk-ins away; our own stamp card wins them back`;
+    alerts.push({ id: 'rival:loyalty', kind: 'rival', severity: state.day === RIVAL.loyaltyDay ? 'warn' : 'info', text, ...(state.cash >= RIVAL.stampCost ? { fix: { kind: 'stampCard' as const } } : {}) });
   }
 
   // 8. signature with no premium
