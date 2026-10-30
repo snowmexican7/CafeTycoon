@@ -114,6 +114,7 @@ export function branchDay(state: GameState, day = state.day, withCall = false): 
 export function settleBranch(state: GameState): void {
   const d = branchDay(state, state.day, true);
   delete state.callAnswer;
+  delete state.callRang;
   if (!d) return;
   state.cash = r2(state.cash + d.profit);
   state.today.branch = d;

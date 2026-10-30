@@ -56,6 +56,11 @@ export function callRinging(state: GameState): (BranchCall & { secsLeft: number 
   return { ...c, secsLeft: Math.ceil((c.until - t) / secondsToTicks(1)) };
 }
 
+/** Mark today's call as having rung, once it first does (the day's tick calls this; review I2). */
+export function noteCallRang(state: GameState): void {
+  if (state.callRang !== state.day && callRinging(state)) state.callRang = state.day;
+}
+
 /** A person picks up (take = fix it / take the order) or lets it ring, while it rings. */
 export function applyCall(state: GameState, input: Extract<PlayerInput, { kind: 'call' }>): void {
   const p = state.players.find((x) => x.id === input.playerId);
@@ -63,10 +68,11 @@ export function applyCall(state: GameState, input: Extract<PlayerInput, { kind: 
   state.callAnswer = { day: state.day, take: input.take, by: p.name };
 }
 
-/** How today's call ended, for closing: null when there was no call. */
+/** How today's call ended, for closing: null when there was no call, or the shop closed before it rang. */
 export function callOutcome(state: GameState): { kind: CallKind; took: boolean; by?: string } | null {
   const c = callFor(state);
   if (!c) return null;
   const a = state.callAnswer?.day === state.day ? state.callAnswer : undefined;
+  if (!a && state.callRang !== state.day) return null; // never rang (closed early): not a missed call
   return { kind: c.kind, took: !!a?.take, ...(a ? { by: a.by } : {}) };
 }

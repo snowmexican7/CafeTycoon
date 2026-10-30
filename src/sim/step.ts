@@ -8,7 +8,7 @@ import { applyRivalCounterInput, applyScoutInput, applyStampCardInput } from './
 import { beginSeason } from './season';
 import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
-import { applyCall } from './call';
+import { applyCall, noteCallRang } from './call';
 import { applyCloseEarly, closeVoteUnanimous, dropCloseVote } from './closeEarly';
 import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
@@ -248,6 +248,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
       return;
     }
   }
+  if (doorsOpen) noteCallRang(s);
   s.phaseTicksLeft -= 1;
   if (s.phaseTicksLeft > 0) return;
   if (doorsOpen) {
