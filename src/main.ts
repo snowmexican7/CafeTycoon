@@ -240,7 +240,7 @@ async function main(): Promise<void> {
       settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec, bots },
       // P3 B13: every new run opens as a kerbside stand and grows from there.
       tier: 'stand',
-      // Gear Tree (in progress): only with ?gear=1 in the URL; off for everyone else until the v3 flip.
+      // G11 (v3.0.0): every new run is a Gear run; ?gear=0 is a hidden classic escape hatch.
       ...(gearFlag() ? { gear: true } : {}),
     };
   }

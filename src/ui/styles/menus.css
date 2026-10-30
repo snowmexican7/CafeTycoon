@@ -169,6 +169,8 @@
 .rec-tot { display: flex; flex-wrap: wrap; gap: 6px; }
 .rec-tot span { background: #f7efe2; border-radius: 99px; padding: 4px 10px; font: 700 13px var(--font-body); }
 .rec-tot b { font-family: var(--font-display); }
+.rec-classic { margin: 8px 0 0; padding: 6px 12px; background: #f1e7d6; border-radius: 10px; font: 600 14px var(--font-body); color: #6b5440; text-align: left; }
+.rec-classic b { font-family: var(--font-display); }
 .hall { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .hall li { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 12px; padding: 6px 10px; box-shadow: var(--sh-1); font: 700 14px var(--font-display); }
 .hall li .av { background: var(--roast); color: var(--crema); } .hall li span.n { margin-left: auto; font: 700 12px var(--font-body); color: var(--ink-soft); }
