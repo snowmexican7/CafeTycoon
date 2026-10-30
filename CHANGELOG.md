@@ -25,6 +25,16 @@ when a build goes out, the line moves under its version with the date.
   before brewing. Steamers drip milk, grinders spill grounds and the bin sometimes leaks: each mess knocks 8% off
   the floor meter, and a quick mop wins it back within a minute.
 
+## 3.3.4 — 2026-10-30 · Counts from one place
+
+- **Counts come straight from the game rules.** The numbers over the machines and on the Gear card now use the same
+  count the game itself uses, so they can't disagree. They look the same as before: nothing when it's empty, amber
+  when the cold brew tap is nearly out, blue when the pot has gone cold.
+- **A count over the pickup counter** shows how many cups are waiting. A stale drip pot still shows its cups, in
+  blue, under its "STALE" badge.
+- **Design doc:** the espresso rework is approved, and the fridge now comes with the café size instead of being a
+  gear line.
+
 ## 3.3.3 — 2026-10-30 · The back sink on screen
 
 The screen catches up with the sink, cold cups and stale pots. This build also carries the sim changes listed under

@@ -130,7 +130,7 @@ grinder**: it's pre-ground supermarket coffee, which keeps opening B cheap. You 
 
 ### 4.3 Espresso (the long one: 6 tiers)
 
-*A rework is PROPOSED in section 5b (no separate steamer, wands by tier). Awaiting Kennedy's OK; this table is what's built today.*
+*A rework is APPROVED in section 5b (C9: no separate steamer, wands by tier). Until C9 lands in the sim, this table is what's built today.*
 
 | Tier | Name | Price | Sell | Sticker | Speed | Needs | Downsides | Quirks and rare events |
 |---|---|---|---|---|---|---|---|---|
@@ -171,18 +171,27 @@ steamer". The two-group machines (E5/E6) are the same idea with two group heads.
   with the planned hold-E tuning. **Later rework note:** if two sides feel fiddly at 1280×800,
   revisit with a ticket-driven choice (the machine makes what the oldest matching ticket needs).
 
-## 5b. PROPOSED: espresso rework and a fridge line (awaiting Kennedy's OK)
+## 5b. APPROVED: espresso rework (C9) and the fridge by café size
 
-> **PROPOSED: awaiting Kennedy's OK.** Nothing below is built. It's written down from Kennedy's playtest notes
-> (3.3.x) so we can agree on it before anyone touches `src/data/gear.ts` or the sim. Sections 4.3, 4.4 and 5
-> above are still what the game does today.
+> **APPROVED by Kennedy, 2026-10-30** (see `docs/HANDOFF.md` "Decisions"). Not built yet: the sim does C9 after
+> A4 (the fridge) merges. Until then sections 4.3, 4.4 and 5 above are what the game does today.
 
-**The idea (Kennedy):** no separate steamer machine. Milk is steamed by the espresso machine itself, and how
+Kennedy's rulings that shape this section:
+
+- **Few gear lines in the shop.** Supporting gear rides on an existing line, a café-size upgrade or a one-off
+  add-on; it doesn't get its own line. Later each line becomes a branching tree (speed / quality / taste).
+- **The fridge follows the café size** (no fridge line, below).
+- **No save compatibility for now.** No migrations or old-save fixtures; the sim bumps `SNAPSHOT_VERSION` when
+  the shape changes and old saves are turned away cleanly. Recheck before 1.0.
+- **Solo starts with 1 bot** (0, 1 or 2 from the start screen's "Solo helpers"); co-op lobbies keep their own choice.
+- **Gear is the game:** no classic runs to keep in step.
+
+**The espresso line (C9):** no separate steamer machine. Milk is steamed by the espresso machine itself, and how
 good the wand is depends on the tier. Six espresso tiers:
 
 - **Tiers 1–2: espresso only.** No wand at all. Milk drinks aren't on the menu until you get a wand.
 - **Tiers 3–4: better espresso, with an optional add-on steam wand.** The wand is weak and slow. You can buy
-  it with the machine or add it later.
+  it with the machine or add it later (a one-off add-on, not a line).
 - **Tiers 5–6: steam wand built in.** The dual boiler is the top of the tree.
 - The silly names stay. The pod machine is still tier 1.
 
@@ -200,29 +209,28 @@ boiler can sit at the top as Kennedy asked.
 
 Notes for whoever builds it (Claude):
 
-- **The steamer tree (S1–S3) would retire.** The Battery whisk's joke (batteries die) could move to the E3
+- **The steamer tree (S1–S3) retires.** The Battery whisk's joke (batteries die) could move to the E3
   add-on wand as a 1-in-N "the wand clogs" quirk.
-- **Old saves.** Runs that own S1–S3 need a mapping: keep the station as a "loose wand" until it's sold, or
-  refund the sell price on load. Pick one before building it. It's a sim and storage change, outside the UI lane.
+- **Old saves:** no mapping needed. Per the decision above, the snapshot version bump turns old saves away.
 - **E4/E5/E6 prices and stats are open.** The table keeps today's price ladder ($45/80/150/260/450/800) and
   moves the machines around it. Rebalance the speed and price multipliers when it's built.
-- The "optional wand" is a new kind of purchase: an add-on to a machine you already own. The Gear board needs
-  an "Add a wand" button on E3/E4.
+- The optional wand is an add-on to a machine you already own. The Gear board needs an "Add a wand" button on
+  E3/E4 (UI lane, once the sim names it; HANDOFF heads-up says `Station.wand?: boolean`, final name TBD).
 
-### Fridge line (also PROPOSED)
+### The fridge follows the café size (no fridge line)
 
-Kennedy: the fridge is where milk comes from, and it starts **next to the espresso machine**. Buy better
-fridges as you go:
+Milk comes from a fridge next to the espresso machine (FB2 A4). The fridge you have depends on the café size,
+not on a gear line:
 
-| Tier | Name | Price (rough) | What it does |
+| Café size | Fridge | Price | Notes |
 |---|---|---|---|
-| F1 | **Mini fridge** (dorm room classic) | $20 | Holds a little milk; you walk to it for every jug |
-| F2 | **Medium fridge** | $60 | More milk on hand, fewer restock trips |
-| F3 | **High-end fridge** (glass door) | $140 | Lots of milk, maybe a second milk type later |
-| F4 | **Auto milk dispenser** | $300 | Pours the milk for you at the wand: one less step on milk drinks |
+| Stand | **Dorm Room Cube** | ~$20, bought once | The stand starts without one; buy it once |
+| Cart | **Garage Beer Fridge** | free | Comes with the cart upgrade |
+| Café | **Chrome Reach-In** | free | Comes with the café upgrade |
+| Café (extra) | **Udder-Matic 3000** | ~$320 | Optional paid extra at the café |
 
-Open questions: does milk become a station step (walk to the fridge, then the wand), or stay a pantry number?
-Does the fridge take a gear slot? Prices are placeholders until we know.
+Field, tool and event names (`spotOf` → `'fridge'`, `tool === 'milk'`, `milkOut`, `fridge.take` / `fridge.put` /
+`supply.spoil`) are as planned in HANDOFF and become final when A4 merges; see BACKLOG "Feedback 2".
 
 ## 6. Drinks that level up with use
 

@@ -2053,6 +2053,16 @@ Open (sim lane):
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
 
+## ui-3.3.4 (UI lane): A5 counts, GEAR_TREE 5b: notes for Claude
+
+- [x] **A5 counts:** `render/countsModel.stationCounts(state: GameState)` now loops `stationCountsLeft(state)` and only
+  adds the look (tone `low` for a batch tap at ≤ `COUNT_LOW`, `cold` for a cold/stale drip pot or a cold waiting
+  output, and the cooling ring). The old UI-side rules (skipping counters/trash, brewing, pot out) are gone. The
+  condiment bar is skipped on purpose: its servings gauge already shows the same number. `ui/gearVM.hudGearVM`
+  reads `stationLeft` for the tap's "n/8 left" and the pot's "n/8 cups" (null → "sold out" / "empty pot (E)").
+- [x] **GEAR_TREE 5b:** APPROVED; folds in the HANDOFF decisions; the fridge table is now the café-size plan.
+- A4 (fridge) and C9 (wand) not landed in the sim yet, so nothing wired; names stay as planned in HANDOFF.
+
 ## ui-3.3.3 (UI lane): sink, pots, cold cups, solo helpers: notes for Claude
 
 Wires the UI side of Feedback 2 A1–A3. No sim, net, host, storage or data changes; protocol unchanged.
@@ -2076,7 +2086,7 @@ Wires the UI side of Feedback 2 A1–A3. No sim, net, host, storage or data chan
 - [x] **A1 solo toggle:** `title.ts` `SOLO_BOT_CHOICES` [0,1,2], `soloBotsSeg`, `readSoloBots`; `StartChoice.soloBots`
   is saved by `startSolo` in `src/main.ts` via `settings.set({ soloBots })` (UI side; the `CreateRunOptions` line is
   untouched).
-- [ ] **A5 counts** (`stationCountsLeft`) not wired yet: next UI item.
+- [x] **A5 counts:** done in ui-3.3.4.
 - Crew tips with 0 solo bots: still silent (open question in HANDOFF).
 
 ## ui-3.3.2 (UI lane): counts, cooling rings, step icons: notes for Claude
@@ -2157,4 +2167,4 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   cups); a waiting machine output 1 (one slot per machine); condiment bar servings; pickup counter cups. Till, sink,
   trash: null. Fridge milk joins with A4. No state, inputs or events. **UI lane:** have `countsModel.stationCounts`
   call `stationCountsLeft` (widen its state type to `GameState`) instead of reading fields; cooling stays in
-  `src/sim/cooling.ts` (`stationCool`, `slotCool`).
+  `src/sim/cooling.ts` (`stationCool`, `slotCool`). (done, ui-3.3.4)
