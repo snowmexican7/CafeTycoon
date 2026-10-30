@@ -16,7 +16,7 @@ import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKi
 import { byDistance, findPath, floorDropNode, idleNode, nodeOf, targetNodes, walkableNodes } from './path';
 import { spillHeld, spillTiles } from '../floor';
 import { floorWidth } from '../growth';
-import { gearArea } from '../gear';
+import { gearArea, tapCupRecipe } from '../gear';
 import { nearestMess, returnMop } from '../mop';
 import { rogueNear, rogueTiles } from '../rogue';
 import { passSlots } from '../pickup';
@@ -156,10 +156,17 @@ function potScore(state: GameState, p: Player, st: Station, need: Need): number 
   return 4;
 }
 
-/** The insert/take pair at `st`; the insert remembers what it should make. */
-const pair = (st: Station, gives: ItemKind): BotStep[] => [
+/**
+ * Batch/pickup (Task 14): a Gear tap pours a steeped cup straight into empty hands on the press (`gearTapPour`),
+ * so that visit is a single insert with nothing left to take.
+ */
+const pours = (state: GameState, st: Station, held: ItemKind | null): boolean =>
+  state.gear === true && st.kind === 'coldBrewTap' && !!st.gear && held === null;
+
+/** The insert/take pair at `st`; the insert remembers what it should make. A Gear tap's pour is the insert alone. */
+const pair = (st: Station, gives: ItemKind, instant = false): BotStep[] => [
   { kind: 'use', station: st.id, action: 'insert', makes: gives },
-  { kind: 'use', station: st.id, action: 'take' },
+  ...(instant ? [] : [{ kind: 'use', station: st.id, action: 'take' } as BotStep]),
 ];
 
 /**
@@ -169,10 +176,12 @@ const pair = (st: Station, gives: ItemKind): BotStep[] => [
  * can stand at it (G9: not an out-of-reach twin).
  */
 function canMake(state: GameState, st: Station, need: Need): boolean {
-  if (st.kind !== need.kind || st.batchLeft === 0) return false;
+  if (st.kind !== need.kind) return false;
   // G5: a dead machine is gone until tonight; a jammed one is fine for empty hands (they whack it first).
   if (st.dead || (st.jammed && need.held !== null) || !reachable(state, st)) return false;
-  return recipeAt(state, st, need.held)?.gives === need.gives;
+  const r = recipeAt(state, st, need.held);
+  // Batch/pickup: only a recipe that uses a steeped cup minds an empty tap (sweet cream from a cup in hand does not).
+  return r?.gives === need.gives && (st.batchLeft !== 0 || !tapCupRecipe(r));
 }
 
 /** 0: start right away (idle, no other bot heading there); 1: it is busy or someone else plans it. Pots: potScore. */
@@ -214,7 +223,7 @@ function route(state: GameState, p: Player, needs: Need[]): { steps: BotStep[]; 
   for (const need of needs) {
     const got = pick(state, p, need);
     if (got === null) return null;
-    steps.push(...pair(got.st, need.gives));
+    steps.push(...pair(got.st, need.gives, pours(state, got.st, need.held)));
     scores.push(got.score);
   }
   return { steps, scores };
@@ -677,7 +686,7 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
         const twin = step.makes !== undefined ? pick(state, p, { kind: st.kind as RecipeKind, held: p.holding, gives: step.makes }, st, true)?.st : null;
         return twin ? retarget(b, st, twin) : wait(state, p);
       }
-      if (idle && r && right && stocked(state, r) && st.batchLeft !== 0) return execute(p);
+      if (idle && r && right && stocked(state, r) && (st.batchLeft !== 0 || !tapCupRecipe(r))) return execute(p);
       const kind = st.kind;
       const leftover =
         st.output !== null &&

@@ -5,7 +5,8 @@ import { TICK_RATE } from '../constants';
 import { afterBotInteract, chainFor, dropPlan, think } from './brain';
 import { addStandIns } from './roster';
 import type { GearId } from '../../data/gear';
-import type { BotStep, Customer, GameState, Player } from '../types';
+import { BASE_DRINKS } from '../../data/drinks';
+import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId } from '../types';
 
 /** A stocked Gear stand (C1 tap + E1 pods) with `bots` stand-ins and no walk-ins. */
 function gearStand(bots = 1): GameState {
@@ -138,4 +139,95 @@ describe('pickup review fixes (M1, M3)', () => {
     const node = idleNode(s, sim(s));
     expect(blocked).not.toContain(`${node.x},${node.y}`);
   });
+});
+
+/** A Gear stand with a C1 tap, E1 pods and an S1 steamer, every tap drink on the menu, plenty of supplies, no walk-ins. */
+function tapStand(bots = 1): GameState {
+  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, tier: 'stand', gear: true });
+  addStandIns(s, bots);
+  for (const g of ['c1', 'e1', 's1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
+  s.unlocked = [...new Set([...BASE_DRINKS, ...s.unlocked, 'icedLatte', 'sweetCream', 'special'] as DrinkId[])];
+  for (const d of s.unlocked) s.menu[d] = true;
+  for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
+  return quiet(s);
+}
+const tapOf = (s: GameState) => s.stations.find((x) => x.kind === 'coldBrewTap')!;
+const ids = (plan: BotStep[]) => plan.map((x) => (x.kind === 'use' ? `${x.station}:${x.action}${x.makes ? `>${x.makes}` : ''}` : x.kind));
+
+describe('bots at the steeped tap (Task 14)', () => {
+  it('a Gear cold brew is one pour at the tap, then the pickup counter', () => {
+    const s = tapStand();
+    const tap = tapOf(s);
+    expect(chainFor(s, sim(s), 'coldBrew', 'serve')).toEqual([
+      { kind: 'use', station: tap.id, action: 'insert', makes: 'coldBrew' },
+      { kind: 'use', station: 'pickup', action: 'put' },
+    ]);
+    // The tap drinks built on a pour: sweet cream at the tap, maple cold foam at the steamer; iced latte needs a shot first.
+    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve'))).toEqual([
+      `${tap.id}:insert>coldBrew`, `${tap.id}:insert>sweetCream`, `${tap.id}:take`, 'pickup:put',
+    ]);
+    expect(ids(chainFor(s, sim(s), 'special', 'serve'))).toEqual([`${tap.id}:insert>coldBrew`, 'steamer:insert>special', 'steamer:take', 'pickup:put']);
+    expect(ids(chainFor(s, sim(s), 'icedLatte', 'serve')).slice(-3)).toEqual([`${tap.id}:insert>icedLatte`, `${tap.id}:take`, 'pickup:put']);
+  });
+
+  it('a bot pours with no concentrate while steeped cups are left', () => {
+    let s = tapStand();
+    const p = sim(s);
+    const tap = tapOf(s);
+    s.supplies.concentrate = 0;
+    tap.batchLeft = 3;
+    p.pos = { x: tap.pos.x, y: tap.pos.y + 1 };
+    p.bot!.plan = chainFor(s, p, 'coldBrew', 'put');
+    p.bot!.thinkTicksLeft = 999;
+    for (let i = 0; i < 3 * TICK_RATE && sim(s).holding === null; i++) s = step(s, []);
+    expect(sim(s).holding).toBe('coldBrew');
+    expect(tapOf(s).batchLeft).toBe(2);
+    expect(sim(s).bot!.plan).toEqual([{ kind: 'use', station: 'pickup', action: 'put' }]);
+  });
+
+  it('an empty tap still makes sweet cream from a cup in hand; it pours nothing and makes no iced latte', () => {
+    const s = tapStand();
+    tapOf(s).batchLeft = 0;
+    const tap = tapOf(s);
+    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve', 'coldBrew'))).toEqual([`${tap.id}:insert>sweetCream`, `${tap.id}:take`, 'pickup:put']);
+    expect(chainFor(s, sim(s), 'coldBrew', 'serve')).toEqual([]);
+    expect(chainFor(s, sim(s), 'icedLatte', 'serve', 'espresso')).toEqual([]);
+  });
+
+  it('a bot holding cold brew finishes sweet cream at an empty tap', () => {
+    let s = tapStand();
+    const p = sim(s);
+    const tap = tapOf(s);
+    tap.batchLeft = 0;
+    s.customers = [order(1, { drink: 'sweetCream', stage: 'pickup', rungAt: s.tick })];
+    p.holding = 'coldBrew';
+    p.pos = { x: tap.pos.x, y: tap.pos.y + 1 };
+    p.bot!.claim = 1;
+    p.bot!.claimDrink = 'sweetCream';
+    p.bot!.plan = chainFor(s, p, 'sweetCream', 'serve', 'coldBrew');
+    for (let i = 0; i < 30 * TICK_RATE && s.today.served === 0; i++) s = step(s, []);
+    expect(s.today.served).toBe(1);
+    expect(s.log.find((e) => e.kind === 'pickup.take')?.data.drink).toBe('sweetCream');
+  });
+
+  it('Gear bots never prep cold brew', () => {
+    const s = tapStand();
+    s.customers = [];
+    sim(s).bot!.personality = 'steady';
+    expect(think(s, sim(s)).some((x) => x.kind === 'use' && x.action === 'insert')).toBe(false);
+  });
+
+  for (const drink of ['coldBrew', 'sweetCream', 'icedLatte', 'special'] as DrinkId[]) {
+    it(`a bot takes a rung-up ${drink} order from the tap to the customer`, () => {
+      let s = tapStand();
+      s.customers = [order(1, { drink, stage: 'pickup', rungAt: s.tick })];
+      const before = tapOf(s).batchLeft!;
+      for (let i = 0; i < 40 * TICK_RATE && s.today.served === 0; i++) s = step(s, []);
+      expect(s.today.served).toBe(1);
+      expect(s.today.wasted ?? 0).toBe(0);
+      expect(s.log.find((e) => e.kind === 'pickup.take')?.data.drink).toBe(drink);
+      expect(tapOf(s).batchLeft).toBe(before - 1); // exactly one steeped cup per drink
+      expect(s.pass).toEqual([]);
+    });
+  }
 });

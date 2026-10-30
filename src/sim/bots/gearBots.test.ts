@@ -369,7 +369,7 @@ describe('item 5: level-up drinks (G6/G6b/G6c, G10a) and the recipe clash', () =
     const s = FULL();
     expect(ids(chainFor(s, sim(s), 'cafeAuLait', 'serve'))).toEqual(['drip:insert', 'drip:take', 'steamer:insert', 'steamer:take', 'pickup:put']);
     expect(ids(chainFor(s, sim(s), 'redEye', 'serve'))).toEqual(['drip:insert', 'drip:take', 'espresso:insert', 'espresso:take', 'pickup:put']);
-    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve'))).toEqual(['coldBrewTap:insert', 'coldBrewTap:take', 'coldBrewTap:insert', 'coldBrewTap:take', 'pickup:put']);
+    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve'))).toEqual(['coldBrewTap:insert', 'coldBrewTap:insert', 'coldBrewTap:take', 'pickup:put']); // Task 14: the pour is one step
     expect(chainFor(s, sim(s), 'americano', 'serve').find((x) => x.kind === 'use' && x.makes === 'americano')).toMatchObject({ station: 'espresso' });
   });
 
