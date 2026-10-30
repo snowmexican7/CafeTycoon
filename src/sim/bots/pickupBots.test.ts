@@ -2,10 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from '../run';
 import { step } from '../step';
 import { TICK_RATE } from '../constants';
-import { afterBotInteract, chainFor, dropPlan, think } from './brain';
+import { BOX_LOW, afterBotInteract, boxNode, chainFor, dropPlan, think } from './brain';
+import { layoutFor } from '../../data/layout';
+import { ECONOMY } from '../../data/economy';
+import { nearestStation } from '../movement';
 import { addStandIns } from './roster';
 import type { GearId } from '../../data/gear';
-import type { BotStep, Customer, GameState, Player } from '../types';
+import { BASE_DRINKS } from '../../data/drinks';
+import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId } from '../types';
 
 /** A stocked Gear stand (C1 tap + E1 pods) with `bots` stand-ins and no walk-ins. */
 function gearStand(bots = 1): GameState {
@@ -137,5 +141,220 @@ describe('pickup review fixes (M1, M3)', () => {
     const blocked = spots.flatMap((st) => targetNodes(s, st, sim(s).pos)).map((n) => `${n.x},${n.y}`);
     const node = idleNode(s, sim(s));
     expect(blocked).not.toContain(`${node.x},${node.y}`);
+  });
+});
+
+/** A Gear stand with a C1 tap, E1 pods and an S1 steamer, every tap drink on the menu, plenty of supplies, no walk-ins. */
+function tapStand(bots = 1): GameState {
+  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, tier: 'stand', gear: true });
+  addStandIns(s, bots);
+  for (const g of ['c1', 'e1', 's1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
+  s.unlocked = [...new Set([...BASE_DRINKS, ...s.unlocked, 'icedLatte', 'sweetCream', 'special'] as DrinkId[])];
+  for (const d of s.unlocked) s.menu[d] = true;
+  for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
+  return quiet(s);
+}
+const tapOf = (s: GameState) => s.stations.find((x) => x.kind === 'coldBrewTap')!;
+const ids = (plan: BotStep[]) => plan.map((x) => (x.kind === 'use' ? `${x.station}:${x.action}${x.makes ? `>${x.makes}` : ''}` : x.kind));
+
+describe('bots at the steeped tap (Task 14)', () => {
+  it('a Gear cold brew is one pour at the tap, then the pickup counter', () => {
+    const s = tapStand();
+    const tap = tapOf(s);
+    expect(chainFor(s, sim(s), 'coldBrew', 'serve')).toEqual([
+      { kind: 'use', station: tap.id, action: 'insert', makes: 'coldBrew' },
+      { kind: 'use', station: 'pickup', action: 'put' },
+    ]);
+    // The tap drinks built on a pour: sweet cream at the tap, maple cold foam at the steamer; iced latte needs a shot first.
+    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve'))).toEqual([
+      `${tap.id}:insert>coldBrew`, `${tap.id}:insert>sweetCream`, `${tap.id}:take`, 'pickup:put',
+    ]);
+    expect(ids(chainFor(s, sim(s), 'special', 'serve'))).toEqual([`${tap.id}:insert>coldBrew`, 'steamer:insert>special', 'steamer:take', 'pickup:put']);
+    expect(ids(chainFor(s, sim(s), 'icedLatte', 'serve')).slice(-3)).toEqual([`${tap.id}:insert>icedLatte`, `${tap.id}:take`, 'pickup:put']);
+  });
+
+  it('a bot pours with no concentrate while steeped cups are left', () => {
+    let s = tapStand();
+    const p = sim(s);
+    const tap = tapOf(s);
+    s.supplies.concentrate = 0;
+    tap.batchLeft = 3;
+    p.pos = { x: tap.pos.x, y: tap.pos.y + 1 };
+    p.bot!.plan = chainFor(s, p, 'coldBrew', 'put');
+    p.bot!.thinkTicksLeft = 999;
+    for (let i = 0; i < 3 * TICK_RATE && sim(s).holding === null; i++) s = step(s, []);
+    expect(sim(s).holding).toBe('coldBrew');
+    expect(tapOf(s).batchLeft).toBe(2);
+    expect(sim(s).bot!.plan).toEqual([{ kind: 'use', station: 'pickup', action: 'put' }]);
+  });
+
+  it('an empty tap still makes sweet cream from a cup in hand; it pours nothing and makes no iced latte', () => {
+    const s = tapStand();
+    tapOf(s).batchLeft = 0;
+    const tap = tapOf(s);
+    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve', 'coldBrew'))).toEqual([`${tap.id}:insert>sweetCream`, `${tap.id}:take`, 'pickup:put']);
+    expect(chainFor(s, sim(s), 'coldBrew', 'serve')).toEqual([]);
+    expect(chainFor(s, sim(s), 'icedLatte', 'serve', 'espresso')).toEqual([]);
+  });
+
+  it('a bot holding cold brew finishes sweet cream at an empty tap', () => {
+    let s = tapStand();
+    const p = sim(s);
+    const tap = tapOf(s);
+    tap.batchLeft = 0;
+    s.customers = [order(1, { drink: 'sweetCream', stage: 'pickup', rungAt: s.tick })];
+    p.holding = 'coldBrew';
+    p.pos = { x: tap.pos.x, y: tap.pos.y + 1 };
+    p.bot!.claim = 1;
+    p.bot!.claimDrink = 'sweetCream';
+    p.bot!.plan = chainFor(s, p, 'sweetCream', 'serve', 'coldBrew');
+    for (let i = 0; i < 30 * TICK_RATE && s.today.served === 0; i++) s = step(s, []);
+    expect(s.today.served).toBe(1);
+    expect(s.log.find((e) => e.kind === 'pickup.take')?.data.drink).toBe('sweetCream');
+  });
+
+  it('Gear bots never prep cold brew', () => {
+    const s = tapStand();
+    s.customers = [];
+    sim(s).bot!.personality = 'steady';
+    expect(think(s, sim(s)).some((x) => x.kind === 'use' && x.action === 'insert')).toBe(false);
+  });
+
+  for (const drink of ['coldBrew', 'sweetCream', 'icedLatte', 'special'] as DrinkId[]) {
+    it(`a bot takes a rung-up ${drink} order from the tap to the customer`, () => {
+      let s = tapStand();
+      s.customers = [order(1, { drink, stage: 'pickup', rungAt: s.tick })];
+      const before = tapOf(s).batchLeft!;
+      for (let i = 0; i < 40 * TICK_RATE && s.today.served === 0; i++) s = step(s, []);
+      expect(s.today.served).toBe(1);
+      expect(s.today.wasted ?? 0).toBe(0);
+      expect(s.log.find((e) => e.kind === 'pickup.take')?.data.drink).toBe(drink);
+      expect(tapOf(s).batchLeft).toBe(before - 1); // exactly one steeped cup per drink
+      expect(s.pass).toEqual([]);
+    });
+  }
+});
+
+describe('bots carry the condiment box (Task 15)', () => {
+  /** A quiet Gear stand with an empty bar and `boxes` boxes in the corner. */
+  const boxStand = (bots = 1, servings = 0, boxes = 1): GameState => {
+    const s = tapStand(bots);
+    s.customers = [];
+    s.condiments = { servings };
+    s.condimentBoxes = boxes;
+    return s;
+  };
+  const isBox = (x: BotStep) => (x.kind === 'floor' && x.action === 'takeBox') || (x.kind === 'use' && x.action === 'refill');
+
+  it('an idle bot with an empty bar and a box plans takeBox + refill, and stepped, fills the bar from the corner', () => {
+    let s = boxStand();
+    const plan = think(s, sim(s));
+    expect(plan).toEqual([
+      { kind: 'floor', node: boxNode(s), action: 'takeBox' },
+      { kind: 'use', station: 'condiments', action: 'refill' },
+    ]);
+    for (let i = 0; i < 40 * TICK_RATE && s.condiments!.servings === 0; i++) s = step(s, []);
+    expect(s.condiments!.servings).toBe(20);
+    expect(s.condimentBoxes).toBe(0);
+    expect(sim(s).tool).toBeNull();
+    expect(s.log.find((e) => e.kind === 'condiment.refill')?.data).toEqual({ by: 'sim-1' });
+  });
+
+  it('a low bar counts; a bar above the low mark, or no box in the corner, does not', () => {
+    expect(think(boxStand(1, BOX_LOW), sim(boxStand(1, BOX_LOW))).some(isBox)).toBe(true);
+    const ok = boxStand(1, BOX_LOW + 1);
+    expect(think(ok, sim(ok)).some(isBox)).toBe(false);
+    const none = boxStand(1, 0, 0);
+    expect(think(none, sim(none)).some(isBox)).toBe(false);
+  });
+
+  it('two bots never both plan it', () => {
+    const s = boxStand(2);
+    const a = think(s, sim(s, 1));
+    expect(a.some(isBox)).toBe(true);
+    sim(s, 1).bot!.plan = a;
+    expect(think(s, sim(s, 2)).some(isBox)).toBe(false);
+    // Nor while one is already carrying a box.
+    sim(s, 1).bot!.plan = [];
+    sim(s, 1).tool = 'box';
+    expect(think(s, sim(s, 2)).some(isBox)).toBe(false);
+  });
+
+  it('an order it can make comes first: no box run planned, and a carried box goes back to the corner', () => {
+    let s = boxStand();
+    s.customers = [order(1, { drink: 'coldBrew', stage: 'pickup', rungAt: s.tick })];
+    expect(think(s, sim(s)).some(isBox)).toBe(false);
+    s.customers = [];
+    const p = sim(s);
+    p.tool = 'box';
+    s.condimentBoxes = 0;
+    p.bot!.plan = [{ kind: 'use', station: 'condiments', action: 'refill' }];
+    s.customers = [order(1, { drink: 'coldBrew', stage: 'pickup', rungAt: s.tick })];
+    s = step(s, []);
+    expect(sim(s).tool).toBeNull();
+    expect(s.condimentBoxes).toBe(1);
+    expect(sim(s).bot!.claim).toBe(1);
+  });
+
+  it('a box in hand at a bar that someone else filled goes back to the corner', () => {
+    let s = boxStand(1, 20, 0);
+    const p = sim(s);
+    p.tool = 'box';
+    expect(think(s, p)).toEqual([{ kind: 'floor', node: expect.anything(), action: 'drop' }]);
+    p.bot!.plan = think(s, p);
+    p.bot!.thinkTicksLeft = 999;
+    for (let i = 0; i < 10 * TICK_RATE && sim(s).tool !== null; i++) s = step(s, []);
+    expect([sim(s).tool, s.condimentBoxes, s.condiments!.servings]).toEqual([null, 1, 20]);
+  });
+
+  it('on every tier, "use" at the box node takes the box (not the mop, not a station)', () => {
+    for (const tier of ['stand', 'cart', 'cafe'] as const) {
+      const s = startDay(createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true, ...(tier !== 'cafe' ? { tier } : {}) }));
+      const n = boxNode(s);
+      const corner = layoutFor(s.tier).boxCorner;
+      expect(Math.hypot(n.x - corner.x, n.y - corner.y)).toBeLessThanOrEqual(ECONOMY.interactRangeTiles);
+      expect(nearestStation(s, n)).toBeNull();
+      s.condimentBoxes = 1;
+      s.players[0].pos = { ...n };
+      const t = step(s, [{ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: true }]);
+      expect([t.players[0].tool, t.condimentBoxes]).toEqual(['box', 0]);
+    }
+  });
+});
+
+describe('extras review I1: a tap pour that yields nothing', () => {
+  it('a bot never "puts" with empty hands (it would lift a cup off the counter and reset its stale timer)', () => {
+    let s = tapStand();
+    const p = sim(s);
+    const pickup = s.stations.find((x) => x.id === 'pickup')!;
+    p.pos = { x: pickup.pos.x, y: pickup.pos.y - 1 };
+    s.pass = [{ item: 'coldBrew', ticksLeft: 500 }];
+    p.bot!.plan = [{ kind: 'use', station: 'pickup', action: 'put' }];
+    p.bot!.thinkTicksLeft = 999;
+    p.bot!.reactionTicksLeft = 0;
+    p.bot!.noticeTicksLeft = 0;
+    let lifted = false;
+    for (let i = 0; i < 60; i++) {
+      s = step(s, []);
+      if (s.log.some((e) => e.kind === 'pass.take' || e.kind === 'pass.put')) lifted = true;
+    }
+    expect(lifted).toBe(false);
+    expect(s.pass[0]?.ticksLeft).toBeLessThan(500);
+  });
+
+  it('a cat on the tap: the pour fails and the bot gives the chain up instead of walking on empty-handed', () => {
+    let s = tapStand();
+    const tap = tapOf(s);
+    s.eggs = s.eggs ?? ({ fired: {} } as never);
+    (s.eggs as { cat?: unknown }).cat = { stationId: tap.id, ticksLeft: 1000 };
+    s.customers = [order(1, { drink: 'coldBrew', stage: 'pickup', rungAt: s.tick })];
+    s.pass = [{ item: 'latte', ticksLeft: 5000 }]; // a cup nobody ordered, sitting on the counter
+    let touched = false;
+    for (let i = 0; i < 20 * TICK_RATE; i++) {
+      s = step(s, []);
+      if (s.log.some((e) => e.kind === 'pass.take' && e.tick === s.tick)) touched = true; // its own cold brew may be put down; nothing is lifted
+    }
+    expect(touched).toBe(false); // the empty-handed bot never lifted the latte and put it back
+    expect(s.pass[0]?.ticksLeft).toBeLessThan(5000 - 19 * TICK_RATE);
   });
 });

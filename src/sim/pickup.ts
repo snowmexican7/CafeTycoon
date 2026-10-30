@@ -7,6 +7,7 @@
  */
 import { ECONOMY } from '../data/economy';
 import { CONDIMENTS_ID, PICKUP_ID } from '../data/layout';
+import { CONDIMENTS, noteCondiments, wantsCondiments } from './condiments';
 import { serveCustomer } from './customers';
 import { emitLog } from './log';
 import type { Customer, DrinkId, GameState, Station } from './types';
@@ -68,6 +69,11 @@ export function stepPickup(state: GameState): void {
       c.drink = item.item;
     }
     emitLog(state, 'pickup.take', { drink: item.item, customer: c.id, by: item.by ?? '' });
-    serveCustomer(state, c, item.item, item.by, item.slips ?? 0, item.temp === true);
+    // Task 10: plain drip and cold brew drinkers stop at the condiment bar; an empty bar means black coffee (tip × 0.8).
+    const want = wantsCondiments(state, c, item.item);
+    const black = want && (state.condiments?.servings ?? 0) <= 0;
+    const served = state.today.served;
+    serveCustomer(state, c, item.item, item.by, item.slips ?? 0, item.temp === true, black ? CONDIMENTS.blackTip : 1);
+    if (want && state.today.served > served) noteCondiments(state, c, black);
   }
 }
