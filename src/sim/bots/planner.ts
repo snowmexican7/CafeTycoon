@@ -62,7 +62,7 @@
  * and nothing in this plan or in `state.equipment` could bring that station back (no grow advice, the kind
  * not unplaced).
  *
- * Money: tomorrow's bills (rent plus wages: `billsForDay`) are held back, and every advice that spends
+ * Money: tomorrow's bills (rent plus wages: `billsForDay`, plus a losing branch's expected loss) are held back, and every advice that spends
  * (restock, grow, branch:open, checkout, gear, rival:loyalty, equip, scout) draws on what is left in
  * priority order, so applying the whole list never overdraws the till or eats tomorrow's bills.
  *
@@ -89,7 +89,7 @@ import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
 import { restockCost } from '../night';
 import { steepPlan } from '../steep';
 import { PRICING, priceForecast, priceStep } from '../pricing';
-import { BRANCH, branchAreas, branchDay, canOpenBranch, hasManager } from '../branch';
+import { BRANCH, branchAreas, branchDay, branchExpectedLoss, canOpenBranch, hasManager } from '../branch';
 import { profitOf } from '../profit';
 import { copyIsLive, countered, hasStamps, isPromoDay, loyaltyLive, RIVAL, sigPrice } from '../rival';
 import { SIG } from '../signature';
@@ -157,6 +157,9 @@ const drinkName = (d: DrinkId) => DRINK_INFO[d].name;
 const stationName = (k: StationKind) => (k === 'counter' ? 'counter' : k === 'drip' ? 'drip machine' : EQUIPMENT[k as EquipmentKind].name.toLowerCase());
 const byId = (a: Advice, b: Advice) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
+/** Review M4: what closing will take before any spending: rent and wages (`billsForDay`) plus a losing branch's expected loss. */
+const billsHeldBack = (state: GameState): number => round2(billsForDay(state) + branchExpectedLoss(state));
+
 /** Cash the plan may spend tonight, drawn down as spending advice is added. */
 interface Budget {
   left: number;
@@ -168,7 +171,7 @@ interface Budget {
  */
 export function restockAdvice(
   state: GameState,
-  budget: Budget = { left: round2(state.cash - billsForDay(state)) },
+  budget: Budget = { left: round2(state.cash - billsHeldBack(state)) },
   targets: Partial<Record<SupplyId, number>> = {},
 ): Advice[] {
   const use = expectedUse(state);
@@ -612,7 +615,7 @@ function rivalCounterAdvice(state: GameState): Advice[] {
 /** P4 F2: the rival's loyalty card is live and ours is not out: print the stamp card once there is $30 and a day's restock to spare. */
 function stampAdvice(state: GameState, budget: Budget): Advice[] {
   if (!isGearRun(state) || !loyaltyLive(state) || hasStamps(state) || state.rival?.stamps !== undefined) return [];
-  const spare = round2(state.cash - billsForDay(state));
+  const spare = round2(state.cash - billsHeldBack(state));
   if (spare < round2(RIVAL.stampCost + dayRestockCost(state)) || budget.left < RIVAL.stampCost) return [];
   budget.left = round2(budget.left - RIVAL.stampCost);
   return [
@@ -637,7 +640,7 @@ function branchOpenAdvice(state: GameState, budget: Budget): Advice[] {
   if (!isGearRun(state) || !canOpenBranch(state)) return [];
   const last = state.days.at(-1);
   if (!last || profitOf(last) <= 0) return [];
-  if (round2(state.cash - billsForDay(state)) < round2(BRANCH.cost + dayRestockCost(state)) || budget.left < BRANCH.cost) return [];
+  if (round2(state.cash - billsHeldBack(state)) < round2(BRANCH.cost + dayRestockCost(state)) || budget.left < BRANCH.cost) return [];
   let best: { area: AreaId; profit: number } | null = null;
   for (const area of branchAreas(state)) {
     const est = branchDay(branchProbe(state, { area, staff: BRANCH.staff.start, openedDay: state.day, spent: BRANCH.cost, by: 'plan' }));
@@ -748,7 +751,7 @@ function menuAdvice(state: GameState, growing: boolean): Advice[] {
 
 /** Everything worth doing tonight, highest priority first (ties by id). Pure and deterministic. */
 export function planNight(state: GameState): Advice[] {
-  const budget: Budget = { left: round2(state.cash - billsForDay(state)) };
+  const budget: Budget = { left: round2(state.cash - billsHeldBack(state)) };
   // Spending advice draws on the budget in priority order: restock (with the steep top-up), condiment boxes, grow, branch:open, checkout, gear, rival:loyalty, equip, scout.
   const steep = steepWant(state);
   const restock = restockAdvice(state, budget, steep ? { concentrate: Math.max(0, steep.want - steep.leftover) } : {});

@@ -111,6 +111,15 @@ export function branchDay(state: GameState, day = state.day, withCall = false): 
   return { served, walked: Math.max(0, demand - served), takings, costs, profit: r2(takings - costs), ...(fromStock > 0 ? { fromStock } : {}), ...(call ? { call } : {}) };
 }
 
+/**
+ * Review M4: what tomorrow's closing will take from the till for the branch: 0 with no branch or an expected
+ * profit, else the expected loss to the cent (the night's own `branchDay` estimate; the phone call is unknowable).
+ */
+export function branchExpectedLoss(state: GameState): number {
+  const d = branchDay(state);
+  return d && d.profit < 0 ? r2(-d.profit) : 0;
+}
+
 /** Closing: run the branch's day and bank its profit (or loss). */
 export function settleBranch(state: GameState): void {
   const d = branchDay(state, state.day, true);

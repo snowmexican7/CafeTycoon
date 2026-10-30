@@ -5,7 +5,7 @@ import { menuDrinks, unlockedDrinks } from '../unlocks';
 import { expectedUse } from '../brief';
 import { countered, hasStamps, isPromoDay, RIVAL } from '../rival';
 import { ECONOMY } from '../../data/economy';
-import { BRANCH, branchAreas, branchDay } from '../branch';
+import { BRANCH, branchAreas, branchDay, branchExpectedLoss } from '../branch';
 import { profitOf } from '../profit';
 import { TIERS } from '../growth';
 import { CHECKOUT } from '../checkout';
@@ -487,6 +487,50 @@ describe('item 6: sorted and pure with every new kind in play', () => {
         }, 0);
         expect(total).toBeLessThanOrEqual(Math.max(0, cash - billsForDay(s)) + 1e-9 + 0);
       }
+    }
+  });
+});
+
+describe('review M4: the planner holds back a losing branch\'s expected loss', () => {
+  const restockSpend = (s: GameState) => planNight(s).reduce((n, x) => n + (x.input.kind === 'restock' ? restockCost(s, x.input.supply, x.input.packs) : 0), 0);
+  const build = (losing: boolean): GameState => {
+    const s = equipped(['e1'], { tier: 'stand' });
+    s.reputation = 0;
+    s.settings = { ...s.settings, dayLengthSec: 600 };
+    s.supplies = { ...FULL, beans: 0, milk: 0 };
+    s.branch = losing
+      ? { area: 'campus', staff: 3, openedDay: 1, spent: BRANCH.cost, by: 'K' }
+      : { area: 'tourist', staff: 1, openedDay: 1, spent: BRANCH.cost, by: 'K' };
+    return s;
+  };
+
+  it('spends less when the branch will lose money, never more than cash after bills and the loss', () => {
+    const lose = build(true);
+    const loss = branchExpectedLoss(lose);
+    expect(loss).toBeGreaterThan(0);
+    const bare = { ...lose, branch: undefined } as GameState;
+    for (const cash of [billsForDay(lose) + 12, billsForDay(lose) + 40, billsForDay(lose) + 80, billsForDay(lose) + loss + 40]) {
+      lose.cash = cash;
+      bare.cash = cash;
+      expect(restockSpend(lose)).toBeLessThanOrEqual(Math.max(0, cash - billsForDay(lose) - loss) + 1e-9);
+      expect(restockSpend(lose)).toBeLessThanOrEqual(restockSpend(bare));
+    }
+    lose.cash = billsForDay(lose) + restockCost(lose, 'beans', 1);
+    bare.cash = lose.cash;
+    expect(find(bare, 'restock:beans')).toBeDefined();
+    expect(find(lose, 'restock:beans')).toBeUndefined();
+    lose.cash = round2(billsForDay(lose) + loss + restockCost(lose, 'beans', 1));
+    expect(find(lose, 'restock:beans')).toBeDefined();
+  });
+
+  it('a profitable or absent branch changes nothing', () => {
+    const win = build(false);
+    expect(branchExpectedLoss(win)).toBe(0);
+    const bare = { ...win, branch: undefined } as GameState;
+    for (const cash of [0, 30, 80, 200, 600]) {
+      win.cash = cash;
+      bare.cash = cash;
+      expect(restockSpend(win)).toBe(restockSpend(bare));
     }
   });
 });

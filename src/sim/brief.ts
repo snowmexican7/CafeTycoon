@@ -29,6 +29,7 @@ import { CHECKOUT, nextCheckout } from './checkout';
 import { CONDIMENTS } from './condiments';
 import { computeModifiers } from './effects';
 import { billsForDay, wagesForDay } from './staff';
+import { branchExpectedLoss } from './branch';
 import { nextTier, TIERS } from './growth';
 import { restockCost } from './night';
 import { profitOf } from './profit';
@@ -150,8 +151,10 @@ export function nightBrief(state: GameState): NightBrief {
   const needed = neededSupplies(state).filter((s) => menu.some((d) => ECONOMY.drinkSupplies[d].includes(s)));
 
   // 1. cash
-  const rent = billsForDay(state); // rent plus wages (P3 B15)
-  const bill = wagesForDay(state) > 0 ? 'rent and wages' : 'rent';
+  const branchLoss = branchExpectedLoss(state); // review M4: a losing second shop takes cash at closing too
+  const rent = round2(billsForDay(state) + branchLoss); // rent plus wages (P3 B15) plus the branch's expected loss
+  const owed = ['rent', ...(wagesForDay(state) > 0 ? ['wages'] : []), ...(branchLoss > 0 ? ['the branch'] : [])];
+  const bill = owed.length === 1 ? owed[0]! : `${owed.slice(0, -1).join(', ')} and ${owed[owed.length - 1]}`;
   const after = round2(state.cash - rent);
   if (after < 0) alerts.push({ id: 'cash:short', kind: 'cash', severity: 'danger', text: `You'll be ${dollars(after)} short on ${bill}` });
   else if (after < rent) alerts.push({ id: 'cash:low', kind: 'cash', severity: 'warn', text: `Only ${dollars(after)} spare after ${bill}` });
