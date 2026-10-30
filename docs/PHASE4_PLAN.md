@@ -24,7 +24,7 @@ keep loading (new `GameState` fields are optional; a snapshot bump needs a migra
 | 4 | *(done: tag `p4-b04`, one off-screen branch with area fit, staff and a daily result; more shops, per-shop menus and manager crews are follow-ups)* **Second shop (franchise)**: at the café tier, open a second site in another area; it runs off-screen on a deterministic summary model (its crew, menu, area taste, rent) with a daily result line | when to expand, where | high: new economy actor |
 | 5 | ✅ **Manager mode** (lite, tag `p4-b05`): the Manager role boosts the branch (+2 cups/barista, supply discount); send stock to the branch as credit; branch line in the Manager's report. Moving hired staff between shops is deferred. | who works where | high: depends on 3 and 4 |
 | 6 | ✅ *(lite, tag `p4-b06`: the call and its choice on a day card; travelling to the branch is deferred)* **Phone calls and travel**: the other shop rings with a problem during the day (a broken machine, a big order); answer it, or travel there for the rest of the day | stay or go | highest single-player risk: two live floors |
-| 7 | **2v2 rival chains on a shared street**: two teams, two cafés, one customer stream; results screen | the whole game | highest: needs its own design spike first |
+| 7 | *(design spike written: [`P4_B7_VERSUS_SPIKE.md`](P4_B7_VERSUS_SPIKE.md); no code yet)* **2v2 rival chains on a shared street**: two teams, two cafés, one customer stream; results screen | the whole game | highest: needs its own design spike first |
 | 8 | **Integration**: full co-op playtests, balance, release **4.0.0** | — | integration |
 
 ### Block notes
