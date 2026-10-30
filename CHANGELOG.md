@@ -16,7 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- Solo runs now start with one bot barista instead of a full crew (0 to 3 can be picked), and bots act as
+  helpers: they leave the machine you're working and give you a few seconds to grab new orders.
 
 ## 3.3.2 — 2026-10-30 · How many are left?
 
