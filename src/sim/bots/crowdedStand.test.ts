@@ -13,6 +13,7 @@ function standDay(n: number, seed: number, secs = 420): GameState {
   for (const g of ['c1', 'e1', 's1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
   s.supplies.beans = 60;
   s.supplies.milk = 60;
+  s.fridge = 'f1'; // FB2 A4: the stand's Dorm Room Cube (milk needs a fridge)
   s.supplies.concentrate = 30;
   s = startDay(s);
   s.players[0].connected = false; // the host is away: only the stand-ins work

@@ -12,7 +12,7 @@
  *     id: string;   // restock:<supply> | price:<drink> | twist:<drink> | signature | scout | rival |
  *                   // grow:<tier> | checkout:<id> | slot:<index> | equip:espresso | menu:<drink>
  *                   // Gear runs: gear:<gearId> | staff:fire | rival:promo | rival:loyalty |
- *                   // branch:open | branch:staff | branch:send:<supply> | steep | condimentBox | gear:f<n> (FB2 A4 fridge)
+ *                   // branch:open | branch:staff | branch:send:<supply> | steep | condimentBox | fridge:f1 | fridge:f4 (FB2 A4)
  *     kind: AdviceKind;  // restock | price | twist | signature | scout | rival | grow | checkout | slot | equip | menu
  *     text: string;
  *     input: NightFix;   // the input without its playerId
@@ -32,7 +32,7 @@
  *    70 grow
  *    65 branch:open (G, kind grow)
  *    60 checkout
- *    59 gear:f<n> fridge (G, equip)
+ *    59 fridge:<id> (G, kind equip)
  *    58 gear:<id> (G, kind equip)
  *
  * Gear rows reuse the existing AdviceKind values (the UI keeps a `Record<AdviceKind, ...>` of icons), so
@@ -82,7 +82,8 @@ import { expectedUse } from '../brief';
 import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
 import { CONDIMENTS } from '../condiments';
-import { fridgeCapacity, fridgeGear, packsThatFit } from '../fridge';
+import { fridgeCapacity, fridgeWanted, packsThatFit } from '../fridge';
+import { FRIDGES } from '../../data/fridges';
 import { computeModifiers } from '../effects';
 import { billsForDay, crewCount, crewNames, wageEach } from '../staff';
 import { averageStars } from '../accuracy';
@@ -574,38 +575,19 @@ function gearAdvice(state: GameState, budget: Budget): Advice[] {
 }
 
 /**
- * FB2 A4, Gear runs: a day's expected milk won't fit in the fridge (no margin: the expected use already runs high, it
- * counts every arrival). Suggest the cheapest
- * better fridge that holds it (else the biggest), net of the old one's trade-in, when the budget covers it.
+ * FB2 A4, Gear runs: buy a fridge card (`fridgeWanted`): the Dorm Room Cube at a stand with a milk station (milk drinks
+ * need it) or whose bar went bad last night; the Udder-Matic when a day's expected milk won't fit in the café's fridge
+ * (no margin: the expected use already runs high). Only when the budget covers it.
  */
 function fridgeAdvice(state: GameState, budget: Budget): Advice[] {
-  const now = fridgeGear(state);
-  if (!now || state.gearVote) return [];
-  const need = expectedUse(state).milk;
-  const want = fridgeFor(state, need);
-  if (!want) return [];
-  const g = GEAR[want];
-  const net = round2(g.price - GEAR[now].sell);
-  if (net > budget.left) return [];
-  budget.left = round2(budget.left - net);
-  const back = GEAR[now].sell > 0 ? `, ${dollars(GEAR[now].sell)} back on the ${GEAR[now].name}` : '';
+  const want = fridgeWanted(state, expectedUse(state).milk);
+  if (!want || want.price > budget.left) return [];
+  budget.left = round2(budget.left - want.price);
+  const f = FRIDGES[want.id];
+  const why = want.why === 'none' ? 'No fridge: milk drinks are off and the condiment bar goes bad every night' : `The fridge holds ${fridgeCapacity(state)} milk, a day needs about ${expectedUse(state).milk}`;
   return [
-    {
-      id: `gear:${want}`,
-      kind: 'equip',
-      text: `The fridge holds ${fridgeCapacity(state)} milk, tomorrow needs about ${need}: buy the ${g.name} (${dollars(g.price)}${back})`,
-      input: { kind: 'gear', action: 'buy', gear: want },
-      priority: PLAN_PRIORITY.fridge,
-    },
+    { id: `fridge:${want.id}`, kind: 'equip', text: `${why}: buy the ${f.name} (${dollars(want.price)})`, input: { kind: 'fridge', fridge: want.id }, priority: PLAN_PRIORITY.fridge },
   ];
-}
-
-/** FB2 A4: the cheapest better fridge holding `need` milk (else the biggest better one), or null when the fridge already holds it. */
-export function fridgeFor(state: GameState, need: number): GearId | null {
-  const now = fridgeGear(state);
-  if (!now || need <= fridgeCapacity(state)) return null;
-  const better = (Object.keys(GEAR) as GearId[]).filter((id) => GEAR[id].fridge && GEAR[id].tier > GEAR[now].tier).sort((a, b) => GEAR[a].tier - GEAR[b].tier);
-  return better.find((id) => GEAR[id].fridge!.holds >= need) ?? better.at(-1) ?? null;
 }
 
 /**

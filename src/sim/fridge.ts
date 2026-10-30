@@ -2,9 +2,11 @@
  * FB2 A4 (docs/CLAUDE_PROMPT_FEEDBACK_2.md): the fridge, morning setup and closing. Gear runs only; every function
  * here is a no-op (or reads like before) when `state.gear !== true`, so classic runs and their goldens don't move.
  *
- *  - The fridge is a fixed counter-kind spot (`FRIDGE_ID`, data/layout.ts) with its own gear tree (f1..f4,
- *    data/gear.ts). A run owns the Dorm Room Cube (`state.fridge` absent = f1); `buyFridge` upgrades it at night
- *    with a trade-in. It is never in a slot, so it can't be sold.
+ *  - The fridge is a fixed counter-kind spot (`FRIDGE_ID`, data/layout.ts). Which one follows the shop size (Kennedy,
+ *    data/fridges.ts): the stand has none until it buys the Dorm Room Cube (f1, a single $20 card), the cart comes with
+ *    the Garage Beer Fridge (f2), the café with the Chrome Reach-In (f3), and the café can buy the Udder-Matic 3000 (f4).
+ *    `fridgeGear` = the better of what was bought (`state.fridge`) and what the size gives. Never sold or downgraded.
+ *    With no fridge, nothing needing one happens: no milk is bought, no carton, and the bar can't be put away.
  *  - `supplies.milk` is the milk IN the fridge (capped at the fridge's `holds` by the restock). Machines draw milk
  *    from `state.milkOut`, the milk out at the bar: E with empty hands at the fridge takes a carton (`tool: 'milk'`,
  *    up to `FRIDGE.carton` servings in `carry`), E at a milk station (a steamer, a steam wand, a cold brew tap) puts
@@ -21,12 +23,13 @@
  * Must not import ./gear, ./stations or ./spoilage (they import this). Pure, no RNG.
  */
 import { ECONOMY } from '../data/economy';
-import { GEAR, type GearId } from '../data/gear';
-import { CONDIMENTS_ID, FRIDGE_ID } from '../data/layout';
+import { FRIDGES, TIER_FRIDGE, isFridgeId, type FridgeId } from '../data/fridges';
+import { CONDIMENTS_ID, FRIDGE_ID, layoutFor } from '../data/layout';
 import { CONDIMENTS } from './condiments';
 import { secondsToTicks } from './constants';
 import { emitLog } from './log';
-import type { GameState, Player, Station, StationKind, SupplyId } from './types';
+import { menuDrinks } from './unlocks';
+import type { GameState, Player, PlayerInput, Station, StationKind, SupplyId } from './types';
 
 export const FRIDGE = {
   /** Servings in a milk carton taken from the fridge. */
@@ -42,19 +45,25 @@ const barServing = () => CONDIMENTS.boxCost / CONDIMENTS.servings;
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const isGear = (state: GameState) => state.gear === true;
 
-/** The crew's fridge (Gear runs; f1 when absent), or null in a classic run. */
-export function fridgeGear(state: GameState): GearId | null {
-  return isGear(state) ? (state.fridge ?? 'f1') : null;
+/** The shop's fridge: the better of the one bought and the one its size comes with; null with none (or in a classic run). */
+export function fridgeGear(state: GameState): FridgeId | null {
+  if (!isGear(state)) return null;
+  const bought = state.fridge && isFridgeId(state.fridge) ? state.fridge : null;
+  const gift = TIER_FRIDGE[state.tier ?? 'cafe'];
+  if (!bought) return gift;
+  if (!gift) return bought;
+  return FRIDGES[bought].rank >= FRIDGES[gift].rank ? bought : gift;
 }
 
 function spec(state: GameState) {
   const id = fridgeGear(state);
-  return id ? GEAR[id].fridge : undefined;
+  return id ? FRIDGES[id] : undefined;
 }
 
-/** Milk the fridge holds (the restock cap): Infinity in a classic run. */
+/** Milk the fridge holds (the restock cap): 0 with no fridge, Infinity in a classic run. */
 export function fridgeCapacity(state: GameState): number {
-  return spec(state)?.holds ?? Infinity;
+  if (!isGear(state)) return Infinity;
+  return spec(state)?.holds ?? 0;
 }
 
 /** × the overnight milk spoil inside the fridge (1 in a classic run). */
@@ -97,17 +106,51 @@ export function packsThatFit(state: GameState, supply: SupplyId, packs: number):
   return Math.max(0, Math.min(packs, Math.floor(room / ECONOMY.packs.milk.size)));
 }
 
-/** Night: buy a better fridge, trading the old one in (the gear input routes here; sim/gear.ts). False when nothing happened. */
-export function buyFridge(state: GameState, id: GearId, by: string): boolean {
-  const want = GEAR[id];
+/**
+ * The fridge cards on offer tonight (the shop shows each as a single card): the Dorm Room Cube while the shop has no
+ * fridge, the Udder-Matic once it is a café without one. [] in a classic run.
+ */
+export function fridgeCards(state: GameState): { id: FridgeId; price: number }[] {
   const now = fridgeGear(state);
-  if (!now || !want?.fridge || want.tier <= GEAR[now].tier) return false;
-  const tradeIn = GEAR[now].sell;
-  if (state.cash + tradeIn < want.price) return false;
-  state.cash = round2(state.cash + tradeIn - want.price);
-  state.fridge = id;
-  state.gearLog = [...(state.gearLog ?? []), { gear: now, action: 'sell', day: state.day, by, cash: tradeIn }, { gear: id, action: 'buy', day: state.day, by, cash: -want.price }];
-  return true;
+  if (!isGear(state)) return [];
+  if (!now) return [{ id: 'f1', price: FRIDGES.f1.price }];
+  if ((state.tier ?? 'cafe') === 'cafe' && FRIDGES[now].rank < FRIDGES.f4.rank) return [{ id: 'f4', price: FRIDGES.f4.price }];
+  return [];
+}
+
+/**
+ * The fridge card worth buying tonight, and why (planner advice and the night brief): the cube when the shop has none
+ * and the bar can make a milk drink (they need it) or the bar went bad last night; the Udder-Matic when a day's
+ * expected milk (`milkUse`) won't fit in the café's fridge. Null otherwise.
+ */
+export function fridgeWanted(state: GameState, milkUse: number): { id: FridgeId; price: number; why: 'none' | 'small' } | null {
+  const card = fridgeCards(state)[0];
+  if (!card) return null;
+  if (card.id === 'f1') {
+    const milk = menuDrinks(state).some((d) => ECONOMY.drinkSupplies[d].includes('milk'));
+    const barLost = (state.days.at(-1)?.spoiledBar ?? 0) > 0;
+    return milk || barLost ? { ...card, why: 'none' } : null;
+  }
+  return milkUse > fridgeCapacity(state) ? { ...card, why: 'small' } : null;
+}
+
+/** Night input: buy a fridge card on offer (connected people only, cash in hand). The fridge appears at its spot at once. */
+export function applyFridgeInput(state: GameState, input: Extract<PlayerInput, { kind: 'fridge' }>): GameState {
+  if (!isGear(state) || state.phase !== 'night') return state;
+  const p = state.players.find((x) => x.id === input.playerId);
+  if (!p || !p.connected || p.bot) return state;
+  const card = fridgeCards(state).find((c) => c.id === input.fridge);
+  if (!card || state.cash < card.price) return state;
+  state.cash = round2(state.cash - card.price);
+  state.fridge = card.id;
+  ensureFridgeStation(state);
+  return state;
+}
+
+/** The fridge station, added when the shop has a fridge and the floor doesn't show it yet (idempotent; slots.ensureCounterSpots). */
+export function ensureFridgeStation(state: GameState): void {
+  if (!fridgeGear(state) || state.stations.some(isFridge)) return;
+  state.stations.push({ id: FRIDGE_ID, kind: 'counter', pos: { ...layoutFor(state.tier).fridge }, busyTicksLeft: 0, output: null, occupiedBy: null });
 }
 
 // ---------------------------------------------------------------------------------------------- closing soon
@@ -203,9 +246,11 @@ export function fridgeInteract(state: GameState, p: Player, st: Station | null, 
     return true;
   }
   if (!st) return false;
+  // M1: the mop or a condiment box in hand: the press is theirs (mopping next to the fridge works).
+  if (p.tool !== null) return false;
   if (isFridge(st)) {
     // Empty hands take a carton; anything else in hand stays there (the fridge is not a counter).
-    if (p.tool === null && p.holding === null && (state.supplies.milk ?? 0) >= 1) {
+    if (p.holding === null && (state.supplies.milk ?? 0) >= 1) {
       const n = Math.min(FRIDGE.carton, Math.floor(state.supplies.milk));
       state.supplies.milk -= n;
       p.tool = 'milk';
@@ -214,7 +259,8 @@ export function fridgeInteract(state: GameState, p: Player, st: Station | null, 
     }
     return true;
   }
-  if (!closingSoon(state) || p.tool !== null || p.holding !== null) return false;
+  // Closing soon's lifts need a fridge to put things in.
+  if (!closingSoon(state) || p.holding !== null || !state.stations.some(isFridge)) return false;
   if (isMilkStation(st) && (state.milkOut ?? 0) > 0 && !autoMilk(state) && st.output === null && st.busyTicksLeft === 0 && st.occupiedBy === null && !wanted()) {
     p.tool = 'milk';
     p.carry = state.milkOut!;
@@ -275,5 +321,9 @@ export function fridgeMorning(state: GameState): void {
   delete state.closingSoonAt;
   const away = state.barAway ?? 0;
   delete state.barAway;
-  if (away > 0 && state.condiments) state.condiments.servings = Math.min(CONDIMENTS.servings, state.condiments.servings + away);
+  if (away <= 0 || !state.condiments) return;
+  // M2: what doesn't fit on the bar waits in the fridge for another morning (never lost).
+  const out = Math.min(away, Math.max(0, CONDIMENTS.servings - state.condiments.servings));
+  state.condiments.servings += out;
+  if (away > out) state.barAway = away - out;
 }

@@ -13,6 +13,7 @@ import { expectedUse } from '../src/sim/brief';
 import { planNight } from '../src/sim/bots/planner';
 import { ECONOMY } from '../src/data/economy';
 import { GEAR, type GearId } from '../src/data/gear';
+import { FRIDGES } from '../src/data/fridges';
 import { TIERS, nextTier } from '../src/sim/growth';
 import { gearArea } from '../src/sim/gear';
 import type { GameState, PlayerInput, ScenarioId, SupplyId, TierId } from '../src/sim/types';
@@ -48,12 +49,10 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
   }
   const nt = nextTier(state);
   if (nt && !skip.has('grow') && state.day >= 3 && state.cash > TIERS[nt].cost + 60) return [{ kind: 'grow', playerId: by, tier: nt }];
-  // FB2 A4: a bigger fridge when tomorrow's milk won't fit (the planner's advice), keeping the reserve.
-  const fridge = planNight(state).find((a) => a.id.startsWith('gear:f') && a.input.kind === 'gear');
-  if (fridge && fridge.input.kind === 'gear' && fridge.input.action === 'buy' && !skip.has(fridge.input.gear)) {
-    const id = fridge.input.gear;
-    const trade = GEAR[state.fridge ?? 'f1'].sell;
-    if (state.cash + trade - GEAR[id].price >= RESERVE) return [{ kind: 'gear', playerId: by, action: 'buy', gear: id }];
+  // FB2 A4: a fridge card on the planner's advice (the cube at a stand with a milk station), keeping the reserve.
+  const fridge = planNight(state).find((a) => a.input.kind === 'fridge');
+  if (fridge && fridge.input.kind === 'fridge' && !skip.has(fridge.input.fridge) && state.cash - FRIDGES[fridge.input.fridge].price >= RESERVE) {
+    return [{ kind: 'fridge', playerId: by, fridge: fridge.input.fridge }];
   }
   const owned = new Set(state.slotGear ?? []);
   for (const id of PATH) {
@@ -114,6 +113,7 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
         const want = inputs[0]!;
         if (want.kind === 'gear' && want.action === 'buy') skip.add(want.gear);
         else if (want.kind === 'grow') skip.add('grow');
+        else if (want.kind === 'fridge') skip.add(want.fridge);
         stuck = 0;
         delete s.gearVote;
       } else if (inputs.length === 0 || sg !== lastSlotGear) stuck = 0;

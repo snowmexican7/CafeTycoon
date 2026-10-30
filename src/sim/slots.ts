@@ -34,8 +34,8 @@ import type { EquipmentKind } from '../data/equipment';
 import { GEAR, type GearId } from '../data/gear';
 import { batchOut, drinkSuppliesFor } from './gear';
 import { TAP_DRINKS } from '../data/drinks';
-import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
-import { stockOf } from './fridge';
+import { CONDIMENTS_ID, PICKUP_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
+import { ensureFridgeStation, stockOf } from './fridge';
 import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
@@ -96,22 +96,26 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
   return out;
 }
 
-/** The Gear-run counter spots: the pickup counter, then the condiment bar beside the till, then the fridge (FB2 A4) (fresh and idle). */
+/** The Gear-run counter spots beside the till: the pickup counter, then the condiment bar (fresh and idle). */
 function counterSpots(tier: TierId | undefined): Station[] {
   const l = layoutFor(tier);
   return [
     { id: PICKUP_ID, kind: 'counter', pos: { ...l.pickup }, busyTicksLeft: 0, output: null, occupiedBy: null },
     { id: CONDIMENTS_ID, kind: 'counter', pos: { ...l.condiments }, busyTicksLeft: 0, output: null, occupiedBy: null },
-    { id: FRIDGE_ID, kind: 'counter', pos: { ...l.fridge }, busyTicksLeft: 0, output: null, occupiedBy: null },
   ];
 }
 
-/** A Gear run gets whichever counter spot it is missing (appended, so each appears once). */
+/**
+ * A Gear run gets whichever fixed spot it is missing (appended, so each appears once): the counter spots, and (FB2 A4)
+ * the fridge when the shop has one. Idempotent; run on load (every snapshot version), every morning, and after every
+ * rebuild of the floor (FB2 review I1). Any new fixed spot belongs here.
+ */
 export function ensureCounterSpots(state: GameState): void {
   if (state.gear !== true) return;
   for (const spot of counterSpots(state.tier)) {
     if (!state.stations.some((s) => s.id === spot.id)) state.stations.push(spot);
   }
+  ensureFridgeStation(state);
 }
 
 const KIND_ORDER: EquipmentKind[] = EQUIPMENT_KINDS;

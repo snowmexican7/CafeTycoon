@@ -1,6 +1,7 @@
 import type { PerkId } from '../data/perks';
 import type { AreaId, DrinkFamily } from '../data/areas';
 import type { GearId } from '../data/gear';
+import type { FridgeId } from '../data/fridges';
 import type { TwistId } from './taste';
 import type { RoleId } from './roles';
 import type { EggsState } from './eggs';
@@ -592,8 +593,9 @@ export interface GameState {
   condiments?: { servings: number };
   /** Batch/pickup: condiment stock boxes waiting in the corner (Gear runs). */
   condimentBoxes?: number;
-  /** FB2 A4: the fridge's gear tier (Gear runs; absent = the Dorm Room Cube, f1). `supplies.milk` is what is inside it. */
-  fridge?: GearId;
+  /** FB2 A4: the fridge the crew bought (the cube at the stand, the Udder-Matic at the café; absent = none bought). The shop's
+   *  fridge is the better of this and the one its size comes with (sim/fridge.ts `fridgeGear`). `supplies.milk` is inside it. */
+  fridge?: FridgeId;
   /** FB2 A4: milk servings out at the bar, where the steamer, a steam wand and the tap draw from (Gear runs; absent = 0). */
   milkOut?: number;
   /** FB2 A4: condiment servings put away in the fridge at closing; they go back on the bar next morning (absent = 0). */
@@ -673,6 +675,8 @@ export type PlayerInput =
   | { kind: 'steep'; playerId: PlayerId; cups: number }
   /** Batch/pickup: buy condiment stock boxes ($6 each). Gear runs, night only, people only. */
   | { kind: 'condimentBox'; playerId: PlayerId; boxes: number }
+  /** FB2 A4: buy a fridge card on offer (the Dorm Room Cube at a shop with no fridge, the Udder-Matic at the café). Gear, night, people only. */
+  | { kind: 'fridge'; playerId: PlayerId; fridge: FridgeId }
   /** Gear Tree: buy a tier (an upgrade trades in the lower tier of its tree) or sell the gear in slot `index`. Night only. */
   | { kind: 'gear'; playerId: PlayerId; action: 'buy'; gear: GearId }
   | { kind: 'gear'; playerId: PlayerId; action: 'sell'; index: number }

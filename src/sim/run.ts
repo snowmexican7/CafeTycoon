@@ -1,7 +1,7 @@
 import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
 import { canMake, growthMorning } from './growth';
-import { defaultSlots, stationsFromSlots } from './slots';
+import { defaultSlots, ensureCounterSpots, stationsFromSlots } from './slots';
 import { secondsToTicks } from './constants';
 import { rngInt, seedRng } from './rng';
 import { SCENARIOS } from '../data/scenarios';
@@ -186,6 +186,7 @@ export function startDay(state: GameState): GameState {
   if (pitchNote) state.morningNotes.push(pitchNote);
   espressoMorning(state);
   gearMorning(state);
+  ensureCounterSpots(state); // FB2 review I1: every fixed Gear spot is on the floor each morning (no-op in classic)
   fridgeMorning(state);
   return state;
 }

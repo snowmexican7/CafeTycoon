@@ -25,9 +25,8 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SN
  */
 import { GEAR, GEAR_START, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
-import { stationsFromSlots, slotCount } from './slots';
+import { ensureCounterSpots, stationsFromSlots, slotCount } from './slots';
 import { CONDIMENTS } from './condiments';
-import { buyFridge } from './fridge';
 import { steepMorning } from './steep';
 import { BASE_DRINKS, DRINK_IDS, TAP_DRINKS, usesShot, type Recipe } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
@@ -62,6 +61,7 @@ export function gearStart(state: GameState): void {
   state.equipment = [];
   state.gearLog = [];
   state.stations = stationsFromSlots(state.tier, slots, gear);
+  ensureCounterSpots(state); // FB2 A4: the fridge, when the shop size comes with one
   // Batch/pickup: a full condiment bar and no stock boxes yet.
   state.condiments = { servings: CONDIMENTS.servings };
   state.condimentBoxes = 0;
@@ -69,6 +69,7 @@ export function gearStart(state: GameState): void {
 
 function rebuild(state: GameState): void {
   state.stations = stationsFromSlots(state.tier, state.slots ?? [], state.slotGear ?? []);
+  ensureCounterSpots(state);
 }
 
 export function applyGearInput(state: GameState, input: Extract<PlayerInput, { kind: 'gear' }>): GameState {
@@ -164,11 +165,6 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
   } else {
     const want = GEAR[input.gear];
     if (!want) return state;
-    // FB2 A4: the fridge is not in a slot; an upgrade trades the old one in.
-    if (want.fridge) {
-      buyFridge(state, want.id, p.name);
-      return state;
-    }
     // the highest tier of this tree already in a slot
     let at = -1;
     gear.forEach((id, i) => {

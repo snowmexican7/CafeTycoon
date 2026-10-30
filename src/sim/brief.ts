@@ -36,8 +36,8 @@ import { profitOf } from './profit';
 import { copyIsLive, countered, isPromoDay, loyaltyLive, RIVAL, sigPrice } from './rival';
 import { FRESH, spoilCount } from './spoilage';
 import { steepPlan } from './steep';
-import { fridgeCapacity, fridgeGear, packsThatFit } from './fridge';
-import { GEAR, type GearId } from '../data/gear';
+import { fridgeCapacity, fridgeWanted, packsThatFit } from './fridge';
+import { FRIDGES } from '../data/fridges';
 import { menuDrinks, neededSupplies, SUPPLY_IDS } from './unlocks';
 import type { CheckoutId, DrinkId, GameState, PlayerInput, SupplyId } from './types';
 
@@ -213,18 +213,15 @@ export function nightBrief(state: GameState): NightBrief {
     }
   }
 
-  // 2c. FB2 A4 (Gear): a day's expected milk won't fit in the fridge (restocks stop at what it holds; no margin, as the planner).
-  const fridge = fridgeGear(state);
-  if (fridge && use.milk > 0 && needed.includes('milk')) {
-    const need = use.milk;
-    const cap = fridgeCapacity(state);
-    if (need > cap) {
-      const better = (Object.keys(GEAR) as GearId[]).filter((id) => GEAR[id].fridge && GEAR[id].tier > GEAR[fridge].tier).sort((a, b) => GEAR[a].tier - GEAR[b].tier);
-      const want = better.find((id) => GEAR[id].fridge!.holds >= need) ?? better.at(-1);
-      const alert: NightAlert = { id: 'fridge', kind: 'stock', severity: 'warn', text: `The fridge holds ${cap} milk; tomorrow needs about ${need}` };
-      if (want && state.cash + GEAR[fridge].sell >= GEAR[want].price) alert.fix = { kind: 'gear', action: 'buy', gear: want };
-      alerts.push(alert);
-    }
+  // 2c. FB2 A4 (Gear): no fridge (milk drinks off, the bar goes bad each night), or a day's milk won't fit in the café's.
+  const fridge = fridgeWanted(state, use.milk);
+  if (fridge) {
+    const text = fridge.why === 'none'
+      ? `No fridge: milk drinks are off and the condiment bar goes bad every night (the ${FRIDGES.f1.name} is $${FRIDGES.f1.price})`
+      : `The fridge holds ${fridgeCapacity(state)} milk; a day needs about ${use.milk}`;
+    const alert: NightAlert = { id: 'fridge', kind: 'stock', severity: 'warn', text };
+    if (state.cash >= fridge.price) alert.fix = { kind: 'fridge', fridge: fridge.id };
+    alerts.push(alert);
   }
 
   // 3. sold out yesterday: restock whichever needed supply is thinnest against the day's use

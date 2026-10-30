@@ -42,7 +42,7 @@ import { stepPickup } from './pickup';
 import { stepCleaning } from './mop';
 import { applySteepInput } from './steep';
 import { applyCondimentBoxInput, returnBox } from './condiments';
-import { putAwayPending, startClosingSoon, stepClosingSoon, stepFridge, storeInFridge } from './fridge';
+import { applyFridgeInput, putAwayPending, startClosingSoon, stepClosingSoon, stepFridge, storeInFridge } from './fridge';
 import { stepRogue } from './rogue';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
@@ -158,6 +158,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'condimentBox':
       applyCondimentBoxInput(s, input);
+      break;
+    case 'fridge':
+      applyFridgeInput(s, input);
       break;
     case 'ad':
       applyAdInput(s, input);
