@@ -2,7 +2,7 @@ import { ECONOMY } from '../data/economy';
 import type { DrinkId } from '../sim/types';
 import { esc, hide, show } from './dom';
 import { coin, itemIcon, jar, logoCup, pauseGlyph, speakerGlyph, stars, sun, SUPPLY_COLOR } from './icons';
-import { crewKey, handKey, ITEM_LABEL, ordersKey, type HudLive } from './live';
+import { callKey, crewKey, handKey, ITEM_LABEL, ordersKey, type CallVM, type HudLive } from './live';
 import { loadRecipeHints, MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, URGENT as TICKET_URGENT, type RecipeHints, type TicketOpts } from './tickets';
 import { DRINK_LABEL } from './tickets';
 import { mountCloseEarly } from './closeEarly';
@@ -29,7 +29,7 @@ const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a
  * The in-day HUD: a top bar of pills, order tickets on the left, pantry/menu/note on the right and
  * what you hold along the bottom. Every block renders once, then only per-tick values are patched.
  */
-export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
+export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
   render(vm: HudVM, live?: HudLive): void;
   /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
   setRecipeHints(mode: RecipeHints): void;
@@ -76,6 +76,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <div class="hud-challenges" aria-live="polite" hidden></div>
     <div class="hud-events" aria-live="polite"></div>
     <div class="hud-eventcard" role="status" hidden></div>
+    <div class="hud-call" role="alert" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
     <div class="toast" role="status" hidden></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(sel: string) => container.querySelector<T>(sel)!;
@@ -124,6 +125,22 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
 
   const closeBtn = $<HTMLButtonElement>('.hud-close');
   const closeEarly = mountCloseEarly(closeBtn, (on) => handlers.onCloseEarly?.(on));
+  // P4 B6: the second shop's phone call.
+  const callEl = $<HTMLElement>('.hud-call');
+  let lastCall = '';
+  callEl.addEventListener('pointerdown', (ev) => {
+    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-take]');
+    if (!b) return;
+    ev.preventDefault();
+    handlers.onCall?.(b.dataset.take === '1');
+  });
+  function renderCall(c: CallVM | undefined): void {
+    const key = callKey(c);
+    if (key === lastCall) return;
+    lastCall = key;
+    callEl.hidden = !c;
+    if (c) callEl.innerHTML = callHtml(c);
+  }
 
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
   // Gear Tree G5: a small card of the crew's machines and how each is doing (Gear runs only).
@@ -449,6 +466,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
         renderHand(live);
       }
       closeEarly.render(live?.closeEarly);
+      renderCall(live?.call);
     },
     toast(lines) {
       if (lines.length === 0) return;
@@ -498,4 +516,9 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     show: () => show(container),
     hide: () => hide(container),
   };
+}
+
+/** P4 B6: the ringing phone card (pure, for tests). */
+export function callHtml(c: CallVM): string {
+  return `<div class="hc-ring" aria-hidden="true">📞</div><div class="hc-t"><small>🏪 ${esc(c.where)} is calling · ${c.secsLeft}s</small><b>${esc(c.title)}</b><span>${esc(c.detail)}</span></div><div class="hc-b"><button class="btn primary" type="button" tabindex="-1" data-take="1">${esc(c.yes)}</button><button class="btn ghost" type="button" tabindex="-1" data-take="0">${esc(c.no)}</button></div>`;
 }

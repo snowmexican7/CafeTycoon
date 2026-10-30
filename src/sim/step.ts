@@ -8,6 +8,7 @@ import { applyRivalCounterInput, applyScoutInput } from './rival';
 import { beginSeason } from './season';
 import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
+import { applyCall } from './call';
 import { applyCloseEarly, closeVoteUnanimous, dropCloseVote } from './closeEarly';
 import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
@@ -168,6 +169,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'espresso':
       drinkEspresso(s, input.playerId);
+      break;
+    case 'call':
+      applyCall(s, input);
       break;
     case 'closeEarly':
       applyCloseEarly(s, input);

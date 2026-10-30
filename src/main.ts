@@ -194,7 +194,7 @@ async function main(): Promise<void> {
   }, roadmap);
   const hintStore = (() => { try { return window.localStorage; } catch { return undefined; } })();
   let recipeHints = loadRecipeHints(hintStore);
-  const hud = createHud($('#hud'), { onMute: () => audio.toggleMute(), onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }) }, { recipeHints });
+  const hud = createHud($('#hud'), { onMute: () => audio.toggleMute(), onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }), onCall: (take) => send({ kind: 'call', playerId: me(), take }) }, { recipeHints });
   const night = createNight($('#night'), nightInputHandlers(send, me));
   const closing = createClosing($('#closing'));
   const weekEnd = createWeekEnd($('#weekEnd'), {

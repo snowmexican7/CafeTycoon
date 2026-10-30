@@ -5,6 +5,7 @@
  * capped by its hired staff) and its profit lands in the till. Deterministic: the noise is a hash of
  * seed and day, so it never draws from the run's RNG and replays stay identical.
  */
+import { CALL, callOutcome, type CallKind } from './call';
 import { AREAS, AREA_TIP, DRINK_FAMILY, type AreaId } from '../data/areas';
 import { DRINK_IDS } from '../data/drinks';
 import { computeModifiers } from './effects';
@@ -81,10 +82,10 @@ function noiseFor(seed: number, day: number): number {
   return 1 - BRANCH.noise + ((h >>> 0) / 4294967296) * 2 * BRANCH.noise;
 }
 
-export interface BranchDay { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number }
+export interface BranchDay { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number; call?: { kind: CallKind; took: boolean; by?: string } }
 
 /** What the branch would do today (pure: the night forecast and closing both use it). */
-export function branchDay(state: GameState, day = state.day): BranchDay | null {
+export function branchDay(state: GameState, day = state.day, withCall = false): BranchDay | null {
   const b = state.branch;
   if (!b) return null;
   const m = computeModifiers({ ...state, phase: 'night' });
@@ -92,21 +93,27 @@ export function branchDay(state: GameState, day = state.day): BranchDay | null {
   // The area's taste swings demand twice as hard as it swings tips (a ×1.1 fit draws ×1.2 the walk-ins).
   const fit = Math.max(0, 1 + 2 * (areaFit(state, b.area) - 1));
   const demand = Math.round(BRANCH.walkIns * m.traffic * fit * noiseFor(state.seed, day));
-  const served = Math.min(demand, b.staff * (BRANCH.perStaff + (hasManager(state) ? BRANCH.managerCups : 0)));
+  // P4 B6: today's phone call (closing only; the night estimate can't know it).
+  const call = withCall ? callOutcome(state) : null;
+  let cap = b.staff * (BRANCH.perStaff + (hasManager(state) ? BRANCH.managerCups : 0));
+  if (call?.kind === 'machine' && !call.took) cap = Math.floor(cap / 2);
+  if (call?.kind === 'order' && call.took) cap = Math.max(0, cap - CALL.orderCups);
+  const served = Math.min(demand, cap);
   const ticket = drinks.length ? drinks.reduce((x, d) => x + menuPrice(state, d), 0) / drinks.length : 0;
   // The Manager's supplier discount reaches the branch too.
   const cupCost = (drinks.length ? drinks.reduce((x, d) => x + unitCost(d), 0) / drinks.length : 0) * roleSupplyCost(state);
-  const takings = r2(served * ticket * (1 + BRANCH.tipRate));
+  const takings = r2(served * ticket * (1 + BRANCH.tipRate) + (call?.kind === 'order' && call.took ? CALL.orderProfit : 0));
   const supplies = r2(served * cupCost);
   // P4 B5: stock sent over from home pays for cups first.
   const fromStock = r2(Math.min(b.stockCredit ?? 0, supplies));
-  const costs = r2(BRANCH.rent + b.staff * wageEach(state) + supplies - fromStock);
-  return { served, walked: Math.max(0, demand - served), takings, costs, profit: r2(takings - costs), ...(fromStock > 0 ? { fromStock } : {}) };
+  const costs = r2(BRANCH.rent + b.staff * wageEach(state) + supplies - fromStock + (call?.kind === 'machine' && call.took ? CALL.repair : 0));
+  return { served, walked: Math.max(0, demand - served), takings, costs, profit: r2(takings - costs), ...(fromStock > 0 ? { fromStock } : {}), ...(call ? { call } : {}) };
 }
 
 /** Closing: run the branch's day and bank its profit (or loss). */
 export function settleBranch(state: GameState): void {
-  const d = branchDay(state);
+  const d = branchDay(state, state.day, true);
+  delete state.callAnswer;
   if (!d) return;
   state.cash = r2(state.cash + d.profit);
   state.today.branch = d;

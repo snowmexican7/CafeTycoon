@@ -1802,6 +1802,14 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 4 B6 — phone calls, lite (p4-b06-phone-calls, tag p4-b06)
+
+- [x] Sim `src/sim/call.ts`: deterministic calls (hash, no RNG): 45% of days once the branch has run a full day, Gear runs only; `machine` (fix $25, or the branch serves half its cups) or `order` (+$30, uses 10 of its cups). Rings 25–55% into the day for 25 s. Input `call {take}` (people only, while ringing) → `GameState.callAnswer`; closing applies it via `branchDay(…, withCall)`, records `DayStats.branch.call`, clears the answer. The night estimate never shows tomorrow's call. PROTOCOL 38 → 39; optional fields, old saves load.
+- [x] UI: a big ringing card on the day HUD (where, what, seconds left, two buttons); the outcome on the branch drawer's last-day line and in the Manager's report.
+- [x] Tests: `src/sim/call.test.ts` (5: frequency/gating/determinism, window + people only + validation, machine outcomes, order outcome + closing record/clear, card HTML + bots + old saves). 1042 tests.
+- [x] Shots: `/workspace/overnight/sprint/p4-b06/branchCall-*`, `branchCallOrder-*` (fixtures `branchCall`, `branchCallOrder`).
+- [ ] Follow-ups: travel to the branch for the rest of the day (two live floors, the original B6 scope); more call kinds (staff sick, inspector); a phone sound; bots answering (Claude prompt); playtest whether the card over the station row is in the way (it sits for ≤25 s).
+
 ### Phase 4 B5 — manager mode, lite (p4-b05-manager-mode, tag p4-b05)
 
 - [x] Sim (`branch.ts`): with a Manager picked, the branch serves +2 cups per barista and its cups cost × `roleSupplyCost`. New branch action `send` (night, people only; beans/milk/cold brew/flavours) moves up to one pack from home supplies into `Branch.stockCredit` at pack value; at closing the credit pays for cups first (`DayStats.branch.fromStock`) and is used up. PROTOCOL 37 → 38; optional fields only, old saves load.
