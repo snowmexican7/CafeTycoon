@@ -321,3 +321,40 @@ describe('bots carry the condiment box (Task 15)', () => {
     }
   });
 });
+
+describe('extras review I1: a tap pour that yields nothing', () => {
+  it('a bot never "puts" with empty hands (it would lift a cup off the counter and reset its stale timer)', () => {
+    let s = tapStand();
+    const p = sim(s);
+    const pickup = s.stations.find((x) => x.id === 'pickup')!;
+    p.pos = { x: pickup.pos.x, y: pickup.pos.y - 1 };
+    s.pass = [{ item: 'coldBrew', ticksLeft: 500 }];
+    p.bot!.plan = [{ kind: 'use', station: 'pickup', action: 'put' }];
+    p.bot!.thinkTicksLeft = 999;
+    p.bot!.reactionTicksLeft = 0;
+    p.bot!.noticeTicksLeft = 0;
+    let lifted = false;
+    for (let i = 0; i < 60; i++) {
+      s = step(s, []);
+      if (s.log.some((e) => e.kind === 'pass.take' || e.kind === 'pass.put')) lifted = true;
+    }
+    expect(lifted).toBe(false);
+    expect(s.pass[0]?.ticksLeft).toBeLessThan(500);
+  });
+
+  it('a cat on the tap: the pour fails and the bot gives the chain up instead of walking on empty-handed', () => {
+    let s = tapStand();
+    const tap = tapOf(s);
+    s.eggs = s.eggs ?? ({ fired: {} } as never);
+    (s.eggs as { cat?: unknown }).cat = { stationId: tap.id, ticksLeft: 1000 };
+    s.customers = [order(1, { drink: 'coldBrew', stage: 'pickup', rungAt: s.tick })];
+    s.pass = [{ item: 'latte', ticksLeft: 5000 }]; // a cup nobody ordered, sitting on the counter
+    let touched = false;
+    for (let i = 0; i < 20 * TICK_RATE; i++) {
+      s = step(s, []);
+      if (s.log.some((e) => e.kind === 'pass.take' && e.tick === s.tick)) touched = true; // its own cold brew may be put down; nothing is lifted
+    }
+    expect(touched).toBe(false); // the empty-handed bot never lifted the latte and put it back
+    expect(s.pass[0]?.ticksLeft).toBeLessThan(5000 - 19 * TICK_RATE);
+  });
+});

@@ -567,6 +567,13 @@ export function reactionDelay(state: GameState, bot: BotState): number {
  */
 export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKind | null): void {
   const b = p.bot;
+  if (b && heldBefore === null && p.holding === null) {
+    // Extras review I1: an empty-handed press at a Gear tap that poured nothing (a cat on it, the last cup gone
+    // the same tick): give the chain up instead of walking on with empty hands.
+    const at = nearestStation(state, p.pos);
+    if (at && pours(state, at, null)) abandon(state, p);
+    return;
+  }
   if (!b || heldBefore !== null || !isDrink(p.holding)) return;
   const st = nearestStation(state, p.pos);
   if (!st || !isRecipeKind(st.kind)) return;
@@ -761,6 +768,8 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       return setPlan(b, dropPlan(state, p));
     }
     case 'put':
+      // Extras review I1: nothing in hand (a pour came up empty) must not lift a cup off the counter and re-put it.
+      if (!isDrink(p.holding)) return abandon(state, p);
       if (b.noticeTicksLeft > 0) return wait(state, p);
       return execute(p);
     case 'refill':
