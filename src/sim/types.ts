@@ -8,7 +8,7 @@ import type { ForecastId } from '../data/forecasts';
 import type { CrewStats } from './stats';
 
 export type PlayerId = string;
-export type DrinkId = 'espresso' | 'latte' | 'coldBrew' | 'icedLatte' | 'mocha' | 'matcha' | 'special' | 'drip' | 'americano' | 'cappuccino';
+export type DrinkId = 'espresso' | 'latte' | 'coldBrew' | 'icedLatte' | 'mocha' | 'matcha' | 'special' | 'drip' | 'americano' | 'cappuccino' | 'doppio' | 'sweetCream' | 'cafeAuLait' | 'redEye';
 export type SupplyId = 'beans' | 'milk' | 'concentrate' | 'flavour' | 'pastry';
 export type ItemKind = 'grounds' | DrinkId;
 export type StationKind = 'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'counter' | 'trash' | 'drip';

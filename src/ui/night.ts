@@ -201,7 +201,7 @@ export function gearBoard(g: GearVM): string {
   // G6: drinks that level up with use.
   const lvl = g.levelUps.length && !g.pickNight
     ? `<div class="gr-book gr-lvl" aria-label="Drinks to learn"><b>🎓 Drinks to learn</b>${g.levelUps
-        .map((l) => `<span class="gr-bk${l.learned ? ' done' : ''}" title="${esc(l.learned ? `${l.name} learned: it's on your menu.` : `Serve ${l.count - l.served} more ${l.from}s to learn the ${l.name.toLowerCase()}.`)}">${l.icon} ${esc(l.name)}: ${l.learned ? '<b>learned ✓</b>' : `<small>${l.served}/${l.count} ${esc(l.from)}s${l.also ? ` + ${esc(l.also)}` : ''}</small>`}</span>`)
+        .map((l) => `<span class="gr-bk${l.learned ? ' done' : ''}" title="${esc(l.learned ? `${l.name} learned: it's on your menu.` : `Serve ${l.count - l.served} more ${l.from}s to learn the ${l.name.toLowerCase()}.`)}">${l.icon} ${esc(l.name)}: ${l.learned ? '<b>learned ✓</b>' : `<small>${l.served}/${l.count} ${esc(l.from)}s${l.also ? ` + ${esc(l.also)}` : ''}${l.needs ? ` · <em class="gr-needs">${esc(l.needs)}</em>` : ''}</small>`}</span>`)
         .join('')}</div>`
     : '';
   return `<div class="st-board gr-board">${head}${vote}${note}${book}${lvl}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>

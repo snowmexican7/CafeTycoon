@@ -78,7 +78,7 @@ function drawGrounds(g: Graphics, id: number): void {
 
 const SPILL_TINT: Record<DrinkId, [number, number]> = {
   espresso: [0x5a3320, 0x7a4a30], latte: [0xd9ad80, 0xf3dfc1], coldBrew: [0x6b4026, 0x8a5a3a], icedLatte: [0xc89a6a, 0xe8d2b4],
-  mocha: [0x7a4430, 0xfff8ee], matcha: [0x8fbf5a, 0xd8ecc0], special: [0x5b3420, 0xf2c48d], drip: [0x4a2a18, 0x6e4430], americano: [0x4e2c1a, 0x6a3f28], cappuccino: [0xd9ad80, 0xfff8ee],
+  mocha: [0x7a4430, 0xfff8ee], matcha: [0x8fbf5a, 0xd8ecc0], special: [0x5b3420, 0xf2c48d], drip: [0x4a2a18, 0x6e4430], americano: [0x4e2c1a, 0x6a3f28], cappuccino: [0xd9ad80, 0xfff8ee], doppio: [0x3a1e10, 0xc98a4a], sweetCream: [0x6b4026, 0xfff4e0], cafeAuLait: [0xb07a50, 0xf3dcc0], redEye: [0x3e2214, 0xa0402a],
 };
 
 /** Latte puddle: a lumpy blob with a foam rim and a shine. Drawn at UNIT_R around (0, 0). */

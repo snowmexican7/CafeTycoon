@@ -5,7 +5,7 @@ import { secondsToTicks } from './constants';
 import type { DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
 
 const DRINK_NAMES: Record<DrinkId, string> = {
-  espresso: 'espresso', latte: 'latte', coldBrew: 'cold brew', icedLatte: 'iced latte', mocha: 'mocha', matcha: 'matcha latte', special: 'maple cold foam', drip: 'drip coffee', americano: 'americano', cappuccino: 'cappuccino',
+  espresso: 'espresso', latte: 'latte', coldBrew: 'cold brew', icedLatte: 'iced latte', mocha: 'mocha', matcha: 'matcha latte', special: 'maple cold foam', drip: 'drip coffee', americano: 'americano', cappuccino: 'cappuccino', doppio: 'doppio', sweetCream: 'sweet-cream cold brew', cafeAuLait: 'café au lait', redEye: 'red-eye',
 };
 const STATION_NAMES: Record<StationKind, string> = {
   grinder: 'grinder',

@@ -312,7 +312,8 @@ const POD_SHOT: Recipe = { takes: null, gives: 'espresso', consumes: ['beans'], 
 export function gearRecipe(s: Station, held: ItemKind | null): Recipe | null | undefined {
   if (!s.gear || !GEAR[s.gear].pods) return undefined;
   // G6: no hot-water tap on a pod machine, so no americano there (doc: E2+).
-  return held === null ? POD_SHOT : held === 'grounds' || held === 'espresso' ? null : undefined;
+  // G6c: no doppio or red-eye there either (no real group head).
+  return held === null ? POD_SHOT : held === 'grounds' || held === 'espresso' || held === 'drip' ? null : undefined;
 }
 
 /** G4: a Gear run with a pod machine can make espresso drinks without a grinder. */
