@@ -1,6 +1,6 @@
 import type { Patch } from './delta';
 import { RESERVED_TELE_KINDS, type TeleEvent } from '../host/telemetry';
-import type { GameState, PlayerInput } from '../sim/types';
+import type { BotsChoice, GameState, PlayerInput } from '../sim/types';
 
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
 export const APP_ID = 'cafetycoon-v1';
@@ -33,8 +33,7 @@ export interface SeatMsg {
   t: 'seat';
   token: string;
 }
-/** Off (0), a fixed count, or 'auto' (fill empty seats). */
-export type BotsChoice = number | 'auto';
+export type { BotsChoice };
 export interface InputMsg {
   t: 'input';
   input: PlayerInput;

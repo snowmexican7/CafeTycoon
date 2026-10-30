@@ -26,7 +26,7 @@ import { stepPass } from './pass';
 import { interact, stepStations } from './stations';
 import type { GameState, PlayerInput } from './types';
 import { validateInput } from './validate';
-import { isBotId } from './bots/roster';
+import { isBotId, syncBots } from './bots/roster';
 import { afterBotInteract, stepBots } from './bots/brain';
 import { drinkEspresso, stepEspresso } from './espresso';
 import { stepEggs, unlockSecret } from './eggs';
@@ -79,7 +79,11 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     }
     case 'settings':
-      if (isHost) Object.assign(s.settings, input.settings);
+      if (isHost) {
+        Object.assign(s.settings, input.settings); // already cleaned by validateInput (sanitizeSettings)
+        // Between days a new bots choice shows up now; during the day it waits for the next startDay.
+        if (input.settings.bots !== undefined && (s.phase === 'night' || s.phase === 'weekEnd')) syncBots(s);
+      }
       break;
     case 'move': {
       const p = s.players.find((x) => x.id === input.playerId);
