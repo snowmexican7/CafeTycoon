@@ -17,6 +17,7 @@ import { layoutFor } from '../data/layout';
 import { resetBotsForNight } from './bots/roster';
 import { clearFloorFields } from './tiles';
 import { returnBox } from './condiments';
+import { steepClosing } from './steep';
 import type { GameState } from './types';
 import { settleEspresso } from './espresso';
 import { settleChallenges } from './challenges';
@@ -28,6 +29,7 @@ function round2(n: number): number {
 /** Doors shut: lose the queue, clean up, pay rent, move reputation, and decide what comes next. */
 export function finishDay(state: GameState): GameState {
   if (eventActive(state, 'healthInspector')) judgeInspection(state);
+  steepClosing(state); // after the inspector: the pour-out at closing is never seen by them
   for (const c of state.customers) loseCustomer(state, c);
   state.customers = [];
   state.messes = [];

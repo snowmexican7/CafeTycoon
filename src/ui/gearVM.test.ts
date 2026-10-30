@@ -85,6 +85,7 @@ describe('Gear G5: the day HUD gear card', () => {
     const s = run();
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 's1' });
+    s.supplies.concentrate = 10; // steeped the night before: the morning fills the tap
     startDay(s);
     s.stations.find((x) => x.kind === 'steamer')!.dead = true;
     expect(hudGearVM(s).map((g) => g.status)).toEqual(['8/8 left', 'dead']);

@@ -130,7 +130,7 @@ describe('Gear Tree G2: the sim', () => {
     expect(reasonOff(s, 'coldBrew')).toBe('noStock');
     s.players[0].pos = { ...tap.pos, y: tap.pos.y + 1 };
     interact(s, 'p1');
-    expect([tap.busyTicksLeft, s.supplies.concentrate]).toEqual([0, 50]);
+    expect([tap.busyTicksLeft, s.supplies.concentrate]).toEqual([0, 42]); // the morning steeped 8 of the 50; the empty tap pours nothing
     gearMorning(s);
     expect(tap.batchLeft).toBe(8);
   });

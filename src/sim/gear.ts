@@ -15,7 +15,7 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SN
  *      sell: empty slot `index` and get its `sell` value back.
  *  - `gearSpeed(station)` / `gearMarks(station)`: the machine's speed (1 = today) and the slip marks it
  *    puts on every cup. Stations with no gear id: 1 and 0, exactly as before.
- *  - `gearMorning(state)`: refill each capped cold brew station's batch for the day.
+ *  - `gearMorning(state)`: steep the taps' cups for the day (`steepMorning`) and roll the day's quirks.
  *  - `batchOut(state)`: a Gear run whose cold brew stations have all used up today's batch (cold
  *    brew drinks are then sold out, the existing sold-out flow).
  *  - `growGearSlots(state, to)`: growing keeps the gear in its slots and adds empty ones.
@@ -27,6 +27,7 @@ import { GEAR, GEAR_START, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
 import { stationsFromSlots, slotCount } from './slots';
 import { CONDIMENTS } from './condiments';
+import { steepMorning } from './steep';
 import { BASE_DRINKS, DRINK_IDS, TAP_DRINKS, usesShot, type Recipe } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
@@ -234,11 +235,9 @@ export function gearMorning(state: GameState): void {
   // G6: yesterday's level-ups.
   if (state.gearLearned?.length) state.morningNotes.push(...state.gearLearned);
   delete state.gearLearned;
+  steepMorning(state); // the taps' cups: yesterday's first, then steeped fresh from concentrate
   for (const s of state.stations) {
     delete s.flowUntil;
-    const cap = s.gear ? GEAR[s.gear].batch : undefined;
-    if (cap !== undefined) s.batchLeft = cap;
-    else delete s.batchLeft;
     // G5: overnight everything is reset and today's quirks are rolled (slot order, so it's deterministic).
     delete s.jammed;
     delete s.dead;
@@ -261,6 +260,10 @@ export function gearMorning(state: GameState): void {
     }
     if (q.crack && s.batchLeft !== undefined && rngNext(state) < q.crack) {
       s.batchLeft = Math.max(0, s.batchLeft - (q.crackLoss ?? 0));
+      if (s.batchOld !== undefined) {
+        s.batchOld = Math.min(s.batchOld, s.batchLeft);
+        if (s.batchOld === 0) delete s.batchOld;
+      }
       state.morningNotes.push(`A jar cracked overnight: ${q.crackLoss} cups of cold brew down the drain.`);
     }
     if (q.morning && rngNext(state) < q.morning) state.morningNotes.push(q.morningText ?? `${name} is acting up.`);

@@ -107,6 +107,7 @@ describe('Gear Tree G5: downsides and funny events', () => {
     expect(asked).toBeGreaterThan(0);
     const j = createRun(opts(true));
     buy(j, 'c2');
+    j.supplies.concentrate = 10_000; // every morning steeps a full jar shelf
     let cracked = 0;
     for (let i = 0; i < 400; i++) { j.morningNotes = []; gearMorning(j); const tap = j.stations.find((x) => x.kind === 'coldBrewTap')!; if (tap.batchLeft === 12) cracked++; }
     expect(cracked).toBeGreaterThan(0);
