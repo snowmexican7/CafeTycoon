@@ -270,3 +270,18 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .tip-ic { flex: none; font-size: 20px; }
 #night .tip-t { flex: 1; min-width: 0; font: 600 var(--fs-m)/1.2 var(--font-display); color: var(--ink); }
 #night .tip-go { flex: none; font: 700 var(--fs-s) var(--font-display); color: #fff; background: var(--caramel); padding: 6px 12px; border-radius: 99px; box-shadow: 0 2px 0 var(--caramel-dk); }
+
+/* Gear Tree G3: Spend › Gear. Slots on top (sell), one row of tiers per tree. */
+#night .gr-pick { font: 600 var(--fs-m) var(--font-body); background: #fff6e0; border: 2px solid #f0c97a; border-radius: 14px; padding: 10px 16px; }
+#night .gr-pick b { font: 700 var(--fs-l) var(--font-display); margin-right: 6px; }
+#night .gr-slot { cursor: default; min-height: 104px; }
+#night .gr-slot .btn { margin-top: 4px; }
+#night .gr-tree { display: grid; grid-template-columns: 130px 1fr; gap: 10px; align-items: stretch; }
+#night .gr-tree-h { font: 700 var(--fs-l) var(--font-display); display: flex; align-items: center; gap: 6px; }
+#night .gr-tiers { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+#night .gr-tier { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 14px; background: #fff; box-shadow: 0 3px 0 #e2cfb2; min-width: 0; }
+#night .gr-tier b { font: 700 var(--fs-m) var(--font-display); line-height: 1.15; }
+#night .gr-stats { font: 600 var(--fs-xs) var(--font-body); color: var(--ink-soft); flex: 1; }
+#night .gr-tier .btn { width: 100%; }
+#night .gr-tier.owned { box-shadow: 0 0 0 3px #6aa36f, 0 3px 0 #e2cfb2; }
+#night .gr-tier.passed, #night .gr-tier.poor, #night .gr-tier.noSlot { opacity: .62; }

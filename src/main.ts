@@ -1,4 +1,5 @@
 import './style.css';
+import { gearFlag } from './ui/gearFlag';
 import { ambienceFor, createHeartbeat, diffCues, heartbeatGapMs } from './audio/cues';
 import { createAudioEngine } from './audio/engine';
 import { SNAPSHOT_INTERVAL_MS } from './host/loop';
@@ -237,6 +238,8 @@ async function main(): Promise<void> {
       settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec, bots },
       // P3 B13: every new run opens as a kerbside stand and grows from there.
       tier: 'stand',
+      // Gear Tree (in progress): only with ?gear=1 in the URL; off for everyone else until the v3 flip.
+      ...(gearFlag() ? { gear: true } : {}),
     };
   }
 
