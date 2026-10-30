@@ -550,3 +550,23 @@ describe('item 7: careful cups (G10b): no early pulls for the arts crowd or a sn
     expect(pulled(hurriedAtShot(seedFor(false), true))).toBe(false);
   });
 });
+
+describe('fix round 1', () => {
+  it('I1: the steamer dies while the shot is still pulling: the re-plan carries that shot to the other steamer', () => {
+    let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', null], ['g2', 'e3', 's1', 's2', 'b0', null]);
+    const s1 = s.stations.find((x) => x.id === 'steamer')!;
+    sim(s).pos = { x: s1.pos.x, y: 2 }; // it plans the latte on s1
+    s.customers = [order(1600, 'latte')];
+    s = runUntil(s, (x) => {
+      const plan = sim(x).bot!.plan;
+      return plan[0]?.kind === 'use' && plan[0].station === 'espresso' && plan[0].action === 'take' && plan[1]?.kind === 'use' && plan[1].station === 'steamer';
+    }, 60 * 60);
+    s.stations.find((x) => x.id === 'steamer')!.dead = true;
+    s = step(s, []);
+    expect(ids(sim(s).bot!.plan).slice(0, 3)).toEqual(['espresso:take', 'steamer-2:insert', 'steamer-2:take']);
+    expect(sim(s).bot!.claim).toBe(1600);
+    s = serveAll(s, 60 * 60);
+    expect(s.today.drinks!.latte).toBe(1);
+    expect(s.pass).toEqual([]);
+  });
+});

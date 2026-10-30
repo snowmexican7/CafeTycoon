@@ -583,7 +583,11 @@ function replanAroundDead(state: GameState, p: Player): void {
   const inserts = b.plan.filter((x): x is Extract<BotStep, { kind: 'use' }> => x.kind === 'use' && x.action === 'insert');
   const before = b.plan.slice(0, i).filter((x): x is Extract<BotStep, { kind: 'use' }> => x.kind === 'use' && x.action === 'insert');
   const drink = b.claimDrink ?? inserts[inserts.length - 1]?.makes;
-  const held = before.length > 0 ? before[before.length - 1].makes : p.holding;
+  // What the bot will hold at step i: the last insert's product; with none before it but a pending take
+  // (the shot still pulling), what that take collects; else what is in hand now.
+  const take = b.plan.slice(0, i).find((x): x is Extract<BotStep, { kind: 'use' }> => x.kind === 'use' && x.action === 'take');
+  const from = take ? state.stations.find((st) => st.id === take.station) : undefined;
+  const held = before.length > 0 ? before[before.length - 1].makes : from ? (from.making ?? from.output ?? undefined) : p.holding;
   const lastStep = b.plan[b.plan.length - 1];
   const finish = lastStep?.kind === 'use' && lastStep.action === 'put' ? 'put' : 'serve';
   const tail = drink && isDrink(drink) && held !== undefined ? chainFor(state, p, drink, finish, held) : [];
