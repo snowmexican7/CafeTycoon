@@ -53,7 +53,7 @@ describe('Gear Tree G4d: drip', () => {
     expect(s.supplies.beans).toBe(2);
   });
 
-  it('a pot left too long goes cold: the cup gets a complaint and a half tip; the urn never goes cold', () => {
+  it('a pot left too long goes cold: E lifts it for the sink (FB2 A3); a missed brew still pours with a complaint; the urn never goes cold', () => {
     const s = createRun(opts(true));
     buy(s, 'd1');
     s.supplies.beans = 3;
@@ -65,9 +65,17 @@ describe('Gear Tree G4d: drip', () => {
     s.tick += 46 * TICK_RATE;
     s.players[0].holding = null;
     interact(s, 'p1');
+    expect([s.players[0].holding, s.players[0].tool, st.potOut]).toEqual([null, 'pot', 'p1']);
+    s.players[0].tool = null;
+    delete st.potOut;
+    // a pot brewed lukewarm or scalding pours, and the cup complains
+    st.output = 'drip';
+    st.potLeft = 2;
+    st.potColdAt = s.tick + 600;
+    st.potOff = 'cold';
+    interact(s, 'p1');
     expect(s.players[0].cupTemp).toBe(true);
     expect(s.log.some((e) => e.kind === 'gear.quirk' && String(e.data.text).startsWith('Too cold'))).toBe(true);
-    // a scalding pot complains too
     st.potOff = 'hot';
     s.players[0].holding = null;
     interact(s, 'p1');

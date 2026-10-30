@@ -304,14 +304,16 @@ describe('item 4: drip pots (G4d)', () => {
     expect(ids(chainFor(s, sim(s), 'drip', 'serve'))[0]).toBe('drip-2:insert'); // brew there
   });
 
-  it('only a cold pot: the cup is poured and served (half tip), no bin-and-repour loop', () => {
+  it('only a cold pot (FB2 A3): it goes down the sink, a fresh pot is brewed and poured, no loop', () => {
     let s = POTS('d2');
     fill(s, station(s, 'drip'), 3, true);
     s.customers = [order(1010, 'drip')];
-    s = serveAll(s, 60 * 60);
+    const dumps = new Map<number, unknown>();
+    s = serveAll(s, 60 * 90, (x) => { for (const e of x.log) if (e.kind === 'sink.dump') dumps.set(e.seq, e.data.item); });
     expect(s.today.drinks!.drip).toBe(1);
     expect(s.today.wasted ?? 0).toBe(0);
-    expect(station(s, 'drip').potLeft).toBe(2);
+    expect([...dumps.values()]).toEqual(['pot']);
+    expect(station(s, 'drip').potLeft).toBe(7); // the fresh pot, one cup poured
   });
 
   it('a temperature miss with a hot pot elsewhere: one retry (bin, pour again), then serve', () => {

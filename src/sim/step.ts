@@ -42,6 +42,7 @@ import { stepPickup } from './pickup';
 import { stepCleaning } from './mop';
 import { applySteepInput } from './steep';
 import { applyCondimentBoxInput, returnBox } from './condiments';
+import { returnPot } from './sink';
 import { stepRogue } from './rogue';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
@@ -80,6 +81,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
         dropCloseVote(s, p.id);
         settleVote(s); // an open gear vote may now have its majority (or be lost)
         if (p.tool === 'box') returnBox(s, p);
+        if (p.tool === 'pot') returnPot(s, p); // FB2 A3: the pot goes home (stale)
         clearFloorFields(p);
         if (s.mop.heldBy === p.id) {
           s.mop.heldBy = null;

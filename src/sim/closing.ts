@@ -18,6 +18,7 @@ import { resetBotsForNight } from './bots/roster';
 import { clearFloorFields } from './tiles';
 import { returnBox } from './condiments';
 import { steepClosing } from './steep';
+import { stalePotsAtClose } from './sink';
 import type { GameState } from './types';
 import { settleEspresso } from './espresso';
 import { settleChallenges } from './challenges';
@@ -39,6 +40,7 @@ export function finishDay(state: GameState): GameState {
   for (const e of state.events) emitLog(state, 'event.end', { kind: e.kind });
   state.events = [];
   state.eventSchedule = [];
+  stalePotsAtClose(state); // FB2 A3: carried pots go home; a pot with cups left is stale tomorrow
   for (const s of state.stations) {
     s.busyTicksLeft = 0;
     s.output = null;

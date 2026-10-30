@@ -23,6 +23,7 @@ import { unlockForDay } from './unlocks';
 import { dealChallenges, pruneChallenges } from './challenges';
 import { eggsMorning } from './eggs';
 import { gearMorning, gearStart } from './gear';
+import { potMorning } from './sink';
 import { applyPerk } from './perks';
 import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
@@ -185,5 +186,6 @@ export function startDay(state: GameState): GameState {
   if (pitchNote) state.morningNotes.push(pitchNote);
   espressoMorning(state);
   gearMorning(state);
+  potMorning(state); // FB2 A3: yesterday's stale pots
   return state;
 }

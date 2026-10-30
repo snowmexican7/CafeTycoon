@@ -21,7 +21,8 @@ export type EventKind = 'rushHour' | 'powerFlicker' | 'influencerVisit' | 'healt
 export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer';
 export type Personality = 'rookie' | 'steady' | 'veteran' | 'hurried' | 'human'; // 'human' = tester stand-in
 export type BotSkill = 1 | 2 | 3 | 4 | 5;
-export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill';
+/** FB2 A3: `lift` a cold or stale drip pot off its machine, `dump` what is in hand (or the pot) at the back sink. */
+export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill' | 'lift' | 'dump';
 
 export interface Vec2 {
   x: number;
@@ -142,7 +143,13 @@ export type SimEventKind =
   | 'condiment.refill'
   | 'steep'
   /** P4 B6: someone (a person or a bot) picked up the branch's phone. */
-  | 'call.answer';
+  | 'call.answer'
+  /** FB2 A3 (Gear runs): the back sink, drip pots and messes. */
+  | 'sink.dump'
+  | 'pot.lift'
+  | 'pot.stale'
+  | 'bin.leak'
+  | 'mess.spawn';
 
 export interface SimEvent {
   seq: number;
@@ -176,8 +183,8 @@ export interface Player {
   staggerTicksLeft?: number;
   /** Bumps: ticks before this barista can be part of another bump (absent = 0). */
   bumpCooldown?: number;
-  /** What the barista carries instead of a cup: the mop, or a condiment stock box (Gear runs). */
-  tool: 'mop' | 'box' | null;
+  /** What the barista carries instead of a cup: the mop, a condiment stock box, or (FB2 A3) a drip pot on its way to the sink (Gear runs). */
+  tool: 'mop' | 'box' | 'pot' | null;
   cleaningTicksLeft: number;
   cleaningMess: number | null;
   dropQueued: boolean;
@@ -219,6 +226,10 @@ export interface Station {
   potColdAt?: number;
   /** Gear G4d: this pot came out too hot or too cold (every cup from it complains). */
   potOff?: 'hot' | 'cold';
+  /** FB2 A3: the pot is off the machine, carried by this player to the sink; the machine can't brew until it is back. */
+  potOut?: PlayerId;
+  /** FB2 A3: the pot sat overnight with cups in it: no pour and no brew until it is dumped at the sink. */
+  stale?: true;
   /** Gear G5: the Pod-o-Matic jammed; empty hands at it whack it back to life. */
   jammed?: true;
   /** Gear G5: dead until tonight (the battery whisk's batteries). */

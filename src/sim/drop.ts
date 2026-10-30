@@ -3,6 +3,8 @@ import { ECONOMY } from '../data/economy';
 import { dropTile, placeMess } from './floor';
 import { emitLog } from './log';
 import { returnTool } from './mop';
+import { dumpDrink, dumpPot, isSink } from './sink';
+import { rollBinLeak } from './messes';
 import { nearestStation } from './movement';
 import { passSlots, spotOf } from './pickup';
 import { PICKUP_ID } from '../data/layout';
@@ -18,8 +20,9 @@ export function resolveDrops(state: GameState): void {
 }
 
 function resolveDrop(state: GameState, p: Player): void {
+  // FB2 A3: R with the pot at the sink dumps it; anywhere else a carried tool goes home.
   if (p.tool !== null) {
-    returnTool(state, p);
+    if (!dumpPot(state, p)) returnTool(state, p);
     return;
   }
   const item = p.holding;
@@ -28,10 +31,13 @@ function resolveDrop(state: GameState, p: Player): void {
 
   if (station) {
     // Kennedy's rule: a station in range takes the item or nothing happens at all.
-    if (station.kind === 'trash') {
+    if (isSink(station) && state.gear === true) {
+      dumpDrink(state, p); // FB2 A3: the sink pours a drink away (grounds stay in hand)
+    } else if (station.kind === 'trash') {
       p.holding = null;
       if (item !== 'grounds') tally(state.today, 'wasted');
       emitLog(state, 'drop', { item, station: station.id, by: p.id });
+      rollBinLeak(state, station, p, item); // FB2 A3 (Gear runs)
     } else if (station.kind === 'counter' && state.gear === true) {
       // Batch/pickup: the till and the pickup counter set the drink down for its customer; the bar takes nothing.
       if (item !== 'grounds' && spotOf(station) !== 'condiments' && state.pass.length < passSlots(state)) {

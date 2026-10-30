@@ -17,16 +17,18 @@ function messAt(state: GameState, tile: Vec2): Mess | undefined {
 /**
  * Put a mess on a tile: a new one at amount 1, or merged into the one already there (a spill
  * landing on grounds makes it a spill). At the cap nothing is placed or merged.
+ * FB2 A3: in a Gear run every mess placed logs `mess.spawn { kind, x, y, at? }` (`source` names it; default: the mess kind).
  */
-export function placeMess(state: GameState, kind: MessKind, tile: Vec2): boolean {
+export function placeMess(state: GameState, kind: MessKind, tile: Vec2, source?: { kind: string; at?: string }): boolean {
   if (state.messes.length >= M.max) return false;
   const here = messAt(state, tile);
   if (here) {
     here.amount = Math.min(1, here.amount + M.mergeAdd);
     if (kind === 'spill') here.kind = 'spill';
-    return true;
+  } else {
+    state.messes.push({ id: state.nextMessId++, kind, x: tile.x, y: tile.y, amount: 1 });
   }
-  state.messes.push({ id: state.nextMessId++, kind, x: tile.x, y: tile.y, amount: 1 });
+  if (state.gear === true) emitLog(state, 'mess.spawn', { kind: source?.kind ?? kind, x: tile.x, y: tile.y, ...(source?.at ? { at: source.at } : {}) });
   return true;
 }
 
@@ -96,10 +98,17 @@ function slip(state: GameState, p: Player): void {
   emitLog(state, 'slip', data);
 }
 
+/**
+ * FB2 A3, Gear runs: the floor meter per tick, down per mess on the floor and up when there is none. Faster down and
+ * slower back than classic (ECONOMY.mess), so a mess left through a rush shows on the meter for a while.
+ */
+export const GEAR_FLOOR = { dirtPerMessPerTick: 0.006, recoverPerTick: 0.003 } as const;
+
 /** Cleanliness drifts down with each mess on the floor and recovers when there are none. */
 export function stepCleanliness(state: GameState): void {
   const n = state.messes.length;
-  const next = n > 0 ? state.cleanliness - M.dirtPerMessPerTick * n : state.cleanliness + M.recoverPerTick;
+  const f = state.gear === true ? GEAR_FLOOR : M;
+  const next = n > 0 ? state.cleanliness - f.dirtPerMessPerTick * n : state.cleanliness + f.recoverPerTick;
   state.cleanliness = Math.min(100, Math.max(0, next));
 }
 
