@@ -380,8 +380,14 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
   return candidates[0]?.st ?? null;
 }
 
+/**
+ * Classic only: park cold brew on the pass ahead of orders. Gear runs never prep (batch/pickup fix round 1): the
+ * tap pours a steeped cup at once, and a prepped cup holds a pickup slot until a cold brew order is rung up
+ * (600 s), so a crew of four filled all four slots in seconds and binned every drink after.
+ */
 function shouldPrep(state: GameState, p: Player): boolean {
   return (
+    state.gear !== true &&
     BOTS.personalities[p.bot!.personality].preps &&
     state.pass.length < passSlots(state) &&
     coldBrewsAhead(state) < BOTS.prepColdBrews &&
