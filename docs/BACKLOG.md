@@ -1967,3 +1967,13 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - **Wrong drink at pickup, names on cups.** Once customers pick up their own drinks, someone may grab the wrong
   one, and names on cups become the fix. Follows the batch/pickup work
   (docs/superpowers/specs/2026-10-30-batch-pickup-design.md).
+
+## Morning-prompt work, 2026-10-30 (Claude)
+
+- **Planner for Gear and Phase 4** (tag `planner-gear-p4`): gear buys along the gearBalance path, staff:fire,
+  rival:promo, rival:loyalty, branch:open/staff/send; budget holds back `billsForDay`; no menu tips on an empty
+  counter. **For the UI lane:** the new rows reuse existing `AdviceKind` values (a new kind would break
+  `tipsVM`'s `Record<AdviceKind, …>`), so tell them apart by `id` prefix or `input.kind`; `coveredBy()` should
+  learn `rival:promo` / `rival:loyalty` so chips don't repeat the night brief's alerts. Adding proper kinds later
+  is fine: change `AdviceKind` and `tipsVM` together.
+
