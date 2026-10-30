@@ -52,9 +52,9 @@ export const ORDERS = {
     bonus: 0.25,
     /** The phone rings this long before they walk in. */
     callSeconds: 10,
-    /** They walk in between 15% and 35% of the way through opening hours (time to make 10 drinks before closing). */
-    from: 0.15,
-    span: 0.2,
+    /** They walk in between 7% and 20% of the way through opening hours (the day, not their patience, is the limit). */
+    from: 0.07,
+    span: 0.13,
   },
 } as const;
 

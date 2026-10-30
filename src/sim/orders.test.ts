@@ -262,13 +262,13 @@ describe('office runs (FB2 B6)', () => {
     expect(office.items![0].done).toBe(true);
   });
 
-  it('walks in 15-35% of the way through the day', () => {
+  it('walks in 7-20% of the way through the day', () => {
     const ticks = secondsToTicks(ECONOMY.dayLengthSec);
     for (let seed = 1; seed <= 80; seed++) {
       const s = gearDay(4, 'cafe', undefined, seed);
       if (!s.office) continue;
-      expect(s.office.at).toBeGreaterThanOrEqual(Math.floor(ticks * 0.15));
-      expect(s.office.at).toBeLessThanOrEqual(Math.floor(ticks * 0.35));
+      expect(s.office.at).toBeGreaterThanOrEqual(Math.floor(ticks * 0.07));
+      expect(s.office.at).toBeLessThanOrEqual(Math.floor(ticks * 0.2));
     }
   });
 
