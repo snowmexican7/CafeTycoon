@@ -39,6 +39,16 @@ describe('records', () => {
     expect(foldRecords(emptyRecords(), one, [], 'd', 10).bestDayProfit?.profit).toBe(profitOf(one.days[0]!));
   });
 
+  it('review I4: a crew name like __proto__ or constructor can not write onto Object.prototype via the hall', () => {
+    for (const name of ['__proto__', 'constructor', 'toString']) {
+      const bad: Award = { ...mvp, winner: name };
+      const r = foldRecords(emptyRecords(), week(7, [10]), [bad], 'd', 10);
+      expect(({} as Record<string, unknown>).mvp).toBeUndefined();
+      expect((Object as unknown as Record<string, unknown>).mvp).toBeUndefined();
+      expect(r.mvps[0]).toMatchObject({ name });
+    }
+  });
+
   it('counts a run once; a later stop adds only the new days', () => {
     let r = foldRecords(emptyRecords(), week(1, [10, 10]), [mvp], 'd', 50);
     r = foldRecords(r, week(1, [10, 10]), [mvp], 'd', 50);

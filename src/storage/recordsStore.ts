@@ -128,7 +128,9 @@ export function foldRecords(prev: Records, state: GameState, awards: Award[], da
   if (fresh) {
     for (const a of awards) {
       if (a.bot || a.tone === 'joke') continue;
-      const h = (r.hall[a.winner] ??= { mvp: 0, awards: 0 });
+      // Own-key check: a crew name is a network string ("__proto__", "constructor") and must not find an inherited member (review I4).
+      if (!Object.hasOwn(r.hall, a.winner)) Object.defineProperty(r.hall, a.winner, { value: { mvp: 0, awards: 0 }, enumerable: true, writable: true, configurable: true });
+      const h = r.hall[a.winner]!;
       if (a.id === 'mvp') {
         h.mvp += 1;
         r.mvps = [{ name: a.winner, seed: state.seed, date }, ...r.mvps].slice(0, KEEP_MVPS);
