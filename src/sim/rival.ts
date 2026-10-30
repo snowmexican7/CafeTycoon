@@ -126,19 +126,26 @@ export function promoLevel(state: GameState, day = state.day): number {
   return Math.min(2, Math.max(0, weekNo(day) - 1));
 }
 
+/** Review M10: the last week's promo days, kept so the per-tick modifier calls don't reshuffle six days each time. Pure in (seed, week, level). */
+let promoMemo: { key: string; days: number[] } | null = null;
+
 /** P4 B1: true when `day` (default: today, or tomorrow at night) is one of the rival's happy-hour days. */
 export function isPromoDay(state: GameState, day = state.day): boolean {
   const level = promoLevel(state, day);
   if (level === 0 || day < 1) return false;
   const week = weekNo(day);
-  const first = (week - 1) * ECONOMY.scoredWeekDays + 1;
-  // Days 2–7 of the week, shuffled by a hash of the seed and week; the first `level` are promo days.
-  const pool = [1, 2, 3, 4, 5, 6].map((k) => first + k);
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = hash32(state.seed * 13 + week * 7919 + i * 104729) % (i + 1);
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+  const key = `${state.seed}|${week}|${level}`;
+  if (promoMemo?.key !== key) {
+    const first = (week - 1) * ECONOMY.scoredWeekDays + 1;
+    // Days 2–7 of the week, shuffled by a hash of the seed and week; the first `level` are promo days.
+    const pool = [1, 2, 3, 4, 5, 6].map((k) => first + k);
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = hash32(state.seed * 13 + week * 7919 + i * 104729) % (i + 1);
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    promoMemo = { key, days: pool.slice(0, level) };
   }
-  return pool.slice(0, level).includes(day);
+  return promoMemo.days.includes(day);
 }
 
 /** P4 B1: the crew countered the promo on `state.day`. */
