@@ -8,6 +8,7 @@ import { ensureCounterSpots, reasonOff, stationsFromSlots, TWIN_OFFSET } from '.
 import { availableDrinks } from './customers';
 import { validateInput } from './validate';
 import { LEVEL_UPS, levelUpGearOk } from './levelUp';
+import { eligibleChallenges } from './challenges';
 import { TICK_RATE } from './constants';
 import { nearestStation } from './movement';
 import { targetNodes } from './bots/path';
@@ -323,6 +324,17 @@ describe('FB2 C9: steaming at the wand', () => {
     expect(gearPullMul(open('e6'), 'latte')).toBeCloseTo(1.15);
     expect(snobFamilies(open('e3', 'weak'))).not.toContain('milky');
     expect(snobFamilies(open('e4', 'strong'))).toContain('milky');
+  });
+
+  it('a Gear run deals no challenge for a milk drink it has no wand for', () => {
+    const ids = (s: GameState) => eligibleChallenges(s).map((c) => c.id);
+    for (const [wand, on] of [[undefined, false], ['weak', true]] as const) {
+      const s = stand('e3', wand);
+      s.day = 6;
+      s.unlocked = [...(s.unlocked ?? BASE_DRINKS), 'matcha', 'mocha'];
+      expect(ids(s).includes('sellMatcha5'), `wand ${wand}`).toBe(on);
+      expect(ids(s).includes('sellMocha4'), `wand ${wand}`).toBe(on);
+    }
   });
 
   it('café au lait levels up only with a steam wand', () => {
