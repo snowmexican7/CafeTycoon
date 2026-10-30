@@ -2125,3 +2125,10 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
     - a machine with its pot out (`Station.potOut`);
     - puddle splashes on `mess.spawn` / `bin.leak`;
     - sounds for `sink.dump` / `pot.lift`.
+- **A5 exact counts (`fb2-a5`).** `src/sim/counts.ts`: `stationLeft(state, stationId): number | null` and
+  `stationCountsLeft(state): { id, n }[]` (stations with a count, in station order). Null means draw nothing, never 0.
+  Counts: tap `batchLeft`; drip `potLeft` (null while brewing or while the pot is out; a stale pot still shows its
+  cups); a waiting machine output 1 (one slot per machine); condiment bar servings; pickup counter cups. Till, sink,
+  trash: null. Fridge milk joins with A4. No state, inputs or events. **UI lane:** have `countsModel.stationCounts`
+  call `stationCountsLeft` (widen its state type to `GameState`) instead of reading fields; cooling stays in
+  `src/sim/cooling.ts` (`stationCool`, `slotCool`).
