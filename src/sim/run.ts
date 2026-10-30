@@ -23,6 +23,7 @@ import { unlockForDay } from './unlocks';
 import { dealChallenges, pruneChallenges } from './challenges';
 import { eggsMorning } from './eggs';
 import { gearMorning, gearStart } from './gear';
+import { applyPerk } from './perks';
 import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
@@ -120,6 +121,7 @@ export function createRun(opts: CreateRunOptions): GameState {
   };
   state.scenario = SCENARIOS[rngInt(state, SCENARIOS.length)].id;
   if (opts.gear) gearStart(state);
+  applyPerk(state, opts.perk);
   return startNight(state);
 }
 

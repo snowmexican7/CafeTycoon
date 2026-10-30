@@ -1,3 +1,4 @@
+import type { PerkId } from '../data/perks';
 import { SIG, sigShare } from '../sim/signature';
 import { gearVM, hudGearVM, type GearVM, type HudGearVM } from './gearVM';
 import { AD_IDS, ADS } from '../sim/ads';
@@ -877,6 +878,8 @@ export interface WeekEndVM {
   awards: Award[];
   /** Plain text of the awards for "Copy awards". */
   awardsText: string;
+  /** P3 B16: head starts this run just unlocked (filled in by main from the meta save). */
+  unlocks?: string[];
   /** Lost customers as a share of everyone who walked in, e.g. "23%". */
   lostPct: string;
 }
@@ -910,10 +913,14 @@ export interface TitleVM {
   history: { date: string; score: string; days: number; scenario: string; players: string }[];
   canResume: boolean;
   rejoinCode: string | null;
+  /** P3 B16: head starts this browser has unlocked, and the one picked last time. */
+  perks?: PerkId[];
+  lastPerk?: PerkId | null;
 }
 
-export function titleViewModel(history: RunRecord[], snapshot: GameState | null, room: RoomRecord | null = null): TitleVM {
+export function titleViewModel(history: RunRecord[], snapshot: GameState | null, room: RoomRecord | null = null, meta?: { unlocked: PerkId[]; lastPerk: PerkId | null }): TitleVM {
   return {
+    ...(meta && meta.unlocked.length ? { perks: meta.unlocked, lastPerk: meta.lastPerk } : {}),
     rejoinCode: room?.role === 'peer' ? room.code : null,
     history: history.map((r) => ({
       date: r.date,

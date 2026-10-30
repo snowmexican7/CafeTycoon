@@ -66,6 +66,7 @@ export function createWeekEnd(
             <div><b>${vm.customersServed}</b><small>SERVED</small></div>
             <div><b>${vm.bestDay ? `Day ${vm.bestDay.day}` : '—'}</b><small>${vm.bestDay ? `BEST · ${esc(vm.bestDay.profit)}` : 'BEST DAY'}</small></div>
           </div>
+          ${vm.unlocks?.length ? `<div class="unlocks" role="status"><b>🎁 Unlocked for your next run</b>${vm.unlocks.map((u) => `<span>${esc(u)}</span>`).join('')}<small>Pick it under Head start on the title screen.</small></div>` : ''}
           <div class="sec-h">Bought this run</div>
           <div class="items">${items}</div>
           <div class="menu-btns row-btns">${buttons}</div>

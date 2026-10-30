@@ -4,6 +4,28 @@
  */
 import type { Records } from '../storage/recordsStore';
 import { esc } from './dom';
+import { PERK_IDS, PERKS, PERK_TUNING } from '../data/perks';
+import type { MetaSave } from '../storage/metaStore';
+
+/** P3 B16: the head starts, earned or not, with progress toward the locked ones. */
+export interface PerkRowVM { icon: string; name: string; effect: string; unlocked: boolean; how: string }
+
+export function perkRows(m: MetaSave): PerkRowVM[] {
+  const progress: Record<string, string> = {
+    nestEgg: 'Finish a week in a Gear run',
+    pantry: `Serve ${PERK_TUNING.pantryServed} drinks in Gear runs (${Math.min(m.served, PERK_TUNING.pantryServed)}/${PERK_TUNING.pantryServed})`,
+    wordOfMouth: 'Grow a stand into a cart',
+  };
+  return PERK_IDS.map((id) => ({ icon: PERKS[id].icon, name: PERKS[id].name, effect: PERKS[id].effect, unlocked: m.unlocked.includes(id), how: progress[id] ?? PERKS[id].unlock }));
+}
+
+export function perksHtml(rows: PerkRowVM[], discovered: number): string {
+  return `<div class="sec-h">Head starts <small>carried between runs · pick one on the title</small></div>
+      <ul class="perks">${rows
+        .map((r) => `<li class="${r.unlocked ? 'on' : 'locked'}"><span class="ic" aria-hidden="true">${r.unlocked ? r.icon : '🔒'}</span><b>${esc(r.name)}</b><span>${esc(r.effect)}</span><small>${r.unlocked ? 'Unlocked' : esc(r.how)}</small></li>`)
+        .join('')}</ul>
+      ${discovered ? `<p class="hint">Recipe book: ${discovered} drinks discovered across your Gear runs.</p>` : ''}`;
+}
 
 export interface RecordsVM {
   empty: boolean;
@@ -53,7 +75,7 @@ export function recordsViewModel(r: Records): RecordsVM {
   };
 }
 
-export function recordsHtml(vm: RecordsVM): string {
+export function recordsHtml(vm: RecordsVM, extra = ''): string {
   const tiles = vm.tiles
     .map((t) => `<div class="rec ${t.gold ? 'gold' : ''}"><small>${esc(t.label)}</small><b>${esc(t.value)}</b><span>${esc(t.sub)}</span></div>`)
     .join('');
@@ -74,11 +96,12 @@ export function recordsHtml(vm: RecordsVM): string {
       <div class="sec-h">Hall of fame</div>
       ${hall}
       ${vm.mvps.length ? `<p class="hint">Recent MVPs: ${vm.mvps.map(esc).join(' · ')}</p>` : ''}
+      ${extra}
       <div class="menu-btns"><button class="btn primary" data-rec="close">Close</button></div>
     </div>`;
 }
 
-export function createRecordsDialog(get: () => Records): { open(): void; close(): void } {
+export function createRecordsDialog(get: () => Records, getMeta?: () => MetaSave | undefined): { open(): void; close(): void } {
   const root = document.createElement('div');
   root.id = 'records';
   root.hidden = true;
@@ -101,7 +124,14 @@ export function createRecordsDialog(get: () => Records): { open(): void; close()
   return {
     open() {
       back = document.activeElement as HTMLElement | null;
-      root.innerHTML = recordsHtml(recordsViewModel(get()));
+      let extra = '';
+      try {
+        const m = getMeta?.();
+        if (m) extra = perksHtml(perkRows(m), m.discovered.length);
+      } catch {
+        /* a bad meta save only hides this section */
+      }
+      root.innerHTML = recordsHtml(recordsViewModel(get()), extra);
       root.hidden = false;
       root.querySelector<HTMLElement>('[data-rec=close]')?.focus();
     },
