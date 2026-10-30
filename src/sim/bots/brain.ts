@@ -7,8 +7,8 @@ import type { Modifiers } from '../effects';
 import { nearestStation } from '../movement';
 import { emitLog } from '../log';
 import { rngInt, rngNext } from '../rng';
-import { STATION_RECIPES, recipeFor, stocked } from '../stations';
-import { gearRecipe, podsCoverGrinder, podsOnly } from '../gear';
+import { STATION_RECIPES, recipeAt, stocked } from '../stations';
+import { podsOnly } from '../gear';
 import { RECIPES, recipeChain, usesShot } from '../../data/drinks';
 import { zeroDrinks } from '../tally';
 import { tally } from '../tally';
@@ -90,9 +90,9 @@ function groundsPlan(state: GameState, p: Player): BotStep[] {
 export function chainFor(state: GameState, p: Player, drink: DrinkId, finish: 'serve' | 'put'): BotStep[] {
   // Every station on the drink's recipe ticket, in order (a mocha visits the steamer twice).
   const steps: BotStep[] = [];
-  // Gear G10: a pod machine pulls its shot from empty hands, so with no grinder the grind step drops out.
-  // Smoke fix: also when a grinder sits beside a pod-only espresso bar (grounds would be refused there).
-  const skipGrind = podsOnly(state) || (!state.stations.some((s) => s.kind === 'grinder') && podsCoverGrinder(state));
+  // Gear G10: a pod-only espresso bar pulls its shots from empty hands, so the grind step drops out (with or
+  // without a grinder in a slot: grounds would be refused there). Mixed bars are planned by gearChain.
+  const skipGrind = podsOnly(state);
   for (const { station } of recipeChain(drink)) {
     if (station === 'grinder' && skipGrind) continue;
     const insert = use(state, p, station, 'insert');
@@ -425,11 +425,11 @@ function act(state: GameState, p: Player, action: BotAction, st: Station): void 
       if (!isRecipeKind(st.kind)) return abandon(state, p);
       // A drink not yet checked stays in hand: a botched espresso must not become a latte.
       if (b.noticeTicksLeft > 0 && isDrink(p.holding)) return wait(state, p);
-      // Gear G10: the station's own gear recipe first (a pod machine pulls a shot from empty hands), as stations.ts does.
-      const own = gearRecipe(st, p.holding);
-      const r = own !== undefined ? own : recipeFor(state, st.kind, p.holding);
+      // The recipe `interact` will run here (gear recipe first: a pod machine pulls a shot from empty hands),
+      // and only when it can start: stocked, and a capped cold brew batch not used up.
+      const r = recipeAt(state, st, p.holding);
       const idle = st.busyTicksLeft === 0 && st.output === null;
-      if (idle && r && stocked(state, r)) return execute(p);
+      if (idle && r && stocked(state, r) && st.batchLeft !== 0) return execute(p);
       const kind = st.kind;
       const leftover =
         st.output !== null &&
