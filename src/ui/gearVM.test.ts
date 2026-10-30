@@ -20,9 +20,24 @@ describe('gearVM (Gear Tree G3)', () => {
     const s = run();
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c2' });
     const cold = gearVM(s).trees.find((t) => t.id === 'coldBrew')!;
-    expect(cold.tiers.map((t) => t.state)).toEqual(['passed', 'owned', 'upgrade', 'poor', 'poor']);
+    expect(cold.tiers.map((t) => t.state)).toEqual(['passed', 'another', 'upgrade', 'poor', 'poor']);
     expect(cold.tiers[2].net).toBe(55 - 8);
     expect(gearVM(s).note).toMatch(/No supplies/);
+  });
+  it('G4e: buy another of the same machine into a free slot; no slot or no cash shows plain owned', () => {
+    const s = run();
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c2' });
+    const before = s.cash;
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c2' });
+    expect((s.slotGear ?? []).filter((g) => g === 'c2').length).toBe(2);
+    expect(s.cash).toBe(before - 25);
+    const vm = gearVM(s);
+    const t = vm.trees.find((x) => x.id === 'coldBrew')!.tiers[1];
+    expect(t.copies).toBe(2);
+    expect(t.state).toBe(vm.freeSlots > 0 && s.cash >= 25 ? 'another' : 'owned');
+    s.cash = 0;
+    expect(gearVM(s).trees.find((x) => x.id === 'coldBrew')!.tiers[1].state).toBe('owned');
+    expect(gearBoard(gearVM(s))).toContain('Yours ×2 ✓');
   });
 });
 

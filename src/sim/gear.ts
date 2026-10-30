@@ -11,7 +11,7 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, FAMILY_WORD, type AreaId, type
  *      buy:  pay `price`. If the crew already has a lower tier of the same tree in a slot, the new
  *            one replaces it in place and the old one is traded in for its `sell` value (an upgrade).
  *            Otherwise it goes into the first empty slot; with no empty slot nothing happens.
- *            Buying a tier you already have, or a lower one than you have, does nothing.
+ *            Buying the tier you already have adds a second copy in a free slot (G4e); a lower one does nothing.
  *      sell: empty slot `index` and get its `sell` value back.
  *  - `gearSpeed(station)` / `gearMarks(station)`: the machine's speed (1 = today) and the slip marks it
  *    puts on every cup. Stations with no gear id: 1 and 0, exactly as before.
@@ -87,7 +87,9 @@ export function applyGearInput(state: GameState, input: Extract<PlayerInput, { k
     gear.forEach((id, i) => {
       if (id && GEAR[id].tree === want.tree && (at < 0 || GEAR[id].tier > GEAR[gear[at]!].tier)) at = i;
     });
-    if (at >= 0 && GEAR[gear[at]!].tier >= want.tier) return state;
+    if (at >= 0 && GEAR[gear[at]!].tier > want.tier) return state;
+    // G4e (playtest): the same machine again goes into a free slot as a second copy (no trade-in).
+    if (at >= 0 && GEAR[gear[at]!].tier === want.tier) at = -1;
     const tradeIn = at >= 0 ? GEAR[gear[at]!].sell : 0;
     if (state.cash + tradeIn < want.price) return state;
     if (at < 0) {
