@@ -10,7 +10,11 @@
   v3.1.0 Phase 3 (hired staff with wages, head starts), v3.2.0 Phase 4 blocks 1–6 + season board + rival loyalty
   card. Every new run from the title or a co-op lobby is a **Gear run**; `?gear=0` still starts classic, and old
   classic saves resume as classic. Pages deploys every push to main.
-- SNAPSHOT 27 (all new state is optional fields), **PROTOCOL 40**. 1047 tests in 128 files; tsc and build clean.
+- SNAPSHOT 27 (all new state is optional fields), **PROTOCOL 40**. 1053 tests in 129 files; tsc and build clean.
+- After v3.2.0, Phase 6 polish only (UI/tests, no sim rules changed; live under the 3.2.0 label): P6-1 phone
+  ring sound, P6-2 season week-by-week table in Records, P6-3 week strip on the week-end screen, P6-4 readable
+  12px labels, P6-5 real v2.1.0/v3.1.0 save fixtures (`src/storage/*.fixture.json`, `oldSaves.test.ts`; keep
+  them loading), P6-6 café-start headless run (`CAFE=1 npx tsx scripts/p4Smoke.ts 14 2`).
 - Integration checks you can reuse: `npx tsx scripts/gearBalance.ts 28 3` (headless Gear runs with stand-in
   bots; `KEEP=1` plays seasons) and `npx tsx scripts/p4Smoke.ts 28 3` (scripted crew that uses the Phase 4
   inputs; a 6-day version runs in vitest as `src/p4Smoke.test.ts`).
@@ -103,6 +107,7 @@ classic one. Also review the overnight sim edits (list below) and fix anything y
 - P4 follow-up F1 (tag `p4-f01`): season board in Café records. `Records.seasons?` (`SeasonRecord`) upserted by `foldRecords` when `state.season` exists, best-first (`seasonOrder`), max 6; rendered as a "Season board" section in `src/ui/records.ts`. Records store version unchanged (optional field).
 - P4 follow-up F2 (tag `p4-f02`): rival loyalty card. `loyaltyLive`/`hasStamps`/`applyRivalLoyalty`/`loyaltyMorning`/`applyStampCardInput` in `src/sim/rival.ts`; input `{kind:'stampCard'}`; `Rival.stamps?`; brief alert `rival:loyalty` with a Stamp card fix. Bots ignore it: a planner hint could buy the stamp card on the launch night when cash ≥ $30 + a day's restock.
 - P4 B7 is a **design spike only** (tag `p4-b07-spike`): `docs/P4_B7_VERSUS_SPIKE.md`. Don't start V1 until Kennedy answers its open questions.
+- P6-6 (scripts only): `scripts/gearBalance.ts` `playGear(..., start?)` sets `s.tier`/`cash` directly because `createRun` ignores a `tier` option; if you want `createRun({tier})` to work, wire it there and drop the workaround.
 - No snapshot bumps: all new fields are optional (SNAPSHOT 27). Protocol is 40 since P4 F2 (39 B6, 34 B1, 35 B2, 36 B3, 37 B4, 38 B5).
 
 ## Freedom
