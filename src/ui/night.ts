@@ -1,4 +1,6 @@
 import { TASTE, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
+import { isGearId, type GearId } from '../data/gear';
+import type { GearTierState, GearTierVM, GearVM } from './gearVM';
 import { catalogueById } from '../data/catalogue';
 import { DRINK_INFO } from '../data/drinks';
 import type { AdId, CheckoutId, DrinkId, PitchKind, SupplyId, TierId } from '../sim/types';
@@ -126,6 +128,39 @@ export function stationsBoard(st: StationsVM, sel: number | null): string {
     .join('');
   return `<div class="st-board">${notes}<div class="st-slots" style="--n:${st.slots.length}">${tiles}</div>${pick}${spares}
     <div class="st-shop-h">Buy a station <small>It goes in the first empty slot, else the back room.</small></div><div class="sp-grid st-shop">${shop}</div></div>`;
+}
+
+// ---------------------------------------------------------------------------------------------- Spend: gear (Gear Tree G3)
+
+const GEAR_BTN: Record<GearTierState, (t: GearTierVM) => string> = {
+  owned: () => 'Yours ✓',
+  passed: () => 'Upgraded past',
+  buy: (t) => `Buy · $${t.price}`,
+  upgrade: (t) => `Upgrade · $${t.net}`,
+  poor: (t) => `$${t.net}`,
+  noSlot: () => 'No free slot',
+};
+
+/** The back bar (sell from a slot) and one row of tiers per tree. Bigger = better, cheapest on the left. */
+export function gearBoard(g: GearVM): string {
+  const head = g.pickNight
+    ? `<div class="gr-pick"><b>Pick your gear.</b> You start with $120 and an empty counter. Buy one machine to sell something tomorrow, then stock up on the Tonight tab.</div>`
+    : '';
+  const note = g.note ? `<div class="st-trade warn" role="status">⚖️ ${esc(g.note)}</div>` : '';
+  const slots = g.slots
+    .map((s) => `<div class="st-slot gr-slot ${s.id ? '' : 'empty'}" aria-label="Slot ${s.index + 1}: ${esc(s.name)}">
+        <span class="st-ic" aria-hidden="true">${s.icon}</span><b>${esc(s.name)}</b><small>Slot ${s.index + 1}</small>
+        ${s.id && s.id !== 'b0' ? `<button class="btn mini ghost" data-action="gear-sell" data-index="${s.index}">Sell · $${s.sell}</button>` : ''}</div>`)
+    .join('');
+  const trees = g.trees
+    .map((t) => `<div class="gr-tree"><div class="gr-tree-h"><span aria-hidden="true">${t.icon}</span> ${esc(t.name)}</div><div class="gr-tiers">${t.tiers
+      .map((x) => `<div class="gr-tier ${x.state}" title="${esc(`${x.blurb} Real-life sticker: ${x.sticker}. Sells back for $${x.sell}.`)}">
+          <b>${esc(x.name)}</b><span class="gr-stats">${esc(x.stats)}</span>
+          <button class="btn ${x.state === 'buy' || x.state === 'upgrade' ? '' : 'ghost'}" data-action="gear-buy" data-gear="${x.id}" ${x.state === 'buy' || x.state === 'upgrade' ? '' : 'disabled'}>${esc(GEAR_BTN[x.state](x))}</button>
+        </div>`).join('')}</div></div>`)
+    .join('');
+  return `<div class="st-board gr-board">${head}${note}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
+    <div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have.</small></div>${trees}</div>`;
 }
 
 // ---------------------------------------------------------------------------------------------- Spend: ads, pitch, grow, checkout
@@ -442,7 +477,7 @@ export interface NightUiState { tab: NightTab; spend: SpendView; drawer: Drawer 
 export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: string | null | undefined, ui: NightUiState): string {
   const cash = parseMoney(vm.cash);
   const day = extras?.day ?? 1;
-  const title = day <= 1 ? 'Opening night' : `After Day ${day - 1}`;
+  const title = day <= 1 ? (vm.gear ? 'Pick your gear' : 'Opening night') : `After Day ${day - 1}`;
   const sub = `planning ${extras ? `${extras.weekday}, ` : ''}Day ${day}`;
   const alertN = vm.brief.alerts.filter((a) => a.severity === 'danger' || a.severity === 'warn').length;
   const badge: Record<NightTab, string> = { tonight: alertN ? `${alertN}` : '', menu: '', spend: vm.hand.length ? `${vm.hand.length}` : '' };
@@ -455,13 +490,13 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
     cards: `<div class="sp-bar"><button class="btn" data-action="reroll" ${vm.reroll.affordable ? '' : 'disabled'} title="Swap the cards on the table for a fresh deal">🎲 Re-roll · ${esc(short$(vm.reroll.cost))}</button>
       ${vm.sets.length ? `<span class="sets-on" title="Set bonuses switched on">${vm.sets.map((n) => `<span>✓ ${esc(n)}</span>`).join('')}</span>` : ''}</div>
       <div class="hand">${cards || '<p class="empty">Nothing left to buy tonight.</p>'}</div>`,
-    stations: stationsBoard(vm.stations, ui.slotSel),
+    stations: vm.gear ? gearBoard(vm.gear) : stationsBoard(vm.stations, ui.slotSel),
     ads: adsBoard(vm.ads),
     pitch: pitchCard(vm.pitch, ui.pitch),
     grow: growthBoard(vm.growth),
     checkout: checkoutBoard(vm.checkout),
   };
-  const spend = `<div class="sp-nav" role="tablist">${SPEND_VIEWS.map((s) => `<button class="chip sv ${s.id === ui.spend ? 'on' : ''}" data-action="spend" data-sv="${s.id}" aria-selected="${s.id === ui.spend}">${s.label}</button>`).join('')}</div>
+  const spend = `<div class="sp-nav" role="tablist">${SPEND_VIEWS.map((s) => `<button class="chip sv ${s.id === ui.spend ? 'on' : ''}" data-action="spend" data-sv="${s.id}" aria-selected="${s.id === ui.spend}">${s.id === 'stations' && vm.gear ? '⚙️ Gear' : s.label}</button>`).join('')}</div>
     ${SPEND_VIEWS.map((s) => `<div class="sv-pane ${s.id === ui.spend ? 'on' : ''}" data-sv-pane="${s.id}">${spendBody[s.id]}</div>`).join('')}`;
   const colors = new Map((extras?.crew ?? []).map((c) => [c.id, c]));
   const ready = vm.ready
@@ -503,13 +538,14 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onTip?(input: NightFix): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onTip?(input: NightFix): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
   let lastVm: NightVM | null = null;
   let lastExtras: NightExtras | undefined;
   let lastKey = '';
   let lastSig = '';
+  let pickedOnce = false;
 
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -547,6 +583,8 @@ export function createNight(
       handlers.onSlot?.(Number(el.dataset.index), isEquipmentKind(el.dataset.station) ? el.dataset.station : null);
       ui.slotSel = null;
     } else if (action === 'equip' && isEquipmentKind(el.dataset.station)) handlers.onEquip?.(el.dataset.station);
+    else if (action === 'gear-buy' && isGearId(el.dataset.gear)) handlers.onGear?.('buy', el.dataset.gear);
+    else if (action === 'gear-sell') handlers.onGearSell?.(Number(el.dataset.index));
     else if (action === 'fix') {
       const fix = lastVm?.brief.alerts.find((a) => a.id === el.dataset.fix)?.fix?.input;
       if (fix) handlers.onTip?.(fix);
@@ -670,6 +708,12 @@ export function createNight(
       const key = `${nightStructureKey(vm)}#${extras ? nightExtrasKey(extras) : ''}#${room ?? ''}`;
       if (key === lastKey) return patch(vm, extras);
       lastKey = key;
+      // Gear Tree: the first night of a Gear run opens on Spend › Gear ("Pick your gear"), once.
+      if (vm.gear?.pickNight && !pickedOnce) {
+        pickedOnce = true;
+        ui.tab = 'spend';
+        ui.spend = 'stations';
+      }
       syncDraft(vm.signature);
       if (ui.drawer?.startsWith('twist:') && !vm.menu?.some((m) => `twist:${m.drink}` === ui.drawer)) ui.drawer = null;
       const focused = document.activeElement instanceof HTMLElement && container.contains(document.activeElement) ? document.activeElement : null;

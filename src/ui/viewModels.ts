@@ -1,4 +1,5 @@
 import { SIG, sigShare } from '../sim/signature';
+import { gearVM, type GearVM } from './gearVM';
 import { AD_IDS, ADS } from '../sim/ads';
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../sim/checkout';
 import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
@@ -289,6 +290,8 @@ export interface NightVM {
   growth: GrowthVM;
   /** FB1 WP5: the Spend › Stations card. */
   stations: StationsVM;
+  /** Gear Tree G3: the Spend › Gear card (Gear runs only; it replaces Stations). */
+  gear?: GearVM;
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
   /** Tomorrow's neighbourhood forecast: the newspaper on the shop board. */
@@ -731,6 +734,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     checkout: checkoutVM(state),
     growth: growthVM(state),
     stations: stationsVM(state),
+    ...(state.gear ? { gear: gearVM(state) } : {}),
     pitch: pitchVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),
