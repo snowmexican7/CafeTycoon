@@ -2217,3 +2217,7 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   **Co-op vote.** The Udder-Matic card ($320) goes to a co-op vote like $50+ gear: `state.fridgeVote { by, byName, fridge, amount, yes, no }`, voted with the gear vote input, one proposal at a time, lapsing at opening, with the result in `gearVoteLast`. The UI lane draws it like the gear vote.
 
   **Known limit.** Last call doesn't interrupt a bot that is busy making a drink.
+- **Cold brew wording (`fb2-tap-wording`, Grok's request).** No "tap" in sim/data player text: tickets read
+  'Pour cold brew' / 'Ice + milk' / 'Cold brew again (sweet cream)'; equipment 'Cold-brew keg', catalogue 'Second
+  cold brew keg', gear c4 'The Kegerator', describe 'cold brew', steep's morning note "…had no room left…". Code ids
+  (`coldBrewTap`, `batchLeft`) unchanged; card-payment "tap terminal" unchanged.

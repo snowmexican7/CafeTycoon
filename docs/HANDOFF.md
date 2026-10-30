@@ -131,7 +131,9 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
   `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
-- [ ] 2026-10-30: **Rename player-facing "tap" (cold brew) in sim/data strings** (Kennedy found it confusing;
+- [x] 2026-10-30: done, merge `fb2-tap-wording` (every string old → new in BACKLOG "Feedback 2"). Gear c4 is now
+  **'The Kegerator'** ('A real keg…'); please rename its row in `docs/GEAR_TREE.md`. Card "tap terminal" left as is.
+  **Rename player-facing "tap" (cold brew) in sim/data strings** (Kennedy found it confusing;
   suggested: "cold brew", "Pour cold brew", "cups of cold brew ready"):
   - `src/data/drinks.ts`: `ticket` ['Tap'] / 'Tap (milk + ice)' / 'Tap again (sweet cream)' (shown on the night
     menu card via `DRINK_INFO[..].ticket` in `ui/night.ts`), blurbs "Straight from the tap.", "A shot over cold
