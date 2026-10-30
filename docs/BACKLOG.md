@@ -1983,4 +1983,11 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
   stock credit, M6 cover bots unpaid, M8 connected Managers only, M9 pots cleared at closing, M10 promo-day memo.
   Open: review item 8 (branch loss in the brief's/planner's bills) and M4, M5, M7. **For the UI lane:**
   src/ui/branchView.ts still values a send at list price (the sim now uses the restock price).
+- **Bots on Gear stations** (tag `bots-gear-1`): pods and mixed bars, jams and dead machines, drip pots,
+  level-up drinks with the clash rule, pour-over, twins/edge slots, no early pulls for snobs and the arts crowd;
+  `recipeAt` (shared with `interact`), insert steps carry `makes`. gearBalance 28×3: served 750 → 769, lost
+  201 → 193, cash $643 → $751, 0 bot mistakes. Open: a cold pot can't be dumped (bots serve it at half tip until
+  empty; the batch/pickup work may add a "dump the pot" action); the optional "prefer near-level-up / better
+  area tip" ordering was skipped (it would break queue order); drip pots, twins and mixed bars are proven by
+  unit tests only (gearBalance stays on the stand): worth a browser smoke on a café Gear run.
 

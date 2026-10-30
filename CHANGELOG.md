@@ -24,6 +24,7 @@ when a build goes out, the line moves under its version with the date.
 - Bot crewmates give better night tips in Gear runs: which machine to save up for next, when a bot costs more than it brings in, matching Starbuck$'s happy hour, printing a stamp card, and opening, staffing or stocking the second shop.
 - Fixes: a gear vote no longer goes through when someone leaves and the proposer withdraws; the second shop isn't charged for a phone call that never rang; a pods-only bar no longer offers an americano, doppio or red-eye it can't make; the second shop can now be opened from the café.
 - Fixes: selling the second shop gives back unspent stock credit; bots that only cover for a missing friend don't draw wages; records' best day matches the night screen's profit.
+- Bots can work a Gear bar now: the Pod-o-Matic, whacking a jammed machine, steering clear of a dead one, brewing and pouring drip pots, the new level-up drinks, pour-over, and twin machines. Gear runs with bots serve more and lose fewer customers.
 
 ## 3.2.0 — 2026-10-30 · Phase 4 (franchise & rivals, lite)
 
