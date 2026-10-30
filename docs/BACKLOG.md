@@ -1634,3 +1634,38 @@ Please also review (G4/G5): the `interact` hooks order in `stations.ts` (gearBlo
 Deviations from GEAR_TREE.md: pods use the beans supply (no new SupplyId); jar crack = lost batch + morning note, not a floor spill; "+1★ quality cap" skipped (3★ is already the max); drip (D-tree) not built yet — it needs a new StationKind/drink/supply + sprites + bots.
 
 Still to build: drip (D1–D5), G6 level-ups, G7 area taste, co-op $50 majority votes (G8), dual boiler sides (G9), G10 pour-over/balance, bots using gear, inspector/other rare events, records split + protocol bump at the v3 flip (G11).
+
+### Claude's review of Gear G1–G5 sim edits (2026-10-29, at Kennedy's request)
+
+Read-only review of f28f9c6, 6b2d55b, a467e25 and bdcb659 (src/data/gear.ts, src/sim/gear.ts and the hooks in
+stations, slots, growth, customers, effects, run, step, validate, types). Classic runs are untouched: every hook
+is behind `state.gear` or `Station.gear`, which only `gearStart` sets. 867 tests green on main 25c51e3.
+
+Answers to the four questions:
+- **stations.ts speed and batch, and the G4/G5 `interact` hook order (determinism):** sound. `gearBlocked` before
+  the recipe and `gearAfterUse` after `busyTotal` is the right order (a jam or dead battery blocks before any
+  supply is consumed; the off-note mark lands on the cup already in the machine). Gear speed divides the brew time, the batch counts down at
+  insert, and gear marks are added after `cupIntoStation`, so they stick. G5 quirk rolls (`gearMorning`,
+  `gearAfterUse`) draw RNG only for stations that carry gear with quirks, in station order, so classic streams are
+  unchanged. The `src/sim/gear.ts` header still says "no RNG"; it should say the G5 quirks roll RNG.
+- **slots.ts ↔ gear.ts import cycle:** safe. Neither module uses the other at load time (only inside functions);
+  the build and the suite confirm it. Leave it.
+- **validate.ts bounds:** fine. `isGearId` uses an own-property check, so `__proto__`-style ids are refused;
+  `sell` checks an integer index and `applyGearInput` range-checks it.
+- **net/storage whitelisting:** nothing to whitelist. Inputs pass through `validateInput`, snapshots carry new
+  optional fields as they are, and delta sync is generic. Versions: G1–G5 added optional state fields and the
+  `gear` input without a snapshot/protocol bump; harmless because every field is optional, and the planned bump at
+  G11 covers it. Snapshot 26/27 and protocol 29/30 were taken by the bot-prep and collision tweaks.
+
+Findings:
+- **Planner suggests classic purchases in a Gear run (Claude's lane, fix pending Kennedy's OK).** On a Gear run
+  `planNight` still proposes `equip` (e.g. a second espresso machine), which `applyEquipInput` ignores there, so a
+  crew-tip chip would do nothing. Fix: skip `equip`/`slot` advice when `isGearRun(state)`.
+- **Bots can't use a Pod-o-Matic (Claude's lane, low priority; Gear's G5b note agrees).** Probe: a Gear run with the E1 pod machine, one bot, an espresso
+  order waiting → the bot idled for 60 s and served nothing. `chainFor` builds every espresso drink from the
+  grinder, which a pod run doesn't have; bots also never whack a jammed machine. Fine while bots are rare; worth a
+  line in the G-block that teaches bots about gear.
+- **Minor:** the portafilter-spill quirk logs "coffee on the floor" even when the mess cap stops the puddle;
+  `gearAfterUse` uses `tileOf(p.pos)` where the rest of the floor code uses `ownTile` (nearest walkable node).
+- **UI question:** the Gear board is gated on the local `?gear=1` flag. A friend who joins a Gear room without the
+  flag gets a Gear run with no Gear board; gating on `state.gear` would follow the host.
