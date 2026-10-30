@@ -19,8 +19,11 @@ export function counterSpotOf(s: { id: string; kind: string }, list: readonly { 
   return list.some((x) => x.id === PICKUP_ID) ? 'till' : undefined;
 }
 
-/** How far up the floor the pickup crowd stands (the order line is at the layout's queue y, 7.6). */
-export const PICKUP_Y = 7.2;
+/**
+ * How far up the floor the pickup crowd stands: the order line's y (7.6), but left of the till, so their
+ * order bubbles stay below the cups on the coasters.
+ */
+export const PICKUP_Y = 7.6;
 /** Space between people waiting at pickup, in tiles. */
 export const PICKUP_GAP = 0.75;
 /** The pickup crowd never stands left of this (the box corner and the door are there). */

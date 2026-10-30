@@ -65,3 +65,18 @@ describe('pickupModel (3.3.1)', () => {
     expect(cups.map((c) => c.wanted)).toEqual([false, false, false, true]);
   });
 });
+
+describe('Gear counters get no number badge (3.3.1)', () => {
+  it('the till stays badge 1 and the pickup counter and bar are skipped like twins', async () => {
+    const { stationBadges } = await import('./slotModel');
+    const list = [
+      { id: 'counter', kind: 'counter' },
+      { id: PICKUP_ID, kind: 'counter' },
+      { id: CONDIMENTS_ID, kind: 'counter' },
+      { id: 'espresso', kind: 'espresso' },
+    ];
+    const b = stationBadges(list.map((s) => ({ kind: s.kind, twin: ['pickup', 'condiments'].includes(counterSpotOf(s, list) ?? '') })));
+    expect(b).toEqual([1, 1, 1, 1]);
+    expect(stationBadges(list.map((s) => ({ kind: s.kind })))).toEqual([1, 2, 3, 1]); // what 3.3.0 drew
+  });
+});

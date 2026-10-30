@@ -1,7 +1,7 @@
 import { Container, Graphics, type Text } from 'pixi.js';
 import { layoutFor } from '../../data/layout';
 import type { GameState } from '../../sim/types';
-import { boxStackOffset, pickupCups, servingsGauge } from '../pickupModel';
+import { boxStackOffset, PICKUP_Y, pickupCups, servingsGauge } from '../pickupModel';
 import { PALETTE, sx, sy } from '../theme';
 import { drawItem, label, shadow } from './draw';
 import { pickupSlotXY, stationDepth } from './stations';
@@ -39,7 +39,7 @@ export class PickupVisuals {
 
   constructor(depth: Container) {
     depth.addChild(this.cups, this.boxes);
-    this.gaugeText = label('', 12, 0xffffff, '800');
+    this.gaugeText = label('', 13, 0xffffff, '800');
     this.gaugeText.style.stroke = { color: 0x3a2418, width: 3 };
     this.boxText = label('', 11, 0xfff4e2, '800');
     this.boxText.style.stroke = { color: 0x3a2418, width: 3 };
@@ -64,7 +64,7 @@ export class PickupVisuals {
       this.floorKey = fk;
       const x0 = sx(Math.max(1.3, lay.condiments.x - 1.6));
       const x1 = sx(lay.pickup.x + 0.45);
-      const y = sy(7.2) + 4;
+      const y = sy(PICKUP_Y) + 4;
       this.mark.clear();
       this.mark.roundRect(x0, y - 16, x1 - x0, 32, 10).fill({ color: 0x5fae86, alpha: 0.16 }).stroke({ width: 2.5, color: 0x3f8a5d, alpha: 0.45 });
       this.markText.position.set((x0 + x1) / 2, y + 26);
@@ -73,12 +73,12 @@ export class PickupVisuals {
     // cups on the pickup coasters
     const g = this.cups;
     g.clear();
-    g.zIndex = stationDepth(lay.pickup) + 1;
+    g.zIndex = Math.max(stationDepth(lay.pickup) + 1, sy(PICKUP_Y) + 40); // never behind the pickup crowd
     pickupCups(state).forEach((c, i) => {
       const { x, y } = pickupSlotXY(lay.pickup, i);
-      if (c.stale && Math.floor(timeSec * 4) % 2 === 0) g.ellipse(x, y + 5, 9, 4).fill({ color: PALETTE.bad, alpha: 0.55 });
-      else if (c.wanted) g.ellipse(x, y + 5, 9, 4).fill({ color: 0xfff2b8, alpha: 0.7 });
-      drawItem(g, c.item, x, y - 2, 0.62);
+      if (c.stale && Math.floor(timeSec * 4) % 2 === 0) g.ellipse(x, y + 5, 11, 5).fill({ color: PALETTE.bad, alpha: 0.6 });
+      else if (c.wanted) g.ellipse(x, y + 5, 11, 5).fill({ color: 0xfff2b8, alpha: 0.75 });
+      drawItem(g, c.item, x, y - 4, 0.85);
     });
 
     // the condiment bar gauge: 20 pips and a count, amber when low, red and blinking when empty
@@ -87,13 +87,13 @@ export class PickupVisuals {
     const by = sy(lay.condiments.y) - 84;
     const pg = this.gauge;
     pg.clear();
-    const w = 60;
+    const t = sv.tone === 'empty' ? 'EMPTY: bring a box' : `${sv.text} left`;
+    if (this.gaugeText.text !== t) this.gaugeText.text = t;
+    const w = Math.max(60, Math.ceil(this.gaugeText.width) + 6); // the box fits its text
     const blink = sv.tone === 'empty' && Math.floor(timeSec * 2.5) % 2 === 0;
     pg.roundRect(bx - w / 2 - 4, by - 10, w + 8, 34, 8).fill({ color: blink ? 0x7a1f17 : 0x2a1a12, alpha: 0.88 }).stroke({ width: 2.5, color: TONE[sv.tone] });
     const pip = w / sv.max;
     for (let i = 0; i < sv.max; i++) pg.roundRect(bx - w / 2 + i * pip + 0.4, by + 12, pip - 0.8, 7, 1).fill(i < sv.pips ? TONE[sv.tone] : 0x5a4a40);
-    const t = sv.tone === 'empty' ? 'EMPTY: bring a box' : `${sv.text} left`;
-    if (this.gaugeText.text !== t) this.gaugeText.text = t;
     this.gaugeText.style.fill = sv.tone === 'ok' ? 0xffffff : TONE[sv.tone];
     this.gaugeText.position.set(bx, by + 2);
 
