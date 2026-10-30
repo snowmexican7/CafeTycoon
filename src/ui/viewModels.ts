@@ -268,7 +268,7 @@ export function handCardViewModel(state: GameState, item: CatalogueItem): HandCa
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[] } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -683,6 +683,18 @@ function spoiledWhat(s: Partial<Record<SupplyId, number>> | undefined): string {
     .join(', ');
 }
 
+const FAMILY_LABEL = { espresso: '☕ Espresso', milky: '🥛 Milky', iced: '🧊 Iced', filter: '🫖 Filter' } as const;
+/** Gear G7: the receipt's "tips by drink type" rows, biggest first (undefined when there are none). */
+export function familyTips(d: DayStats): { label: string; amount: string }[] | undefined {
+  const t = d.tipsByFamily;
+  if (!t) return undefined;
+  const rows = (Object.keys(FAMILY_LABEL) as (keyof typeof FAMILY_LABEL)[])
+    .filter((f) => (t[f] ?? 0) > 0)
+    .sort((a, b) => (t[b] ?? 0) - (t[a] ?? 0))
+    .map((f) => ({ label: FAMILY_LABEL[f], amount: money(t[f]!) }));
+  return rows.length ? rows : undefined;
+}
+
 export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   const last = state.days[state.days.length - 1];
   const takings =
@@ -692,6 +704,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           ...(last.fines ? { fines: money(last.fines) } : {}), ...(last.bonus ? { bonus: money(last.bonus) } : {}),
           ...(last.spoiledValue ? { spoiled: money(last.spoiledValue), spoiledWhat: spoiledWhat(last.spoiled) } : {}),
           ...(last.pastries ? { pastries: last.pastries } : {}),
+          ...(familyTips(last) ? { familyTips: familyTips(last) } : {}),
           ...(last.twistCost ? { twists: money(last.twistCost) } : {}),
           ...(last.checkoutFees ? { checkoutFees: money(last.checkoutFees) } : {}),
           ...(last.ad ? { ad: `${ADS[last.ad.id].icon} ${ADS[last.ad.id].name} ad ${last.ad.outcome === 'viral' ? 'went viral' : last.ad.outcome === 'ok' ? 'did fine' : 'flopped'}` } : {}),

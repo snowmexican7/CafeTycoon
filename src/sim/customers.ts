@@ -1,5 +1,5 @@
 import { signatureServed, sigPremium, sigShare } from './signature';
-import { areaTipMul, batchOut, gearAskedFor } from './gear';
+import { areaTipMul, batchOut, gearAskedFor, gearPullMul, noteFamilyTip } from './gear';
 import { rivalAskFactor } from './rival';
 import { roleCraft, roleTip } from './roles';
 import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
@@ -79,7 +79,7 @@ export function spawnCustomers(state: GameState): GameState {
 
 /** Weighted drink draw over the menu, biased by the café's order modifiers (one rngNext). */
 export function drawDrink(state: GameState, menu: DrinkId[], m: Modifiers): DrinkId {
-  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d));
+  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d) * gearPullMul(state, d));
   let roll = rngNext(state) * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < menu.length; i++) {
     roll -= weights[i];
@@ -260,6 +260,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   state.cash = round2(state.cash + price + tip + sigBonus - fee - (combo ? TASTE.cost : 0));
   state.today.sales = round2(state.today.sales + price);
   state.today.tips = round2(state.today.tips + tip);
+  noteFamilyTip(state, drink, tip);
   state.today.served += 1;
   tallyDrink(state.today, drink);
   levelUpOnServe(state, drink); // Gear G6: drinks level up with use

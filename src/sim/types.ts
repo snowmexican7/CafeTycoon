@@ -391,6 +391,8 @@ export interface DayStats {
   inspection?: 'pass' | 'fail' | null;
   events?: EventKind[];
   drinks?: Record<DrinkId, number>;
+  /** Gear G7: tips per drink family today (Gear runs only; the receipt's per-family lines). */
+  tipsByFamily?: Partial<Record<'espresso' | 'milky' | 'iced' | 'filter', number>>;
   influencer?: 'served' | 'lost' | null;
   /** Espresso Easter egg: ambulance bill run up today, and hospital tab paid off from today's profit. */
   ambulance?: number;
