@@ -10,6 +10,7 @@ import { step } from '../src/sim/step';
 import { addStandIns, syncBots } from '../src/sim/bots/roster';
 import { restockCost } from '../src/sim/night';
 import { expectedUse } from '../src/sim/brief';
+import { planNight } from '../src/sim/bots/planner';
 import { ECONOMY } from '../src/data/economy';
 import { GEAR, type GearId } from '../src/data/gear';
 import { TIERS, nextTier } from '../src/sim/growth';
@@ -38,6 +39,10 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
       if (packs <= 0) continue;
       cash = r2(cash - restockCost(state, sup, packs));
       out.push({ kind: 'restock', playerId: by, supply: sup, packs });
+    }
+    // Batch coffee / condiments: the stand-ins have no human to steep or buy boxes, so take the planner's advice for both.
+    for (const a of planNight(state)) {
+      if ((a.id === 'steep' || a.id === 'condimentBox') && (a.input.kind === 'steep' || a.input.kind === 'condimentBox')) out.push({ ...a.input, playerId: by });
     }
     return out;
   }
@@ -129,6 +134,7 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
     stars: cups ? r2(stars / cups) : null, tier: s.tier ?? 'cafe', gear: (s.slotGear ?? []).filter(Boolean).join(' '),
     drinks: d.reduce((a, x) => { for (const [k, v] of Object.entries(x.drinks ?? {})) if (v) a[k] = (a[k] ?? 0) + v; return a; }, {} as Record<string, number>),
     botMistakes: d.reduce((a, x) => a + (x.botMistakes ?? 0), 0),
+    black: d.reduce((a, x) => a + (x.blackCoffees ?? 0), 0),
     cashByDay: d.map((x) => Math.round(x.sales + x.tips)),
     ...(s.season ? { season: s.season.weeks.map((w) => `w${w.week}:${Math.round(w.profit)}${w.target !== null ? '/' + w.target : ''}`).join(' ') } : {}),
   };
