@@ -54,15 +54,15 @@ export const DRINK_INFO: Record<DrinkId, DrinkInfo> = {
   },
   mocha: {
     name: 'Mocha', short: 'Mocha', icon: '🍫', bias: 0.6, wait: 1.3, unlockDay: 5,
-    ticket: ['Grind', 'Pull', 'Steam', 'Steam again (cocoa)'], blurb: 'A latte that goes back on the steamer with cocoa.',
+    ticket: ['Grind', 'Pull', 'Steam', 'Steam again (cocoa)'], blurb: 'A latte that goes back on the steam wand with cocoa.',
   },
   matcha: {
     name: 'Matcha latte', short: 'Matcha', icon: '🍵', bias: 0.7,
-    ticket: ['Steamer, empty hands (matcha + milk)'], blurb: 'No shot: whisk matcha into milk at the steamer.',
+    ticket: ['Wand, empty hands (matcha + milk)'], blurb: 'No shot: whisk matcha into milk at the steam wand.',
   },
   special: {
     name: 'Maple cold foam', short: 'Maple foam', icon: '🍁', bias: 0.5, wait: 1.2,
-    ticket: ['Tap', 'Steamer (maple foam)'], blurb: 'Seasonal special: cold brew topped with maple foam.',
+    ticket: ['Tap', 'Wand (maple foam)'], blurb: 'Seasonal special: cold brew topped with maple foam.',
   },
   // G4d: Gear runs only (a drip machine on the floor). One press brews a pot; each press after pours a cup.
   drip: { name: 'Drip coffee', short: 'Drip', icon: '🫖', bias: 0.9, ticket: ['Drip (brew a pot, then pour)'], blurb: 'Filter coffee from a pot. Cheap and fast once it is brewed.' },
@@ -72,7 +72,7 @@ export const DRINK_INFO: Record<DrinkId, DrinkInfo> = {
   // G6c: more level-ups (Gear runs only).
   doppio: { name: 'Doppio', short: 'Doppio', icon: '⚡', bias: 0.6, ticket: ['Grind', 'Pull', 'Espresso machine again (second shot)'], blurb: 'A double shot. Learned after 30 espressos on a Sylvia or better.' },
   sweetCream: { name: 'Sweet-cream cold brew', short: 'Sweet cream', icon: '🧋', bias: 0.8, wait: 1.1, ticket: ['Tap', 'Tap again (sweet cream)'], blurb: 'Cold brew under a float of sweet cream. Learned after 15 cold brews.' },
-  cafeAuLait: { name: 'Café au lait', short: 'Au lait', icon: '🫗', bias: 0.8, ticket: ['Drip', 'Steamer (hot milk)'], blurb: 'Drip coffee and hot milk, half and half. Learned after 12 drips.' },
+  cafeAuLait: { name: 'Café au lait', short: 'Au lait', icon: '🫗', bias: 0.8, ticket: ['Drip', 'Wand (hot milk)'], blurb: 'Drip coffee and hot milk, half and half. Learned after 12 drips.' },
   redEye: { name: 'Red-eye', short: 'Red-eye', icon: '👁️', bias: 0.6, ticket: ['Drip', 'Espresso machine (shot on top)'], blurb: 'Drip coffee with a shot dropped in. Learned after 20 drips with a real espresso machine.' },
   // G10a: comes with the Pour-Over Bar (Gear runs).
   pourOver: { name: 'Pour-over', short: 'Pour-over', icon: '🫘', bias: 0.7, wait: 1.15, ticket: ['Pour-over bar (handmade)'], blurb: 'One cup, poured by hand through a paper cone. Slow and fancy.' },
@@ -105,7 +105,7 @@ export interface Recipe {
 
 /**
  * Every recipe per station, first match wins. What is in your hands picks the recipe, so the controls
- * stay one button: a shot at the steamer makes a latte, a latte at the steamer makes a mocha.
+ * stay one button: a shot at the steamer (FB2 C9: the steam wand) makes a latte, a latte there makes a mocha.
  */
 export const RECIPES: Record<RecipeStation, Recipe[]> = {
   grinder: [{ takes: null, gives: 'grounds', consumes: ['beans'] }],

@@ -23,9 +23,9 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SN
  * Classic `equip` and `slot` inputs do nothing in a Gear run (the Gear tab replaces the stations shop).
  * Pure and deterministic: no RNG.
  */
-import { GEAR, GEAR_START, type GearId } from '../data/gear';
+import { GEAR, GEAR_START, WANDS, WAND_SECONDS, WAND_UPGRADE, type AddOnWand, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
-import { ensureCounterSpots, stationsFromSlots, slotCount } from './slots';
+import { ensureCounterSpots, stationsFromSlots, slotCount, wandOn } from './slots';
 import { buyFridgeCard, fridgeCards } from './fridge';
 import { FRIDGES } from '../data/fridges';
 import { CONDIMENTS } from './condiments';
@@ -61,6 +61,7 @@ export function gearStart(state: GameState): void {
   });
   state.slots = slots;
   state.slotGear = gear;
+  state.slotWand = Array.from({ length: n }, () => null);
   state.equipment = [];
   state.gearLog = [];
   state.stations = stationsFromSlots(state.tier, slots, gear);
@@ -72,7 +73,7 @@ export function gearStart(state: GameState): void {
 
 function rebuild(state: GameState): void {
   const old = state.stations;
-  state.stations = stationsFromSlots(state.tier, state.slots ?? [], state.slotGear ?? []);
+  state.stations = stationsFromSlots(state.tier, state.slots ?? [], state.slotGear ?? [], state.slotWand ?? []);
   keepStale(old, state.stations); // FB2 A3: a stale pot stays stale on the same machine
   ensureCounterSpots(state);
 }
@@ -108,11 +109,14 @@ const voters = (state: GameState) => state.players.filter((x) => x.connected && 
 function bigDeal(state: GameState, input: Extract<PlayerInput, { kind: 'gear' }>): Pick<GearVote, 'action' | 'gear' | 'index' | 'amount'> | null {
   if (input.action === 'buy') {
     const want = GEAR[input.gear];
-    return want && want.price >= GEAR_VOTE_MIN ? { action: 'buy', gear: want.id, amount: want.price } : null;
+    const wand = buyWand(input.gear, input.wand);
+    const amount = want ? want.price + (wand ? WANDS[wand].withMachine : 0) : 0;
+    return want && amount >= GEAR_VOTE_MIN ? { action: 'buy', gear: want.id, amount, ...(wand ? { wand } : {}) } : null;
   }
   if (input.action === 'sell') {
     const id = state.slotGear?.[input.index];
-    return id && GEAR[id].sell >= GEAR_VOTE_MIN ? { action: 'sell', gear: id, index: input.index, amount: GEAR[id].sell } : null;
+    const amount = id ? GEAR[id].sell + wandSell(state, input.index) : 0;
+    return id && amount >= GEAR_VOTE_MIN ? { action: 'sell', gear: id, index: input.index, amount } : null;
   }
   return null;
 }
@@ -195,7 +199,7 @@ export function settleVote(state: GameState): GameState {
   if (yes * 2 > n) {
     const cashBefore = state.cash;
     const slotsBefore = JSON.stringify(state.slotGear ?? []);
-    gearDeal(state, v.byName, v.action === 'buy' ? { kind: 'gear', playerId: v.by, action: 'buy', gear: v.gear } : { kind: 'gear', playerId: v.by, action: 'sell', index: v.index! });
+    gearDeal(state, v.byName, v.action === 'buy' ? { kind: 'gear', playerId: v.by, action: 'buy', gear: v.gear, ...(v.wand ? { wand: v.wand } : {}) } : { kind: 'gear', playerId: v.by, action: 'sell', index: v.index! });
     const done = state.cash !== cashBefore || JSON.stringify(state.slotGear ?? []) !== slotsBefore;
     return endVote(state, done, done ? `Vote passed: ${v.action === 'buy' ? 'bought' : 'sold'} ${name}.` : `Vote passed, but there wasn't enough cash or room for ${name}.`);
   }
@@ -214,18 +218,29 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
   const p = { name: by };
   const slots = [...(state.slots ?? [])];
   const gear = [...(state.slotGear ?? [])];
+  const wands = [...(state.slotWand ?? [])];
   while (gear.length < slots.length) gear.push(null);
+  while (wands.length < slots.length) wands.push(null);
+  let wandAt = -1; // FB2 C9: the slot that got a machine with a wand, for `wand.add`
   if (input.action === 'sell') {
     const i = input.index;
     const id = gear[i];
     if (!Number.isInteger(i) || i < 0 || i >= slots.length || !id) return state;
-    state.cash = round2(state.cash + GEAR[id].sell);
+    // FB2 C9: an add-on wand goes with its machine, for its own sell value.
+    const w = wandOn(id, wands[i] ?? null) === wands[i] ? wands[i] : null;
+    const back = GEAR[id].sell + (w ? WANDS[w].sell : 0);
+    state.cash = round2(state.cash + back);
     slots[i] = null;
     gear[i] = null;
-    state.gearLog = [...(state.gearLog ?? []), { gear: id, action: 'sell', day: state.day, by: p.name, cash: GEAR[id].sell }];
+    wands[i] = null;
+    state.gearLog = [...(state.gearLog ?? []), { gear: id, action: 'sell', day: state.day, by: p.name, cash: back, ...(w ? { wand: w } : {}) }];
   } else {
     const want = GEAR[input.gear];
     if (!want) return state;
+    // FB2 C9: a wand bought with the machine must be one it takes (E3: weak; E4: weak or strong).
+    if (input.wand !== undefined && buyWand(want.id, input.wand) === null) return state;
+    const wand = buyWand(want.id, input.wand);
+    const wandPrice = wand ? WANDS[wand].withMachine : 0;
     // the highest tier of this tree already in a slot
     let at = -1;
     gear.forEach((id, i) => {
@@ -236,18 +251,22 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
     if (!gearRequiresMet(state, want.id)) return state;
     // G4e (playtest): the same machine again goes into a free slot as a second copy (no trade-in).
     if (at >= 0 && GEAR[gear[at]!].tier === want.tier) at = -1;
-    const tradeIn = at >= 0 ? GEAR[gear[at]!].sell : 0;
-    if (state.cash + tradeIn < want.price) return state;
+    // FB2 C9: replacing a machine drops its add-on wand too (its sell value comes back with the trade-in).
+    const oldWand = at >= 0 && wandOn(gear[at]!, wands[at] ?? null) === wands[at] ? (wands[at] ?? null) : null;
+    const tradeIn = at >= 0 ? GEAR[gear[at]!].sell + (oldWand ? WANDS[oldWand].sell : 0) : 0;
+    if (state.cash + tradeIn < want.price + wandPrice) return state;
     if (at < 0) {
       at = slots.findIndex((x, i) => x === null && i < slotCount(state.tier));
       if (at < 0) return state;
     } else {
-      state.gearLog = [...(state.gearLog ?? []), { gear: gear[at]!, action: 'sell', day: state.day, by: p.name, cash: tradeIn }];
+      state.gearLog = [...(state.gearLog ?? []), { gear: gear[at]!, action: 'sell', day: state.day, by: p.name, cash: tradeIn, ...(oldWand ? { wand: oldWand } : {}) }];
     }
-    state.cash = round2(state.cash + tradeIn - want.price);
+    state.cash = round2(state.cash + tradeIn - want.price - wandPrice);
     slots[at] = want.station;
     gear[at] = want.id;
-    state.gearLog = [...(state.gearLog ?? []), { gear: want.id, action: 'buy', day: state.day, by: p.name, cash: -want.price }];
+    wands[at] = wand;
+    if (wand) wandAt = at;
+    state.gearLog = [...(state.gearLog ?? []), { gear: want.id, action: 'buy', day: state.day, by: p.name, cash: -(want.price + wandPrice), ...(wand ? { wand } : {}) }];
     // G4d: the first drip machine puts drip coffee on the menu for good.
     if (want.pot) {
       const known = state.unlocked ?? [...BASE_DRINKS];
@@ -263,8 +282,86 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
   }
   state.slots = slots;
   state.slotGear = gear;
+  state.slotWand = wands;
   rebuild(state);
+  const st = wandAt >= 0 ? state.stations.find((x) => x.kind === 'espresso' && !x.twin && slotOf(state, x) === wandAt) : undefined;
+  if (st?.wand && st.wand !== 'built') emitLog(state, 'wand.add', { station: st.id, wand: st.wand, by: input.playerId });
   return state;
+}
+
+// ---------------------------------------------------------------------------------------------- FB2 C9: steam wands
+
+/** The add-on wand `want` if machine `id` takes it (null when it doesn't, or none was asked for). */
+function buyWand(id: GearId, want: AddOnWand | undefined): AddOnWand | null {
+  if (want === undefined || !GEAR[id]) return null;
+  return GEAR[id].wand?.addOns?.includes(want) ? want : null;
+}
+
+/** What the add-on wand in slot `i` sells for with its machine (0 with none). */
+function wandSell(state: GameState, i: number): number {
+  const id = state.slotGear?.[i];
+  const w = state.slotWand?.[i] ?? null;
+  return id && w && wandOn(id, w) === w ? WANDS[w].sell : 0;
+}
+
+/** The slot a (non-twin) station stands in, by position; -1 when none. */
+function slotOf(state: GameState, st: Station): number {
+  return SLOT_POSITIONS[state.tier ?? 'cafe'].findIndex((p) => p.x === st.pos.x && p.y === st.pos.y);
+}
+
+/** A wand on offer for one espresso machine tonight: add one (`later` price) or upgrade a little one to a proper one. */
+export interface WandCard { station: string; index: number; gear: GearId; wand: AddOnWand; price: number; upgrade: boolean }
+
+/**
+ * FB2 C9: the wands on offer tonight, per espresso machine in a slot (slot order): E3 with no wand, the little wand at
+ * its later price; E4 with no wand, the little one or the proper one; E4 with the little one, the proper one for the
+ * difference (`WAND_UPGRADE`). Built-in wands (E5/E6), E1/E2 and a proper wand already on: nothing. [] outside Gear runs.
+ */
+export function wandCards(state: GameState): WandCard[] {
+  if (!isGearRun(state)) return [];
+  const out: WandCard[] = [];
+  for (const st of state.stations) {
+    if (st.kind !== 'espresso' || st.twin || !st.gear) continue;
+    const offers = GEAR[st.gear].wand?.addOns ?? [];
+    const index = slotOf(state, st);
+    if (index < 0) continue;
+    for (const w of offers) {
+      if (st.wand === w || st.wand === 'strong') continue;
+      const upgrade = st.wand === 'weak';
+      out.push({ station: st.id, index, gear: st.gear, wand: w, price: upgrade ? WAND_UPGRADE : WANDS[w].later, upgrade });
+    }
+  }
+  return out;
+}
+
+/**
+ * FB2 C9 night input: add a wand to (or upgrade the little wand on) the espresso machine `station`, from `wandCards`
+ * (night, people only, a Gear run, the cash in hand). Every wand price is under GEAR_VOTE_MIN, so like any gear under
+ * $50 it is bought at once, also in co-op. Logs `wand.add { station, wand, by }` and a gearLog 'wand' entry.
+ */
+export function applyWandInput(state: GameState, input: Extract<PlayerInput, { kind: 'wand' }>): GameState {
+  if (!isGearRun(state) || state.phase !== 'night') return state;
+  const p = state.players.find((x) => x.id === input.playerId);
+  if (!p || !p.connected || p.bot) return state;
+  settleVote(state);
+  const card = wandCards(state).find((c) => c.station === input.station && c.wand === input.wand);
+  if (!card || state.cash < card.price) return state;
+  const wands = [...(state.slotWand ?? [])];
+  while (wands.length < (state.slots ?? []).length) wands.push(null);
+  wands[card.index] = card.wand;
+  state.slotWand = wands;
+  state.cash = round2(state.cash - card.price);
+  state.gearLog = [...(state.gearLog ?? []), { gear: card.gear, action: 'wand', day: state.day, by: p.name, cash: -card.price, wand: card.wand }];
+  rebuild(state);
+  emitLog(state, 'wand.add', { station: card.station, wand: card.wand, by: p.id });
+  return state;
+}
+
+/** FB2 C9: a wand's seconds per latte and its milky-pull tier (null: not a wand station). */
+export function wandSpec(s: Station): { seconds: number; tier: number } | null {
+  if (s.kind !== 'steamer' || !s.wand) return null;
+  if (s.wand !== 'built') return WANDS[s.wand];
+  return (s.wandOf && GEAR[s.wandOf].wand?.built) || null;
 }
 
 /** G10a: is a gear's `requires` met (a tree at a tier or better in a slot)? Pour-over gear already owned counts too. */
@@ -275,6 +372,9 @@ export function gearRequiresMet(state: GameState, id: GearId): boolean {
 }
 
 export function gearSpeed(s: Station, tick?: number): number {
+  // FB2 C9: a wand steams at its own speed (1 = today's 3.5 s steamer).
+  const wand = wandSpec(s);
+  if (wand) return ECONOMY.stationSeconds.steamer / wand.seconds;
   if (!s.gear) return 1;
   const flowing = tick !== undefined && s.flowUntil !== undefined && tick < s.flowUntil;
   return GEAR[s.gear].speed * (flowing ? FLOW_SPEED : 1);
@@ -342,12 +442,16 @@ function quirk(state: GameState, s: Station, text: string, by: string): void {
  * nothing; a jammed one gets whacked by empty hands (fixed, no brew this press).
  */
 export function gearBlocked(state: GameState, s: Station, p: Player): boolean {
-  if (!s.gear) return false;
+  if (!s.gear && !s.wand) return false;
   if (s.dead) return true;
   if (s.jammed) {
     if (p.holding === null) {
       delete s.jammed;
-      quirk(state, s, `${p.name} whacked the ${GEAR[s.gear].name}. It works again.`, p.id);
+      if (!s.gear) {
+        // FB2 C9: a clogged little wand, whacked clear.
+        emitLog(state, 'wand.unclog', { station: s.id, by: p.id });
+        quirk(state, s, `${p.name} whacked the steam wand. It hisses back to life.`, p.id);
+      } else quirk(state, s, `${p.name} whacked the ${GEAR[s.gear].name}. It works again.`, p.id);
     }
     return true;
   }
@@ -361,6 +465,13 @@ export function gearAfterUse(state: GameState, s: Station, p: Player): void {
   if (flow && !(s.flowUntil !== undefined && state.tick < s.flowUntil) && rngNext(state) < flow.chance) {
     s.flowUntil = state.tick + Math.round(flow.seconds * TICK_RATE);
     quirk(state, s, `Flow state! The ${GEAR[s.gear!].name} pours twice as fast for ${flow.seconds} s. Somebody films it.`, p.id);
+  }
+  // FB2 C9: the little wand clogs now and then (dead until someone whacks it with empty hands, like the pod jam).
+  const clog = isGearRun(state) && s.kind === 'steamer' && s.wand && s.wand !== 'built' ? WANDS[s.wand].clog : undefined;
+  if (clog && rngNext(state) < clog) {
+    s.jammed = true;
+    emitLog(state, 'wand.clog', { station: s.id, by: p.id });
+    quirk(state, s, `The little steam wand clogged! Empty hands + E to whack it.`, p.id);
   }
   const q = s.gear && isGearRun(state) ? GEAR[s.gear].quirks : undefined;
   if (!q) return;
@@ -439,12 +550,15 @@ export function growGearSlots(state: GameState, to: TierId): void {
   const n = SLOT_POSITIONS[to].length;
   const slots = [...(state.slots ?? [])];
   const gear = [...(state.slotGear ?? [])];
+  const wands = [...(state.slotWand ?? [])];
   while (slots.length < n) slots.push(null);
   while (gear.length < n) gear.push(null);
+  while (wands.length < n) wands.push(null);
   state.slots = slots.slice(0, n);
   state.slotGear = gear.slice(0, n);
+  state.slotWand = wands.slice(0, n);
   const old = state.stations;
-  state.stations = stationsFromSlots(to, state.slots, state.slotGear);
+  state.stations = stationsFromSlots(to, state.slots, state.slotGear, state.slotWand);
   keepStale(old, state.stations); // FB2 A3
 }
 
@@ -563,6 +677,8 @@ export function snobFamilies(state: GameState): DrinkFamily[] {
     const f = id ? SNOB_GEAR[id] : undefined;
     if (f && !fams.includes(f)) fams.push(f);
   }
+  // FB2 C9: the milk snob came for the top steamer (S3); now any wand as good as a proper one draws them.
+  if (!fams.includes('milky') && state.stations.some((s) => (wandSpec(s)?.seconds ?? Infinity) <= WAND_SECONDS.strong)) fams.push('milky');
   return fams.slice(0, SNOB.max);
 }
 
@@ -587,6 +703,9 @@ export function gearPullMul(state: GameState, drink: DrinkId): number {
   let best = 0;
   let draw = 1;
   for (const s of state.stations) {
+    // FB2 C9: milk drinks follow the best wand (the little one counts as tier 2, a proper or built-in one 3, E6's 4).
+    const wand = wandSpec(s);
+    if (wand && s.kind === FAMILY_TREE[fam]) best = Math.max(best, wand.tier);
     if (!s.gear) continue;
     if (s.kind === FAMILY_TREE[fam]) best = Math.max(best, GEAR[s.gear].tier);
     const d = GEAR[s.gear].draws;

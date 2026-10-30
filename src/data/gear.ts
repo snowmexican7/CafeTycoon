@@ -4,8 +4,10 @@
  * `CreateRunOptions.gear`); every other run plays exactly as before (a station with no `gear` id has
  * today's numbers).
  *
- * Built so far (G1/G2/G4): the cold brew, espresso (E1 Pod-o-Matic up), grinder,
- * steamer and bin trees. Drip (G4) and the dual boiler's two sides (G9) come later.
+ * Built: the cold brew, espresso (E1 Pod-o-Matic up), grinder, drip, pour-over and bin trees.
+ * FB2 C9 (docs/GEAR_TREE.md §5b): there is no steamer tree any more. Milk is steamed at a wand on the espresso
+ * machine: none on E1/E2, an add-on wand on E3/E4 (`WANDS`, bought with the machine or later), built in on E5/E6.
+ * A machine with a wand gets a twin station of kind 'steamer' beside it (the G9 twin mechanism).
  *
  * Per tier:
  *  - `price` to buy, `sell` back at night (a trade-in when you buy a higher tier of the same tree).
@@ -16,13 +18,12 @@
  */
 import type { StationKind } from '../sim/types';
 
-export type GearTree = 'coldBrew' | 'espresso' | 'grinder' | 'steamer' | 'drip' | 'pourOver' | 'bin';
+export type GearTree = 'coldBrew' | 'espresso' | 'grinder' | 'drip' | 'pourOver' | 'bin';
 
 export type GearId =
   | 'c1' | 'c2' | 'c3' | 'c4' | 'c5'
   | 'e1' | 'e2' | 'e3' | 'e4' | 'e5' | 'e6'
   | 'g1' | 'g2' | 'g3'
-  | 's1' | 's2' | 's3'
   | 'd1' | 'd2' | 'd3' | 'd4'
   | 'd4b' | 'd5b'
   | 'b0';
@@ -64,6 +65,9 @@ export interface GearInfo {
    *  A twin of the machine's own kind is a second group head with the same gear; any other kind (the steam
    *  wand) is a plain station of that kind. */
   twin?: Exclude<StationKind, 'counter'>[];
+  /** FB2 C9: the machine's steam wand: the add-ons it takes (E3/E4), or a wand built in (E5/E6: its seconds per
+   *  latte and its tier for the milky pull). Absent = no wand at all (E1/E2, every other tree). */
+  wand?: { addOns?: AddOnWand[]; built?: { seconds: number; tier: number } };
   /** G10a: buying it needs this tree at this tier or better in a slot (the drip branch opens after D3). */
   requires?: { tree: GearTree; tier: number; label: string };
   blurb: string;
@@ -97,11 +101,44 @@ export const GEAR_TREES: { id: GearTree; name: string; icon: string }[] = [
   { id: 'coldBrew', name: 'Cold brew', icon: '🧊' },
   { id: 'espresso', name: 'Espresso', icon: '☕' },
   { id: 'grinder', name: 'Grinder', icon: '⚙️' },
-  { id: 'steamer', name: 'Milk', icon: '🥛' },
   { id: 'drip', name: 'Drip', icon: '🫖' },
   { id: 'pourOver', name: 'Pour-over', icon: '🫘' },
   { id: 'bin', name: 'Bin', icon: '🗑️' },
 ];
+
+// ---------------------------------------------------------------------------------------------- FB2 C9: steam wands
+
+/** A wand on an espresso machine: an add-on (E3/E4) or built in (E5/E6). `Station.wand` carries it. */
+export type WandKind = 'weak' | 'strong' | 'built';
+export type AddOnWand = Exclude<WandKind, 'built'>;
+
+/** Seconds per latte at each wand (today's steamer was 3.5 s). The dual boiler (E6) has the fastest one. */
+export const WAND_SECONDS = { weak: 4.5, strong: 3.5, built: 3.5, dualBoiler: 3 } as const;
+
+export interface WandInfo {
+  name: string;
+  seconds: number;
+  /** Its tier for G7's milky pull (+5% milk orders per tier above 1), as the old steamer tiers were. */
+  tier: number;
+  /** The price bought with the machine, and added on a later night. */
+  withMachine: number;
+  later: number;
+  /** Cash back when its machine is sold or replaced (the wand goes with it). */
+  sell: number;
+  /** Chance per use that it clogs: dead until someone whacks it with empty hands (the battery whisk's old joke). */
+  clog?: number;
+  blurb: string;
+}
+
+export const WANDS: Record<AddOnWand, WandInfo> = {
+  weak: { name: 'Little steam wand', seconds: WAND_SECONDS.weak, tier: 2, withMachine: 25, later: 30, sell: 10, clog: 1 / 30, blurb: 'Weak and slow (4.5 s a latte), and now and then it clogs: whack it with empty hands.' },
+  strong: { name: 'Proper steam wand', seconds: WAND_SECONDS.strong, tier: 3, withMachine: 40, later: 40, sell: 20, blurb: 'A real wand: 3.5 s a latte. La Marzipana Due only.' },
+};
+
+/** Upgrading a little wand to a proper one costs the difference. */
+export const WAND_UPGRADE = WANDS.strong.withMachine - WANDS.weak.withMachine;
+
+export const isAddOnWand = (x: unknown): x is AddOnWand => x === 'weak' || x === 'strong';
 
 const g = (info: GearInfo): GearInfo => info;
 
@@ -111,18 +148,16 @@ export const GEAR: Record<GearId, GearInfo> = {
   c3: g({ id: 'c3', tree: 'coldBrew', tier: 3, station: 'coldBrewTap', name: 'The Big Orange Bucket', price: 55, sell: 20, sticker: '$40', speed: 1, marks: 0, batch: 30, blurb: 'Hardware-store bucket plus a filter bag. 30 cups a day. Hide it from the inspector.' }),
   c4: g({ id: 'c4', tree: 'coldBrew', tier: 4, station: 'coldBrewTap', name: 'Kegerator Tap', price: 110, sell: 55, sticker: '$600', speed: 1, marks: 0, batch: 60, quirks: { funny: 0.02, funnyText: 'The keg burps. Loudly. Nobody says anything.' }, blurb: 'A real tap. Steep up to 60 cups a night.' }),
   c5: g({ id: 'c5', tree: 'coldBrew', tier: 5, station: 'coldBrewTap', name: 'The Slow Tower of Patience', price: 220, sell: 110, sticker: '$1,200', speed: 1.1, marks: 0, batch: 60, priceMul: 1.25, polish: true, draws: { family: 'iced', mul: 1.1 }, blurb: 'A Kyoto drip tower. Customers stare at it, then order two.' }),
-  e1: g({ id: 'e1', tree: 'espresso', tier: 1, station: 'espresso', name: 'Pod-o-Matic 3000', price: 45, sell: 8, sticker: '$129', speed: 5 / 6, marks: 1, priceMul: 0.85, pods: true, quirks: { jam: 0.04, morning: 0.05, morningText: 'The Pod-o-Matic\'s "descale" light is on again. Nobody knows what it means.' }, blurb: 'Pods, no grinder: empty hands, press E, get a shot. Tastes like a pod (2★ at best, espresso drinks sell for less). A mysterious "descale" light nobody understands.' }),
-  e2: g({ id: 'e2', tree: 'espresso', tier: 2, station: 'espresso', name: 'Brevelle "Barista Distress"', price: 80, sell: 35, sticker: '$700', speed: 0.9, marks: 0, quirks: { spill: 0.03, funny: 0.02, funnyText: 'The Brevelle makes a noise like a goose. HONK.' }, blurb: 'A home machine doing its best. Needs a grinder. Makes a noise like a goose.' }),
-  e3: g({ id: 'e3', tree: 'espresso', tier: 3, station: 'espresso', name: 'Sylvia the Prosumer', price: 150, sell: 75, sticker: '$1,800', speed: 1, marks: 0, blurb: 'A proper single boiler: today\'s machine.' }),
-  e4: g({ id: 'e4', tree: 'espresso', tier: 4, station: 'espresso', name: 'Double Trouble', price: 260, sell: 130, sticker: '$3,000', speed: 1.1, marks: 0, twin: ['steamer'], blurb: 'Dual boiler, two sides: shots on one side, a steam wand on the other. One barista can pull a shot and steam milk at once.' }),
-  e5: g({ id: 'e5', tree: 'espresso', tier: 5, station: 'espresso', name: 'La Marzipana Due', price: 450, sell: 225, sticker: '$18,000', speed: 1.1, marks: 0, priceMul: 1.1, twin: ['steamer', 'espresso'], blurb: 'Two-group commercial machine with a steam wand: two shots at once. The regulars notice.' }),
-  e6: g({ id: 'e6', tree: 'espresso', tier: 6, station: 'espresso', name: 'The Annihilator', price: 800, sell: 400, sticker: '$25,000+', speed: 1.4, marks: 0, priceMul: 1.2, polish: true, influencerOdds: 1.5, twin: ['steamer', 'espresso'], blurb: 'Two groups and a steam wand. So loud the café cat leaves for the day.' }),
+  e1: g({ id: 'e1', tree: 'espresso', tier: 1, station: 'espresso', name: 'Pod-o-Matic 3000', price: 45, sell: 8, sticker: '$129', speed: 5 / 6, marks: 1, priceMul: 0.85, pods: true, quirks: { jam: 0.04, morning: 0.05, morningText: 'The Pod-o-Matic\'s "descale" light is on again. Nobody knows what it means.' }, blurb: 'Pods, no grinder: empty hands, press E, get a shot. Tastes like a pod (2★ at best, espresso drinks sell for less). No steam wand. A mysterious "descale" light nobody understands.' }),
+  e2: g({ id: 'e2', tree: 'espresso', tier: 2, station: 'espresso', name: 'Brevelle "Barista Distress"', price: 80, sell: 35, sticker: '$700', speed: 0.9, marks: 0, quirks: { spill: 0.03, funny: 0.02, funnyText: 'The Brevelle makes a noise like a goose. HONK.' }, blurb: 'A home machine doing its best. Needs a grinder, has no steam wand. Makes a noise like a goose.' }),
+  // FB2 C9 (§5b): E3/E4 take an add-on wand (WANDS); E5/E6 have one built in. Shot seconds = 5 / speed: 6, 5.5, 5, 4.5, 3.5, 3.
+  e3: g({ id: 'e3', tree: 'espresso', tier: 3, station: 'espresso', name: 'Sylvia the Prosumer', price: 150, sell: 75, sticker: '$1,800', speed: 1, marks: 0, wand: { addOns: ['weak'] }, blurb: 'A proper single boiler: 5 s shots. Add a little steam wand (with the machine or later) and lattes go on the board.' }),
+  e4: g({ id: 'e4', tree: 'espresso', tier: 4, station: 'espresso', name: 'La Marzipana Due', price: 260, sell: 130, sticker: '$18,000', speed: 5 / 4.5, marks: 0, priceMul: 1.1, twin: ['espresso'], wand: { addOns: ['weak', 'strong'] }, blurb: 'Two-group commercial machine: two shots at once, 4.5 s each. Takes the little wand or a proper one. The regulars notice.' }),
+  e5: g({ id: 'e5', tree: 'espresso', tier: 5, station: 'espresso', name: 'The Annihilator', price: 450, sell: 225, sticker: '$25,000+', speed: 5 / 3.5, marks: 0, priceMul: 1.2, polish: true, influencerOdds: 1.5, twin: ['steamer', 'espresso'], wand: { built: { seconds: WAND_SECONDS.built, tier: 3 } }, quirks: { funny: 0.01, funnyText: 'The Annihilator roared. The café cat has left for the day.' }, blurb: 'Two groups, 3.5 s shots and a steam wand built in. Forgives a slip. So loud the café cat leaves for the day.' }),
+  e6: g({ id: 'e6', tree: 'espresso', tier: 6, station: 'espresso', name: 'Double Trouble', price: 800, sell: 400, sticker: '$32,000 (and a second mortgage)', speed: 5 / 3, marks: 0, priceMul: 1.2, polish: true, twin: ['steamer', 'espresso'], wand: { built: { seconds: WAND_SECONDS.dualBoiler, tier: 4 } }, quirks: { funny: 0.01, funnyText: 'Both boilers hum in harmony. Somebody tears up.' }, blurb: 'Dual boiler, two groups, 3 s shots and the fastest wand there is: it steams while it pulls. Forgives a slip. The top of the tree.' }),
   g1: g({ id: 'g1', tree: 'grinder', tier: 1, station: 'grinder', name: 'Spice grinder', price: 12, sell: 2, sticker: '$15', speed: 0.6, marks: 0, quirks: { offNote: 0.05 }, blurb: 'Still smells of cumin. Slow.' }),
   g2: g({ id: 'g2', tree: 'grinder', tier: 2, station: 'grinder', name: 'Burr grinder', price: 30, sell: 12, sticker: '$150', speed: 1, marks: 0, blurb: 'Today\'s grinder.' }),
   g3: g({ id: 'g3', tree: 'grinder', tier: 3, station: 'grinder', name: 'The Monolith', price: 90, sell: 45, sticker: '$1,500', speed: 1.65, marks: 0, blurb: 'A flat-burr slab of steel. Fast.' }),
-  s1: g({ id: 's1', tree: 'steamer', tier: 1, station: 'steamer', name: 'Battery whisk', price: 10, sell: 0, sticker: '$1.25', speed: 0.6, marks: 1, quirks: { dieAfter: 6, dieSpread: 8 }, blurb: 'From the dollar store. Slow, and the milk shows it.' }),
-  s2: g({ id: 's2', tree: 'steamer', tier: 2, station: 'steamer', name: 'Milk frother jug', price: 25, sell: 8, sticker: '$40', speed: 0.8, marks: 0, blurb: 'Plug it in, wait, pour.' }),
-  s3: g({ id: 's3', tree: 'steamer', tier: 3, station: 'steamer', name: 'Steam wand station', price: 40, sell: 15, sticker: '$300', speed: 1, marks: 0, blurb: 'Today\'s steamer.' }),
   // G4d (docs/GEAR_TREE.md §4.2): drip lists at $2.50, beans but no grinder. Pot brew time = 20 s / speed.
   d1: g({ id: 'd1', tree: 'drip', tier: 1, station: 'drip', name: 'Thrift Store Special', price: 15, sell: 2, sticker: '$6', speed: 1, marks: 0, pot: { cups: 4, coldAfter: 45, miss: 0.12 }, quirks: { funny: 0.03, funnyText: 'That pot tasted faintly of 1997.', morning: 0.08, morningText: 'The Thrift Store Special\'s clock is flashing 12:00 again. It has since 1997.' }, blurb: 'A $6 coffee maker with a yellowed carafe. 4 cups a pot, goes cold fast, sometimes scalding.' }),
   d2: g({ id: 'd2', tree: 'drip', tier: 2, station: 'drip', name: 'Mister Kaffee 12-Cup', price: 40, sell: 15, sticker: '$35', speed: 20 / 14, marks: 0, pot: { cups: 8, coldAfter: 60, miss: 0.05 }, quirks: { funny: 0.03, funnyText: 'Mister Kaffee clicked itself off mid-rush. Someone clicked it back on.' }, blurb: 'The office classic. 8 cups a pot in 14 s.' }),
