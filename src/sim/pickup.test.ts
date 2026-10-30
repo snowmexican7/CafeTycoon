@@ -6,6 +6,7 @@ import { stepCustomers } from './customers';
 import { stepPass } from './pass';
 import { PICKUP, passSlots, pickupTarget, spotOf, stepPickup, wantsDrink } from './pickup';
 import { ECONOMY } from '../data/economy';
+import { FRIDGE_ID } from '../data/layout';
 import { TICK_RATE } from './constants';
 import { GEAR, type GearId } from '../data/gear';
 import type { Customer, GameState, PlayerInput, SupplyId } from './types';

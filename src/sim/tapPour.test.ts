@@ -22,7 +22,11 @@ function gearNight(gear: GearId[], supplies: Partial<Record<SupplyId, number>> =
   Object.assign(s.supplies, supplies);
   return s;
 }
-const gearDay = (gear: GearId[], supplies: Partial<Record<SupplyId, number>> = {}) => startDay(gearNight(gear, supplies));
+const gearDay = (gear: GearId[], supplies: Partial<Record<SupplyId, number>> = {}) => {
+  const s = startDay(gearNight(gear, supplies));
+  if (supplies.milk) s.milkOut = supplies.milk; // FB2 A4: the milk is out at the bar, not in the fridge
+  return s;
+};
 const stand = (s: GameState, id: string) => {
   const st = s.stations.find((x) => x.id === id)!;
   s.players[0].pos = { ...st.pos, y: st.pos.y + 1 };

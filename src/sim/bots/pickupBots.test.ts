@@ -26,6 +26,7 @@ const quiet = (s: GameState): GameState => {
   s = startDay(s);
   s.eventSchedule = [];
   s.players[0].pos = { x: 10, y: 5 };
+  s.milkOut = s.supplies.milk; // FB2 A4: the milk is out at the bar
   return s;
 };
 const sim = (s: GameState, n = 1): Player => s.players.find((p) => p.id === `sim-${n}`)!;

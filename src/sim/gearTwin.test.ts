@@ -118,6 +118,7 @@ describe('G9: a bot crew works a day with a two-group machine', () => {
     s.slotGear = ['g1', 'e5', null, 'b0'];
     s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
     for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 60;
+    s.fridge = 'f1'; // FB2 A4: the stand's Dorm Room Cube (milk needs a fridge)
     s = startDay(s);
     // FB2 A1: the bots work alone here (with a person in the café they would act as helpers).
     s.players[0].connected = false;
@@ -139,6 +140,7 @@ describe('G9: a bot crew works a day with a two-group machine', () => {
     s.slotGear = ['g1', 'e5', null, 'b0'];
     s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
     for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 60;
+    s.fridge = 'f1'; // FB2 A4: the stand's Dorm Room Cube (milk needs a fridge)
     s = startDay(s);
     const used = new Set<string>();
     for (let i = 0; i < 60 * 400 && s.days.length === 0; i++) {

@@ -20,7 +20,10 @@ function gearStand(gear: GearId[] = ['g2', 's3', 'e3', 'b0']): GameState {
   s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
   s.supplies.beans = 10;
   s.supplies.milk = 10;
-  return startDay(s);
+  s.fridge = 'f1'; // FB2 A4: the stand's cube
+  const d = startDay(s);
+  d.milkOut = 10; // FB2 A4: the milk is out at the bar
+  return d;
 }
 
 const classicDay = (): GameState => startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' }));

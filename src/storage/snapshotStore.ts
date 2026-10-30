@@ -123,7 +123,10 @@ export function migrateSnapshot(version: number, state: GameState): GameState | 
     if (!step) return null;
     step(state);
   }
-  return version > SNAPSHOT_VERSION ? null : state;
+  if (version > SNAPSHOT_VERSION) return null;
+  // FB2 review I1: every Gear save, whatever its version, gets the fixed spots its shop has (the fridge, A3's sink…).
+  ensureCounterSpots(state);
+  return state;
 }
 
 interface Envelope {

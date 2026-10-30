@@ -28,6 +28,7 @@ function gearShop(slots: SlotContent[], gear: (GearId | null)[], o: { standIns?:
   addStandIns(s, o.standIns ?? 1);
   s = startDay(s);
   s.eventSchedule = [];
+  s.milkOut = 99; // FB2 A4: plenty of milk out at the bar too
   // Park the human out of the way, below the counter row.
   s.players[0].pos = { x: 10, y: 5 };
   return s;

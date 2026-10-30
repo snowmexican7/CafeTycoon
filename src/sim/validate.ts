@@ -2,6 +2,7 @@ import { BRANCH_AREAS, BRANCH_SUPPLIES } from './branch';
 import type { AreaId } from '../data/areas';
 import { cleanDraft } from './signature';
 import { isGearId } from '../data/gear';
+import { isFridgeId } from '../data/fridges';
 import { cleanPitch, isPitchKind } from './pitch';
 import { isAdId } from './ads';
 import { isCheckoutId } from './checkout';
@@ -112,6 +113,8 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return Number.isInteger(input.cups) && input.cups >= 0 && input.cups <= STEEP.maxInput
         ? { kind: 'steep', playerId: input.playerId, cups: input.cups }
         : null;
+    case 'fridge':
+      return isFridgeId(input.fridge) ? { kind: 'fridge', playerId: input.playerId, fridge: input.fridge } : null;
     case 'condimentBox':
       return Number.isInteger(input.boxes) && input.boxes >= 1 && input.boxes <= CONDIMENTS.maxBoxes
         ? { kind: 'condimentBox', playerId: input.playerId, boxes: input.boxes }

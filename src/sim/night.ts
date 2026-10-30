@@ -8,6 +8,7 @@ import { tuneRadio } from './events';
 import { startDay } from './run';
 import { TICK_RATE, secondsToTicks } from './constants';
 import { unlockDrink } from './unlocks';
+import { packsThatFit } from './fridge';
 import type { CatalogueItem, Effect, GameState, OwnedItem, PlayerId, PlayerInput, SupplyId } from './types';
 
 /** Relaxed night: seconds the last call runs once enough of the room is ready. */
@@ -124,7 +125,9 @@ function reroll(state: GameState): void {
   dealHand(state, CATALOGUE, [...state.hand, ...state.boughtTonight]);
 }
 
-function restock(state: GameState, supply: SupplyId, packs: number): void {
+function restock(state: GameState, supply: SupplyId, want: number): void {
+  // FB2 A4: Gear milk goes in the fridge, so only whole packs that fit are bought (nothing is lost on the way in).
+  const packs = packsThatFit(state, supply, want);
   if (packs <= 0) return;
   const cost = restockCost(state, supply, packs);
   if (state.cash < cost) return;
