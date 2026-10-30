@@ -1802,6 +1802,14 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 4 B1 — rival escalation (p4-b01-rival-escalation, tag p4-b01)
+- **Happy hour** (Gear runs only; classic unchanged): `promoLevel` is 0 in week 1, 1 in week 2, 2 from week 3. `isPromoDay` picks that many of days 2–7 of each week by a hash of seed and week (no RNG draws, so it's deterministic and the same for host and guests). On a promo day `applyRivalPromo` (last in `computeModifiers`) cuts traffic to ×0.8.
+- **Counter:** a night input `{kind:'rivalCounter', on?: boolean}`. It is for humans only, at night, and only when tomorrow is a promo day. It sets `Rival.counter = day` (optional field; old saves read as "not countered"); `on:false` undoes it. When countered, every drink sells at ×0.85 and traffic is unchanged. Profit per walk-in is about the same, but you serve more people, so you get more tips, stars and served counts. PROTOCOL 34.
+- **Heads up** alert `rival:promo` (warn, or info once countered) with a **Match it · 15% off** / **Undo** button (generic `fix` → `onTip`). There's also a morning note on the promo day.
+- **Faster knock-offs:** `copyAfter(state)` is 2 days from week 3 of a Gear run (3 before).
+- Tests: `src/sim/rivalPromo.test.ts` (6: schedule per week and seed, never on a week's first day, classic none; traffic vs. counter prices; input gating and validation; brief + button + morning notes; faster copy; old-save shape). Dev fixture `rivalPromo`; shots `/workspace/overnight/sprint/p4-b01/rivalPromo-{1512,1280}.png`.
+- Follow-ups: rival loyalty card (week 4+), a rival second shop at the cart/café tier, a bot planner hint (logged in the Claude prompt), and a headless balance run past week 1 (`gearBalance.ts` stops at the week-end; it needs a Keep going loop).
+
 ### Phase 3 B17 — integration and v3.1.0 (p3-b17-release, tag v3.1.0)
 - **Phase 3 is complete** (B1–B17). Version 3.1.0; CHANGELOG `## 3.1.0`; ROADMAP marks Phase 3 done and Phase 4 next; the in-game Roadmap (`public/roadmap.json`) shows Phase 3 done (incl. the Gear Tree) and Phase 4 "now". Phase 4 is planned in `docs/PHASE4_PLAN.md` (8 blocks, branches `p4-bNN-…`, tags `p4-bNN`).
 - **Hourly wages:** `wageEach` now scales with `settings.dayLengthSec / 150`, so hired bots on 60 s quick days cost 40% (cafe tier $2 instead of $5 per bot per day). Headless `DAY=60 npx tsx scripts/staffBalance.ts`: 0/28 bankruptcies, week-end cash $28–100. `scripts/gearBalance.ts` takes `DAY=` too.

@@ -1159,6 +1159,8 @@ function briefRow(state: GameState, a: NightAlert): BriefAlert {
     row.icon = a.kind === 'stock' ? SUPPLY_ICON[f.supply] : row.icon;
     const cost = restockCost(state, f.supply, f.packs);
     row.fix = { label: `+${f.packs * ECONOMY.packs[f.supply].size} · ${money(cost).replace('.00', '')}`, action: 'fix', data: { fix: a.id }, input: f };
+  } else if (f?.kind === 'rivalCounter') {
+    row.fix = { label: f.on === false ? 'Undo' : `Match it · ${Math.round((1 - RIVAL.counterPrice) * 100)}% off`, action: 'fix', data: { fix: a.id }, input: f };
   } else if (a.kind === 'grow') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'grow' } };
   else if (a.kind === 'checkout') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'checkout' } };
   else if (a.kind === 'rival' || a.kind === 'signature') row.fix = { label: 'Menu', action: 'goto', data: { tab: 'menu' } };

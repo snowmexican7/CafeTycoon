@@ -1,4 +1,6 @@
 import { judgePitch } from '../sim/pitch';
+import { gearStart } from '../sim/gear';
+import { isPromoDay } from '../sim/rival';
 import { comboStars } from '../sim/taste';
 /**
  * Dev-only visual fixtures (served by `vite` at /CafeTycoon/fixtures.html?f=<name>; never in the build).
@@ -104,6 +106,18 @@ const FIXTURES: Record<string, Fixture> = {
     setup(s) {
       s.cash = 260;
       s.owned = [{ itemId: 'dualBoiler', effects: [] }];
+    },
+    timeline: [],
+  },
+  /** P4 B1: a Gear run's night before the rival's week-2 happy hour (the brief warns, with Match it). */
+  rivalPromo: {
+    night: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      s.cash = 90;
+      const promo = [9, 10, 11, 12, 13, 14].find((d) => isPromoDay(s, d))!;
+      s.day = promo; // at night `day` is already tomorrow
     },
     timeline: [],
   },

@@ -3,7 +3,7 @@ import { applyGearInput } from './gear';
 import { applyPitchInput } from './pitch';
 import { applyAdInput } from './ads';
 import { applyCheckoutInput } from './checkout';
-import { applyScoutInput } from './rival';
+import { applyRivalCounterInput, applyScoutInput } from './rival';
 import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
 import { applyCloseEarly, closeVoteUnanimous, dropCloseVote } from './closeEarly';
@@ -151,6 +151,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'scout':
       applyScoutInput(s, input);
+      break;
+    case 'rivalCounter':
+      applyRivalCounterInput(s, input);
       break;
     case 'staff':
       applyStaffInput(s, input);

@@ -233,6 +233,8 @@ export interface Customer {
 export interface Rival {
   scouted?: number;
   copy?: { drink: DrinkId; twist: TwistId; since: number; price: number; day: number };
+  /** P4 B1: the day the crew countered the rival's happy hour (prices down that day). */
+  counter?: number;
 }
 
 /** P3 B10: parody ad platforms, and how a campaign landed. */
@@ -574,6 +576,7 @@ export type PlayerInput =
   | { kind: 'price'; playerId: PlayerId; drink: DrinkId; step: number }
   | { kind: 'twist'; playerId: PlayerId; drink: DrinkId; twist: TwistId | null }
   | { kind: 'scout'; playerId: PlayerId }
+  | { kind: 'rivalCounter'; playerId: PlayerId; on?: boolean }
   /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
   | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire' }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
