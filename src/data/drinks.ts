@@ -1,7 +1,7 @@
 import type { DrinkId, ItemKind, StationKind, SupplyId } from '../sim/types';
 
 /** Every drink, in menu order. Hot or iced decides how weather and forecasts tilt orders. */
-export const DRINK_IDS: DrinkId[] = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'mocha', 'matcha', 'special'];
+export const DRINK_IDS: DrinkId[] = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'mocha', 'matcha', 'special', 'drip'];
 
 /** On the menu from day 1. The rest unlock by day or by a night card (Phase 2 B5). */
 export const BASE_DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
@@ -15,6 +15,7 @@ export const DRINK_TEMP: Record<DrinkId, DrinkTemp> = {
   mocha: 'hot',
   matcha: 'hot',
   special: 'iced',
+  drip: 'hot',
 };
 
 export interface DrinkInfo {
@@ -53,6 +54,8 @@ export const DRINK_INFO: Record<DrinkId, DrinkInfo> = {
     name: 'Maple cold foam', short: 'Maple foam', icon: '🍁', bias: 0.5, wait: 1.2,
     ticket: ['Tap', 'Steamer (maple foam)'], blurb: 'Seasonal special: cold brew topped with maple foam.',
   },
+  // G4d: Gear runs only (a drip machine on the floor). One press brews a pot; each press after pours a cup.
+  drip: { name: 'Drip coffee', short: 'Drip', icon: '🫖', bias: 0.9, ticket: ['Drip (brew a pot, then pour)'], blurb: 'Filter coffee from a pot. Cheap and fast once it is brewed.' },
 };
 
 /** Base drinks plus every drink whose unlock day has come. */
@@ -88,6 +91,8 @@ export const RECIPES: Record<RecipeStation, Recipe[]> = {
     { takes: null, gives: 'coldBrew', consumes: ['concentrate'] },
     { takes: 'espresso', gives: 'icedLatte', consumes: ['milk'], seconds: 2.5 },
   ],
+  // G4d: a pot of filter coffee (one unit of beans, no grinder); the pot then pours cups (sim/gear.ts gearPotPour).
+  drip: [{ takes: null, gives: 'drip', consumes: ['beans'] }],
 };
 
 /** Drinks that start with a shot (grounds or an espresso in flight can still become one). */

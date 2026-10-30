@@ -95,6 +95,7 @@ export const DRINK_STATIONS: Record<DrinkId, StationKind[]> = {
   mocha: ['grinder', 'espresso', 'steamer'],
   matcha: ['steamer'],
   special: ['coldBrewTap', 'steamer'],
+  drip: ['drip'],
 };
 
 export function isTierId(x: unknown): x is TierId {

@@ -52,7 +52,7 @@ const ones = (): Record<DrinkId, number> => Object.fromEntries(DRINKS.map((d) =>
 /** Neutral modifiers: every multiplier 1, tipRate 0. */
 export function baseModifiers(): Modifiers {
   return {
-    stationSpeed: { grinder: 1, espresso: 1, steamer: 1, coldBrewTap: 1, counter: 1, trash: 1 },
+    stationSpeed: { grinder: 1, espresso: 1, steamer: 1, coldBrewTap: 1, counter: 1, trash: 1, drip: 1 },
     moveSpeed: 1,
     price: ones(),
     traffic: 1,

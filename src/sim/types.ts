@@ -8,10 +8,10 @@ import type { ForecastId } from '../data/forecasts';
 import type { CrewStats } from './stats';
 
 export type PlayerId = string;
-export type DrinkId = 'espresso' | 'latte' | 'coldBrew' | 'icedLatte' | 'mocha' | 'matcha' | 'special';
+export type DrinkId = 'espresso' | 'latte' | 'coldBrew' | 'icedLatte' | 'mocha' | 'matcha' | 'special' | 'drip';
 export type SupplyId = 'beans' | 'milk' | 'concentrate' | 'flavour' | 'pastry';
 export type ItemKind = 'grounds' | DrinkId;
-export type StationKind = 'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'counter' | 'trash';
+export type StationKind = 'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'counter' | 'trash' | 'drip';
 export type Phase = 'night' | 'day' | 'closing' | 'weekEnd' | 'ended';
 export type ScenarioId = 'normal' | 'campusTown' | 'rainyWeek' | 'touristSeason';
 export type Rarity = 'common' | 'uncommon' | 'rare';
@@ -182,6 +182,12 @@ export interface Station {
   gear?: GearId;
   /** Gear Tree: cold brew batch cups left today (absent = no cap). */
   batchLeft?: number;
+  /** Gear G4d: cups left in a drip machine's pot (absent = no pot brewed). */
+  potLeft?: number;
+  /** Gear G4d: the tick the pot goes cold (absent = never, or no pot). */
+  potColdAt?: number;
+  /** Gear G4d: this pot came out too hot or too cold (every cup from it complains). */
+  potOff?: 'hot' | 'cold';
   /** Gear G5: the Pod-o-Matic jammed; empty hands at it whack it back to life. */
   jammed?: true;
   /** Gear G5: dead until tonight (the battery whisk's batteries). */

@@ -1674,3 +1674,19 @@ Findings:
   flag gets a Gear run with no Gear board; gating on `state.gear` would follow the host.
 
 UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` and only logs when `placeMess` lands a puddle, with a test) and the gear.ts header now describes the G5 RNG rolls. On the UI question: the Gear board and day HUD card already follow `state.gear` from the host (`nightViewModel`/`hudViewModel`); `?gear=1` only decides `gear: true` when this client creates the run. Planner `equip` advice and bots on pods/jams stay in Claude's lane.
+
+### G4d — Drip tree (UI lane, tag `gear-g04d`)
+- New Gear-only station kind `drip` and drink `drip` (appended to `DRINK_IDS`, filter family, $2.50). Classic never
+  unlocks it; `EquipmentKind` excludes `drip`, so the classic stations shop is unchanged. Buying the first drip
+  machine unlocks drip and puts it on the menu.
+- Tree D1 Thrift Store Special ($15, 4-cup pot, 20 s, cold after 45 s, 12% too hot/cold) → D2 Mister Kaffee
+  ($40, 8 cups, 14 s, 60 s, 5%) → D3 Office Urn ($85, 16 cups, 12 s, never cold, 2%) → D4 Twin-Batch Fetch-O
+  ($160, 24 cups, 10 s). Pour-over branch (D4b/D5b) is not built: it needs another drink.
+- Mechanic: empty hands + E brews a pot (one unit of beans, no grinder) via the normal `RECIPES.drip`; when it
+  finishes `gearPotFinished` fills `potLeft` and rolls one RNG draw for a too-hot/too-cold pot (Gear + pot machines
+  only). Each pick-up pours a cup (`gearPotPour`) and the station keeps its output until the pot is empty. Cups
+  from a missed or cold pot get one mark (−1★, smaller tip) and a complaint toast (`gearTempMiss`). The doc says
+  "half tip"; the mark is the light version (no per-cup flag through the pass).
+- Office-park walk-ins asking for filter now stop once drip is on the menu; the notebook gains a Filter row.
+- **Bots (Claude):** `recipeChain('drip')` exists, so bots can probably brew and pour already (screenshots show
+  bots serving drip), but they don't know pots go cold or prefer pouring from a full pot. Worth checking.

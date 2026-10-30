@@ -16,8 +16,8 @@ export const ECONOMY = {
     flavour: { size: 10, cost: 9 },
     pastry: { size: 6, cost: 7 },
   } as Record<SupplyId, { size: number; cost: number }>,
-  prices: { espresso: 3, latte: 4.75, coldBrew: 4, icedLatte: 5.25, mocha: 6, matcha: 5.5, special: 6.25 } as Record<DrinkId, number>,
-  stationSeconds: { grinder: 2.5, espresso: 5, steamer: 3.5, coldBrewTap: 1.5 } as Record<
+  prices: { espresso: 3, latte: 4.75, coldBrew: 4, icedLatte: 5.25, mocha: 6, matcha: 5.5, special: 6.25, drip: 2.5 } as Record<DrinkId, number>,
+  stationSeconds: { grinder: 2.5, espresso: 5, steamer: 3.5, coldBrewTap: 1.5, drip: 20 } as Record<
     Exclude<StationKind, 'counter' | 'trash'>,
     number
   >,
@@ -59,7 +59,7 @@ export const ECONOMY = {
   drinkSupplies: Object.fromEntries(DRINK_IDS.map((d) => [d, suppliesFor(d)])) as Record<DrinkId, SupplyId[]>,
   /** Free flavour packs when the first drink that needs them joins the menu (cocoa, matcha, maple). */
   flavourStarter: 10,
-  pass: { slots: 3, staleSeconds: { espresso: 45, latte: 60, coldBrew: 600, icedLatte: 180, mocha: 60, matcha: 60, special: 180 } as Record<DrinkId, number> },
+  pass: { slots: 3, staleSeconds: { espresso: 45, latte: 60, coldBrew: 600, icedLatte: 180, mocha: 60, matcha: 60, special: 180, drip: 90 } as Record<DrinkId, number> },
   events: {
     scheduleWeights: [0.35, 0.45, 0.2],
     windowStart: 0.15,

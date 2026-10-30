@@ -74,6 +74,7 @@ export const STATION_LABELS: Record<StationKind, string> = {
   espresso: 'ESPRESSO',
   steamer: 'STEAMER',
   coldBrewTap: 'COLD BREW',
+  drip: 'DRIP',
   trash: 'TRASH',
   counter: 'PICK-UP',
 };
@@ -84,6 +85,7 @@ export const PROGRESS_BAR_RISE: Record<StationKind, number> = {
   espresso: 92,
   steamer: 98,
   coldBrewTap: 104,
+  drip: 96,
   trash: 60,
   counter: 70,
 };

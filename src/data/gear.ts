@@ -16,13 +16,14 @@
  */
 import type { StationKind } from '../sim/types';
 
-export type GearTree = 'coldBrew' | 'espresso' | 'grinder' | 'steamer' | 'bin';
+export type GearTree = 'coldBrew' | 'espresso' | 'grinder' | 'steamer' | 'drip' | 'bin';
 
 export type GearId =
   | 'c1' | 'c2' | 'c3' | 'c4' | 'c5'
   | 'e1' | 'e2' | 'e3' | 'e4' | 'e5' | 'e6'
   | 'g1' | 'g2' | 'g3'
   | 's1' | 's2' | 's3'
+  | 'd1' | 'd2' | 'd3' | 'd4'
   | 'b0';
 
 export interface GearInfo {
@@ -44,6 +45,10 @@ export interface GearInfo {
   quirks?: GearQuirks;
   /** G4: pods, no grinder. Empty hands at it make a shot (one pod = one unit of beans). */
   pods?: boolean;
+  /** G4d: a drip machine. One press brews a pot of `cups` (one unit of beans); each press after pours a cup.
+   *  The pot goes cold `coldAfter` seconds after it finishes (null = never); `miss` = chance a pot comes out
+   *  too hot or too cold (each cup from a missed or cold pot: a complaint and −1★). */
+  pot?: { cups: number; coldAfter: number | null; miss: number };
   blurb: string;
 }
 
@@ -76,6 +81,7 @@ export const GEAR_TREES: { id: GearTree; name: string; icon: string }[] = [
   { id: 'espresso', name: 'Espresso', icon: '☕' },
   { id: 'grinder', name: 'Grinder', icon: '⚙️' },
   { id: 'steamer', name: 'Milk', icon: '🥛' },
+  { id: 'drip', name: 'Drip', icon: '🫖' },
   { id: 'bin', name: 'Bin', icon: '🗑️' },
 ];
 
@@ -99,6 +105,11 @@ export const GEAR: Record<GearId, GearInfo> = {
   s1: g({ id: 's1', tree: 'steamer', tier: 1, station: 'steamer', name: 'Battery whisk', price: 10, sell: 0, sticker: '$1.25', speed: 0.6, marks: 1, quirks: { dieAfter: 6, dieSpread: 8 }, blurb: 'From the dollar store. Slow, and the milk shows it.' }),
   s2: g({ id: 's2', tree: 'steamer', tier: 2, station: 'steamer', name: 'Milk frother jug', price: 25, sell: 8, sticker: '$40', speed: 0.8, marks: 0, blurb: 'Plug it in, wait, pour.' }),
   s3: g({ id: 's3', tree: 'steamer', tier: 3, station: 'steamer', name: 'Steam wand station', price: 40, sell: 15, sticker: '$300', speed: 1, marks: 0, blurb: 'Today\'s steamer.' }),
+  // G4d (docs/GEAR_TREE.md §4.2): drip lists at $2.50, beans but no grinder. Pot brew time = 20 s / speed.
+  d1: g({ id: 'd1', tree: 'drip', tier: 1, station: 'drip', name: 'Thrift Store Special', price: 15, sell: 2, sticker: '$6', speed: 1, marks: 0, pot: { cups: 4, coldAfter: 45, miss: 0.12 }, quirks: { funny: 0.03, funnyText: 'That pot tasted faintly of 1997.', morning: 0.08, morningText: 'The Thrift Store Special\'s clock is flashing 12:00 again. It has since 1997.' }, blurb: 'A $6 coffee maker with a yellowed carafe. 4 cups a pot, goes cold fast, sometimes scalding.' }),
+  d2: g({ id: 'd2', tree: 'drip', tier: 2, station: 'drip', name: 'Mister Kaffee 12-Cup', price: 40, sell: 15, sticker: '$35', speed: 20 / 14, marks: 0, pot: { cups: 8, coldAfter: 60, miss: 0.05 }, quirks: { funny: 0.03, funnyText: 'Mister Kaffee clicked itself off mid-rush. Someone clicked it back on.' }, blurb: 'The office classic. 8 cups a pot in 14 s.' }),
+  d3: g({ id: 'd3', tree: 'drip', tier: 3, station: 'drip', name: 'Office Urn', price: 85, sell: 40, sticker: '$400', speed: 20 / 12, marks: 0, pot: { cups: 16, coldAfter: null, miss: 0.02 }, quirks: { funny: 0.03, funnyText: 'Someone from "accounting" took a free refill. Nobody stopped them.' }, blurb: 'A steel urn that keeps it hot all day. 16 cups in 12 s.' }),
+  d4: g({ id: 'd4', tree: 'drip', tier: 4, station: 'drip', name: 'Twin-Batch Fetch-O', price: 160, sell: 80, sticker: '$2,500', speed: 2, marks: 0, pot: { cups: 24, coldAfter: null, miss: 0 }, blurb: 'Two pots at once, 10 s. The diner down the road has one.' }),
   b0: g({ id: 'b0', tree: 'bin', tier: 0, station: 'trash', name: 'Cardboard box', price: 0, sell: 0, sticker: 'free', speed: 1, marks: 0, blurb: 'Today\'s bin, but it says FRAGILE on the side.' }),
 };
 

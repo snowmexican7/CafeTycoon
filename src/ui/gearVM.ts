@@ -45,6 +45,7 @@ const FAMILIES: { family: DrinkFamily; label: string; icon: string }[] = [
   { family: 'espresso', label: 'Espresso', icon: '☕' },
   { family: 'milky', label: 'Milky', icon: '🥛' },
   { family: 'iced', label: 'Iced', icon: '🧊' },
+  { family: 'filter', label: 'Filter', icon: '🫖' }, // G4d: drip
 ];
 
 /** G7b: served counts per family over finished days, and a 2–5★ verdict once there are enough. */
@@ -72,6 +73,7 @@ export function gearStats(id: GearId): string {
   out.push(g.speed < 1 ? 'Slow' : g.speed > 1 ? 'Fast' : 'Normal speed');
   if (g.marks) out.push(`-${g.marks}★ per cup`);
   if (g.pods) out.push('Pods, no grinder');
+  if (g.pot) out.push(`${g.pot.cups}-cup pot · ${g.pot.coldAfter === null ? 'stays hot' : `cold after ${g.pot.coldAfter} s`}${g.pot.miss ? ` · ${Math.round(g.pot.miss * 100)}% too hot/cold` : ''}`);
   if (g.priceMul && g.priceMul !== 1) out.push(`Sells at ×${g.priceMul}`);
   if (g.batch) out.push(`${g.batch} cups/day`);
   else if (g.tree === 'coldBrew') out.push('No daily cap');
@@ -131,6 +133,11 @@ export function hudGearVM(state: GameState): HudGearVM[] {
       if (s.dead) [status, warn] = ['dead', true];
       else if (s.jammed) [status, warn] = ['jammed! (E)', true];
       else if (s.batchLeft !== undefined) [status, warn] = [s.batchLeft > 0 ? `${s.batchLeft}/${g.batch} left` : 'sold out', s.batchLeft === 0];
+      else if (g.pot && s.busyTicksLeft > 0) status = 'brewing…';
+      else if (g.pot && s.potLeft !== undefined) {
+        const cold = s.potOff === 'cold' || (s.potColdAt !== undefined && state.tick >= s.potColdAt);
+        [status, warn] = [`${s.potLeft}/${g.pot.cups} cups${cold ? ' · cold' : s.potOff === 'hot' ? ' · scalding' : ''}`, cold || s.potOff === 'hot'];
+      } else if (g.pot) status = 'empty pot (E)';
       else if (s.lucky) status = 'lucky ✨';
       return { icon: ICON[g.tree], name: g.name, status, warn };
     });
