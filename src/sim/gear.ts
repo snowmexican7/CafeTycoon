@@ -1,7 +1,7 @@
 import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SNOB_GEAR, FAMILY_WORD, type AreaId, type DrinkFamily } from '../data/areas';
 /**
  * Gear Tree G2 (docs/GEAR_TREE.md): the sim side of a Gear run. Everything here is a no-op unless
- * `state.gear === true`, which only `createRun({ gear: true })` sets (the UI only with `?gear=1`).
+ * `state.gear === true`, which only `createRun({ gear: true })` sets (since v3.0.0 the UI does for every new run; `?gear=0` starts a classic one).
  *  RNG: G1–G4 draw none. G5 quirks (`gearMorning`, `gearAfterUse`) roll `state.rng`, only for stations
  *  that carry gear with quirks, so classic streams are unchanged. G7 `gearArea` is a pure hash (no draw).
  *

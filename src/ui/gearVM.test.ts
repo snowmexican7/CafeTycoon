@@ -47,10 +47,12 @@ import { nightViewModel } from './viewModels';
 
 describe('Gear UI wiring (G3)', () => {
   it('?gear=1 only', () => {
+    // G11: Gear is the default; only ?gear=0 starts a classic run.
     expect(gearFlag('?gear=1')).toBe(true);
     expect(gearFlag('?gear=0')).toBe(false);
-    expect(gearFlag('')).toBe(false);
-    expect(gearFlag('?seed=3')).toBe(false);
+    expect(gearFlag('')).toBe(true);
+    expect(gearFlag('?seed=3')).toBe(true);
+    expect(gearFlag('?link=local')).toBe(true);
   });
   it('the night VM carries gear only in a Gear run', () => {
     const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });

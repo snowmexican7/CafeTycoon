@@ -5,6 +5,7 @@
  */
 import type { Award } from '../sim/awards';
 import type { DayStats, GameState } from '../sim/types';
+import { isGearRun } from '../sim/gear';
 import { readJson, type StorageLike } from './storageLike';
 
 const KEY = 'cafetycoon.records';
@@ -21,6 +22,14 @@ export interface Totals {
   lost: number;
 }
 
+/** The four "best" records. Since G11 the top-level ones are Gear-era; classic runs keep their own. */
+export interface Bests {
+  bestWeek: Records['bestWeek'];
+  bestDay: Records['bestDay'];
+  bestDayProfit: Records['bestDayProfit'];
+  longestRun: Records['longestRun'];
+}
+
 export interface Records {
   version: 1;
   /** Week-end screens reached (runs folded in). */
@@ -35,12 +44,29 @@ export interface Records {
   mvps: { name: string; seed: number; date: string }[];
   /** What has been counted for each recent run (key = seed|host), so a later stop only adds the new days. */
   counted: ({ key: string } & Totals)[];
+  /**
+   * G11 records split (still version 1, so v2 browsers read it fine). Once `split` is set, the top-level
+   * bests are Gear-era only and `classic` holds the retired v2 bests ("Classic (retired)"). Totals and the
+   * hall of fame stay lifetime.
+   */
+  split?: true;
+  classic?: Bests;
 }
 
 const ZERO: Totals = { days: 0, served: 0, perfect: 0, slips: 0, espressos: 0, mopped: 0, lost: 0 };
 
 export function emptyRecords(): Records {
-  return { version: 1, weeks: 0, totals: { ...ZERO }, bestWeek: null, bestDay: null, bestDayProfit: null, longestRun: null, hall: {}, mvps: [], counted: [] };
+  return { version: 1, weeks: 0, totals: { ...ZERO }, bestWeek: null, bestDay: null, bestDayProfit: null, longestRun: null, hall: {}, mvps: [], counted: [], split: true };
+}
+
+const NO_BESTS: Bests = { bestWeek: null, bestDay: null, bestDayProfit: null, longestRun: null };
+const hasBests = (b: Bests) => !!(b.bestWeek || b.bestDay || b.bestDayProfit || b.longestRun);
+
+/** G11: move pre-split (v2, all classic) bests into `classic` and start the Gear bests fresh. Pure, idempotent. */
+export function splitRecords(r: Records): Records {
+  if (r.split) return r;
+  const old: Bests = { bestWeek: r.bestWeek ?? null, bestDay: r.bestDay ?? null, bestDayProfit: r.bestDayProfit ?? null, longestRun: r.longestRun ?? null };
+  return { ...r, ...NO_BESTS, split: true, ...(hasBests(old) ? { classic: old } : {}) };
 }
 
 const dayProfit = (d: DayStats) => Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0)) * 100) / 100;
@@ -69,12 +95,14 @@ export function foldRecords(prev: Records, state: GameState, awards: Award[], da
   r.counted = [{ key, ...now }, ...r.counted.filter((c) => c.key !== key)].slice(0, KEEP_RUNS);
   const crew = state.players.filter((p) => !p.bot).map((p) => p.name);
   if (fresh) r.weeks += 1;
-  if (!r.bestWeek || score > r.bestWeek.score) r.bestWeek = { score, seed: state.seed, date, crew, days: state.days.length };
-  if (!r.longestRun || state.days.length > r.longestRun.days) r.longestRun = { days: state.days.length, seed: state.seed, date };
+  // G11: Gear runs set the headline bests; a classic run (an old save, or ?gear=0) only counts as "Classic (retired)".
+  const b: Bests = r.split && !isGearRun(state) ? (r.classic ??= { ...NO_BESTS }) : r;
+  if (!b.bestWeek || score > b.bestWeek.score) b.bestWeek = { score, seed: state.seed, date, crew, days: state.days.length };
+  if (!b.longestRun || state.days.length > b.longestRun.days) b.longestRun = { days: state.days.length, seed: state.seed, date };
   for (const d of state.days) {
-    if (!r.bestDay || d.served > r.bestDay.served) r.bestDay = { served: d.served, day: d.day, seed: state.seed, date };
+    if (!b.bestDay || d.served > b.bestDay.served) b.bestDay = { served: d.served, day: d.day, seed: state.seed, date };
     const p = dayProfit(d);
-    if (!r.bestDayProfit || p > r.bestDayProfit.profit) r.bestDayProfit = { profit: p, day: d.day, seed: state.seed, date };
+    if (!b.bestDayProfit || p > b.bestDayProfit.profit) b.bestDayProfit = { profit: p, day: d.day, seed: state.seed, date };
   }
   if (fresh) {
     for (const a of awards) {
@@ -93,14 +121,17 @@ function sanitize(raw: unknown): Records {
   const base = emptyRecords();
   if (!raw || typeof raw !== 'object' || (raw as Records).version !== 1) return base;
   const r = raw as Partial<Records>;
-  return {
+  const classic = r.classic && typeof r.classic === 'object' ? { ...NO_BESTS, ...r.classic } : undefined;
+  return splitRecords({
     ...base,
     ...r,
+    split: r.split === true ? true : undefined,
     totals: { ...ZERO, ...(r.totals ?? {}) },
     hall: r.hall && typeof r.hall === 'object' ? r.hall : {},
     mvps: Array.isArray(r.mvps) ? r.mvps : [],
     counted: Array.isArray(r.counted) ? r.counted : [],
-  } as Records;
+    ...(classic ? { classic } : {}),
+  } as Records);
 }
 
 export function createRecordsStore(storage: StorageLike): { get(): Records; record(state: GameState, awards: Award[], date: string, score: number): Records } {

@@ -12,6 +12,10 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 
 ## Already done on main (no need to redo)
 
+- **v3.0.0 is live (G11, tag `v3.0.0`, rollback `pre-gear` / `v2.2.0`).** Every new run from the title or a
+  co-op lobby is now a Gear run, so everything below is what players meet by default. `?gear=0` still starts a
+  classic run for comparison, and old classic saves resume as classic.
+
 - Solo bots switch (`solo-bots-switch`), bots leaving your prep alone (`bot-prep-wait`), collision spills
   (`collision-spills`, tuned to 5%), planner skipping classic purchases in Gear runs, and the crewTips fixes
   (fb1-sim-fixes). They were all on main before the sprint.
@@ -58,7 +62,8 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - G9: `data/gear.ts` `twin`; `sim/types.ts` `Station.twin`; `sim/slots.ts` `stationsFromSlots` adds twins (`TWIN_OFFSET`); `sim/levelUp.ts` `levelUpGearOk` counts the E4 wand as a steamer.
 - G10: `data/gear.ts` `polish`/`flow`/`draws`/`influencerOdds`; `data/areas.ts` `pull`/`pullDrink`; `sim/gear.ts` `gearSpeed(s, tick)`, `gearPolish`, flow roll in `gearAfterUse`, `gearPullMul` area pull, influencer odds in `applyGearPrices`; `sim/stations.ts` calls `gearPolish`; `sim/types.ts` `Station.flowUntil`; `sim/bots/brain.ts` pod chain + `gearRecipe` in `act`; new `scripts/gearBalance.ts`.
 - Smoke fix: `sim/gear.ts` `podsOnly`; `sim/bots/brain.ts` `chainFor` skips the grinder when `podsOnly`.
-- No snapshot bumps: all new fields are optional. Protocol is 31 since G8.
+- G11 (storage + net, please review): `storage/recordsStore.ts` records split (still version 1: `split` marker + `classic` bests; `splitRecords` moves pre-v3 bests to "Classic (retired)"; classic runs fold into `classic` only), and PROTOCOL_VERSION 32 so v2 tabs are told to refresh. `createRun` itself still defaults to classic (goldens untouched); the UI passes `gear: true`.
+- No snapshot bumps: all new fields are optional. Protocol is 32 since G11.
 
 ## Freedom
 

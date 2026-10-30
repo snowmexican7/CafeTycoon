@@ -598,7 +598,7 @@ export interface CreateRunOptions {
   settings?: Partial<Settings>;
   /** P3 B13: the size the run opens at (absent = the café; new games from the title start at the stand). */
   tier?: TierId;
-  /** Gear Tree: start a Gear run ($120, no stations, no supplies). Off by default (UI: `?gear=1`). */
+  /** Gear Tree: start a Gear run ($120, no stations, no supplies). The sim default stays classic (old saves, golden tests); since v3.0.0 the UI sets it for every new run (`?gear=0` opts out). */
   gear?: boolean;
 }
 

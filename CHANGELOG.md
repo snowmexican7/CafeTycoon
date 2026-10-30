@@ -15,6 +15,20 @@ Every pull request or push that changes what players see adds a line under **Unr
 when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
+
+## 3.0.0 — 2026-10-30 · Gear Tree
+
+Every new run now starts from almost nothing: a folding table, a cardboard bin and a $120 fund. You build your bar one machine at a time.
+
+- **Pick your gear.** Night 0 opens the Gear shop. Each machine has its own upgrade tree, from a jar of cold brew and a Pod-o-Matic up to a dual boiler, a two-group machine and a Kyoto drip tower, plus a drip and pour-over branch. Cheap gear is funny and bad: small batches, breakdowns (give it a whack), spills and drip that runs too hot or too cold. Sell what you don't need.
+- **Drinks level up with use.** Pull enough shots and you learn the Americano; steam enough lattes and you learn the cappuccino. Order tickets pick the right recipe for what you hold.
+- **Every area has a hidden taste.** Customers say what they wish you sold and tip for what they love; the notebook keeps track.
+- **Co-op big buys are a vote** ($50 and up), with a banner everyone sees.
+- **Nights in order:** Restock → Gear shop → Menu → Extras. The wall chalkboard follows your live menu, and a fast hand-off at the till earns a little extra.
+- **Pod machines and grinders.** With only a Pod-o-Matic, bots no longer grind beans it can't use, the order ticket shows one "Pod" step, the hand hint says the machine takes pods, and the Gear tab says the grinder pays off with a real espresso machine.
+- **Records split.** Your best week, busiest day, best day and longest run now count Gear runs only; your old bests are kept on one line as "Classic (retired)". Lifetime totals and the hall of fame carry on.
+- Runs you already started (classic saves) load and finish exactly as before.
+- Friends on an old tab are asked to refresh before they can join (protocol 32).
 - Bots stop snatching your prep: they leave a shot, grounds or a drink in a machine alone for a while (and while anyone is near it or heading its way) before tidying it up.
 - Watch where you're going: bump into another barista and you both stumble for a moment, and now and then (about one bump in twenty) whatever you're carrying hits the floor. Drinks leave a puddle, grounds leave a pile, and the mop gets busy.
 

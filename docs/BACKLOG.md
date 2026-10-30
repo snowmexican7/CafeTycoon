@@ -1802,3 +1802,12 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### G11 — the flip: v3.0.0 Gear Tree (gear-g11, tag v3.0.0)
+- `pre-gear` tag on main at a36f951 (the last pre-flip commit, == gear-smoke). Rollback: redeploy `v2.2.0` or revert the G11 merge.
+- **Gear is the default.** `gearFlag()` is now true unless the URL says `?gear=0` (a hidden classic escape hatch for comparing). Title "Play solo" and co-op lobbies both open on Night 0 "Pick your gear" with $120. `createRun` still defaults to classic, so goldens and old saves are untouched. Old classic saves resume as classic (checked in the browser: a `?gear=0` run left at night, reloaded without the flag, Resume → classic stations, same seed).
+- **Records split** (GEAR_TREE §2.1). Still `version: 1` (v2 code reads it fine). New `split` marker and `classic` bests; on first load, pre-v3 bests move to "Classic (retired)" and the headline tiles start fresh for Gear runs. Classic runs (old saves, `?gear=0`) only update the classic line. Lifetime totals and the hall of fame carry on. The records dialog shows one "Classic (retired): Best week $1,480 · Busiest day 41 served · …" line.
+- **Protocol 32** so a friend on a cached v2.2 tab gets the existing "refresh" message instead of joining a Gear room with old code.
+- `package.json` 3.0.0 (title shows "CafeTycoon v3.0.0"), CHANGELOG 3.0.0 section (the Gear Tree in players' words, plus the two Unreleased bot/collision lines).
+- Tests: gearFlag default, 3 records-split tests (old blob migrates, Gear vs classic folding, dialog line). Browser check `/workspace/overnight/pw/g11check.mjs` at 1512x982 and 1280x800 + `?link=local` co-op (host and guest both Gear, $120), no page errors. Screenshots: `/workspace/overnight/sprint/g11/{title,records,resumed-classic,new-run-night0}-{1512,1280}.png`, `coop-guest-night0-1280.png`.
+- Note: GEAR_TREE §10 asked for "at least one good `?gear=1` playtest" before the flip. Kennedy asked overnight for the flip once the integration smoke was clean; the overnight smokes (4 full weeks, solo and co-op, both sizes) stand in for it. If the first real game night disagrees, roll back to `v2.2.0`.
+

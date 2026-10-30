@@ -11,6 +11,8 @@ export interface RecordsVM {
   totals: { label: string; value: number }[];
   hall: { name: string; mvp: number; awards: number }[];
   mvps: string[];
+  /** G11: the retired v2 bests, shown small under "Classic (retired)". */
+  classic: string[];
 }
 
 const money = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
@@ -40,6 +42,14 @@ export function recordsViewModel(r: Records): RecordsVM {
     ],
     hall,
     mvps: r.mvps.map((m) => `${m.name} (${m.date})`),
+    classic: r.classic
+      ? [
+          r.classic.bestWeek ? `Best week ${money(r.classic.bestWeek.score)}` : '',
+          r.classic.bestDay ? `Busiest day ${r.classic.bestDay.served} served` : '',
+          r.classic.bestDayProfit ? `Best day ${money(r.classic.bestDayProfit.profit)}` : '',
+          r.classic.longestRun ? `Longest run ${r.classic.longestRun.days} days` : '',
+        ].filter(Boolean)
+      : [],
   };
 }
 
@@ -58,6 +68,7 @@ export function recordsHtml(vm: RecordsVM): string {
       <div class="menu-hd"><span class="badge-ic" aria-hidden="true" style="font-size:28px">🏆</span><div><h2 id="rec-h">Café records</h2>
         <p>${vm.empty ? 'No finished weeks yet. Records fill in at the end of each week.' : 'Kept in this browser. Bragging rights only.'}</p></div></div>
       <div class="rec-grid">${tiles}</div>
+      ${vm.classic.length ? `<p class="hint rec-classic"><b>Classic (retired):</b> ${vm.classic.map(esc).join(' · ')}</p>` : ''}
       <div class="sec-h">Lifetime totals</div>
       <div class="rec-tot">${totals}</div>
       <div class="sec-h">Hall of fame</div>
