@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRun } from '../run';
+import { step } from '../step';
 import { expectedUse } from '../brief';
 import { computeModifiers, rentForDay } from '../effects';
 import { restockCost } from '../night';
@@ -483,5 +484,40 @@ describe('crewTips', () => {
     expect(crewTips(s).length).toBe(2);
     s.players.find((p) => p.id === bots[0])!.connected = false;
     expect(crewTips(s, 2).map((t) => t.by)).toEqual([bots[1], bots[1]]);
+  });
+});
+
+describe('planNight: Gear runs', () => {
+  // A Gear run replaces the classic stations shop: the `equip` and `slot` inputs do nothing there, so the planner
+  // must not offer them as crew tips.
+  const gearRun = (): GameState => {
+    let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true, tier: 'stand' });
+    for (const gear of ['g1', 'e2'] as const) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear }]);
+    s.days.push(dayStats({ served: 3, lost: 9 }));
+    s.cash = 300;
+    s.supplies = { ...FULL };
+    return s;
+  };
+
+  it('offers no classic equip advice, even after a day that lost more than it served', () => {
+    const s = gearRun();
+    expect(s.stations.filter((st) => st.kind === 'espresso')).toHaveLength(1);
+    expect(planNight(s).filter((a) => a.kind === 'equip')).toEqual([]);
+  });
+
+  it('offers no slot advice for spare equipment', () => {
+    const s = gearRun();
+    s.equipment = ['steamer'];
+    expect(s.slots).toContain(null);
+    expect(planNight(s).filter((a) => a.kind === 'slot')).toEqual([]);
+  });
+
+  it('the same day on a classic stand still gets the second-machine tip', () => {
+    const s = run('stand');
+    s.days.push(dayStats({ served: 3, lost: 9 }));
+    s.cash = 300;
+    s.supplies = { ...FULL };
+    s.slots = ['grinder', 'espresso', null, 'trash'];
+    expect(planNight(s).some((a) => a.kind === 'equip')).toBe(true);
   });
 });
