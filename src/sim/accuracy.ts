@@ -38,6 +38,7 @@ export function cupIntoStation(p: Player, s: Station): void {
   if (p.cupSlips) s.cupSlips = p.cupSlips;
   else delete s.cupSlips;
   delete p.cupSlips;
+  delete p.cupTemp;
 }
 
 /** The cup comes out of a machine; marks it if it sat too long. `sitTicks` = sitSeconds in ticks. */
@@ -48,6 +49,7 @@ export function cupOutOfStation(state: GameState, p: Player, s: Station, sitTick
   delete s.doneAt;
   if (slips > 0) p.cupSlips = Math.min(ACCURACY.maxStars, slips);
   else delete p.cupSlips;
+  delete p.cupTemp;
 }
 
 /** Note a served cup on today's record. */

@@ -75,7 +75,7 @@ export function stepStations(state: GameState): GameState {
 export function interact(state: GameState, playerId: PlayerId): GameState {
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return state;
-  if (player.holding === null) delete player.cupSlips; // P3 B5: empty hands, no cup, no marks
+  if (player.holding === null) { delete player.cupSlips; delete player.cupTemp; } // P3 B5: empty hands, no cup, no marks
   if (player.tool !== null) {
     mopInteract(state, player);
     return state;

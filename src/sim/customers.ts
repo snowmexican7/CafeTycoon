@@ -222,7 +222,7 @@ function rollsUpset(state: GameState, customer: Customer): boolean {
 export const PERFECT_PATIENCE = 0.75;
 
 /** Pay out one served customer: price, patience-scaled tip, cash, stats, and leave the queue. */
-export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId, slips = 0): void {
+export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId, slips = 0, tempMiss = false): void {
   if (customer.egg === 'nameMix' && !customer.upset) {
     // Wrong name on the cup — they refuse until remade or the name is corrected.
     customer.upset = { ticksLeft: secondsToTicks(ECONOMY.rogue.remakeSeconds) };
@@ -251,6 +251,8 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   const combo = serveCombo(state, drink, state.today, sig?.twist);
   const sigBonus = sig && combo ? signatureServed(state.today, combo.stars) : 0;
   let tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) * areaTipMul(state, drink) + roleCraft(state, by));
+  // Gear G4h (doc §4.2): a too-hot or too-cold cup earns half the tip.
+  if (tempMiss) tip = round2(tip / 2);
   // Gear G4g: rung up at the till and handed off fast.
   const speedTip = tillSpeedTip(state, customer);
   if (speedTip) tip = round2(tip + speedTip);
@@ -325,8 +327,9 @@ export function serveDrink(state: GameState, playerId: PlayerId): GameState {
   const drink = player.holding;
   const target = serveTarget(state, (c) => c.drink === drink);
   if (target === null) return state;
-  serveCustomer(state, target, drink, playerId, player.cupSlips ?? 0);
+  serveCustomer(state, target, drink, playerId, player.cupSlips ?? 0, player.cupTemp === true);
   player.holding = null;
   delete player.cupSlips;
+  delete player.cupTemp;
   return state;
 }

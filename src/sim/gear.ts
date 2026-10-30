@@ -382,10 +382,10 @@ export function gearPotPour(state: GameState, s: Station): { pot: boolean; more:
 const TOO_HOT = ['"Ow! This is lava."', '"Is this coffee or a dare?"', '"I can\'t feel my tongue."'];
 const TOO_COLD = ['"This is… room temperature."', '"Did this sit out since breakfast?"', '"Lukewarm. Like my enthusiasm."'];
 
-/** G4d: a too-hot or too-cold cup: one mark on it (−1★, a smaller tip) and a complaint line. */
+/** G4d/G4h: a too-hot or too-cold cup: half tip when it's served (doc §4.2) and a complaint line. */
 export function gearTempMiss(state: GameState, s: Station, p: Player, temp: 'hot' | 'cold'): void {
-  p.cupSlips = Math.min(ACCURACY.maxStars, (p.cupSlips ?? 0) + 1);
+  p.cupTemp = true;
   const lines = temp === 'hot' ? TOO_HOT : TOO_COLD;
   const line = lines[state.tick % lines.length];
-  quirk(state, s, `${temp === 'hot' ? 'Too hot' : 'Too cold'}: ${line} (−1★)`, p.id);
+  quirk(state, s, `${temp === 'hot' ? 'Too hot' : 'Too cold'}: ${line} (half tip)`, p.id);
 }
