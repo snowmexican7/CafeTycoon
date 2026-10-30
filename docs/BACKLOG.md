@@ -1626,4 +1626,11 @@ Merged so far (all behind `createRun({gear:true})` / the hidden `?gear=1` link; 
 
 Please review: the stations.ts speed/batch edits (determinism), the slots.ts ↔ gear.ts circular import, validate.ts bounds, and whether any net/storage path should whitelist the new fields.
 
-Still to build (G4+): pods/E1 and drip, price multipliers and quality caps (+1★), downsides (battery die-off etc.), co-op $50 majority votes (G8), dual boiler sides (G9), bots buying gear, records split + protocol bump at the v3 flip (G11).
+- **G4 `gear-g04`** — Pod-o-Matic 3000 (E1): `gearRecipe` in `stations.ts` interact (empty hands → espresso, 1 beans = 1 pod, no grinder; `growth.ts` canMake treats pods as covering the grinder). Price multipliers via `applyGearPrices` at the end of `effects.ts` computeModifiers (c5 ×1.25, e5 ×1.1, e6 ×1.2, e1 ×0.85). Night board `sellLabel`: $0 items say "Toss it" / "Bin the sock".
+- **G5 `gear-g05`** — quirks in `GEAR[*].quirks`, run by `gearMorning`, `gearBlocked` (top of `interact` when idle) and `gearAfterUse` (after a brew starts) in `src/sim/gear.ts`: Pod jams (whack with empty hands), goose spills (`placeMess`), spice-grinder off notes (+1 mark), whisk dies after 6–13 uses/day, jar crack (lose the batch), sock question (−0.05 rep), Lucky Sock (no lint mark), funny lines as `gear.quirk` log → toast in `main.ts`. New optional Station fields `jammed/dead/usesToDie/lucky`. RNG (`state.rng`) is only drawn in Gear runs, so classic replays/goldens are unchanged.
+- **G5b `gear-g05b`** — day HUD "Gear" card (compact chips: 🧊 6/8 left · 🥛 ready · ☕ jammed!).
+
+Please also review (G4/G5): the `interact` hooks order in `stations.ts` (gearBlocked before recipe; gearAfterUse after busyTotal), and RNG use. **Bots are untouched**: they don't know pods (won't make espresso on E1), and may walk to a dead/jammed machine and get nothing — bot logic for gear is yours.
+Deviations from GEAR_TREE.md: pods use the beans supply (no new SupplyId); jar crack = lost batch + morning note, not a floor spill; "+1★ quality cap" skipped (3★ is already the max); drip (D-tree) not built yet — it needs a new StationKind/drink/supply + sprites + bots.
+
+Still to build: drip (D1–D5), G6 level-ups, G7 area taste, co-op $50 majority votes (G8), dual boiler sides (G9), G10 pour-over/balance, bots using gear, inspector/other rare events, records split + protocol bump at the v3 flip (G11).
