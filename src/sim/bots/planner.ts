@@ -31,6 +31,8 @@
  * Pure: no RNG, no Date, no mutation of `state`. Reads only what the crew can see (the taste
  * notebook, the scouted rival copy), never hidden state (`comboStars`, `adOutcome`, `rivalMenu`).
  */
+import { AREAS } from '../../data/areas';
+import type { AreaId } from '../../data/areas';
 import { BASE_DRINKS, DRINK_INFO } from '../../data/drinks';
 import { ECONOMY } from '../../data/economy';
 import { GEAR } from '../../data/gear';
@@ -47,7 +49,9 @@ import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun } from '../gear';
 import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
 import { restockCost } from '../night';
 import { PRICING, priceForecast, priceStep } from '../pricing';
-import { copyIsLive, RIVAL, sigPrice } from '../rival';
+import { BRANCH, branchAreas, branchDay, canOpenBranch, hasManager } from '../branch';
+import { profitOf } from '../profit';
+import { copyIsLive, countered, hasStamps, isPromoDay, loyaltyLive, RIVAL, sigPrice } from '../rival';
 import { SIG } from '../signature';
 import { defaultSlots, reasonOff, slotCount } from '../slots';
 import { knownStars, TWIST_INFO, TWISTS, twistFor } from '../taste';
@@ -70,12 +74,17 @@ export const PLAN_PRIORITY = {
   restockOut: 100,
   restockLow: 90,
   rival: 80,
+  rivalCounter: 75,
   grow: 70,
+  branchOpen: 65,
   checkout: 60,
   gear: 58,
   slot: 55,
   staff: 53,
+  branchStaff: 52,
   price: 50,
+  branchSend: 48,
+  stampCard: 45,
   twist: 40,
   signature: 35,
   equip: 30,
@@ -469,6 +478,125 @@ function staffAdvice(state: GameState): Advice[] {
   ];
 }
 
+/** What it costs to stock one normal day (expected use, whole packs), whatever is in the pantry. */
+function dayRestockCost(state: GameState): number {
+  const use = expectedUse(state);
+  const menu = menuDrinks(state);
+  return round2(
+    RESTOCKABLE.filter((s) => menu.some((d) => ECONOMY.drinkSupplies[d].includes(s))).reduce(
+      (n, supply) => n + restockCost(state, supply, Math.ceil(use[supply] / ECONOMY.packs[supply].size)),
+      0,
+    ),
+  );
+}
+
+/** P4 B1: tomorrow is one of the rival's happy-hour days and nobody has matched it (a free price cut). */
+function rivalCounterAdvice(state: GameState): Advice[] {
+  if (!isGearRun(state) || !isPromoDay(state) || countered(state)) return [];
+  return [{ id: 'rival:promo', kind: 'rival', text: `Match ${RIVAL.name}'s happy hour`, input: { kind: 'rivalCounter' }, priority: PLAN_PRIORITY.rivalCounter }];
+}
+
+/** P4 F2: the rival's loyalty card is live and ours is not out: print the stamp card once there is $30 and a day's restock to spare. */
+function stampAdvice(state: GameState, budget: Budget): Advice[] {
+  if (!isGearRun(state) || !loyaltyLive(state) || hasStamps(state) || state.rival?.stamps !== undefined) return [];
+  const spare = round2(state.cash - billsForDay(state));
+  if (spare < round2(RIVAL.stampCost + dayRestockCost(state)) || budget.left < RIVAL.stampCost) return [];
+  budget.left = round2(budget.left - RIVAL.stampCost);
+  return [
+    {
+      id: 'rival:loyalty',
+      kind: 'rival',
+      text: `Print our own stamp card (${dollars(RIVAL.stampCost)}) to win back ${RIVAL.name}'s loyalty-card walk-ins`,
+      input: { kind: 'stampCard' },
+      priority: PLAN_PRIORITY.stampCard,
+    },
+  ];
+}
+
+/** The branch as it would be if opened in `area` (for the sim's own `branchDay` estimate). */
+const branchProbe = (state: GameState, branch: NonNullable<GameState['branch']>): GameState => ({ ...state, branch });
+
+/**
+ * P4 B4: open the second shop at the café tier once there is the lease, bills and a day's stock to spare and
+ * yesterday made a profit, in the area whose `branchDay` estimate (two baristas) is best and not a loss.
+ */
+function branchOpenAdvice(state: GameState, budget: Budget): Advice[] {
+  if (!isGearRun(state) || !canOpenBranch(state)) return [];
+  const last = state.days.at(-1);
+  if (!last || profitOf(last) <= 0) return [];
+  if (round2(state.cash - billsForDay(state)) < round2(BRANCH.cost + dayRestockCost(state)) || budget.left < BRANCH.cost) return [];
+  let best: { area: AreaId; profit: number } | null = null;
+  for (const area of branchAreas(state)) {
+    const est = branchDay(branchProbe(state, { area, staff: BRANCH.staff.start, openedDay: state.day, spent: BRANCH.cost, by: 'plan' }));
+    if (est && est.profit > 0 && (!best || est.profit > best.profit)) best = { area, profit: est.profit };
+  }
+  if (!best) return [];
+  budget.left = round2(budget.left - BRANCH.cost);
+  return [
+    {
+      id: 'branch:open',
+      kind: 'grow',
+      text: `Open a second shop in ${AREAS[best.area].name} (${dollars(BRANCH.cost)}, about ${dollars(Math.round(best.profit))} a day)`,
+      input: { kind: 'branch', action: 'open', area: best.area },
+      priority: PLAN_PRIORITY.branchOpen,
+    },
+  ];
+}
+
+/** P4 B4: one more barista at the branch after a day that walked people out (when the estimate says it pays), one fewer after a loss with no walk-outs. */
+function branchStaffAdvice(state: GameState): Advice[] {
+  const b = state.branch;
+  const last = state.days.at(-1)?.branch;
+  if (!isGearRun(state) || !b || !last) return [];
+  const now = branchDay(state)!.profit;
+  const profitWith = (staff: number) => branchDay(branchProbe(state, { ...b, staff }))!.profit;
+  if (last.walked > 0 && b.staff < BRANCH.staff.max && profitWith(b.staff + 1) > now) {
+    return [
+      {
+        id: 'branch:staff',
+        kind: 'grow',
+        text: `${last.walked} walked out of the second shop yesterday: put ${b.staff + 1} baristas there`,
+        input: { kind: 'branch', action: 'staff', staff: b.staff + 1 },
+        priority: PLAN_PRIORITY.branchStaff,
+      },
+    ];
+  }
+  if (last.profit < 0 && last.walked === 0 && b.staff > BRANCH.staff.min && profitWith(b.staff - 1) > now) {
+    return [
+      {
+        id: 'branch:staff',
+        kind: 'grow',
+        text: `The second shop lost ${money(-last.profit)} with nobody walking out: cut to ${b.staff - 1} ${b.staff - 1 === 1 ? 'barista' : 'baristas'} there`,
+        input: { kind: 'branch', action: 'staff', staff: b.staff - 1 },
+        priority: PLAN_PRIORITY.branchStaff,
+      },
+    ];
+  }
+  return [];
+}
+
+/** P4 B5: with a Manager on the crew and a branch open, send a pack of beans or milk when home has more than two packs beyond tomorrow's use. */
+function branchSendAdvice(state: GameState): Advice[] {
+  const b = state.branch;
+  if (!isGearRun(state) || !b || !hasManager(state)) return [];
+  // credit beyond what the branch's next day will draw is already waiting there
+  if ((b.stockCredit ?? 0) > (branchDay(state)?.fromStock ?? 0)) return [];
+  const use = expectedUse(state);
+  const advice: Advice[] = [];
+  for (const supply of ['beans', 'milk'] as const) {
+    const size = ECONOMY.packs[supply].size;
+    if ((state.supplies[supply] ?? 0) <= use[supply] + 2 * size) continue;
+    advice.push({
+      id: `branch:send:${supply}`,
+      kind: 'restock',
+      text: `Plenty of ${STOCK_NAME[supply]} at home: send a pack to the second shop`,
+      input: { kind: 'branch', action: 'send', supply },
+      priority: PLAN_PRIORITY.branchSend,
+    });
+  }
+  return advice;
+}
+
 function scoutAdvice(state: GameState, budget: Budget): Advice[] {
   if (state.day < 2 || state.rival?.scouted === state.day || budget.left < SCOUT_SPARE) return [];
   budget.left = round2(budget.left - RIVAL.scoutCost);
@@ -511,21 +639,28 @@ export function planNight(state: GameState): Advice[] {
   // Spending advice draws on the budget in priority order: restock, grow, checkout, gear, equip, scout.
   const restock = restockAdvice(state, budget);
   const grow = growAdvice(state, budget);
+  const branchOpen = branchOpenAdvice(state, budget);
   const checkout = grow.length ? [] : checkoutAdvice(state, budget);
   const gear = gearAdvice(state, budget);
   const slot = slotAdvice(state);
+  const stamp = stampAdvice(state, budget);
   const equip = equipAdvice(state, budget, slot.length > 0);
   const scout = scoutAdvice(state, budget);
   const all = [
     ...restock,
     ...rivalAdvice(state),
+    ...rivalCounterAdvice(state),
     ...grow,
+    ...branchOpen,
     ...checkout,
     ...gear,
     ...slot,
     ...staffAdvice(state),
+    ...branchStaffAdvice(state),
     ...priceAdvice(state),
     ...twistAdvice(state),
+    ...branchSendAdvice(state),
+    ...stamp,
     ...signatureAdvice(state),
     ...equip,
     ...scout,

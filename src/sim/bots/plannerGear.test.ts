@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createRun } from '../run';
 import { step } from '../step';
-import { unlockedDrinks } from '../unlocks';
+import { menuDrinks, unlockedDrinks } from '../unlocks';
+import { expectedUse } from '../brief';
+import { countered, hasStamps, isPromoDay, RIVAL } from '../rival';
+import { ECONOMY } from '../../data/economy';
+import { BRANCH, branchAreas, branchDay } from '../branch';
+import { profitOf } from '../profit';
 import { rentForDay } from '../effects';
 import { restockCost } from '../night';
 import { billsForDay, wagesForDay } from '../staff';
@@ -32,6 +37,7 @@ function equipped(gears: GearId[], opts: Parameters<typeof gearRun>[0] = {}, cas
 const classicRun = (bots = 0, tier: TierId = 'stand'): GameState =>
   createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots }, tier });
 
+const round2 = (n: number) => Math.round(n * 100) / 100;
 const find = (s: GameState, id: string): Advice | undefined => planNight(s).find((a) => a.id === id);
 
 describe('item 1: the planner budgets bills (rent + wages), not rent', () => {
@@ -232,5 +238,190 @@ describe('item 4: let a barista go when the wages beat what the crew adds', () =
     for (const x of [afterDay(2, 2, 0), afterDay(1, 1, 5), afterDay(0, 0, 0), s]) {
       expect(planNight(x).some((a) => a.input.kind === 'staff' && a.input.action === 'hire')).toBe(false);
     }
+  });
+});
+
+/** The cost of a day's restock at today's prices (what the planner calls "a day's restock"). */
+function dayRestock(s: GameState): number {
+  const use = expectedUse(s);
+  return (['beans', 'milk', 'concentrate', 'flavour'] as const).reduce((n, sup) => {
+    if (!menuDrinks(s).some((d) => ECONOMY.drinkSupplies[d].includes(sup))) return n;
+    return n + restockCost(s, sup, Math.ceil(use[sup] / ECONOMY.packs[sup].size));
+  }, 0);
+}
+
+describe('item 5a: match the rival’s happy hour', () => {
+  const promoNight = (): GameState => {
+    const s = equipped(['c1', 'e1'], {}, 200);
+    const day = [8, 9, 10, 11, 12, 13, 14].find((d) => isPromoDay(s, d))!;
+    s.day = day;
+    expect(isPromoDay(s)).toBe(true);
+    return s;
+  };
+  const ad = (s: GameState) => planNight(s).find((a) => a.input.kind === 'rivalCounter');
+
+  it('on a promo night that is not matched: Match Starbuck$’s happy hour, priority 75', () => {
+    const a = ad(promoNight())!;
+    expect(a).toMatchObject({ kind: 'rival', text: `Match ${RIVAL.name}'s happy hour`, input: { kind: 'rivalCounter' }, priority: PLAN_PRIORITY.rivalCounter });
+    expect(PLAN_PRIORITY.rivalCounter).toBe(75);
+  });
+
+  it('quiet once matched, on a normal night, and in week 1', () => {
+    const s = promoNight();
+    s.rival = { counter: s.day } as GameState['rival'];
+    expect(countered(s)).toBe(true);
+    expect(ad(s)).toBeUndefined();
+    const n = promoNight();
+    n.day -= 1;
+    while (isPromoDay(n)) n.day -= 1;
+    expect(ad(n)).toBeUndefined();
+    n.day = 3;
+    expect(ad(n)).toBeUndefined();
+  });
+
+  it('applying the advice (as a human would) turns it off', () => {
+    let s = promoNight();
+    s = step(s, [{ kind: 'rivalCounter', playerId: 'p1' }]);
+    expect(countered(s)).toBe(true);
+    expect(ad(s)).toBeUndefined();
+  });
+});
+
+describe('item 5b: the stamp card against the loyalty card', () => {
+  const night = (cash: number, day = RIVAL.loyaltyDay): GameState => {
+    const s = equipped(['c1', 'e1'], {}, cash);
+    s.day = day;
+    return s;
+  };
+  const ad = (s: GameState) => planNight(s).find((a) => a.input.kind === 'stampCard');
+
+  it('suggests the card when cash covers bills, $30 and a day’s restock; priority 45', () => {
+    const probe = night(0);
+    const need = round2(billsForDay(probe) + RIVAL.stampCost + dayRestock(probe));
+    expect(ad(night(need))).toMatchObject({ kind: 'rival', priority: PLAN_PRIORITY.stampCard, input: { kind: 'stampCard' } });
+    expect(PLAN_PRIORITY.stampCard).toBe(45);
+    expect(ad(night(round2(need - 0.5)))).toBeUndefined();
+  });
+
+  it('only while the rival’s card is live and ours is not out', () => {
+    expect(ad(night(500, RIVAL.loyaltyDay - 1))).toBeUndefined();
+    expect(ad(night(500, RIVAL.loyaltyDay))).toBeDefined();
+    expect(ad(night(500, RIVAL.loyaltyDay + 3))).toBeDefined();
+    const s = night(500);
+    s.rival = { stamps: s.day } as GameState['rival'];
+    expect(ad(s)).toBeUndefined();
+    const b = step(night(500), [{ kind: 'stampCard', playerId: 'p1' }]);
+    expect(hasStamps(b)).toBe(true);
+    expect(ad(b)).toBeUndefined();
+  });
+});
+
+describe('item 5c: the second shop', () => {
+  const cafe = (cash: number): GameState => {
+    const s = equipped(['c1', 'e1'], { tier: 'cafe' }, cash);
+    s.tier = 'cafe'; // createRun leaves a café start's tier unset; growing sets it
+    s.days.push(dayStats({ sales: 100, tips: 10, rent: 25 }));
+    s.checkout = { owned: ['register', 'kiosk', 'squarely'], active: 'squarely', since: 1, by: 'K' }; // nothing else asks for the till
+    return s;
+  };
+  const open = (s: GameState) => planNight(s).find((a) => a.input.kind === 'branch' && a.input.action === 'open');
+  const needed = (s: GameState) => round2(billsForDay(s) + BRANCH.cost + dayRestock(s));
+  const withBranch = (staff: number, last: Partial<NonNullable<DayStats['branch']>>): GameState => {
+    const s = cafe(1000);
+    s.branch = { area: 'tourist', staff, openedDay: 1, spent: BRANCH.cost, by: 'K' };
+    s.days[0]!.branch = { served: 12, walked: 0, takings: 60, costs: 50, profit: 10, ...last };
+    return s;
+  };
+  const staffAd = (s: GameState) => planNight(s).find((a) => a.input.kind === 'branch' && a.input.action === 'staff');
+
+  it('opens at the café with a cushion after a profitable day, in the area whose estimate is best; priority 65', () => {
+    const s = cafe(needed(cafe(0)));
+    const a = open(s)!;
+    expect(a).toMatchObject({ kind: 'grow', id: 'branch:open', priority: PLAN_PRIORITY.branchOpen, input: { kind: 'branch', action: 'open', area: 'tourist' } });
+    expect(PLAN_PRIORITY.branchOpen).toBe(65);
+    // the estimate it used is the sim's own
+    const probe = { ...s, branch: { area: 'tourist' as const, staff: BRANCH.staff.start, openedDay: s.day, spent: BRANCH.cost, by: 'x' } };
+    for (const other of branchAreas(s)) {
+      const p = { ...probe, branch: { ...probe.branch, area: other } };
+      expect(branchDay(p)!.profit).toBeLessThanOrEqual(branchDay(probe)!.profit);
+    }
+  });
+
+  it('waits without the cushion, off the café tier, after a losing day, on opening night, or once open', () => {
+    expect(open(cafe(round2(needed(cafe(0)) - 1)))).toBeUndefined();
+    const cart = cafe(1000);
+    cart.tier = 'cart';
+    expect(open(cart)).toBeUndefined();
+    const loss = cafe(1000);
+    loss.days[0] = dayStats({ sales: 10, tips: 0, rent: 25 });
+    expect(profitOf(loss.days[0]!)).toBeLessThan(0);
+    expect(open(loss)).toBeUndefined();
+    const first = cafe(1000);
+    first.days = [];
+    expect(open(first)).toBeUndefined();
+    expect(open(withBranch(2, {}))).toBeUndefined();
+  });
+
+  it('adds a barista when yesterday walked people out and the sim’s estimate says it pays; priority 52', () => {
+    const s = withBranch(1, { walked: 13, served: 12 });
+    const a = staffAd(s)!;
+    expect(a).toMatchObject({ kind: 'grow', id: 'branch:staff', priority: PLAN_PRIORITY.branchStaff, input: { kind: 'branch', action: 'staff', staff: 2 } });
+    expect(PLAN_PRIORITY.branchStaff).toBe(52);
+    expect(staffAd(withBranch(3, { walked: 13 }))).toBeUndefined(); // at the cap
+    expect(staffAd(withBranch(2, { walked: 0 }))).toBeUndefined();
+  });
+
+  it('cuts one after a loss with nobody walked out, when the estimate says it helps', () => {
+    const s = withBranch(3, { walked: 0, profit: -6 });
+    s.branch!.area = 'drizzleton';
+    expect(staffAd(s)?.input).toEqual({ kind: 'branch', action: 'staff', staff: 2 });
+    expect(staffAd(withBranch(1, { walked: 0, profit: -6 }))).toBeUndefined(); // already at the minimum
+    expect(staffAd(withBranch(3, { walked: 0, profit: 4 }))).toBeUndefined(); // not a loss
+  });
+});
+
+describe('item 5d: send surplus stock to the branch', () => {
+  const sendAd = (s: GameState) => planNight(s).filter((a) => a.input.kind === 'branch' && a.input.action === 'send');
+  const managed = (beans: number, milk: number): GameState => {
+    const s = equipped(['c1', 'e1'], { tier: 'cafe' }, 1000);
+    s.branch = { area: 'tourist', staff: 2, openedDay: 1, spent: BRANCH.cost, by: 'K' };
+    s.players[0]!.role = 'manager';
+    s.supplies = { ...FULL, beans, milk };
+    return s;
+  };
+
+  it('beans or milk beyond tomorrow’s use plus two packs, Manager mode only; priority 48', () => {
+    const base = managed(0, 0);
+    const use = expectedUse(base);
+    const pack = (k: 'beans' | 'milk') => ECONOMY.packs[k].size;
+    const s = managed(use.beans + 2 * pack('beans') + 1, use.milk + 2 * pack('milk'));
+    const ads = sendAd(s);
+    expect(ads.map((a) => a.input)).toEqual([{ kind: 'branch', action: 'send', supply: 'beans' }]);
+    expect(ads[0]).toMatchObject({ id: 'branch:send:beans', priority: PLAN_PRIORITY.branchSend });
+    expect(PLAN_PRIORITY.branchSend).toBe(48);
+    const both = managed(use.beans + 3 * pack('beans'), use.milk + 3 * pack('milk'));
+    expect(sendAd(both).map((a) => a.id)).toEqual(['branch:send:beans', 'branch:send:milk']);
+    expect(sendAd(managed(use.beans + 2 * pack('beans'), 0))).toEqual([]);
+  });
+
+  it('quiet without a branch or a Manager, or when the credit already covers the branch’s cups', () => {
+    const s = managed(900, 900);
+    expect(sendAd(s)).toHaveLength(2);
+    delete s.players[0]!.role;
+    expect(sendAd(s)).toEqual([]);
+    const n = managed(900, 900);
+    delete n.branch;
+    expect(sendAd(n)).toEqual([]);
+    const c = managed(900, 900);
+    c.branch!.stockCredit = 500;
+    expect(sendAd(c)).toEqual([]);
+  });
+
+  it('applying it moves a pack and the advice follows the stock down', () => {
+    let s = managed(60, 0);
+    s.supplies.beans = expectedUse(s).beans + 2 * ECONOMY.packs.beans.size + 1;
+    expect(sendAd(s)).toHaveLength(1);
+    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'send', supply: 'beans' }]);
+    expect(sendAd(s)).toEqual([]);
   });
 });
