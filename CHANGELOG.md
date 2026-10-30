@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **The phone rings.** When the second shop calls, you now hear an old desk phone trill when it starts and every 3 seconds until someone picks up or it rings out.
+
 ## 3.2.0 — 2026-10-30 · Phase 4 (franchise & rivals, lite)
 
 Most of Phase 4, "Franchise & rivals", in a first playable cut: seasons, a pushier Starbuck$, and a second shop you run from the night screen. Still to come in Phase 4: travelling to the second shop, more than two shops, and 2v2 on a shared street (designed, not built). Old saves load as before.

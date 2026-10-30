@@ -1,4 +1,5 @@
 import { TICK_RATE } from '../sim/constants';
+import { callRinging } from '../sim/call';
 import type { EventKind, GameState, PlayerId, StationKind } from '../sim/types';
 
 /**
@@ -54,7 +55,8 @@ export type CueId =
   | 'eggReview'
   | 'eggSecret'
   | 'eggCamper'
-  | 'eggNameMix';
+  | 'eggNameMix'
+  | 'phoneRing';
 
 export interface Cue {
   id: CueId;
@@ -80,6 +82,9 @@ export const EVENT_CUE: Record<EventKind, CueId> = {
 
 /** Ticks between ballast buzzes while the power is out. */
 export const BUZZ_TICKS = 48;
+
+/** Seconds between phone rings while the second shop's call is waiting (P6). */
+export const RING_EVERY_SEC = 3;
 
 /** Longest a station loop may run, so a slowed station can't drone forever. */
 export const MAX_STATION_SEC = 8;
@@ -166,6 +171,12 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
   // the lights are out: the ballast keeps buzzing every ~0.8 s
   if (sameDay && next.events.some((e) => e.kind === 'powerFlicker') && Math.floor(prev.tick / BUZZ_TICKS) !== Math.floor(next.tick / BUZZ_TICKS)) cues.push({ id: 'buzz' });
   // chaos pack state changes: the mop picked up, a rogue appearing, the door slamming behind them
+  // the second shop is on the phone: ring when it starts, then every few seconds until someone picks up
+  const ring = callRinging(next);
+  if (ring) {
+    const was = sameDay ? callRinging(prev) : null;
+    if (!was || Math.ceil(was.secsLeft / RING_EVERY_SEC) !== Math.ceil(ring.secsLeft / RING_EVERY_SEC)) cues.push({ id: 'phoneRing' });
+  }
   if (prev.mop && next.mop && prev.mop.heldBy === null && next.mop.heldBy !== null) cues.push({ id: 'mopGrab', mine: next.mop.heldBy === me });
   const rogueStarted = !prev.rogue && !!next.rogue;
   if (rogueStarted) cues.push({ id: 'rogueSneak' });
