@@ -22,7 +22,7 @@ export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
 
 export const ITEM_LABEL: Record<ItemKind, string> = {
   grounds: 'Grounds', espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew',
-  icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha latte', special: 'Maple cold foam', drip: 'Drip coffee', americano: 'Americano', cappuccino: 'Cappuccino', doppio: 'Doppio', sweetCream: 'Sweet-cream cold brew', cafeAuLait: 'Café au lait', redEye: 'Red-eye',
+  icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha latte', special: 'Maple cold foam', drip: 'Drip coffee', americano: 'Americano', cappuccino: 'Cappuccino', doppio: 'Doppio', sweetCream: 'Sweet-cream cold brew', cafeAuLait: 'Café au lait', redEye: 'Red-eye', pourOver: 'Pour-over',
 };
 export const STATION_NAME: Record<StationKind, string> = {
   grinder: 'Grinder',
@@ -49,6 +49,7 @@ export const DRINK_STEPS: Record<DrinkId, string[]> = {
   sweetCream: ['Tap', 'Cream', 'Hand off'],
   cafeAuLait: ['Drip', 'Milk', 'Hand off'],
   redEye: ['Drip', 'Shot', 'Hand off'],
+  pourOver: ['Pour', 'Hand off'],
   cappuccino: ['Grind', 'Pull', 'Steam', 'Foam', 'Hand off'],
 };
 

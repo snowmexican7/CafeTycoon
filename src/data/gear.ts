@@ -16,7 +16,7 @@
  */
 import type { StationKind } from '../sim/types';
 
-export type GearTree = 'coldBrew' | 'espresso' | 'grinder' | 'steamer' | 'drip' | 'bin';
+export type GearTree = 'coldBrew' | 'espresso' | 'grinder' | 'steamer' | 'drip' | 'pourOver' | 'bin';
 
 export type GearId =
   | 'c1' | 'c2' | 'c3' | 'c4' | 'c5'
@@ -24,6 +24,7 @@ export type GearId =
   | 'g1' | 'g2' | 'g3'
   | 's1' | 's2' | 's3'
   | 'd1' | 'd2' | 'd3' | 'd4'
+  | 'd4b' | 'd5b'
   | 'b0';
 
 export interface GearInfo {
@@ -49,6 +50,10 @@ export interface GearInfo {
    *  The pot goes cold `coldAfter` seconds after it finishes (null = never); `miss` = chance a pot comes out
    *  too hot or too cold (each cup from a missed or cold pot: a complaint and −1★). */
   pot?: { cups: number; coldAfter: number | null; miss: number };
+  /** G10a: a pour-over station (drip branch b). Empty hands make one handmade Pour-over in `seconds`. */
+  pour?: { seconds: number };
+  /** G10a: buying it needs this tree at this tier or better in a slot (the drip branch opens after D3). */
+  requires?: { tree: GearTree; tier: number; label: string };
   blurb: string;
 }
 
@@ -82,6 +87,7 @@ export const GEAR_TREES: { id: GearTree; name: string; icon: string }[] = [
   { id: 'grinder', name: 'Grinder', icon: '⚙️' },
   { id: 'steamer', name: 'Milk', icon: '🥛' },
   { id: 'drip', name: 'Drip', icon: '🫖' },
+  { id: 'pourOver', name: 'Pour-over', icon: '🫘' },
   { id: 'bin', name: 'Bin', icon: '🗑️' },
 ];
 
@@ -110,6 +116,9 @@ export const GEAR: Record<GearId, GearInfo> = {
   d2: g({ id: 'd2', tree: 'drip', tier: 2, station: 'drip', name: 'Mister Kaffee 12-Cup', price: 40, sell: 15, sticker: '$35', speed: 20 / 14, marks: 0, pot: { cups: 8, coldAfter: 60, miss: 0.05 }, quirks: { funny: 0.03, funnyText: 'Mister Kaffee clicked itself off mid-rush. Someone clicked it back on.' }, blurb: 'The office classic. 8 cups a pot in 14 s.' }),
   d3: g({ id: 'd3', tree: 'drip', tier: 3, station: 'drip', name: 'Office Urn', price: 85, sell: 40, sticker: '$400', speed: 20 / 12, marks: 0, pot: { cups: 16, coldAfter: null, miss: 0.02 }, quirks: { funny: 0.03, funnyText: 'Someone from "accounting" took a free refill. Nobody stopped them.' }, blurb: 'A steel urn that keeps it hot all day. 16 cups in 12 s.' }),
   d4: g({ id: 'd4', tree: 'drip', tier: 4, station: 'drip', name: 'Twin-Batch Fetch-O', price: 160, sell: 80, sticker: '$2,500', speed: 2, marks: 0, pot: { cups: 24, coldAfter: null, miss: 0 }, blurb: 'Two pots at once, 10 s. The diner down the road has one.' }),
+  // G10a: the drip branch's other side (doc §4.2 D4b/D5b). Its own row; the tiers keep the doc's numbers.
+  d4b: g({ id: 'd4b', tree: 'pourOver', tier: 4, station: 'drip', name: 'Pour-Over Bar', price: 70, sell: 30, sticker: '$120', speed: 1, marks: 0, pour: { seconds: 8 }, requires: { tree: 'drip', tier: 3, label: 'Office Urn' }, quirks: { spill: 0.03, funny: 0.02, funnyText: 'Flow state: the pour-over spirals perfectly. Somebody films it.' }, blurb: 'A V60 cone and a gooseneck kettle. No pot: one handmade Pour-over at a time, 8 s. Unlocks the Pour-over ($4.50). The kettle sometimes pours on your shoe.' }),
+  d5b: g({ id: 'd5b', tree: 'pourOver', tier: 5, station: 'drip', name: 'The Pour-Over Lab', price: 150, sell: 75, sticker: '$600', speed: 1, marks: 0, priceMul: 1.15, pour: { seconds: 2.5 }, requires: { tree: 'drip', tier: 3, label: 'Office Urn' }, blurb: 'Three cones and a Chemex: three cups in about 7 s. Pour-overs sell for ×1.15. Snobs start dropping by.' }),
   b0: g({ id: 'b0', tree: 'bin', tier: 0, station: 'trash', name: 'Cardboard box', price: 0, sell: 0, sticker: 'free', speed: 1, marks: 0, blurb: 'Today\'s bin, but it says FRAGILE on the side.' }),
 };
 

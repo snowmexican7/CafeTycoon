@@ -161,6 +161,8 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
       if (id && GEAR[id].tree === want.tree && (at < 0 || GEAR[id].tier > GEAR[gear[at]!].tier)) at = i;
     });
     if (at >= 0 && GEAR[gear[at]!].tier > want.tier) return state;
+    // G10a: a branch opens only with its parent tree far enough along (D4b needs D3+).
+    if (!gearRequiresMet(state, want.id)) return state;
     // G4e (playtest): the same machine again goes into a free slot as a second copy (no trade-in).
     if (at >= 0 && GEAR[gear[at]!].tier === want.tier) at = -1;
     const tradeIn = at >= 0 ? GEAR[gear[at]!].sell : 0;
@@ -181,11 +183,24 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
       if (!known.includes('drip')) state.unlocked = DRINK_IDS.filter((d) => d === 'drip' || known.includes(d));
       state.menu.drip = true;
     }
+    // G10a: the pour-over bar puts the Pour-over on the menu for good.
+    if (want.pour) {
+      const known = state.unlocked ?? [...BASE_DRINKS];
+      if (!known.includes('pourOver')) state.unlocked = DRINK_IDS.filter((d) => d === 'pourOver' || known.includes(d));
+      state.menu.pourOver = true;
+    }
   }
   state.slots = slots;
   state.slotGear = gear;
   rebuild(state);
   return state;
+}
+
+/** G10a: is a gear's `requires` met (a tree at a tier or better in a slot)? Pour-over gear already owned counts too. */
+export function gearRequiresMet(state: GameState, id: GearId): boolean {
+  const req = GEAR[id].requires;
+  if (!req) return true;
+  return (state.slotGear ?? []).some((x) => x && ((GEAR[x].tree === req.tree && GEAR[x].tier >= req.tier) || GEAR[x].tree === GEAR[id].tree));
 }
 
 export function gearSpeed(s: Station): number {
@@ -310,6 +325,9 @@ const POD_SHOT: Recipe = { takes: null, gives: 'espresso', consumes: ['beans'], 
  * The Pod-o-Matic makes a shot from empty hands (a pod; no grinder) and does not take grounds.
  */
 export function gearRecipe(s: Station, held: ItemKind | null): Recipe | null | undefined {
+  // G10a: a pour-over station makes one handmade cup from empty hands, and nothing else.
+  const pour = s.gear ? GEAR[s.gear].pour : undefined;
+  if (pour) return held === null ? { takes: null, gives: 'pourOver', consumes: ['beans'], seconds: pour.seconds } : null;
   if (!s.gear || !GEAR[s.gear].pods) return undefined;
   // G6: no hot-water tap on a pod machine, so no americano there (doc: E2+).
   // G6c: no doppio or red-eye there either (no real group head).
@@ -325,10 +343,11 @@ export function podsCoverGrinder(state: GameState): boolean {
  *  espresso machine (the best one if there are several); plain cold brew follows the cold brew tap. */
 export function gearPriceMul(state: GameState, drink: DrinkId): number {
   if (!isGearRun(state)) return 1;
-  const station: StationKind | null = usesShot(drink) ? 'espresso' : drink === 'coldBrew' ? 'coldBrewTap' : null;
+  const station: StationKind | null = usesShot(drink) ? 'espresso' : drink === 'coldBrew' ? 'coldBrewTap' : drink === 'pourOver' ? 'drip' : null;
   if (!station) return 1;
   let best: GearId | null = null;
-  for (const s of state.stations) if (s.kind === station && s.gear && (!best || GEAR[s.gear].tier > GEAR[best].tier)) best = s.gear;
+  // G10a: the pour-over price follows the pour-over gear only (not the drip pots on the same station kind).
+  for (const s of state.stations) if (s.kind === station && s.gear && (drink !== 'pourOver' || GEAR[s.gear].pour) && (!best || GEAR[s.gear].tier > GEAR[best].tier)) best = s.gear;
   return best ? (GEAR[best].priceMul ?? 1) : 1;
 }
 

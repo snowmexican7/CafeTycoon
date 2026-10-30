@@ -9,8 +9,9 @@ import { DRINK_STATIONS } from '../sim/growth';
 import { defaultSlots, reasonOff, slotCount } from '../sim/slots';
 import type { DrinkId, GameState, StationKind } from '../sim/types';
 
-export const STATION_ICON: Record<EquipmentKind, string> = { grinder: '⚙️', espresso: '☕', steamer: '🥛', coldBrewTap: '🧊', trash: '🗑️' };
-export const STATION_SHORT: Record<EquipmentKind, string> = { grinder: 'Grinder', espresso: 'Espresso', steamer: 'Steamer', coldBrewTap: 'Cold brew', trash: 'Bin' };
+// G10a fix: 'drip' (Gear-only) is here too, so a drip drink with no drip machine names it instead of crashing.
+export const STATION_ICON: Record<EquipmentKind | 'drip', string> = { grinder: '⚙️', espresso: '☕', steamer: '🥛', coldBrewTap: '🧊', trash: '🗑️', drip: '🫖' };
+export const STATION_SHORT: Record<EquipmentKind | 'drip', string> = { grinder: 'Grinder', espresso: 'Espresso', steamer: 'Steamer', coldBrewTap: 'Cold brew', trash: 'Bin', drip: 'Drip machine' };
 
 export interface SlotTileVM {
   index: number;

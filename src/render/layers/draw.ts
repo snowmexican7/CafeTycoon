@@ -187,6 +187,11 @@ export function drawItem(g: Graphics, kind: ItemKind, x: number, y: number, k = 
     g.ellipse(X(0), Y(-9), 7 * k, 2.2 * k).fill(0x3e2214);
     g.ellipse(X(0), Y(-9.2), 3 * k, 1 * k).fill(0xc98a4a);
     g.moveTo(X(7), Y(-5)).quadraticCurveTo(X(13), Y(-3), X(7), Y(4)).stroke({ width: 2.6 * k, color: 0xe8e1d6 });
+  } else if (kind === 'pourOver') {
+    // G10a: a glass carafe of filter coffee with a wooden collar.
+    g.poly([X(-6), Y(-10), X(6), Y(-10), X(9), Y(6), X(-9), Y(6)]).fill({ color: 0xe6f5ff, alpha: 0.75 }).stroke({ width: 1, color: 0x9fc9e2 });
+    g.poly([X(-7.6), Y(-2), X(7.6), Y(-2), X(8.6), Y(5.5), X(-8.6), Y(5.5)]).fill(0x8a4a22);
+    g.rect(X(-6.5), Y(-8), 13 * k, 3.4 * k).fill(0xb07a50);
   }
 }
 

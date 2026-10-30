@@ -94,7 +94,8 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 const money = (n: number) => `$${n.toFixed(2)}`;
 const dollars = (n: number) => `$${n.toFixed(2).replace(/\.00$/, '')}`;
 const drinkName = (d: DrinkId) => DRINK_INFO[d].name;
-const stationName = (k: StationKind) => (k === 'counter' ? 'counter' : EQUIPMENT[k as EquipmentKind].name.toLowerCase());
+// G10a fix: the Gear-only drip machine has no EQUIPMENT entry.
+const stationName = (k: StationKind) => (k === 'counter' ? 'counter' : k === 'drip' ? 'drip machine' : EQUIPMENT[k as EquipmentKind].name.toLowerCase());
 const byId = (a: Advice, b: Advice) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 /** Cash the plan may spend tonight, drawn down as spending advice is added. */

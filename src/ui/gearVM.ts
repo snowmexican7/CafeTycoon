@@ -1,5 +1,5 @@
 import { AREAS, DRINK_FAMILY, type DrinkFamily } from '../data/areas';
-import { GEAR_VOTE_MIN, gearArea } from '../sim/gear';
+import { GEAR_VOTE_MIN, gearArea, gearRequiresMet } from '../sim/gear';
 import { DRINK_INFO } from '../data/drinks';
 import { LEVEL_UPS, levelUpGearOk } from '../sim/levelUp';
 /**
@@ -11,10 +11,12 @@ import { GEAR, GEAR_TREES, treeTiers, type GearId, type GearTree } from '../data
 import { slotCount } from '../sim/slots';
 import type { DrinkId, GameState, PlayerId } from '../sim/types';
 
-export type GearTierState = 'owned' | 'another' | 'passed' | 'buy' | 'upgrade' | 'poor' | 'noSlot';
+export type GearTierState = 'owned' | 'another' | 'passed' | 'buy' | 'upgrade' | 'poor' | 'noSlot' | 'needs';
 
 export interface GearTierVM {
   id: GearId;
+  /** G10a: what it needs first ("Office Urn"), when its branch isn't open yet. */
+  needs?: string;
   name: string;
   /** G4e: how many of this machine the crew has in its slots. */
   copies: number;
@@ -98,7 +100,7 @@ const ICON: Record<GearTree, string> = Object.fromEntries(GEAR_TREES.map((t) => 
 export function gearStats(id: GearId): string {
   const g = GEAR[id];
   const out: string[] = [];
-  out.push(g.speed < 1 ? 'Slow' : g.speed > 1 ? 'Fast' : 'Normal speed');
+  out.push(g.pour ? (g.pour.seconds >= 6 ? `Slow: one cup, ${g.pour.seconds} s` : `3 cones: a cup every ${g.pour.seconds} s`) : g.speed < 1 ? 'Slow' : g.speed > 1 ? 'Fast' : 'Normal speed');
   if (g.marks) out.push(`-${g.marks}★ per cup`);
   if (g.pods) out.push('Pods, no grinder');
   if (g.pot) out.push(`${g.pot.cups}-cup pot · ${g.pot.coldAfter === null ? 'stays hot' : `cold after ${g.pot.coldAfter} s`}${g.pot.miss ? ` · ${Math.round(g.pot.miss * 100)}% too hot/cold` : ''}`);
@@ -126,17 +128,19 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
       // G4e: the machine you have can be bought again when a slot is free.
       if (top && top.id === g.id) st = freeSlots > 0 && state.cash >= g.price ? 'another' : 'owned';
       else if (top && top.tier > g.tier) st = 'passed';
+      else if (!gearRequiresMet(state, g.id)) st = 'needs';
       else if (state.cash + tradeIn < g.price) st = 'poor';
       else if (!top && freeSlots === 0) st = 'noSlot';
       else st = top ? 'upgrade' : 'buy';
       const copies = owned.filter((o) => o.id === g.id).length;
-      return { copies, id: g.id, name: g.name, price: g.price, sell: g.sell, sticker: g.sticker, blurb: g.blurb, stats: gearStats(g.id), state: st, net };
+      return { ...(st === 'needs' && g.requires ? { needs: g.requires.label } : {}), copies, id: g.id, name: g.name, price: g.price, sell: g.sell, sticker: g.sticker, blurb: g.blurb, stats: gearStats(g.id), state: st, net };
     });
     return { id: t.id, name: t.name, icon: t.icon, tiers };
   });
   const has = (tree: GearTree) => slots.some((s) => s.id && GEAR[s.id].tree === tree);
   let note: string | null = null;
-  if (!has('coldBrew') && !has('espresso')) note = 'Nothing to sell yet: buy a cold brew rig or an espresso machine.';
+  // G10a fix: a drip machine or a pour-over bar sells drinks too.
+  if (!has('coldBrew') && !has('espresso') && !has('drip') && !has('pourOver')) note = 'Nothing to sell yet: buy a cold brew rig, an espresso machine or a drip machine.';
   else if (has('espresso') && !has('grinder') && !slots.some((s) => s.id && GEAR[s.id].pods)) note = 'Espresso needs beans ground first: buy a grinder.';
   else if (!Object.values(state.supplies).some((x) => x > 0)) note = 'No supplies yet: restock on the Restock tab.';
   // G4g: co-op pick night nudges toward two cheap machines so everyone has a job (plus the till).
