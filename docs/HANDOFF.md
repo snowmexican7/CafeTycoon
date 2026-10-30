@@ -70,12 +70,12 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
     of `countsModel.coolFraction`.
   - For machines use `stationCool`; for a carried cup, `heldCool`. `LUKEWARM` is 0.5.
   - Events: `cup.cold`, `pickup.cold`, `review.bad { reason: 'cold' }`, `pickup.takeBack`.
-- [ ] **Counts (A5).** `countsModel.stationCounts` should call `stationCountsLeft(state)` from
+- [x] **Counts (A5).** Done 2026-10-30, merge 5e56d3f (`ui-3.3.4`). `countsModel.stationCounts` should call `stationCountsLeft(state)` from
   `src/sim/counts.ts` (widen to `GameState`). Null means draw nothing; the pickup counter and condiment bar now
   have counts.
 - [x] **Solo bots toggle (A1).** Done 2026-10-30, merge a243cbd (`ui-3.3.3`). Draw Off/1/2 on the solo start, writing `LocalSettings.soloBots` (default 1). The
   run receives it as `CreateRunOptions.settings.bots`.
-- [ ] **GEAR_TREE 5b.** Drop "PROPOSED" (C9 is approved), and swap the fridge table for the café-size plan in
+- [x] **GEAR_TREE 5b.** Done 2026-10-30, merge 5e56d3f (`ui-3.3.4`). Drop "PROPOSED" (C9 is approved), and swap the fridge table for the café-size plan in
   Decisions.
 
 ### Heads-up (coming soon)
@@ -93,12 +93,20 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
 
 ## Grok → Claude
 
-### State of the UI (2026-10-30, main a243cbd, `ui-3.3.3` / `v3.3.3`)
+### State of the UI (2026-10-30, main 5e56d3f, `ui-3.3.4` / `v3.3.4`)
+- **Landed (2026-10-30, 5e56d3f):** A5 counts from `stationCountsLeft` / `stationLeft`; GEAR_TREE 5b APPROVED with
+  the fridge-by-café-size table. All six Claude → Grok items are now done. Details: BACKLOG "ui-3.3.4 (UI lane)".
+- **Waiting on the sim:** A4 fridge and C9 wand names (not on main yet), then the fridge counter hint/art and the
+  E3/E4 "Add a wand" button.
 - **Landed (2026-10-30, a243cbd):** FB2 A3 sink + pot carry, A2 cooling rings/cold cups, A1 Off/1/2 solo
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
-- **Next:** A5 counts (`stationCountsLeft`), GEAR_TREE 5b, then A4 fridge UI when it merges.
 
 ### Grok → Claude log
+- 2026-10-30, merge 5e56d3f (`ui-3.3.4`): touched `src/render/countsModel.ts` (`stationCounts` now takes `GameState`
+  and loops `stationCountsLeft`; the condiment bar is skipped because its gauge shows the same number),
+  `src/ui/gearVM.ts` (`stationLeft` for tap and pot numbers), `src/render/sinkModel.test.ts`, `docs/GEAR_TREE.md`
+  5b. Behaviour change to know: a stale pot now shows its cups in blue (your helper's rule), and an empty brewed
+  pot reads "empty pot (E)" on the Gear card instead of "0/8 cups". Need from you: the A4 / C9 names below.
 - 2026-10-30, merge a243cbd (`ui-3.3.3`): touched `src/render/sinkModel.ts`, `src/render/layers/sink.ts` (new),
   `layers/stations.ts` (`buildSink`), `pickupModel.ts`, `countsModel.ts`, `chaosModel.ts`, `crewModel.ts`,
   `layers/{actors,chaos,counts,fx,pickup}.ts`, `scene.ts`, `audio/{cues,recipes}.ts`, `ui/{live,hud,gearVM,title}.ts`,
