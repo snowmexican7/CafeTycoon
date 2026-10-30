@@ -5,6 +5,8 @@ import { profitOf } from './profit';
 import { restockCost } from './night';
 import { nextCheckout } from './checkout';
 import { ECONOMY } from '../data/economy';
+import { BRANCH, branchDay, branchExpectedLoss } from './branch';
+import { billsForDay } from './staff';
 import type { DayStats, GameState } from './types';
 
 const run = (): GameState => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
@@ -230,5 +232,53 @@ describe('nightBrief alerts', () => {
     const rank = { danger: 0, warn: 1, info: 2 } as const;
     expect(alerts.map((a) => rank[a.severity])).toEqual([...alerts.map((a) => rank[a.severity])].sort());
     expect(alerts.map((a) => a.id)).toEqual(['cash:short', 'stock:milk:out', 'stock:beans:low', 'soldOut', 'signature']);
+  });
+});
+
+describe('nightBrief cash alert counts a losing branch (review M4)', () => {
+  const gear = (): GameState => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true, tier: 'stand' });
+  /** A second shop that expects a loss tomorrow: a dull area, no reputation, long (dear) shifts. */
+  const withBranch = (losing: boolean): GameState => {
+    const s = gear();
+    s.reputation = 0;
+    s.settings = { ...s.settings, dayLengthSec: 600 };
+    s.branch = losing
+      ? { area: 'campus', staff: 3, openedDay: 1, spent: BRANCH.cost, by: 'K' }
+      : { area: 'tourist', staff: 1, openedDay: 1, spent: BRANCH.cost, by: 'K' };
+    return s;
+  };
+
+  it('branchExpectedLoss: 0 with no branch or a profit, else the loss to the cent', () => {
+    expect(branchExpectedLoss(gear())).toBe(0);
+    const win = withBranch(false);
+    expect(branchDay(win)!.profit).toBeGreaterThan(0);
+    expect(branchExpectedLoss(win)).toBe(0);
+    const lose = withBranch(true);
+    expect(branchDay(lose)!.profit).toBeLessThan(0);
+    expect(branchExpectedLoss(lose)).toBe(-branchDay(lose)!.profit);
+  });
+
+  it('a losing branch fires the cash alert where the bills alone did not, and names the branch', () => {
+    const s = withBranch(true);
+    const loss = branchExpectedLoss(s);
+    const bills = billsForDay(s);
+    s.cash = bills + loss - 1;
+    expect(find(s, 'cash:short')).toMatchObject({ kind: 'cash', severity: 'danger', text: "You'll be $1 short on rent and the branch" });
+    // the same till with no branch is only a thin warning at worst, not a danger
+    expect(find({ ...s, branch: undefined } as GameState, 'cash:short')).toBeUndefined();
+    s.cash = bills + loss + 1;
+    expect(find(s, 'cash:short')).toBeUndefined();
+    expect(find(s, 'cash:low')).toMatchObject({ severity: 'warn', text: "Only $1 spare after rent and the branch" });
+  });
+
+  it('a profitable or absent branch changes nothing', () => {
+    for (const cash of [3, 20, 60]) {
+      const none = gear();
+      none.cash = cash;
+      const win = withBranch(false);
+      win.cash = cash;
+      const bare = { ...win, branch: undefined } as GameState;
+      expect(nightBrief(win).alerts).toEqual(nightBrief(bare).alerts);
+    }
   });
 });
