@@ -130,4 +130,22 @@ describe('G9: a bot crew works a day with a two-group machine', () => {
     // Deterministic seed: the bots pulled shots on both groups and steamed on the built-in wand.
     expect([...used]).toEqual(expect.arrayContaining(['espresso', 'espresso-2', 'steamer']));
   });
+
+  it('with a person in the café (bots as helpers) the crew still works the day on both groups', async () => {
+    const { startDay } = await import('./run');
+    const { step } = await import('./step');
+    let s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 2 }, tier: 'stand', gear: true });
+    s.slots = ['grinder', 'espresso', 'steamer', 'trash'];
+    s.slotGear = ['g1', 'e5', null, 'b0'];
+    s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
+    for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 60;
+    s = startDay(s);
+    const used = new Set<string>();
+    for (let i = 0; i < 60 * 400 && s.days.length === 0; i++) {
+      s = step(s, []);
+      for (const st of s.stations) if (st.busyTicksLeft > 0) used.add(st.id);
+    }
+    expect(s.days.at(-1)!.served).toBeGreaterThan(0);
+    expect([...used]).toEqual(expect.arrayContaining(['espresso', 'espresso-2']));
+  });
 });
