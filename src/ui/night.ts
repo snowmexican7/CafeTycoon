@@ -1,4 +1,4 @@
-import { branchBody, branchChip } from './branchView';
+import { branchBody, branchChip, type BranchVM } from './branchView';
 import type { AreaId } from '../data/areas';
 import type { ReportVM } from './report';
 import { TASTE, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
@@ -430,7 +430,7 @@ function receiptBody(vm: NightVM, day: number): string {
 }
 
 /** P4 B3: the manager's report drawer. */
-function reportBody(r: ReportVM | undefined): string {
+function reportBody(r: ReportVM | undefined, br?: BranchVM): string {
   if (!r) return '<p>No report yet: open the shop first.</p>';
   const $ = (n: number) => `$${n.toFixed(2)}`;
   const bar = (pct: number) => `<span class="mr-bar" aria-hidden="true"><i style="width:${Math.max(2, Math.min(100, pct))}%"></i></span>`;
@@ -450,7 +450,11 @@ function reportBody(r: ReportVM | undefined): string {
     ? `<div class="mr-sec"><div class="sec-h">Who served</div>${r.crew.map((c) => `<div class="mr-row"><span>${c.bot ? '🤖' : '🧑'} ${esc(c.name)} <small>${c.serves} cups</small></span>${bar(c.pct)}<b>${$(c.takings)}</b></div>`).join('')}</div>`
     : '';
   const notes = `<div class="mr-notes">${r.notes.map((n) => `<p>📝 ${esc(n)}</p>`).join('')}</div>`;
-  return `<div class="mreport">${kpis}${notes}${costs}${drinks}${crew}</div>`;
+  const y = br?.yesterday;
+  const shop = y && br?.area
+    ? `<div class="mr-sec"><div class="sec-h">🏪 Second shop · ${esc(br.area.name)}</div><div class="mr-row two"><span>${y.served} served${y.walked ? ` · <span class="neg">${y.walked} walked</span>` : ''}${y.fromStock ? ` · ${$(y.fromStock)} from our stock` : ''}</span><b class="${y.profit < 0 ? 'neg' : ''}">${y.profit < 0 ? '−' : '+'}${$(Math.abs(y.profit))}</b></div></div>`
+    : '';
+  return `<div class="mreport">${kpis}${notes}${costs}${shop}${drinks}${crew}</div>`;
 }
 
 function newspaper(f: ForecastVM | undefined): string {
@@ -541,7 +545,7 @@ function drawerHtml(d: Drawer | null, vm: NightVM, extras: NightExtras | undefin
   let title = '';
   let body = '';
   if (d === 'receipt') { title = 'Receipt'; body = receiptBody(vm, extras?.day ?? 1); }
-  else if (d === 'report') { title = `📋 Manager's report · Day ${vm.report?.day ?? ''}`; body = reportBody(vm.report); }
+  else if (d === 'report') { title = `📋 Manager's report · Day ${vm.report?.day ?? ''}`; body = reportBody(vm.report, vm.branch); }
   else if (d === 'branch') { title = '🏪 Second shop'; body = branchBody(vm.branch); }
   else if (d === 'paper') { title = 'The paper'; body = newspaper(vm.forecast) + rivalCard(vm.rival); }
   else if (d === 'regulars') { title = 'Regulars'; body = regularsBody(vm.regulars ?? []); }
@@ -637,7 +641,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onTip?(input: NightFix): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'close', opts: { area?: AreaId; staff?: number }): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onTip?(input: NightFix): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
   let lastVm: NightVM | null = null;
@@ -678,6 +682,7 @@ export function createNight(
       const op = el.dataset.op;
       if (op === 'open' && el.dataset.area) handlers.onBranch?.('open', { area: el.dataset.area as AreaId });
       else if (op === 'staff') handlers.onBranch?.('staff', { staff: Number(el.dataset.staff) });
+      else if (op === 'send' && el.dataset.supply) handlers.onBranch?.('send', { supply: el.dataset.supply as SupplyId });
       else if (op === 'close') handlers.onBranch?.('close', {});
     } else if (action === 'staff') handlers.onStaff?.(el.dataset.staff === 'fire' ? 'fire' : 'hire');
     else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);

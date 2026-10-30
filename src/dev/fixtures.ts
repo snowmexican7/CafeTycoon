@@ -216,6 +216,24 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P4 B5: the branch with a Manager picked, stock credit there, and a report that lists it. */
+  branchManaged: {
+    night: true,
+    extras: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      s.tier = 'cafe';
+      s.cash = 280;
+      s.day = 12;
+      s.players[0]!.role = 'manager';
+      s.supplies = { ...s.supplies, beans: 14, milk: 6, concentrate: 0, flavour: 3 };
+      s.branch = { area: 'tourist', staff: 3, openedDay: 8, spent: 300, by: 'Ana', stockCredit: 6.4 };
+      s.days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((day) => ({ day, served: 40, lost: 5, turnedAway: 0, sales: 170, tips: 26, rent: 25, waitTicks: 40 * 14 * 60 }));
+      Object.assign(s.today, { day: 11, served: 47, lost: 3, turnedAway: 0, sales: 205, tips: 35, rent: 25, wages: 20, waitTicks: 47 * 15 * 60, branch: { served: 30, walked: 2, takings: 142.8, costs: 79.1, profit: 63.7, fromStock: 8 } });
+    },
+    timeline: [],
+  },
   /** P3 B1: the night shop with roles picked (Ana is Chef, Cleo is Host; Ben and Dev free). */
   roles: {
     night: true,

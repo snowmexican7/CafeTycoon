@@ -16,9 +16,10 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
   `pre-gear` / `v2.2.0`); 3.1.0 adds hired staff with wages (B15) and head starts carried between runs (B16).
   Every new run from the title or a co-op lobby is a Gear run, so everything below is what players meet by
   default. `?gear=0` still starts a classic run for comparison, and old classic saves resume as classic.
-  Phase 4 (Franchise & rivals) is planned block by block in `docs/PHASE4_PLAN.md`; blocks 1–4 (rival happy
-  hours, seasons, manager's report, second shop) are merged on main (tags `p4-b01`…`p4-b04`) but **not released**:
-  live is still 3.1.0. Playtest them on main, then cut 3.2.0 after a clean smoke.
+  Phase 4 (Franchise & rivals) is planned block by block in `docs/PHASE4_PLAN.md`; blocks 1–5 (rival
+  happy hours, seasons, manager's report, second shop, manager mode) are merged on main (tags `p4-b01`…`p4-b05`)
+  with no release tag. **Note:** GitHub Pages deploys every push to main, so these are already live under the
+  3.1.0 label. Playtest the live site, then bump to 3.2.0 (CHANGELOG heading + package.json) after a clean smoke.
 
 - Solo bots switch (`solo-bots-switch`), bots leaving your prep alone (`bot-prep-wait`), collision spills
   (`collision-spills`, tuned to 5%), planner skipping classic purchases in Gear runs, and the crewTips fixes
@@ -75,7 +76,8 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - P4 B2 (tag `p4-b02`): `sim/season.ts` adds `GameState.season` (PROTOCOL 35). `beginSeason` runs on the first week-end Keep going of a Gear run; `seasonWeekEnd` in `finishDay` stops at the week-end screen every 7th day until week 4 (`done`). Bots don't need to do anything (the host decides at week-end), but `seasonNow(state)` gives `{week, target, soFar}` if you want the planner to lean toward cash on the last nights of a week that is short of its target. Follow-ups: a season board in Records (fold `season.weeks` into `recordsStore` keyed like runs) and a per-player stats line per week. `KEEP=1 npx tsx scripts/gearBalance.ts 28 3` plays four-week seasons headlessly: stand-in crews hit about a third of $30–40 targets, so tune `SEASON.floor/growth` with real playtests.
 - P4 B3 (tag `p4-b03`): `serveCustomer` now tallies `DayStats.waitTicks`, `takingsByDrink` and `byPlayer` (PROTOCOL 36; all optional, old days read as "—"). `src/ui/report.ts` `reportViewModel(state)` builds the night's 📋 Report drawer (`NightVM.report`). For bots: `report.crew` gives each bot's cups and takings per day, a clean signal if you want bot self-review or a 'bot of the day' line; `report.notes` are rule-based and could feed the planner's advice rows (don't duplicate them).
 - P4 B4 (tag `p4-b04`): second shop. `src/sim/branch.ts` runs an off-screen branch at each closing (`settleBranch`, `DayStats.branch`, `GameState.branch`, new `branch` input open/staff/close; PROTOCOL 37). Bots ignore it today. For bots: a planner hint could suggest opening when tier is café, cash ≥ cost + a stock buffer and the home shop is profitable, and suggest ±1 barista from `days[-1].branch` (walked > 0 → add; loss with walked 0 → cut). Use `branchDay(state)` for the estimate; don't change its maths in bot code.
-- No snapshot bumps: all new fields are optional (SNAPSHOT 27). Protocol is 37 since P4 B4 (34 B1, 35 B2, 36 B3).
+- P4 B5 (tag `p4-b05`): manager mode (lite). `hasManager(state)` adds `BRANCH.managerCups` (2) per barista and applies `roleSupplyCost` to branch cups; branch input `send` (+`supply`) moves up to one pack of home stock into `Branch.stockCredit` (valued at pack cost), which pays branch cups first (`DayStats.branch.fromStock`). For bots: if a bot holds Manager and a branch is open, a hint could send surplus beans/milk when home stock > 2 packs; don't touch branch maths.
+- No snapshot bumps: all new fields are optional (SNAPSHOT 27). Protocol is 38 since P4 B5 (34 B1, 35 B2, 36 B3, 37 B4).
 
 ## Freedom
 

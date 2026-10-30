@@ -345,3 +345,9 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .br-staff { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } #night .br-staff b { font-size: 24px; min-width: 1.2em; text-align: center; } #night .br-staff small { font-size: 14px; opacity: 0.8; }
 #night .br-chip { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #e3f1e6; color: #2f7a4b; font-weight: 800; white-space: nowrap; }
 #night .br-chip.neg { background: #fbe4dc; color: #b8452e; }
+/* P4 B5: manager + stock on the second shop drawer. */
+#night .br-mgr { margin: 0; padding: 8px 12px; border-radius: 12px; background: #fff6df; box-shadow: 0 0 0 2px #e8c76a; font-size: 15px; }
+#night .br-mgr.off { background: rgba(255,255,255,0.6); box-shadow: none; opacity: 0.85; }
+#night .br-stock { display: flex; flex-direction: column; gap: 6px; }
+#night .br-stock-h { display: flex; flex-direction: column; gap: 2px; } #night .br-stock-h small { font-size: 14px; opacity: 0.8; }
+#night .br-stock-btns { display: flex; flex-wrap: wrap; gap: 6px; } #night .br-stock-btns .btn { font-size: 15px; }

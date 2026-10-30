@@ -3,6 +3,7 @@ import { createRun, startDay, startNight } from './run';
 import { finishDay } from './closing';
 import { step } from './step';
 import { areaFit, BRANCH, branchAreas, branchDay } from './branch';
+import { branchViewModel } from '../ui/branchView';
 import { gearArea } from './gear';
 import { fittingsValue, scoreRun } from './score';
 import { profitOf } from './profit';
@@ -79,5 +80,40 @@ describe('second shop (P4 B4)', () => {
     const old = night();
     delete old.branch;
     expect(() => finishDay(startDay(old))).not.toThrow();
+  });
+});
+
+describe('manager mode (P4 B5)', () => {
+  it('sends a pack of stock over as credit that pays for branch cups first, then runs out', () => {
+    let s = open(night());
+    s.supplies.beans = 7;
+    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'send', supply: 'beans' }]);
+    expect(s.supplies.beans).toBe(0);
+    const credit = (7 * 8) / 10;
+    expect(s.branch?.stockCredit).toBeCloseTo(credit, 2);
+    const plain = branchDay({ ...s, branch: { ...s.branch!, stockCredit: undefined } })!;
+    const est = branchDay(s)!;
+    expect(est.fromStock).toBeGreaterThan(0);
+    expect(est.profit).toBeCloseTo(plain.profit + est.fromStock!, 2);
+    const after = finishDay(startDay(s));
+    expect(after.days[after.days.length - 1].branch?.fromStock).toBe(est.fromStock);
+    expect(after.branch?.stockCredit ?? 0).toBeCloseTo(credit - est.fromStock!, 2);
+    expect(validateInput({ kind: 'branch', playerId: 'p1', action: 'send', supply: 'pastry' })).toBeNull();
+  });
+
+  it('a Manager adds cups per barista and their supplier discount, and the drawer says so', () => {
+    let s = open(night());
+    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'staff', staff: 1 }]);
+    const without = branchDay(s)!;
+    s.players[0]!.role = 'manager';
+    const withM = branchDay(s)!;
+    expect(without.walked).toBeGreaterThan(0);
+    expect(withM.served).toBe(Math.min(without.served + without.walked, BRANCH.perStaff + BRANCH.managerCups));
+    expect(branchViewModel(s)?.manager?.name).toBe('Kay');
+    const vm = nightViewModel(s, 'p1');
+    const ui = { tab: 'tonight', spend: 'cards', drawer: 'branch', sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null } as Parameters<typeof nightHtml>[3];
+    const html = nightHtml(vm, undefined, null, ui);
+    expect(html).toMatch(/is Manager/);
+    expect(html).toMatch(/Send stock over/);
   });
 });

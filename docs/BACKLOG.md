@@ -1802,6 +1802,14 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 4 B5 — manager mode, lite (p4-b05-manager-mode, tag p4-b05)
+
+- [x] Sim (`branch.ts`): with a Manager picked, the branch serves +2 cups per barista and its cups cost × `roleSupplyCost`. New branch action `send` (night, people only; beans/milk/cold brew/flavours) moves up to one pack from home supplies into `Branch.stockCredit` at pack value; at closing the credit pays for cups first (`DayStats.branch.fromStock`) and is used up. PROTOCOL 37 → 38; optional fields only, old saves load.
+- [x] UI: drawer shows the Manager line (or how to get one), "Send stock over" buttons with amount and value, credit waiting, "from our stock" on last day / tomorrow; the Manager's report gets a 🏪 Second shop row.
+- [x] Tests: `branch.test.ts` +2 (send → credit → paid cups → decrement, validation; Manager capacity + drawer HTML). 1037 tests.
+- [x] Shots: `/workspace/overnight/sprint/p4-b05/branchManagedDrawer-*`, `branchManagedReport-*` (fixture `branchManaged`).
+- [ ] Follow-ups: move hired staff between shops (the original B5 scope); per-shop report tabs; bots sending stock (Claude prompt). Note: main auto-deploys to Pages, so P4 is live under the 3.1.0 label until the 3.2.0 bump.
+
 ### Phase 4 B4 — second shop (p4-b04-second-shop, tag p4-b04)
 
 - [x] `src/sim/branch.ts`: `BRANCH` tunables (cost $300, 20 base walk-ins, 12 cups per barista, 1–3 staff, rent $28, 5% tips, ±15% noise). `branchDay(state)` = walk-ins × home traffic modifiers (reputation, weather, week ramp; computed as at night so the day shape is ignored) × area fit (doubled swing of the menu's loved/meh multiplier, × the area's `all`) × seeded hash noise (no RNG draw, replays identical), capped by staff; takings at menu prices; costs = rent + staff × `wageEach` + cups × average unit cost.
