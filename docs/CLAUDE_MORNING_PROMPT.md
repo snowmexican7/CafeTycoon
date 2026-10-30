@@ -38,6 +38,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - **G6c new level-up drinks:** Doppio (espresso in hand → espresso machine again; clashes with Americano, so take it only when the oldest such ticket is yours), Sweet-cream cold brew (cold brew in hand → tap), Café au lait (drip pour in hand → steamer), Red-eye (drip pour in hand → espresso machine, not on pods). `recipeChain` resolves all four.
 - **G10a Pour-over:** made from empty hands at a `drip`-kind station whose gear has `pour` set (`GEAR[s.gear].pour`). The pot drip machines on the same kind make drip instead, so pick the station by gear. `recipeChain('pourOver')` gives one `drip` step.
 - **G10b crowds & snobs (optional):** snob regulars (`Regular.snob`) tip ×1.3 only for a perfect (3★, no slips) cup and ×0.5 for 1★ or less, and the arts crowd tips by stars too, so bots serving a snob or working in the arts district should favour accuracy over speed. Office/gym customers have ×0.85 patience (`areaPatienceMul`).
+- **G9 twin stations:** E4–E6 put extra stations in the same slot, 0.55 tiles to the side (`Station.twin`; ids like `steamer`, `espresso-2`). `targetNodes` already finds the side tile for each, so bots can use them as ordinary stations; with E5/E6 they should split shots across both groups. Check edge slots: when the machine sits on the first or last column, the outer twin may have no walkable node (human-only), so the planner must not hang waiting for it.
 - **G8 co-op votes (optional polish):** `state.gearVote` and the `gear/vote` input are live (protocol 31). If you touch net/host: call `settleVote(state)` (sim/gear.ts) when a player disconnects so a vote can't hang; a toast on vote pass/fail would be nice. Bots must not vote.
 
 ## Sim edits made overnight (please review)
@@ -51,6 +52,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - G6c: `data/drinks.ts` 4 new drinks + recipes + `GEAR_ONLY_DRINKS`; `sim/levelUp.ts` `needs`/`levelUpGearOk`; `gearRecipe` refuses drip on pods.
 - G10a: `data/gear.ts` d4b/d5b (`pour`, `requires`); `sim/gear.ts` `gearRecipe` pour branch, `gearRequiresMet`, pour-over unlock on buy, `gearPriceMul` pour-over; `sim/bots/planner.ts` `stationName` knows 'drip' (crash fix, one line).
 - G10b: `data/areas.ts` crowd fields, `SNOB_GEAR`/`SNOB`; `sim/gear.ts` `areaPatienceMul`, `areaQualityTip`, `snobFamilies`, `snobTip`, and per-drink overrides in `areaTipMul`; `sim/customers.ts` `pickRegular` (snob first via `newSnob`, ordinary names now count non-snobs), area patience in `addCustomer`, and the quality/snob tip in `serveCustomer`.
+- G9: `data/gear.ts` `twin`; `sim/types.ts` `Station.twin`; `sim/slots.ts` `stationsFromSlots` adds twins (`TWIN_OFFSET`); `sim/levelUp.ts` `levelUpGearOk` counts the E4 wand as a steamer.
 - No snapshot bumps: all new fields are optional. Protocol is 31 since G8.
 
 ## Freedom

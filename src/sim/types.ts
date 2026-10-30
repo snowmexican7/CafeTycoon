@@ -186,6 +186,8 @@ export interface Station {
   outputSince?: number;
   /** Gear Tree: which tier of gear this station is (absent = today's machine, every non-Gear run). */
   gear?: GearId;
+  /** Gear G9: the second side of a machine that shares a slot (the dual boiler's steam wand, a second group). */
+  twin?: true;
   /** Gear Tree: cold brew batch cups left today (absent = no cap). */
   batchLeft?: number;
   /** Gear G4d: cups left in a drip machine's pot (absent = no pot brewed). */

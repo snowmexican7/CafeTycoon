@@ -24,7 +24,11 @@ function cabinet(g: Graphics, cx: number, cy: number, w = 60): void {
   g.roundRect(x - 3, cy - 8, w + 6, 6, 3).fill(MAT.topEdge);
 }
 
+/** G9: a twin side shares its main side's name plate, so it draws none. */
+let plainArt = false;
+
 function plate(root: Container, g: Graphics, cx: number, cy: number, text: string, color: number = PALETTE.espresso, alpha = 0.82): void {
+  if (plainArt) return;
   // FB1 WP5: slots can sit one tile apart, so plates are capped at a tile and the text squeezes to fit.
   const w = Math.min(62, Math.max(56, text.length * 7 + 14));
   g.roundRect(cx - w / 2, cy + 34, w, 15, 7.5).fill({ color, alpha });
@@ -122,8 +126,28 @@ export function buildEmptySlot(pos: Vec2): Container {
   return root;
 }
 
-export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1): Container {
-  const root = buildStationArt(kind, pos, checkout);
+/** G9: size of a twin station's art next to its main side. */
+const TWIN_SCALE = 0.7;
+
+export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false): Container {
+  plainArt = twin;
+  let root: Container;
+  try {
+    root = buildStationArt(kind, pos, checkout);
+  } finally {
+    plainArt = false;
+  }
+  if (twin) {
+    // Gear G9: the second side of a machine sharing a slot, drawn smaller and behind the main side so the
+    // pair reads as one machine.
+    const cx = sx(pos.x);
+    const cy = sy(pos.y);
+    root.pivot.set(cx, cy + 28);
+    root.position.set(cx, cy + 28);
+    root.scale.set(TWIN_SCALE);
+    root.zIndex -= 1;
+    return root;
+  }
   if (n > 1) numberBadge(root, sx(pos.x), sy(pos.y), n);
   return root;
 }

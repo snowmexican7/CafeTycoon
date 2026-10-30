@@ -105,6 +105,7 @@ export function gearStats(id: GearId): string {
   out.push(g.pour ? (g.pour.seconds >= 6 ? `Slow: one cup, ${g.pour.seconds} s` : `3 cones: a cup every ${g.pour.seconds} s`) : g.speed < 1 ? 'Slow' : g.speed > 1 ? 'Fast' : 'Normal speed');
   if (g.marks) out.push(`-${g.marks}★ per cup`);
   if (g.pods) out.push('Pods, no grinder');
+  if (g.twin) out.push(g.twin.includes('espresso') ? 'Two groups + steam wand' : 'Steam wand built in');
   if (g.pot) out.push(`${g.pot.cups}-cup pot · ${g.pot.coldAfter === null ? 'stays hot' : `cold after ${g.pot.coldAfter} s`}${g.pot.miss ? ` · ${Math.round(g.pot.miss * 100)}% too hot/cold` : ''}`);
   if (g.priceMul && g.priceMul !== 1) out.push(`Sells at ×${g.priceMul}`);
   if (g.batch) out.push(`${g.batch} cups/day`);
@@ -178,7 +179,7 @@ export interface HudGearVM { icon: string; name: string; status: string; warn: b
 /** G5: one short line per machine on the counter for the day HUD (the bin is left out). */
 export function hudGearVM(state: GameState): HudGearVM[] {
   return state.stations
-    .filter((s) => s.gear && s.gear !== 'b0')
+    .filter((s) => s.gear && s.gear !== 'b0' && !s.twin)
     .map((s) => {
       const g = GEAR[s.gear!];
       let status = 'ready';

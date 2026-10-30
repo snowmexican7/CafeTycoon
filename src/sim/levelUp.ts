@@ -33,7 +33,8 @@ export const LEVEL_UPS: LevelUp[] = [
 /** G6c: does the crew own the gear a level-up needs? */
 export function levelUpGearOk(state: GameState, l: LevelUp): boolean {
   if (!l.needs) return true;
-  return (state.slotGear ?? []).some((id) => id && GEAR[id].tree === l.needs!.tree && GEAR[id].tier >= l.needs!.tier);
+  // G9: the dual boiler's steam wand counts as a milk steamer.
+  return (state.slotGear ?? []).some((id) => id && ((GEAR[id].tree === l.needs!.tree && GEAR[id].tier >= l.needs!.tier) || (l.needs!.tree === 'steamer' && GEAR[id].twin?.includes('steamer'))));
 }
 
 const reached = (state: GameState, l: LevelUp): boolean =>
