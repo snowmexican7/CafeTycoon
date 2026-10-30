@@ -129,6 +129,8 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     player.holding = station.output;
     // G4d: a drip pot keeps pouring until it's empty; pot cups don't "sit" (they go cold instead).
     const pour = gearPotPour(state, station);
+    // A2: a cup's clock: a pour from a pot starts now; a machine's output was made when it appeared.
+    if (state.gear === true) player.heldSince = pour.pot ? state.tick : (station.outputSince ?? state.tick);
     if (!pour.more) {
       station.output = null;
       delete station.outputSince;
@@ -142,6 +144,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   // P3 B5: pull it early. Empty hands at a machine near the end of its run take the drink now, one star off.
   if (player.holding === null && station.busyTicksLeft > 0 && station.making && station.busyTotal && station.busyTicksLeft <= station.busyTotal * ACCURACY.earlyShare) {
     player.holding = station.making;
+    if (state.gear === true) player.heldSince = state.tick; // A2: made now
     station.making = null;
     station.busyTicksLeft = 0;
     delete station.doneAt;

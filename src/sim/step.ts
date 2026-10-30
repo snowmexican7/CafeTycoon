@@ -39,6 +39,7 @@ import { clearFloorFields, floorFields, stepStuns, trackTiles } from './tiles';
 import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
 import { stepPickup } from './pickup';
+import { stepCooling } from './cooling';
 import { stepCleaning } from './mop';
 import { applySteepInput } from './steep';
 import { applyCondimentBoxInput, returnBox } from './condiments';
@@ -242,6 +243,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepCleaning(s);
   stepStations(s);
   stepPass(s);
+  stepCooling(s); // A2: cups go cold (Gear only)
   stepCleanliness(s);
   if (doorsOpen) spawnCustomers(s);
   stepCustomers(s);

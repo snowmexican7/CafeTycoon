@@ -130,6 +130,8 @@ grinder**: it's pre-ground supermarket coffee, which keeps opening B cheap. You 
 
 ### 4.3 Espresso (the long one: 6 tiers)
 
+*A rework is PROPOSED in section 5b (no separate steamer, wands by tier). Awaiting Kennedy's OK; this table is what's built today.*
+
 | Tier | Name | Price | Sell | Sticker | Speed | Needs | Downsides | Quirks and rare events |
 |---|---|---|---|---|---|---|---|---|
 | E1 | **Pod-o-Matic 3000** | $45 | $8 | $129 | 6 s, one at a time | Pods (no grinder) | 2★ cap, espresso drinks ×0.85 price, jams 4% (whack it) | Rare: a mysterious "descale" light nobody understands. Egg: a handsome stranger whispers "what else?" |
@@ -168,6 +170,59 @@ steamer". The two-group machines (E5/E6) are the same idea with two group heads.
 - **Rejected for now:** a hold-E or tap-choice menu ("shot or latte?"). It's a new control and clashes
   with the planned hold-E tuning. **Later rework note:** if two sides feel fiddly at 1280×800,
   revisit with a ticket-driven choice (the machine makes what the oldest matching ticket needs).
+
+## 5b. PROPOSED: espresso rework and a fridge line (awaiting Kennedy's OK)
+
+> **PROPOSED: awaiting Kennedy's OK.** Nothing below is built. It's written down from Kennedy's playtest notes
+> (3.3.x) so we can agree on it before anyone touches `src/data/gear.ts` or the sim. Sections 4.3, 4.4 and 5
+> above are still what the game does today.
+
+**The idea (Kennedy):** no separate steamer machine. Milk is steamed by the espresso machine itself, and how
+good the wand is depends on the tier. Six espresso tiers:
+
+- **Tiers 1–2: espresso only.** No wand at all. Milk drinks aren't on the menu until you get a wand.
+- **Tiers 3–4: better espresso, with an optional add-on steam wand.** The wand is weak and slow. You can buy
+  it with the machine or add it later.
+- **Tiers 5–6: steam wand built in.** The dual boiler is the top of the tree.
+- The silly names stay. The pod machine is still tier 1.
+
+Prices are today's tier prices, in the same order. Only the two top machines swap places, so the dual
+boiler can sit at the top as Kennedy asked.
+
+| Tier | Name | Price | Espresso quality | Wand |
+|---|---|---|---|---|
+| E1 | **Pod-o-Matic 3000** | $45 | Pods, 2★ cap, espresso drinks ×0.85, jams 4% | none |
+| E2 | **Brevelle "Barista Distress"** | $80 | Real shots, needs a grinder; 3% portafilter slips | none |
+| E3 | **Sylvia the Prosumer** (single boiler) | $150 | Today's machine (5 s); slow first shot | **optional**: weak, slow wand (S2-like, 4.5 s). Add-on about $25 with the machine, $30 later |
+| E4 | **La Marzipana Due** (two-group) | $260 | Two shots at once, ×1.1 price | **optional**: same add-on wand, or a stronger one for about $40 (today's S3, 3.5 s) |
+| E5 | **The Annihilator** | $450 | 3.5 s, two groups, +1★ cap, ×1.2 price, very loud | **built-in** (S3 speed) |
+| E6 | **Double Trouble** (dual boiler, top tier) | $800 | 3.5 s, two groups, +1★ cap, ×1.2 price | **built-in**, steams while it pulls (two sides, as in section 5); fastest wand |
+
+Notes for whoever builds it (Claude):
+
+- **The steamer tree (S1–S3) would retire.** The Battery whisk's joke (batteries die) could move to the E3
+  add-on wand as a 1-in-N "the wand clogs" quirk.
+- **Old saves.** Runs that own S1–S3 need a mapping: keep the station as a "loose wand" until it's sold, or
+  refund the sell price on load. Pick one before building it. It's a sim and storage change, outside the UI lane.
+- **E4/E5/E6 prices and stats are open.** The table keeps today's price ladder ($45/80/150/260/450/800) and
+  moves the machines around it. Rebalance the speed and price multipliers when it's built.
+- The "optional wand" is a new kind of purchase: an add-on to a machine you already own. The Gear board needs
+  an "Add a wand" button on E3/E4.
+
+### Fridge line (also PROPOSED)
+
+Kennedy: the fridge is where milk comes from, and it starts **next to the espresso machine**. Buy better
+fridges as you go:
+
+| Tier | Name | Price (rough) | What it does |
+|---|---|---|---|
+| F1 | **Mini fridge** (dorm room classic) | $20 | Holds a little milk; you walk to it for every jug |
+| F2 | **Medium fridge** | $60 | More milk on hand, fewer restock trips |
+| F3 | **High-end fridge** (glass door) | $140 | Lots of milk, maybe a second milk type later |
+| F4 | **Auto milk dispenser** | $300 | Pours the milk for you at the wand: one less step on milk drinks |
+
+Open questions: does milk become a station step (walk to the fridge, then the wand), or stay a pantry number?
+Does the fridge take a gear slot? Prices are placeholders until we know.
 
 ## 6. Drinks that level up with use
 

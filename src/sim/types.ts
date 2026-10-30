@@ -55,6 +55,8 @@ export interface PassItem {
   temp?: boolean;
   /** Batch/pickup: who set the cup on the pickup counter (absent = unknown, or classic). */
   by?: PlayerId;
+  /** Feedback 2 A2 (Gear): the tick the drink was made; it cools from here (src/sim/cooling.ts). Absent = fresh. */
+  madeAt?: number;
 }
 
 /** Absolute state.tick at which the event starts. */
@@ -149,7 +151,12 @@ export type SimEventKind =
   | 'pot.lift'
   | 'pot.stale'
   | 'bin.leak'
-  | 'mess.spawn';
+  | 'mess.spawn'
+  /** Feedback 2 A2: cups go cold (src/sim/cooling.ts). */
+  | 'cup.cold'
+  | 'pickup.cold'
+  | 'pickup.takeBack'
+  | 'review.bad';
 
 export interface SimEvent {
   seq: number;
@@ -169,6 +176,8 @@ export interface Player {
   cupSlips?: number;
   /** Gear G4h: the cup in hand came out too hot or too cold (half tip when served). */
   cupTemp?: boolean;
+  /** Feedback 2 A2 (Gear): the made tick of the cup in hand (its clock keeps running); cleared when the hands empty. */
+  heldSince?: number;
   connected: boolean;
   bot?: BotState;
   idleTicks: number;

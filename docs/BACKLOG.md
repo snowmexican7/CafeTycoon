@@ -2052,3 +2052,53 @@ Open (sim lane):
   the feature (tighten them); a full counter bins the held drink rather than taking back a cup nobody wants (M2).
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
+
+## ui-3.3.2 (UI lane): counts, cooling rings, step icons: notes for Claude
+
+Built in `src/render/countsModel.ts` (pure, tested) and `src/render/layers/counts.ts` (Pixi). No sim changes.
+
+- **Cooling ring is wired only where the sim has a real timer:** cups on the pickup coasters (`PassItem.ticksLeft`
+  against `ECONOMY.pass.staleSeconds`) and drip pots (`potColdAt` against `GEAR[id].pot.coldAfter`).
+  **Left unwired: a shot or milk waiting at a machine (`Station.output`).** It has no age or stale timer, so it
+  never cools. If you want it to (Kennedy's "shots die"), add a timer to the station (e.g. `outputSince` plus a
+  per-item limit). Then `drawCoolRing(g, x, y, r, frac)` in `layers/counts.ts` and `coolFraction(left, total)` take
+  a 0..1 fraction directly, and `stationCounts()` already has a `cool` field per station to fill in.
+- **Step icons over a carried cup** read the tickets' own step lists (`ticketSteps` / `nextStepIndex`). The target
+  is the customer whose drink exactly matches what's held, else the first ticket (pickup first) the item fits.
+  This is a guess: the sim doesn't record which order a cup is "for". If it ever does, pass that drink in.
+- **Espresso rework and fridge line** are a proposal only: `docs/GEAR_TREE.md` section 5b, marked PROPOSED and
+  awaiting Kennedy's OK. It touches gear data, the sim and saves (retiring S1–S3), all in your lane.
+
+## Feedback 2 (Claude, sim lane, 2026-10-30)
+
+Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names below are as built.
+
+- **A1 solo bots + helper bots (`fb2-a1`).** Solo runs read a new local setting `soloBots` (default 1; 0–3 or
+  'auto'; `src/storage/settingsStore.ts`), passed to the run as `CreateRunOptions.settings.bots`; co-op lobbies
+  keep their own choice. `src/main.ts` solo start passes it (one line, sim lane). 0 bots is a supported solo game
+  (no wages, no staff advice; crew tips are silent because no bot voices them: the UI may want an unvoiced
+  fallback). In Gear runs with a person in the café, crew bots act as helpers (`src/sim/bots/helper.ts`): a person
+  keeps the machine nearest them (within `ECONOMY.bots.helperGuardTiles` 1.5) while it brews or holds a cup,
+  while they hold something it takes, or until an order needing it has waited `helperGuardSeconds` (8 s); the
+  till stays theirs only while their hands are empty and the front customer is under 3 s; fresh tickets
+  (`helperTicketSeconds`, 3 s after appearing or being rung) are left to free people. No new state, inputs or
+  events. **UI lane:** draw the Off/1/2 solo toggle writing `soloBots`. Open: tune both windows by playtest.
+  Morning-prompt leftovers (optional, not built): bots favouring well-tipping families and drinks near a level-up;
+  bots treating a flowing D4b as the fast station; planner leaning to cash late in a short season week; bot
+  self-review from `report.crew`; G8 vote toast (UI lane).
+- **A2 cups go cold (`fb2-a2`, protocol 42).** Hot drinks cool from the tick they're made; the clock follows the
+  cup: `Station.outputSince` (machine output), `Player.heldSince` (in hand), `PassItem.madeAt` (pickup counter);
+  absent = fresh. Helpers in `src/sim/cooling.ts`: `coolFraction(state, madeAt, drink)` (0 fresh .. 1 cold; always
+  0 for iced), `slotCool(state, state.pass[i])`, `stationCool(state, station)` (a drip pot by its own `potColdAt`,
+  else the waiting output), `heldCool(state, player)`, `takeBackIndex(state)` / `takeBackCold(state)`. Thresholds
+  `LUKEWARM` 0.5 (half tip) and 1 (cold: taken, not paid, counts as a walk-out). `COOLING_SECONDS`: shots 45 s,
+  milky and filter 60 s, iced never. Customers take the freshest matching cup; empty hands at pickup take back
+  cooling cups coldest first, then oldest. Hot cups with a clock no longer go stale on the counter (iced and
+  old-save cups still do). Bots clear a cold counter cup before ringing, bin and remake a claim whose cup went
+  cold, clear a cold or stray output blocking a machine (a warm stray goes on the counter). Events:
+  `cup.cold { slot | station, drink }` (once per cup), `pickup.cold { customer, drink }`,
+  `review.bad { customer, drink, reason: 'cold' }`, `pickup.takeBack { drink, by, cold }` (`pass.take` still
+  fires). **UI lane:** `pickupModel`'s stale blink and 3.3.2's `passCool` read `PassItem.ticksLeft`, which no
+  longer runs down for hot Gear cups: read `slotCool` instead (note it runs 0 fresh → 1 cold, the opposite of
+  `countsModel.coolFraction`). Settles pickup M2. Open: no thermal gear yet; p4Smoke end cash is lower (served
+  within 2%), to revisit in the A balance pass.

@@ -131,3 +131,19 @@ describe('Gear G4d: drip on the HUD', () => {
     expect([line().status, line().warn]).toEqual(['3/4 cups · cold', true]);
   });
 });
+
+describe('3.3.2: the day HUD names each machine', () => {
+  it('labels rows by machine, numbering duplicates', async () => {
+    const { hudGearVM } = await import('./gearVM');
+    const s = run();
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'd1' });
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 's1' });
+    const rows = hudGearVM(s);
+    expect(rows.map((r) => r.label)).toEqual(['Cold brew', 'Drip', 'Steamer']);
+    // two of the same machine: numbered
+    const tap = s.stations.find((x) => x.kind === 'coldBrewTap')!;
+    s.stations.push({ ...tap, id: 'tap-2' });
+    expect(hudGearVM(s).filter((r) => r.label.startsWith('Cold brew')).map((r) => r.label)).toEqual(['Cold brew 1', 'Cold brew 2']);
+  });
+});

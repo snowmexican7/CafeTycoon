@@ -16,7 +16,27 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- Solo runs now start with one bot barista instead of a full crew (0 to 3 can be picked), and bots act as
+  helpers: they leave the machine you're working and give you a few seconds to grab new orders.
+- Drinks go cold: hot cups cool on the pickup counter, in the machine and in your hands. A lukewarm cup earns half
+  the tip; a cold one is taken but not paid for, and earns a bad review. Empty hands at pickup take back the
+  coldest cup so you can bin it. Iced drinks never cool.
+
+## 3.3.2 — 2026-10-30 · How many are left?
+
+Small screen-only changes from Kennedy's playtest. Nothing about how the game plays has changed.
+
+- **Counts over the machines.** A small number floats over each machine that has something waiting: cups left in
+  the cold brew tap, cups left in the drip pot, a shot sitting at the espresso machine. Empty machines show nothing.
+  The number turns amber when the tap is nearly out, and blue when the drip pot has gone cold.
+- **The Gear card names each machine.** "Cold brew: 7/8 left" instead of just "7/8 left". If you own two of the
+  same machine, they're numbered.
+- **Recipe steps over the cup you're carrying.** A little strip over your head shows the drink's steps: done ones
+  get a tick, and the next one is circled.
+- **Cooling rings.** Cups on the pickup counter and a fresh drip pot get a ring that empties as they cool, going
+  red → orange → yellow, then blue once the pot is cold.
+- **Proposed (not built): espresso rework and fridges.** The Gear design doc now has Kennedy's six-tier espresso
+  idea (wands by tier, no separate steamer) and a fridge line. It's waiting for Kennedy's OK.
 
 ## 3.3.1 — 2026-10-30 · The pickup counter on screen
 

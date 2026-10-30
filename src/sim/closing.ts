@@ -54,6 +54,7 @@ export function finishDay(state: GameState): GameState {
   }
   for (const p of state.players) {
     p.holding = null;
+    delete p.heldSince; // A2: no cup, no clock
     if (p.tool === 'box') returnBox(state, p);
     clearFloorFields(p);
   }
