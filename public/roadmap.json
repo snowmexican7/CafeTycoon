@@ -219,27 +219,27 @@
       "aim": "Bigger games across several cafés and game nights. Big new systems, but still predictable code we can test.",
       "goals": [
         {
-          "text": "Rival escalation: Starbuck$ grows with you from week 2",
+          "text": "Rival escalation: happy hours and a loyalty card from week 2",
           "state": "done"
         },
         {
-          "text": "Campus franchise of several cafés",
-          "state": "todo"
+          "text": "A second shop across town (more shops later)",
+          "state": "doing"
         },
         {
-          "text": "Manager mode: assign crews, read reports",
-          "state": "todo"
+          "text": "Manager mode: day reports, run the 2nd shop, send it stock",
+          "state": "done"
         },
         {
-          "text": "Phone calls and travel between sites",
-          "state": "todo"
+          "text": "Phone calls from the 2nd shop (travel between sites later)",
+          "state": "doing"
         },
         {
           "text": "2v2 rival chains on a shared street, competing for the same customers",
           "state": "todo"
         },
         {
-          "text": "Seasons that carry across game nights",
+          "text": "Seasons that carry across game nights, with a season board",
           "state": "done"
         }
       ],

@@ -15,6 +15,8 @@ import { GEAR, type GearId } from '../src/data/gear';
 import { TIERS, nextTier } from '../src/sim/growth';
 import { gearArea } from '../src/sim/gear';
 import type { GameState, PlayerInput, ScenarioId, SupplyId } from '../src/sim/types';
+// Node globals, typed locally so src tests can import this file without @types/node.
+declare const process: { env: Record<string, string | undefined>; argv: string[]; exit(code?: number): never };
 
 const PATH: GearId[] = ['c1', 'e1', 's1', 'c2', 's2', 'g1', 'e2', 'c3', 'g2', 'e3', 's3', 'd1', 'c4', 'e4', 'd2', 'd3', 'g3', 'e5', 'd4b', 'c5', 'd5b', 'e6'];
 const RESERVE = 45;
@@ -56,7 +58,10 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
   return [];
 }
 
-export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0) {
+/** P4 B8: an optional extra crew move, asked when the scripted night has nothing left to do (and each day tick). */
+export type ExtraMoves = (state: GameState, ids: string[]) => PlayerInput[];
+
+export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0, extra?: ExtraMoves, onState?: (s: GameState) => void) {
   let s = createRun({ seed, hostId: 'tester', players: [], tier: 'stand', gear: true, settings: { bots, dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4 } });
   addStandIns(s, humans);
   if (bots) syncBots(s);
@@ -70,6 +75,12 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
   while (s.phase !== 'ended' && s.days.length < days) {
     if (s.phase === 'weekEnd') {
       // P4 B2: KEEP=1 plays on through a season (as the host pressing Keep going).
+      if (extra) {
+        // P4 B8: the real Keep going input (as the host pressing it), so season checkpoints run as in a game.
+        s = step(s, [{ kind: 'weekEnd', playerId: s.hostId, choice: 'continue' }]);
+        if (s.phase === 'weekEnd') break;
+        continue;
+      }
       if (!process.env.KEEP) break;
       beginSeason(s);
       s.unlimited = true;
@@ -94,7 +105,8 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
       if (stage >= 0 && stage !== 99) stage = inputs.length === 0 ? 99 : stage + 1;
       else if (stage === 99) stage = -1;
     }
-    if (process.env.DBG && s.phase === 'day' && last !== 'day') console.error('day', s.day, 'cash', s.cash, JSON.stringify(s.supplies), s.stations.map((x) => x.kind + ':' + x.gear + (x.broken ? '!' : '')).join(','), 'menu', JSON.stringify(Object.keys(s.menu).filter((k) => (s.menu as Record<string, boolean>)[k]).length));
+    if (extra && inputs.length === 0 && (s.phase === 'day' || (s.phase === 'night' && stage === -1))) inputs = extra(s, ids);
+    if (process.env.DBG && s.phase === 'day' && last !== 'day') console.error('day', s.day, 'cash', s.cash, JSON.stringify(s.supplies), s.stations.map((x) => x.kind + ':' + x.gear).join(','), 'menu', JSON.stringify(Object.keys(s.menu).filter((k) => (s.menu as Record<string, boolean>)[k]).length));
     last = s.phase;
     // Stand-ins are bot-driven, and step() ignores inputs from bots; lift the flag on the night buyer for this one step.
     const buyer = inputs.length ? s.players.find((p) => p.id === ids[0]) : undefined;
@@ -103,6 +115,7 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
     s = step(s, inputs);
     if (buyer && bot) s.players.find((p) => p.id === ids[0])!.bot = bot;
   }
+  onState?.(s);
   const d = s.days;
   const cups = d.reduce((a, x) => a + (x.cups ?? 0), 0);
   const stars = d.reduce((a, x) => a + (x.cupStars ?? 0), 0);

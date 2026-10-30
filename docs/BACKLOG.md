@@ -1802,6 +1802,15 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 4 B8 — integration + release 3.2.0 (p4-b08-integration, tag v3.2.0)
+
+- [x] `scripts/p4Smoke.ts`: headless Gear runs with a scripted crew that answers calls, counters promos, buys the stamp card, opens the branch and sends stock; checks finite cash, a finished season at 28 days, save round-trip, records fold, and determinism. `npx tsx scripts/p4Smoke.ts 28 3` was OK (seeds 200–202; two went bankrupt around day 25, the third finished the season with a bronze, so the scripted crew is weak, not the sim). A 6-day version runs in vitest (`src/p4Smoke.test.ts`).
+- [x] Browser smoke on the built game (`overnight/pw/p4smoke.mjs`): solo and `?link=local` co-op (2 tabs, peer joins the lobby) at 1512×982 and 1280×800, 2 days each, no page errors.
+- [x] Released as **3.2.0** (Phase 4 lite). **4.0.0** stays reserved for Phase 4 complete (travel, 2v2, human playtests).
+- [ ] The scripted crew never got a phone call or reached the branch in 28 days at 2 humans with no bots (cash stays under the $420 it waits for). Worth a seeded fixture run that starts at the café tier with $500 so the branch/call/send path gets exercised headlessly end to end.
+- [ ] Human co-op playtest of a full season with the branch and calls (Kennedy).
+- [ ] Bots ignore calls, the stamp card, the branch and send-stock (logged for Claude in the morning prompt).
+
 ### Phase 4 B7 — 2v2 design spike (p4-b07-design-spike, tag p4-b07-spike)
 
 - [x] Written design: [`P4_B7_VERSUS_SPIKE.md`](P4_B7_VERSUS_SPIKE.md). Recommends two `GameState`s stepped in lockstep by a pure `street.ts` (one arrival stream split by a hashed `pickCafe` pull), per-team delta baselines in `hostRoom`, `?versus=1`, Starbuck$ off and street moves instead. Milestones V1–V5.
