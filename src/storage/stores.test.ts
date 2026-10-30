@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../sim/run';
-import { applyGearInput } from '../sim/gear';
-import { tillNext } from '../sim/till';
+import { createRun } from '../sim/run';
 import type { GameState } from '../sim/types';
-import { defaultSlots } from '../sim/slots';
 import { createHistoryStore } from './historyStore';
 import { createSettingsStore } from './settingsStore';
 import { SNAPSHOT_VERSION, createSnapshotStore, migrateSnapshot } from './snapshotStore';
@@ -76,113 +73,23 @@ describe('stores', () => {
 
 describe('snapshot versioning', () => {
   it('pins the snapshot version', () => {
-    expect(SNAPSHOT_VERSION).toBe(28);
+    expect(SNAPSHOT_VERSION).toBe(29);
   });
 
-  /** A Gear day as a v3.x build saved it: no pickup/condiment spots, no condiment state, a customer already rung. */
-  const oldGearDay = (gear: boolean): GameState => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear });
-    if (gear) applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
-    startDay(s);
-    s.customers = [{ id: 1, drink: 'latte', patienceLeft: 500, patienceMax: 900, rungAt: 3 }];
-    delete (s as { condiments?: unknown }).condiments;
-    delete (s as { condimentBoxes?: unknown }).condimentBoxes;
-    delete (s as { steep?: unknown }).steep;
-    s.stations = s.stations.filter((x) => x.id !== 'pickup' && x.id !== 'condiments');
-    return s;
-  };
-
-  it('a mid-day v27 Gear save puts rung customers back in line (Review Focus 5)', () => {
-    const s = oldGearDay(true);
-    const m = migrateSnapshot(27, s)!;
-    expect(m.customers[0]).toMatchObject({ stage: 'order' });
-    expect(m.customers[0].rungAt).toBeUndefined();
-    expect(tillNext(m)?.id).toBe(1);
-    expect([m.condiments, m.condimentBoxes, m.steep]).toEqual([{ servings: 20 }, 0, undefined]);
-    expect(m.stations.map((x) => x.id)).toEqual(expect.arrayContaining(['pickup', 'condiments']));
+  it('FB2 C9 (no save compatibility): every older save is turned away, a current one loads with its fixed spots', () => {
+    const st = memoryStorage();
+    const store = createSnapshotStore(st);
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+    for (const v of [3, 22, 27, 28]) {
+      st.setItem('cafetycoon.run', JSON.stringify({ version: v, state: s }));
+      expect(store.load(), `v${v}`).toBeNull();
+    }
+    expect(migrateSnapshot(28, JSON.parse(JSON.stringify(s)))).toBeNull();
+    const old = JSON.parse(JSON.stringify(s)) as GameState;
+    old.stations = old.stations.filter((x) => x.id !== 'pickup' && x.id !== 'condiments');
+    const m = migrateSnapshot(SNAPSHOT_VERSION, old)!;
     expect(m.stations.filter((x) => x.id === 'pickup')).toHaveLength(1);
-  });
-
-  it('a v27 Gear save keeps condiment state it already has', () => {
-    const s = oldGearDay(true);
-    s.condiments = { servings: 7 };
-    s.condimentBoxes = 2;
-    const m = migrateSnapshot(27, s)!;
-    expect([m.condiments, m.condimentBoxes]).toEqual([{ servings: 7 }, 2]);
-  });
-
-  it('a v27 classic save gains nothing', () => {
-    const s = oldGearDay(false);
-    const before = JSON.stringify(s);
-    const m = migrateSnapshot(27, s)!;
-    expect(JSON.stringify(m)).toBe(before);
-    expect(m.condiments).toBeUndefined();
-    expect(m.condimentBoxes).toBeUndefined();
-    expect(m.stations.some((x) => x.id === 'pickup' || x.id === 'condiments')).toBe(false);
-    expect(m.customers[0]).toEqual({ id: 1, drink: 'latte', patienceLeft: 500, patienceMax: 900, rungAt: 3 });
-  });
-
-  it('migrates a version-23 save: lastCall stays absent', () => {
-    const old = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
-    const out = migrateSnapshot(23, old)!;
-    expect(out).not.toBeNull();
-    expect(out.lastCall).toBeUndefined();
-  });
-
-  it('migrates a version-22 save through 22 -> 23 -> 24 -> 25: walkouts at 0, lastCall absent', () => {
-    const old = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
-    delete (old.today as { soldOutWalkouts?: number }).soldOutWalkouts;
-    delete (old as { slots?: unknown }).slots;
-    delete (old as { equipment?: unknown }).equipment;
-    const out = migrateSnapshot(22, old)!;
-    expect(out).not.toBeNull();
-    expect(out.today.soldOutWalkouts).toBe(0);
-    expect(out.lastCall).toBeUndefined();
-    expect(out.slots).toEqual(defaultSlots('cafe'));
-    expect(out.equipment).toEqual([]);
-  });
-
-  it('migrates a version-4 save (three drinks, no flavours) to the B5 menu', () => {
-    const st = memoryStorage();
-    const store = createSnapshotStore(st);
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
-    s.day = 4;
-    const old = JSON.parse(JSON.stringify(s));
-    delete old.unlocked;
-    delete old.freshDrinks;
-    delete old.supplies.flavour;
-    old.menu = { espresso: true, latte: false, coldBrew: true };
-    old.today.drinks = { espresso: 2, latte: 0, coldBrew: 1 };
-    st.setItem('cafetycoon.run', JSON.stringify({ version: 4, state: old }));
-    const got = store.load()!;
-    expect(got.unlocked).toEqual(['espresso', 'latte', 'coldBrew', 'icedLatte']);
-    expect(got.menu).toMatchObject({ latte: false, icedLatte: true, mocha: true });
-    expect(got.supplies.flavour).toBe(0);
-    expect(got.today.drinks?.mocha).toBe(0);
-  });
-
-  it('migrates a version-21 save (P3 B13): the run counts as the full café, stations untouched', () => {
-    const st = memoryStorage();
-    const store = createSnapshotStore(st);
-    const s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
-    const old = JSON.parse(JSON.stringify(s));
-    st.setItem('cafetycoon.run', JSON.stringify({ version: 21, state: old }));
-    const back = store.load()!;
-    expect(back.tier).toBe('cafe');
-    expect(back.stations).toEqual(s.stations);
-    expect(back.stations.map((x) => x.kind)).toContain('steamer');
-  });
-
-  it('migrates a version-3 save (no forecast) instead of dropping it', () => {
-    const st = memoryStorage();
-    const store = createSnapshotStore(st);
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
-    const old = JSON.parse(JSON.stringify(s));
-    delete old.forecast;
-    st.setItem('cafetycoon.run', JSON.stringify({ version: 3, state: old }));
-    expect(store.load()).toEqual({ ...s, tier: 'cafe', today: { ...s.today, soldOutWalkouts: 0 } }); // P3 B13: every old run is the café; FB1 WP4: walkouts start at 0
-    st.setItem('cafetycoon.run', JSON.stringify({ version: 2, state: old }));
-    expect(store.load()).toBeNull();
+    expect(m.stations.filter((x) => x.id === 'condiments')).toHaveLength(1);
     st.setItem('cafetycoon.run', JSON.stringify({ version: SNAPSHOT_VERSION + 1, state: s }));
     expect(store.load()).toBeNull();
   });
