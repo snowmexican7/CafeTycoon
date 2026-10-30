@@ -20,6 +20,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 - Neither lane edits the other's files. If you need a change there, put it in "Needs from you".
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-10-30: **Round 3 approved (Kennedy, Oct 30, 2026 7:46 PM):** money changes stay VERY slight (the main squeeze was
+  playing at the stand, 0.75 price); the honest price forecast becomes a paid Strategist hire. Spec: BACKLOG "Round 3".
 - 2026-10-30: **Gear is the game.** There are no classic runs any more; don't preserve classic behaviour or
   goldens.
 - 2026-10-30: **No save backwards compatibility for now.** No migrations or old-save fixtures. The sim bumps
@@ -114,6 +116,9 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
 
 ### Grok → Claude log
+- 2026-10-30 (`docs-handoff-round3`): docs only. Added Round 3 request below, a Decisions line, and BACKLOG
+  "Round 3 (Kennedy approved 2026-10-30)" incl. the Later list. UI lane is now on stand/cart art, the grow
+  transition card, "Too pricey!" bubbles, the waiting area and first-run tips.
 - 2026-10-30, merge 4b55ae6 (`ui-3.3.5`): touched `src/ui/live.ts` (`DRINK_STEPS`, `STATION_NAME`),
   `src/render/countsModel.ts` (`STEP_ICON`), `src/ui/viewModels.ts`, `src/render/scene.ts`, and one assertion in
   your `src/sim/podsGrinder.test.ts` (`ticketSteps('coldBrew', true)` now `['Pour cold brew', 'Hand off']`).
@@ -131,6 +136,22 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
   `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
+- [ ] 2026-10-30: **Round 3 (Kennedy approved Oct 30, 2026 7:46 PM).** Full goal / freedom / don't touch / what Grok
+  wires for each item: BACKLOG "Round 3 (Kennedy approved 2026-10-30)". Summary:
+  1. **More lattes:** shift the order mix toward `latte` / `cappuccino` where the gear can make them; optional
+     "and a latte for my friend" add-on asks. Batch stays viable, espresso becomes competitive.
+  2. **Money, VERY slight:** stand price 0.75→0.8, supply packs −10%, elasticity 1.8→~1.4, fix `unitCost` (drip per
+     pot, cappuccino = two milks) and `brief.ts` `expectedUse`, cap forecast orders by real capacity. New event
+     `walkout { customer, reason: 'price' }` instead of a silent no-spawn.
+  3. **Price calculator → paid hire:** rough guess only by default; `staff.strategist` (~$7/week, honest forecast +
+     sets peak prices), `staff.marketer` (weekly fee, more customers at current prices); both stack.
+  4. **Line + waiting area:** inside browse area before the line; `line.complain` ("Line's too long!") with a
+     cooldown, `line.leave { customer, quiet: true }` (tumbleweed) while it runs.
+  5. **Ring-up time by register tier (small):** cheapest ~1–1.5 s, faster per tier, top tier self-order → pickup with
+     bonus patience. Expose ring-up progress 0..1.
+  6. **Early growth nudge:** e.g. cart $80→$70; an event/state for "next tier affordable".
+  7. **Grow diff:** on `grow`, a diff (queue, price, traffic, rent, new crowd, unlocks) for the transition card.
+  Please put the exact names as built in BACKLOG and tick here.
 - [x] 2026-10-30: done, merge `fb2-tap-wording` (every string old → new in BACKLOG "Feedback 2"). Gear c4 is now
   **'The Kegerator'** ('A real keg…'); please rename its row in `docs/GEAR_TREE.md`. Card "tap terminal" left as is.
   **Rename player-facing "tap" (cold brew) in sim/data strings** (Kennedy found it confusing;

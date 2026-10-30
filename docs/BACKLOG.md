@@ -2221,3 +2221,42 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   'Pour cold brew' / 'Ice + milk' / 'Cold brew again (sweet cream)'; equipment 'Cold-brew keg', catalogue 'Second
   cold brew keg', gear c4 'The Kegerator', describe 'cold brew', steep's morning note "…had no room left…". Code ids
   (`coldBrewTap`, `batchLeft`) unchanged; card-payment "tap terminal" unchanged.
+
+
+## Round 3 (Kennedy approved 2026-10-30)
+Approved Oct 30, 2026 7:46 PM (Toronto). Sim lane builds; UI lane (Grok) wires. Linked from HANDOFF.
+
+1. **More lattes.** Goal: coffee shops make their money on lattes; shift the order mix toward `latte` and
+   `cappuccino` when the gear can make them, plus occasional "and a latte for my friend" add-on asks if cheap.
+   Freedom: weights, how add-ons attach (combo machinery from B6 is fine). Don't touch: batch must stay viable,
+   don't make espresso mandatory. Grok wires: add-on ask bubble and ticket line.
+2. **Money (VERY slight).** Goal: soften the squeeze a little; the main cause was the stand's 0.75 price. Suggested:
+   stand price 0.75→0.8, supply packs −10%, elasticity 1.8→~1.4, fix `unitCost` (drip per pot, cappuccino counts two
+   milks), fix `brief.ts` `expectedUse` restock estimate, cap forecast orders by real capacity (queue + serve rate).
+   Log price walkouts as `walkout { customer, reason: 'price' }` instead of silently not spawning. Freedom: exact
+   numbers within "slight". Don't touch: cart/café price multipliers. Grok wires: "Too pricey!" bubble + walk-out.
+3. **Price calculator becomes a paid hire.** Goal (Kennedy's idea): without a hire, the night shows only a rough
+   guess. `staff.strategist` (~$7/week) gives the honest forecast and sets peak prices for the current crowd.
+   `staff.marketer` (weekly fee) brings more customers at your current prices. Both stack. Freedom: fees, how
+   "rough" the guess is, input names (please list). Don't touch: manual pricing stays available. Grok wires: hire
+   cards on the night screen, rough-vs-honest forecast display, "set by Strategist" marks.
+4. **Line and waiting area.** Queue capacity is already per tier (stand 3, cart 5, café `ECONOMY.queueCapacity`).
+   Goal: an inside waiting area where a few customers browse before joining the line. If the line doesn't move for a
+   while, one customer says "Line's too long!" (`line.complain`), with a cooldown; during it, others just leave with a
+   tumbleweed (`line.leave { customer, quiet: true }`). Freedom: timings, area size per tier. Don't touch: queue
+   caps. Grok wires: waiting-area art and browsers, complaint bubble, tumbleweed.
+5. **Order-taking time by register tier (small).** Cheapest register ~1–1.5 s to ring up, faster per tier; the top
+   tier is self-order and moves the customer to pickup with bonus patience. Expose ring-up progress 0..1. Freedom:
+   exact seconds, field name. Don't touch: keep it small. Grok wires: ring-up bar at the till.
+6. **Early growth (nudge).** Maybe cart $80→$70. Emit an event or state for "next tier affordable". Freedom: name
+   and amount. Grok wires: night nudge "You can afford a cart!".
+7. **Tier upgrade summary.** On `grow`, give the UI a diff (queue, price, traffic, rent, new crowd, unlocks).
+   Grok wires: transition between stand / cart / café and a "what you gained" card.
+
+### Later (not this round)
+- **Café add-ons first:** a seating nook that juts out with a big window; an outside queue of shadow figures.
+- A cashier hire who entertains the line (line can grow to 6+).
+- Area upgrades mid-day rather than on another screen.
+- A split money pool for co-op.
+- Upgrade paths: speed, reliability, taste, quality.
+- A smart café path (top registers pair with smart machines), ending in a self-running shop with conveyor belts.
