@@ -37,12 +37,30 @@ const RING = 2 * Math.PI * 14;
 const parseMoney = (s: string) => Number(s.replace(/[^0-9.-]/g, '')) || 0;
 const short$ = (s: string) => s.replace('.00', '');
 
-export type NightTab = 'tonight' | 'menu' | 'spend';
+export type NightTab = 'tonight' | 'menu' | 'spend' | 'gear';
 export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
   { id: 'tonight', label: 'Tonight', icon: '🌙' },
   { id: 'menu', label: 'Menu', icon: '☕' },
   { id: 'spend', label: 'Spend', icon: '🛒' },
 ];
+/**
+ * G4f (playtest: "the night tabs are confusing"): a Gear run's night is one numbered order —
+ * ① Restock (stock first, then yesterday and the heads-ups), ② Gear shop, ③ Menu, ④ Extras (cards,
+ * ads, pitch, grow, checkout). The pick-your-gear night puts the gear first (nothing to stock yet).
+ * A "Next ▸" button in the footer walks the order. Classic runs keep their three tabs.
+ */
+export const GEAR_NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
+  { id: 'tonight', label: 'Restock', icon: '📦' },
+  { id: 'gear', label: 'Gear shop', icon: '⚙️' },
+  { id: 'menu', label: 'Menu', icon: '☕' },
+  { id: 'spend', label: 'Extras', icon: '🛒' },
+];
+export function nightTabs(gear: GearVM | undefined | null): { id: NightTab; label: string; icon: string }[] {
+  if (!gear) return NIGHT_TABS;
+  if (!gear.pickNight) return GEAR_NIGHT_TABS;
+  const [restock, shop, ...rest] = GEAR_NIGHT_TABS;
+  return [{ ...shop, label: 'Pick gear' }, restock, ...rest];
+}
 export type SpendView = 'cards' | 'stations' | 'ads' | 'pitch' | 'grow' | 'checkout';
 export const SPEND_VIEWS: { id: SpendView; label: string }[] = [
   { id: 'cards', label: '🃏 Cards' },
@@ -145,7 +163,7 @@ const GEAR_BTN: Record<GearTierState, (t: GearTierVM) => string> = {
 /** The back bar (sell from a slot) and one row of tiers per tree. Bigger = better, cheapest on the left. */
 export function gearBoard(g: GearVM): string {
   const head = g.pickNight
-    ? `<div class="gr-pick"><b>Pick your gear.</b> You start with $120 and an empty counter. Buy one machine to sell something tomorrow, then stock up on the Tonight tab.</div>`
+    ? `<div class="gr-pick"><b>Pick your gear.</b> You start with $120 and an empty counter. Buy one machine to sell something tomorrow, then tap <b>Next</b> to stock up on the Restock tab.</div>`
     : '';
   const note = g.note ? `<div class="st-trade warn" role="status">⚖️ ${esc(g.note)}</div>` : '';
   const slots = g.slots
@@ -344,7 +362,7 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
   const r = vm.rival;
   const extrasRow = `${regs.length ? `<button class="chip ${regWarn ? 'warn' : ''}" data-action="drawer" data-d="regulars">♥ ${regs.length} regulars${regWarn ? ` · ${regWarn} !` : ''} ▸</button>` : ''}
     ${r.scouted ? `<button class="chip" data-action="drawer" data-d="paper">🔭 Scouted ▸</button>` : `<button class="chip" data-action="scout" ${r.affordable ? '' : 'disabled'} title="See ${esc(r.name)}'s menu and prices for tomorrow">🔭 Scout ${esc(r.name)} · ${esc(short$(r.cost))}</button>`}`;
-  return `${banner}<div class="tn-grid">${yday}${tmrw}${alerts}
+  return `${banner}<div class="tn-grid ${vm.gear ? 'flow' : ''}">${yday}${tmrw}${alerts}
     <div class="tn-card st"><div class="tn-h">Stock</div><div class="restocks" style="--n:${vm.restock?.length || 1}">${stock}</div></div>
     <div class="tn-card cr"><div class="tn-h">Crew roles</div><div class="roles">${rolesRow(vm.roles)}</div><div class="cr-x">${extrasRow}</div></div></div>`;
 }
@@ -477,6 +495,12 @@ function drawerHtml(d: Drawer | null, vm: NightVM, extras: NightExtras | undefin
 
 // ---------------------------------------------------------------------------------------------- The board
 
+function nextStep(order: { id: NightTab; label: string; icon: string }[], tab: NightTab): { id: NightTab; label: string; icon: string; n: number } | null {
+  const i = order.findIndex((t) => t.id === tab);
+  return i >= 0 && i < order.length - 1 ? { ...order[i + 1], n: i + 2 } : null;
+}
+const nextLabel = (t: { label: string; icon: string; n: number }) => `Next: ${t.n} ${t.icon} ${esc(t.label)} ▸`;
+
 export interface NightUiState { tab: NightTab; spend: SpendView; drawer: Drawer | null; sig: SigDraft | null; pitch: PitchDraft; slotSel: number | null }
 
 /** The whole board as HTML (pure: tests and the word-count check use it). */
@@ -486,10 +510,12 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
   const title = day <= 1 ? (vm.gear ? 'Pick your gear' : 'Opening night') : `After Day ${day - 1}`;
   const sub = `planning ${extras ? `${extras.weekday}, ` : ''}Day ${day}`;
   const alertN = vm.brief.alerts.filter((a) => a.severity === 'danger' || a.severity === 'warn').length;
-  const badge: Record<NightTab, string> = { tonight: alertN ? `${alertN}` : '', menu: '', spend: vm.hand.length ? `${vm.hand.length}` : '' };
-  const tabs = NIGHT_TABS
-    .map((t) => `<button class="tab ntab ${t.id === ui.tab ? 'on' : ''} ${t.id === 'tonight' && alertN ? 'alert' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="${t.id === ui.tab}">${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}</button>`)
+  const badge: Record<NightTab, string> = { tonight: alertN ? `${alertN}` : '', menu: '', spend: vm.hand.length ? `${vm.hand.length}` : '', gear: '' };
+  const order = nightTabs(vm.gear);
+  const tabs = order
+    .map((t, i) => `<button class="tab ntab ${t.id === ui.tab ? 'on' : ''} ${t.id === 'tonight' && alertN ? 'alert' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="${t.id === ui.tab}">${vm.gear ? `<span class="step-n" aria-hidden="true">${i + 1}</span>` : ''}${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}</button>`)
     .join('');
+  const next = vm.gear ? nextStep(order, ui.tab) : null;
   const bought = extras?.bought ?? [];
   const cards = vm.hand.map((c) => handCard(c, cash)).join('') + bought.map((b) => boughtCard(b.itemId)).join('');
   const spendBody: Record<SpendView, string> = {
@@ -502,8 +528,9 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
     grow: growthBoard(vm.growth),
     checkout: checkoutBoard(vm.checkout),
   };
-  const spend = `<div class="sp-nav" role="tablist">${SPEND_VIEWS.map((s) => `<button class="chip sv ${s.id === ui.spend ? 'on' : ''}" data-action="spend" data-sv="${s.id}" aria-selected="${s.id === ui.spend}">${s.id === 'stations' && vm.gear ? '⚙️ Gear' : s.label}</button>`).join('')}</div>
-    ${SPEND_VIEWS.map((s) => `<div class="sv-pane ${s.id === ui.spend ? 'on' : ''}" data-sv-pane="${s.id}">${spendBody[s.id]}</div>`).join('')}`;
+  const views = vm.gear ? SPEND_VIEWS.filter((s) => s.id !== 'stations') : SPEND_VIEWS;
+  const spend = `<div class="sp-nav" role="tablist">${views.map((s) => `<button class="chip sv ${s.id === ui.spend ? 'on' : ''}" data-action="spend" data-sv="${s.id}" aria-selected="${s.id === ui.spend}">${s.id === 'stations' && vm.gear ? '⚙️ Gear' : s.label}</button>`).join('')}</div>
+    ${views.map((s) => `<div class="sv-pane ${s.id === ui.spend ? 'on' : ''}" data-sv-pane="${s.id}">${spendBody[s.id]}</div>`).join('')}`;
   const colors = new Map((extras?.crew ?? []).map((c) => [c.id, c]));
   const ready = vm.ready
     .map((p) => {
@@ -531,11 +558,13 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
       <div class="pane tonight-pane ${ui.tab === 'tonight' ? 'on' : ''}" data-pane="tonight" role="tabpanel">${tonightPane(vm, extras)}</div>
       <div class="pane menu-pane ${ui.tab === 'menu' ? 'on' : ''}" data-pane="menu" role="tabpanel">${menuPane(vm)}</div>
       <div class="pane spend-pane ${ui.tab === 'spend' ? 'on' : ''}" data-pane="spend" role="tabpanel">${spend}</div>
+      ${vm.gear ? `<div class="pane gear-pane ${ui.tab === 'gear' ? 'on' : ''}" data-pane="gear" role="tabpanel">${gearBoard(vm.gear)}</div>` : ''}
       <div class="foot">
         <div class="ready">${ready}</div>
         <div class="spacer"></div>
         ${footWarn}
         <span class="foot-note">${note}</span>
+        ${vm.gear ? `<button class="btn big next-step" data-action="tab" data-tab="${next?.id ?? ''}" ${next ? '' : 'hidden'}>${next ? nextLabel(next) : ''}</button>` : ''}
         <button class="btn primary big" data-action="ready" ${vm.meReady ? 'disabled' : ''}>${vm.meReady ? 'Ready ✓ waiting' : `${sun(24).replaceAll('#f6c35b', '#fff4e2')}Open the shop`}</button>
       </div>
       <div class="drawer-slot">${drawerHtml(ui.drawer, vm, extras, ui.sig)}</div>
@@ -552,6 +581,7 @@ export function createNight(
   let lastKey = '';
   let lastSig = '';
   let pickedOnce = false;
+  let pendingSub: string | null = null;
 
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
@@ -563,7 +593,9 @@ export function createNight(
     else if (action === 'price') handlers.onPrice?.(el.dataset.drink as DrinkId, Number(el.dataset.step));
     else if (action === 'role') handlers.onRole?.(isRole(el.dataset.role) ? el.dataset.role : null);
     else if (action === 'tab' || action === 'goto') {
+      pendingSub = el.dataset.sub ?? null;
       selectTab(el.dataset.tab as NightTab);
+      pendingSub = null;
       if (el.dataset.sub) selectSpend(el.dataset.sub as SpendView);
     } else if (action === 'spend') selectSpend(el.dataset.sv as SpendView);
     else if (action === 'drawer') openDrawer(el.dataset.d as Drawer);
@@ -657,8 +689,18 @@ export function createNight(
     redrawDrawer();
   });
   function selectTab(tab: NightTab): void {
-    if (!NIGHT_TABS.some((t) => t.id === tab)) return;
+    const order = nightTabs(lastVm?.gear);
+    // Gear runs: the old "Spend › Stations" links land on the Gear shop tab.
+    if (lastVm?.gear && tab === 'spend' && pendingSub === 'stations') tab = 'gear';
+    if (!order.some((t) => t.id === tab)) return;
     ui.tab = tab;
+    const nx = container.querySelector<HTMLElement>('.next-step');
+    if (nx) {
+      const n = nextStep(order, tab);
+      nx.hidden = !n;
+      nx.dataset.tab = n?.id ?? '';
+      nx.textContent = n ? `Next: ${n.n} ${n.icon} ${n.label} ▸` : '';
+    }
     container.querySelectorAll<HTMLElement>('.ntab').forEach((b) => {
       const on = b.dataset.tab === tab;
       b.classList.toggle('on', on);
@@ -717,9 +759,11 @@ export function createNight(
       // Gear Tree: the first night of a Gear run opens on Spend › Gear ("Pick your gear"), once.
       if (vm.gear?.pickNight && !pickedOnce) {
         pickedOnce = true;
-        ui.tab = 'spend';
-        ui.spend = 'stations';
+        ui.tab = 'gear';
       }
+      // a Gear run has no Spend › Stations view (it is the Gear shop tab); a classic run has no Gear tab
+      if (vm.gear && ui.spend === 'stations') ui.spend = 'cards';
+      if (!vm.gear && ui.tab === 'gear') ui.tab = 'tonight';
       syncDraft(vm.signature);
       if (ui.drawer?.startsWith('twist:') && !vm.menu?.some((m) => `twist:${m.drink}` === ui.drawer)) ui.drawer = null;
       const focused = document.activeElement instanceof HTMLElement && container.contains(document.activeElement) ? document.activeElement : null;

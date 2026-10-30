@@ -112,7 +112,7 @@ export function gearVM(state: GameState): GearVM {
   let note: string | null = null;
   if (!has('coldBrew') && !has('espresso')) note = 'Nothing to sell yet: buy a cold brew rig or an espresso machine.';
   else if (has('espresso') && !has('grinder') && !slots.some((s) => s.id && GEAR[s.id].pods)) note = 'Espresso needs beans ground first: buy a grinder.';
-  else if (!Object.values(state.supplies).some((x) => x > 0)) note = 'No supplies yet: restock on the Tonight tab.';
+  else if (!Object.values(state.supplies).some((x) => x > 0)) note = 'No supplies yet: restock on the Restock tab.';
   return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook: notebookVM(state) };
 }
 

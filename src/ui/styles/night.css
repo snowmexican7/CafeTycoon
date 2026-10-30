@@ -65,6 +65,11 @@
 #night .al .btn { flex: none; white-space: nowrap; }
 #night .al-none { margin: 0; font: 600 var(--fs-m) var(--font-display); color: var(--good); }
 #night .st { grid-column: 1 / span 2; } #night .cr { grid-column: 3; }
+/* G4f: a Gear night's Restock tab puts the stock first, full width, big */
+#night .tn-grid.flow { grid-template-rows: auto auto auto; } #night .tn-grid.flow .st { grid-column: 1 / -1; order: -1; } #night .tn-grid.flow .cr { grid-column: 1 / -1; }
+#night .tab .step-n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #0000001a; font: 700 var(--fs-s) var(--font-display); }
+#night .tab.on .step-n { background: var(--crema); color: var(--espresso); }
+#night .foot .next-step { background: var(--mint-dk, #3f8f6a); color: #fff; }
 #night .restocks { flex: 1 0 auto; display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); grid-auto-rows: 1fr; gap: clamp(8px, .8vw, 12px); width: 100%; }
 #night .restock { display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; gap: 10px; background: #faf3e7; border-radius: 16px; padding: clamp(10px, 1.4vh, 16px) 12px; text-align: center; }
 #night .restock > svg { width: clamp(44px, calc(19vh - 96px), 96px); height: auto; flex: none; }
