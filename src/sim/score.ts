@@ -4,6 +4,7 @@ import type { GameState, RunRecord } from './types';
 import { checkoutSpent } from './checkout';
 import { tierSpent } from './growth';
 import { equipmentSpent } from './slots';
+import { branchSpent } from './branch';
 
 /** B11: what the café's permanent fittings are worth at the week's end (half their price), so upgrades are not pure cost. */
 export function fittingsValue(state: GameState): number {
@@ -15,6 +16,7 @@ export function fittingsValue(state: GameState): number {
   total += checkoutSpent(state);
   total += tierSpent(state);
   total += equipmentSpent(state);
+  total += branchSpent(state);
   return Math.round(total * ECONOMY.fittingsResale * 100) / 100;
 }
 

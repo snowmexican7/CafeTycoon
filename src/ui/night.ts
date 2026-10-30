@@ -1,3 +1,5 @@
+import { branchBody, branchChip } from './branchView';
+import type { AreaId } from '../data/areas';
 import type { ReportVM } from './report';
 import { TASTE, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
 import { isGearId, type GearId } from '../data/gear';
@@ -73,7 +75,7 @@ export const SPEND_VIEWS: { id: SpendView; label: string }[] = [
   { id: 'checkout', label: '🧾 Checkout' },
 ];
 /** What opens over the board. `twist:<drink>` is that drink's twist picker. */
-export type Drawer = 'receipt' | 'report' | 'paper' | 'regulars' | 'signature' | 'pricing' | `twist:${DrinkId}`;
+export type Drawer = 'receipt' | 'report' | 'branch' | 'paper' | 'regulars' | 'signature' | 'pricing' | `twist:${DrinkId}`;
 
 function needText(cost: number, cash: number): string {
   const need = cost - cash;
@@ -368,11 +370,12 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     ? `<div class="gr-milestone" role="status"><div class="gr-confetti" aria-hidden="true">${Array.from({ length: 18 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
         <span class="gr-big" aria-hidden="true">${g.icon}</span><b>We're ${g.name === 'The café' ? 'a café' : `a ${esc(g.name.replace(/^The /, '').toLowerCase())}`} now!</b><span>${esc(g.by)} signed the lease.</span></div>`
     : '';
-  const stats = extras ? `<div class="yd-stats">${extras.served} served · <span class="${extras.lost ? 'neg' : ''}">${extras.lost} walked</span> · ${extras.reputation.toFixed(1)}★</div>` : '';
+  const stats = extras ? `<div class="yd-stats">${extras.served} served · <span class="${extras.lost ? 'neg' : ''}">${extras.lost} walked</span> · ${extras.reputation.toFixed(1)}★${branchChip(vm.branch)}</div>` : '';
+  const branchBtn = vm.branch && (vm.branch.open || vm.branch.canOpen) ? `<button class="btn mini ghost" data-action="drawer" data-d="branch">🏪 ${vm.branch.open ? 'Second shop' : 'Open a 2nd shop'} ▸</button>` : '';
   const yday = b.profit
     ? `<div class="tn-card yd"><div class="tn-h">Day ${day - 1}</div><div class="yd-hero ${b.loss ? 'loss' : ''}">${esc(b.profit)}</div>${stats}
-        <div class="yd-btns"><button class="btn mini ghost" data-action="drawer" data-d="receipt">Receipt ▸</button>${vm.report ? '<button class="btn mini ghost" data-action="drawer" data-d="report">📋 Report ▸</button>' : ''}</div></div>`
-    : `<div class="tn-card yd"><div class="tn-h">In the till</div><div class="yd-hero">${esc(vm.cash)}</div><div class="yd-stats">Keep enough for stock.</div></div>`;
+        <div class="yd-btns"><button class="btn mini ghost" data-action="drawer" data-d="receipt">Receipt ▸</button>${vm.report ? '<button class="btn mini ghost" data-action="drawer" data-d="report">📋 Report ▸</button>' : ''}${branchBtn}</div></div>`
+    : `<div class="tn-card yd"><div class="tn-h">In the till</div><div class="yd-hero">${esc(vm.cash)}</div><div class="yd-stats">Keep enough for stock.</div>${branchBtn}</div>`;
   const h = b.headline;
   const tmrw = h
     ? `<div class="tn-card tm"><div class="tn-h">Tomorrow${extras ? ` · ${esc(extras.weekday)}` : ''}</div><div class="tm-row"><span class="tm-ic" aria-hidden="true">${h.icon}</span><b class="tm-head">${esc(h.text)}</b></div>
@@ -420,6 +423,7 @@ function receiptBody(vm: NightVM, day: number): string {
     ${t.spoiled ? line(`Went off: ${esc(t.spoiledWhat ?? '')}`, `<span class="neg">${esc(t.spoiled)}</span>`) : ''}
     ${t.fines ? line('Fines', `<span class="neg">−${esc(t.fines)}</span>`) : ''}
     ${t.tabPaid ? line('Hospital tab paid', `<span class="neg">−${esc(t.tabPaid)}</span>`) : ''}
+    ${vm.branch?.yesterday ? line(`Second shop (${vm.branch.yesterday.served} served)`, vm.branch.yesterday.profit < 0 ? `<span class="neg">−$${Math.abs(vm.branch.yesterday.profit).toFixed(2)}</span>` : `+$${vm.branch.yesterday.profit.toFixed(2)}`) : ''}
     ${t.ambulance ? line('Ambulance ride', `<span class="neg">−${esc(t.ambulance)}</span>`, 'ambulance') : ''}
     ${line('Profit', t.profit.startsWith('-') ? esc(t.profit) : `+${esc(t.profit)}`, `total ${t.profit.startsWith('-') ? 'loss' : ''}`)}
     ${vm.tab ? line('Hospital tab (half of each profit pays it)', esc(vm.tab)) : ''}</div>`;
@@ -538,6 +542,7 @@ function drawerHtml(d: Drawer | null, vm: NightVM, extras: NightExtras | undefin
   let body = '';
   if (d === 'receipt') { title = 'Receipt'; body = receiptBody(vm, extras?.day ?? 1); }
   else if (d === 'report') { title = `📋 Manager's report · Day ${vm.report?.day ?? ''}`; body = reportBody(vm.report); }
+  else if (d === 'branch') { title = '🏪 Second shop'; body = branchBody(vm.branch); }
   else if (d === 'paper') { title = 'The paper'; body = newspaper(vm.forecast) + rivalCard(vm.rival); }
   else if (d === 'regulars') { title = 'Regulars'; body = regularsBody(vm.regulars ?? []); }
   else if (d === 'signature') { title = '⭐ Signature drink'; body = signatureCard(vm.signature, sig); }
@@ -632,7 +637,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onTip?(input: NightFix): void; onStaff?(action: 'hire' | 'fire'): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onTip?(input: NightFix): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'close', opts: { area?: AreaId; staff?: number }): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
   let lastVm: NightVM | null = null;
@@ -669,7 +674,12 @@ export function createNight(
       ui.sig = null;
       handlers.onSignature?.(null);
     } else if (action === 'scout') handlers.onScout?.();
-    else if (action === 'staff') handlers.onStaff?.(el.dataset.staff === 'fire' ? 'fire' : 'hire');
+    else if (action === 'branch') {
+      const op = el.dataset.op;
+      if (op === 'open' && el.dataset.area) handlers.onBranch?.('open', { area: el.dataset.area as AreaId });
+      else if (op === 'staff') handlers.onBranch?.('staff', { staff: Number(el.dataset.staff) });
+      else if (op === 'close') handlers.onBranch?.('close', {});
+    } else if (action === 'staff') handlers.onStaff?.(el.dataset.staff === 'fire' ? 'fire' : 'hire');
     else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);
     else if (action === 'checkout' && el.dataset.checkout) handlers.onCheckout?.(el.dataset.checkout as CheckoutId);
     else if (action === 'grow' && el.dataset.tier) handlers.onGrow?.(el.dataset.tier as TierId);

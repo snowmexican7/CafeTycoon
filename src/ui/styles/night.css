@@ -326,3 +326,22 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .mr-row.two { grid-template-columns: 1fr auto; }
 #night .mr-bar { height: 10px; border-radius: 6px; background: #f0e3cf; overflow: hidden; } #night .mr-bar i { display: block; height: 100%; background: #d98a3d; border-radius: 6px; }
 #night .mr-notes p { margin: 0 0 6px; padding: 8px 12px; border-radius: 12px; background: #fff6df; box-shadow: 0 0 0 2px #e8c76a; font-size: 15px; }
+
+/* P4 B4: second shop drawer. */
+#night .branch { display: flex; flex-direction: column; gap: 12px; font: 600 16px var(--font-body); color: var(--ink); }
+#night .branch .neg { color: #b8452e; } #night .branch .pos { color: #2f7a4b; }
+#night .br-lead { margin: 0; line-height: 1.4; }
+#night .br-why { margin: 0; padding: 8px 12px; border-radius: 10px; background: #fbeee0; font-weight: 800; }
+#night .br-fine { margin: 0; font-size: 14px; opacity: 0.75; line-height: 1.35; }
+#night .br-areas { display: flex; flex-direction: column; gap: 8px; }
+#night .br-area { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.6); border: 2px solid rgba(60,40,20,0.12); }
+#night .br-area > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#night .br-area b { font-size: 18px; } #night .br-area small { font-size: 14px; }
+#night .br-area .btn { flex: none; font-size: 15px; }
+#night .br-head { display: flex; flex-direction: column; gap: 4px; } #night .br-head b { font-size: 22px; } #night .br-head small { font-size: 14px; opacity: 0.8; }
+#night .br-days { display: flex; gap: 10px; }
+#night .br-day { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.6); }
+#night .br-day small { font-size: 12px; letter-spacing: 0.08em; opacity: 0.7; } #night .br-day b { font-size: 26px; } #night .br-day span { font-size: 14px; }
+#night .br-staff { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } #night .br-staff b { font-size: 24px; min-width: 1.2em; text-align: center; } #night .br-staff small { font-size: 14px; opacity: 0.8; }
+#night .br-chip { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: #e3f1e6; color: #2f7a4b; font-weight: 800; white-space: nowrap; }
+#night .br-chip.neg { background: #fbe4dc; color: #b8452e; }

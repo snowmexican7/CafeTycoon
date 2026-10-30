@@ -1,3 +1,4 @@
+import { applyBranchInput } from './branch';
 import { applySignatureInput } from './signature';
 import { applyGearInput } from './gear';
 import { applyPitchInput } from './pitch';
@@ -158,6 +159,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'staff':
       applyStaffInput(s, input);
+      break;
+    case 'branch':
+      applyBranchInput(s, input);
       break;
     case 'role':
       applyRoleInput(s, input);

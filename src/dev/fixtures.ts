@@ -185,6 +185,37 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P4 B4: café tier with cash in the till: the "Open a 2nd shop" drawer. */
+  branchPick: {
+    night: true,
+    extras: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      s.tier = 'cafe';
+      s.cash = 420;
+      s.day = 8;
+      s.days = [1, 2, 3, 4, 5, 6].map((day) => ({ day, served: 40, lost: 5, turnedAway: 0, sales: 170, tips: 26, rent: 25 }));
+      Object.assign(s.today, { day: 7, served: 44, lost: 6, turnedAway: 0, sales: 190, tips: 30, rent: 25, wages: 20 });
+    },
+    timeline: [],
+  },
+  /** P4 B4: a running second shop in the Gym strip, with yesterday's result. */
+  branchRunning: {
+    night: true,
+    extras: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      s.tier = 'cafe';
+      s.cash = 310;
+      s.day = 11;
+      s.days = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((day) => ({ day, served: 40, lost: 5, turnedAway: 0, sales: 170, tips: 26, rent: 25 }));
+      s.branch = { area: 'gym', staff: 2, openedDay: 8, spent: 300, by: 'Ana' };
+      Object.assign(s.today, { day: 10, served: 46, lost: 4, turnedAway: 0, sales: 201, tips: 33, rent: 25, wages: 20, branch: { served: 21, walked: 3, takings: 99.96, costs: 63.4, profit: 36.56 } });
+    },
+    timeline: [],
+  },
   /** P3 B1: the night shop with roles picked (Ana is Chef, Cleo is Host; Ben and Dev free). */
   roles: {
     night: true,
