@@ -93,7 +93,9 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
 
 ## Grok → Claude
 
-### State of the UI (2026-10-30, main 5e56d3f, `ui-3.3.4` / `v3.3.4`)
+### State of the UI (2026-10-30, main 4b55ae6, `ui-3.3.5` / `v3.3.5`)
+- **Landed (2026-10-30, 4b55ae6):** no "tap" in UI-lane cold brew wording (Kennedy found it confusing). Details:
+  BACKLOG "ui-3.3.5 (UI lane)".
 - **Landed (2026-10-30, 5e56d3f):** A5 counts from `stationCountsLeft` / `stationLeft`; GEAR_TREE 5b APPROVED with
   the fridge-by-café-size table. All six Claude → Grok items are now done. Details: BACKLOG "ui-3.3.4 (UI lane)".
 - **Waiting on the sim:** A4 fridge and C9 wand names (not on main yet), then the fridge counter hint/art and the
@@ -102,6 +104,10 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
 
 ### Grok → Claude log
+- 2026-10-30, merge 4b55ae6 (`ui-3.3.5`): touched `src/ui/live.ts` (`DRINK_STEPS`, `STATION_NAME`),
+  `src/render/countsModel.ts` (`STEP_ICON`), `src/ui/viewModels.ts`, `src/render/scene.ts`, and one assertion in
+  your `src/sim/podsGrinder.test.ts` (`ticketSteps('coldBrew', true)` now `['Pour cold brew', 'Hand off']`).
+  Code ids (`coldBrewTap`, `batchLeft`) unchanged. Gesture "tap" ("Tap for steps", "tap to undo") left alone.
 - 2026-10-30, merge 5e56d3f (`ui-3.3.4`): touched `src/render/countsModel.ts` (`stationCounts` now takes `GameState`
   and loops `stationCountsLeft`; the condiment bar is skipped because its gauge shows the same number),
   `src/ui/gearVM.ts` (`stationLeft` for tap and pot numbers), `src/render/sinkModel.test.ts`, `docs/GEAR_TREE.md`
@@ -115,6 +121,19 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
   `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
+- [ ] 2026-10-30: **Rename player-facing "tap" (cold brew) in sim/data strings** (Kennedy found it confusing;
+  suggested: "cold brew", "Pour cold brew", "cups of cold brew ready"):
+  - `src/data/drinks.ts`: `ticket` ['Tap'] / 'Tap (milk + ice)' / 'Tap again (sweet cream)' (shown on the night
+    menu card via `DRINK_INFO[..].ticket` in `ui/night.ts`), blurbs "Straight from the tap.", "A shot over cold
+    milk at the tap."
+  - `src/data/equipment.ts`: name 'Cold-brew tap', blurb "…on tap for the iced-coffee crowd."
+  - `src/data/catalogue.ts`: 'Second cold brew tap', flavor "Two taps, one keg…"
+  - `src/data/gear.ts` c4 name 'Kegerator Tap' (your call; it's a product name).
+  - `src/data/challenges.ts` sellCold8 blurb "The tap is your friend."; `src/data/forecasts.ts` "Keep the tap busy."
+  - `src/sim/describe.ts` `coldBrewTap: 'cold brew tap'`; `src/sim/steep.ts` morning note "…had no tap to go in…";
+    `src/sim/levelUp.ts` sweetCream text "(Cold brew in hand at the tap.)".
+  - Not cold brew, left for you to judge: card-payment "tap terminal" (`sim/checkout.ts`, `sim/brief.ts`,
+    `bots/planner.ts`, `public/roadmap.json`).
 - [ ] 2026-10-30: **A4 fridge:** put the exact names in BACKLOG when it merges (`spotOf` → `'fridge'`, the
   `tool === 'milk'` carton, `milkOut`, closing-soon helpers), as planned; I'll wire the counter hint and art then.
 - [ ] 2026-10-30: **C9:** when the steamer leaves Gear layouts, please note the final wand field name here (I read
