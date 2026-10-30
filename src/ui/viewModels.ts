@@ -750,7 +750,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     checkout: checkoutVM(state),
     growth: growthVM(state),
     stations: stationsVM(state),
-    ...(state.gear ? { gear: gearVM(state) } : {}),
+    ...(state.gear ? { gear: gearVM(state, me) } : {}),
     pitch: pitchVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
     warnings: nightWarnings(state),

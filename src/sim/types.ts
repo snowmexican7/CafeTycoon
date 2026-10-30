@@ -374,6 +374,9 @@ export interface ChallengeProgress {
   failed: boolean;
 }
 
+/** Gear G8 (doc §8): a big buy or sell waiting on a majority of connected humans. */
+export interface GearVote { by: PlayerId; byName: string; action: 'buy' | 'sell'; gear: GearId; index?: number; amount: number; yes: PlayerId[]; no: PlayerId[] }
+
 export interface DayStats {
   day: number;
   served: number;
@@ -510,6 +513,10 @@ export interface GameState {
   /** Gear Tree: the gear in each slot, parallel to `slots` (Gear runs only). */
   slotGear?: (GearId | null)[];
   /** Gear Tree: every buy, upgrade and sale (what, the coming day, who, the cash change). */
+  /** Gear G8: an open co-op proposal for a big buy/sell (night only; lapses at opening). */
+  gearVote?: GearVote;
+  /** Gear G8: how the last proposal ended (shown on the board until the next one). */
+  gearVoteLast?: { text: string; passed: boolean };
   gearLog?: { gear: GearId; action: 'buy' | 'sell'; day: number; by: string; cash: number }[];
   /** P3 B11: the latest pitch to the panel (it applies on its `day` when green-lit). */
   pitch?: PitchResult;
@@ -564,6 +571,7 @@ export type PlayerInput =
   /** Gear Tree: buy a tier (an upgrade trades in the lower tier of its tree) or sell the gear in slot `index`. Night only. */
   | { kind: 'gear'; playerId: PlayerId; action: 'buy'; gear: GearId }
   | { kind: 'gear'; playerId: PlayerId; action: 'sell'; index: number }
+  | { kind: 'gear'; playerId: PlayerId; action: 'vote'; yes: boolean }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }

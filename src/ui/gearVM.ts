@@ -1,5 +1,5 @@
 import { AREAS, DRINK_FAMILY, type DrinkFamily } from '../data/areas';
-import { gearArea } from '../sim/gear';
+import { GEAR_VOTE_MIN, gearArea } from '../sim/gear';
 import { DRINK_INFO } from '../data/drinks';
 import { LEVEL_UPS } from '../sim/levelUp';
 /**
@@ -9,7 +9,7 @@ import { LEVEL_UPS } from '../sim/levelUp';
  */
 import { GEAR, GEAR_TREES, treeTiers, type GearId, type GearTree } from '../data/gear';
 import { slotCount } from '../sim/slots';
-import type { DrinkId, GameState } from '../sim/types';
+import type { DrinkId, GameState, PlayerId } from '../sim/types';
 
 export type GearTierState = 'owned' | 'another' | 'passed' | 'buy' | 'upgrade' | 'poor' | 'noSlot';
 
@@ -29,7 +29,14 @@ export interface GearTierVM {
   net: number;
 }
 export interface GearSlotVM { index: number; id: GearId | null; name: string; icon: string; sell: number }
+/** G8: the open co-op vote, from one player's view. */
+export interface GearVoteVM { text: string; yes: number; no: number; of: number; need: number; mine: 'yes' | 'no' | null; proposer: boolean }
+
 export interface GearVM {
+  /** G8: open co-op vote, its last result, and the rule note (co-op only). */
+  vote?: GearVoteVM;
+  voteLast?: { text: string; passed: boolean };
+  voteRule?: string;
   /** The first night of a Gear run: "Pick your gear". */
   pickNight: boolean;
   slots: GearSlotVM[];
@@ -100,7 +107,7 @@ export function gearStats(id: GearId): string {
   return out.join(' · ');
 }
 
-export function gearVM(state: GameState): GearVM {
+export function gearVM(state: GameState, me?: PlayerId): GearVM {
   const n = slotCount(state.tier);
   const gear = state.slotGear ?? [];
   const slots: GearSlotVM[] = Array.from({ length: n }, (_, i) => {
@@ -136,7 +143,16 @@ export function gearVM(state: GameState): GearVM {
   const coopHint = state.day <= 1 && humans > 1
     ? `Playing with ${humans}? Two cheap machines give two people a job (try The Hanes Method $5 + Pod-o-Matic $45). Whoever's free runs the till: ring up orders at the counter for speed tips.`
     : null;
-  return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook: notebookVM(state), levelUps: levelUpVM(state), ...(coopHint ? { coopHint } : {}) };
+  const voters = state.players.filter((p) => p.connected && !p.bot);
+  const v = state.gearVote;
+  const vote: GearVoteVM | undefined = v ? {
+    text: `${v.byName} wants to ${v.action === 'buy' ? 'buy' : 'sell'} ${GEAR[v.gear].name} ($${v.amount}).`,
+    yes: v.yes.length, no: v.no.length, of: voters.length, need: Math.floor(voters.length / 2) + 1,
+    mine: me && v.yes.includes(me) ? 'yes' : me && v.no.includes(me) ? 'no' : null, proposer: me === v.by,
+  } : undefined;
+  const voteRule = voters.length > 1 ? `Co-op: buys or sales of $${GEAR_VOTE_MIN}+ need a yes from most of the crew.` : undefined;
+  return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook: notebookVM(state), levelUps: levelUpVM(state), ...(coopHint ? { coopHint } : {}),
+    ...(vote ? { vote } : {}), ...(state.gearVoteLast ? { voteLast: state.gearVoteLast } : {}), ...(voteRule ? { voteRule } : {}) };
 }
 
 /** Polish: what the sell button says. Worthless gear gets tossed, not sold. */

@@ -33,7 +33,7 @@ import { ACCURACY } from './accuracy';
 import { ownTile, placeMess } from './floor';
 import { emitLog } from './log';
 import { rngInt, rngNext } from './rng';
-import type { DrinkId, GameState, ItemKind, Player, PlayerInput, Station, StationKind, TierId } from './types';
+import type { DrinkId, GameState, GearVote, ItemKind, Player, PlayerInput, Station, StationKind, TierId } from './types';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -68,6 +68,79 @@ export function applyGearInput(state: GameState, input: Extract<PlayerInput, { k
   if (!isGearRun(state) || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
   if (!p || !p.connected || p.bot) return state;
+  settleVote(state); // someone may have left since the last vote
+  if (input.action === 'vote') return gearCastVote(state, p, input.yes);
+  // G8: a big buy/sell with more than one human becomes a proposal (one open at a time).
+  const big = bigDeal(state, input);
+  if (big && voters(state).length > 1) {
+    if (state.gearVote) return state;
+    state.gearVote = { by: p.id, byName: p.name, ...big, yes: [p.id], no: [] };
+    delete state.gearVoteLast;
+    return state;
+  }
+  return gearDeal(state, p.name, input);
+}
+
+/** G8: the threshold for a co-op vote (doc §8). */
+export const GEAR_VOTE_MIN = 50;
+
+/** Connected humans: the electorate. Bots don't vote. */
+const voters = (state: GameState) => state.players.filter((x) => x.connected && !x.bot);
+
+/** G8: is this buy or sell a "big" one ($50 or more)? Returns the proposal body, or null. */
+function bigDeal(state: GameState, input: Extract<PlayerInput, { kind: 'gear' }>): Pick<GearVote, 'action' | 'gear' | 'index' | 'amount'> | null {
+  if (input.action === 'buy') {
+    const want = GEAR[input.gear];
+    return want && want.price >= GEAR_VOTE_MIN ? { action: 'buy', gear: want.id, amount: want.price } : null;
+  }
+  if (input.action === 'sell') {
+    const id = state.slotGear?.[input.index];
+    return id && GEAR[id].sell >= GEAR_VOTE_MIN ? { action: 'sell', gear: id, index: input.index, amount: GEAR[id].sell } : null;
+  }
+  return null;
+}
+
+/** G8: a yes or no. Passes on a strict majority of connected humans (tie fails); cash checked on pass. */
+function gearCastVote(state: GameState, p: Player, yes: boolean): GameState {
+  const v = state.gearVote;
+  if (!v || v.yes.includes(p.id) || v.no.includes(p.id)) {
+    // The proposer can withdraw with a no.
+    if (v && !yes && v.by === p.id) return endVote(state, false, `${v.byName} withdrew the ${GEAR[v.gear].name} vote.`);
+    return state;
+  }
+  (yes ? v.yes : v.no).push(p.id);
+  return settleVote(state);
+}
+
+/** G8: resolve the open vote if a majority is reached either way (also after someone leaves). */
+export function settleVote(state: GameState): GameState {
+  const v = state.gearVote;
+  if (!v) return state;
+  const ids = new Set(voters(state).map((x) => x.id));
+  const yes = v.yes.filter((id) => ids.has(id)).length;
+  const no = v.no.filter((id) => ids.has(id)).length;
+  const n = ids.size;
+  const name = GEAR[v.gear].name;
+  if (yes * 2 > n) {
+    const cashBefore = state.cash;
+    const slotsBefore = JSON.stringify(state.slotGear ?? []);
+    gearDeal(state, v.byName, v.action === 'buy' ? { kind: 'gear', playerId: v.by, action: 'buy', gear: v.gear } : { kind: 'gear', playerId: v.by, action: 'sell', index: v.index! });
+    const done = state.cash !== cashBefore || JSON.stringify(state.slotGear ?? []) !== slotsBefore;
+    return endVote(state, done, done ? `Vote passed: ${v.action === 'buy' ? 'bought' : 'sold'} ${name}.` : `Vote passed, but there wasn't enough cash or room for ${name}.`);
+  }
+  if ((n - no) * 2 <= n) return endVote(state, false, `Vote failed: no ${name} ${v.action === 'buy' ? 'tonight' : 'sale'}.`);
+  return state;
+}
+
+function endVote(state: GameState, passed: boolean, text: string): GameState {
+  delete state.gearVote;
+  state.gearVoteLast = { text, passed };
+  return state;
+}
+
+/** The buy/sell itself (G2–G4e rules), by the player named `by`. */
+function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { kind: 'gear'; action: 'buy' | 'sell' }>): GameState {
+  const p = { name: by };
   const slots = [...(state.slots ?? [])];
   const gear = [...(state.slotGear ?? [])];
   while (gear.length < slots.length) gear.push(null);
