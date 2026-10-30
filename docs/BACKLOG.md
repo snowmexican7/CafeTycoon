@@ -1731,3 +1731,9 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Per doc §4.2, a drip temperature miss no longer marks the cup (−1★). Instead it sets `Player.cupTemp`, which halves the tip when that cup is served. The flag rides through the pass (`PassItem.temp`). It's cleared on empty hands, on going into or out of a machine, and on serving. The complaint toast now says "(half tip)".
 - Optional fields, no version bump. Classic runs never set it.
 - **For Claude (bots):** bots carrying a `cupTemp` cup could prefer rebrewing over serving if time allows (optional).
+
+### Gear G8 — co-op majority vote for big buys (gear-g08)
+- Per doc §8, with more than one connected human, buying gear priced $50+ or selling gear worth $50+ opens `state.gearVote` instead of happening at once. The proposer counts as yes, and only one proposal can be open. Others vote with the new input `{kind:'gear', action:'vote', yes}`, and a no from the proposer withdraws it. A strict majority of connected humans passes it; a tie fails. Cash and slots are checked when it passes. Bots and disconnected players don't count. It lapses when the day starts. `gearVoteLast` shows the result on the board.
+- Solo and cheap buys are unchanged. The night Gear board shows a blue banner with 👍 Yes / 👎 No (Withdraw for the proposer), plus a 🗳️ mark on vote-needing buy buttons in co-op.
+- **PROTOCOL_VERSION 30 → 31** (new input shape). The snapshot is unchanged (optional fields).
+- **For Claude (bots/net):** bots never vote, so a human-majority-only rule needs no bot work. Optional: a toast for the vote result, and a host-side `settleVote` call when a player leaves (it currently re-settles on the next gear input).

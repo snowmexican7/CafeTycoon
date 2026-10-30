@@ -35,8 +35,10 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 7. **Optional niceties:** favour families that tip well in this area (`areaTipMul`), and drinks near a
    level-up (`levelUpProgress`).
 <!-- SPRINT-APPEND: later blocks add items below this line -->
+- **G8 co-op votes (optional polish):** `state.gearVote` and the `gear/vote` input are live (protocol 31). If you touch net/host: call `settleVote(state)` (sim/gear.ts) when a player disconnects so a vote can't hang; a toast on vote pass/fail would be nice. Bots must not vote.
 
 ## Sim edits made overnight (please review)
+- G8: sim/gear.ts `applyGearInput` split into proposal/vote + `gearDeal`; `GameState.gearVote/gearVoteLast`; validate.ts vote case; run.ts `startDay` clears the vote; PROTOCOL_VERSION 31.
 
 - `sim/levelUp.ts` (new), `levelUpOnServe` called from `customers.ts` serveCustomer after tallyDrink.
 - `sim/stations.ts` `recipeFor`: when there are several matches, the oldest waiting ticket wins.

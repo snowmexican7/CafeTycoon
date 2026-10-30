@@ -279,6 +279,14 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 /* Gear Tree G3: Spend › Gear. Slots on top (sell), one row of tiers per tree. */
 #night .gr-pick { font: 600 var(--fs-m) var(--font-body); background: #fff6e0; border: 2px solid #f0c97a; border-radius: 14px; padding: 10px 16px; }
 #night .gr-pick b { font: 700 var(--fs-l) var(--font-display); margin-right: 6px; }
+#night .gr-vote { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font: 600 var(--fs-m) var(--font-body); background: #eef4ff; border: 2px solid #8fb0e8; border-radius: 14px; padding: 10px 16px; }
+#night .gr-vote .gr-vote-q { flex: 1 1 300px; }
+#night .gr-vote .gr-vote-q small { display: block; font-size: var(--fs-s, 0.95em); color: var(--ink-soft); }
+#night .gr-vote .btn { font-size: var(--fs-m); padding: 8px 18px; }
+#night .gr-vote .gr-vote-mine { font-weight: 700; color: var(--ink-soft); }
+#night .gr-vote.done.ok { background: #eaf7ea; border-color: #8cc98c; }
+#night .gr-vote.done.no { background: #fbeeee; border-color: #e0a0a0; }
+#night .gr-vote-rule { font: 600 var(--fs-s, 0.95em) var(--font-body); color: var(--ink-soft); margin: 2px 0 6px; }
 #night .gr-book { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font: 600 var(--fs-m) var(--font-body); background: #fffdf6; border: 2px dashed #d9c6a0; border-radius: 14px; padding: 8px 16px; }
 #night .gr-book > b { font: 700 var(--fs-l) var(--font-display); }
 #night .gr-book small { color: var(--ink-soft); }

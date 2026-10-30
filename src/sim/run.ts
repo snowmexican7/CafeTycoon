@@ -146,6 +146,9 @@ export function startNight(state: GameState): GameState {
 /** Open the doors for `state.day`. */
 export function startDay(state: GameState): GameState {
   state.phase = 'day';
+  // Gear G8: open proposals lapse when the shop opens.
+  delete state.gearVote;
+  delete state.gearVoteLast;
   delete state.lastCall;
   state.phaseTicksLeft = secondsToTicks(state.settings.dayLengthSec);
   state.customers = [];
