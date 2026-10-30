@@ -2,6 +2,7 @@ import { ECONOMY } from '../data/economy';
 import { layoutFor } from '../data/layout';
 import { isOut } from './espresso';
 import { emitLog } from './log';
+import { returnBox } from './condiments';
 import type { GameState, Mess, Player, Vec2 } from './types';
 
 const M = ECONOMY.mess;
@@ -64,6 +65,12 @@ export function returnMop(state: GameState, p: Player): void {
   p.tool = null;
   stopCleaning(p);
   sendHome(state);
+}
+
+/** Put back whatever tool `p` carries: the mop to its corner, a condiment box to the box corner. */
+export function returnTool(state: GameState, p: Player): void {
+  if (p.tool === 'mop') returnMop(state, p);
+  else if (p.tool === 'box') returnBox(state, p);
 }
 
 function sendHome(state: GameState): void {

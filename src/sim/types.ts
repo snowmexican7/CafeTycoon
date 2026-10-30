@@ -49,6 +49,8 @@ export interface PassItem {
   slips?: number;
   /** Gear G4h: a too-hot/too-cold cup waiting on the pass. */
   temp?: boolean;
+  /** Batch/pickup: who set the cup on the pickup counter (absent = unknown, or classic). */
+  by?: PlayerId;
 }
 
 /** Absolute state.tick at which the event starts. */
@@ -128,7 +130,14 @@ export type SimEventKind =
   | 'egg.secret'
   | 'closedEarly'
   | 'gear.quirk'
-  | 'walkout';
+  | 'walkout'
+  /** Batch/pickup (docs/superpowers/specs/2026-10-30-batch-pickup-design.md). */
+  | 'till.rung'
+  | 'pickup.take'
+  | 'condiment.use'
+  | 'condiment.black'
+  | 'condiment.refill'
+  | 'steep';
 
 export interface SimEvent {
   seq: number;
@@ -162,7 +171,8 @@ export interface Player {
   staggerTicksLeft?: number;
   /** Bumps: ticks before this barista can be part of another bump (absent = 0). */
   bumpCooldown?: number;
-  tool: 'mop' | null;
+  /** What the barista carries instead of a cup: the mop, or a condiment stock box (Gear runs). */
+  tool: 'mop' | 'box' | null;
   cleaningTicksLeft: number;
   cleaningMess: number | null;
   dropQueued: boolean;
@@ -196,6 +206,8 @@ export interface Station {
   flowUntil?: number;
   /** Gear Tree: cold brew batch cups left today (absent = no cap). */
   batchLeft?: number;
+  /** Batch/pickup: how many of `batchLeft` were steeped the day before (poured first; absent = none). */
+  batchOld?: number;
   /** Gear G4d: cups left in a drip machine's pot (absent = no pot brewed). */
   potLeft?: number;
   /** Gear G4d: the tick the pot goes cold (absent = never, or no pot). */
@@ -229,6 +241,8 @@ export interface Customer {
   sig?: true;
   /** Gear G4g: the tick the till rang them up (absent = not rung). */
   rungAt?: number;
+  /** Batch/pickup: waiting to order at the till, or rung up and waiting at pickup (absent = 'order'). */
+  stage?: 'order' | 'pickup';
 }
 
 /** P3 B7: the crew's signature drink. `premium` is in $0.50 steps; `since` is the day the recipe was set. */
@@ -470,6 +484,8 @@ export interface DayStats {
   branch?: { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number; /** P4 B6: today's phone call and how it ended. */ call?: { kind: 'machine' | 'order'; took: boolean; by?: string } };
   /** FB1 WP4: seconds into the day when the board first sold out. */
   soldOutAt?: number;
+  /** Batch/pickup: drip and cold brew customers who found the condiment bar empty and took it black. */
+  blackCoffees?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -546,6 +562,14 @@ export interface GameState {
   equipLog?: { station: StationKind; day: number; by: string }[];
   /** Gear Tree (docs/GEAR_TREE.md): true for a Gear run (absent = today's game; off unless created with `gear`). */
   gear?: true;
+  /** Batch/pickup: the sticky cold brew steep target for tomorrow (Gear runs; absent = the taps' full cap). */
+  steep?: number;
+  /** Batch/pickup: fresh cold brew cups carried overnight (absent = none). */
+  coldBrewLeft?: number;
+  /** Batch/pickup: the condiment bar (Gear runs; absent in classic runs). */
+  condiments?: { servings: number };
+  /** Batch/pickup: condiment stock boxes waiting in the corner (Gear runs). */
+  condimentBoxes?: number;
   /** Gear Tree G6: drinks served this run, for drinks that level up with use (absent = none yet). */
   gearServed?: Partial<Record<DrinkId, number>>;
   /** Gear Tree G6: drinks learned today, for tomorrow's morning note (cleared each morning). */
@@ -615,6 +639,10 @@ export type PlayerInput =
   | { kind: 'grow'; playerId: PlayerId; tier: TierId }
   | { kind: 'slot'; playerId: PlayerId; index: number; station: StationKind | null }
   | { kind: 'equip'; playerId: PlayerId; station: StationKind }
+  /** Batch/pickup: tomorrow's cold brew steep target (sticky). Gear runs, night only, people only. */
+  | { kind: 'steep'; playerId: PlayerId; cups: number }
+  /** Batch/pickup: buy condiment stock boxes ($6 each). Gear runs, night only, people only. */
+  | { kind: 'condimentBox'; playerId: PlayerId; boxes: number }
   /** Gear Tree: buy a tier (an upgrade trades in the lower tier of its tree) or sell the gear in slot `index`. Night only. */
   | { kind: 'gear'; playerId: PlayerId; action: 'buy'; gear: GearId }
   | { kind: 'gear'; playerId: PlayerId; action: 'sell'; index: number }

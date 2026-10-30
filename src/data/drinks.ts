@@ -154,6 +154,9 @@ export function recipeChain(drink: DrinkId): { station: RecipeStation; recipe: R
   return out;
 }
 
+/** Batch/pickup: every drink drawn from the cold brew tap's steeped cups (a `coldBrewTap` step in its chain). */
+export const TAP_DRINKS: DrinkId[] = DRINK_IDS.filter((d) => recipeChain(d).some((x) => x.station === 'coldBrewTap'));
+
 /** Every supply a drink uses, from scratch, in first-use order. */
 export function suppliesFor(drink: DrinkId): SupplyId[] {
   const out: SupplyId[] = [];
