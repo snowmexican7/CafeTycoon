@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createRun } from '../run';
 import { step } from '../step';
+import { unlockedDrinks } from '../unlocks';
 import { rentForDay } from '../effects';
 import { restockCost } from '../night';
 import { billsForDay, wagesForDay } from '../staff';
-import { planNight } from './planner';
+import { crewTips, planNight } from './planner';
 import type { Advice } from './planner';
 import type { GearId } from '../../data/gear';
 import type { DayStats, GameState, TierId } from '../types';
@@ -84,5 +85,25 @@ describe('item 1: the planner budgets bills (rent + wages), not rent', () => {
         expect(spent).toBeLessThanOrEqual(Math.max(0, cash - billsForDay(s)) + 1e-9);
       }
     }
+  });
+});
+
+describe('item 2: no menu advice when nothing can be made', () => {
+  it('night 1 of a Gear run with an empty counter: crewTips never suggests taking drinks off the board', () => {
+    const s = gearRun({ bots: 2 });
+    expect(unlockedDrinks(s)).toEqual([]);
+    s.supplies.beans = 0;
+    s.cash = 200;
+    expect(planNight(s).some((a) => a.kind === 'menu')).toBe(false);
+    expect(crewTips(s, 8).some((t) => t.kind === 'menu')).toBe(false);
+  });
+
+  it('still switches off a drink the bar cannot make once something can be (and in classic runs)', () => {
+    const g = equipped(['e1']);
+    expect(unlockedDrinks(g)).toEqual(['espresso']);
+    expect(planNight(g).some((a) => a.kind === 'menu')).toBe(true);
+    const classic = classicRun();
+    classic.slots = ['grinder', null, null, 'trash'];
+    expect(planNight(classic).some((a) => a.kind === 'menu')).toBe(true);
   });
 });

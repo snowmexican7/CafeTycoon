@@ -49,7 +49,7 @@ import { SIG } from '../signature';
 import { defaultSlots, reasonOff, slotCount } from '../slots';
 import { knownStars, TWIST_INFO, TWISTS, twistFor } from '../taste';
 import type { TwistId } from '../taste';
-import { menuDrinks, SUPPLY_IDS } from '../unlocks';
+import { menuDrinks, SUPPLY_IDS, unlockedDrinks } from '../unlocks';
 import { BOT_IDS, botsFor, humanCount } from './roster';
 import type { CheckoutId, DrinkId, GameState, PlayerId, StationKind, SupplyId } from '../types';
 
@@ -386,6 +386,8 @@ function scoutAdvice(state: GameState, budget: Budget): Advice[] {
  */
 function menuAdvice(state: GameState, growing: boolean): Advice[] {
   if (growing) return [];
+  // Nothing can be made yet (night 1 of a Gear run with an empty counter): there is no board to trim.
+  if (unlockedDrinks(state).length === 0) return [];
   const unplaced = state.equipment ?? [];
   const on = (state.unlocked ?? BASE_DRINKS).filter((d) => state.menu[d]);
   let stays = on.length;
