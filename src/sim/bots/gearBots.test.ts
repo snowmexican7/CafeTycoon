@@ -569,4 +569,20 @@ describe('fix round 1', () => {
     expect(s.today.drinks!.latte).toBe(1);
     expect(s.pass).toEqual([]);
   });
+
+  it('I2: a drink left on an out-of-reach edge twin is no orphan for bots: the bot keeps serving', () => {
+    let s = gearShop(['espresso', 'grinder', 'steamer', 'trash'], ['e5', 'g2', 's3', 'b0'], { standIns: 1, tier: 'stand' });
+    const outer = s.stations.find((x) => x.id === 'espresso-2')!;
+    outer.output = 'espresso';
+    outer.outputSince = s.tick - 10_000; // a person's shot, long abandoned
+    s.players[0].pos = { x: 6, y: 4 };
+    s.customers = [order(1610, 'latte'), order(1611, 'espresso'), order(1612, 'latte')];
+    let touched = false;
+    for (let i = 0; i < 60 * 60; i++) {
+      s = step(s, []);
+      if (sim(s).bot!.plan.some((x) => x.kind === 'use' && x.station === 'espresso-2')) touched = true;
+    }
+    expect(touched).toBe(false);
+    expect(s.today.served).toBeGreaterThanOrEqual(2);
+  });
 });

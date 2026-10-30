@@ -347,7 +347,8 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
   };
   const candidates = state.stations
     // G4d: a pot's cups wait in the pot for the orders that claim them (pouring it out would only fill the pass).
-    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st)) && !(hasPot(st) && st.output === 'drip') && !takenBy(st) && !personAt(st) && sat(st))
+    // G9: a drink on an out-of-reach twin is for people only (a bot would pick it, find no node, and loop).
+    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st)) && !(hasPot(st) && st.output === 'drip') && reachable(state, st) && !takenBy(st) && !personAt(st) && sat(st))
     .map((st) => ({ st, d: dist(st.pos, self.pos) }))
     .sort((a, b) => a.d - b.d || a.st.pos.y - b.st.pos.y || a.st.pos.x - b.st.pos.x);
   return candidates[0]?.st ?? null;
