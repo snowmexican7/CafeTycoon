@@ -70,7 +70,7 @@ describe('Gear G5: the day HUD gear card', () => {
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 's1' });
     startDay(s);
     s.stations.find((x) => x.kind === 'steamer')!.dead = true;
-    expect(hudGearVM(s).map((g) => g.status)).toEqual(['8/8 cups left', 'dead till tonight']);
+    expect(hudGearVM(s).map((g) => g.status)).toEqual(['8/8 left', 'dead']);
     expect(hudViewModel(s).gear?.length).toBe(2);
     const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
     expect('gear' in hudViewModel(classic)).toBe(false);

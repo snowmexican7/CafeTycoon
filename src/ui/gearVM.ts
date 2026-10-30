@@ -95,12 +95,12 @@ export function hudGearVM(state: GameState): HudGearVM[] {
     .filter((s) => s.gear && s.gear !== 'b0')
     .map((s) => {
       const g = GEAR[s.gear!];
-      let status = '';
+      let status = 'ready';
       let warn = false;
-      if (s.dead) [status, warn] = ['dead till tonight', true];
-      else if (s.jammed) [status, warn] = ['jammed: whack it (E)', true];
-      else if (s.batchLeft !== undefined) [status, warn] = [s.batchLeft > 0 ? `${s.batchLeft}/${g.batch} cups left` : 'sold out', s.batchLeft === 0];
-      else if (s.lucky) status = 'lucky today ✨';
+      if (s.dead) [status, warn] = ['dead', true];
+      else if (s.jammed) [status, warn] = ['jammed! (E)', true];
+      else if (s.batchLeft !== undefined) [status, warn] = [s.batchLeft > 0 ? `${s.batchLeft}/${g.batch} left` : 'sold out', s.batchLeft === 0];
+      else if (s.lucky) status = 'lucky ✨';
       return { icon: ICON[g.tree], name: g.name, status, warn };
     });
 }

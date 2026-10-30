@@ -130,7 +130,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   let gearHtml = '';
   function renderGear(vm: HudVM): void {
     const html = (vm.gear ?? [])
-      .map((g) => `<div class="hg ${g.warn ? 'warn' : ''}"><span class="hg-ic" aria-hidden="true">${g.icon}</span><b>${esc(g.name)}</b>${g.status ? `<small>${esc(g.status)}</small>` : ''}</div>`)
+      .map((g) => `<div class="hg ${g.warn ? 'warn' : ''}" title="${esc(g.name)}: ${esc(g.status)}" aria-label="${esc(g.name)}: ${esc(g.status)}"><span class="hg-ic" aria-hidden="true">${g.icon}</span>${esc(g.status)}</div>`)
       .join('');
     if (html === gearHtml) return;
     gearHtml = html;
