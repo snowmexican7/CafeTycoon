@@ -6,7 +6,7 @@ import { BASE_DRINKS } from '../../data/drinks';
 import { FRIDGE_ID } from '../../data/layout';
 import type { GearId } from '../../data/gear';
 import type { BotStep, Customer, DrinkId, GameState, Player, SimEvent, SupplyId } from '../types';
-import { think } from './brain';
+import { MILK_LOW, think } from './brain';
 import { addStandIns } from './roster';
 import { FRIDGE } from '../fridge';
 
@@ -61,6 +61,8 @@ describe('FB2 A4: bots and the fridge', () => {
     s.milkOut = 5;
     s.customers = [rung(1, 'latte')];
     expect(ids(think(s, sim(s))).includes(`${FRIDGE_ID}:fetch`)).toBe(false);
+    s.milkOut = MILK_LOW; // low enough with a latte waiting: go now, ahead of running dry
+    expect(ids(think(s, sim(s)))[0]).toBe(`${FRIDGE_ID}:fetch`);
     const t = shop(2);
     t.milkOut = 1;
     t.customers = [rung(1, 'latte'), rung(2, 'cappuccino')];

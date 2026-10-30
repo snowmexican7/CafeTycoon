@@ -576,9 +576,12 @@ function carryPlan(state: GameState, p: Player): BotStep[] {
   return [at ? { kind: 'use', station: at.id, action: at === fridge ? 'store' : 'stock' } : { kind: 'floor', node: nodeOf(state, p.pos), action: 'drop' }];
 }
 
+/** FB2 A4 fix round 1: a bot fetches a carton for waiting milk orders once the milk out (cartons on the way included) is this low. */
+export const MILK_LOW = 4;
+
 /** Gear: milk out is low, a milk drink is wanted, the fridge has milk, nobody else is on it: fetch a carton and put it out. */
 function cartonPlan(state: GameState, p: Player): BotStep[] | null {
-  if (state.gear !== true || autoMilk(state) || (state.supplies.milk ?? 0) < 1 || milkFree(state, p) > 2) return null;
+  if (state.gear !== true || autoMilk(state) || (state.supplies.milk ?? 0) < 1 || milkFree(state, p) > MILK_LOW) return null;
   if (!milkWanted(state) || fridgeBusy(state, p)) return null;
   const fridge = fridgeReachable(state);
   const out = milkStation(state, p);

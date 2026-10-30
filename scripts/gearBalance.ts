@@ -13,7 +13,7 @@ import { expectedUse } from '../src/sim/brief';
 import { planNight } from '../src/sim/bots/planner';
 import { ECONOMY } from '../src/data/economy';
 import { GEAR, type GearId } from '../src/data/gear';
-import { FRIDGES } from '../src/data/fridges';
+import { fridgeWanted } from '../src/sim/fridge';
 import { TIERS, nextTier } from '../src/sim/growth';
 import { gearArea } from '../src/sim/gear';
 import type { GameState, PlayerInput, ScenarioId, SupplyId, TierId } from '../src/sim/types';
@@ -22,6 +22,8 @@ declare const process: { env: Record<string, string | undefined>; argv: string[]
 
 const PATH: GearId[] = ['c1', 'e1', 's1', 'c2', 's2', 'g1', 'e2', 'c3', 'g2', 'e3', 's3', 'd1', 'c4', 'e4', 'd2', 'd3', 'g3', 'e5', 'd4b', 'c5', 'd5b', 'e6'];
 const RESERVE = 45;
+/** FB2 A4: what the crew keeps back when buying the $20 Dorm Room Cube (milk drinks need it). */
+const CUBE_RESERVE = 25;
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 function night(state: GameState, ids: string[], stage: number, skip: Set<string>): PlayerInput[] {
@@ -49,10 +51,11 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
   }
   const nt = nextTier(state);
   if (nt && !skip.has('grow') && state.day >= 3 && state.cash > TIERS[nt].cost + 60) return [{ kind: 'grow', playerId: by, tier: nt }];
-  // FB2 A4: a fridge card on the planner's advice (the cube at a stand with a milk station), keeping the reserve.
-  const fridge = planNight(state).find((a) => a.input.kind === 'fridge');
-  if (fridge && fridge.input.kind === 'fridge' && !skip.has(fridge.input.fridge) && state.cash - FRIDGES[fridge.input.fridge].price >= RESERVE) {
-    return [{ kind: 'fridge', playerId: by, fridge: fridge.input.fridge }];
+  // FB2 A4: a fridge card when one is worth it (the cube as soon as a milk drink is on the board: lattes need it, so it
+  // only keeps a small reserve for the night's restock; the Udder-Matic keeps the full reserve).
+  const fridge = fridgeWanted(state, expectedUse(state).milk);
+  if (fridge && !skip.has(fridge.id) && state.cash - fridge.price >= (fridge.id === 'f1' ? CUBE_RESERVE : RESERVE)) {
+    return [{ kind: 'fridge', playerId: by, fridge: fridge.id }];
   }
   const owned = new Set(state.slotGear ?? []);
   for (const id of PATH) {
