@@ -41,9 +41,9 @@ export const EQUIPMENT: Record<EquipmentKind, EquipmentInfo> = {
     blurb: 'Warm, frothy and the reason lattes and matcha exist at all.',
   },
   coldBrewTap: {
-    name: 'Cold-brew tap',
+    name: 'Cold-brew keg',
     cost: 35,
-    blurb: 'Slow, smooth and chilly, on tap for the iced-coffee crowd.',
+    blurb: 'Slow, smooth and chilly, steeped for the iced-coffee crowd.',
   },
   trash: {
     name: 'Bin',

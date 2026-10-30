@@ -47,10 +47,10 @@ export interface DrinkInfo {
 export const DRINK_INFO: Record<DrinkId, DrinkInfo> = {
   espresso: { name: 'Espresso', short: 'Espresso', icon: '☕', bias: 1, ticket: ['Grind', 'Pull'], blurb: 'A short shot.' },
   latte: { name: 'Latte', short: 'Latte', icon: '🥛', bias: 1, ticket: ['Grind', 'Pull', 'Steam'], blurb: 'Shot plus steamed milk.' },
-  coldBrew: { name: 'Cold brew', short: 'Cold brew', icon: '🧊', bias: 1, ticket: ['Tap'], blurb: 'Straight from the tap.' },
+  coldBrew: { name: 'Cold brew', short: 'Cold brew', icon: '🧊', bias: 1, ticket: ['Pour cold brew'], blurb: 'Poured straight from the batch.' },
   icedLatte: {
     name: 'Iced latte', short: 'Iced latte', icon: '🥤', bias: 0.8, wait: 1.15, unlockDay: 3,
-    ticket: ['Grind', 'Pull', 'Tap (milk + ice)'], blurb: 'A shot over cold milk at the tap.',
+    ticket: ['Grind', 'Pull', 'Ice + milk'], blurb: 'A shot over cold milk and ice.',
   },
   mocha: {
     name: 'Mocha', short: 'Mocha', icon: '🍫', bias: 0.6, wait: 1.3, unlockDay: 5,
@@ -62,7 +62,7 @@ export const DRINK_INFO: Record<DrinkId, DrinkInfo> = {
   },
   special: {
     name: 'Maple cold foam', short: 'Maple foam', icon: '🍁', bias: 0.5, wait: 1.2,
-    ticket: ['Tap', 'Steamer (maple foam)'], blurb: 'Seasonal special: cold brew topped with maple foam.',
+    ticket: ['Pour cold brew', 'Steamer (maple foam)'], blurb: 'Seasonal special: cold brew topped with maple foam.',
   },
   // G4d: Gear runs only (a drip machine on the floor). One press brews a pot; each press after pours a cup.
   drip: { name: 'Drip coffee', short: 'Drip', icon: '🫖', bias: 0.9, ticket: ['Drip (brew a pot, then pour)'], blurb: 'Filter coffee from a pot. Cheap and fast once it is brewed.' },
@@ -71,7 +71,7 @@ export const DRINK_INFO: Record<DrinkId, DrinkInfo> = {
   cappuccino: { name: 'Cappuccino', short: 'Cappuccino', icon: '☁️', bias: 0.8, wait: 1.1, ticket: ['Grind', 'Pull', 'Steam', 'Steam again (extra foam)'], blurb: 'A latte with a tall cap of foam. Learned after 12 lattes.' },
   // G6c: more level-ups (Gear runs only).
   doppio: { name: 'Doppio', short: 'Doppio', icon: '⚡', bias: 0.6, ticket: ['Grind', 'Pull', 'Espresso machine again (second shot)'], blurb: 'A double shot. Learned after 30 espressos on a Sylvia or better.' },
-  sweetCream: { name: 'Sweet-cream cold brew', short: 'Sweet cream', icon: '🧋', bias: 0.8, wait: 1.1, ticket: ['Tap', 'Tap again (sweet cream)'], blurb: 'Cold brew under a float of sweet cream. Learned after 15 cold brews.' },
+  sweetCream: { name: 'Sweet-cream cold brew', short: 'Sweet cream', icon: '🧋', bias: 0.8, wait: 1.1, ticket: ['Pour cold brew', 'Cold brew again (sweet cream)'], blurb: 'Cold brew under a float of sweet cream. Learned after 15 cold brews.' },
   cafeAuLait: { name: 'Café au lait', short: 'Au lait', icon: '🫗', bias: 0.8, ticket: ['Drip', 'Steamer (hot milk)'], blurb: 'Drip coffee and hot milk, half and half. Learned after 12 drips.' },
   redEye: { name: 'Red-eye', short: 'Red-eye', icon: '👁️', bias: 0.6, ticket: ['Drip', 'Espresso machine (shot on top)'], blurb: 'Drip coffee with a shot dropped in. Learned after 20 drips with a real espresso machine.' },
   // G10a: comes with the Pour-Over Bar (Gear runs).
@@ -163,7 +163,7 @@ export function recipeChain(drink: DrinkId): { station: RecipeStation; recipe: R
   return out;
 }
 
-/** Batch/pickup: every drink drawn from the cold brew tap's steeped cups (a `coldBrewTap` step in its chain). */
+/** Batch/pickup: every drink drawn from the cold brew station's steeped cups (a `coldBrewTap` step in its chain). */
 export const TAP_DRINKS: DrinkId[] = DRINK_IDS.filter((d) => recipeChain(d).some((x) => x.station === 'coldBrewTap'));
 
 /** Every supply a drink uses, from scratch, in first-use order. */

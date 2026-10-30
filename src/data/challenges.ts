@@ -44,7 +44,7 @@ export const CHALLENGES: ChallengeDef[] = [
   { id: 'sellMatcha5', label: 'Sell 5 matchas', blurb: 'Sell 5 matcha lattes. Whisk, steam, smile.', goal: { kind: 'sellDrink', drink: 'matcha', need: 5 }, reward: 12, fromDay: 3, needsDrink: 'matcha' },
   { id: 'sellMocha4', label: 'Sell 4 mochas', blurb: 'Sell 4 mochas. The cocoa tin earns its keep.', goal: { kind: 'sellDrink', drink: 'mocha', need: 4 }, reward: 12, fromDay: 4, needsDrink: 'mocha' },
   { id: 'sellIced6', label: 'Sell 6 iced lattes', blurb: 'Sell 6 iced lattes. Shot over cold milk, keep going.', goal: { kind: 'sellDrink', drink: 'icedLatte', need: 6 }, reward: 10, fromDay: 3, needsDrink: 'icedLatte' },
-  { id: 'sellCold8', label: 'Sell 8 cold brews', blurb: 'Sell 8 cold brews. The tap is your friend.', goal: { kind: 'sellDrink', drink: 'coldBrew', need: 8 }, reward: 10, fromDay: 2 },
+  { id: 'sellCold8', label: 'Sell 8 cold brews', blurb: 'Sell 8 cold brews. Keep the cold brew flowing.', goal: { kind: 'sellDrink', drink: 'coldBrew', need: 8 }, reward: 10, fromDay: 2 },
   { id: 'sellSpecial3', label: 'Sell 3 specials', blurb: 'Sell 3 maple cold foams. The seasonal board wants a workout.', goal: { kind: 'sellDrink', drink: 'special', need: 3 }, reward: 14, fromDay: 5, needsDrink: 'special' },
   { id: 'influencer', label: 'Serve the influencer', blurb: 'Serve the influencer before they leave. Smile for the camera.', goal: { kind: 'serveInfluencer' }, reward: 15, fromDay: 2, needsInfluencer: true },
 ];
