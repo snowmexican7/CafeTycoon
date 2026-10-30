@@ -346,3 +346,109 @@ describe('item 4: drip pots (G4d)', () => {
     expect(station(s, 'drip-2').potLeft).toBe(3);
   });
 });
+
+describe('item 5: level-up drinks (G6/G6b/G6c, G10a) and the recipe clash', () => {
+  const NEW: DrinkId[] = ['americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye', 'icedLatte', 'mocha', 'drip'];
+  const FULL = (o: Parameters<typeof gearShop>[2] = {}) =>
+    gearShop(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'drip', 'trash'], ['g2', 'e3', 's3', 'c4', 'd3', 'b0'], { drinks: NEW, ...o });
+
+  for (const d of ['americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye', 'icedLatte', 'mocha'] as DrinkId[]) {
+    it(`a bot makes and serves a ${d} end to end`, () => {
+      let s = FULL();
+      s.customers = [order(1100, d)];
+      s = serveAll(s, 60 * 90);
+      expect(s.today.drinks![d]).toBe(1);
+      expect(s.today.wasted ?? 0).toBe(0);
+    });
+  }
+
+  it('the chains: drip pours in hand go on to the steamer or the espresso machine', () => {
+    const s = FULL();
+    expect(ids(chainFor(s, sim(s), 'cafeAuLait', 'serve'))).toEqual(['drip:insert', 'drip:take', 'steamer:insert', 'steamer:take', 'counter:serve']);
+    expect(ids(chainFor(s, sim(s), 'redEye', 'serve'))).toEqual(['drip:insert', 'drip:take', 'espresso:insert', 'espresso:take', 'counter:serve']);
+    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve'))).toEqual(['coldBrewTap:insert', 'coldBrewTap:take', 'coldBrewTap:insert', 'coldBrewTap:take', 'counter:serve']);
+    expect(chainFor(s, sim(s), 'americano', 'serve').find((x) => x.kind === 'use' && x.makes === 'americano')).toMatchObject({ station: 'espresso' });
+  });
+
+  it('americano and red-eye never go on a pod machine: the shot may, the top-up goes to the E2', () => {
+    const s = gearShop(['espresso', 'espresso', 'drip', 'trash', null, null], ['e1', 'e2', 'd3', 'b0', null, null], { drinks: ['americano', 'redEye', 'drip'] });
+    expect(ids(chainFor(s, sim(s), 'americano', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'espresso-2:insert', 'espresso-2:take', 'counter:serve']);
+    expect(ids(chainFor(s, sim(s), 'redEye', 'serve'))).toEqual(['drip:insert', 'drip:take', 'espresso-2:insert', 'espresso-2:take', 'counter:serve']);
+    const pods = gearShop(['espresso', 'drip', 'trash', null, null, null], ['e1', 'd3', 'b0', null, null, null], { drinks: ['americano', 'redEye', 'drip'] });
+    expect(chainFor(pods, sim(pods), 'americano', 'serve')).toEqual([]);
+    expect(chainFor(pods, sim(pods), 'redEye', 'serve')).toEqual([]);
+  });
+
+  it('clash: an older mocha ticket claimed by someone else keeps this bot off the cappuccino', () => {
+    let s = FULL({ standIns: 2 });
+    s.customers = [order(1200, 'mocha'), order(1201, 'cappuccino')];
+    const other = sim(s, 2);
+    other.bot!.claim = 1200;
+    other.bot!.claimDrink = 'mocha';
+    other.bot!.plan = [{ kind: 'idle', node: { x: 9, y: 4 } }];
+    other.pos = { x: 9, y: 4 };
+    const plan = think(s, sim(s));
+    expect(sim(s).bot!.claim).toBeNull(); // (it preps cold brew instead)
+    expect(plan.some((x) => x.kind === 'use' && x.station.startsWith('steamer'))).toBe(false);
+    s.customers = [order(1201, 'cappuccino')]; // the mocha is gone: now the steamer makes cappuccino
+    expect(ids(think(s, sim(s)))).toContain('counter:serve');
+    expect(sim(s).bot!.claim).toBe(1201);
+  });
+
+  it('clash: the oldest such ticket is its own, so the bot carries the latte to the steamer', () => {
+    let s = FULL();
+    s.customers = [order(1210, 'cappuccino'), order(1211, 'mocha')];
+    s = serveAll(s, 60 * 120);
+    expect(s.today.drinks!.cappuccino).toBe(1);
+    expect(s.today.drinks!.mocha).toBe(1);
+    expect(s.today.wasted ?? 0).toBe(0);
+  });
+
+  it('clash at the machine: an older mocha appears while the bot holds a latte for a cappuccino; it waits, then makes the cappuccino', () => {
+    let s = FULL();
+    const p = sim(s);
+    const steamer = s.stations.find((x) => x.id === 'steamer')!;
+    p.pos = { x: steamer.pos.x, y: 2 };
+    p.holding = 'latte';
+    s.customers = [order(1220, 'mocha'), order(1221, 'cappuccino')];
+    p.bot!.claim = 1221;
+    p.bot!.claimDrink = 'cappuccino';
+    p.bot!.plan = [{ kind: 'use', station: 'steamer', action: 'insert', makes: 'cappuccino' }, { kind: 'use', station: 'steamer', action: 'take' }, { kind: 'use', station: 'counter', action: 'serve' }];
+    for (let i = 0; i < 120; i++) s = step(s, []);
+    expect(sim(s).holding).toBe('latte');
+    expect(s.stations.find((x) => x.id === 'steamer')!.making ?? null).toBeNull();
+    s.customers = s.customers.filter((c) => c.id !== 1220);
+    s = serveAll(s, 60 * 60);
+    expect(s.today.drinks!.cappuccino).toBe(1);
+    expect(s.today.drinks!.mocha ?? 0).toBe(0);
+  });
+
+  it('americano/doppio clash at the espresso machine: only the oldest such ticket is taken', () => {
+    let s = FULL({ standIns: 2 });
+    s.customers = [order(1230, 'doppio'), order(1231, 'americano')];
+    s = serveAll(s, 60 * 120);
+    expect(s.today.drinks!.doppio).toBe(1);
+    expect(s.today.drinks!.americano).toBe(1);
+    expect(s.today.wasted ?? 0).toBe(0);
+  });
+
+  it('pour-over: made from empty hands on the pour-over bar, never on the pot drip machine', () => {
+    let s = gearShop(['drip', 'drip', 'trash', null, null, null], ['d3', 'd4b', 'b0', null, null, null], { drinks: ['drip', 'pourOver'] });
+    const p = sim(s);
+    p.pos = { x: s.stations[0].pos.x, y: 2 }; // standing by the urn
+    expect(ids(chainFor(s, p, 'pourOver', 'serve'))).toEqual(['drip-2:insert', 'drip-2:take', 'counter:serve']);
+    expect(ids(chainFor(s, p, 'drip', 'serve'))).toEqual(['drip:insert', 'drip:take', 'counter:serve']);
+    s.customers = [order(1240, 'pourOver'), order(1241, 'drip')];
+    s = serveAll(s, 60 * 90);
+    expect(s.today.drinks!.pourOver).toBe(1);
+    expect(s.today.drinks!.drip).toBe(1);
+  });
+
+  it('a busy afternoon of every new drink with two bots: all served, nothing binned', () => {
+    let s = FULL({ standIns: 2 });
+    s.customers = NEW.map((d, i) => order(1300 + i, d));
+    s = serveAll(s, 60 * 300);
+    expect(s.today.served).toBe(NEW.length);
+    expect(s.today.wasted ?? 0).toBe(0);
+  });
+});
