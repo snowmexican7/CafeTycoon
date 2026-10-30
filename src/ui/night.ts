@@ -159,7 +159,12 @@ export function gearBoard(g: GearVM): string {
           <button class="btn ${x.state === 'buy' || x.state === 'upgrade' ? '' : 'ghost'}" data-action="gear-buy" data-gear="${x.id}" ${x.state === 'buy' || x.state === 'upgrade' ? '' : 'disabled'}>${esc(GEAR_BTN[x.state](x))}</button>
         </div>`).join('')}</div></div>`)
     .join('');
-  return `<div class="st-board gr-board">${head}${note}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
+  const book = g.notebook.length && !g.pickNight
+    ? `<div class="gr-book" aria-label="Street notebook"><b>📓 Street notebook</b>${g.notebook
+        .map((r) => `<span class="gr-bk" title="${esc(r.stars === null ? `Serve ${r.left} more ${r.label.toLowerCase()} drinks to learn how this street feels about them.` : `${r.label} on this street: ${r.stars} of 5.`)}">${r.icon} ${esc(r.label)}: ${r.stars === null ? `<small>${r.served}/${r.served + r.left} served</small>` : `<span class="gr-stars">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</span>`}</span>`)
+        .join('')}</div>`
+    : '';
+  return `<div class="st-board gr-board">${head}${note}${book}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
     <div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have.</small></div>${trees}</div>`;
 }
 
