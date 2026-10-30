@@ -38,7 +38,8 @@ export interface Rogue {
 }
 /** Mop steps (takeMop, clean, returnMop), and `drop`: put what is in hand on the floor (no bin in the shop). */
 export type FloorAction = 'takeMop' | 'clean' | 'returnMop' | 'drop';
-export type BotStep = { kind: 'use'; station: string; action: BotAction } | { kind: 'idle'; node: Vec2 }
+/** `makes`: on a bot's insert step, what the machine should make from what the bot will hold there (absent on old saves). */
+export type BotStep = { kind: 'use'; station: string; action: BotAction; makes?: ItemKind } | { kind: 'idle'; node: Vec2 }
   | { kind: 'floor'; node: Vec2; action: FloorAction };
 
 export interface PassItem {

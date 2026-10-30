@@ -98,3 +98,55 @@ describe('item 1: the UI lane bot edits (pods-only bar, gear recipe in act)', ()
     expect(ids(think(s, sim(s)))).toEqual(['espresso:insert', 'espresso:take', 'counter:serve']);
   });
 });
+
+describe('item 2: pods (E1) and the mixed bar', () => {
+  // grinder, Pod-o-Matic, Brevelle (E2), steamer, bin: the pod machine is 'espresso', the E2 'espresso-2'.
+  const MIXED: [SlotContent[], (GearId | null)[]] = [['grinder', 'espresso', 'espresso', 'steamer', 'trash', null], ['g2', 'e1', 'e2', 's3', 'b0', null]];
+  const mixed = (o: Parameters<typeof gearShop>[2] = {}) => gearShop(...MIXED, o);
+  const station = (s: GameState, id: string) => s.stations.find((x) => x.id === id)!;
+
+  it('both routes free: grinder + the E2 (no pod mark); grounds never go to the pod machine', () => {
+    const s = mixed();
+    expect(ids(chainFor(s, sim(s), 'latte', 'serve'))).toEqual([
+      'grinder:insert', 'grinder:take', 'espresso-2:insert', 'espresso-2:take', 'steamer:insert', 'steamer:take', 'counter:serve',
+    ]);
+    // From grounds in hand, only the E2 will do, even standing right by the pod machine.
+    const p = sim(s);
+    p.pos = { x: station(s, 'espresso').pos.x, y: 2 };
+    expect(ids(chainFor(s, p, 'espresso', 'serve', 'grounds'))).toEqual(['espresso-2:insert', 'espresso-2:take', 'counter:serve']);
+  });
+
+  it('the grinder route busy: the pod machine pulls the shot from empty hands', () => {
+    const s = mixed();
+    station(s, 'espresso-2').busyTicksLeft = 300;
+    station(s, 'espresso-2').making = 'espresso';
+    expect(ids(chainFor(s, sim(s), 'espresso', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'counter:serve']);
+  });
+
+  it('grounds in hand, no bin, floor at the mess cap: pulled through the E2, never the pod machine', () => {
+    const s = gearShop(['grinder', 'espresso', 'espresso', 'steamer', null, null], ['g2', 'e1', 'e2', 's3', null, null]);
+    const p = sim(s);
+    p.holding = 'grounds';
+    p.pos = { x: station(s, 'espresso').pos.x, y: 2 };
+    for (let i = 0; s.messes.length < 12; i++) s.messes.push({ id: 500 + i, kind: 'spill', x: 1 + (i % 9), y: 4 + Math.floor(i / 9), amount: 1 });
+    expect(ids(think(s, p))).toEqual(['espresso-2:insert', 'espresso-2:take', 'counter:put']);
+  });
+
+  it('a mixed bar serves a run of lattes end to end, and the pod machine never holds grounds', () => {
+    let s = mixed({ standIns: 2 });
+    s.customers = [order(910, 'latte'), order(911, 'latte'), order(912, 'espresso'), order(913, 'latte')];
+    let podGrounds = false;
+    s = serveAll(s, 60 * 180, (x) => { if (station(x, 'espresso').output === 'grounds') podGrounds = true; });
+    expect(podGrounds).toBe(false);
+    expect(s.today.served).toBe(4);
+    expect(s.today.wasted ?? 0).toBe(0);
+  });
+
+  it('a mixed bar with no grinder: shots come from the pod machine', () => {
+    let s = gearShop(['espresso', 'espresso', 'steamer', 'trash', null, null], ['e1', 'e2', 's3', 'b0', null, null]);
+    expect(ids(chainFor(s, sim(s), 'espresso', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'counter:serve']);
+    s.customers = [order(920, 'espresso'), order(921, 'latte')];
+    s = serveAll(s);
+    expect(s.today.served).toBe(2);
+  });
+});
