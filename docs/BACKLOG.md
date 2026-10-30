@@ -1769,3 +1769,18 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Screenshots: /workspace/overnight/sprint/g09-twin-{e4,e5}-{1512x982,1280x800}.png.
 - Tests: src/sim/gearTwin.test.ts (11, incl. a headless bot day: two bots used both groups and the built-in wand).
 
+### Gear G10 — balance pass and top-tier perks (gear-g10)
+- **Top-tier perks** (GEAR_TREE §5 promises, now real): **C5** and **E6** "polish" forgives one slip per cup (+1★, `gearPolish`); **D4b** pour-over bar rolls a rare **flow state** (2% per cup: ×2 speed for 20 s, toast "Flow state! …"; cleared each morning; `Station.flowUntil`); **C5** draws +10% iced orders (`draws`); **E6** makes influencer visits ×1.5 (`influencerOdds`, via `applyGearPrices`). Twins never double-count a perk. Gear cards list each perk.
+- **Area order pull** (`AreaInfo.pull` / `pullDrink`, inside `gearPullMul`): office filter ×1.5 and pour-over back to ×1 (too slow for commuters); arts espresso ×1.4 and pour-over ×1.4; gym iced and espresso ×1.3. The three scenario areas already tilt orders through their scenarios (campus cold brew ×1.5, Drizzleton latte ×1.5, tourist traffic ×1.25 and tips +0.1), so they get no extra pull.
+- **Bot fix found by the balance run:** stand-ins/bots never used the **E1 pod machine** (they planned a grinder step and the bot's "insert" check ignored gear recipes), so a fresh Gear stand only ever sold cold brew. `chainFor` now drops the grind step when pods cover it, and the bot's insert check uses `gearRecipe` first, as `stations.ts` does (this also covers the pour-over bar). Small, targeted, logged for Claude.
+- **Balance check** (`npx tsx scripts/gearBalance.ts [days] [seeds]`): stand-ins play Gear weeks with a simple crew policy (buy the next tier on a fixed path keeping a $45 supply reserve, never trade pods away before a grinder, grow when cash > cost + $60, restock ~1.3 days). Results, 7-day weeks, seeds 100–103 (tourist, campus, Drizzleton, tourist):
+
+  | Crew | Served/week | Lost/week | Avg ★ | Week-end cash | Gear by day 7 |
+  |---|---|---|---|---|---|
+  | 1 | 60–90 | 15–29 | 1.6–2.3 | $41–102 | C2–C3, E1, S1–S3 |
+  | 2 | 71–94 | 17–32 | 1.7–2.1 | $64–111 | C2–C3, E1, S1–S3 |
+  | 4 | 71–96 | 18–36 | 1.7–2.1 | $63–113 | C2–C3, E1, S2–S3 |
+
+  Before the pod fix the same runs served 21–41 a week with 50–70 lost and two bankruptcies. Read: no bankruptcies; sales ~$35–60 a day; week 1 climbs the cheap rungs and the Cart/E2+grinder step is a week-2 goal, which matches GEAR_TREE's "scrappy stand" week. Crew size barely matters at the stand (it is machine-bound with 3 machines), which is the intended push to grow. Drizzleton is the hardest area (the whisk dies, iced is weak). No price numbers changed; revisit after a real week-2 run with growth (the harness rarely grows, because it spends on gear first).
+- Tests: src/sim/gearBalance.test.ts (8: flow on/off/reset, polish, nitro draw, area pull, influencer odds and classic untouched, card lines, a stand-in pulling pod shots with no grinder). 970 tests.
+

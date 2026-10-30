@@ -188,6 +188,8 @@ export interface Station {
   gear?: GearId;
   /** Gear G9: the second side of a machine that shares a slot (the dual boiler's steam wand, a second group). */
   twin?: true;
+  /** Gear G10: a pour-over in "flow state" works at double speed until this tick. */
+  flowUntil?: number;
   /** Gear Tree: cold brew batch cups left today (absent = no cap). */
   batchLeft?: number;
   /** Gear G4d: cups left in a drip machine's pot (absent = no pot brewed). */

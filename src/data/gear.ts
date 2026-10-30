@@ -52,6 +52,14 @@ export interface GearInfo {
   pot?: { cups: number; coldAfter: number | null; miss: number };
   /** G10a: a pour-over station (drip branch b). Empty hands make one handmade Pour-over in `seconds`. */
   pour?: { seconds: number };
+  /** G10 "+1★ cap": the machine forgives one slip on each cup it takes in (doc: C5, E6; pour-overs start clean anyway). */
+  polish?: true;
+  /** G10: a rare "flow state" (pour-over): this chance per use of double speed for `flow.seconds`. */
+  flow?: { chance: number; seconds: number };
+  /** G10: orders of a family get this much likelier while this machine is in a slot (Kyoto tower: iced +10%). */
+  draws?: { family: 'espresso' | 'milky' | 'iced' | 'filter'; mul: number };
+  /** G10: the influencer event is this much likelier (The Annihilator ×1.5). */
+  influencerOdds?: number;
   /** G9: extra stations in the same slot, about half a tile to the side (doc §5: two sides, no new buttons).
    *  A twin of the machine's own kind is a second group head with the same gear; any other kind (the steam
    *  wand) is a plain station of that kind. */
@@ -102,13 +110,13 @@ export const GEAR: Record<GearId, GearInfo> = {
   c2: g({ id: 'c2', tree: 'coldBrew', tier: 2, station: 'coldBrewTap', name: 'Mason Jar Army', price: 25, sell: 8, sticker: '$30', speed: 1, marks: 0, batch: 16, quirks: { crack: 0.03, crackLoss: 4 }, blurb: 'A shelf of jars steeping overnight. 16 cups a day.' }),
   c3: g({ id: 'c3', tree: 'coldBrew', tier: 3, station: 'coldBrewTap', name: 'The Big Orange Bucket', price: 55, sell: 20, sticker: '$40', speed: 1, marks: 0, batch: 30, blurb: 'Hardware-store bucket plus a filter bag. 30 cups a day. Hide it from the inspector.' }),
   c4: g({ id: 'c4', tree: 'coldBrew', tier: 4, station: 'coldBrewTap', name: 'Kegerator Tap', price: 110, sell: 55, sticker: '$600', speed: 1, marks: 0, quirks: { funny: 0.02, funnyText: 'The keg burps. Loudly. Nobody says anything.' }, blurb: 'A real tap. No daily cap: it pours as long as there is concentrate.' }),
-  c5: g({ id: 'c5', tree: 'coldBrew', tier: 5, station: 'coldBrewTap', name: 'The Slow Tower of Patience', price: 220, sell: 110, sticker: '$1,200', speed: 1.1, marks: 0, priceMul: 1.25, blurb: 'A Kyoto drip tower. Customers stare at it, then order two.' }),
+  c5: g({ id: 'c5', tree: 'coldBrew', tier: 5, station: 'coldBrewTap', name: 'The Slow Tower of Patience', price: 220, sell: 110, sticker: '$1,200', speed: 1.1, marks: 0, priceMul: 1.25, polish: true, draws: { family: 'iced', mul: 1.1 }, blurb: 'A Kyoto drip tower. Customers stare at it, then order two.' }),
   e1: g({ id: 'e1', tree: 'espresso', tier: 1, station: 'espresso', name: 'Pod-o-Matic 3000', price: 45, sell: 8, sticker: '$129', speed: 5 / 6, marks: 1, priceMul: 0.85, pods: true, quirks: { jam: 0.04, morning: 0.05, morningText: 'The Pod-o-Matic\'s "descale" light is on again. Nobody knows what it means.' }, blurb: 'Pods, no grinder: empty hands, press E, get a shot. Tastes like a pod (2★ at best, espresso drinks sell for less). A mysterious "descale" light nobody understands.' }),
   e2: g({ id: 'e2', tree: 'espresso', tier: 2, station: 'espresso', name: 'Brevelle "Barista Distress"', price: 80, sell: 35, sticker: '$700', speed: 0.9, marks: 0, quirks: { spill: 0.03, funny: 0.02, funnyText: 'The Brevelle makes a noise like a goose. HONK.' }, blurb: 'A home machine doing its best. Needs a grinder. Makes a noise like a goose.' }),
   e3: g({ id: 'e3', tree: 'espresso', tier: 3, station: 'espresso', name: 'Sylvia the Prosumer', price: 150, sell: 75, sticker: '$1,800', speed: 1, marks: 0, blurb: 'A proper single boiler: today\'s machine.' }),
   e4: g({ id: 'e4', tree: 'espresso', tier: 4, station: 'espresso', name: 'Double Trouble', price: 260, sell: 130, sticker: '$3,000', speed: 1.1, marks: 0, twin: ['steamer'], blurb: 'Dual boiler, two sides: shots on one side, a steam wand on the other. One barista can pull a shot and steam milk at once.' }),
   e5: g({ id: 'e5', tree: 'espresso', tier: 5, station: 'espresso', name: 'La Marzipana Due', price: 450, sell: 225, sticker: '$18,000', speed: 1.1, marks: 0, priceMul: 1.1, twin: ['steamer', 'espresso'], blurb: 'Two-group commercial machine with a steam wand: two shots at once. The regulars notice.' }),
-  e6: g({ id: 'e6', tree: 'espresso', tier: 6, station: 'espresso', name: 'The Annihilator', price: 800, sell: 400, sticker: '$25,000+', speed: 1.4, marks: 0, priceMul: 1.2, twin: ['steamer', 'espresso'], blurb: 'Two groups and a steam wand. So loud the café cat leaves for the day.' }),
+  e6: g({ id: 'e6', tree: 'espresso', tier: 6, station: 'espresso', name: 'The Annihilator', price: 800, sell: 400, sticker: '$25,000+', speed: 1.4, marks: 0, priceMul: 1.2, polish: true, influencerOdds: 1.5, twin: ['steamer', 'espresso'], blurb: 'Two groups and a steam wand. So loud the café cat leaves for the day.' }),
   g1: g({ id: 'g1', tree: 'grinder', tier: 1, station: 'grinder', name: 'Spice grinder', price: 12, sell: 2, sticker: '$15', speed: 0.6, marks: 0, quirks: { offNote: 0.05 }, blurb: 'Still smells of cumin. Slow.' }),
   g2: g({ id: 'g2', tree: 'grinder', tier: 2, station: 'grinder', name: 'Burr grinder', price: 30, sell: 12, sticker: '$150', speed: 1, marks: 0, blurb: 'Today\'s grinder.' }),
   g3: g({ id: 'g3', tree: 'grinder', tier: 3, station: 'grinder', name: 'The Monolith', price: 90, sell: 45, sticker: '$1,500', speed: 1.65, marks: 0, blurb: 'A flat-burr slab of steel. Fast.' }),
@@ -121,7 +129,7 @@ export const GEAR: Record<GearId, GearInfo> = {
   d3: g({ id: 'd3', tree: 'drip', tier: 3, station: 'drip', name: 'Office Urn', price: 85, sell: 40, sticker: '$400', speed: 20 / 12, marks: 0, pot: { cups: 16, coldAfter: null, miss: 0.02 }, quirks: { funny: 0.03, funnyText: 'Someone from "accounting" took a free refill. Nobody stopped them.' }, blurb: 'A steel urn that keeps it hot all day. 16 cups in 12 s.' }),
   d4: g({ id: 'd4', tree: 'drip', tier: 4, station: 'drip', name: 'Twin-Batch Fetch-O', price: 160, sell: 80, sticker: '$2,500', speed: 2, marks: 0, pot: { cups: 24, coldAfter: null, miss: 0 }, blurb: 'Two pots at once, 10 s. The diner down the road has one.' }),
   // G10a: the drip branch's other side (doc §4.2 D4b/D5b). Its own row; the tiers keep the doc's numbers.
-  d4b: g({ id: 'd4b', tree: 'pourOver', tier: 4, station: 'drip', name: 'Pour-Over Bar', price: 70, sell: 30, sticker: '$120', speed: 1, marks: 0, pour: { seconds: 8 }, requires: { tree: 'drip', tier: 3, label: 'Office Urn' }, quirks: { spill: 0.03, funny: 0.02, funnyText: 'Flow state: the pour-over spirals perfectly. Somebody films it.' }, blurb: 'A V60 cone and a gooseneck kettle. No pot: one handmade Pour-over at a time, 8 s. Unlocks the Pour-over ($4.50). The kettle sometimes pours on your shoe.' }),
+  d4b: g({ id: 'd4b', tree: 'pourOver', tier: 4, station: 'drip', name: 'Pour-Over Bar', price: 70, sell: 30, sticker: '$120', speed: 1, marks: 0, pour: { seconds: 8 }, flow: { chance: 0.02, seconds: 20 }, requires: { tree: 'drip', tier: 3, label: 'Office Urn' }, quirks: { spill: 0.03 }, blurb: 'A V60 cone and a gooseneck kettle. No pot: one handmade Pour-over at a time, 8 s. Unlocks the Pour-over ($4.50). The kettle sometimes pours on your shoe; now and then you hit flow state and pour twice as fast.' }),
   d5b: g({ id: 'd5b', tree: 'pourOver', tier: 5, station: 'drip', name: 'The Pour-Over Lab', price: 150, sell: 75, sticker: '$600', speed: 1, marks: 0, priceMul: 1.15, pour: { seconds: 2.5 }, requires: { tree: 'drip', tier: 3, label: 'Office Urn' }, blurb: 'Three cones and a Chemex: three cups in about 7 s. Pour-overs sell for ×1.15. Snobs start dropping by.' }),
   b0: g({ id: 'b0', tree: 'bin', tier: 0, station: 'trash', name: 'Cardboard box', price: 0, sell: 0, sticker: 'free', speed: 1, marks: 0, blurb: 'Today\'s bin, but it says FRAGILE on the side.' }),
 };

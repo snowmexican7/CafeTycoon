@@ -203,8 +203,18 @@ export function gearRequiresMet(state: GameState, id: GearId): boolean {
   return (state.slotGear ?? []).some((x) => x && ((GEAR[x].tree === req.tree && GEAR[x].tier >= req.tier) || GEAR[x].tree === GEAR[id].tree));
 }
 
-export function gearSpeed(s: Station): number {
-  return s.gear ? GEAR[s.gear].speed : 1;
+export function gearSpeed(s: Station, tick?: number): number {
+  if (!s.gear) return 1;
+  const flowing = tick !== undefined && s.flowUntil !== undefined && tick < s.flowUntil;
+  return GEAR[s.gear].speed * (flowing ? FLOW_SPEED : 1);
+}
+
+/** G10: flow state doubles a pour-over's speed. */
+export const FLOW_SPEED = 2;
+
+/** G10 "+1★ cap": a polish machine forgives one slip on the cup it just took in. */
+export function gearPolish(s: Station): void {
+  if (s.gear && GEAR[s.gear].polish && (s.cupSlips ?? 0) > 0) s.cupSlips = s.cupSlips! - 1;
 }
 
 export function gearMarks(s: Station): number {
@@ -218,6 +228,7 @@ export function gearMorning(state: GameState): void {
   if (state.gearLearned?.length) state.morningNotes.push(...state.gearLearned);
   delete state.gearLearned;
   for (const s of state.stations) {
+    delete s.flowUntil;
     const cap = s.gear ? GEAR[s.gear].batch : undefined;
     if (cap !== undefined) s.batchLeft = cap;
     else delete s.batchLeft;
@@ -272,6 +283,12 @@ export function gearBlocked(state: GameState, s: Station, p: Player): boolean {
 
 /** G5: right after a gear machine starts a brew: roll its downsides and jokes (Gear runs only). */
 export function gearAfterUse(state: GameState, s: Station, p: Player): void {
+  // G10: flow state starts on the next cup (this one's time is already set).
+  const flow = s.gear && isGearRun(state) ? GEAR[s.gear].flow : undefined;
+  if (flow && !(s.flowUntil !== undefined && state.tick < s.flowUntil) && rngNext(state) < flow.chance) {
+    s.flowUntil = state.tick + Math.round(flow.seconds * TICK_RATE);
+    quirk(state, s, `Flow state! The ${GEAR[s.gear!].name} pours twice as fast for ${flow.seconds} s. Somebody films it.`, p.id);
+  }
   const q = s.gear && isGearRun(state) ? GEAR[s.gear].quirks : undefined;
   if (!q) return;
   const name = GEAR[s.gear!].name;
@@ -355,6 +372,10 @@ export function gearPriceMul(state: GameState, drink: DrinkId): number {
 export function applyGearPrices(state: GameState, m: Modifiers): void {
   if (!isGearRun(state)) return;
   for (const d of Object.keys(m.price) as DrinkId[]) m.price[d] *= gearPriceMul(state, d);
+  // G10: The Annihilator draws influencers.
+  let odds = 1;
+  for (const s of state.stations) if (s.gear && !s.twin) odds = Math.max(odds, GEAR[s.gear].influencerOdds ?? 1);
+  m.eventOdds.influencerVisit *= odds;
 }
 
 /**
@@ -435,8 +456,18 @@ export function gearPullMul(state: GameState, drink: DrinkId): number {
   const fam = DRINK_FAMILY[drink];
   if (!fam) return 1;
   let best = 0;
-  for (const s of state.stations) if (s.kind === FAMILY_TREE[fam] && s.gear) best = Math.max(best, GEAR[s.gear].tier);
-  return 1 + GEAR_PULL * Math.max(0, best - 1);
+  let draw = 1;
+  for (const s of state.stations) {
+    if (!s.gear) continue;
+    if (s.kind === FAMILY_TREE[fam]) best = Math.max(best, GEAR[s.gear].tier);
+    const d = GEAR[s.gear].draws;
+    if (d && d.family === fam && !s.twin) draw = Math.max(draw, d.mul);
+  }
+  // G10: the hidden area tilts what walk-ins order (a per-drink rule multiplies on top of the family's).
+  const area = gearArea(state);
+  const a = area ? AREAS[area] : undefined;
+  const pull = (a?.pull?.[fam] ?? 1) * (a?.pullDrink?.[drink] ?? 1);
+  return (1 + GEAR_PULL * Math.max(0, best - 1)) * draw * pull;
 }
 
 /** G7: add a served cup's tip to today's per-family tally (Gear runs only). */
