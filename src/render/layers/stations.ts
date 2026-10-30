@@ -129,11 +129,11 @@ export function buildEmptySlot(pos: Vec2): Container {
 /** G9: size of a twin station's art next to its main side. */
 const TWIN_SCALE = 0.7;
 
-export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false): Container {
+export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour'): Container {
   plainArt = twin;
   let root: Container;
   try {
-    root = buildStationArt(kind, pos, checkout);
+    root = variant === 'pour' ? buildPourOver(pos) : buildStationArt(kind, pos, checkout);
   } finally {
     plainArt = false;
   }
@@ -149,6 +149,44 @@ export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId 
     return root;
   }
   if (n > 1) numberBadge(root, sx(pos.x), sy(pos.y), n);
+  return root;
+}
+
+/**
+ * Gear G10a/polish: a pour-over bar sits in the drip slot but is a different thing: a wooden stand with two
+ * ceramic cones over glass servers, and a gooseneck kettle beside it.
+ */
+function buildPourOver(pos: Vec2): Container {
+  const root = new Container();
+  const g = new Graphics();
+  root.addChild(g);
+  const cx = sx(pos.x);
+  const cy = sy(pos.y);
+  root.zIndex = stationDepth(pos);
+  cabinet(g, cx, cy);
+  const top = cy - 20; // where machines sit
+  const L = cx - 8; // the stand's centre, left of the kettle
+  // Wooden stand: a top board on two legs.
+  g.roundRect(L - 22, top - 44, 44, 6, 3).fill(0x9a6a43).stroke({ width: 1, color: 0x6e4a2c });
+  g.rect(L - 20, top - 38, 4, 38).fill(0x8a5d3a);
+  g.rect(L + 16, top - 38, 4, 38).fill(0x8a5d3a);
+  for (const dx of [-9, 9]) {
+    const x = L + dx;
+    // Glass server with coffee in it, under the board.
+    g.roundRect(x - 6, top - 26, 12, 25, 5).fill({ color: 0xdde8ee, alpha: 0.9 }).stroke({ width: 1.2, color: 0x8d989f });
+    g.roundRect(x - 5, top - 14, 10, 12, 4).fill(0x5a3320);
+    g.circle(x, top - 33, 1.5).fill(0x5a3320);
+    // Ceramic cone with its paper filter, sitting on the board.
+    g.poly([x - 9, top - 58, x + 9, top - 58, x + 3, top - 42, x - 3, top - 42]).fill(0xfbf6ee).stroke({ width: 1.5, color: 0xc9bca8 });
+    g.poly([x - 7, top - 58, x + 7, top - 58, x + 5, top - 54, x - 5, top - 54]).fill(0x7a4a2a);
+  }
+  // Gooseneck kettle beside the stand.
+  const K = cx + 21;
+  g.roundRect(K - 7, top - 24, 14, 24, 6).fill(0x2d2a30);
+  g.roundRect(K - 4, top - 28, 8, 5, 2).fill(0x2d2a30);
+  g.moveTo(K - 6, top - 14).quadraticCurveTo(K - 15, top - 18, K - 13, top - 34).stroke({ width: 2.5, color: 0x2d2a30, cap: 'round' });
+  g.moveTo(K - 15, top - 40).quadraticCurveTo(K - 12, top - 46, K - 9, top - 40).stroke({ width: 2, color: 0xffffff, alpha: 0.6 });
+  plate(root, g, cx, cy, 'POUR-OVER');
   return root;
 }
 

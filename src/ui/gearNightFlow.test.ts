@@ -35,3 +35,26 @@ describe('G4f: one clear night order in Gear runs', () => {
     expect(h).toContain('data-sv="stations"');
   });
 });
+
+describe('Gear polish: night board wording', () => {
+  const title = (h: string) => /<h1[^>]*>([^<]*)/.exec(h)?.[1] ?? h;
+  it('the title says "Pick your gear" only on the gear tab of the first night', () => {
+    const vm = nightViewModel(run(true), 'p1');
+    expect(nightHtml(vm, undefined, null, ui({ tab: 'gear' }))).toContain('Pick your gear');
+    const restock = nightHtml(vm, undefined, null, ui({ tab: 'tonight' }));
+    expect(title(restock)).not.toContain('Pick your gear');
+  });
+  it('an empty Gear counter does not paint every jar red', () => {
+    const vm = nightViewModel(run(true), 'p1');
+    const h = nightHtml(vm, undefined, null, ui({ tab: 'tonight' }));
+    expect(h).not.toMatch(/class="restock danger"/);
+  });
+  it('classic still flags an empty jar, but not the optional pastries', () => {
+    const s = run(false);
+    s.supplies.milk = 0;
+    s.supplies.pastry = 0;
+    const h = nightHtml(nightViewModel(s, 'p1'), undefined, null, ui());
+    expect(h).toMatch(/class="restock danger" data-supply="milk"/);
+    expect(h).not.toMatch(/class="restock danger" data-supply="pastry"/);
+  });
+});

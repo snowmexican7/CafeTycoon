@@ -115,6 +115,16 @@ export function drawPerson(g: Graphics, o: PersonOpts): void {
   if (o.holding) drawItem(g, o.holding, 20, -24, 0.95);
 }
 
+/** Gear G4g till: a rung-up order wears a little paper receipt (top-left of the bubble) with a green tick. */
+export function drawReceipt(g: Graphics, x: number, y: number): void {
+  const w = 20, h = 25;
+  const pts: number[] = [x, y, x + w, y, x + w, y + h];
+  for (let i = 4; i >= 0; i--) pts.push(x + (i * w) / 4, y + h - (i % 2 ? 4 : 0));
+  g.poly(pts).fill(0xfffdf6).stroke({ width: 2, color: 0x6e624f });
+  g.rect(x + 4, y + 5, 12, 2).fill(0xb9ad99);
+  g.moveTo(x + 5, y + 14).lineTo(x + 9, y + 18).lineTo(x + 15, y + 10).stroke({ width: 3, color: 0x3f9b5a, cap: 'round', join: 'round' });
+}
+
 /** Order bubble with a drink icon and a patience ring, centred at (x, y). */
 export function drawOrderBubble(g: Graphics, x: number, y: number, drink: DrinkId, patience: number, upset = false): void {
   const r = 22;
@@ -339,6 +349,7 @@ export class Actors {
       }
       sprite.extra.clear();
       if (c.kind === 'influencer') drawInfluencer(sprite.extra, timeSec);
+      if (c.rungAt !== undefined && !c.upset) drawReceipt(sprite.extra, -42, -128);
       const frac = c.patienceLeft / c.patienceMax;
       if (c.kind === 'impatient' && !c.upset) {
         // a stopwatch on the bubble, a tapping foot, and a sweat drop when it gets close

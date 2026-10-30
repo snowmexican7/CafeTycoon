@@ -15,6 +15,11 @@ export function toastText(name: string, item: DrinkId, amount: number): string {
   return `${name} served ${DRINK_PHRASE[item]} +$${amount.toFixed(2)}`;
 }
 
+/** Gear G4g: the till's fast hand-off tip, e.g. " · 🧾 +$0.50". Empty when the order wasn't rung up. */
+export function tillText(till: unknown): string {
+  return typeof till === 'number' && till > 0 ? ` · 🧾 +$${till.toFixed(2)}` : '';
+}
+
 /** P3 B5: the cup's accuracy stars, e.g. " ★★☆". Empty for old events without stars. */
 export function starText(stars: unknown): string {
   if (typeof stars !== 'number') return '';
@@ -103,7 +108,7 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       const name = playerIndex >= 0 ? next.players[playerIndex].name : 'Someone';
       bursts.push({
         kind: 'serve',
-        text: toastText(name, e.data.item as DrinkId, Number(e.data.amount) || 0) + starText(e.data.stars) + comboText(e.data) + sigText(e.data),
+        text: toastText(name, e.data.item as DrinkId, Number(e.data.amount) || 0) + starText(e.data.stars) + comboText(e.data) + sigText(e.data) + tillText(e.data.till),
         by,
         playerIndex,
         perfect: e.data.perfect === true,
