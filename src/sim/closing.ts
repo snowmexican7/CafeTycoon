@@ -1,3 +1,4 @@
+import { settleBranch } from './branch';
 import { seasonWeekEnd } from './season';
 import { sigRating } from './signature';
 import { comboRating } from './taste';
@@ -59,6 +60,7 @@ export function finishDay(state: GameState): GameState {
     state.today.checkoutFees = round2((state.today.checkoutFees ?? 0) + licence);
   }
   settleEspresso(state);
+  settleBranch(state);
 
   const { served, lost } = state.today;
   const weighted = lost + (state.today.lostRegulars ?? 0) * (ECONOMY.customers.regular.lostWeight - 1);

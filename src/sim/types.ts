@@ -1,5 +1,5 @@
 import type { PerkId } from '../data/perks';
-import type { DrinkFamily } from '../data/areas';
+import type { AreaId, DrinkFamily } from '../data/areas';
 import type { GearId } from '../data/gear';
 import type { TwistId } from './taste';
 import type { RoleId } from './roles';
@@ -237,6 +237,9 @@ export interface Rival {
   counter?: number;
 }
 
+/** P4 B4: a second shop run off-screen (see sim/branch.ts). `spent` is what opening it cost. */
+export interface Branch { area: AreaId; staff: number; openedDay: number; spent: number; by: string }
+
 /** P4 B2: one week of a season: its profit target (none for week 1) and the score it added. */
 export interface SeasonWeek { week: number; target: number | null; profit: number }
 /** P4 B2: `base` is the week-1 score (floored); `startScore` the run score when the current week began. */
@@ -458,6 +461,8 @@ export interface DayStats {
   takingsByDrink?: Partial<Record<DrinkId, number>>;
   /** P4 B3: who handed off what today: serves and takings per player (bots included). */
   byPlayer?: Record<PlayerId, { serves: number; takings: number }>;
+  /** P4 B4: the second shop's day (its profit is already in the till). */
+  branch?: { served: number; walked: number; takings: number; costs: number; profit: number };
   /** FB1 WP4: seconds into the day when the board first sold out. */
   soldOutAt?: number;
 }
@@ -475,6 +480,8 @@ export interface GameState {
   unlimited: boolean;
   /** P4 B2: the four-week season started by Keep going after week 1 (Gear runs). */
   season?: Season;
+  /** P4 B4: the second shop, once opened. */
+  branch?: Branch;
   bankrupt: boolean;
   hostId: PlayerId;
   settings: Settings;
@@ -592,6 +599,7 @@ export type PlayerInput =
   | { kind: 'rivalCounter'; playerId: PlayerId; on?: boolean }
   /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
   | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire' }
+  | { kind: 'branch'; playerId: PlayerId; action: 'open' | 'staff' | 'close'; area?: AreaId; staff?: number }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
   | { kind: 'grow'; playerId: PlayerId; tier: TierId }

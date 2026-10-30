@@ -19,6 +19,7 @@ import { awardsFor, awardsText, type Award } from '../sim/awards';
 import { catalogueById } from '../data/catalogue';
 import { GEAR } from '../data/gear';
 import { reportViewModel, type ReportVM } from './report';
+import { branchViewModel, type BranchVM } from './branchView';
 import { SEASON, seasonMedal, seasonTarget, targetsHit, type Medal } from '../sim/season';
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
@@ -274,6 +275,8 @@ export function handCardViewModel(state: GameState, item: CatalogueItem): HandCa
 export interface NightVM {
   /** P4 B3: the manager's report on the last finished day. */
   report?: ReportVM;
+  /** P4 B4: the second shop (Gear runs). */
+  branch?: BranchVM;
   clock: string;
   cash: string;
   takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; wages?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
@@ -771,7 +774,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   };
   const brief = nightBriefVM(vm, state);
   const report = reportViewModel(state);
-  return { ...vm, brief, tips: tipsVM(state, brief.alerts.map((a) => a.id)), ...(report ? { report } : {}) };
+  const branch = branchViewModel(state);
+  return { ...vm, brief, tips: tipsVM(state, brief.alerts.map((a) => a.id)), ...(report ? { report } : {}), ...(branch ? { branch } : {}) };
 }
 
 /** P3 B15: the night board's staff row. */

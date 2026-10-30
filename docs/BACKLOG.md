@@ -1802,6 +1802,15 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 4 B4 — second shop (p4-b04-second-shop, tag p4-b04)
+
+- [x] `src/sim/branch.ts`: `BRANCH` tunables (cost $300, 20 base walk-ins, 12 cups per barista, 1–3 staff, rent $28, 5% tips, ±15% noise). `branchDay(state)` = walk-ins × home traffic modifiers (reputation, weather, week ramp; computed as at night so the day shape is ignored) × area fit (doubled swing of the menu's loved/meh multiplier, × the area's `all`) × seeded hash noise (no RNG draw, replays identical), capped by staff; takings at menu prices; costs = rent + staff × `wageEach` + cups × average unit cost.
+- [x] `settleBranch` in `finishDay` after espresso: cash += profit, `DayStats.branch`. `profitOf` includes it; `fittingsValue` counts the lease at half. `branch` input (open/staff/close; night, Gear, people only; café tier, cash, area ≠ home), validated. PROTOCOL 36 → 37. `GameState.branch?` optional: old saves load.
+- [x] UI `src/ui/branchView.ts`: `branchViewModel` (`NightVM.branch`), drawer (area picker with fit words, or running view with last day / tomorrow estimate / staff −/+ / sell for half), 🏪 chip on the Day card, receipt line. Button "🏪 Open a 2nd shop ▸" / "Second shop ▸" on the Day or In-the-till card.
+- [x] Tests: `src/sim/branch.test.ts` (5: gating + half-value fitting, deterministic capped closing + profitOf, sell-back is score-neutral, area fit, validation + drawer HTML + old saves).
+- [x] Shots: `/workspace/overnight/sprint/p4-b04/branchPickBoard-*`, `branchPick-*` (drawer), `branchRunning-*` (fixtures `branchPick`, `branchRunning`).
+- [ ] Follow-ups: playtest the numbers (≈$10–45/day at 2 staff in stand-in runs: payback ~1–2 weeks); bots never open/staff the branch (planner hint for Claude); more than one shop and a per-shop menu; branch rows in the manager report and the week-end screen; rival second shop (P4 B1 follow-up) could compete in the same area.
+
 ### Phase 4 B3 — manager reports (p4-b03-manager-reports, tag p4-b03)
 
 - [x] Sim tallies in `serveCustomer` (`noteReport`): `DayStats.waitTicks` (patienceMax − patienceLeft at the hand-off), `takingsByDrink` (price + tip), `byPlayer` ({serves, takings}). Optional fields, PROTOCOL 35 → 36.
