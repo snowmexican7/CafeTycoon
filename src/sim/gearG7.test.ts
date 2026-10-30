@@ -39,3 +39,31 @@ describe('Gear Tree G7a: hidden area tips', () => {
     expect(areaTipMul(at('rainyWeek'), 'special')).toBe(1);
   });
 });
+
+describe('Gear Tree G7c: asked-for walk-outs', () => {
+  it('a loved family you do not serve sends some walk-ins away, and tomorrow says so', async () => {
+    const { gearAskedFor, gearMorning } = await import('./gear');
+    const s = { ...run(true, 5), scenario: 'campusTown' } as GameState; // campus loves iced
+    let left = 0;
+    for (let i = 0; i < 400; i++) if (gearAskedFor(s, ['espresso', 'latte'])) left++;
+    expect(left).toBeGreaterThan(20);
+    expect(left).toBeLessThan(90);
+    expect(s.gearAsked).toEqual({ iced: left });
+    s.morningNotes = [];
+    gearMorning(s);
+    expect(s.morningNotes).toContain(`${left} people asked for something iced yesterday and walked on.`);
+    expect(s.gearAsked).toBeUndefined();
+  });
+
+  it('nobody asks when you serve what the area loves, or in classic runs (no RNG drawn)', async () => {
+    const { gearAskedFor } = await import('./gear');
+    const s = { ...run(true, 5), scenario: 'campusTown' } as GameState;
+    const r = s.rng;
+    expect(gearAskedFor(s, ['coldBrew'])).toBe(false);
+    expect(s.rng).toBe(r);
+    const c = run(false, 5);
+    const rc = c.rng;
+    expect(gearAskedFor(c, ['espresso'])).toBe(false);
+    expect(c.rng).toBe(rc);
+  });
+});

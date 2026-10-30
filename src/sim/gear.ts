@@ -1,4 +1,4 @@
-import { AREAS, AREA_TIP, DRINK_FAMILY, type AreaId } from '../data/areas';
+import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, FAMILY_WORD, type AreaId, type DrinkFamily } from '../data/areas';
 /**
  * Gear Tree G2 (docs/GEAR_TREE.md): the sim side of a Gear run. Everything here is a no-op unless
  * `state.gear === true`, which only `createRun({ gear: true })` sets (the UI only with `?gear=1`).
@@ -116,6 +116,7 @@ export function gearMarks(s: Station): number {
 
 export function gearMorning(state: GameState): void {
   if (!isGearRun(state)) return;
+  state.morningNotes.push(...gearAskedNotes(state));
   for (const s of state.stations) {
     const cap = s.gear ? GEAR[s.gear].batch : undefined;
     if (cap !== undefined) s.batchLeft = cap;
@@ -270,4 +271,31 @@ export function areaTipMul(state: GameState, drink: DrinkId): number {
   if (fam && a.loves.includes(fam)) mul *= AREA_TIP.loved;
   else if (fam && a.meh.includes(fam)) mul *= AREA_TIP.meh;
   return mul;
+}
+
+/**
+ * Gear Tree G7c: an arriving walk-in sometimes wants a family the area loves that isn't on today's menu.
+ * They leave without costing rating; the count becomes tomorrow's morning note. Returns true when the
+ * walk-in left. Draws RNG only in Gear runs whose area loves something you don't serve.
+ */
+export function gearAskedFor(state: GameState, menu: DrinkId[]): boolean {
+  const id = gearArea(state);
+  if (!id) return false;
+  const served = new Set(menu.map((d) => DRINK_FAMILY[d]));
+  const missing = AREAS[id].loves.filter((f) => !served.has(f));
+  if (missing.length === 0 || rngNext(state) >= AREA_ASK) return false;
+  const fam = missing[missing.length > 1 ? rngInt(state, missing.length) : 0];
+  const asked = (state.gearAsked ??= {});
+  asked[fam] = (asked[fam] ?? 0) + 1;
+  return true;
+}
+
+/** G7c: "3 people asked for something iced yesterday." Clears the tally. */
+export function gearAskedNotes(state: GameState): string[] {
+  const asked = state.gearAsked;
+  delete state.gearAsked;
+  if (!asked) return [];
+  return (Object.entries(asked) as [DrinkFamily, number][])
+    .filter(([, n]) => n > 0)
+    .map(([f, n]) => `${n === 1 ? 'Someone' : `${n} people`} asked for ${FAMILY_WORD[f]} yesterday and walked on.`);
 }

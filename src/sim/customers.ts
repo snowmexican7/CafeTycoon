@@ -1,5 +1,5 @@
 import { signatureServed, sigPremium, sigShare } from './signature';
-import { areaTipMul, batchOut } from './gear';
+import { areaTipMul, batchOut, gearAskedFor } from './gear';
 import { rivalAskFactor } from './rival';
 import { roleCraft, roleTip } from './roles';
 import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
@@ -64,6 +64,7 @@ export function spawnCustomers(state: GameState): GameState {
   const m = computeModifiers(state);
   const p = (ECONOMY.baseArrivalsPerSecond * m.traffic * priceTraffic(state, menu, m)) / TICK_RATE;
   if (rngNext(state) >= p) return state;
+  if (gearAskedFor(state, menu)) return state; // Gear G7c: wanted something you don't serve
   if (state.customers.length >= queueCapacity(m, tierInfo(state).queue)) {
     state.today.turnedAway += 1;
     return state;

@@ -1,3 +1,4 @@
+import type { DrinkFamily } from '../data/areas';
 import type { GearId } from '../data/gear';
 import type { TwistId } from './taste';
 import type { RoleId } from './roles';
@@ -486,6 +487,8 @@ export interface GameState {
   equipLog?: { station: StationKind; day: number; by: string }[];
   /** Gear Tree (docs/GEAR_TREE.md): true for a Gear run (absent = today's game; off unless created with `gear`). */
   gear?: true;
+  /** Gear Tree G7c: walk-ins today who asked for a loved family you don't serve (for tomorrow's morning note). */
+  gearAsked?: Partial<Record<DrinkFamily, number>>;
   /** Gear Tree: the gear in each slot, parallel to `slots` (Gear runs only). */
   slotGear?: (GearId | null)[];
   /** Gear Tree: every buy, upgrade and sale (what, the coming day, who, the cash change). */
