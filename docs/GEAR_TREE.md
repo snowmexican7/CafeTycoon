@@ -309,14 +309,15 @@ cheap-gear comedy. G11 waits for at least one good `?gear=1` playtest.
 - Hired staff with wages (Phase 3 B15) interacts with gear: a pro barista on a Pod-o-Matic is wasted.
 - Buyable and movable mop bucket.
 
-## 13. Open questions for Kennedy
+## 13. Decisions (all questions answered)
 
 Answered 2026-10-29: $120 with no free supplies; the pod machine as the cheapest espresso; the dual
 boiler with two sides and no new buttons; Gear **replaces** the classic start.
 
-1. **Order against Phase 3.** Should the Gear Tree (v3.0.0) come before wages and saves (B15/B16),
-   which would then follow as v3.x?
-2. **Preview link.** Is it OK for the work in progress to be reachable on the live site with
-   `?gear=1` (hidden, off by default), so you can try it on game nights before the flip?
-3. Smaller: are $50 and "majority" the right lines for co-op votes, and should the level-up counts
-   (12 espresso → Americano) be faster for short game nights?
+Answered 2026-10-29, 9 PM, with the go-ahead to build:
+- The Gear Tree (v3.0.0) comes **before** wages and saves (B15/B16), which follow as v3.x.
+- The hidden `?gear=1` link on the live site is fine for trying the work in progress.
+- Co-op buys over **$50** need a **majority** vote.
+- Keep the planned drink level-up pace (12 espresso → Americano, and so on).
+
+No open questions right now.
