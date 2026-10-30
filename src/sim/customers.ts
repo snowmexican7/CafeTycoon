@@ -6,7 +6,7 @@ import { roleCraft, roleTip } from './roles';
 import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
 import { demandFactor, menuPrice, pricePatience, priceTraffic } from './pricing';
 import { ECONOMY } from '../data/economy';
-import { TICK_RATE, secondsToTicks } from './constants';
+import { TICK_RATE, isReservedId, secondsToTicks } from './constants';
 import { computeModifiers, type Modifiers } from './effects';
 import { emitLog } from './log';
 import { tillSpeedTip } from './till';
@@ -368,8 +368,11 @@ function noteReport(today: GameState['today'], customer: Customer, drink: DrinkI
   today.waitTicks = (today.waitTicks ?? 0) + Math.max(0, customer.patienceMax - customer.patienceLeft);
   const t = (today.takingsByDrink ??= {});
   t[drink] = round2((t[drink] ?? 0) + takings);
-  if (by) {
-    const b = ((today.byPlayer ??= {})[by] ??= { serves: 0, takings: 0 });
+  if (by && !isReservedId(by)) {
+    // Own-key check: an id like "toString" must not find an inherited member and write onto it (review I4).
+    const map = (today.byPlayer ??= {});
+    if (!Object.hasOwn(map, by)) map[by] = { serves: 0, takings: 0 };
+    const b = map[by]!;
     b.serves += 1;
     b.takings = round2(b.takings + takings);
   }
