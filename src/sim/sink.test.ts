@@ -6,6 +6,7 @@ import { applyGearInput } from './gear';
 import { applyGrowInput } from './growth';
 import { ensureCounterSpots, stationsFromSlots } from './slots';
 import { interact } from './stations';
+import { drinkEspresso } from './espresso';
 import { blocked, nearestStation } from './movement';
 import { addStandIns } from './bots/roster';
 import { findPath, targetNodes, walkableNodes } from './bots/path';
@@ -229,6 +230,21 @@ describe('FB2 A3: carrying a pot to the sink', () => {
     below(s, p1(s), 'drip');
     interact(s, 'p1');
     s = step(s, [{ kind: 'leave', playerId: 'p1' }]);
+    expect([p1(s).tool, st(s, 'drip').potOut, st(s, 'drip').stale]).toEqual([null, undefined, true]);
+  });
+});
+
+describe('FB2 A3 fix round 1: a collapse puts the pot back (I3)', () => {
+  it('a barista who collapses on espresso drops no pot: it goes home stale', () => {
+    const s = stand(['d1', 'e3', 'g2', 'b0']);
+    coldPot(s);
+    below(s, p1(s), 'drip');
+    interact(s, 'p1');
+    expect(p1(s).tool).toBe('pot');
+    below(s, p1(s), 'espresso');
+    s.supplies.beans = 50;
+    for (let i = 0; i < 20 && !p1(s).espresso?.out; i++) drinkEspresso(s, 'p1');
+    expect(p1(s).espresso?.out).toBe(true);
     expect([p1(s).tool, st(s, 'drip').potOut, st(s, 'drip').stale]).toEqual([null, undefined, true]);
   });
 });

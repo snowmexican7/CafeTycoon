@@ -140,4 +140,24 @@ describe('FB2 A3: bots and the sink', () => {
     expect([sim(s).tool, sim(s).bot!.claim]).toEqual([null, 1]);
     expect(s.mop.heldBy).toBeNull();
   });
+
+  it('a person walking off with the pot: bots make the next order instead of waiting on the drip (fix round 1, I3)', () => {
+    const s0 = POT();
+    const d = station(s0, 'drip');
+    d.potOut = 'p1';
+    s0.players[0].tool = 'pot';
+    s0.players[0].pos = { x: 6, y: 5 };
+    s0.customers = [rung(1, 'drip'), rung(2, 'espresso')];
+    const plan = think(s0, sim(s0));
+    expect(sim(s0).bot!.claim).toBe(2);
+    expect(ids(plan)[0]).toBe('espresso:insert');
+    const { s } = runUntil(s0, (x) => x.today.served >= 1, 60 * 60);
+    expect(s.today.drinks!.espresso).toBe(1);
+    // a pot a bot carries is still worth a short wait
+    const t = gearShop(['drip', 'espresso', 'trash', null, null, null], ['d2', 'e1', 'b0', null, null, null], 2);
+    station(t, 'drip').potOut = 'sim-2';
+    sim(t, 2).tool = 'pot';
+    t.customers = [rung(1, 'drip')];
+    expect(ids(think(t, sim(t)))).toEqual(['drip:insert', 'drip:take', 'pickup:put']);
+  });
 });

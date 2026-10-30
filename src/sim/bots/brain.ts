@@ -140,6 +140,10 @@ function reachable(state: GameState, st: Station): boolean {
   return reach.ids.has(st.id);
 }
 
+/** FB2 A3: the pot of `st` is out with someone who is not a bot (a person may keep it a while, or have collapsed). */
+const personHasPot = (state: GameState, st: Station): boolean =>
+  st.potOut !== undefined && !state.players.find((o) => o.id === st.potOut)?.bot;
+
 /** Gear G4d: a drip machine that brews pots (one press brews, each press after pours a cup). */
 export const hasPot = (st: Station): boolean => !!st.gear && !!GEAR[st.gear].pot;
 
@@ -191,6 +195,8 @@ const pair = (st: Station, gives: ItemKind, instant = false): BotStep[] => [
  */
 function canMake(state: GameState, st: Station, need: Need): boolean {
   if (st.kind !== need.kind) return false;
+  // FB2 A3 fix round 1 (I3): a pot a person walked off with may not come back soon; only a bot's carry is worth a wait.
+  if (personHasPot(state, st)) return false;
   // G5: a dead machine is gone until tonight; a jammed one is fine for empty hands (they whack it first).
   if (st.dead || (st.jammed && need.held !== null) || !reachable(state, st)) return false;
   const r = recipeAt(state, st, need.held);
@@ -859,6 +865,7 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       // FB2 A3: a pot machine with its pot at the sink: wait for it. One that went cold or stale since the plan was
       // made: lift it and take it to the sink first (or wait while another bot does).
       if (hasPot(st) && p.holding === null && p.tool === null) {
+        if (personHasPot(state, st)) return abandon(state, p);
         if (st.potOut !== undefined) return wait(state, p, POT_TRIP_TICKS);
         if (needsDump(state, st)) {
           if (liftPlanned(state, p, st)) return wait(state, p, POT_TRIP_TICKS);
