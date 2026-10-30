@@ -76,9 +76,9 @@ describe('bumps', () => {
     return step(s, []);
   }
 
-  it('a bump with a latte in hand spills about half the time, with a puddle, a log and a tally', () => {
+  it('a bump with a latte in hand spills now and then (ECONOMY.bump.spillChance), with a puddle, a log and a tally', () => {
     let spills = 0;
-    for (let seed = 1; seed <= 40; seed++) {
+    for (let seed = 1; seed <= 400; seed++) {
       const s = bumpWith(seed, 'latte');
       const spilled = s.log.filter((e) => e.kind === 'bump.spill');
       if (spilled.length === 0) {
@@ -95,13 +95,14 @@ describe('bumps', () => {
       expect(s.today.bumpSpills).toBe(1);
       expect(s.today.wasted).toBe(1);
     }
-    expect(spills / 40).toBeGreaterThan(0.25);
-    expect(spills / 40).toBeLessThan(0.75);
+    // 5% chance: over 400 bumps expect roughly 20 spills.
+    expect(spills / 400).toBeGreaterThan(0.02);
+    expect(spills / 400).toBeLessThan(0.1);
   });
 
   it('a spilled bag of grounds makes a grounds mess and empties the hands', () => {
     let seen = false;
-    for (let seed = 1; seed <= 40 && !seen; seed++) {
+    for (let seed = 1; seed <= 400 && !seen; seed++) {
       const s = bumpWith(seed, 'grounds');
       if (!s.log.some((e) => e.kind === 'bump.spill')) continue;
       seen = true;

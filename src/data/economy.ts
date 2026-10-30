@@ -47,7 +47,7 @@ export const ECONOMY = {
    * into each other stagger for `staggerSeconds` at `staggerSpeed` x their pace, can't bump again for `cooldownSeconds`,
    * are shoved `push` tiles apart each, and whoever is carrying something drops it with `spillChance`.
    */
-  bump: { bodyTiles: 0.6, staggerSeconds: 0.6, staggerSpeed: 0.4, cooldownSeconds: 1.0, spillChance: 0.5, push: 0.15 },
+  bump: { bodyTiles: 0.6, staggerSeconds: 0.6, staggerSpeed: 0.4, cooldownSeconds: 1.0, spillChance: 0.05, push: 0.15 },
   dayLengthSec: 150,
   nightLengthSec: 120,
   handSize: 4,
