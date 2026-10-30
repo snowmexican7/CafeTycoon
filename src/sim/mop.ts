@@ -2,7 +2,7 @@ import { ECONOMY } from '../data/economy';
 import { layoutFor } from '../data/layout';
 import { isOut } from './espresso';
 import { emitLog } from './log';
-import { returnBox } from './condiments';
+import { canTakeBox, refillBar, returnBox, takeBox } from './condiments';
 import type { GameState, Mess, Player, Vec2 } from './types';
 
 const M = ECONOMY.mess;
@@ -47,7 +47,21 @@ export function mopInteract(state: GameState, player: Player): void {
     player.cleaningMess = mess.id;
     return;
   }
+  if (player.tool === 'box') {
+    refillBar(state, player);
+    return;
+  }
   if (player.tool !== null || player.holding !== null) return;
+  // Batch/pickup: the box corner wins only when strictly nearer than the mop (a tie goes to the mop).
+  if (canTakeBox(state, player)) {
+    const corner = layoutFor(state.tier).boxCorner;
+    if (dist(player.pos, corner) < dist(player.pos, state.mop.pos) && takeBox(state, player)) return;
+  }
+  takeMop(state, player);
+  if (player.tool === null) takeBox(state, player);
+}
+
+function takeMop(state: GameState, player: Player): void {
   if (mopHolder(state) !== null) return;
   if (dist(player.pos, state.mop.pos) > RANGE) return;
   // A stale holder (gone or disconnected) loses any claim on the mop.
