@@ -54,6 +54,8 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       if (!SUPPLIES.includes(input.supply)) return null;
       if (!Number.isInteger(input.packs) || input.packs < 1 || input.packs > MAX_PACKS) return null;
       return { kind: 'restock', playerId: input.playerId, supply: input.supply, packs: input.packs };
+    case 'stampCard':
+      return { kind: 'stampCard', playerId: input.playerId };
     case 'rivalCounter':
       if (input.on !== undefined && typeof input.on !== 'boolean') return null;
       return input.on === false ? { kind: 'rivalCounter', playerId: input.playerId, on: false } : { kind: 'rivalCounter', playerId: input.playerId };

@@ -9,6 +9,10 @@
  * week in week 2, two from week 3, picked by hash from days 2–7 of the week) that pull walk-ins away;
  * the crew can counter the night before (our prices down, the walk-ins stay). From week 3 it copies
  * a signature after 2 days instead of 3.
+ *
+ * P4 F2 (Gear runs): from week 3 the rival also runs a loyalty card that keeps pulling a share of
+ * walk-ins every day, announced the night before it launches. The crew can answer once with its own
+ * stamp card: a one-off print cost and every 10th cup free (prices a little lower), walk-ins back.
  */
 import { DRINK_INFO } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
@@ -38,6 +42,13 @@ export const RIVAL = {
   counterPrice: 0.85,
   /** P4 B1: from week 3 the knock-off comes this many days after a new signature. */
   copyAfterLate: 2,
+  /** P4 F2: the rival's loyalty card starts on this day (day 1 of week 3) of a Gear run. */
+  loyaltyDay: 15,
+  /** P4 F2: while it runs and we have no stamp card we keep this share of walk-ins. */
+  loyaltyTraffic: 0.93,
+  /** P4 F2: our stamp card: one-off cost, and every 10th cup free ≈ prices at this share. */
+  stampCost: 30,
+  stampPrice: 0.97,
 };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -175,6 +186,45 @@ export function applyScoutInput(state: GameState, input: Extract<PlayerInput, { 
   if (state.rival?.scouted === state.day || state.cash < RIVAL.scoutCost) return state;
   state.cash = round2(state.cash - RIVAL.scoutCost);
   state.rival = { ...(state.rival ?? {}), scouted: state.day } as Rival;
+  return state;
+}
+
+/** P4 F2: the rival's loyalty card is running on `day` (default: today, or tomorrow at night). */
+export function loyaltyLive(state: GameState, day = state.day): boolean {
+  return !!state.gear && day >= RIVAL.loyaltyDay;
+}
+
+/** P4 F2: our stamp card is out (bought on or before `state.day`). */
+export function hasStamps(state: GameState): boolean {
+  const d = state.rival?.stamps;
+  return d !== undefined && d <= state.day;
+}
+
+/** P4 F2 modifiers: the loyalty card costs walk-ins; our stamp card wins them back for a small price cut. */
+export function applyRivalLoyalty(state: GameState, m: Modifiers): void {
+  if (!loyaltyLive(state)) return;
+  if (hasStamps(state)) {
+    for (const d of Object.keys(m.price) as DrinkId[]) m.price[d] *= RIVAL.stampPrice;
+  } else m.traffic *= RIVAL.loyaltyTraffic;
+}
+
+/** P4 F2 morning note: the launch day, and the day our stamp card comes out. */
+export function loyaltyMorning(state: GameState): string | null {
+  if (!loyaltyLive(state)) return null;
+  const lost = Math.round((1 - RIVAL.loyaltyTraffic) * 100);
+  if (state.rival?.stamps === state.day) return `Our stamp card is out: regulars stay with us, and every 10th cup is on the house (about ${Math.round((1 - RIVAL.stampPrice) * 100)}% off takings).`;
+  if (state.day === RIVAL.loyaltyDay && !hasStamps(state)) return `${RIVAL.name} launched a loyalty card today. Expect about ${lost}% fewer walk-ins every day until we answer it.`;
+  return null;
+}
+
+/** P4 F2 night input: print our own stamp card (once, humans, at night, once the rival's card is coming). */
+export function applyStampCardInput(state: GameState, input: Extract<PlayerInput, { kind: 'stampCard' }>): GameState {
+  if (state.phase !== 'night') return state;
+  const p = state.players.find((x) => x.id === input.playerId);
+  if (!p || !p.connected || p.bot) return state;
+  if (!loyaltyLive(state) || state.rival?.stamps !== undefined || state.cash < RIVAL.stampCost) return state;
+  state.cash = round2(state.cash - RIVAL.stampCost);
+  state.rival = { ...(state.rival ?? {}), stamps: state.day };
   return state;
 }
 

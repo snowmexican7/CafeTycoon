@@ -17,7 +17,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
   Every new run from the title or a co-op lobby is a Gear run, so everything below is what players meet by
   default. `?gear=0` still starts a classic run for comparison, and old classic saves resume as classic.
   Phase 4 (Franchise & rivals) is planned block by block in `docs/PHASE4_PLAN.md`; blocks 1–6 (rival
-  happy hours, seasons, manager's report, second shop, manager mode, phone calls) plus a season board in Café records are merged on main (tags `p4-b01`…`p4-b06`, `p4-f01`)
+  happy hours, seasons, manager's report, second shop, manager mode, phone calls) plus a season board in Café records and the rival's loyalty card are merged on main (tags `p4-b01`…`p4-b06`, `p4-f01`, `p4-f02`)
   with no release tag. **Note:** GitHub Pages deploys every push to main, so these are already live under the
   3.1.0 label. Playtest the live site, then bump to 3.2.0 (CHANGELOG heading + package.json) after a clean smoke.
 
@@ -79,7 +79,8 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - P4 B5 (tag `p4-b05`): manager mode (lite). `hasManager(state)` adds `BRANCH.managerCups` (2) per barista and applies `roleSupplyCost` to branch cups; branch input `send` (+`supply`) moves up to one pack of home stock into `Branch.stockCredit` (valued at pack cost), which pays branch cups first (`DayStats.branch.fromStock`). For bots: if a bot holds Manager and a branch is open, a hint could send surplus beans/milk when home stock > 2 packs; don't touch branch maths.
 - P4 B6 (tag `p4-b06`): phone calls (lite). `src/sim/call.ts`: `callFor(state, day)` (hash of seed+day, 45% of days once the branch has run a day; `machine` or `order`; rings 25–55% into the day for 25 s), `callRinging`, input `{kind:'call', take}` (people only, while ringing) → `GameState.callAnswer`; `branchDay(state, day, withCall=true)` at closing applies it (missed machine = half cups; fix = $25; order = +$30 and −10 cups) and records `DayStats.branch.call`; `settleBranch` clears `callAnswer`. HUD card `.hud-call` (`callVM` in live.ts, `callHtml` in hud.ts). Bots never answer; a hint could let a bot Manager answer (fix if branch staff ≥ 2, take orders when last day had no walk-outs). Travel to the branch (two live floors) is not built.
 - P4 follow-up F1 (tag `p4-f01`): season board in Café records. `Records.seasons?` (`SeasonRecord`) upserted by `foldRecords` when `state.season` exists, best-first (`seasonOrder`), max 6; rendered as a "Season board" section in `src/ui/records.ts`. Records store version unchanged (optional field).
-- No snapshot bumps: all new fields are optional (SNAPSHOT 27). Protocol is 39 since P4 B6 (34 B1, 35 B2, 36 B3, 37 B4, 38 B5).
+- P4 follow-up F2 (tag `p4-f02`): rival loyalty card. `loyaltyLive`/`hasStamps`/`applyRivalLoyalty`/`loyaltyMorning`/`applyStampCardInput` in `src/sim/rival.ts`; input `{kind:'stampCard'}`; `Rival.stamps?`; brief alert `rival:loyalty` with a Stamp card fix. Bots ignore it: a planner hint could buy the stamp card on the launch night when cash ≥ $30 + a day's restock.
+- No snapshot bumps: all new fields are optional (SNAPSHOT 27). Protocol is 40 since P4 F2 (39 B6, 34 B1, 35 B2, 36 B3, 37 B4, 38 B5).
 
 ## Freedom
 

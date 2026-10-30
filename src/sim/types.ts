@@ -235,6 +235,8 @@ export interface Rival {
   copy?: { drink: DrinkId; twist: TwistId; since: number; price: number; day: number };
   /** P4 B1: the day the crew countered the rival's happy hour (prices down that day). */
   counter?: number;
+  /** P4 F2: the day our stamp card came out (answers the rival's loyalty card for good). */
+  stamps?: number;
 }
 
 /** P4 B4: a second shop run off-screen (see sim/branch.ts). `spent` is what opening it cost. */
@@ -599,6 +601,7 @@ export type PlayerInput =
   | { kind: 'twist'; playerId: PlayerId; drink: DrinkId; twist: TwistId | null }
   | { kind: 'scout'; playerId: PlayerId }
   | { kind: 'rivalCounter'; playerId: PlayerId; on?: boolean }
+  | { kind: 'stampCard'; playerId: PlayerId }
   /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
   | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire' }
   | { kind: 'branch'; playerId: PlayerId; action: 'open' | 'staff' | 'send' | 'close'; area?: AreaId; staff?: number; supply?: SupplyId }
