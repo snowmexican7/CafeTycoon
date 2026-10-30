@@ -1802,6 +1802,13 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 6 polish P6-4 — readable labels (p6-readable-labels, tag p6-04)
+
+- [x] Layout audit over all 54 fixtures at 1512×982 and 1280×800 (`overnight/pw/audit.mjs`: off-screen dialogs, clipped leaf text, text under 11.5px). No clipping found; all sub-11px text was small-caps labels.
+- [x] Bumped to 12px: `.tiles small`, `.money-split small`, `.rec small`, `.sec-h .chip`, `.botscard .chip`, host chip, title history `th`, roadmap log tags; bot tag on awards to 11.5px; `.sec-h small` 13px. The receipt (`.menu.results`) gets the short-screen tightening the week-end already had, since the bigger tiles pushed it 2px off the bottom at 1280×800.
+- [x] Shots: `overnight/sprint/p6-04/{receipt,seasonDone}-{1512,1280}.png`.
+- [ ] Left as-is (11px, fine on both sizes): HUD "OPEN"/cleanliness words, "CREW MVP".
+
 ### Phase 6 polish P6-3 — week strip on the week-end screen (p6-week-strip, tag p6-03)
 
 - [x] `weekStripViewModel` (last ≤7 `state.days`, profit per day via `profitOf`, bar height relative to the biggest |profit|, loss days flagged) → `WeekEndVM.week`; `weekStripHtml` renders "LAST 7 DAYS · total · served" plus 7 bars. UI only, no sim/save changes. Compact layout under 820px tall (fits the 4-row season card at 1280×800).

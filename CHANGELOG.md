@@ -16,6 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Easier-to-read labels.** The small caps labels on the receipt, week-end, Records and title history tables are a touch bigger (12px, up from 10–10.5px), and the day receipt tightens up on shorter screens so it never runs off the bottom at 1280×800.
 - **The week at a glance.** The week-end screen shows the last seven days as little profit bars (red for a day that lost money), with the week's total and customers served beside them.
 - **Season details.** On the Season board in Café records, tap a season to see it week by week: each week's target, what you made, and whether you hit it. Seasons saved before this update just show their summary line.
 - **The phone rings.** When the second shop calls, you now hear an old desk phone trill when it starts and every 3 seconds until someone picks up or it rings out.
