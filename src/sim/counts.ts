@@ -6,21 +6,23 @@
  *
  * What counts: cold brew cups left on a tap (`batchLeft`); cups in a brewed drip pot (`potLeft`; null while brewing or
  * while the pot is out at the sink, a stale pot still shows its cups); a finished item waiting at a machine (one slot,
- * so 1); condiment servings (`state.condiments`); cups on the pickup counter (`state.pass`). Till, sink, trash: null.
+ * so 1); condiment servings (`state.condiments`); cups on the pickup counter (`state.pass`); milk in the fridge
+ * (`supplies.milk`, FB2 A4). Till, sink, trash: null.
  * Cooling stays in ./cooling (`stationCool`, `slotCool`); this is only the number.
  *
  * Pure: no state change, no events, no RNG. Must not import ./gear.
  */
-import { CONDIMENTS_ID, PICKUP_ID } from '../data/layout';
+import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID } from '../data/layout';
 import type { GameState, Station } from './types';
 
 /** Left-over count for one station (see the file header), or null when there is nothing to show. */
 function leftAt(state: GameState, s: Station): number | null {
   if (s.id === PICKUP_ID) return positive(state.pass.length);
   if (s.id === CONDIMENTS_ID) return positive(state.condiments?.servings ?? 0);
+  // FB2 A4: the milk inside the fridge (`supplies.milk`; what is out at the bar is `state.milkOut`).
+  if (s.id === FRIDGE_ID) return positive(state.supplies.milk ?? 0);
   // Till, sink, trash and any other counter-kind spot carry no count.
   if (s.kind === 'counter' || s.kind === 'trash') return null;
-  // FB2 A4 (milk in the fridge) will add its station here; its fields are not built yet, so nothing is guessed.
   if (s.batchLeft !== undefined) return positive(s.batchLeft);
   if (s.kind === 'drip') {
     if (s.potOut !== undefined || s.busyTicksLeft > 0) return null;

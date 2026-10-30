@@ -7,6 +7,7 @@ import { ensureCounterSpots, stationsFromSlots } from './slots';
 import { applyGrowInput } from './growth';
 import { CONDIMENTS } from './condiments';
 import { spotOf } from './pickup';
+import { stationLeft } from './counts';
 import { FRIDGE, closingChecklist, closingSoon, fridgeCapacity, fridgeCards, fridgeGear, fridgeMorning } from './fridge';
 import { migrateSnapshot, SNAPSHOT_VERSION } from '../storage/snapshotStore';
 import { FRIDGE_ID, CONDIMENTS_ID, layoutFor } from '../data/layout';
@@ -186,6 +187,26 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
     s.barAway = 30;
     fridgeMorning(s);
     expect([s.condiments.servings, s.barAway]).toEqual([CONDIMENTS.servings, 15]);
+  });
+
+  it('A5 counts: the fridge shows the milk it holds, nothing when empty', () => {
+    const s = gearDay();
+    expect(stationLeft(s, FRIDGE_ID)).toBe(20);
+    s.supplies.milk = 0;
+    expect(stationLeft(s, FRIDGE_ID)).toBeNull();
+  });
+
+  it('A2: a carton carried as a tool is not a cup and never cools', () => {
+    let s = gearDay();
+    me(s).tool = 'milk';
+    me(s).carry = 8;
+    me(s).pos = { x: 6, y: 4 };
+    let cold = 0;
+    for (let i = 0; i < 60 * 90; i++) {
+      s = step(s, []);
+      cold += logs(s, 'cup.cold').length;
+    }
+    expect([me(s).tool, me(s).carry, me(s).heldSince, cold]).toEqual(['milk', 8, undefined, 0]);
   });
 
   it('spotOf names the fridge (not the till)', () => {
