@@ -43,6 +43,7 @@ export function p4Run(seed: number, humans = 2, days = 28, start?: Parameters<ty
   if (!Number.isFinite(s.cash)) problems.push('cash not finite');
   if (s.days.some((d) => !Number.isFinite(d.sales) || (d.branch && !Number.isFinite(d.branch.profit)))) problems.push('NaN in a day');
   if (s.days.length >= 28 && (!s.season || s.season.weeks.length !== 4 || !s.season.done)) problems.push(`season not finished: ${JSON.stringify(s.season?.weeks.map((w) => w.week))}`);
+  if (s.condiments && (!(s.condiments.servings >= 0 && s.condiments.servings <= 20) || (s.condimentBoxes ?? 0) < 0)) problems.push('bar out of range');
   const back = JSON.parse(JSON.stringify(s)) as GameState;
   if (JSON.stringify(back) !== JSON.stringify(s)) problems.push('save does not round-trip');
   const rec = foldRecords(emptyRecords(), s, [], '2026-10-30', s.cash);
