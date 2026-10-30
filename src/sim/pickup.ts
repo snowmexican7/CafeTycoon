@@ -38,7 +38,7 @@ export function wantsDrink(c: Customer, d: DrinkId): boolean {
   return c.drink === d || (c.extra?.includes(d) ?? false);
 }
 
-/** Who takes `drink` off the counter: rung up (stage pickup), not a camper, wants it; upset first, then the longest wait, then the lowest id. */
+/** Who takes `drink` off the counter: rung up (stage pickup), not a camper, wants it; upset first, an office run last (FB2 B6), then the longest wait, then the lowest id. */
 export function pickupTarget(state: GameState, drink: DrinkId): Customer | null {
   let best: Customer | null = null;
   for (const c of state.customers) {
@@ -50,6 +50,8 @@ export function pickupTarget(state: GameState, drink: DrinkId): Customer | null 
 
 function better(a: Customer, b: Customer): boolean {
   if (!!a.upset !== !!b.upset) return !!a.upset;
+  // FB2 B6: an office run waits for the whole order anyway; it takes a cup only when nobody else wants it.
+  if ((a.order === 'office') !== (b.order === 'office')) return b.order === 'office';
   const ra = a.rungAt ?? Infinity;
   const rb = b.rungAt ?? Infinity;
   if (ra !== rb) return ra < rb;

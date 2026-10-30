@@ -11,7 +11,9 @@
  * - Office runs: on the cart and at the café from day 3, about every other day (drawn at day start), 6-10 drinks off
  *   the menu, 3× the patience, a 25% bonus tip on the order's price when complete. The phone rings 10 s before they
  *   walk in (`office.call { at }`, `at` the tick they arrive). Lost: `order.lost { customer }`, no lost customers, no
- *   bad review, no reputation hit. Served: one customer for reputation (`DayStats.officeExtra`).
+ *   bad review, no reputation hit. Served: one customer for reputation (`DayStats.officeExtra`). Since losing one costs
+ *   nothing, it never comes before walk-ins: it takes a cup off the pickup counter only when no one else wants it
+ *   (`pickup.ts`), and bots make its drinks only when no walk-in's order is waiting (`bots/brain.ts`).
  * Events: `order.combo`, `order.office { customer, count }`, `office.call`, `order.done { customer, paid, tip }`,
  * `order.lost`. Randomness from `state.rng` only, drawn only in Gear runs inside each window.
  */
@@ -50,9 +52,9 @@ export const ORDERS = {
     bonus: 0.25,
     /** The phone rings this long before they walk in. */
     callSeconds: 10,
-    /** They walk in between 20% and 60% of the way through opening hours. */
-    from: 0.2,
-    span: 0.4,
+    /** They walk in between 15% and 35% of the way through opening hours (time to make 10 drinks before closing). */
+    from: 0.15,
+    span: 0.2,
   },
 } as const;
 

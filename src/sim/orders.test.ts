@@ -249,6 +249,29 @@ describe('office runs (FB2 B6)', () => {
     expect(s.today.office).toBe('served');
   });
 
+  it('takes a cup off the pickup counter only when no one else rung up wants it', () => {
+    const s = gearDay(4, 'cafe');
+    const office = ticket(s, ['drip', 'latte'], { order: 'office', rungAt: s.tick - 600 });
+    s.customers.push({ id: 51, drink: 'drip', patienceLeft: 900, patienceMax: 1800, stage: 'pickup', rungAt: s.tick });
+    put(s, 'drip');
+    stepPickup(s);
+    expect(s.customers.map((c) => c.id)).toEqual([50]);
+    expect(office.items!.every((x) => !x.done)).toBe(true);
+    put(s, 'drip');
+    stepPickup(s);
+    expect(office.items![0].done).toBe(true);
+  });
+
+  it('walks in 15-35% of the way through the day', () => {
+    const ticks = secondsToTicks(ECONOMY.dayLengthSec);
+    for (let seed = 1; seed <= 80; seed++) {
+      const s = gearDay(4, 'cafe', undefined, seed);
+      if (!s.office) continue;
+      expect(s.office.at).toBeGreaterThanOrEqual(Math.floor(ticks * 0.15));
+      expect(s.office.at).toBeLessThanOrEqual(Math.floor(ticks * 0.35));
+    }
+  });
+
   it('lost: order.lost, no lost customers, no bad review, no reputation hit', () => {
     const s = gearDay(4, 'cafe');
     const c = ticket(s, ['drip', 'latte'], { order: 'office' });
