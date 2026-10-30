@@ -1,3 +1,5 @@
+import { stationCountsLeft } from '../sim/counts';
+import { CONDIMENTS_ID, PICKUP_ID } from '../data/layout';
 import { describe, expect, it } from 'vitest';
 import { createRun, startDay } from '../sim/run';
 import { stationsFromSlots } from '../sim/slots';
@@ -137,15 +139,26 @@ describe('sink wiring in the render models (3.3.3)', () => {
     expect(counterSpotOf(st(s, SINK_ID), s.stations)).toBe('sink');
   });
 
-  it('stationCounts hides the drip cup count while its pot is out or stale, and rings a waiting shot', () => {
+  it('stationCounts (A5, stationCountsLeft): hides the drip count while the pot is out, shows a stale pot in blue', () => {
     const s = stand();
     const d = st(s, 'drip');
-    d.output = 'drip';
     d.potLeft = 3;
     d.potColdAt = s.tick + 100;
-    expect(stationCounts(s).some((c) => c.id === 'drip')).toBe(true);
+    expect(stationCounts(s).find((c) => c.id === 'drip')).toMatchObject({ n: 3, tone: 'ok' });
     d.stale = true;
+    expect(stationCounts(s).find((c) => c.id === 'drip')).toMatchObject({ n: 3, tone: 'cold', cool: 0 });
+    d.potOut = 'p1';
     expect(stationCounts(s).some((c) => c.id === 'drip')).toBe(false);
+  });
+
+  it('stationCounts matches stationCountsLeft: pickup cups count, the condiment bar is left to its gauge, never a 0', () => {
+    const s = stand();
+    s.pass = [{ item: 'drip', ticksLeft: 999, by: 'p1', madeAt: s.tick }, { item: 'espresso', ticksLeft: 999, by: 'p1', madeAt: s.tick }];
+    const ids = new Map(stationCounts(s).map((c) => [c.id, c.n]));
+    for (const { id, n } of stationCountsLeft(s)) if (id !== CONDIMENTS_ID) expect(ids.get(id)).toBe(n);
+    expect(ids.get(PICKUP_ID)).toBe(2);
+    expect(ids.has(CONDIMENTS_ID)).toBe(false);
+    expect([...ids.values()].every((n) => n > 0)).toBe(true);
   });
 
   it('pickup cups that cool on the counter blink near cold and flag fully cold; passCool reads the same clock', () => {

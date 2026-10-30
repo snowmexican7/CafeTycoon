@@ -1,3 +1,4 @@
+import { stationLeft } from '../sim/counts';
 import { AREAS, DRINK_FAMILY, type DrinkFamily } from '../data/areas';
 import { GEAR_VOTE_MIN, gearArea, gearRequiresMet } from '../sim/gear';
 import { DRINK_INFO } from '../data/drinks';
@@ -197,14 +198,19 @@ export function hudGearVM(state: GameState): HudGearVM[] {
       let warn = false;
       if (s.dead) [status, warn] = ['dead', true];
       else if (s.jammed) [status, warn] = ['jammed! (E)', true];
-      else if (s.batchLeft !== undefined) [status, warn] = [s.batchLeft > 0 ? `${s.batchLeft}/${g.batch} left` : 'sold out', s.batchLeft === 0];
+      // 3.3.4 (FB2 A5): the numbers come from the sim's `stationLeft` (null = nothing left / nothing to count)
+      else if (s.batchLeft !== undefined) {
+        const n = stationLeft(state, s.id);
+        [status, warn] = [n !== null ? `${n}/${g.batch} left` : 'sold out', n === null];
+      }
       // 3.3.3 (FB2 A3): a pot out at the sink, or yesterday's pot still on the plate
       else if (g.pot && s.potOut !== undefined) [status, warn] = ['pot out (sink)', true];
       else if (g.pot && s.stale === true) [status, warn] = ['stale pot', true];
       else if (g.pot && s.busyTicksLeft > 0) status = 'brewing…';
-      else if (g.pot && s.potLeft !== undefined) {
+      else if (g.pot && stationLeft(state, s.id) !== null) {
+        const n = stationLeft(state, s.id)!;
         const cold = s.potOff === 'cold' || (s.potColdAt !== undefined && state.tick >= s.potColdAt);
-        [status, warn] = [`${s.potLeft}/${g.pot.cups} cups${cold ? ' · cold' : s.potOff === 'hot' ? ' · scalding' : ''}`, cold || s.potOff === 'hot'];
+        [status, warn] = [`${n}/${g.pot.cups} cups${cold ? ' · cold' : s.potOff === 'hot' ? ' · scalding' : ''}`, cold || s.potOff === 'hot'];
       } else if (g.pot) status = 'empty pot (E)';
       else if (s.lucky) status = 'lucky ✨';
       const k = (seen.get(g.tree) ?? 0) + 1;

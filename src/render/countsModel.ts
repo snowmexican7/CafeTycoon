@@ -5,6 +5,8 @@ import { podsOnly } from '../sim/gear';
 import { passSlots } from '../sim/pickup';
 import { coolsOnCounter, slotCool } from '../sim/cooling';
 import { outputFreshness } from './sinkModel';
+import { stationCountsLeft } from '../sim/counts';
+import { CONDIMENTS_ID } from '../data/layout';
 import type { DrinkId, GameState, PlayerId, Station, Vec2 } from '../sim/types';
 import { nextStepIndex, ticketSteps } from '../ui/tickets';
 
@@ -31,34 +33,31 @@ export interface StationCount {
 export const COUNT_LOW = 2;
 
 /**
- * One count per station that has something waiting: cold brew cups left on a batch tap, cups left in a drip
- * pot, or a finished item sitting at the machine (a pulled shot = 1). Counters, the bin and empty or
- * still-brewing machines get nothing.
+ * One count per station that has something waiting. 3.3.4 (FB2 A5): the number itself comes from the sim's
+ * `stationCountsLeft` (`src/sim/counts.ts`): null/absent = draw nothing, never a "0". This only adds the look:
+ * amber when a batch tap is nearly out, blue when the drip pot (or a waiting shot) has gone cold or is stale, and
+ * a cooling ring where there is a clock. The condiment bar is left out: its servings gauge already shows the
+ * same number.
  */
-export function stationCounts(state: Pick<GameState, 'stations' | 'tick'> & Partial<Pick<GameState, 'gear'>>): StationCount[] {
+export function stationCounts(state: GameState): StationCount[] {
   const out: StationCount[] = [];
-  for (const s of state.stations) {
-    if (s.kind === 'counter' || s.kind === 'trash') continue;
-    let n = 0;
+  const byId = new Map(state.stations.map((s) => [s.id, s] as const));
+  for (const { id, n } of stationCountsLeft(state)) {
+    const s = byId.get(id);
+    if (!s || id === CONDIMENTS_ID) continue;
     let cool: number | null = null;
     let cold = false;
-    // 3.3.3 (FB2 A3): a pot that is out at the sink, or stale, can't pour: its STALE/POT OUT badge says so instead.
-    if (s.potOut !== undefined || s.stale === true) continue;
-    if (s.batchLeft !== undefined) n = s.batchLeft;
-    else if (s.potLeft !== undefined && s.busyTicksLeft <= 0) {
-      n = s.potLeft;
-      cool = potCool(s, state.tick);
-      cold = s.potOff === 'cold' || cool === 0;
-    } else if (s.output) {
-      n = 1;
+    if (s.kind === 'drip' && s.potLeft !== undefined && s.batchLeft === undefined) {
+      cool = s.stale === true ? 0 : potCool(s, state.tick);
+      cold = s.stale === true || s.potOff === 'cold' || cool === 0;
+    } else if (s.output && s.batchLeft === undefined && s.kind !== 'counter') {
       // 3.3.3 (FB2 A2): a shot or steamed milk waiting at the machine cools by its own clock (`outputSince`)
       if (state.gear === true) {
-        cool = outputFreshness(state as GameState, s);
+        cool = outputFreshness(state, s);
         cold = cool === 0;
       }
     }
-    if (n <= 0) continue;
-    out.push({ id: s.id, pos: s.pos, n, tone: cold ? 'cold' : n <= COUNT_LOW && s.batchLeft !== undefined ? 'low' : 'ok', cool });
+    out.push({ id, pos: s.pos, n, tone: cold ? 'cold' : n <= COUNT_LOW && s.batchLeft !== undefined ? 'low' : 'ok', cool });
   }
   return out;
 }
