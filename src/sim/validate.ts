@@ -1,4 +1,4 @@
-import { BRANCH_AREAS } from './branch';
+import { BRANCH_AREAS, BRANCH_SUPPLIES } from './branch';
 import type { AreaId } from '../data/areas';
 import { cleanDraft } from './signature';
 import { isGearId } from '../data/gear';
@@ -85,7 +85,7 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       if (input.action === 'vote') return typeof input.yes === 'boolean' ? { kind: 'gear', playerId: input.playerId, action: 'vote', yes: input.yes } : null;
       return null;
     case 'branch': {
-      if (input.action !== 'open' && input.action !== 'staff' && input.action !== 'close') return null;
+      if (input.action !== 'open' && input.action !== 'staff' && input.action !== 'send' && input.action !== 'close') return null;
       const out: Extract<PlayerInput, { kind: 'branch' }> = { kind: 'branch', playerId: input.playerId, action: input.action };
       if (input.action === 'open') {
         if (!BRANCH_AREAS.includes(input.area as AreaId)) return null;
@@ -94,6 +94,10 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       if (input.action === 'staff') {
         if (!Number.isInteger(input.staff) || input.staff! < 1 || input.staff! > 3) return null;
         out.staff = input.staff;
+      }
+      if (input.action === 'send') {
+        if (!BRANCH_SUPPLIES.includes(input.supply as SupplyId)) return null;
+        out.supply = input.supply;
       }
       return out;
     }

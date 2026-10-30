@@ -238,7 +238,7 @@ export interface Rival {
 }
 
 /** P4 B4: a second shop run off-screen (see sim/branch.ts). `spent` is what opening it cost. */
-export interface Branch { area: AreaId; staff: number; openedDay: number; spent: number; by: string }
+export interface Branch { area: AreaId; staff: number; openedDay: number; spent: number; by: string; /** P4 B5: value of stock sent from home, spent on the branch's cups first. */ stockCredit?: number }
 
 /** P4 B2: one week of a season: its profit target (none for week 1) and the score it added. */
 export interface SeasonWeek { week: number; target: number | null; profit: number }
@@ -462,7 +462,7 @@ export interface DayStats {
   /** P4 B3: who handed off what today: serves and takings per player (bots included). */
   byPlayer?: Record<PlayerId, { serves: number; takings: number }>;
   /** P4 B4: the second shop's day (its profit is already in the till). */
-  branch?: { served: number; walked: number; takings: number; costs: number; profit: number };
+  branch?: { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number };
   /** FB1 WP4: seconds into the day when the board first sold out. */
   soldOutAt?: number;
 }
@@ -599,7 +599,7 @@ export type PlayerInput =
   | { kind: 'rivalCounter'; playerId: PlayerId; on?: boolean }
   /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
   | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire' }
-  | { kind: 'branch'; playerId: PlayerId; action: 'open' | 'staff' | 'close'; area?: AreaId; staff?: number }
+  | { kind: 'branch'; playerId: PlayerId; action: 'open' | 'staff' | 'send' | 'close'; area?: AreaId; staff?: number; supply?: SupplyId }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
   | { kind: 'grow'; playerId: PlayerId; tier: TierId }
