@@ -1616,3 +1616,14 @@ failure on 40dbbfd, fixed); the FOR LEASE sign overflowed on the narrow cart str
 - New-run scores (~170–190) are lower than café-start records (~277), so old week records don't
   compare directly. Consider a separate leaderboard or a "started as" tag.
 - The week-end screen doesn't show the growth journey yet.
+
+## Gear Tree build — for Claude to review (UI lane touched sim files, approved by Kennedy 2026-10-29)
+
+Merged so far (all behind `createRun({gear:true})` / the hidden `?gear=1` link; classic runs are unchanged and v2.2.0 rollback tag is `pre-gear-work`):
+- **G1 `gear-g01`** — `src/data/gear.ts` (+tests): gear trees, tiers, prices, speeds, marks, batch caps, `GEAR_START`.
+- **G2 `gear-g02`** — `src/sim/gear.ts` (+tests) and small hooks in `types.ts`, `slots.ts` (classic slot/equip ignored in Gear runs; `noStock` when batch is out), `stations.ts` (gear speed, marks, batch countdown), `customers.ts` (no concentrate drinks when batch out), `run.ts` (gearStart / gearMorning), `growth.ts` (growGearSlots), `step.ts` + `validate.ts` (`{kind:'gear'}` input). No save/protocol bump: all fields optional.
+- **G3 `gear-g03`** — UI only: `src/ui/gearVM.ts`, Spend › ⚙️ Gear board in `night.ts`, `?gear=1` in `main.ts` via `ui/gearFlag.ts`.
+
+Please review: the stations.ts speed/batch edits (determinism), the slots.ts ↔ gear.ts circular import, validate.ts bounds, and whether any net/storage path should whitelist the new fields.
+
+Still to build (G4+): pods/E1 and drip, price multipliers and quality caps (+1★), downsides (battery die-off etc.), co-op $50 majority votes (G8), dual boiler sides (G9), bots buying gear, records split + protocol bump at the v3 flip (G11).
