@@ -550,9 +550,12 @@ function cartonPlan(state: GameState, p: Player): BotStep[] | null {
   return [{ kind: 'use', station: fridge.id, action: 'fetch' }, { kind: 'use', station: out.id, action: 'stock' }];
 }
 
-/** Gear, closing soon: lift what is out and nobody needs any more, and put it in the fridge (one bot at a time). */
+/**
+ * Gear, closing soon: lift what is out and nobody needs any more, and put it in the fridge (one bot at a time). Bots wait
+ * for the doors to lock (no more walk-ins wanting a latte or cream), and the closing waits for them (`putAwayPending`).
+ */
 function putAwayPlan(state: GameState, p: Player): BotStep[] | null {
-  if (!closingSoon(state) || fridgeBusy(state, p)) return null;
+  if (!closingSoon(state) || state.phase !== 'closing' || fridgeBusy(state, p)) return null;
   const fridge = fridgeReachable(state);
   if (!fridge) return null;
   const store: BotStep = { kind: 'use', station: fridge.id, action: 'store' };

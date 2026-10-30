@@ -83,20 +83,24 @@ describe('FB2 A4: bots and the fridge', () => {
     expect(seen.some((e) => e.kind === 'fridge.take')).toBe(false);
   });
 
-  it('closing soon: a bot lifts the milk and the bar and puts both in the fridge', () => {
+  it('closing soon: once the doors lock, a bot lifts the milk and the bar and puts both in the fridge', () => {
     const s = shop();
     s.milkOut = 5;
     s.condiments = { servings: 12 };
     s.closingSoonAt = s.tick;
+    expect(ids(think(s, sim(s)))).toEqual(['idle']); // doors still open: more walk-ins may want them
+    s.phase = 'closing';
+    s.phaseTicksLeft = 60 * 30;
     const { s: t, seen } = run(s, (x) => (x.milkOut ?? 0) === 0 && x.condiments!.servings === 0 && sim(x).tool === null, 60 * 40);
-    expect([t.supplies.milk, t.barAway]).toEqual([25, 12]);
-    expect(seen.filter((e) => e.kind === 'fridge.put').map((e) => e.data.item).sort()).toEqual(['bar', 'milk']);
+    expect(t.barAway).toBe(12);
+    expect(seen.filter((e) => e.kind === 'fridge.put').map((e) => `${e.data.item}:${e.data.n}`).sort()).toEqual(['bar:12', 'milk:5']);
+    expect(seen.some((e) => e.kind === 'supply.spoil')).toBe(false);
   });
 
   it('closing soon leaves the milk out while someone still wants a milk drink', () => {
     const s = shop();
     s.milkOut = 5;
-    s.closingSoonAt = s.tick;
+    enterClosing(s);
     s.customers = [rung(1, 'latte')];
     const plan = ids(think(s, sim(s)));
     expect(plan.some((x) => x.endsWith(':lift'))).toBe(false);
