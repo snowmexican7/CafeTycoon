@@ -31,7 +31,7 @@
 #title .more summary { cursor: pointer; font: 600 13px var(--font-display); color: var(--ink-soft); padding: 4px 0; }
 #title .more summary:hover { color: var(--ink); }
 #title table.history { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 6px 0; }
-#title table.history th { text-align: left; font: 700 10.5px var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); padding: 4px; }
+#title table.history th { text-align: left; font: 700 12px var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); padding: 4px; }
 #title table.history td { padding: 5px 4px; border-top: 1.5px dotted var(--oat); color: var(--ink); font-weight: 700; }
 #title .muted { color: var(--ink-soft); margin: 6px 0; }
 #title .keys-help { line-height: 2; margin: 6px 0 2px; }
@@ -96,7 +96,7 @@
 #roadmap .log { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 #roadmap .log li { display: flex; gap: 12px; align-items: baseline; background: #fff; border-radius: 12px; padding: 9px 12px; box-shadow: var(--sh-1); font: 700 13.5px/1.35 var(--font-body); }
 #roadmap .log time { font: 600 12px var(--font-display); color: var(--ink-soft); white-space: nowrap; }
-#roadmap .log span { flex: 1; } #roadmap .log em { font: 700 10.5px var(--font-display); font-style: normal; letter-spacing: .08em; text-transform: uppercase; background: var(--cherry); color: #fff; border-radius: 99px; padding: 2px 8px; }
+#roadmap .log span { flex: 1; } #roadmap .log em { font: 700 12px var(--font-display); font-style: normal; letter-spacing: .08em; text-transform: uppercase; background: var(--cherry); color: #fff; border-radius: 99px; padding: 2px 8px; }
 #roadmap .log li.new { box-shadow: 0 0 0 2px #f3b8ad, var(--sh-1); }
 #roadmap .ft { padding: 10px 18px 14px; display: flex; gap: 12px; align-items: center; background: linear-gradient(#fff4e200, #fbe6c8 40%); }
 #roadmap .ft .btn { text-decoration: none; flex: none; }
