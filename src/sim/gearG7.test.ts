@@ -31,8 +31,9 @@ describe('Gear Tree G7a: hidden area tips', () => {
   it('loved families tip ×1.2, meh ×0.85, tourists tip a bit on everything', () => {
     const s = run(true, 5);
     const at = (scenario: GameState['scenario']) => ({ ...s, scenario }) as GameState;
-    expect(areaTipMul(at('campusTown'), 'coldBrew')).toBeCloseTo(1.2);
-    expect(areaTipMul(at('campusTown'), 'latte')).toBe(1);
+    // G10b: students tip low on everything (campus all ×0.9), but still more for what they love.
+    expect(areaTipMul(at('campusTown'), 'coldBrew')).toBeCloseTo(1.2 * AREAS.campus.all!);
+    expect(areaTipMul(at('campusTown'), 'latte')).toBeCloseTo(AREAS.campus.all!);
     expect(areaTipMul(at('rainyWeek'), 'latte')).toBeCloseTo(1.2);
     expect(areaTipMul(at('rainyWeek'), 'icedLatte')).toBeCloseTo(0.85);
     expect(areaTipMul(at('touristSeason'), 'espresso')).toBeCloseTo(AREAS.tourist.all!);

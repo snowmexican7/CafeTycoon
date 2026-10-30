@@ -1,4 +1,4 @@
-import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, FAMILY_WORD, type AreaId, type DrinkFamily } from '../data/areas';
+import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SNOB_GEAR, FAMILY_WORD, type AreaId, type DrinkFamily } from '../data/areas';
 /**
  * Gear Tree G2 (docs/GEAR_TREE.md): the sim side of a Gear run. Everything here is a no-op unless
  * `state.gear === true`, which only `createRun({ gear: true })` sets (the UI only with `?gear=1`).
@@ -377,9 +377,48 @@ export function areaTipMul(state: GameState, drink: DrinkId): number {
   const a = AREAS[id];
   const fam = DRINK_FAMILY[drink];
   let mul = a.all ?? 1;
-  if (fam && a.loves.includes(fam)) mul *= AREA_TIP.loved;
+  // G10b: a per-drink rule beats the family rule (arts loves pour-over even though filter is meh there).
+  if (a.lovesDrink?.includes(drink)) mul *= AREA_TIP.loved;
+  else if (a.mehDrink?.includes(drink)) mul *= AREA_TIP.meh;
+  else if (fam && a.loves.includes(fam)) mul *= AREA_TIP.loved;
   else if (fam && a.meh.includes(fam)) mul *= AREA_TIP.meh;
   return mul;
+}
+
+/** G10b: the area crowd's patience for an order (1 in classic runs): office/gym rush, Drizzleton waits for milk. */
+export function areaPatienceMul(state: GameState, drinks: DrinkId[]): number {
+  const id = gearArea(state);
+  if (!id) return 1;
+  const a = AREAS[id];
+  let fam = 1;
+  for (const d of drinks) {
+    const f = DRINK_FAMILY[d];
+    if (f && a.patienceFam?.[f]) fam = Math.max(fam, a.patienceFam[f]!);
+  }
+  return (a.patience ?? 1) * fam;
+}
+
+/** G10b: the arts crowd notices quality: 2★ ×1, each star above/below ±10% (1 elsewhere). */
+export function areaQualityTip(state: GameState, stars: number): number {
+  const id = gearArea(state);
+  if (!id || !AREAS[id].quality) return 1;
+  return 1 + QUALITY_TIP_PER_STAR * (stars - (ACCURACY.maxStars - 1));
+}
+
+/** G10b: drink families whose top-tier gear the crew owns (each draws one snob regular, up to SNOB.max). */
+export function snobFamilies(state: GameState): DrinkFamily[] {
+  if (!isGearRun(state)) return [];
+  const fams: DrinkFamily[] = [];
+  for (const id of state.slotGear ?? []) {
+    const f = id ? SNOB_GEAR[id] : undefined;
+    if (f && !fams.includes(f)) fams.push(f);
+  }
+  return fams.slice(0, SNOB.max);
+}
+
+/** G10b: a snob tips big for a perfect cup (3★) and little for a sloppy one (1★ or less). */
+export function snobTip(stars: number): number {
+  return stars >= ACCURACY.maxStars ? SNOB.hiTip : stars <= ACCURACY.maxStars - 2 ? SNOB.loTip : 1;
 }
 
 /** G7: the gear tree that makes each drink family (the family's "best tier" for gear pull). */

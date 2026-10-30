@@ -1752,3 +1752,10 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Deferred: the flow state doubling speed (only a line for now), the "+1★ cap", and the snob draw for the Lab (next block: snob regulars). The station still renders as a drip machine sprite (machine polish block).
 - **For Claude (bots):** the pour-over is made at the pour-over gear only (a `drip`-kind station whose `GEAR[gear].pour` is set). Bots must choose that station and not a drip pot.
 
+### Gear G10b — area crowds and snob regulars (gear-g10b)
+- Every area now has a **crowd** (`AreaInfo.crowd`, GEAR_TREE.md §7). Campus students tip ×0.9 on everything. Drizzleton waits ×1.25 longer for milky orders. Office commuters and the gym rush have ×0.85 patience. The arts crowd notices quality: tip ×(1 + 0.1 × (stars − 2)), so a 3★ cup is ×1.1 and a 0★ cup ×0.8. Tourists tip ×1.15. All of these are Gear-only and pure, with no RNG (`areaPatienceMul`, `areaQualityTip`).
+- **Per-drink overrides** beat the family rule (`lovesDrink`/`mehDrink`): the arts district loves pour-over though filter is meh there, and the office park shrugs at pour-over (too slow) though it loves filter.
+- The street notebook shows the crowd line (👥) once any family has stars.
+- **Snob regulars:** owning top-tier gear (E5/E6, S3, C5, D5b; `SNOB_GEAR`) makes the next regular a snob (🎩 Margaux, then Sebastian; at most 2, one per family). They order the fanciest drink of that family on the menu and tip ×1.3 for a perfect 3★ cup, ×0.5 for 1★ or less. A toast announces them; tickets read "🎩 Margaux · snob: wants it perfect"; the regulars drawer marks them. `Regular.snob` is optional, so old saves load. Snobs do not use up the three ordinary regular names.
+- Deferred: tourist "crowds" (more arrivals) and the doc's ×1.4/×1.5 per-area tip strengths (all loves stay ×1.2) are for the G10 balance pass.
+

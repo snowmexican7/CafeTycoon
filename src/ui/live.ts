@@ -74,11 +74,11 @@ export interface OrderTicket {
 }
 
 /** The little tag on an order ticket for the customer kinds worth planning around. */
-export function ticketTag(c: GameState['customers'][number]): OrderTicket['tag'] {
+export function ticketTag(c: GameState['customers'][number], snobs?: ReadonlySet<string>): OrderTicket['tag'] {
   if (c.upset) return { text: 'Wrong drink! Remake it', tone: 'upset' };
   switch (c.kind) {
     case 'regular':
-      return { text: `${c.name ?? 'Regular'} \u00b7 regular`, tone: 'regular' };
+      return snobs?.has(c.name ?? '') ? { text: `\u{1F3A9} ${c.name} \u00b7 snob: wants it perfect`, tone: 'regular' } : { text: `${c.name ?? 'Regular'} \u00b7 regular`, tone: 'regular' };
     case 'impatient':
       return { text: 'In a hurry', tone: 'impatient' };
     case 'group': {
@@ -195,13 +195,14 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
   const total = state.phase === 'closing' ? ECONOMY.closingGraceSeconds * TICK_RATE : state.settings.dayLengthSec * TICK_RATE;
   const progress = total > 0 ? Math.max(0, Math.min(1, 1 - state.phaseTicksLeft / total)) : 0;
   const player = state.players.find((p) => p.id === me);
+  const snobs = new Set(state.regulars.filter((r) => r.snob).map((r) => r.name));
   return {
     day: state.day,
     dayInWeek: (state.day - 1) % 7,
     progress,
     open: state.phase === 'day',
     orders: state.customers.map((c) => {
-      const tag = ticketTag(c);
+      const tag = ticketTag(c, snobs);
       return { id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0, ...(tag ? { tag } : {}) };
     }),
     crew: crewOf(state, me),

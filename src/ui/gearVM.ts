@@ -48,6 +48,8 @@ export interface GearVM {
   note: string | null;
   /** G7b: the street notebook. One row per drink family; stars once you've served enough of it. */
   notebook: NotebookRowVM[];
+  /** G10b: who walks in here, revealed once the notebook has learned any family. */
+  crowd?: string;
   /** G6: drinks that level up with use: progress toward each (learned ones show done). */
   levelUps: LevelUpVM[];
   /** G4g: co-op pick-night hint (absent solo or after day 1). */
@@ -156,7 +158,10 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
     mine: me && v.yes.includes(me) ? 'yes' : me && v.no.includes(me) ? 'no' : null, proposer: me === v.by,
   } : undefined;
   const voteRule = voters.length > 1 ? `Co-op: buys or sales of $${GEAR_VOTE_MIN}+ need a yes from most of the crew.` : undefined;
-  return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook: notebookVM(state), levelUps: levelUpVM(state), ...(coopHint ? { coopHint } : {}),
+  const notebook = notebookVM(state);
+  const areaId = gearArea(state);
+  const crowd = areaId && notebook.some((r) => r.stars !== null) ? AREAS[areaId].crowd : undefined;
+  return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook, ...(crowd ? { crowd } : {}), levelUps: levelUpVM(state), ...(coopHint ? { coopHint } : {}),
     ...(vote ? { vote } : {}), ...(state.gearVoteLast ? { voteLast: state.gearVoteLast } : {}), ...(voteRule ? { voteRule } : {}) };
 }
 

@@ -1,5 +1,6 @@
 import { signatureServed, sigPremium, sigShare } from './signature';
-import { areaTipMul, batchOut, gearAskedFor, gearPullMul, noteFamilyTip } from './gear';
+import { areaPatienceMul, areaQualityTip, areaTipMul, batchOut, gearAskedFor, gearPullMul, noteFamilyTip, snobFamilies, snobTip } from './gear';
+import { DRINK_FAMILY, SNOB } from '../data/areas';
 import { rivalAskFactor } from './rival';
 import { roleCraft, roleTip } from './roles';
 import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
@@ -111,13 +112,37 @@ function patienceFor(m: Modifiers, mul: number): number {
 /** The regular who comes in next: a new one while the roster has room, else one not queued whose drink is on the menu. */
 export function pickRegular(state: GameState, menu: DrinkId[]): Regular | null {
   const cfg = ECONOMY.customers.regular;
-  if (state.regulars.length < cfg.max) {
-    const regular: Regular = { name: cfg.names[state.regulars.length], drink: drawDrink(state, menu, computeModifiers(state)), visits: 0, lost: 0 };
+  const snob = newSnob(state, menu);
+  if (snob) return snob;
+  const ordinary = state.regulars.filter((r) => !r.snob).length;
+  if (ordinary < cfg.max) {
+    const regular: Regular = { name: cfg.names[ordinary], drink: drawDrink(state, menu, computeModifiers(state)), visits: 0, lost: 0 };
     state.regulars.push(regular);
     return regular;
   }
   const candidates = state.regulars.filter((r) => !state.customers.some((c) => c.name === r.name) && menu.includes(r.drink));
   return candidates.length === 0 ? null : candidates[rngInt(state, candidates.length)];
+}
+
+/**
+ * Gear G10b "top tiers add snob regulars": while the crew owns top-tier gear in a family without its snob,
+ * the next regular is a new snob who orders that family's fanciest drink on the menu. Pure (no RNG).
+ */
+function newSnob(state: GameState, menu: DrinkId[]): Regular | null {
+  const snobs = state.regulars.filter((r) => r.snob);
+  if (snobs.length >= SNOB.max) return null;
+  const have = new Set(snobs.map((r) => DRINK_FAMILY[r.drink]));
+  for (const fam of snobFamilies(state)) {
+    if (have.has(fam)) continue;
+    const options = menu.filter((d) => DRINK_FAMILY[d] === fam);
+    if (options.length === 0) continue;
+    const drink = options.reduce((a, b) => (DRINK_IDS.indexOf(b) > DRINK_IDS.indexOf(a) ? b : a));
+    const regular: Regular = { name: SNOB.names[snobs.length], drink, visits: 0, lost: 0, snob: true };
+    state.regulars.push(regular);
+    emitLog(state, 'gear.quirk', { gear: '', text: `🎩 ${regular.name} heard about your gear. A snob regular: big tips for a perfect ${DRINK_INFO[drink].name}, little for sloppy ones.` });
+    return regular;
+  }
+  return null;
 }
 
 /** Draw the drink(s), apply the kind's patience and queue the customer; null when nothing can be made. */
@@ -137,7 +162,7 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const mul = kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1;
   // fancy drinks buy a little patience; a group waits as long as its fanciest order
   const wait = Math.max(...drinks.map((d) => (DRINK_INFO[d].wait ?? 1) * pricePatience(state, d)));
-  const patienceMax = patienceFor(m, mul * wait);
+  const patienceMax = patienceFor(m, mul * wait * areaPatienceMul(state, drinks));
   const customer: Customer = { id: state.nextCustomerId++, drink: drinks[0], patienceLeft: patienceMax, patienceMax };
   if (kind === 'impatient' || kind === 'group') customer.kind = kind;
   if (kind === 'group') customer.extra = drinks.slice(1);
@@ -251,6 +276,9 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   const combo = serveCombo(state, drink, state.today, sig?.twist);
   const sigBonus = sig && combo ? signatureServed(state.today, combo.stars) : 0;
   let tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) * areaTipMul(state, drink) + roleCraft(state, by));
+  // Gear G10b: the arts crowd and snob regulars notice quality.
+  const quality = areaQualityTip(state, stars) * (reg?.snob ? snobTip(stars) : 1);
+  if (quality !== 1) tip = round2(tip * quality);
   // Gear G4h (doc §4.2): a too-hot or too-cold cup earns half the tip.
   if (tempMiss) tip = round2(tip / 2);
   // Gear G4g: rung up at the till and handed off fast.

@@ -37,6 +37,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 <!-- SPRINT-APPEND: later blocks add items below this line -->
 - **G6c new level-up drinks:** Doppio (espresso in hand → espresso machine again; clashes with Americano, so take it only when the oldest such ticket is yours), Sweet-cream cold brew (cold brew in hand → tap), Café au lait (drip pour in hand → steamer), Red-eye (drip pour in hand → espresso machine, not on pods). `recipeChain` resolves all four.
 - **G10a Pour-over:** made from empty hands at a `drip`-kind station whose gear has `pour` set (`GEAR[s.gear].pour`). The pot drip machines on the same kind make drip instead, so pick the station by gear. `recipeChain('pourOver')` gives one `drip` step.
+- **G10b crowds & snobs (optional):** snob regulars (`Regular.snob`) tip ×1.3 only for a perfect (3★, no slips) cup and ×0.5 for 1★ or less, and the arts crowd tips by stars too, so bots serving a snob or working in the arts district should favour accuracy over speed. Office/gym customers have ×0.85 patience (`areaPatienceMul`).
 - **G8 co-op votes (optional polish):** `state.gearVote` and the `gear/vote` input are live (protocol 31). If you touch net/host: call `settleVote(state)` (sim/gear.ts) when a player disconnects so a vote can't hang; a toast on vote pass/fail would be nice. Bots must not vote.
 
 ## Sim edits made overnight (please review)
@@ -49,6 +50,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - G8: sim/gear.ts `applyGearInput` split into proposal/vote + `gearDeal`; `GameState.gearVote/gearVoteLast`; validate.ts vote case; run.ts `startDay` clears the vote; PROTOCOL_VERSION 31.
 - G6c: `data/drinks.ts` 4 new drinks + recipes + `GEAR_ONLY_DRINKS`; `sim/levelUp.ts` `needs`/`levelUpGearOk`; `gearRecipe` refuses drip on pods.
 - G10a: `data/gear.ts` d4b/d5b (`pour`, `requires`); `sim/gear.ts` `gearRecipe` pour branch, `gearRequiresMet`, pour-over unlock on buy, `gearPriceMul` pour-over; `sim/bots/planner.ts` `stationName` knows 'drip' (crash fix, one line).
+- G10b: `data/areas.ts` crowd fields, `SNOB_GEAR`/`SNOB`; `sim/gear.ts` `areaPatienceMul`, `areaQualityTip`, `snobFamilies`, `snobTip`, and per-drink overrides in `areaTipMul`; `sim/customers.ts` `pickRegular` (snob first via `newSnob`, ordinary names now count non-snobs), area patience in `addCustomer`, and the quality/snob tip in `serveCustomer`.
 - No snapshot bumps: all new fields are optional. Protocol is 31 since G8.
 
 ## Freedom

@@ -68,6 +68,8 @@ export interface RegularVM {
   max: number;
   /** 'ok' | 'off' (favourite off the menu) | 'pricey' (tips fall) */
   status: 'ok' | 'off' | 'pricey';
+  /** Gear G10b: a snob regular (big tips for a perfect cup, little for a sloppy one). */
+  snob?: boolean;
 }
 
 export function regularsViewModel(state: GameState): RegularVM[] {
@@ -78,5 +80,6 @@ export function regularsViewModel(state: GameState): RegularVM[] {
     loyalty: loyaltyOf(r),
     max: LOYALTY.max,
     status: !state.menu[r.drink] ? 'off' : fairness(state, r.drink) < 1 ? 'pricey' : 'ok',
+    ...(r.snob ? { snob: true } : {}),
   }));
 }
