@@ -434,6 +434,8 @@ export interface DayStats {
   ad?: { id: AdId; outcome: AdOutcome };
   /** P3 B12: what the checkout cost today (card fees plus the kiosk licence). */
   checkoutFees?: number;
+  /** P3 B15: wages paid to the hired bot baristas at closing (Gear runs; absent = none). */
+  wages?: number;
   /** Challenge tip paid at closing (folded into bonus too). */
   challengeBonus?: number;
   /** Challenge ids won today. */
@@ -569,6 +571,8 @@ export type PlayerInput =
   | { kind: 'price'; playerId: PlayerId; drink: DrinkId; step: number }
   | { kind: 'twist'; playerId: PlayerId; drink: DrinkId; twist: TwistId | null }
   | { kind: 'scout'; playerId: PlayerId }
+  /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
+  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire' }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
   | { kind: 'grow'; playerId: PlayerId; tier: TierId }

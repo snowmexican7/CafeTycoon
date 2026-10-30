@@ -6,7 +6,7 @@
  */
 import { createRun } from '../src/sim/run';
 import { step } from '../src/sim/step';
-import { addStandIns } from '../src/sim/bots/roster';
+import { addStandIns, syncBots } from '../src/sim/bots/roster';
 import { restockCost } from '../src/sim/night';
 import { expectedUse } from '../src/sim/brief';
 import { ECONOMY } from '../src/data/economy';
@@ -55,11 +55,12 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
   return [];
 }
 
-export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number) {
-  let s = createRun({ seed, hostId: 'tester', players: [], tier: 'stand', gear: true, settings: { bots: 0, dayLengthSec: 150, nightLengthSec: 4 } });
+export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0) {
+  let s = createRun({ seed, hostId: 'tester', players: [], tier: 'stand', gear: true, settings: { bots, dayLengthSec: 150, nightLengthSec: 4 } });
   addStandIns(s, humans);
+  if (bots) syncBots(s);
   if (scenario) s.scenario = scenario;
-  const ids = s.players.map((p) => p.id);
+  const ids = s.players.filter((p) => p.id.startsWith('sim-')).map((p) => p.id);
   let stage = 0;
   let last = s.phase;
   let lastSlotGear = '';

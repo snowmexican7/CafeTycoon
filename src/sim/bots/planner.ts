@@ -38,7 +38,8 @@ import type { EquipmentKind } from '../../data/equipment';
 import { expectedUse } from '../brief';
 import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
-import { computeModifiers, rentForDay } from '../effects';
+import { computeModifiers } from '../effects';
+import { billsForDay } from '../staff';
 import { isGearRun } from '../gear';
 import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
 import { restockCost } from '../night';
@@ -104,7 +105,7 @@ interface Budget {
 }
 
 /** Restock every supply a menu drink needs up to the day's expected use × RESTOCK_MARGIN; out-of-stock first. */
-export function restockAdvice(state: GameState, budget: Budget = { left: round2(state.cash - rentForDay(state)) }): Advice[] {
+export function restockAdvice(state: GameState, budget: Budget = { left: round2(state.cash - billsForDay(state)) }): Advice[] {
   const use = expectedUse(state);
   const menu = menuDrinks(state);
   const wants = SUPPLY_IDS.filter((s) => RESTOCKABLE.includes(s) && menu.some((d) => ECONOMY.drinkSupplies[d].includes(s)))
@@ -408,7 +409,7 @@ function menuAdvice(state: GameState, growing: boolean): Advice[] {
 
 /** Everything worth doing tonight, highest priority first (ties by id). Pure and deterministic. */
 export function planNight(state: GameState): Advice[] {
-  const budget: Budget = { left: round2(state.cash - rentForDay(state)) };
+  const budget: Budget = { left: round2(state.cash - billsForDay(state)) };
   // Spending advice draws on the budget in priority order: restock, grow, checkout, equip, scout.
   const restock = restockAdvice(state, budget);
   const grow = growAdvice(state, budget);

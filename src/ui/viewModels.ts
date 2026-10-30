@@ -38,6 +38,8 @@ import type { RoomRecord } from '../storage/roomStore';
 import { BASE_DRINKS, DRINK_IDS, GEAR_ONLY_DRINKS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
 import { menuDrinks, neededSupplies, unlockedDrinks } from '../sim/unlocks';
 import { forecastById } from '../data/forecasts';
+import { BOT_PERSONALITIES } from '../sim/bots/roster';
+import { canHire, crewNames, wageEach } from '../sim/staff';
 import { WEEKDAY_NAMES, forecastFor, forecastName, forecastOf, weekdayOf } from '../sim/forecast';
 
 
@@ -268,7 +270,7 @@ export function handCardViewModel(state: GameState, item: CatalogueItem): HandCa
 export interface NightVM {
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; wages?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -277,6 +279,8 @@ export interface NightVM {
   ready: { id: PlayerId; name: string; ready: boolean; role?: string }[];
   /** Phase 3 B1: the four roles, who holds each, and whether this barista can take it. */
   roles?: RoleVM[];
+  /** P3 B15 (Gear runs): the hired bot baristas, each one's daily wage, and whether a spot is free. */
+  staff?: StaffVM;
   /** Phase 3 B3: regulars, their favourite and loyalty. */
   regulars?: RegularVM[];
   meReady: boolean;
@@ -707,6 +711,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           ...(familyTips(last) ? { familyTips: familyTips(last) } : {}),
           ...(last.twistCost ? { twists: money(last.twistCost) } : {}),
           ...(last.checkoutFees ? { checkoutFees: money(last.checkoutFees) } : {}),
+          ...(last.wages ? { wages: money(last.wages) } : {}),
           ...(last.ad ? { ad: `${ADS[last.ad.id].icon} ${ADS[last.ad.id].name} ad ${last.ad.outcome === 'viral' ? 'went viral' : last.ad.outcome === 'ok' ? 'did fine' : 'flopped'}` } : {}),
           ...(last.sigServed ? { sigSold: last.sigServed, sigBonus: money(last.sigBonus ?? 0) } : {}),
           ...(last.combosFound?.length ? {
@@ -741,6 +746,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     }),
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id), ...(p.role ? { role: ROLES[p.role].icon } : {}) })),
     roles: rolesViewModel(state, me),
+    ...(state.gear ? { staff: staffViewModel(state) } : {}),
     ...(state.regulars.length ? { regulars: regularsViewModel(state) } : {}),
     meReady: state.ready.includes(me),
     menu: menuLines(state),
@@ -761,6 +767,24 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   return { ...vm, brief, tips: tipsVM(state, brief.alerts.map((a) => a.id)) };
 }
 
+/** P3 B15: the night board's staff row. */
+export interface StaffVM {
+  crew: { name: string; trait: string }[];
+  wage: string;
+  total: string;
+  canHire: boolean;
+}
+
+const TRAIT: Record<string, string> = { steady: 'steady', hurried: 'quick, sloppy', veteran: 'careful', rookie: 'new', human: 'stand-in' };
+
+export function staffViewModel(state: GameState): StaffVM | undefined {
+  if (!state.gear) return undefined;
+  const names = crewNames(state);
+  const w = wageEach(state);
+  const trait = (name: string, i: number) => TRAIT[state.players.find((p) => p.name === name && p.bot)?.bot!.personality ?? BOT_PERSONALITIES[i]] ?? '';
+  return { crew: names.map((name, i) => ({ name, trait: trait(name, i) })), wage: money(w), total: money(w * names.length), canHire: canHire(state) };
+}
+
 export interface ClosingVM {
   dayLabel: string;
   served: number;
@@ -769,6 +793,8 @@ export interface ClosingVM {
   sales: string;
   tips: string;
   rent: string;
+  /** P3 B15: wages paid to the hired crew today (Gear runs). */
+  wages?: string;
   profit: string;
   reputationBefore: string;
   reputationAfter: string;
@@ -806,6 +832,7 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     sales: money(d.sales),
     tips: money(d.tips),
     rent: money(d.rent),
+    ...(d.wages ? { wages: money(d.wages) } : {}),
     profit: money(profitOf(d)),
     reputationBefore: stars(before.reputation),
     reputationAfter: stars(after.reputation),

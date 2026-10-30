@@ -533,7 +533,7 @@ Open items:
 
 ## Phase 1 UI polish: night warnings, cash vs. score
 
-- **Needs from sim: wages.** The night warning works out "cash after tomorrow's bills" from rent only (`rentForDay`), because there are no wages in the sim yet. When hired staff land (phase 3), expose the next day's wage bill (or a `billsForDay(state)` helper next to `rentForDay`) and `src/ui/nightWarnings.ts` will add it to `rentTomorrow`.
+- **(Done in P3 B15: `billsForDay` in `src/sim/staff.ts`; `rentTomorrow` now returns it.) Needs from sim: wages.** The night warning works out "cash after tomorrow's bills" from rent only (`rentForDay`), because there are no wages in the sim yet. When hired staff land (phase 3), expose the next day's wage bill (or a `billsForDay(state)` helper next to `rentForDay`) and `src/ui/nightWarnings.ts` will add it to `rentTomorrow`.
 - Supply "low" warnings use a UI-side estimate (`expectedUse`: base arrivals × day length × traffic, split by order bias over the drinks on the menu). A supply counts as low below 75% of that (`LOW_SUPPLY_SHARE`), since some customers walk out, so a fresh run's starting stock doesn't nag. If the sim ever tracks an expected-orders number, use that instead.
 - Warnings never block Ready. The structure key only includes each warning's `id:level`; titles and amounts are patched in place.
 
@@ -1801,6 +1801,16 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Harness note: the board re-renders after every click, so Playwright element handles go stale; click by selector (week.mjs's classic restock loop has the same issue).
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
+
+### Phase 3 B15 — hired staff with wages (p3-b15-staff, tag p3-b15)
+- **Gear runs only** (classic keeps free bots, goldens untouched). New `src/sim/staff.ts`: `WAGE_BY_TIER` stand $1 / cart $3 / café $5 per crew bot per day; `crewCount` (between days = the crew that clocks in tomorrow, since bots only clock in at `startDay`; during the day = bots behind the bar); `wagesForDay`, **`billsForDay` = rent + wages** (the helper asked for above, next to `rentForDay`); `canHire`; `applyStaffInput`; `payWages` at closing right after rent → `DayStats.wages` (optional, old saves fine). Temps and stand-ins never draw a wage.
+- **Hire / let go:** new `staff` input (`hire` | `fire`), any connected person, night only. It sets `settings.bots` to a number (crew ± 1) and calls `syncBots`, so firing drops the newest (highest id) and hiring takes the lowest free id, capped at four baristas. PROTOCOL 33.
+- **Bills everywhere:** `profitOf` and the records day profit subtract wages; the night brief / `nightWarnings` use `billsForDay` and say "rent and wages" when wages are due; the bot night planner budgets with `billsForDay` (two-line bot-side edit, logged for Claude).
+- **Why so cheap at the stand:** `scripts/staffBalance.ts` (7 days, 4 seeds, 150 s days). Without wages a solo stand gains only ~$1–3/day of takings per bot (the line is machine-bound). With wages on, week-end cash: solo + 0/1/2 bots $41–102 / $69–121 / $59–101; duo + 0/1/2 bots $64–111 / $61–97 / $47–92. No bankruptcies. Cart/café wages are a guess until runs reach those tiers; retune after a playtest.
+- UI: "Hired staff" row inside the Tonight crew card (names, $/day each, total at closing, ＋ Hire, Let <newest> go), "Crew wages" on the closing receipt and the night receipt drawer.
+- Tests: `src/sim/staff.test.ts` (11: auto crew projection, classic no wages, tier scaling, hire cap and fire order, night/person-only, validation, closing pays + records + closing VM, wages can bankrupt, old days' profit unchanged, warning wording, night HTML).
+- Browser check (`/workspace/overnight/pw/b15.mjs`, 1512x982 and 1280x800, no page errors): opening night shows Bo and Lu at $1/day; Hire brings in Mo and then greys out (crew of four); letting two go leaves Bo; the Day 1 receipt shows Crew wages −$1.00 and the math adds up. Shots: `/workspace/overnight/sprint/b15/{night-staff,night-staff-one,closing-wages}-{1512,1280}.png`.
+- Follow-ups: staff roles (line 1167 idea), per-personality wages, a co-op vote on hiring (today anyone can hire), and a morning-paper line naming the wage bill.
 
 ### G11 — the flip: v3.0.0 Gear Tree (gear-g11, tag v3.0.0)
 - `pre-gear` tag on main at a36f951 (the last pre-flip commit, == gear-smoke). Rollback: redeploy `v2.2.0` or revert the G11 merge.

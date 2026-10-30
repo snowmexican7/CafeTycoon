@@ -27,6 +27,7 @@ import { interact, stepStations } from './stations';
 import type { GameState, PlayerInput } from './types';
 import { validateInput } from './validate';
 import { isBotId, syncBots } from './bots/roster';
+import { applyStaffInput } from './staff';
 import { afterBotInteract, stepBots } from './bots/brain';
 import { drinkEspresso, stepEspresso } from './espresso';
 import { stepEggs, unlockSecret } from './eggs';
@@ -150,6 +151,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'scout':
       applyScoutInput(s, input);
+      break;
+    case 'staff':
+      applyStaffInput(s, input);
       break;
     case 'role':
       applyRoleInput(s, input);

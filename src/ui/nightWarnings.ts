@@ -1,6 +1,6 @@
 import { ECONOMY } from '../data/economy';
 import { expectedUse, nightBrief } from '../sim/brief';
-import { rentForDay } from '../sim/effects';
+import { billsForDay, wagesForDay } from '../sim/staff';
 import { restockCost } from '../sim/night';
 import { SUPPLY_IDS, menuDrinks } from '../sim/unlocks';
 import type { DrinkId, GameState, SupplyId } from '../sim/types';
@@ -28,9 +28,9 @@ const DRINK_PLURAL: Record<DrinkId, string> = {
 const dollars = (n: number) => `$${Math.abs(n).toFixed(2).replace(/\.00$/, '')}`;
 const listJoin = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
 
-/** Rent due at tomorrow's closing. At night `state.day` is already tomorrow. Wages do not exist yet (phase 3). */
+/** Bills due at tomorrow's closing: rent plus the hired crew's wages (P3 B15). At night `state.day` is already tomorrow. */
 export function rentTomorrow(state: GameState): number {
-  return rentForDay(state);
+  return billsForDay(state);
 }
 
 /**
@@ -42,6 +42,9 @@ export { expectedUse };
 export function nightWarnings(state: GameState): NightWarning[] {
   const out: NightWarning[] = [];
   const rent = rentTomorrow(state);
+  const wages = wagesForDay(state);
+  const bill = wages > 0 ? 'rent and wages' : 'rent';
+  const billText = wages > 0 ? `Rent and wages are ${dollars(rent)}` : `Rent is ${dollars(rent)}`;
   const after = Math.round((state.cash - rent) * 100) / 100;
   const opening = state.days.length === 0;
   const brief = new Set(nightBrief(state).alerts.map((a) => a.id));
@@ -50,18 +53,18 @@ export function nightWarnings(state: GameState): NightWarning[] {
       id: 'cash:short',
       kind: 'cash',
       level: 'danger',
-      title: `You'll be ${dollars(after)} short on rent`,
-      detail: `Rent is ${dollars(rent)} at closing. Tomorrow's sales have to cover the gap, or the landlord changes the locks.`,
+      title: `You'll be ${dollars(after)} short on ${bill}`,
+      detail: `${billText} at closing. Tomorrow's sales have to cover the gap, or the landlord changes the locks.`,
     });
   } else if (brief.has('cash:low')) {
     out.push({
       id: 'cash:low',
       kind: 'cash',
       level: 'low',
-      title: `Only ${dollars(after)} spare after rent`,
+      title: `Only ${dollars(after)} spare after ${bill}`,
       detail: opening
-        ? `Rent is ${dollars(rent)} tomorrow night and there are no sales yet. Keep enough back for rent and stock.`
-        : `Rent is ${dollars(rent)}. One slow day could leave you short.`,
+        ? `${billText} tomorrow night and there are no sales yet. Keep enough back for ${bill} and stock.`
+        : `${billText}. One slow day could leave you short.`,
     });
   }
 

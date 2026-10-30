@@ -25,7 +25,8 @@
 import { ECONOMY } from '../data/economy';
 import { DRINK_INFO } from '../data/drinks';
 import { CHECKOUT, nextCheckout } from './checkout';
-import { computeModifiers, rentForDay } from './effects';
+import { computeModifiers } from './effects';
+import { billsForDay, wagesForDay } from './staff';
 import { nextTier, TIERS } from './growth';
 import { restockCost } from './night';
 import { profitOf } from './profit';
@@ -135,10 +136,11 @@ export function nightBrief(state: GameState): NightBrief {
   const needed = neededSupplies(state).filter((s) => menu.some((d) => ECONOMY.drinkSupplies[d].includes(s)));
 
   // 1. cash
-  const rent = rentForDay(state);
+  const rent = billsForDay(state); // rent plus wages (P3 B15)
+  const bill = wagesForDay(state) > 0 ? 'rent and wages' : 'rent';
   const after = round2(state.cash - rent);
-  if (after < 0) alerts.push({ id: 'cash:short', kind: 'cash', severity: 'danger', text: `You'll be ${dollars(after)} short on rent` });
-  else if (after < rent) alerts.push({ id: 'cash:low', kind: 'cash', severity: 'warn', text: `Only ${dollars(after)} spare after rent` });
+  if (after < 0) alerts.push({ id: 'cash:short', kind: 'cash', severity: 'danger', text: `You'll be ${dollars(after)} short on ${bill}` });
+  else if (after < rent) alerts.push({ id: 'cash:low', kind: 'cash', severity: 'warn', text: `Only ${dollars(after)} spare after ${bill}` });
 
   // 2. stock
   for (const s of needed) {

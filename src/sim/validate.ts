@@ -79,6 +79,8 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       if (input.action === 'sell') return Number.isInteger(input.index) ? { kind: 'gear', playerId: input.playerId, action: 'sell', index: input.index } : null;
       if (input.action === 'vote') return typeof input.yes === 'boolean' ? { kind: 'gear', playerId: input.playerId, action: 'vote', yes: input.yes } : null;
       return null;
+    case 'staff':
+      return input.action === 'hire' || input.action === 'fire' ? { kind: 'staff', playerId: input.playerId, action: input.action } : null;
     case 'equip':
       return isEquipmentKind(input.station) ? { kind: 'equip', playerId: input.playerId, station: input.station } : null;
     case 'ad':

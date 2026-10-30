@@ -39,6 +39,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 7. **Optional niceties:** favour families that tip well in this area (`areaTipMul`), and drinks near a
    level-up (`levelUpProgress`).
 <!-- SPRINT-APPEND: later blocks add items below this line -->
+- **P3 B15 hired staff (bot side, small):** bots now cost wages in Gear runs (`src/sim/staff.ts`: `billsForDay` = rent + wages). I switched the night planner's budget in `sim/bots/planner.ts` (`restockAdvice` default and the night plan) from `rentForDay` to `billsForDay`, please review. Optional: the planner could suggest letting a bot go when wages beat what it adds (at the stand that is often true), and bots should never send the `staff` input.
 - **G6c new level-up drinks:** Doppio (espresso in hand → espresso machine again; clashes with Americano, so take it only when the oldest such ticket is yours), Sweet-cream cold brew (cold brew in hand → tap), Café au lait (drip pour in hand → steamer), Red-eye (drip pour in hand → espresso machine, not on pods). `recipeChain` resolves all four.
 - **G10a Pour-over:** made from empty hands at a `drip`-kind station whose gear has `pour` set (`GEAR[s.gear].pour`). The pot drip machines on the same kind make drip instead, so pick the station by gear. `recipeChain('pourOver')` gives one `drip` step.
 - **G10b crowds & snobs (optional):** snob regulars (`Regular.snob`) tip ×1.3 only for a perfect (3★, no slips) cup and ×0.5 for 1★ or less, and the arts crowd tips by stars too, so bots serving a snob or working in the arts district should favour accuracy over speed. Office/gym customers have ×0.85 patience (`areaPatienceMul`).
@@ -63,7 +64,8 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - G10: `data/gear.ts` `polish`/`flow`/`draws`/`influencerOdds`; `data/areas.ts` `pull`/`pullDrink`; `sim/gear.ts` `gearSpeed(s, tick)`, `gearPolish`, flow roll in `gearAfterUse`, `gearPullMul` area pull, influencer odds in `applyGearPrices`; `sim/stations.ts` calls `gearPolish`; `sim/types.ts` `Station.flowUntil`; `sim/bots/brain.ts` pod chain + `gearRecipe` in `act`; new `scripts/gearBalance.ts`.
 - Smoke fix: `sim/gear.ts` `podsOnly`; `sim/bots/brain.ts` `chainFor` skips the grinder when `podsOnly`.
 - G11 (storage + net, please review): `storage/recordsStore.ts` records split (still version 1: `split` marker + `classic` bests; `splitRecords` moves pre-v3 bests to "Classic (retired)"; classic runs fold into `classic` only), and PROTOCOL_VERSION 32 so v2 tabs are told to refresh. `createRun` itself still defaults to classic (goldens untouched); the UI passes `gear: true`.
-- No snapshot bumps: all new fields are optional. Protocol is 32 since G11.
+- P3 B15: `sim/staff.ts` (new), `closing.ts` calls `payWages` after rent, `types.ts` `DayStats.wages` + `staff` input, `validate.ts`/`step.ts` staff case, `profit.ts` and `storage/recordsStore.ts` subtract wages, `brief.ts` uses `billsForDay`. PROTOCOL_VERSION 33.
+- No snapshot bumps: all new fields are optional. Protocol is 33 since B15.
 
 ## Freedom
 

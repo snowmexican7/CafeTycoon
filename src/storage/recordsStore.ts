@@ -69,7 +69,7 @@ export function splitRecords(r: Records): Records {
   return { ...r, ...NO_BESTS, split: true, ...(hasBests(old) ? { classic: old } : {}) };
 }
 
-const dayProfit = (d: DayStats) => Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0)) * 100) / 100;
+const dayProfit = (d: DayStats) => Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0) - (d.wages ?? 0)) * 100) / 100;
 
 export function runTotals(state: GameState): Totals {
   const crew = state.crew?.players ?? [];
