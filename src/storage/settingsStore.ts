@@ -12,8 +12,14 @@ export interface LocalSettings {
   pace: Pace;
   dayLengthSec: number;
   nightLengthSec: number;
-  /** Bots in a run you host: 'auto' (fill the café), or 0..3. Solo play reads this. */
+  /** Bots in a co-op room you host: 'auto' (fill the café), or 0..3. Kept for old stored JSON; solo reads soloBots. */
   bots: BotsChoice;
+  /**
+   * Bots in a solo run: 0..3 or 'auto', default 1 (a helper, not a crew). A separate key from `bots` so every
+   * player who already has `bots: 'auto'` stored still gets the new solo default. main.ts passes it to the run
+   * as `CreateRunOptions.settings.bots`.
+   */
+  soloBots: BotsChoice;
 }
 
 export function createSettingsStore(
@@ -27,11 +33,13 @@ export function createSettingsStore(
     dayLengthSec: ECONOMY.dayLengthSec,
     nightLengthSec: ECONOMY.nightLengthSec,
     bots: 'auto',
+    soloBots: 1,
   });
   const get = (): LocalSettings => {
     const stored = readJson<Partial<LocalSettings>>(storage, KEY);
     const merged = { ...defaults(), ...stored };
     merged.bots = parseBots(merged.bots) ?? 'auto';
+    merged.soloBots = parseBots(merged.soloBots) ?? 1;
     if (!stored || !stored.playerToken) storage.setItem(KEY, JSON.stringify(merged));
     return merged;
   };

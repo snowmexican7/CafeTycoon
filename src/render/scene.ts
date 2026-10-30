@@ -18,6 +18,7 @@ import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
 import { StationOverlay, buildEmptySlot, buildStation, type StationOverlayState } from './layers/stations';
 import { PickupVisuals } from './layers/pickup';
+import { CountsLayer } from './layers/counts';
 import { counterSpotOf } from './pickupModel';
 import { emptySlotPositions, stationBadges, wallMenuRows } from './slotModel';
 import { GEAR } from '../data/gear';
@@ -55,6 +56,7 @@ export class Scene {
   private readonly chaos: Chaos;
   private readonly eventFx: EventVisuals;
   private readonly pickup: PickupVisuals;
+  private readonly counts = new CountsLayer();
   /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
   private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
@@ -74,7 +76,7 @@ export class Scene {
     this.chaos = new Chaos(this.depth);
     this.eventFx = new EventVisuals(this.depth, this.chaos.overlay, SCENE_WIDTH, SCENE_HEIGHT);
     this.pickup = new PickupVisuals(this.depth);
-    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.tags, this.chaos.overlay);
+    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.counts.root, this.tags, this.chaos.overlay);
     this.root.addChild(this.wall.root, this.soldOutSign, buildLamps(), floor, this.chaos.floor, this.pickup.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
 
@@ -187,6 +189,15 @@ export class Scene {
     this.actors.spots = { gear: state.gear === true, width: lay.width, queueSlots: lay.queueSlots, till: LAYOUT.stations.find((s) => s.kind === 'counter')!.pos, pickup: lay.pickup };
     this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses);
     this.pickup.update(state, now);
+    // 3.3.2: floating counts over stations + recipe steps over carried cups (day only)
+    const live = state.phase === 'day' || state.phase === 'closing';
+    this.counts.root.visible = live;
+    if (live) {
+      const kinds = new Map(state.stations.map((s) => [s.id, s.kind]));
+      const pos = new Map(state.players.map((p) => [p.id, view.baristaPositions[p.id] ?? p.pos]));
+      const humans = new Set(state.players.filter((p) => !p.bot && p.connected).map((p) => p.id));
+      this.counts.update(state, kinds, pos, humans);
+    }
     this.chaos.update(state, now, dt);
     this.eventFx.update(state, now);
     this.espressoPops(state.players, view.baristaPositions);

@@ -2052,3 +2052,37 @@ Open (sim lane):
   the feature (tighten them); a full counter bins the held drink rather than taking back a cup nobody wants (M2).
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
+
+## ui-3.3.2 (UI lane): counts, cooling rings, step icons: notes for Claude
+
+Built in `src/render/countsModel.ts` (pure, tested) and `src/render/layers/counts.ts` (Pixi). No sim changes.
+
+- **Cooling ring is wired only where the sim has a real timer:** cups on the pickup coasters (`PassItem.ticksLeft`
+  against `ECONOMY.pass.staleSeconds`) and drip pots (`potColdAt` against `GEAR[id].pot.coldAfter`).
+  **Left unwired: a shot or milk waiting at a machine (`Station.output`).** It has no age or stale timer, so it
+  never cools. If you want it to (Kennedy's "shots die"), add a timer to the station (e.g. `outputSince` plus a
+  per-item limit). Then `drawCoolRing(g, x, y, r, frac)` in `layers/counts.ts` and `coolFraction(left, total)` take
+  a 0..1 fraction directly, and `stationCounts()` already has a `cool` field per station to fill in.
+- **Step icons over a carried cup** read the tickets' own step lists (`ticketSteps` / `nextStepIndex`). The target
+  is the customer whose drink exactly matches what's held, else the first ticket (pickup first) the item fits.
+  This is a guess: the sim doesn't record which order a cup is "for". If it ever does, pass that drink in.
+- **Espresso rework and fridge line** are a proposal only: `docs/GEAR_TREE.md` section 5b, marked PROPOSED and
+  awaiting Kennedy's OK. It touches gear data, the sim and saves (retiring S1–S3), all in your lane.
+
+## Feedback 2 (Claude, sim lane, 2026-10-30)
+
+Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names below are as built.
+
+- **A1 solo bots + helper bots (`fb2-a1`).** Solo runs read a new local setting `soloBots` (default 1; 0–3 or
+  'auto'; `src/storage/settingsStore.ts`), passed to the run as `CreateRunOptions.settings.bots`; co-op lobbies
+  keep their own choice. `src/main.ts` solo start passes it (one line, sim lane). 0 bots is a supported solo game
+  (no wages, no staff advice; crew tips are silent because no bot voices them: the UI may want an unvoiced
+  fallback). In Gear runs with a person in the café, crew bots act as helpers (`src/sim/bots/helper.ts`): a person
+  keeps the machine nearest them (within `ECONOMY.bots.helperGuardTiles` 1.5) while it brews or holds a cup,
+  while they hold something it takes, or until an order needing it has waited `helperGuardSeconds` (8 s); the
+  till stays theirs only while their hands are empty and the front customer is under 3 s; fresh tickets
+  (`helperTicketSeconds`, 3 s after appearing or being rung) are left to free people. No new state, inputs or
+  events. **UI lane:** draw the Off/1/2 solo toggle writing `soloBots`. Open: tune both windows by playtest.
+  Morning-prompt leftovers (optional, not built): bots favouring well-tipping families and drinks near a level-up;
+  bots treating a flowing D4b as the fast station; planner leaning to cash late in a short season week; bot
+  self-review from `report.crew`; G8 vote toast (UI lane).

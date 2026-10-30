@@ -5,6 +5,8 @@ import { boxStackOffset, PICKUP_Y, pickupCups, servingsGauge } from '../pickupMo
 import { PALETTE, sx, sy } from '../theme';
 import { drawItem, label, shadow } from './draw';
 import { pickupSlotXY, stationDepth } from './stations';
+import { passCool } from '../countsModel';
+import { drawCoolRing } from './counts';
 
 const TONE = { ok: PALETTE.good, low: PALETTE.warn, empty: PALETTE.bad } as const;
 
@@ -74,11 +76,14 @@ export class PickupVisuals {
     const g = this.cups;
     g.clear();
     g.zIndex = Math.max(stationDepth(lay.pickup) + 1, sy(PICKUP_Y) + 40); // never behind the pickup crowd
+    const cool = passCool(state);
     pickupCups(state).forEach((c, i) => {
       const { x, y } = pickupSlotXY(lay.pickup, i);
       if (c.stale && Math.floor(timeSec * 4) % 2 === 0) g.ellipse(x, y + 5, 11, 5).fill({ color: PALETTE.bad, alpha: 0.6 });
       else if (c.wanted) g.ellipse(x, y + 5, 11, 5).fill({ color: 0xfff2b8, alpha: 0.75 });
       drawItem(g, c.item, x, y - 4, 0.85);
+      // 3.3.2: the cooling ring: empties red → orange → yellow, then the cup is binned as stale
+      if (cool[i] !== undefined) drawCoolRing(g, x, y - 26, 5, cool[i]);
     });
 
     // the condiment bar gauge: 20 pips and a count, amber when low, red and blinking when empty

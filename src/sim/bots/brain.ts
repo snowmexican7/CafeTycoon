@@ -25,6 +25,7 @@ import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, layoutFor } from '../../data/layou
 import { autoMilk, closingSoon, isMilkStation, readyStock } from '../fridge';
 import { CONDIMENTS, canTakeBox, returnBox } from '../condiments';
 import { answerPhone } from './phone';
+import { heldByPerson, heldForPeople, ringsAtOnce } from './helper';
 
 const BOTS = ECONOMY.bots;
 const MESS = ECONOMY.mess;
@@ -196,11 +197,12 @@ function stationScore(state: GameState, p: Player, st: Station, need: Need): num
 /**
  * The station for a visit: among the stations that can make it, the lowest score, then nearest the bot
  * (ties: the lower array index). `skip` is left out; with `freeOnly`, only a score-0 station will do.
+ * FB2 A1: a helper bot never picks the machine a person is at (`heldByPerson`).
  */
 function pick(state: GameState, p: Player, need: Need, skip: Station | null = null, freeOnly = false): { st: Station; score: number } | null {
   let best: { st: Station; score: number; d: number } | null = null;
   for (const st of state.stations) {
-    if (st === skip || !canMake(state, p, st, need)) continue;
+    if (st === skip || !canMake(state, p, st, need) || heldByPerson(state, p, st)) continue;
     const score = stationScore(state, p, st, need);
     if (freeOnly && score > 0) continue;
     const d = dist(st.pos, p.pos);
@@ -336,9 +338,12 @@ export function uncoveredOrders(state: GameState, self: Player): Customer[] {
   return out;
 }
 
-/** The first uncovered order the shop can make now, with its chain (think's rule 2), or null. */
+/** The first uncovered order the shop can make now, with its chain (think's rule 2), or null. FB2 A1: a helper skips fresh tickets held for free people. */
 function claimable(state: GameState, p: Player): { order: Customer; chain: BotStep[] } | null {
-  for (const order of uncoveredOrders(state, p)) {
+  const orders = uncoveredOrders(state, p);
+  const held = heldForPeople(state, p, orders);
+  for (const order of orders) {
+    if (held.has(order.id)) continue;
     const chain = chainFor(state, p, order.drink, 'serve');
     if (chain.length > 0) return { order, chain };
   }
@@ -571,6 +576,30 @@ function ringPlanned(state: GameState, self: Player): boolean {
   return state.players.some((o) => o !== self && o.bot?.plan.some((x) => x.kind === 'use' && x.action === 'ring'));
 }
 
+/** FB2 A1: a person stands at the till (a helper bot leaves the ringing to them). */
+function tillHeld(state: GameState, p: Player): boolean {
+  const till = state.stations.find((st) => st.id === 'counter');
+  return !!till && heldByPerson(state, p, till);
+}
+
+/**
+ * FB2 A1: the next step is an insert or a ring at a station a person has since stepped up to. An insert moves to a
+ * free twin, else the bot waits where it is (up to the wait cap, then gives the job up: `wait`); a ring is dropped.
+ * A take (the bot's own cup) goes ahead. True when the bot should not walk on this tick.
+ */
+function yieldToPerson(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }>, st: Station): boolean {
+  if ((step.action !== 'insert' && step.action !== 'ring') || !heldByPerson(state, p, st)) return false;
+  const b = p.bot!;
+  if (step.action === 'ring') {
+    setPlan(b, []);
+    return true;
+  }
+  const twin = step.makes !== undefined && isRecipeKind(st.kind) ? pick(state, p, { kind: st.kind, held: p.holding, gives: step.makes }, st, true)?.st : null;
+  if (twin) retarget(b, st, twin);
+  else wait(state, p);
+  return true;
+}
+
 /** Pick the next job. First match wins. A thinking bot has nothing in progress, so it starts unclaimed. */
 export function think(state: GameState, p: Player): BotStep[] {
   const b = p.bot!;
@@ -599,7 +628,8 @@ export function think(state: GameState, p: Player): BotStep[] {
   if (state.gear === true) {
     // 1. Gear (batch/pickup): ring up the queue when nobody else is on their way to the till. Only a thinking
     // bot (nothing in progress) gets here, so it never leaves a machine mid-chain for it.
-    const ring = tillNext(state) && !ringPlanned(state, p) ? spotStep(state, 'counter', 'ring') : null;
+    // FB2 A1: a helper leaves the till to a person standing at it.
+    const ring = tillNext(state) && !ringPlanned(state, p) && !tillHeld(state, p) ? spotStep(state, 'counter', 'ring') : null;
     if (ring) return [ring];
     // 1b. FB2 A4, closing soon: put away the milk and the bar once nobody needs them (one bot does it).
     const away = putAwayPlan(state, p);
@@ -1078,6 +1108,7 @@ function stepBot(state: GameState, p: Player): void {
       if (next.length > 0 && next[0].kind !== 'idle') {
         setPlan(b, next);
         b.reactionTicksLeft = reactionDelay(state, b);
+        if (ringsAtOnce(state, p, next[0])) b.reactionTicksLeft = 0; // FB2 A1 (C1): drawn anyway, so the rng stream is unchanged
         if (b.reactionTicksLeft > 0) return; // a moment to react before moving off
       } else if (b.plan.length === 0) b.plan = next;
     }
@@ -1093,6 +1124,7 @@ function stepBot(state: GameState, p: Player): void {
   if (current.kind === 'idle' || current.kind === 'floor') node = current.node;
   else {
     station = state.stations.find((s) => s.id === current.station) ?? null;
+    if (station && yieldToPerson(state, p, current, station)) return;
     const nodes = station ? targetNodes(state, station, p.pos) : [];
     if (nodes.length === 0) return abandon(state, p);
     maxRank = nodes.length - 1;
