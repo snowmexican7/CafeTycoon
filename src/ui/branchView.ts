@@ -3,6 +3,7 @@ import { AREAS, type AreaId } from '../data/areas';
 import { areaFit, BRANCH, BRANCH_SUPPLIES, branchAreas, branchDay, canOpenBranch } from '../sim/branch';
 import { ECONOMY } from '../data/economy';
 import { roleSupplyCost } from '../sim/roles';
+import { restockCost } from '../sim/night';
 import { wageEach } from '../sim/staff';
 import type { GameState, SupplyId } from '../sim/types';
 
@@ -69,7 +70,8 @@ export function branchViewModel(state: GameState): BranchVM | undefined {
       const pack = ECONOMY.packs[id];
       const have = state.supplies[id] ?? 0;
       const send = Math.min(have, pack.size);
-      return { id, name: SUPPLY[id], have, send, worth: Math.round(((send * pack.cost) / pack.size) * 100) / 100 };
+      // 3.3.1: the sim credits a send at tonight's restock price (Manager / card discounts count, review M3)
+      return { id, name: SUPPLY[id], have, send, worth: Math.round(((send * restockCost(state, id, 1)) / pack.size) * 100) / 100 };
     });
     const m = state.players.find((p) => p.role === 'manager');
     vm.manager = m ? { name: m.name, cups: BRANCH.managerCups, discountPct: Math.round((1 - roleSupplyCost(state)) * 100) } : null;

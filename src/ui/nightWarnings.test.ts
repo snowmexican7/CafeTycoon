@@ -109,3 +109,54 @@ describe('night warnings', () => {
     expect(nightStructureKey(nightViewModel(s, 'p1'))).toBe(c);
   });
 });
+
+describe('3.3.1: a losing branch is part of tomorrow\'s bills (matches the sim brief)', () => {
+  const branchRun = (losing: boolean) => {
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true, tier: 'stand' });
+    s.reputation = 0;
+    s.settings = { ...s.settings, dayLengthSec: 600 };
+    s.branch = losing
+      ? { area: 'campus', staff: 3, openedDay: 1, spent: 300, by: 'K' }
+      : { area: 'tourist', staff: 1, openedDay: 1, spent: 300, by: 'K' };
+    return s;
+  };
+
+  it('adds the expected loss and names the branch in the warning', async () => {
+    const { branchExpectedLoss } = await import('../sim/branch');
+    const { billsForDay } = await import('../sim/staff');
+    const s = branchRun(true);
+    const loss = branchExpectedLoss(s);
+    expect(loss).toBeGreaterThan(0);
+    expect(rentTomorrow(s)).toBeCloseTo(billsForDay(s) + loss, 2);
+    s.cash = 1;
+    const w = nightWarnings(s).find((x) => x.id === 'cash:short');
+    expect(w?.title).toMatch(/short on rent.*the branch$/);
+    expect(w?.detail).toMatch(/the branch are \$/);
+    expect(cutsIntoRent({ ...s, cash: billsForDay(s) + loss / 2 + 1 } as typeof s, 1)).toBe(true);
+  });
+
+  it('a profitable branch adds nothing', async () => {
+    const { billsForDay } = await import('../sim/staff');
+    const s = branchRun(false);
+    expect(rentTomorrow(s)).toBe(billsForDay(s));
+  });
+});
+
+describe('3.3.1: branch stock sends are valued like the sim credits them', () => {
+  it('worth = units x tonight\'s restock price per unit', async () => {
+    const { branchViewModel } = await import('./branchView');
+    const { restockCost } = await import('../sim/night');
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true, tier: 'stand' });
+    s.branch = { area: 'tourist', staff: 1, openedDay: 1, spent: 300, by: 'K' };
+    s.supplies = { ...s.supplies, beans: 500, milk: 3 };
+    (s.players[0] as { role?: string }).role = 'manager'; // a Manager's discount makes tonight's price lower than list
+    const vm = branchViewModel(s)!;
+    for (const sup of vm.supplies ?? []) {
+      const pack = ECONOMY.packs[sup.id];
+      expect(sup.worth).toBeCloseTo((sup.send * restockCost(s, sup.id, 1)) / pack.size, 2);
+    }
+    expect(vm.supplies?.find((x) => x.id === 'milk')?.send).toBe(3);
+    const beans = vm.supplies!.find((x) => x.id === 'beans')!;
+    expect(beans.worth).toBeLessThan(ECONOMY.packs.beans.cost);
+  });
+});

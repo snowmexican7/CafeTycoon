@@ -1,6 +1,7 @@
 import { ECONOMY } from '../data/economy';
 import { expectedUse, nightBrief } from '../sim/brief';
 import { billsForDay, wagesForDay } from '../sim/staff';
+import { branchExpectedLoss } from '../sim/branch';
 import { restockCost } from '../sim/night';
 import { SUPPLY_IDS, menuDrinks } from '../sim/unlocks';
 import type { DrinkId, GameState, SupplyId } from '../sim/types';
@@ -28,9 +29,12 @@ const DRINK_PLURAL: Record<DrinkId, string> = {
 const dollars = (n: number) => `$${Math.abs(n).toFixed(2).replace(/\.00$/, '')}`;
 const listJoin = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
 
-/** Bills due at tomorrow's closing: rent plus the hired crew's wages (P3 B15). At night `state.day` is already tomorrow. */
+/**
+ * Bills due at tomorrow's closing: rent plus the hired crew's wages (P3 B15), plus what a losing second shop is
+ * expected to take (3.3.1, matching the sim brief's review M4). At night `state.day` is already tomorrow.
+ */
 export function rentTomorrow(state: GameState): number {
-  return billsForDay(state);
+  return Math.round((billsForDay(state) + branchExpectedLoss(state)) * 100) / 100;
 }
 
 /**
@@ -43,8 +47,10 @@ export function nightWarnings(state: GameState): NightWarning[] {
   const out: NightWarning[] = [];
   const rent = rentTomorrow(state);
   const wages = wagesForDay(state);
-  const bill = wages > 0 ? 'rent and wages' : 'rent';
-  const billText = wages > 0 ? `Rent and wages are ${dollars(rent)}` : `Rent is ${dollars(rent)}`;
+  const branchLoss = branchExpectedLoss(state);
+  const owed = ['rent', ...(wages > 0 ? ['wages'] : []), ...(branchLoss > 0 ? ['the branch'] : [])];
+  const bill = listJoin(owed);
+  const billText = `${bill[0]!.toUpperCase()}${bill.slice(1)} ${owed.length > 1 ? 'are' : 'is'} ${dollars(rent)}`;
   const after = Math.round((state.cash - rent) * 100) / 100;
   const opening = state.days.length === 0;
   const brief = new Set(nightBrief(state).alerts.map((a) => a.id));
