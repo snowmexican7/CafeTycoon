@@ -126,6 +126,15 @@ export const doorBell: Synth = (ctx, out, t) => {
   return bell(ctx, out, t + 0.14, 1046.5, 0.07, 1.3) - t;
 };
 
+/** An old desk phone: two short trills of alternating bell strikes (the second shop calling, P6). */
+export const phone: Synth = (ctx, out, t) => {
+  let end = t;
+  for (const start of [0, 0.42]) {
+    for (let i = 0; i < 8; i++) end = bell(ctx, out, t + start + i * 0.04, i % 2 ? 1568 : 1319, 0.05, 0.25);
+  }
+  return end - t;
+};
+
 /** Register "ching": two bright bell strikes. */
 export const ching: Synth = (ctx, out, t) => {
   bell(ctx, out, t, 2093, 0.05, 0.5);

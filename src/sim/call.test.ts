@@ -10,6 +10,7 @@ import { callVM } from '../ui/live';
 import { callHtml } from '../ui/hud';
 import { callLine } from '../ui/branchView';
 import type { GameState } from './types';
+import { diffCues, logCursor, RING_EVERY_SEC } from '../audio/cues';
 
 /** A Gear run at night with a branch open since day 1, then rolled to the first day of `kind` call. */
 function dayWithCall(kind: CallKind): GameState {
@@ -104,5 +105,21 @@ describe('phone calls from the second shop (P4 B6)', () => {
     const old = dayWithCall('order');
     delete old.callAnswer;
     expect(() => finishDay(old)).not.toThrow();
+  });
+
+  it('rings the phone when the call starts and every few seconds until someone picks up (P6 sound)', () => {
+    const s = dayWithCall('machine');
+    const c = callFor(s)!;
+    const rings = (prev: GameState, next: GameState) => diffCues(prev, next, 'p1', logCursor(prev)).cues.filter((q) => q.id === 'phoneRing').length;
+    const before = at(structuredClone(s), c.ringAt - 1);
+    const start = at(structuredClone(s), c.ringAt);
+    expect(rings(before, start)).toBe(1);
+    const tick = (n: number) => at(structuredClone(s), c.ringAt + n);
+    expect(rings(tick(1), tick(2))).toBe(0);
+    let total = 0;
+    for (let i = 0; i < c.until - c.ringAt + 5; i++) total += rings(tick(i), tick(i + 1));
+    expect(total).toBe(Math.ceil(CALL.answerSec / RING_EVERY_SEC) - 1);
+    const answered = { ...tick(5), callAnswer: { day: s.day, take: true } } as GameState;
+    expect(rings(tick(4), answered)).toBe(0);
   });
 });

@@ -135,6 +135,7 @@ export const RECIPES: Record<CueId, Layer[]> = {
   ],
   eggCamper: [{ synth: 'doorBell', gain: 0.5 }],
   eggNameMix: [{ synth: 'hmph', gain: 0.7 }],
+  phoneRing: [{ synth: 'phone', gain: 0.8 }],
 };
 
 /** Seconds a cue will sound for, used to hold its voice slot in the gate. */

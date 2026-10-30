@@ -1802,6 +1802,11 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 6 polish P6-1 — phone ring (p6-phone-ring, tag p6-01)
+
+- [x] `phoneRing` cue (`src/audio/cues.ts`, synth `phone`): rings when `callRinging` starts and every `RING_EVERY_SEC` (3 s) while it rings; silent once answered. Client-side only (no sim, protocol or save change). Test in `src/sim/call.test.ts`.
+- [ ] Playtest the volume next to a busy rush; maybe a quieter ring for bots-only crews.
+
 ### Phase 4 B8 — integration + release 3.2.0 (p4-b08-integration, tag v3.2.0)
 
 - [x] `scripts/p4Smoke.ts`: headless Gear runs with a scripted crew that answers calls, counters promos, buys the stamp card, opens the branch and sends stock; checks finite cash, a finished season at 28 days, save round-trip, records fold, and determinism. `npx tsx scripts/p4Smoke.ts 28 3` was OK (seeds 200–202; two went bankrupt around day 25, the third finished the season with a bronze, so the scripted crew is weak, not the sim). A 6-day version runs in vitest (`src/p4Smoke.test.ts`).
@@ -1845,7 +1850,7 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - [x] UI: drawer shows the Manager line (or how to get one), "Send stock over" buttons with amount and value, credit waiting, "from our stock" on last day / tomorrow; the Manager's report gets a 🏪 Second shop row.
 - [x] Tests: `branch.test.ts` +2 (send → credit → paid cups → decrement, validation; Manager capacity + drawer HTML). 1037 tests.
 - [x] Shots: `/workspace/overnight/sprint/p4-b05/branchManagedDrawer-*`, `branchManagedReport-*` (fixture `branchManaged`).
-- [ ] Follow-ups: move hired staff between shops (the original B5 scope); per-shop report tabs; bots sending stock (Claude prompt). Note: main auto-deploys to Pages, so P4 is live under the 3.1.0 label until the 3.2.0 bump.
+- [ ] Follow-ups: move hired staff between shops (the original B5 scope); per-shop report tabs; bots sending stock (Claude prompt). Note (resolved: released as v3.2.0): main auto-deploys to Pages, so P4 was live under the 3.1.0 label until the 3.2.0 bump.
 
 ### Phase 4 B4 — second shop (p4-b04-second-shop, tag p4-b04)
 
