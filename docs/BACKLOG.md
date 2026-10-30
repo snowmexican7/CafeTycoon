@@ -1802,6 +1802,11 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 4 B7 — 2v2 design spike (p4-b07-design-spike, tag p4-b07-spike)
+
+- [x] Written design: [`P4_B7_VERSUS_SPIKE.md`](P4_B7_VERSUS_SPIKE.md). Recommends two `GameState`s stepped in lockstep by a pure `street.ts` (one arrival stream split by a hashed `pickCafe` pull), per-team delta baselines in `hostRoom`, `?versus=1`, Starbuck$ off and street moves instead. Milestones V1–V5.
+- [ ] Kennedy: answer the open questions (match length, shared weather, poaching regulars), then V1 (street sim, no UI).
+
 ### Phase 4 follow-up F2 — rival loyalty card (p4-f02-rival-loyalty, tag p4-f02)
 
 - [x] Sim (`rival.ts`): Gear runs, from day 15 (`RIVAL.loyaltyDay`) the rival's loyalty card keeps `loyaltyTraffic` 0.93 of walk-ins; `stampCard` night input (humans, $30 once, from the launch night) sets `Rival.stamps` → walk-ins back, prices × `stampPrice` 0.97 from that day. Brief alert `rival:loyalty` (warn on launch night, info after; fix only when affordable); morning notes on launch / our card. PROTOCOL 39 → 40; optional field, old saves load.
