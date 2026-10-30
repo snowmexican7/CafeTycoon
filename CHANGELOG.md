@@ -15,6 +15,7 @@ Every pull request or push that changes what players see adds a line under **Unr
 when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
+- Bots stop snatching your prep: they leave a shot, grounds or a drink in a machine alone for a while (and while anyone is near it or heading its way) before tidying it up.
 
 ## 2.2.0 — 2026-10-29 · Feedback round 1 (game-night build)
 
