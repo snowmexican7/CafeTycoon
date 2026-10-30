@@ -24,7 +24,7 @@ import { tillNext } from '../till';
 import { CONDIMENTS_ID, PICKUP_ID, layoutFor } from '../../data/layout';
 import { CONDIMENTS, canTakeBox, returnBox } from '../condiments';
 import { answerPhone } from './phone';
-import { heldByPerson, heldForPeople } from './helper';
+import { heldByPerson, heldForPeople, ringsAtOnce } from './helper';
 
 const BOTS = ECONOMY.bots;
 const MESS = ECONOMY.mess;
@@ -989,6 +989,7 @@ function stepBot(state: GameState, p: Player): void {
       if (next.length > 0 && next[0].kind !== 'idle') {
         setPlan(b, next);
         b.reactionTicksLeft = reactionDelay(state, b);
+        if (ringsAtOnce(state, p, next[0])) b.reactionTicksLeft = 0; // FB2 A1 (C1): drawn anyway, so the rng stream is unchanged
         if (b.reactionTicksLeft > 0) return; // a moment to react before moving off
       } else if (b.plan.length === 0) b.plan = next;
     }

@@ -42,35 +42,141 @@ describe('FB2 A1: crew bots help a person instead of playing for them', () => {
     expect(helping(c, bot(c))).toBe(false);
   });
 
-  it('never claims or works the machine a person stands at, while an order needing it waits', () => {
+  it('leaves the machine a person stands at alone while the order needing it is fresh, then takes it (I1)', () => {
     let s = helperStand();
-    const machine = at(s, 'espresso');
-    person(s).pos = { x: machine.pos.x, y: machine.pos.y + 1 };
-    s.customers = [rungOrder(s, 1, 30)];
-    for (let i = 0; i < 600; i++) {
+    const id = at(s, 'espresso').id;
+    const machine = (x: GameState) => x.stations.find((st) => st.id === id)!;
+    person(s).pos = { x: machine(s).pos.x, y: machine(s).pos.y + 1 };
+    s.customers = [rungOrder(s, 1, 0)];
+    const guard = secondsToTicks(ECONOMY.bots.helperGuardSeconds);
+    for (let i = 0; i < guard - 30; i++) {
       s = step(s, []);
       expect(bot(s).bot!.claim).toBeNull();
-      expect(usesStation(bot(s).bot!.plan, machine)).toBe(false);
-      expect(machine.busyTicksLeft === 0 && s.stations.find((x) => x.id === machine.id)!.output === null).toBe(true);
+      expect(usesStation(bot(s).bot!.plan, machine(s))).toBe(false);
+      expect(machine(s).busyTicksLeft).toBe(0);
+      expect(machine(s).output).toBeNull();
     }
-    expect(s.customers.map((c) => c.id)).toEqual([1]);
-    // The person walks off: the bot takes the order and makes it.
-    person(s).pos = { x: 2, y: 4 };
+    // The person still stands there, empty-handed, but the order has gone stale: the bot takes it.
     let claimed = false;
-    for (let i = 0; i < 600 && !claimed; i++) {
+    for (let i = 0; i < 300 && !claimed; i++) {
       s = step(s, []);
       claimed = bot(s).bot!.claim === 1;
     }
     expect(claimed).toBe(true);
   });
 
-  it('leaves the till alone while a person stands at it', () => {
+  it('a person keeps a machine while it holds their cup or they hold something it takes', () => {
+    const s = helperStand();
+    const machine = at(s, 'espresso');
+    person(s).pos = { x: machine.pos.x, y: machine.pos.y + 1 };
+    s.customers = [rungOrder(s, 1, 30)];
+    think(s, bot(s));
+    expect(bot(s).bot!.claim).toBe(1); // stale order, idle machine, empty hands: not theirs
+    machine.output = 'espresso';
+    machine.outputSince = s.tick;
+    think(s, bot(s));
+    expect(bot(s).bot!.claim).toBeNull();
+    machine.output = null;
+    machine.busyTicksLeft = 120;
+    think(s, bot(s));
+    expect(bot(s).bot!.claim).toBeNull();
+  });
+
+  it('leaves the till to a person standing at it only while the front customer is fresh (C1)', () => {
     const s = helperStand();
     const till = s.stations.find((x) => x.id === 'counter')!;
     s.customers = [{ id: 1, drink: 'espresso', ...huge, stage: 'order' }];
     expect(think(s, bot(s))).toEqual([{ kind: 'use', station: 'counter', action: 'ring' }]);
     person(s).pos = { x: till.pos.x, y: till.pos.y - 1 };
     expect(think(s, bot(s)).some((x) => x.kind === 'use' && x.action === 'ring')).toBe(false);
+    // The front customer has waited past the window and the person still hasn't rung: the bot does.
+    s.customers[0].patienceLeft -= secondsToTicks(ECONOMY.bots.helperTicketSeconds);
+    expect(think(s, bot(s))).toEqual([{ kind: 'use', station: 'counter', action: 'ring' }]);
+  });
+
+  it('a person standing still beside the till all day does not stop the café (C1)', () => {
+    // Main 8b1338d, the same three days (counted at day end): lost 0, 2, 0. A single walk-out swings with the seed,
+    // so the bar is the three days together: no more lost than main, and every day serves.
+    const mainLost = 2;
+    let lost = 0;
+    for (const seed of [3, 4, 5]) {
+      let s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 150 }, tier: 'stand', gear: true });
+      for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
+      for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
+      s = startDay(s);
+      for (let i = 0; s.days.length === 0 && i < 60 * 400; i++) {
+        if (s.phase === 'day') person(s).pos = { x: 6, y: 5 };
+        s = step(s, []);
+      }
+      const d = s.days[0]!;
+      expect(d.served).toBeGreaterThan(0);
+      lost += d.lost;
+    }
+    expect(lost).toBeLessThanOrEqual(mainLost);
+  });
+
+  it('a planned insert at a machine a person steps up to: the bot waits, then gives the job up (M2)', () => {
+    let s = helperStand();
+    const id = at(s, 'espresso').id;
+    const machine = (x: GameState) => x.stations.find((st) => st.id === id)!;
+    s.customers = [rungOrder(s, 1, 30)];
+    const b = bot(s);
+    b.bot!.plan = [{ kind: 'use', station: id, action: 'insert', makes: 'espresso' }, { kind: 'use', station: id, action: 'take' }, { kind: 'use', station: 'pickup', action: 'put' }];
+    b.bot!.claim = 1;
+    b.bot!.claimDrink = 'espresso';
+    // The person steps up with their own shot sitting in the machine.
+    person(s).pos = { x: machine(s).pos.x, y: machine(s).pos.y + 1 };
+    machine(s).output = 'espresso';
+    machine(s).outputSince = s.tick;
+    let gaveUp = false;
+    for (let i = 0; i < ECONOMY.bots.maxWaitTicks + 30; i++) {
+      s = step(s, []);
+      expect(machine(s).output).toBe('espresso'); // never takes the person's shot
+      expect(bot(s).holding).toBeNull();
+      if (bot(s).bot!.claim === null) {
+        gaveUp = true;
+        break;
+      }
+    }
+    expect(gaveUp).toBe(true);
+  });
+
+  it('a planned insert moves to the free twin group when a person steps up to the other (M2)', () => {
+    let s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1 }, tier: 'stand', gear: true });
+    s.slots = ['grinder', 'espresso', 'steamer', 'trash'];
+    s.slotGear = ['g1', 'e5', null, 'b0'];
+    s.stations = [...stationsFromSlots('stand', s.slots, s.slotGear), ...s.stations.filter((x) => x.id === 'counter' || x.id === 'pickup' || x.id === 'condiments')];
+    for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
+    s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
+    s = startDay(s);
+    s.eventSchedule = [];
+    const e = s.stations.find((x) => x.id === 'espresso')!;
+    s.customers = [rungOrder(s, 1, 30)];
+    const b = bot(s);
+    b.holding = 'grounds';
+    b.bot!.plan = [{ kind: 'use', station: 'espresso', action: 'insert', makes: 'espresso' }, { kind: 'use', station: 'espresso', action: 'take' }, { kind: 'use', station: 'pickup', action: 'put' }];
+    b.bot!.claim = 1;
+    b.bot!.claimDrink = 'espresso';
+    person(s).pos = { x: e.pos.x, y: e.pos.y + 1 };
+    e.output = 'espresso';
+    e.outputSince = s.tick;
+    s = step(s, []);
+    expect(bot(s).bot!.plan.slice(0, 2)).toEqual([
+      { kind: 'use', station: 'espresso-2', action: 'insert', makes: 'espresso' },
+      { kind: 'use', station: 'espresso-2', action: 'take' },
+    ]);
+  });
+
+  it('a planned ring is dropped when a person steps up to the till with a fresh customer waiting (M2)', () => {
+    let s = helperStand();
+    const till = s.stations.find((x) => x.id === 'counter')!;
+    s.customers = [{ id: 1, drink: 'espresso', ...huge, stage: 'order' }];
+    bot(s).bot!.plan = [{ kind: 'use', station: 'counter', action: 'ring' }];
+    bot(s).bot!.thinkTicksLeft = 99;
+    person(s).pos = { x: till.pos.x, y: till.pos.y - 1 };
+    s = step(s, []);
+    expect(bot(s).bot!.plan.some((x) => x.kind === 'use' && x.action === 'ring')).toBe(false);
+    expect(s.customers[0]!.rungAt).toBeUndefined();
   });
 
   it('a new ticket is the free person’s for a few seconds; after that, or with nobody free, the bot takes it', () => {

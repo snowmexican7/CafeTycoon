@@ -112,6 +112,8 @@ export const ECONOMY = {
     // the person is this close to it, and leave a fresh ticket to a free person for this long before claiming it.
     helperGuardTiles: 1.5,
     helperTicketSeconds: 3,
+    // ...and an idle machine next to an empty-handed person stays theirs only until the orders needing it have waited this long.
+    helperGuardSeconds: 8,
   },
   mess: {
     max: 12,
