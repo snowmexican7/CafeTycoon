@@ -173,3 +173,23 @@ describe('Gear pickup (3.3.1)', () => {
     expect(mem.putters).toEqual({ drip: ['p1'] });
   });
 });
+
+describe('batch/pickup feedback (3.3.1)', () => {
+  it('turns condiment.black, steep and call.answer into bursts', () => {
+    const a = run();
+    const b = withLog(
+      a,
+      { kind: 'condiment.black', data: { customer: 3, text: 'No milk? Black, then.' } },
+      { kind: 'steep', data: { cups: 14, paid: 10 } },
+      { kind: 'call.answer', data: { by: 'Ana', take: true, kind: 'machine' } },
+      { kind: 'call.answer', data: { by: 'Bo', take: false, kind: 'order' } },
+    );
+    const { bursts } = crewBursts(a, b, a.nextLogSeq - 1, newCrewMemory());
+    expect(bursts).toEqual([
+      { kind: 'grumble', text: 'No milk? Black, then.' },
+      { kind: 'steep', cups: 14, paid: 10 },
+      { kind: 'call', by: 'Ana', take: true, call: 'machine' },
+      { kind: 'call', by: 'Bo', take: false, call: 'order' },
+    ]);
+  });
+});

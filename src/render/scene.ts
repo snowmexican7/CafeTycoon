@@ -17,6 +17,8 @@ import { ESPRESSO } from '../sim/espresso';
 import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
 import { StationOverlay, buildEmptySlot, buildStation, type StationOverlayState } from './layers/stations';
+import { PickupVisuals } from './layers/pickup';
+import { counterSpotOf } from './pickupModel';
 import { emptySlotPositions, stationBadges, wallMenuRows } from './slotModel';
 import { GEAR } from '../data/gear';
 import { buildWall } from './layers/wall';
@@ -52,6 +54,7 @@ export class Scene {
   private readonly gags: EspressoGags;
   private readonly chaos: Chaos;
   private readonly eventFx: EventVisuals;
+  private readonly pickup: PickupVisuals;
   /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
   private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
@@ -70,8 +73,9 @@ export class Scene {
     this.gags = new EspressoGags(this.depth);
     this.chaos = new Chaos(this.depth);
     this.eventFx = new EventVisuals(this.depth, this.chaos.overlay, SCENE_WIDTH, SCENE_HEIGHT);
-    this.overlay.addChild(this.stationOverlay.root, this.tags, this.chaos.overlay);
-    this.root.addChild(this.wall.root, this.soldOutSign, buildLamps(), floor, this.chaos.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
+    this.pickup = new PickupVisuals(this.depth);
+    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.tags, this.chaos.overlay);
+    this.root.addChild(this.wall.root, this.soldOutSign, buildLamps(), floor, this.chaos.floor, this.pickup.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
 
   /** FB1 WP4: a red "SOLD OUT" strip hung across the chalkboard menu while nothing can be made. */
@@ -95,7 +99,7 @@ export class Scene {
     this.stationArt = list.map((s, i) => {
       const twin = 'twin' in s && s.twin === true;
       const g = gearOf(s);
-      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : undefined);
+      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : undefined, counterSpotOf(s, list));
     });
     for (const pos of emptySlotPositions(tier, list)) this.stationArt.push(buildEmptySlot(pos));
     for (const c of this.stationArt) this.depth.addChild(c);
@@ -178,7 +182,10 @@ export class Scene {
       return at == null ? null : Math.max(0, (state.tick - at) / TICK_RATE);
     };
     const poses = this.gags.update(state.players, simAge, now, (p) => fellAtScreen(p.espresso?.fellAt ?? p.pos));
+    const lay = layoutFor(state.tier);
+    this.actors.spots = { gear: state.gear === true, width: lay.width, queueSlots: lay.queueSlots, till: LAYOUT.stations.find((s) => s.kind === 'counter')!.pos, pickup: lay.pickup };
     this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses);
+    this.pickup.update(state, now);
     this.chaos.update(state, now, dt);
     this.eventFx.update(state, now);
     this.espressoPops(state.players, view.baristaPositions);
@@ -199,7 +206,8 @@ export class Scene {
 
   /** Serve toasts, combo cheers, fail feedback, and juice punches. */
   private crewBurst(b: CrewBurst, state: GameState, positions: Record<PlayerId, { x: number; y: number }>): void {
-    const counter = LAYOUT.stations.find((s) => s.kind === 'counter')!;
+    // Gear: serves happen when the customer takes the cup, so the toasts rise over the pickup counter
+    const counter = state.gear === true ? { pos: layoutFor(state.tier).pickup } : LAYOUT.stations.find((s) => s.kind === 'counter')!;
     const cx = sx(counter.pos.x);
     const cy = sy(counter.pos.y);
     if (b.kind === 'serve') {
@@ -239,6 +247,18 @@ export class Scene {
       this.fx.spawn('Slip!', sx(pos.x), sy(pos.y) - 100, 0xf0a63a, 16);
     } else if (b.kind === 'wrong') {
       this.fx.spawn(b.text, cx, cy - 120, 0xe0564a, 15);
+    } else if (b.kind === 'grumble') {
+      // said walking away from the empty condiment bar
+      const bar = layoutFor(state.tier).condiments;
+      this.fx.spawn(`“${b.text}”`, sx(bar.x), sy(bar.y) - 130, 0xf0a63a, 16);
+    } else if (b.kind === 'steep') {
+      if (b.cups > 0) {
+        const fresh = b.paid < b.cups ? ` (${b.paid} fresh)` : '';
+        this.fx.spawn(`🧊 ${b.cups} cold ${b.cups === 1 ? 'brew' : 'brews'} on tap${fresh}`, SCENE_WIDTH / 2, sy(2), 0x9fd3ff, 17);
+      }
+    } else if (b.kind === 'call') {
+      const text = !b.take ? `${b.by} let the phone ring` : b.call === 'machine' ? `📞 ${b.by} talked the branch through the machine` : `📞 ${b.by} took the branch's order`;
+      this.fx.spawn(text, SCENE_WIDTH / 2, sy(2) + 30, b.take ? 0x7fcfb4 : 0xf0a63a, 15);
     } else if (b.kind === 'challenge') {
       this.fx.spawn(`Challenge! +$${b.reward}`, cx, cy - 160, 0x7fcfb4, 16);
       this.fx.confetti(cx, cy - 50, 16);

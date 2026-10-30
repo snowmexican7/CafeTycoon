@@ -49,7 +49,13 @@ export type CrewBurst =
   | { kind: 'storm'; count: number }
   | { kind: 'slip'; playerId: string }
   | { kind: 'wrong'; text: string }
-  | { kind: 'challenge'; label: string; reward: number };
+  | { kind: 'challenge'; label: string; reward: number }
+  /** Gear: a drip / cold brew drinker found the condiment bar empty (said out loud, they are already gone). */
+  | { kind: 'grumble'; text: string }
+  /** Gear morning: the taps were filled (`paid` of `cups` fresh tonight, the rest yesterday's). */
+  | { kind: 'steep'; cups: number; paid: number }
+  /** The branch phone was picked up (`by` is a name) or left to ring. */
+  | { kind: 'call'; by: string; take: boolean; call: 'order' | 'machine' };
 
 /** Visual-only memory between snapshots: pass putters, combo streak, and crew vibe. */
 export interface CrewMemory {
@@ -183,6 +189,13 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
     } else if (e.kind === 'challenge.won') {
       bursts.push({ kind: 'challenge', label: String(e.data.label ?? e.data.id ?? 'Challenge'), reward: Number(e.data.reward) || 0 });
       bumpVibe(mem, 6);
+    } else if (e.kind === 'condiment.black') {
+      bursts.push({ kind: 'grumble', text: String(e.data.text ?? 'Black, I guess.') });
+      bumpVibe(mem, -1);
+    } else if (e.kind === 'steep') {
+      bursts.push({ kind: 'steep', cups: Number(e.data.cups) || 0, paid: Number(e.data.paid) || 0 });
+    } else if (e.kind === 'call.answer') {
+      bursts.push({ kind: 'call', by: String(e.data.by ?? 'Someone'), take: e.data.take === true, call: e.data.kind === 'machine' ? 'machine' : 'order' });
     } else if (e.kind === 'rogue.stormed') {
       bursts.push({ kind: 'storm', count: 1 });
       resetCombo(mem);
