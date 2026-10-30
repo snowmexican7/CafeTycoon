@@ -5,7 +5,8 @@ import { addStandIns } from './roster';
 import { afterBotInteract, dropPlan, think } from './brain';
 import { TICK_RATE } from '../constants';
 import type { GearId } from '../../data/gear';
-import type { Customer, DrinkId, GameState, PassItem } from '../types';
+import type { BotStep, Customer, DrinkId, GameState, PassItem, SupplyId } from '../types';
+import { stationsFromSlots } from '../slots';
 
 // Feedback 2 A2: bots and cold cups (src/sim/cooling.ts).
 const secs = (n: number) => Math.round(n * TICK_RATE);
@@ -159,5 +160,127 @@ describe('cold cups with FB2 A1 helper bots', () => {
     s = step(s, [{ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: true }]); // the person rings the espresso order
     expect(s.log.some((e) => e.kind === 'till.rung')).toBe(true);
     expect(s.log.some((e) => e.kind === 'pickup.cold')).toBe(false);
+  });
+});
+
+describe('A2 fix round 2: a cold or orphaned machine output never makes a bot wait', () => {
+  /** A café bar set by hand (grinder, Brevelle E2, steamer, bin), `n` stand-ins, no walk-ins, p1 parked out of the way. */
+  function bar(n = 1): GameState {
+    let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, gear: true });
+    s.slots = ['grinder', 'espresso', 'steamer', 'trash', null, null];
+    s.slotGear = ['g2', 'e2', 's3', 'b0', null, null];
+    s.stations = stationsFromSlots('cafe', s.slots, s.slotGear);
+    for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
+    addStandIns(s, n);
+    s = quiet(startDay(s));
+    s.players[0].pos = { x: 10, y: 5 };
+    return s;
+  }
+  const sim = (s: GameState, n = 1) => s.players.find((p) => p.id === `sim-${n}`)!;
+  const station = (s: GameState, kind: string) => s.stations.find((x) => x.kind === kind)!;
+  const order = (id: number, drink: DrinkId): Customer => ({ id, drink, patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: 0 });
+  const steps = (plan: BotStep[]) => plan.map((x) => (x.kind === 'use' ? `${x.station}:${x.action}` : x.kind));
+
+  it('a bot that comes for its own cup and finds it cold bins it and remakes', () => {
+    let s = bar();
+    const e = station(s, 'espresso');
+    e.output = 'espresso';
+    e.outputSince = s.tick - secs(50);
+    s.customers = [order(1, 'espresso')];
+    const q = sim(s);
+    q.bot!.claim = 1;
+    q.bot!.claimDrink = 'espresso';
+    q.bot!.plan = [{ kind: 'use', station: e.id, action: 'take' }, { kind: 'use', station: 'pickup', action: 'put' }];
+    q.bot!.thinkTicksLeft = 999;
+    for (let i = 0; i < secs(15) && sim(s).holding === null; i++) s = step(s, idle);
+    expect(sim(s).holding).toBe('espresso');
+    expect(steps(sim(s).bot!.plan)[0]).toBe('trash:trash');
+    expect(sim(s).bot!.claim).toBe(1);
+    const kinds: string[] = [];
+    for (let i = 0; i < secs(60) && s.customers.length > 0; i++) {
+      s = step(s, idle);
+      for (const x of s.log) if (x.tick === s.tick) kinds.push(x.kind);
+    }
+    expect(s.customers).toHaveLength(0);
+    expect(kinds).not.toContain('pickup.cold');
+    expect(kinds.indexOf('trash')).toBeLessThan(kinds.indexOf('pickup.take'));
+  });
+
+  it('a bot with grounds at a machine blocked by a cold shot does not wait it out', () => {
+    let s = bar();
+    const e = station(s, 'espresso');
+    e.output = 'espresso';
+    e.outputSince = s.tick - secs(50);
+    s.customers = [order(1, 'latte')];
+    const p = sim(s);
+    p.bot!.claim = 1;
+    p.bot!.claimDrink = 'latte';
+    p.holding = 'grounds';
+    p.bot!.plan = [{ kind: 'use', station: e.id, action: 'insert', makes: 'espresso' }, { kind: 'use', station: e.id, action: 'take' }, { kind: 'use', station: 'pickup', action: 'put' }];
+    p.bot!.thinkTicksLeft = 0;
+    let cleared = -1;
+    for (let i = 0; i < secs(60) && s.customers.length > 0; i++) {
+      s = step(s, idle);
+      if (cleared < 0 && s.stations.find((x) => x.id === e.id)!.output !== 'espresso') cleared = i;
+    }
+    // Well under the 15 s wait cap (walk there, give the grounds up, take the cold shot).
+    expect(cleared).toBeGreaterThanOrEqual(0);
+    expect(cleared).toBeLessThan(secs(10));
+    expect(s.customers).toHaveLength(0);
+    expect(s.log.some((x) => x.kind === 'pickup.cold')).toBe(false);
+  });
+
+  it('empty hands at a machine blocked by a stray warm cup nobody is coming for take it, park it and carry on', () => {
+    let s = bar();
+    const st = station(s, 'steamer');
+    st.output = 'latte';
+    st.outputSince = s.tick;
+    s.customers = [order(1, 'mocha')];
+    const p = sim(s);
+    p.holding = null;
+    p.bot!.plan = [{ kind: 'use', station: st.id, action: 'insert', makes: 'matcha' }];
+    p.bot!.thinkTicksLeft = 999;
+    for (let i = 0; i < secs(15) && sim(s).holding === null; i++) s = step(s, idle);
+    expect(sim(s).holding).toBe('latte');
+    expect(steps(sim(s).bot!.plan)).toEqual(['pickup:put', `${st.id}:insert`]);
+  });
+
+  it('a free bot clears a stray output that blocks another bot at once (no 15 s grace)', () => {
+    const s = bar(2);
+    const e = station(s, 'espresso');
+    e.output = 'espresso';
+    e.outputSince = s.tick - secs(2);
+    const a = sim(s, 1);
+    a.holding = 'grounds';
+    a.bot!.plan = [{ kind: 'use', station: e.id, action: 'insert', makes: 'espresso' }, { kind: 'use', station: e.id, action: 'take' }];
+    expect(think(s, sim(s, 2))).toEqual([{ kind: 'use', station: e.id, action: 'take' }]);
+    // Nobody waiting on it: the stray shot gets its grace.
+    a.bot!.plan = [];
+    expect(think(s, sim(s, 2))).not.toEqual([{ kind: 'use', station: e.id, action: 'take' }]);
+  });
+
+  it('a bot holding a cold cup at a blocked machine bins it and remakes instead of waiting', () => {
+    let s = bar();
+    const st = station(s, 'steamer');
+    st.output = 'latte';
+    st.outputSince = s.tick;
+    st.occupiedBy = null;
+    s.customers = [order(1, 'latte')];
+    const p = sim(s);
+    p.holding = 'espresso';
+    p.heldSince = s.tick - secs(60);
+    p.bot!.claim = 1;
+    p.bot!.claimDrink = 'latte';
+    p.bot!.plan = [{ kind: 'use', station: st.id, action: 'insert', makes: 'latte' }, { kind: 'use', station: st.id, action: 'take' }, { kind: 'use', station: 'pickup', action: 'put' }];
+    p.bot!.thinkTicksLeft = 999;
+    let binFirst = false;
+    for (let i = 0; i < secs(8) && !binFirst; i++) {
+      s = step(s, idle);
+      const first = sim(s).bot!.plan[0];
+      binFirst = first?.kind === 'use' && first.station === 'trash';
+    }
+    expect(binFirst).toBe(true);
+    expect(sim(s).bot!.claim).toBe(1);
+    expect(sim(s).bot!.plan.length).toBeGreaterThan(1);
   });
 });
