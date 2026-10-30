@@ -12,7 +12,7 @@
  *     id: string;   // restock:<supply> | price:<drink> | twist:<drink> | signature | scout | rival |
  *                   // grow:<tier> | checkout:<id> | slot:<index> | equip:espresso | menu:<drink>
  *                   // Gear runs: gear:<gearId> | staff:fire | rival:promo | rival:loyalty |
- *                   // branch:open | branch:staff | branch:send:<supply>
+ *                   // branch:open | branch:staff | branch:send:<supply> | steep | condimentBox
  *     kind: AdviceKind;  // restock | price | twist | signature | scout | rival | grow | checkout | slot | equip | menu
  *     text: string;
  *     input: NightFix;   // the input without its playerId
@@ -25,15 +25,17 @@
  *
  *   100 restock, out of stock          55 slot (classic)               40 twist
  *    90 restock, low                   53 staff:fire (G, kind equip)   35 signature
- *    80 rival (knock-off)              52 branch:staff (G, kind grow)  30 equip (classic)
- *    75 rival:promo (G, rivalCounter)  50 price                        20 scout
- *    70 grow                           48 branch:send:* (G, restock)   10 menu
- *    65 branch:open (G, kind grow)     45 rival:loyalty (G, stampCard)
+ *    86 steep (G, kind restock)        52 branch:staff (G, kind grow)  30 equip (classic)
+ *    84 condimentBox (G, restock)      50 price                        20 scout
+ *    80 rival (knock-off)              48 branch:send:* (G, restock)   10 menu
+ *    75 rival:promo (G, rivalCounter)  45 rival:loyalty (G, stampCard)
+ *    70 grow
+ *    65 branch:open (G, kind grow)
  *    60 checkout
  *    58 gear:<id> (G, kind equip)
  *
  * Gear rows reuse the existing AdviceKind values (the UI keeps a `Record<AdviceKind, ...>` of icons), so
- * tell them apart by `id` or `input.kind`: `gear` buys, `staff` (fire only, never hire), `rivalCounter`,
+ * tell them apart by `id` or `input.kind`: `steep` and `condimentBox` (batch coffee, below), `gear` buys, `staff` (fire only, never hire), `rivalCounter`,
  * `stampCard` and `branch` (open / staff / send).
  *
  * Gear runs: there is no `slot` or `equip` advice (the Gear board replaces the stations shop). The gear
@@ -47,6 +49,13 @@
  * with the best `branchDay` estimate), add or cut a branch barista from yesterday's branch day (only if
  * `branchDay` says it pays), and send a pack of beans or milk when a Manager is on the crew and home stock is
  * more than two packs over tomorrow's use. Season pacing has no input to attach, so there is no season advice.
+ *
+ * Batch coffee (docs/superpowers/specs/2026-10-30-batch-pickup-design.md §2, §4): `steep` sets tomorrow's cold brew
+ * number to ceil(expected orders for every drink that takes cold brew from the tap x STEEP_MARGIN), within the taps'
+ * cap; the concentrate restock then buys only the top-up (the want less yesterday's leftovers), and the number is
+ * what that stock and the budget can actually steep. `condimentBox` buys boxes when 60% of the expected plain
+ * drip and cold brew orders outrun the bar's servings plus the boxes waiting in the corner. Both draw on the same
+ * budget, right after restock. Classic runs get neither.
  *
  * Opening night is for stocking up: grow, checkout and equip advice wait for a finished day (as
  * `nightBrief` does). A drink with no station is only taken off the board when something can be made at all
@@ -62,7 +71,7 @@
  */
 import { AREAS } from '../../data/areas';
 import type { AreaId } from '../../data/areas';
-import { BASE_DRINKS, DRINK_INFO } from '../../data/drinks';
+import { BASE_DRINKS, DRINK_INFO, TAP_DRINKS } from '../../data/drinks';
 import { ECONOMY } from '../../data/economy';
 import { GEAR } from '../../data/gear';
 import type { GearId } from '../../data/gear';
@@ -71,12 +80,14 @@ import type { EquipmentKind } from '../../data/equipment';
 import { expectedUse } from '../brief';
 import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
+import { CONDIMENTS } from '../condiments';
 import { computeModifiers } from '../effects';
 import { billsForDay, crewCount, crewNames, wageEach } from '../staff';
 import { averageStars } from '../accuracy';
 import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun } from '../gear';
 import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
 import { restockCost } from '../night';
+import { steepPlan } from '../steep';
 import { PRICING, priceForecast, priceStep } from '../pricing';
 import { BRANCH, branchAreas, branchDay, canOpenBranch, hasManager } from '../branch';
 import { profitOf } from '../profit';
@@ -102,6 +113,8 @@ export interface Advice {
 export const PLAN_PRIORITY = {
   restockOut: 100,
   restockLow: 90,
+  steep: 86,
+  condimentBox: 84,
   rival: 80,
   rivalCounter: 75,
   grow: 70,
@@ -123,6 +136,8 @@ export const PLAN_PRIORITY = {
 
 /** Restock to this multiple of the day's expected use. */
 export const RESTOCK_MARGIN = 1.25;
+/** Steep this multiple of the expected cold brew orders (every drink that takes cold brew from the tap). */
+export const STEEP_MARGIN = 1.2;
 /** Price steps the planner weighs for each drink. */
 export const PLAN_STEPS = { min: -2, max: 4 } as const;
 /** Scouting waits for this much spare cash after rent. */
@@ -147,12 +162,19 @@ interface Budget {
   left: number;
 }
 
-/** Restock every supply a menu drink needs up to the day's expected use × RESTOCK_MARGIN; out-of-stock first. */
-export function restockAdvice(state: GameState, budget: Budget = { left: round2(state.cash - billsForDay(state)) }): Advice[] {
+/**
+ * Restock every supply a menu drink needs up to the day's expected use × RESTOCK_MARGIN; out-of-stock first.
+ * A `targets` entry replaces that number for its supply (Gear: the steep top-up for concentrate).
+ */
+export function restockAdvice(
+  state: GameState,
+  budget: Budget = { left: round2(state.cash - billsForDay(state)) },
+  targets: Partial<Record<SupplyId, number>> = {},
+): Advice[] {
   const use = expectedUse(state);
   const menu = menuDrinks(state);
   const wants = SUPPLY_IDS.filter((s) => RESTOCKABLE.includes(s) && menu.some((d) => ECONOMY.drinkSupplies[d].includes(s)))
-    .map((supply) => ({ supply, have: state.supplies[supply] ?? 0, target: use[supply] * RESTOCK_MARGIN }))
+    .map((supply) => ({ supply, have: state.supplies[supply] ?? 0, target: targets[supply] ?? use[supply] * RESTOCK_MARGIN }))
     .filter((w) => w.have < w.target);
   const out = wants.filter((w) => w.have < 1);
   const low = wants.filter((w) => w.have >= 1);
@@ -173,6 +195,68 @@ export function restockAdvice(state: GameState, budget: Budget = { left: round2(
     });
   }
   return advice;
+}
+
+/** Expected orders per drink tomorrow, unrounded (the share of arrivals by order bias; 0 off the menu). Same split as `expectedUse`. */
+function expectedOrdersFor(state: GameState): Partial<Record<DrinkId, number>> {
+  const m = computeModifiers(state);
+  const arrivals = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
+  const menu = menuDrinks(state);
+  const w = (d: DrinkId) => m.orderBias[d] * DRINK_INFO[d].bias;
+  const total = menu.reduce((sum, d) => sum + w(d), 0) || 1;
+  return Object.fromEntries(menu.map((d) => [d, (arrivals * w(d)) / total]));
+}
+
+/** Gear runs with a cold brew tap: the number of cups worth steeping tomorrow and the orders behind it. */
+function steepWant(state: GameState): { want: number; expected: number; leftover: number } | null {
+  if (!isGearRun(state)) return null;
+  const plan = steepPlan(state);
+  if (plan.cap <= 0) return null;
+  const orders = expectedOrdersFor(state);
+  const expected = TAP_DRINKS.reduce((sum, d) => sum + (orders[d] ?? 0), 0);
+  return { want: Math.min(plan.cap, Math.ceil(expected * STEEP_MARGIN)), expected, leftover: plan.leftover };
+}
+
+/** Tomorrow's steep number: what the want, the leftovers, the concentrate in stock and the packs just bought can steep. */
+function steepAdvice(state: GameState, steep: ReturnType<typeof steepWant>, restock: Advice[]): Advice[] {
+  if (!steep) return [];
+  const bought = restock.find((a) => a.id === 'restock:concentrate')?.input;
+  const packs = bought && bought.kind === 'restock' ? bought.packs : 0;
+  const fresh = Math.floor(state.supplies.concentrate ?? 0) + packs * ECONOMY.packs.concentrate.size;
+  const n = Math.min(steep.want, steep.leftover + fresh);
+  if (n === steepPlan(state).target) return [];
+  return [
+    {
+      id: 'steep',
+      kind: 'restock',
+      text: `Steep ${n} cold brews for tomorrow (about ${Math.round(steep.expected)} cold brew orders expected)`,
+      input: { kind: 'steep', cups: n },
+      priority: PLAN_PRIORITY.steep,
+    },
+  ];
+}
+
+/** Gear runs: buy condiment boxes when the bar (and the boxes already waiting) can't cover the drip and cold brew drinkers. */
+function condimentAdvice(state: GameState, budget: Budget): Advice[] {
+  if (!isGearRun(state) || !state.condiments) return [];
+  const orders = expectedOrdersFor(state);
+  const use = Math.ceil(CONDIMENTS.share * ((orders.drip ?? 0) + (orders.coldBrew ?? 0)));
+  const have = state.condiments.servings + (state.condimentBoxes ?? 0) * CONDIMENTS.servings;
+  if (use <= have) return [];
+  let n = Math.min(CONDIMENTS.maxBoxes, Math.ceil((use - have) / CONDIMENTS.servings));
+  while (n > 0 && round2(n * CONDIMENTS.boxCost) > budget.left) n -= 1;
+  if (n <= 0) return [];
+  const cost = round2(n * CONDIMENTS.boxCost);
+  budget.left = round2(budget.left - cost);
+  return [
+    {
+      id: 'condimentBox',
+      kind: 'restock',
+      text: `Buy ${n} condiment ${n === 1 ? 'box' : 'boxes'} (${dollars(cost)}): the bar runs dry tomorrow`,
+      input: { kind: 'condimentBox', boxes: n },
+      priority: PLAN_PRIORITY.condimentBox,
+    },
+  ];
 }
 
 /** The forecast profit on `drink` if its price step were `step` (every other step as it is). */
@@ -665,8 +749,10 @@ function menuAdvice(state: GameState, growing: boolean): Advice[] {
 /** Everything worth doing tonight, highest priority first (ties by id). Pure and deterministic. */
 export function planNight(state: GameState): Advice[] {
   const budget: Budget = { left: round2(state.cash - billsForDay(state)) };
-  // Spending advice draws on the budget in priority order: restock, grow, branch:open, checkout, gear, rival:loyalty, equip, scout.
-  const restock = restockAdvice(state, budget);
+  // Spending advice draws on the budget in priority order: restock (with the steep top-up), condiment boxes, grow, branch:open, checkout, gear, rival:loyalty, equip, scout.
+  const steep = steepWant(state);
+  const restock = restockAdvice(state, budget, steep ? { concentrate: Math.max(0, steep.want - steep.leftover) } : {});
+  const condiments = condimentAdvice(state, budget);
   const grow = growAdvice(state, budget);
   const branchOpen = branchOpenAdvice(state, budget);
   const checkout = grow.length ? [] : checkoutAdvice(state, budget);
@@ -677,6 +763,8 @@ export function planNight(state: GameState): Advice[] {
   const scout = scoutAdvice(state, budget);
   const all = [
     ...restock,
+    ...steepAdvice(state, steep, restock),
+    ...condiments,
     ...rivalAdvice(state),
     ...rivalCounterAdvice(state),
     ...grow,
