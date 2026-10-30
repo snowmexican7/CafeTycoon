@@ -14,7 +14,7 @@ import { ECONOMY } from '../src/data/economy';
 import { GEAR, type GearId } from '../src/data/gear';
 import { TIERS, nextTier } from '../src/sim/growth';
 import { gearArea } from '../src/sim/gear';
-import type { GameState, PlayerInput, ScenarioId, SupplyId } from '../src/sim/types';
+import type { GameState, PlayerInput, ScenarioId, SupplyId, TierId } from '../src/sim/types';
 // Node globals, typed locally so src tests can import this file without @types/node.
 declare const process: { env: Record<string, string | undefined>; argv: string[]; exit(code?: number): never };
 
@@ -61,8 +61,10 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
 /** P4 B8: an optional extra crew move, asked when the scripted night has nothing left to do (and each day tick). */
 export type ExtraMoves = (state: GameState, ids: string[]) => PlayerInput[];
 
-export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0, extra?: ExtraMoves, onState?: (s: GameState) => void) {
+export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0, extra?: ExtraMoves, onState?: (s: GameState) => void, start?: { tier: TierId; cash: number }) {
   let s = createRun({ seed, hostId: 'tester', players: [], tier: 'stand', gear: true, settings: { bots, dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4 } });
+  // P6-6: start further along (e.g. the café tier with cash) so later systems get exercised.
+  if (start) { s.tier = start.tier; s.cash = s.startingCash = start.cash; }
   addStandIns(s, humans);
   if (bots) syncBots(s);
   if (scenario) s.scenario = scenario;
@@ -90,7 +92,9 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
     }
     if (s.phase === 'night' && last !== 'night') { stage = 0; stuck = 0; skip.clear(); }
     let inputs: PlayerInput[] = [];
-    if (s.phase === 'night' && stage >= 0) {
+    // P6-6: a run started further along asks the crew first each night (so the till isn't spent on gear first).
+    if (extra && start && s.phase === 'night' && stage === 0) inputs = extra(s, ids);
+    if (inputs.length === 0 && s.phase === 'night' && stage >= 0) {
       inputs = night(s, ids, stage, skip);
       const sg = JSON.stringify([s.slotGear, s.tier, s.gearVote]);
       if (stage !== 99 && inputs.length && sg === lastSlotGear && ++stuck > 2) {
