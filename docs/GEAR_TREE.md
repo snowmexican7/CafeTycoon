@@ -1,12 +1,12 @@
 # Gear Tree: design plan (v3 "Gear Tree")
 
-*Status: design only, 2026-10-29. Nothing here is built yet. Written from Kennedy's playtest notes and
+*Status: design only, 2026-10-29 (updated 9 PM with Kennedy's answers). Nothing here is built yet. Written from Kennedy's playtest notes and
 the Gear Tree interview (same day), checked against `main` at `ca2c2ff` (v2.2.0). Numbers are a first
 guess for the balance pass, not final.*
 
 ## 1. The idea in plain English
 
-- A new run starts with **almost nothing**: a folding table, a cardboard box for a bin, and a small
+- Every new run (this replaces today's start) begins with **almost nothing**: a folding table, a cardboard box for a bin, and a small
   **startup fund**. The first screen of the run is **"Pick your gear"**.
 - Every machine has its own **upgrade tree**, bought with money only. Cheap gear is funny and bad;
   expensive gear is fast, reliable and lets you charge more. Trees are **different lengths**: cold
@@ -37,14 +37,33 @@ Read from the code on `main`, so the plan fits it:
 | Messes, spills, mop, slip chance | `src/sim/floor.ts`, `src/sim/mop.ts` | Messy gear calls `placeMess`. |
 | Easter eggs: cat on a warm machine (blocks it), burnt-shot smoke | `src/sim/eggs.ts` | Breakdowns reuse the "station is blocked" pattern. Rare gear events live here. |
 | Hidden taste map from the seed, no RNG used | `src/sim/taste.ts` | The area's taste uses the same hash trick. |
-| Run-wide scenarios (Campus town, Rainy week, Tourist season), announced on day 1 | `src/data/scenarios.ts` | Become hidden **areas** in Gear mode. |
+| Run-wide scenarios (Campus town, Rainy week, Tourist season), announced on day 1 | `src/data/scenarios.ts` | Become hidden **areas** in Gear runs. |
 | Unanimous vote to close early (`closeVotes`) | `src/sim/closeEarly.ts` | Same pattern for co-op big-buy votes. |
-| Upgrade cards that already are machines: Dual-boiler ($95), "La Mazzocca Pro" ($255), Flat-burr grinder, Auto-steam pitcher, Second cold-brew tap | `src/data/catalogue.ts` | **Removed from the deck in Gear mode**, since the tree replaces them. Classic mode keeps them. |
-| Drinks unlock by day (iced latte day 3, mocha day 5) or by a card | `src/data/drinks.ts`, `src/sim/unlocks.ts` | In Gear mode, unlocks come from use (section 6). Card unlocks such as matcha and maple stay. |
+| Upgrade cards that already are machines: Dual-boiler ($95), "La Mazzocca Pro" ($255), Flat-burr grinder, Auto-steam pitcher, Second cold-brew tap | `src/data/catalogue.ts` | **Retired** when Gear goes live, since the tree replaces them (section 2.1). |
+| Drinks unlock by day (iced latte day 3, mocha day 5) or by a card | `src/data/drinks.ts`, `src/sim/unlocks.ts` | With the Gear Tree, unlocks come from use (section 6). Card unlocks such as matcha and maple stay. |
 | Bot count is already a run setting (`settings.bots`: number or `'auto'`); the co-op lobby has an Off/1/2/3 card | `src/sim/types.ts`, `src/ui/lobby.ts` | "Play solo" skips the lobby and always sends `'auto'`; that's the bots on/off gap (section 11). |
 
-**Classic mode stays.** Gear Tree ships as a new run mode ("Start from scratch") next to today's game,
-so game nights always have a known-good build. Once it's tuned it can become the default.
+**Gear replaces the classic start (decided 2026-10-29).** There is no second mode: once it ships,
+every new run is a Gear run. To keep the live game playable while it's built, all the work sits
+behind an off-by-default flag and is switched on only at the release (section 10).
+
+### 2.1 What happens to today's game
+
+| Thing | What happens |
+|---|---|
+| **Classic start** (stand with free grinder, espresso and tap, $100, free supplies) | Gone from the title at the release. Inside the sim it stays as the default `createRun` loadout until then, and afterwards it's kept only as a **test fixture** (the 73 test files and the balance baseline build runs this way), never reachable from the UI. |
+| **The 5 machine cards** (Dual-boiler, "La Mazzocca Pro", Flat-burr grinder, Auto-steam pitcher, Second cold-brew tap) | Never dealt once Gear is on, because their jobs become tree tiers (E4, E5, G3, S2/S3, a second tap). The entries stay in the catalogue marked `retired`, so an old save that owns one still applies its effect. |
+| **Day-based unlocks** (iced latte day 3, mocha day 5) | Replaced by use-based unlocks (section 6) for Gear runs. Old saves keep their day unlocks. |
+| **Existing saves** (snapshot v24, a run in progress) | Load and finish as they are. A migration tags them `legacy` and maps their stations to "classic" gear ids with today's exact numbers, so nothing changes mid-run. Every new run after the release is Gear. |
+| **Run records / week scores** | Old records are labelled "Classic (retired)". Gear runs get their own best scores, because a scratch start scores lower. |
+| **Title and lobby** | "Play solo" and "Host a co-op run" both go straight into **Night 0: Pick your gear** (after the lobby in co-op). There's no mode picker. The seed field, pace and the bots picker stay. The shop still opens at the stand and grows to the cart and café as today. |
+| **Protocol** | Bumped at the release. A friend on an old tab can't join a Gear room, and the existing version check already says "refresh". |
+
+**Risk.** This changes the first ten minutes of every run, so the first game night on it is the real
+test. **Rollback:** tag `v2.2.0` (`ca2c2ff`) is the last classic build, and we tag `pre-gear` on main
+right before the flip. Reverting the flip commit (or redeploying `v2.2.0`) brings classic back in
+about two minutes. Gear saves won't load on the rolled-back build (they'd show the normal "can't
+resume, start fresh" notice).
 
 ## 3. Money scale and the startup fund
 
@@ -52,11 +71,11 @@ Today a run starts with **$100 cash plus about $125 of free stand stations and ~
 A stand day sells roughly 12–25 cups and nets about **$15–35** (balance run, 1 human + 1 bot,
 3 weeks). The existing machine cards top out at $255.
 
-So Gear mode uses the same scale. The top of the espresso tree is about one strong week's profit at
+So the Gear Tree uses the same scale. The top of the espresso tree is about one strong week's profit at
 the café, and every tier shows a **"real-life sticker"** in its flavour text ($129 → $25,000) so it
 still feels like the real ladder.
 
-**Proposal: startup fund $120, no free stations, no free supplies.** You get the counter, a free
+**Startup fund $120, no free stations, no free supplies (confirmed).** You get the counter, a free
 cardboard-box bin and the mop. Supplies come out of the same $120 at today's pack prices:
 beans 10 for $8, milk 10 for $10, concentrate 10 for $9, plus new **pods 10 for $12**. Rent and
 prices follow the stand as today.
@@ -70,7 +89,7 @@ prices follow the stand as today.
 | **B. Sock & thrift** | Hanes sock $5 + Thrift Store Special drip $15 + 2 concentrate $18 + 2 beans $16 | $54 | **$66** | Two cheap drinks, one hot and one iced, both low quality. Lots of money left for a second-night upgrade (Mason jars, a frother) or a small permanent card. |
 | **C. One good thing** | Mister Kaffee drip $40 + 3 beans $24 + Thermal carafe $20 (small permanent upgrade) | $84 | $36 | One reliable drink done well, with spare cash for supplies. Same idea with Mason Jar Army cold brew. |
 
-Pods answer the "K-cup" question: the cheapest espresso needs **no grinder**, but it runs on a
+Pods answer the "K-cup" question (confirmed): the cheapest espresso needs **no grinder**, but it runs on a
 pricier supply and can't make good coffee. Real espresso (tier 2+) needs a grinder and beans.
 
 ## 4. The trees
@@ -137,7 +156,7 @@ grinder**: it's pre-ground supermarket coffee, which keeps opening B cheap. You 
 Kennedy's rule: the solo espresso machine has no steam; cheap espresso needs a separate steamer;
 the dual boiler lets one person do both at once.
 
-**Proposal: the dual boiler has two sides.** In the sim it's two stations sharing one slot: a group
+**Decided: the dual boiler has two sides, no new buttons.** In the sim it's two stations sharing one slot: a group
 head on the left (espresso recipes) and a steam wand on the right (steamer recipes), about half a tile
 apart. You use whichever side you're facing or standing nearer to. Because stations already keep
 working after you walk away, one barista can start a shot, step to the wand and steam milk while the
@@ -154,7 +173,7 @@ steamer". The two-group machines (E5/E6) are the same idea with two group heads.
 
 The game counts every drink served this run. Hitting a count unlocks the next drink (permanently for
 the run), with a morning note ("You've pulled 12 shots. Somebody asked for it watered down: Americano
-unlocked"). In Gear mode this replaces the day-3 and day-5 unlocks.
+unlocked"). This replaces the day-3 and day-5 unlocks.
 
 | Serve this | This many | Unlocks | Made how (one-button rule kept) | Needs |
 |---|---|---|---|---|
@@ -180,7 +199,7 @@ drink's index) keeps every existing seed's ladders.
 
 ## 7. The area's hidden taste
 
-Each Gear-mode run rolls a hidden **area** from the seed (a pure hash, like `taste.ts`, so it doesn't
+Each run rolls a hidden **area** from the seed (a pure hash, like `taste.ts`, so it doesn't
 use the sim's random stream). An area tilts four drink families: **espresso**, **milky**, **iced** and
 **filter** (drip and pour-over), and sets the crowd.
 
@@ -228,7 +247,7 @@ Claude = `src/sim`, `src/net`, `src/host`, `src/storage`, `src/data`, scripts an
 | Gear catalogue | `EQUIPMENT` shape | `src/data/gear.ts`: `GearId` → kind, tier, tree, price, sell, speed, batch, marks, break/spill/temp chances, price mul, flavour, sticker | Claude |
 | Gear on stations | `Station`, `slots`, `equipment`, `equipLog` | `Station.gear?`, `equipment` holds gear ids; classic stations map to "classic" gear with today's exact numbers; snapshot migration | Claude |
 | Buy, upgrade, sell | `equip` and `slot` inputs | `equip` takes a gear id; new `sell` input; `fittingsValue` uses sell values | Claude |
-| Run mode + Night 0 | `createRun`, night phase, ready votes | `CreateRunOptions.mode: 'classic' \| 'gear'`; Gear runs start in the **night phase on day 0** with the $120 fund and an empty bar, so "Pick your gear" is the night shop with only Gear + Supplies | Claude (sim), UI (screen) |
+| Gear flag + Night 0 | `createRun`, night phase, ready votes | `CreateRunOptions.gear?: true` (sim) and a `?gear=1` URL flag (UI), both off until the release; Gear runs start in the **night phase on day 0** with the $120 fund and an empty bar, so "Pick your gear" is the night shop with only Gear + Supplies | Claude (sim), UI (screen) |
 | Pods supply | `SupplyId`, packs, restock | `pods` supply; E1 recipe takes empty hands, uses pods | Claude |
 | Drip station | `RECIPES`, `stepStations`, sold-out flow, pass stale times | `drip` station kind, pot state (cups left, warm ticks), `drip` drink | Claude (sim + bots), UI (sprite, ticket) |
 | Batch caps | sold-out flow, `reasonOff` | per-day cup counter on cold-brew gear | Claude |
@@ -238,31 +257,36 @@ Claude = `src/sim`, `src/net`, `src/host`, `src/storage`, `src/data`, scripts an
 | Area taste | `taste.ts` hash, scenarios, `orderBias`/`orderTag` effects | `area` from seed, asked-for walk-outs, family tips, notebook selector | Claude (sim), UI (notebook card, receipt rows) |
 | Co-op votes | `closeVotes` pattern | `proposal`, `propose`/`vote` inputs | Claude (sim/net), UI (proposal banner) |
 | Gear tab | Stations tab (`stationsVM.ts`), night board | Tree view per machine: owned / next / locked, sell button, sticker + flavour | UI |
-| Cards | catalogue | Gear mode removes the five machine cards from the deck | Claude |
-| Balance | `scripts/balance.ts` | `--mode gear` and an "opening" policy per example opening | Claude |
+| Cards | catalogue | `retired` flag on the five machine cards: never dealt in Gear runs, still applied in old saves | Claude |
+| Saves, records | snapshot migrations, `recordsStore` | migration tags old runs `legacy`; records split Gear vs "Classic (retired)" | Claude (storage), UI (records screen) |
+| Balance | `scripts/balance.ts` | `--gear` and an "opening" policy per example opening; the classic run stays as the baseline | Claude |
 
 ## 10. Build order (small, revertible, lowest risk first)
 
-Each block is its own branch and merge, with tests green, tsc and build clean, and a screenshot pass.
-Nothing changes Classic mode until G11.
+**How the live build stays playable.** Every block merges to main with Gear **off by default**: the
+sim only does Gear things when a run is created with `gear: true`, and the UI only offers it with
+`?gear=1` in the URL. So main and the live site play exactly like v2.2.0 until G11, and Kennedy can
+try the work in progress on the live site with the link. Each block is its own `gear-…` branch,
+merged with `--no-ff`, with tests green, tsc and build clean, a screenshot pass, and a check that the
+classic run replays to the cent (the RNG golden tests).
 
 | Block | What | Lane | Risk |
 |---|---|---|---|
 | **G0** | This doc + backlog pointers | UI | none |
-| **G1** | Gear data + `Station.gear`; every classic station = classic gear with identical numbers; migration. **Classic runs replay to the cent.** | Claude | low |
-| **G2** | Gear stats wired (speed, marks, price mul, batch caps); `equip` by gear id; `sell` input; `mode: 'gear'` + Night 0 with the $120 fund. Cold brew, espresso, grinder, steamer trees as data. | Claude | low–med |
-| **G3** | Gear tab (tree view, buy, upgrade, sell) + the "Pick your gear" Night 0 screen; Gear mode toggle on the title | UI | low |
+| **G1** | Gear data + `Station.gear`; classic stations = classic gear with identical numbers; `legacy` save migration; the `gear` run flag (does nothing yet) | Claude | low |
+| **G2** | Gear stats wired (speed, marks, price mul, batch caps); `equip` by gear id; `sell` input; Night 0 with the $120 fund; retired cards skipped in Gear runs. Cold brew, espresso, grinder, steamer trees as data | Claude | low–med |
+| **G3** | Gear tab (tree view, buy, upgrade, sell) + the "Pick your gear" screen, reachable only with `?gear=1` | UI | low |
 | **G4** | Pods + Pod-o-Matic; drip station, pots and drip drink; bots learn drip | Claude, then UI sprites | med |
 | **G5** | Downsides: breakdowns + whack, temp complaints, messy spills, rare events | Claude, then UI toasts | med |
 | **G6** | Drink level-ups + the ticket-aware recipe pick | Claude, UI tickets | med |
 | **G7** | Area taste: hidden areas, asked-for notes, family tips, notebook | Claude, UI notebook | med |
 | **G8** | Co-op big-buy votes | Claude (sim/net), UI banner | med |
 | **G9** | Dual boiler and two-group twin stations | Claude, UI sprite | med–high |
-| **G10** | Pour-over branch, Kyoto tower, top tiers; full balance pass at 1, 2 and 4 players | Claude | med |
-| **G11** | Release: Gear mode default for new runs (Classic stays selectable) → **v3.0.0** | both | — |
+| **G10** | Pour-over branch, Kyoto tower, top tiers; full balance pass at 1, 2 and 4 players; a `?gear=1` playtest night | Claude, both | med |
+| **G11** | **The flip** (one small commit, tagged `pre-gear` before it): title and lobby always start Gear runs, flag removed from the UI, records split, protocol bump → **v3.0.0**. Rollback = revert this commit or redeploy `v2.2.0` | both | **high** (every run changes) |
 
-Playable checkpoints: after G3 you can play a Gear run with cold brew + espresso. After G5 it has the
-full cheap-gear comedy. Each later block can ship as a 2.x minor on its own.
+Playable checkpoints with `?gear=1`: after G3, a Gear run with cold brew + espresso. After G5, the full
+cheap-gear comedy. G11 waits for at least one good `?gear=1` playtest.
 
 ## 11. Tonight-ish backlog (not part of the Gear Tree build)
 
@@ -287,13 +311,12 @@ full cheap-gear comedy. Each later block can ship as a 2.x minor on its own.
 
 ## 13. Open questions for Kennedy
 
-1. **Startup fund $120, supplies not free.** Is "espresso gamble leaves $12" the right amount of
-   pain, or should day 1 come with a free starter bag of beans?
-2. **Pods.** Is a pod machine (no grinder, pricey pods, 2★ cap) the right cheapest espresso, or
-   should the cheapest real espresso already need a grinder?
-3. **Dual boiler as two sides** of one machine (no new buttons). OK, or would you rather a choice
-   button at the machine?
-4. **Gear mode vs Classic.** Ship Gear as a second mode first (safe for game nights) and make it the
-   default at v3.0.0. And should the Gear Tree come **before** wages and saves (B15/B16)?
-5. Smaller: are $50 and "majority" the right lines for co-op votes? Should the level-up counts (12
-   espresso → Americano) be faster for short game nights?
+Answered 2026-10-29: $120 with no free supplies; the pod machine as the cheapest espresso; the dual
+boiler with two sides and no new buttons; Gear **replaces** the classic start.
+
+1. **Order against Phase 3.** Should the Gear Tree (v3.0.0) come before wages and saves (B15/B16),
+   which would then follow as v3.x?
+2. **Preview link.** Is it OK for the work in progress to be reachable on the live site with
+   `?gear=1` (hidden, off by default), so you can try it on game nights before the flip?
+3. Smaller: are $50 and "majority" the right lines for co-op votes, and should the level-up counts
+   (12 espresso → Americano) be faster for short game nights?
