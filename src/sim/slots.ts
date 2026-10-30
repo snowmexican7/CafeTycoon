@@ -29,6 +29,7 @@
 import { ECONOMY } from '../data/economy';
 import { EQUIPMENT, EQUIPMENT_KINDS } from '../data/equipment';
 import type { EquipmentKind } from '../data/equipment';
+import type { GearId } from '../data/gear';
 import { SLOT_POSITIONS, layoutFor } from '../data/layout';
 import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
@@ -48,7 +49,7 @@ export function defaultSlots(tier: TierId | undefined): SlotContent[] {
 }
 
 /** Fresh, idle stations for the slots (in slot order), the counter last. */
-export function stationsFromSlots(tier: TierId | undefined, slots: readonly SlotContent[]): Station[] {
+export function stationsFromSlots(tier: TierId | undefined, slots: readonly SlotContent[], gear?: readonly (GearId | null)[]): Station[] {
   const positions = SLOT_POSITIONS[tier ?? 'cafe'];
   const seen = new Map<StationKind, number>();
   const out: Station[] = [];
@@ -57,7 +58,10 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
     if (kind === null || kind === 'counter') return;
     const n = (seen.get(kind) ?? 0) + 1;
     seen.set(kind, n);
-    out.push({ id: n === 1 ? kind : `${kind}-${n}`, kind, pos: { ...pos }, busyTicksLeft: 0, output: null, occupiedBy: null });
+    const st: Station = { id: n === 1 ? kind : `${kind}-${n}`, kind, pos: { ...pos }, busyTicksLeft: 0, output: null, occupiedBy: null };
+    const gid = gear?.[i];
+    if (gid) st.gear = gid;
+    out.push(st);
   });
   const counter = layoutFor(tier).stations.find((s) => s.kind === 'counter');
   if (counter) out.push({ id: counter.id, kind: counter.kind, pos: { ...counter.pos }, busyTicksLeft: 0, output: null, occupiedBy: null });

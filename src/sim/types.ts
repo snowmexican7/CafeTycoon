@@ -1,3 +1,4 @@
+import type { GearId } from '../data/gear';
 import type { TwistId } from './taste';
 import type { RoleId } from './roles';
 import type { EggsState } from './eggs';
@@ -167,6 +168,10 @@ export interface Station {
   cupSlips?: number;
   busyTotal?: number;
   doneAt?: number;
+  /** Gear Tree: which tier of gear this station is (absent = today's machine, every non-Gear run). */
+  gear?: GearId;
+  /** Gear Tree: cold brew batch cups left today (absent = no cap). */
+  batchLeft?: number;
 }
 
 export interface Customer {
@@ -456,6 +461,12 @@ export interface GameState {
   equipment?: StationKind[];
   /** FB1 WP5: each station bought from the stations shop (what, the coming day, who bought it). */
   equipLog?: { station: StationKind; day: number; by: string }[];
+  /** Gear Tree (docs/GEAR_TREE.md): true for a Gear run (absent = today's game; off unless created with `gear`). */
+  gear?: true;
+  /** Gear Tree: the gear in each slot, parallel to `slots` (Gear runs only). */
+  slotGear?: (GearId | null)[];
+  /** Gear Tree: every buy, upgrade and sale (what, the coming day, who, the cash change). */
+  gearLog?: { gear: GearId; action: 'buy' | 'sell'; day: number; by: string; cash: number }[];
   /** P3 B11: the latest pitch to the panel (it applies on its `day` when green-lit). */
   pitch?: PitchResult;
   eventSchedule: ScheduledEvent[];
@@ -506,6 +517,9 @@ export type PlayerInput =
   | { kind: 'grow'; playerId: PlayerId; tier: TierId }
   | { kind: 'slot'; playerId: PlayerId; index: number; station: StationKind | null }
   | { kind: 'equip'; playerId: PlayerId; station: StationKind }
+  /** Gear Tree: buy a tier (an upgrade trades in the lower tier of its tree) or sell the gear in slot `index`. Night only. */
+  | { kind: 'gear'; playerId: PlayerId; action: 'buy'; gear: GearId }
+  | { kind: 'gear'; playerId: PlayerId; action: 'sell'; index: number }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
   | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
@@ -526,6 +540,8 @@ export interface CreateRunOptions {
   settings?: Partial<Settings>;
   /** P3 B13: the size the run opens at (absent = the café; new games from the title start at the stand). */
   tier?: TierId;
+  /** Gear Tree: start a Gear run ($120, no stations, no supplies). Off by default (UI: `?gear=1`). */
+  gear?: boolean;
 }
 
 export interface RunRecord {
