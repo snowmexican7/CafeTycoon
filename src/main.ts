@@ -337,7 +337,7 @@ async function main(): Promise<void> {
     attachTelemetry(s, tele);
     armWatchdog(s);
     rememberPerk(choice);
-    local.start(runOptions(choice, id, [{ token: id, name: settings.playerName }]));
+    local.start(runOptions(choice, id, [{ token: id, name: settings.playerName }], settings.soloBots));
   }
 
   function openHostRoom(s: Session, local: Transport, code: string, hostMember: Member): void {
