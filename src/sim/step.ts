@@ -44,6 +44,7 @@ import { stepCleaning } from './mop';
 import { applySteepInput } from './steep';
 import { applyCondimentBoxInput, returnBox } from './condiments';
 import { returnPot } from './sink';
+import { freeSpot } from './spawn';
 import { stepRogue } from './rogue';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
@@ -60,13 +61,13 @@ function applyInput(s: GameState, input: PlayerInput): void {
         s.players.splice(firstBot === -1 ? s.players.length : firstBot, 0, {
           id: input.playerId,
           name: input.name,
-          pos: { ...LAYOUT.door },
+          pos: freeSpot(s, LAYOUT.door),
           moveDir: { x: 0, y: 0 },
           interactQueued: false,
           holding: null,
           connected: true,
           idleTicks: 0,
-          ...floorFields(LAYOUT.door),
+          ...floorFields(freeSpot(s, LAYOUT.door)),
         });
       }
       break;

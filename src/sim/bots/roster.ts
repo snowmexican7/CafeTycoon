@@ -2,6 +2,7 @@ import { ECONOMY } from '../../data/economy';
 import { LAYOUT } from '../../data/layout';
 import type { BotsChoice, BotState, GameState, Personality, Player } from '../types';
 import { floorFields } from '../tiles';
+import { freeSpot } from '../spawn';
 
 /** Who the bot baristas are: their ids, names, personalities, and how many the café wants. */
 export const BOT_IDS = ['bot-1', 'bot-2', 'bot-3', 'bot-4'];
@@ -67,7 +68,8 @@ export function makeBotState(personality: Personality): BotState {
 }
 
 function newBarista(state: GameState, id: string, name: string, personality: Personality): Player {
-  const pos = { ...(LAYOUT.spawnPoints[state.players.length] ?? LAYOUT.door) };
+  // FB2 A3 fix round 2: a mid-day cover bot (or temp, or stand-in) never lands inside a fixture (the stand's sink).
+  const pos = freeSpot(state, LAYOUT.spawnPoints[state.players.length] ?? LAYOUT.door);
   return {
     id,
     name,

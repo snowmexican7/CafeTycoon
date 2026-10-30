@@ -80,10 +80,10 @@ describe('FB2 A3: the back sink fixture', () => {
     }
   });
 
-  it('nobody starts the day inside the sink (the stand\'s fourth spawn point is its tile)', () => {
+  it('nobody starts the day inside the sink (spawn index 2 is the stand\'s sink tile)', () => {
     const s = createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 }, tier: 'stand', gear: true });
     addStandIns(s, 4);
-    expect(s.players.some((p) => p.pos.x === layoutFor('stand').sink.x && p.pos.y === layoutFor('stand').sink.y)).toBe(true);
+    for (const p of s.players) expect(blocked(p.pos, s.stations, layoutFor('stand').width), p.id).toBe(false);
     startDay(s);
     for (const p of s.players) expect(blocked(p.pos, s.stations, layoutFor('stand').width), p.id).toBe(false);
   });

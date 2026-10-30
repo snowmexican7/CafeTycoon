@@ -1,8 +1,6 @@
 import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
-import { canMake, floorWidth, growthMorning } from './growth';
-import { blocked } from './movement';
-import { nodeOf } from './bots/path';
+import { canMake, growthMorning } from './growth';
 import { defaultSlots, stationsFromSlots } from './slots';
 import { secondsToTicks } from './constants';
 import { rngInt, seedRng } from './rng';
@@ -26,6 +24,7 @@ import { dealChallenges, pruneChallenges } from './challenges';
 import { eggsMorning } from './eggs';
 import { gearMorning, gearStart } from './gear';
 import { potMorning } from './sink';
+import { settle } from './spawn';
 import { applyPerk } from './perks';
 import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
@@ -124,6 +123,7 @@ export function createRun(opts: CreateRunOptions): GameState {
   };
   state.scenario = SCENARIOS[rngInt(state, SCENARIOS.length)].id;
   if (opts.gear) gearStart(state);
+  for (const p of state.players) settle(state, p); // FB2 A3: the Gear fixtures (the sink) may cover a spawn point
   applyPerk(state, opts.perk);
   return startNight(state);
 }
@@ -167,9 +167,7 @@ export function startDay(state: GameState): GameState {
   state.mop = { pos: { ...layoutFor(state.tier).mopHome }, heldBy: null };
   state.rogue = null;
   syncBots(state);
-  // FB2 A3: a barista whose spot is now inside a fixture (the stand's fourth spawn point is the back sink's tile, and
-  // old saves gain the sink on load) steps onto the nearest free tile.
-  for (const p of state.players) if (blocked(p.pos, state.stations, floorWidth(state))) p.pos = nodeOf(state, p.pos);
+  for (const p of state.players) settle(state, p); // FB2 A3: old saves gain the sink on load; growing moves fixtures
   for (const p of state.players) p.tile = tileOf(p.pos);
   const adNote = adMorning(state);
   scheduleEvents(state);
