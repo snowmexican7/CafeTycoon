@@ -452,3 +452,54 @@ describe('item 5: level-up drinks (G6/G6b/G6c, G10a) and the recipe clash', () =
     expect(s.today.wasted ?? 0).toBe(0);
   });
 });
+
+describe('item 6: multiples and twins (G4e, G9)', () => {
+  const planned = (s: GameState) => s.players.flatMap((p) => (p.bot ? p.bot.plan : [])).filter((x) => x.kind === 'use').map((x) => (x as { station: string }).station);
+
+  it('E5 twins: two bots on two espresso orders pull on different groups, and both are served', () => {
+    let s = gearShop(['grinder', 'grinder', 'espresso', 'steamer', 'trash', null], ['g2', 'g2', 'e5', 's3', 'b0', null], { standIns: 2 });
+    expect(s.stations.filter((x) => x.kind === 'espresso').map((x) => x.id)).toEqual(['espresso', 'espresso-2']);
+    s.customers = [order(1400, 'espresso'), order(1401, 'espresso')];
+    for (let i = 0; i < 12; i++) s = step(s, []);
+    const groups = [sim(s, 1), sim(s, 2)].map((p) => p.bot!.plan.find((x) => x.kind === 'use' && x.makes === 'espresso' && x.station.startsWith('espresso')) as { station: string });
+    expect(groups.every(Boolean)).toBe(true);
+    expect(groups[0].station).not.toBe(groups[1].station);
+    s = serveAll(s, 60 * 60);
+    expect(s.today.drinks!.espresso).toBe(2);
+  });
+
+  it('a second copy of a machine (G4e): two latte orders steam on both steamers', () => {
+    let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', 'grinder'], ['g2', 'e3', 's2', 's2', 'b0', 'g2'], { standIns: 2 });
+    s.customers = [order(1410, 'latte'), order(1411, 'latte')];
+    const used = new Set<string>();
+    s = serveAll(s, 60 * 90, (x) => { for (const st of x.stations) if (st.kind === 'steamer' && st.busyTicksLeft > 0) used.add(st.id); });
+    expect(s.today.drinks!.latte).toBe(2);
+    expect([...used].sort()).toEqual(['steamer', 'steamer-2']);
+  });
+
+  it('edge slot: an outer twin with no node to stand on is human-only; bots never target it and do not hang', () => {
+    // E5 in the stand's first slot: the second group sits at x 0.45, out of reach of every whole tile.
+    let s = gearShop(['espresso', 'grinder', 'steamer', 'trash'], ['e5', 'g2', 's3', 'b0'], { standIns: 2, tier: 'stand' });
+    const outer = s.stations.find((x) => x.id === 'espresso-2')!;
+    expect(outer.twin).toBe(true);
+    expect(outer.pos.x).toBeLessThan(1);
+    s.customers = [order(1420, 'espresso'), order(1421, 'espresso'), order(1422, 'latte')];
+    s.players[0].pos = { x: 6, y: 4 };
+    let touched = false;
+    s = serveAll(s, 60 * 90, (x) => { if (planned(x).includes('espresso-2')) touched = true; });
+    expect(touched).toBe(false);
+    expect(s.today.served).toBe(3);
+  });
+
+  it('edge slot on the last column: the same for the outer twin on the right', () => {
+    let s = gearShop(['grinder', 'steamer', 'trash', 'espresso'], ['g2', 's3', 'b0', 'e6'], { standIns: 1, tier: 'stand' });
+    const outer = s.stations.find((x) => x.id === 'espresso-2')!;
+    expect(outer.pos.x).toBeGreaterThan(7);
+    s.players[0].pos = { x: 4, y: 4 };
+    s.customers = [order(1430, 'espresso'), order(1431, 'espresso')];
+    let touched = false;
+    s = serveAll(s, 60 * 90, (x) => { if (planned(x).includes('espresso-2')) touched = true; });
+    expect(touched).toBe(false);
+    expect(s.today.served).toBe(2);
+  });
+});

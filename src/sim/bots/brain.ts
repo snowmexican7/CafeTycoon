@@ -15,6 +15,7 @@ import { tally } from '../tally';
 import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Mess, Player, Station, StationKind, Vec2 } from '../types';
 import { byDistance, findPath, floorDropNode, idleNode, nodeOf, targetNodes, walkableNodes } from './path';
 import { spillHeld, spillTiles } from '../floor';
+import { floorWidth } from '../growth';
 import { nearestMess, returnMop } from '../mop';
 import { rogueNear, rogueTiles } from '../rogue';
 
@@ -92,6 +93,22 @@ function groundsPlan(state: GameState, p: Player): BotStep[] {
 /** One machine visit: at a station of `kind`, holding `held`, the machine should make `gives` (`last`: the drink itself). */
 interface Need { kind: RecipeKind; held: ItemKind | null; gives: ItemKind; last?: boolean }
 
+/**
+ * Gear G9: stations a bot can work, i.e. with a walkable whole-tile node from which it is the station "use"
+ * hits (`targetNodes` non-empty). A twin on an edge slot can sit out of reach of every node: that side is
+ * for people only. Depends only on the floor and where the stations stand, so it is cached per layout.
+ */
+let reach: { key: string; ids: Set<string> } | null = null;
+function reachable(state: GameState, st: Station): boolean {
+  const key = `${floorWidth(state)}|${state.stations.map((x) => `${x.id}@${x.pos.x},${x.pos.y}`).join(';')}`;
+  if (reach === null || reach.key !== key) {
+    const ids = new Set<string>();
+    for (const x of state.stations) if (targetNodes(state, x, x.pos).length > 0) ids.add(x.id);
+    reach = { key, ids };
+  }
+  return reach.ids.has(st.id);
+}
+
 /** Gear G4d: a drip machine that brews pots (one press brews, each press after pours a cup). */
 export const hasPot = (st: Station): boolean => !!st.gear && !!GEAR[st.gear].pot;
 
@@ -130,12 +147,13 @@ const pair = (st: Station, gives: ItemKind): BotStep[] => [
 /**
  * `st` can take this visit: the recipe it would run for `held` makes `gives` (a gear recipe first, the
  * menu, and the oldest-ticket clash rule all included, as in `interact`), a capped batch is not used up,
- * the machine is not dead, and it is not jammed unless the bot arrives empty-handed (to whack it).
+ * the machine is not dead, it is not jammed unless the bot arrives empty-handed (to whack it), and a bot
+ * can stand at it (G9: not an out-of-reach twin).
  */
 function canMake(state: GameState, st: Station, need: Need): boolean {
   if (st.kind !== need.kind || st.batchLeft === 0) return false;
   // G5: a dead machine is gone until tonight; a jammed one is fine for empty hands (they whack it first).
-  if (st.dead || (st.jammed && need.held !== null)) return false;
+  if (st.dead || (st.jammed && need.held !== null) || !reachable(state, st)) return false;
   return recipeAt(state, st, need.held)?.gives === need.gives;
 }
 
