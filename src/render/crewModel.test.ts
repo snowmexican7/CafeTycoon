@@ -137,3 +137,39 @@ describe('Gear polish: till tip in the serve toast', () => {
     expect(tillText(0)).toBe('');
   });
 });
+
+describe('Gear pickup (3.3.1)', () => {
+  it('a pickup.take shifts the putter and cheers when someone else rang the customer up', () => {
+    const a = run();
+    const mem = newCrewMemory();
+    const b = withLog(
+      a,
+      { kind: 'till.rung', data: { customer: 7, drink: 'latte', by: 'p1' } },
+      { kind: 'till.rung', data: { customer: 8, drink: 'latte', by: 'p2' } },
+      { kind: 'pass.put', data: { by: 'p2', item: 'latte' } },
+      { kind: 'drop', data: { item: 'latte', station: 'pickup', by: 'p2' } },
+    );
+    let r = crewBursts(a, b, a.nextLogSeq - 1, mem);
+    expect(r.bursts).toEqual([]);
+    expect(mem.putters.latte).toEqual(['p2', 'p2']);
+    const c = withLog(b, { kind: 'pickup.take', data: { drink: 'latte', customer: 7, by: 'p2' } }, { kind: 'pickup.take', data: { drink: 'latte', customer: 8, by: 'p2' } });
+    r = crewBursts(b, c, r.lastSeq, mem);
+    // Ana rang 7 up and Dev set it out: teamwork; Dev rang and set out 8 himself: no cheer
+    expect(r.bursts).toEqual([{ kind: 'teamwork', from: 'Ana', to: 'Dev' }]);
+    expect(mem.putters.latte).toEqual([]);
+  });
+
+  it('only counter drops count as puts (not spills, bins or a box going home)', () => {
+    const a = run();
+    const mem = newCrewMemory();
+    const b = withLog(
+      a,
+      { kind: 'drop', data: { item: 'latte', x: 3, y: 4, by: 'p1' } },
+      { kind: 'drop', data: { item: 'latte', station: 'trash', by: 'p1' } },
+      { kind: 'drop', data: { item: 'box', x: 1, y: 7 } },
+      { kind: 'drop', data: { item: 'drip', station: 'counter', by: 'p1' } },
+    );
+    crewBursts(a, b, a.nextLogSeq - 1, mem);
+    expect(mem.putters).toEqual({ drip: ['p1'] });
+  });
+});

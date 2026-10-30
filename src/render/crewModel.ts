@@ -61,6 +61,8 @@ export interface CrewMemory {
   /** Last seen today.lost, so we can cheer/storm when someone walks out. */
   lostSeen: number;
   day: number;
+  /** Batch/pickup (Gear): who rang each customer up at the till, by customer id (for the teamwork burst). */
+  ringers?: Record<number, string>;
 }
 export const VIBE_START = 55;
 export const newCrewMemory = (): CrewMemory => ({ putters: {}, streak: 0, vibe: VIBE_START, lostSeen: 0, day: 0 });
@@ -84,6 +86,11 @@ function addCombo(mem: CrewMemory, bursts: CrewBurst[]): void {
     bursts.push({ kind: 'streak', count: mem.streak });
     bumpVibe(mem, 8);
   }
+}
+
+/** A drop log entry that set a cup on the counter (classic `counter`, Gear `pickup`), not a spill or a bin. */
+function isCounterDrop(d: Record<string, unknown>): boolean {
+  return (d.station === 'counter' || d.station === 'pickup') && typeof d.item === 'string' && d.item !== 'grounds' && d.item !== 'box';
 }
 
 /** New serve / bot-mistake / influencer / fail log entries since `lastSeq`, as one-shot visuals. */
@@ -128,9 +135,26 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       if (playerIndex >= 0) bursts.push({ kind: 'oops', playerIndex, by: next.players[playerIndex].id });
       resetCombo(mem);
       bumpVibe(mem, -5);
-    } else if (e.kind === 'pass.put') {
+    } else if (e.kind === 'pass.put' || (e.kind === 'drop' && isCounterDrop(e.data))) {
+      // An R-drop on the till or pickup counter puts the cup down just like E.
       const item = e.data.item as DrinkId;
       (mem.putters[item] ??= []).push(String(e.data.by));
+    } else if (e.kind === 'till.rung') {
+      const ringers = (mem.ringers ??= {});
+      ringers[Number(e.data.customer)] = String(e.data.by ?? '');
+      const ids = Object.keys(ringers);
+      if (ids.length > 64) for (const id of ids.slice(0, ids.length - 64)) delete ringers[Number(id)];
+    } else if (e.kind === 'pickup.take') {
+      // Gear: the customer takes the cup themselves. Teamwork = one barista rang them up, another set the drink out.
+      const item = e.data.drink as DrinkId;
+      const from = mem.putters[item]?.shift() ?? String(e.data.by ?? '');
+      const ringer = mem.ringers?.[Number(e.data.customer)];
+      if (ringer && from && ringer !== from) {
+        const name = (id: string) => next.players.find((p) => p.id === id)?.name ?? '?';
+        bursts.push({ kind: 'teamwork', from: name(ringer), to: name(from) });
+        bumpVibe(mem, 5);
+        addCombo(mem, bursts);
+      }
     } else if (e.kind === 'pass.serve' || e.kind === 'pass.take' || e.kind === 'pass.stale') {
       const item = e.data.item as DrinkId;
       const from = mem.putters[item]?.shift();

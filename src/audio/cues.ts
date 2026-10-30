@@ -56,7 +56,11 @@ export type CueId =
   | 'eggSecret'
   | 'eggCamper'
   | 'eggNameMix'
-  | 'phoneRing';
+  | 'phoneRing'
+  | 'ringUp'
+  | 'refill'
+  | 'grumble'
+  | 'boxDown';
 
 export interface Cue {
   id: CueId;
@@ -128,6 +132,11 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'pass.put': cues.push({ id: 'cupDown', mine }); break;
       case 'pass.take': cues.push({ id: 'pickUp', mine }); break;
       case 'pass.serve': cues.push({ id: 'serve', mine }); break;
+      // Gear batch/pickup: the customer takes their own cup off the pickup counter (the serve sound)
+      case 'pickup.take': cues.push({ id: 'serve', mine }); break;
+      case 'till.rung': cues.push({ id: 'ringUp', mine }); break;
+      case 'condiment.refill': cues.push({ id: 'refill', mine }); break;
+      case 'condiment.black': cues.push({ id: 'grumble' }); break;
       case 'trash': cues.push({ id: 'trash', mine }); break;
       case 'bot.mistake': cues.push({ id: 'botOops' }); break;
       case 'event.start': {
@@ -142,6 +151,9 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'slip': cues.push({ id: 'slip', mine: e.data.player === me }); break;
       case 'drop':
         if (e.data.item === 'mop') cues.push({ id: 'mopDown' });
+        else if (e.data.item === 'box') cues.push({ id: 'boxDown' });
+        // Gear: an R-drop on the till or the pickup counter sets the cup down like E does
+        else if (e.data.station === 'pickup') cues.push({ id: 'cupDown', mine });
         else if (e.data.x !== undefined) cues.push({ id: e.data.item === 'grounds' ? 'scatter' : 'splash' });
         break;
       case 'clean': cues.push({ id: 'squeak', mine: e.data.player === me }); break;
