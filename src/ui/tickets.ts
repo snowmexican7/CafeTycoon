@@ -39,8 +39,8 @@ export const DRINK_LABEL: Record<DrinkId, string> = {
  * Which step of this drink's recipe comes next, judged only from what I'm holding (display only,
  * mirrors the station chain in live.ts). Null when the held item doesn't belong to this drink.
  */
-export function nextStepIndex(drink: DrinkId, holding: ItemKind | null, pods = false): number | null {
-  const steps = ticketSteps(drink, pods);
+export function nextStepIndex(drink: DrinkId, holding: ItemKind | null, pods = false, gear = false): number | null {
+  const steps = ticketSteps(drink, pods, gear);
   if (holding === drink) return steps.length - 1;
   if (holding === null) return 0;
   if (pods && steps[0] === 'Pod') {
@@ -55,8 +55,10 @@ export function nextStepIndex(drink: DrinkId, holding: ItemKind | null, pods = f
 }
 
 /** A drink's ticket steps; at a pod-only espresso bar Grind + Pull become one "Pod" step. */
-export function ticketSteps(drink: DrinkId, pods = false): string[] {
-  const steps = DRINK_STEPS[drink];
+export function ticketSteps(drink: DrinkId, pods = false, gear = false): string[] {
+  const base = DRINK_STEPS[drink];
+  // Batch/pickup: Gear runs set drinks on the pickup counter instead of handing them over.
+  const steps = gear && base.at(-1) === 'Hand off' ? [...base.slice(0, -1), 'Pickup'] : base;
   return pods && steps[0] === 'Grind' && steps[1] === 'Pull' ? ['Pod', ...steps.slice(2)] : steps;
 }
 
@@ -76,6 +78,8 @@ export interface TicketOpts {
   prices: Partial<Record<DrinkId, string>>;
   /** Pod-only espresso bar (see ticketSteps). */
   pods?: boolean;
+  /** Gear run: the last step is "Pickup", not "Hand off". */
+  gear?: boolean;
 }
 
 const tilt = (id: number) => (((id * 37) % 7) - 3) * 0.3;
@@ -88,15 +92,15 @@ export function ticketsHtml(orders: readonly OrderTicket[], o: TicketOpts): stri
     shown
       .map((t, i) => {
         const open = stepsOpen(o.mode, i, t.id, o.open, o.day);
-        const next = open ? nextStepIndex(t.drink, o.holding, o.pods) : null;
+        const next = open ? nextStepIndex(t.drink, o.holding, o.pods, o.gear) : null;
         const clickable = o.mode === 'click';
         const steps = open
-          ? `<div class="steps">${ticketSteps(t.drink, o.pods).map((s, k) => `<span class="${k === next ? 'next' : ''}">${s}</span>`).join('')}</div>`
+          ? `<div class="steps">${ticketSteps(t.drink, o.pods, o.gear).map((s, k) => `<span class="${k === next ? 'next' : ''}">${s}</span>`).join('')}</div>`
           : clickable ? '<div class="peek">Tap for steps</div>' : '';
-        const cls = ['ticket', t.patience < URGENT ? 'urgent' : '', t.tag ? `kind-${t.tag.tone}` : '', open ? 'open' : '', clickable ? 'tap' : ''].filter(Boolean).join(' ');
+        const cls = ['ticket', t.pickup ? 'rung' : '', t.patience < URGENT ? 'urgent' : '', t.tag ? `kind-${t.tag.tone}` : '', open ? 'open' : '', clickable ? 'tap' : ''].filter(Boolean).join(' ');
         const aria = clickable ? ` role="button" aria-expanded="${open}" aria-label="${DRINK_LABEL[t.drink]}: ${open ? 'hide' : 'show'} steps"` : '';
         return `<div class="${cls}" data-id="${t.id}"${aria} style="--r:${tilt(t.id)}deg">
-          ${t.tag ? `<div class="ktag">${esc(t.tag.text)}</div>` : ''}
+          ${t.tag ? `<div class="ktag">${esc(t.tag.text)}</div>` : ''}${t.pickup ? '<div class="rungtag">🧾 At pickup</div>' : ''}
           <div class="ic">${itemIcon(t.drink, 38)}</div><div class="nm">${DRINK_LABEL[t.drink]}</div>
           <div class="pr">${esc(o.prices[t.drink] ?? '')}</div>
           ${steps}
@@ -108,7 +112,7 @@ export function ticketsHtml(orders: readonly OrderTicket[], o: TicketOpts): stri
 
 /** Rebuild key for the rail: the orders plus anything that changes which steps show or which is next. */
 export function ticketsKey(ordersKey: string, o: TicketOpts): string {
-  return `${ordersKey}|${o.mode}|${o.day === 1 ? 1 : 0}|${[...o.open].sort((a, b) => a - b).join('.')}|${o.mode === 'off' ? '' : o.holding ?? '-'}|${o.pods ? 'p' : ''}`;
+  return `${ordersKey}|${o.mode}|${o.day === 1 ? 1 : 0}|${[...o.open].sort((a, b) => a - b).join('.')}|${o.mode === 'off' ? '' : o.holding ?? '-'}|${o.pods ? 'p' : ''}${o.gear ? 'g' : ''}`;
 }
 
 /** Toggle a ticket's steps. Day 1's auto-open first ticket records a "shut" marker instead. */
