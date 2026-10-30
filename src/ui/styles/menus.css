@@ -195,3 +195,9 @@
 @media (max-width: 640px) { .rec-grid { grid-template-columns: 1fr 1fr; } }
 .recbtn { position: fixed; top: 24px; right: 252px; z-index: 3; }
 @media (max-width: 720px) { .recbtn { top: auto; bottom: 16px; right: 16px; } }
+/* P4 follow-up: the season board in Records. */
+.seasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.seasons li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; background: #fff; border-radius: 12px; padding: 8px 12px; box-shadow: var(--sh-1); }
+.seasons li .md { grid-row: span 2; font-size: 28px; }
+.seasons li b { font: 700 16px var(--font-display); } .seasons li small { font-size: 13px; color: var(--ink-soft); }
+.seasons li.live { box-shadow: var(--sh-1), inset 0 0 0 2px var(--caramel); }

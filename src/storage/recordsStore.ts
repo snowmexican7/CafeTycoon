@@ -6,11 +6,16 @@
 import type { Award } from '../sim/awards';
 import type { DayStats, GameState } from '../sim/types';
 import { isGearRun } from '../sim/gear';
+import { SEASON, seasonMedal, targetsHit, type Medal } from '../sim/season';
 import { readJson, type StorageLike } from './storageLike';
 
 const KEY = 'cafetycoon.records';
 const KEEP_RUNS = 20;
 const KEEP_MVPS = 8;
+const KEEP_SEASONS = 6;
+
+/** P4 follow-up: one row per season played (best first), updated at every season week-end. */
+export interface SeasonRecord { key: string; seed: number; date: string; crew: string[]; weeksPlayed: number; hit: number; made: number; medal: Medal; done: boolean }
 
 export interface Totals {
   days: number;
@@ -51,6 +56,8 @@ export interface Records {
    */
   split?: true;
   classic?: Bests;
+  /** P4 follow-up: the season board (optional; older records have none). */
+  seasons?: SeasonRecord[];
 }
 
 const ZERO: Totals = { days: 0, served: 0, perfect: 0, slips: 0, espressos: 0, mopped: 0, lost: 0 };
@@ -104,6 +111,12 @@ export function foldRecords(prev: Records, state: GameState, awards: Award[], da
     const p = dayProfit(d);
     if (!b.bestDayProfit || p > b.bestDayProfit.profit) b.bestDayProfit = { profit: p, day: d.day, seed: state.seed, date };
   }
+  if (state.season) {
+    const s = state.season;
+    const later = s.weeks.filter((w) => w.target !== null);
+    const row: SeasonRecord = { key, seed: state.seed, date, crew, weeksPlayed: later.length, hit: targetsHit(s), made: Math.round(later.reduce((n, w) => n + w.profit, 0) * 100) / 100, medal: seasonMedal(s), done: !!s.done || later.length >= SEASON.weeks - 1 };
+    r.seasons = [row, ...(r.seasons ?? []).filter((x) => x.key !== key)].sort(seasonOrder).slice(0, KEEP_SEASONS);
+  }
   if (fresh) {
     for (const a of awards) {
       if (a.bot || a.tone === 'joke') continue;
@@ -115,6 +128,12 @@ export function foldRecords(prev: Records, state: GameState, awards: Award[], da
     }
   }
   return r;
+}
+
+const MEDAL_RANK: Record<string, number> = { gold: 3, silver: 2, bronze: 1 };
+/** Best season first: medal, then targets hit, then profit made. */
+export function seasonOrder(a: SeasonRecord, b: SeasonRecord): number {
+  return (MEDAL_RANK[b.medal ?? ''] ?? 0) - (MEDAL_RANK[a.medal ?? ''] ?? 0) || b.hit - a.hit || b.made - a.made;
 }
 
 function sanitize(raw: unknown): Records {
@@ -130,6 +149,7 @@ function sanitize(raw: unknown): Records {
     hall: r.hall && typeof r.hall === 'object' ? r.hall : {},
     mvps: Array.isArray(r.mvps) ? r.mvps : [],
     counted: Array.isArray(r.counted) ? r.counted : [],
+    seasons: Array.isArray(r.seasons) ? r.seasons.filter((x) => x && typeof x === 'object' && typeof x.key === 'string') : undefined,
     ...(classic ? { classic } : {}),
   } as Records);
 }
