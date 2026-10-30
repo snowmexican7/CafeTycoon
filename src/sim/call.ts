@@ -7,6 +7,7 @@
  * replays and guests agree. Travelling to the branch is deferred (two live floors).
  */
 import { secondsToTicks } from './constants';
+import { emitLog } from './log';
 import type { GameState, PlayerInput } from './types';
 
 export const CALL = {
@@ -44,7 +45,7 @@ export function callFor(state: GameState, day = state.day): BranchCall | null {
   return { kind: hash(state.seed, day, 3) < 0.5 ? 'machine' : 'order', ringAt, until: Math.min(dayTicks, ringAt + secondsToTicks(CALL.answerSec)) };
 }
 
-const elapsed = (state: GameState): number => secondsToTicks(state.settings.dayLengthSec) - state.phaseTicksLeft;
+export const elapsed = (state: GameState): number => secondsToTicks(state.settings.dayLengthSec) - state.phaseTicksLeft;
 
 /** The call that is ringing right now (day phase, inside its window, not yet answered), with seconds left. */
 export function callRinging(state: GameState): (BranchCall & { secsLeft: number }) | null {
@@ -65,7 +66,23 @@ export function noteCallRang(state: GameState): void {
 export function applyCall(state: GameState, input: Extract<PlayerInput, { kind: 'call' }>): void {
   const p = state.players.find((x) => x.id === input.playerId);
   if (!p || p.bot || !callRinging(state)) return;
-  state.callAnswer = { day: state.day, take: input.take, by: p.name };
+  answerCall(state, p.name, input.take);
+}
+
+/**
+ * A bot picks up (the sim's own decision, see bots/phone.ts). Network inputs from bot ids stay refused in
+ * applyCall; only the bot brain calls this, and only while the phone rings.
+ */
+export function applyBotCall(state: GameState, botId: string, take: boolean): void {
+  const p = state.players.find((x) => x.id === botId);
+  if (!p || !p.bot || !callRinging(state)) return;
+  answerCall(state, p.name, take);
+}
+
+function answerCall(state: GameState, by: string, take: boolean): void {
+  const c = callFor(state);
+  state.callAnswer = { day: state.day, take, by };
+  emitLog(state, 'call.answer', { by, take, kind: c?.kind ?? 'order' });
 }
 
 /** How today's call ended, for closing: null when there was no call, or the shop closed before it rang. */
