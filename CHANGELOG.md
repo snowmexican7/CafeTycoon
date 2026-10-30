@@ -16,9 +16,15 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+## 3.1.0 — 2026-10-30 · Phase 3 complete
+
+Phase 3, "Real-life growth", is done: your crew is now on the payroll, and every good run makes the next one a little easier.
+
 - **Head starts carried between runs.** Finishing a week, serving 100 drinks across your runs, or growing a stand into a cart each unlocks a head start for later runs: a Nest egg (+$20), a Stocked pantry (+10 beans and milk) or Word of mouth (open at 3★). Pick one under **Head start** on the title screen; the week-end screen tells you when you earn one, and Records lists them all. Progress lives in this browser, separately from your run save, so a damaged progress save can never stop you starting a game.
 
-- **Hired staff.** In a Gear run the bot baristas are on the payroll: $1 a day each at the stand, $3 at the cart, $5 at the café, paid at closing. The Tonight tab's crew card lists who's hired, with **Hire** and **Let go** buttons, and the receipt shows the wages. The night warning counts rent and wages together. Classic runs keep free bots.
+- **Hired staff.** In a Gear run the bot baristas are on the payroll: $1 a day each at the stand, $3 at the cart, $5 at the café, paid at closing. The Tonight tab's crew card lists who's hired, with **Hire** and **Let go** buttons, and the receipt shows the wages. The night warning counts rent and wages together. Classic runs keep free bots. Wages are paid by the hour, so on 60-second quick days a barista costs 40% of that.
+- The in-game Roadmap shows Phase 3 as done and Phase 4, Franchise & rivals, as next.
+- The week-end screen's "Bought this run" now lists the gear you bought (it used to say "Nothing. Bold." on every Gear run).
 
 ## 3.0.0 — 2026-10-30 · Gear Tree
 

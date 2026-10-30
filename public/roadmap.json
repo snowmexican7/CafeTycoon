@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-29",
+  "updated": "2026-10-30",
   "repo": "snowmexican7/CafeTycoon",
   "draft": true,
   "order": "Phases go from easiest and lowest risk to hardest and riskiest. main stays the stable, playable build while risky work for the next phase happens on a branch.",
@@ -122,7 +122,7 @@
       "id": 3,
       "name": "Real-life growth",
       "tagline": "stand → cart → café",
-      "status": "now",
+      "status": "done",
       "suggested": false,
       "aim": "A progression that feels like running a real café, with saves that carry over.",
       "goals": [
@@ -180,27 +180,31 @@
         },
         {
           "text": "Feedback round 1: readable nights, longer or relaxed nights, bigger order tickets",
-          "state": "doing"
+          "state": "done"
         },
         {
           "text": "Feedback round 1: close the day early, sold-out walk-ups, rush hour fix",
-          "state": "todo"
+          "state": "done"
         },
         {
           "text": "Station slots: swap stations, extra grinders and espresso machines (replaces the layout editor)",
-          "state": "todo"
+          "state": "done"
         },
         {
           "text": "Bots that use the new systems (hurried bots, night tips)",
-          "state": "todo"
+          "state": "done"
+        },
+        {
+          "text": "Gear Tree: start with a folding table and $120, buy each machine, learn drinks by making them (v3.0.0)",
+          "state": "done"
         },
         {
           "text": "Bots become hired staff with wages",
-          "state": "todo"
+          "state": "done"
         },
         {
           "text": "Saves and unlocks carried between runs",
-          "state": "todo"
+          "state": "done"
         }
       ],
       "doneWhen": "A run feels like \"we started tiny and built something\", every locked night tab is live, and saves survive a refresh and a new game night with no lost progress.",
@@ -210,10 +214,14 @@
       "id": 4,
       "name": "Franchise & rivals",
       "tagline": "the long game",
-      "status": "planned",
+      "status": "now",
       "suggested": false,
       "aim": "Bigger games across several cafés and game nights. Big new systems, but still predictable code we can test.",
       "goals": [
+        {
+          "text": "Rival escalation: Starbuck$ grows with you from week 2",
+          "state": "todo"
+        },
         {
           "text": "Campus franchise of several cafés",
           "state": "todo"
@@ -351,6 +359,18 @@
     {
       "date": "2026-10-29",
       "text": "Feedback round 1 planned from Kennedy's first Phase 3 playtest"
+    },
+    {
+      "date": "2026-10-29",
+      "text": "Version 2.2.0: Feedback round 1 (readable nights, close early, sold-out walk-ups, station slots, bot tips)"
+    },
+    {
+      "date": "2026-10-30",
+      "text": "Version 3.0.0: the Gear Tree. Every run starts tiny and buys its bar one machine at a time"
+    },
+    {
+      "date": "2026-10-30",
+      "text": "Version 3.1.0: Phase 3 is done. Hired staff with wages, and head starts carried between runs"
     }
   ]
 }

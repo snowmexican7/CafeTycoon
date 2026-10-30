@@ -17,6 +17,7 @@ import { regularsViewModel, type RegularVM } from '../sim/regulars';
 import { ROLE_IDS, ROLES, roleHolders, type RoleId } from '../sim/roles';
 import { awardsFor, awardsText, type Award } from '../sim/awards';
 import { catalogueById } from '../data/catalogue';
+import { GEAR } from '../data/gear';
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
 import { TICK_RATE, secondsToTicks } from '../sim/constants';
@@ -899,7 +900,11 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
     daysCompleted: state.days.length,
     customersServed: state.days.reduce((sum, d) => sum + d.served, 0),
     bestDay: best ? { day: best.day, profit: money(profitOf(best)) } : null,
-    itemsBought: state.owned.map((o) => catalogueById[o.itemId]?.name ?? o.itemId),
+    itemsBought: [
+      ...state.owned.map((o) => catalogueById[o.itemId]?.name ?? o.itemId),
+      // B17: Gear runs buy gear, not catalogue items; list each gear buy (an upgrade shows each step).
+      ...(state.gearLog ?? []).filter((e) => e.action === 'buy').map((e) => GEAR[e.gear]?.name ?? e.gear),
+    ],
     seed: state.seed,
     isHost: me === state.hostId,
     bankrupt: state.bankrupt,
