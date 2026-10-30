@@ -22,6 +22,8 @@ when a build goes out, the line moves under its version with the date.
 - **Season details.** On the Season board in Café records, tap a season to see it week by week: each week's target, what you made, and whether you hit it. Seasons saved before this update just show their summary line.
 - **The phone rings.** When the second shop calls, you now hear an old desk phone trill when it starts and every 3 seconds until someone picks up or it rings out.
 - Bot crewmates give better night tips in Gear runs: which machine to save up for next, when a bot costs more than it brings in, matching Starbuck$'s happy hour, printing a stamp card, and opening, staffing or stocking the second shop.
+- Fixes: a gear vote no longer goes through when someone leaves and the proposer withdraws; the second shop isn't charged for a phone call that never rang; a pods-only bar no longer offers an americano, doppio or red-eye it can't make; the second shop can now be opened from the café.
+- Fixes: selling the second shop gives back unspent stock credit; bots that only cover for a missing friend don't draw wages; records' best day matches the night screen's profit.
 
 ## 3.2.0 — 2026-10-30 · Phase 4 (franchise & rivals, lite)
 

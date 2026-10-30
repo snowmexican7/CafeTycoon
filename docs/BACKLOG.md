@@ -1976,4 +1976,11 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
   `tipsVM`'s `Record<AdviceKind, …>`), so tell them apart by `id` prefix or `input.kind`; `coveredBy()` should
   learn `rival:promo` / `rival:loyalty` so chips don't repeat the night brief's alerts. Adding proper kinds later
   is fine: change `AdviceKind` and `tipsVM` together.
+- **Overnight-edit review fixes** (tag `review-fixes-1`): I1 gear vote (settle on leave, withdraw first; when
+  the only other voter leaves, the proposer's vote passes), I2 call counts only once rung (`callRang`), I3
+  americano needs E2+ and americano/doppio/red-eye are off a pods-only bar, I4 `isReservedId` guards on join,
+  seat, `noteReport` and the records hall; M1 café branch, M2 records `dayProfit` = `profitOf`, M3 branch
+  stock credit, M6 cover bots unpaid, M8 connected Managers only, M9 pots cleared at closing, M10 promo-day memo.
+  Open: review item 8 (branch loss in the brief's/planner's bills) and M4, M5, M7. **For the UI lane:**
+  src/ui/branchView.ts still values a send at list price (the sim now uses the restock price).
 
