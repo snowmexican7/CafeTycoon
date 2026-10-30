@@ -108,6 +108,10 @@ export const ECONOMY = {
     orphanDrinkSeconds: 12, // a bot leaves a finished drink in a machine alone until it has sat this long
     orphanPrepSeconds: 15, // ...and a shot or stray grounds (a person may be prepping the next step); under the 18 s smoke egg so a rescued shot is passed, not dumped
     orphanGuardTiles: 2.5, // a connected person this close to the machine, or walking toward it, keeps it theirs
+    // FB2 A1 (helper bots): with a person in a Gear café, crew bots leave the machine nearest each person alone while
+    // the person is this close to it, and leave a fresh ticket to a free person for this long before claiming it.
+    helperGuardTiles: 1.5,
+    helperTicketSeconds: 3,
   },
   mess: {
     max: 12,

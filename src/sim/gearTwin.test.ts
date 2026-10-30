@@ -119,6 +119,8 @@ describe('G9: a bot crew works a day with a two-group machine', () => {
     s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
     for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 60;
     s = startDay(s);
+    // FB2 A1: the bots work alone here (with a person in the café they would act as helpers).
+    s.players[0].connected = false;
     const used = new Set<string>();
     for (let i = 0; i < 60 * 90 && s.phase === 'day'; i++) {
       s = step(s, []);
