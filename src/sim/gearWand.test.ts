@@ -302,6 +302,20 @@ describe('FB2 C9: steaming at the wand', () => {
     expect(w.making).toBe('latte');
   });
 
+  it('a carton goes out at the wand (milk.out), and the wand steams from it', () => {
+    const s = open('e3', 'weak');
+    s.milkOut = 0;
+    atWand(s);
+    s.players[0]!.tool = 'milk';
+    s.players[0]!.carry = 8;
+    interact(s, 'p1');
+    expect([s.players[0]!.tool, s.milkOut]).toEqual([null, 8]);
+    expect(logs(s, 'milk.out').at(-1)).toEqual({ by: 'p1', n: 8, station: 'steamer' });
+    s.players[0]!.holding = 'espresso';
+    interact(s, 'p1');
+    expect([wandOf(s)!.making, s.milkOut]).toEqual(['latte', 7]);
+  });
+
   it('proper and built-in wands never clog', () => {
     for (const [gear, wand] of [['e4', 'strong'], ['e5', undefined], ['e6', undefined]] as const) {
       const s = open(gear, wand);
