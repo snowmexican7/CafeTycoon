@@ -7,6 +7,7 @@
  * worth doing), because the list is rebuilt from state every frame.
  */
 import { ECONOMY } from '../data/economy';
+import { CONDIMENTS } from '../sim/condiments';
 import { BOT_IDS, BOT_PERSONALITIES } from '../sim/bots/roster';
 import { crewTips, type Advice, type AdviceKind } from '../sim/bots/planner';
 import { nightBrief, type NightFix } from '../sim/brief';
@@ -35,6 +36,19 @@ export const MAX_TIPS = 2;
 const TIP_ICON: Record<AdviceKind, string> = {
   restock: '📦', price: '🏷️', twist: '✨', signature: '⭐', scout: '🔭', rival: '☕', grow: '🏗️', checkout: '🧾', slot: '🛠️', equip: '🛠️', menu: '📋',
 };
+/**
+ * 3.3.1: Gear and Phase 4 rows reuse AdviceKind values (planner.ts), so the icon follows the input first:
+ * a steep row is not a restock box, a happy-hour match is not a knock-off.
+ */
+const INPUT_ICON: Partial<Record<NightFix['kind'], string>> = {
+  steep: '🧊', condimentBox: '🥛', gear: '⚙️', staff: '👋', rivalCounter: '⏰', stampCard: '🎟️', branch: '🏪',
+};
+
+/** The chip's icon: by the input it sends, else by advice kind. */
+export function tipIcon(a: Pick<Advice, 'kind' | 'input'>): string {
+  return INPUT_ICON[a.input.kind] ?? TIP_ICON[a.kind];
+}
+
 const SUPPLY_NAME: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'cold brew', flavour: 'flavours', pastry: 'pastries' };
 
 const cap = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
@@ -43,6 +57,13 @@ const cap = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
 export function shortTip(a: Pick<Advice, 'kind' | 'text' | 'input'>): string {
   const i = a.input;
   if (a.kind === 'restock' && i.kind === 'restock') return `Buy ${i.packs} ${i.packs === 1 ? 'pack' : 'packs'} of ${SUPPLY_NAME[i.supply]}`;
+  if (i.kind === 'steep') return `Steep ${i.cups} cold ${i.cups === 1 ? 'brew' : 'brews'} for tomorrow`;
+  if (i.kind === 'condimentBox') return `Buy ${i.boxes} condiment ${i.boxes === 1 ? 'box' : 'boxes'} ($${(i.boxes * CONDIMENTS.boxCost).toFixed(0)})`;
+  if (i.kind === 'rivalCounter') return 'Match the happy hour';
+  if (i.kind === 'stampCard') return 'Print our own stamp card';
+  if (i.kind === 'staff' && i.action === 'fire') return 'Let a paid barista go';
+  if (i.kind === 'branch' && i.action === 'send' && i.supply) return `Send a pack of ${SUPPLY_NAME[i.supply as SupplyId] ?? i.supply} to the branch`;
+  if (i.kind === 'branch' && i.action === 'staff' && typeof i.staff === 'number') return `Put ${i.staff} ${i.staff === 1 ? 'barista' : 'baristas'} at the branch`;
   let t = a.text;
   const colon = t.indexOf(': ');
   if (colon > 0 && (a.kind === 'rival' || a.kind === 'equip')) t = cap(t.slice(colon + 2));
@@ -52,11 +73,15 @@ export function shortTip(a: Pick<Advice, 'kind' | 'text' | 'input'>): string {
 }
 
 /** Alert ids that already cover a piece of advice (the sim brief's and the Tonight list's). */
-function coveredBy(id: string): string[] {
+export function coveredBy(id: string): string[] {
   const [kind, arg] = id.split(':');
   if (kind === 'grow') return ['grow', id];
   if (kind === 'checkout') return ['checkout', id];
-  if (kind === 'restock' && arg) return [`stock:${arg}:out`, `stock:${arg}:low`];
+  // Gear: concentrate is steeped, and the brief's steep alert carries the concentrate top-up
+  if (kind === 'restock' && arg) return [`stock:${arg}:out`, `stock:${arg}:low`, ...(arg === 'concentrate' ? ['steep'] : [])];
+  if (kind === 'condimentBox') return ['condiments'];
+  // Phase 4: the brief's rival alerts have their own Match / Print buttons
+  if (kind === 'rival' && (arg === 'promo' || arg === 'loyalty')) return [id];
   return [];
 }
 
@@ -78,6 +103,6 @@ export function tipsVM(state: GameState, shown: readonly string[] = []): TipVM[]
     .slice(0, MAX_TIPS)
     .map((a) => {
       const who = botName(state, a.by);
-      return { id: a.id, kind: a.kind, icon: TIP_ICON[a.kind], by: who.name, personality: who.personality, text: shortTip(a), full: a.text, input: a.input };
+      return { id: a.id, kind: a.kind, icon: tipIcon(a), by: who.name, personality: who.personality, text: shortTip(a), full: a.text, input: a.input };
     });
 }
