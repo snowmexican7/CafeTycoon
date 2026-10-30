@@ -176,12 +176,11 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
 export function sellLabel(id: GearId, sell: number): { text: string; title: string } {
   if (sell > 0) return { text: `Sell · $${sell}`, title: `Sell it back for $${sell}.` };
   if (id === 'c1') return { text: 'Bin the sock', title: 'Nobody wants the sock. Frees the slot ($0).' };
-  if (id === 's1') return { text: 'Toss it', title: 'Even the dollar store won\'t take it back. Frees the slot ($0).' };
   return { text: 'Toss it', title: 'Worth nothing, but frees the slot ($0).' };
 }
 
 /** 3.3.2: a short "which machine" word for the HUD row ("7/8 left" alone didn't say what). */
-export const HUD_MACHINE: Record<GearTree, string> = { coldBrew: 'Cold brew', espresso: 'Espresso', grinder: 'Grinder', steamer: 'Steamer', drip: 'Drip', pourOver: 'Pour-over', bin: 'Bin' };
+export const HUD_MACHINE: Record<GearTree, string> = { coldBrew: 'Cold brew', espresso: 'Espresso', grinder: 'Grinder', drip: 'Drip', pourOver: 'Pour-over', bin: 'Bin' };
 
 export interface HudGearVM { icon: string; name: string; status: string; warn: boolean; /** 3.3.2: "Cold brew", "Drip 2"… */ label: string }
 
