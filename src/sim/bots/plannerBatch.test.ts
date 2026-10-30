@@ -85,7 +85,8 @@ describe('Task 12: the planner suggests the steep number', () => {
 
   it('no tap, no steep advice', () => {
     expect(find(gearNight(['d1'], 300), 'steep')).toBeUndefined();
-    expect(find(gearNight(['c4'], 300), 'steep')).toBeUndefined(); // a c4 has no daily cap
+    // A C4 now has a steep cap too (60 cups, batch-steep), so it does get a steep number.
+    expect(find(gearNight(['c4'], 300), 'steep')).toBeDefined();
   });
 
   it('with only the bills in the till and no concentrate: leftovers only', () => {
