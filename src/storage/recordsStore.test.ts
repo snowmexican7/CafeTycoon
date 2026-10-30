@@ -3,6 +3,7 @@ import { createRun } from '../sim/run';
 import { createRecordsStore, foldRecords, emptyRecords, splitRecords, type Records } from './recordsStore';
 import { recordsHtml, recordsViewModel } from '../ui/records';
 import { memoryStorage } from './storageLike';
+import { profitOf } from '../sim/profit';
 import type { Award } from '../sim/awards';
 import type { GameState } from '../sim/types';
 
@@ -25,6 +26,17 @@ describe('records', () => {
     expect(r.bestDay).toMatchObject({ served: 30, day: 2 });
     expect(r.hall).toEqual({ K: { mvp: 1, awards: 0 }, S: { mvp: 0, awards: 1 } });
     expect(r.mvps[0]).toMatchObject({ name: 'K' });
+  });
+
+  it('review M2: the best-day profit is the full net of the day (branch, twist, licence and wages)', () => {
+    const s = week(1, [10, 10]);
+    // Day 1: sales 50 + tips 3 - rent 25 = 28. Day 2 looks the same, but its branch lost $60 and wages cost $20.
+    s.days[1] = { ...s.days[1]!, wages: 20, twistCost: 5, checkoutFees: 4, branch: { served: 5, walked: 0, takings: 10, costs: 70, profit: -60 } };
+    const r = foldRecords(emptyRecords(), s, [], 'd', 10);
+    expect(r.bestDayProfit).toMatchObject({ day: 1, profit: 28 });
+    const one = week(2, [10]);
+    one.days[0] = { ...one.days[0]!, wages: 20, twistCost: 5, checkoutFees: 4, branch: { served: 5, walked: 0, takings: 10, costs: 70, profit: -60 } };
+    expect(foldRecords(emptyRecords(), one, [], 'd', 10).bestDayProfit?.profit).toBe(profitOf(one.days[0]!));
   });
 
   it('counts a run once; a later stop adds only the new days', () => {

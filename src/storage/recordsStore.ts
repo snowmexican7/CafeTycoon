@@ -6,6 +6,7 @@
 import type { Award } from '../sim/awards';
 import type { DayStats, GameState } from '../sim/types';
 import { isGearRun } from '../sim/gear';
+import { profitOf } from '../sim/profit';
 import { SEASON, seasonMedal, targetsHit, type Medal } from '../sim/season';
 import { readJson, type StorageLike } from './storageLike';
 
@@ -83,7 +84,7 @@ export function splitRecords(r: Records): Records {
   return { ...r, ...NO_BESTS, split: true, ...(hasBests(old) ? { classic: old } : {}) };
 }
 
-const dayProfit = (d: DayStats) => Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0) - (d.wages ?? 0)) * 100) / 100;
+const dayProfit = profitOf; // review M2: the day's full net (branch, twists, licences, wages), like the rest of the game
 
 export function runTotals(state: GameState): Totals {
   const crew = state.crew?.players ?? [];
