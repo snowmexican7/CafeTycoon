@@ -56,7 +56,7 @@ describe('stores', () => {
 
 describe('snapshot versioning', () => {
   it('is on version 9', () => {
-    expect(SNAPSHOT_VERSION).toBe(25);
+    expect(SNAPSHOT_VERSION).toBe(26);
   });
 
   it('migrates a version-23 save: lastCall stays absent', () => {
