@@ -196,7 +196,7 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
       if (d <= BOTS.orphanGuardTiles) return true;
       return d <= 4 && p.moveDir.x * (st.pos.x - p.pos.x) + p.moveDir.y * (st.pos.y - p.pos.y) > 0;
     });
-  // Not its own item until it has sat a while: a drink 12 s, a shot or grounds 20 s. Unknown age (old saves,
+  // Not its own item until it has sat a while: a drink 12 s, a shot or grounds 15 s. Unknown age (old saves,
   // hand-built states) falls back to `doneAt`, then to "sat long enough" so a leftover never blocks a machine forever.
   const sat = (st: Station) => {
     const since = st.outputSince ?? st.doneAt;

@@ -125,7 +125,7 @@ describe('bot brain', () => {
     expect(bot(s).bot!.claim).toBe(900);
     s.customers = [];
     const wasted = s.today.wasted ?? 0;
-    // Brew, then the 20 s orphan wait, a walk and a reaction delay. A shot left past the 18 s smoke egg is dumped on pickup instead of passed.
+    // Brew, then the 15 s orphan wait (under the 18 s smoke egg), a walk and a reaction delay; a slow walk can still meet the smoke.
     s = runUntil(s, (x) => machine(x).output === null && machine(x).busyTicksLeft === 0 && bot(x).holding === null && (x.pass.some((i) => i.item === 'espresso') || (x.today.wasted ?? 0) > wasted), 60 * 40);
     expect(bot(s).bot!.claim).toBeNull();
   });
@@ -1015,10 +1015,10 @@ describe('bots wait before taking an item a person may be using', () => {
     }
   });
 
-  it('the same grounds, person gone and 20 s elapsed, are taken', () => {
-    const young = parked('espresso', 'grounds', { x: 11, y: 5 }, sec(19));
+  it('the same grounds, person gone and 15 s elapsed, are taken', () => {
+    const young = parked('espresso', 'grounds', { x: 11, y: 5 }, sec(14));
     expect(think(young, bot(young))[0].kind).toBe('idle');
-    const old = parked('espresso', 'grounds', { x: 11, y: 5 }, sec(20));
+    const old = parked('espresso', 'grounds', { x: 11, y: 5 }, sec(15));
     expect(think(old, bot(old))).toEqual(take('espresso'));
   });
 
@@ -1041,10 +1041,10 @@ describe('bots wait before taking an item a person may be using', () => {
     expect(think(old, bot(old))).toEqual(take('steamer'));
   });
 
-  it('an espresso shot waits the longer prep time', () => {
-    const young = parked('espresso', 'espresso', { x: 11, y: 5 }, sec(15));
+  it('an espresso shot waits the longer prep time, and is rescued before the 18 s smoke', () => {
+    const young = parked('espresso', 'espresso', { x: 11, y: 5 }, sec(14));
     expect(think(young, bot(young))[0].kind).toBe('idle');
-    const old = parked('espresso', 'espresso', { x: 11, y: 5 }, sec(20));
+    const old = parked('espresso', 'espresso', { x: 11, y: 5 }, sec(15));
     expect(think(old, bot(old))).toEqual(take('espresso'));
   });
 });
