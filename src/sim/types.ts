@@ -45,6 +45,8 @@ export interface PassItem {
   ticksLeft: number;
   /** P3 B5: the cup's sloppy marks. */
   slips?: number;
+  /** Gear G4h: a too-hot/too-cold cup waiting on the pass. */
+  temp?: boolean;
 }
 
 /** Absolute state.tick at which the event starts. */
@@ -138,6 +140,8 @@ export interface Player {
   holding: ItemKind | null;
   /** P3 B5: sloppy marks on the cup in hand (absent = 0). */
   cupSlips?: number;
+  /** Gear G4h: the cup in hand came out too hot or too cold (half tip when served). */
+  cupTemp?: boolean;
   connected: boolean;
   bot?: BotState;
   idleTicks: number;

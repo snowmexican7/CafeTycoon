@@ -1726,3 +1726,8 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 ### Gear G6b — level-ups replace the day-3/day-5 unlocks (gear-g06b)
 - Gear runs skip `unlockForDay`. Iced latte now unlocks after 10 espressos + 10 cold brews (`LevelUp.also`), and Mocha after 25 lattes (the flavour starter pack comes via unlockDrink). Classic runs are unchanged. The night "Drinks to learn" row shows both counts.
 - **For Claude (bots):** bots could aim for level-up counts (`levelUpProgress`). Optional.
+
+### Gear G4h — too hot / too cold = half tip (gear-g04h)
+- Per doc §4.2, a drip temperature miss no longer marks the cup (−1★). Instead it sets `Player.cupTemp`, which halves the tip when that cup is served. The flag rides through the pass (`PassItem.temp`). It's cleared on empty hands, on going into or out of a machine, and on serving. The complaint toast now says "(half tip)".
+- Optional fields, no version bump. Classic runs never set it.
+- **For Claude (bots):** bots carrying a `cupTemp` cup could prefer rebrewing over serving if time allows (optional).
