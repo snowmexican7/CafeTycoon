@@ -6,6 +6,7 @@ import { interact } from './stations';
 import { ensureCounterSpots, stationsFromSlots } from './slots';
 import { applyGrowInput } from './growth';
 import { CONDIMENTS } from './condiments';
+import { spotOf } from './pickup';
 import { FRIDGE, closingChecklist, closingSoon, fridgeCapacity, fridgeCards, fridgeGear, fridgeMorning } from './fridge';
 import { migrateSnapshot, SNAPSHOT_VERSION } from '../storage/snapshotStore';
 import { FRIDGE_ID, CONDIMENTS_ID, layoutFor } from '../data/layout';
@@ -185,6 +186,10 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
     s.barAway = 30;
     fridgeMorning(s);
     expect([s.condiments.servings, s.barAway]).toEqual([CONDIMENTS.servings, 15]);
+  });
+
+  it('spotOf names the fridge (not the till)', () => {
+    expect(spotOf(at(gearDay(), FRIDGE_ID))).toBe('fridge');
   });
 
   it('M1: with the mop in hand next to the fridge, E still mops', () => {
