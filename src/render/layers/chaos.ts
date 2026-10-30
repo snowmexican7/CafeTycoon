@@ -443,6 +443,15 @@ export class Chaos {
       case 'scatter':
         this.puffs(x, y + 8, 0x4a2c1a, 12, 'dot');
         break;
+      case 'drain':
+        // the glug over the basin: coffee-brown drops for the pot, a pale splash for a cup
+        this.comic(b.pot ? 'Glug glug!' : 'Glug!', x, y - 74, 0x7fb8e0, false);
+        this.puffs(x - 4, y - 26, b.pot ? 0x5a3320 : 0xd9ad80, b.pot ? 12 : 8, 'dot');
+        break;
+      case 'leak':
+        this.comic('Drip drip…', x, y - 46, 0x9a8a5a, false);
+        this.puffs(x, y + 8, 0x8a7a3a, 10, 'dot');
+        break;
       case 'sparkle':
         this.comic('Squeaky clean!', x, y - 36, PALETTE.mint, false);
         this.puffs(x, y, 0xfff6c9, 8, 'star');

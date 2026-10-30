@@ -198,6 +198,9 @@ export function hudGearVM(state: GameState): HudGearVM[] {
       if (s.dead) [status, warn] = ['dead', true];
       else if (s.jammed) [status, warn] = ['jammed! (E)', true];
       else if (s.batchLeft !== undefined) [status, warn] = [s.batchLeft > 0 ? `${s.batchLeft}/${g.batch} left` : 'sold out', s.batchLeft === 0];
+      // 3.3.3 (FB2 A3): a pot out at the sink, or yesterday's pot still on the plate
+      else if (g.pot && s.potOut !== undefined) [status, warn] = ['pot out (sink)', true];
+      else if (g.pot && s.stale === true) [status, warn] = ['stale pot', true];
       else if (g.pot && s.busyTicksLeft > 0) status = 'brewing…';
       else if (g.pot && s.potLeft !== undefined) {
         const cold = s.potOff === 'cold' || (s.potColdAt !== undefined && state.tick >= s.potColdAt);

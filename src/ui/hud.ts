@@ -289,7 +289,9 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     if (key === lastHand) return;
     lastHand = key;
     const h = live.holding;
-    el.hand.innerHTML = `<div class="slot ${h ? 'full' : ''}">${h ? itemIcon(h, 36) : '∅'}</div><div class="t">${h ? ITEM_LABEL[h] : 'Empty hands'}<small>${esc(live.meName)} · you</small></div>`;
+    const t = live.tool;
+    const name = h ? `${ITEM_LABEL[h]}${live.heldCold ? ' <b class="cold">· cold</b>' : ''}` : t ? esc(t.label) : 'Empty hands';
+    el.hand.innerHTML = `<div class="slot ${h || t ? 'full' : ''}">${h ? itemIcon(h, 36) : t ? `<span class="tool">${t.icon}</span>` : '∅'}</div><div class="t">${name}<small>${esc(live.meName)} · you</small></div>`;
     const { go, title, detail } = live.hint;
     el.hint.classList.toggle('idle', !go);
     el.hint.hidden = !title;

@@ -293,3 +293,6 @@
 #hud .ticket .rungtag { grid-column: 1 / span 3; justify-self: start; font: 800 13px var(--font-body); letter-spacing: .04em; text-transform: uppercase;
   padding: 1px 8px; border-radius: 99px; margin: -2px 0 2px; background: #dff3e4; color: #2f7a4c; }
 #hud .ticket.rung { box-shadow: 0 0 0 2px #7cc49a, var(--sh-1); }
+/* 3.3.3: a tool in hand (the old drip pot, a box, the mop), and a cup gone cold */
+#hud .hold .slot .tool { font-size: 26px; line-height: 1; }
+#hud .hold .t b.cold { color: #3d79b0; font-weight: 800; }

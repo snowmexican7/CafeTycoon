@@ -13,6 +13,8 @@ import { ROLES } from '../sim/roles';
 import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
 import { CALL, callRinging } from '../sim/call';
 import { AREAS } from '../data/areas';
+import { coolTicks, heldCool, takeBackCold, takeBackIndex } from '../sim/cooling';
+import { needsDump, potCold, potMachine } from '../sim/sink';
 /**
  * Presentational helpers for the restyled overlays. They read GameState directly for the things
  * the view models do not carry (order tickets, crew, what you hold, the day bar), and never change
@@ -121,6 +123,10 @@ export interface HudLive {
   orders: OrderTicket[];
   crew: CrewMember[];
   holding: ItemKind | null;
+  /** 3.3.3: a tool in hand instead of a cup (the old drip pot, a condiment box, the mop). */
+  tool?: { label: string; icon: string; cold?: true };
+  /** 3.3.3 (FB2 A2): the cup in hand has gone cold. */
+  heldCold?: true;
   /** Every espresso machine is a pod machine: tickets show "Pod" instead of Grind + Pull. */
   pods?: boolean;
   /** Batch/pickup: a Gear run (tickets end in "Pickup"). */
@@ -172,7 +178,38 @@ const USES: Record<keyof typeof VERB, SupplyId | null> = { grinder: 'beans', esp
 /** Gear names for the three counter-kind spots (the till keeps the counter's id). */
 export function counterName(station: { id: string }): string {
   const spot = spotOf(station as Station);
-  return spot === 'pickup' ? 'Pickup counter' : spot === 'condiments' ? 'Condiment bar' : 'Till';
+  return spot === 'pickup' ? 'Pickup counter' : spot === 'condiments' ? 'Condiment bar' : spot === 'sink' ? 'Back sink' : 'Till';
+}
+
+/** 3.3.3: what the hand slot shows for a tool. */
+export const TOOL_LABEL: Record<'mop' | 'box' | 'pot', { label: string; icon: string }> = {
+  pot: { label: 'Old drip pot', icon: '🫖' },
+  box: { label: 'Condiment box', icon: '📦' },
+  mop: { label: 'Mop', icon: '🧹' },
+};
+
+/** FB2 A2: the cup in hand has gone cold (a hot drink past its cooling clock). Iced drinks and grounds never do. */
+export function heldColdNow(state: GameState, player: GameState['players'][number]): boolean {
+  return state.gear === true && player.tool === null && player.holding !== null && player.holding !== 'grounds' && coolTicks(player.holding) !== null && heldCool(state, player) >= 1;
+}
+
+/**
+ * FB2 A3 (mirrors sim/sink.ts dumpDrink and dumpPot): the back sink takes the carried pot, or any cup in hand
+ * (E or R), but not grounds. Empty hands get no hint.
+ */
+function sinkHint(state: GameState, player: GameState['players'][number]): HandHint {
+  const where = 'Back sink';
+  const held = player.holding;
+  if (player.tool === 'pot') return { go: true, title: 'Dump the pot', detail: `${where} · then brew a fresh one` };
+  if (held === 'grounds') return { go: false, title: 'Grounds go in the bin', detail: where };
+  if (held) {
+    const name = ITEM_LABEL[held].toLowerCase();
+    return heldColdNow(state, player)
+      ? { go: true, title: `Dump it: the ${name} went cold`, detail: `${where} · E or R pours it away` }
+      : { go: true, title: 'Dump it', detail: `${where} · the ${name} is still warm` };
+  }
+  // HANDOFF (2026-10-30): empty hands at the sink show nothing
+  return { go: false, title: '', detail: '' };
 }
 
 /**
@@ -183,6 +220,7 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   const where = counterName(station);
   const held = player.holding;
   const spot = spotOf(station);
+  if (spot === 'sink') return sinkHint(state, player);
   if (held && held !== 'grounds') {
     if (state.pass.length >= passSlots(state)) return { go: false, title: 'Pickup counter is full', detail: `${where} · ${state.pass.length}/${passSlots(state)} slots` };
     const taker = pickupTarget(state, held);
@@ -201,6 +239,11 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   }
   if (spot === 'pickup') {
     if (state.pass.length === 0) return { go: false, title: 'Bring a drink here', detail: `${where} · ${passSlots(state)} slots` };
+    // FB2 A2: take-back grabs the coldest cup first, so the hint says when that one is cold
+    if (takeBackCold(state)) {
+      const cup = state.pass[takeBackIndex(state)];
+      return { go: true, title: `Take back the cold ${ITEM_LABEL[cup.item].toLowerCase()}`, detail: `${where} · then dump it at the sink` };
+    }
     return { go: true, title: 'Take a cup back', detail: `${where} · ${state.pass.length}/${passSlots(state)} on the counter` };
   }
   const servings = state.condiments?.servings ?? 0;
@@ -213,6 +256,16 @@ export const CONDIMENTS_LOW = 5;
 
 /** A plain-words hint for the nearest station, mirroring the interact rules (display only). */
 export function handHint(state: GameState, me: PlayerId): HandHint {
+  const hint = baseHandHint(state, me);
+  // FB2 A2/A3: a cold cup anywhere but the sink or the bin says where it belongs
+  const player = state.players.find((p) => p.id === me);
+  if (!player || !hint.title || !heldColdNow(state, player)) return hint;
+  const station = nearestStation(state, player.pos);
+  if (station && (station.kind === 'trash' || spotOf(station) === 'sink')) return hint;
+  return { ...hint, detail: hint.detail ? `${hint.detail} · cold: dump it at the sink` : 'Cold: dump it at the sink' };
+}
+
+function baseHandHint(state: GameState, me: PlayerId): HandHint {
   const player = state.players.find((p) => p.id === me);
   const idle = (title: string, detail: string): HandHint => ({ go: false, title, detail });
   const go = (title: string, detail: string): HandHint => ({ go: true, title, detail });
@@ -223,6 +276,11 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
     if (station?.id !== CONDIMENTS_ID) return idle('Carry the box to the condiment bar', 'R puts it back in the corner');
     const servings = state.condiments?.servings ?? 0;
     return servings >= CONDIMENTS.servings ? idle('The bar is full: keep the box', `Condiment bar · ${servings}/${CONDIMENTS.servings}`) : go('Refill the condiment bar', `Condiment bar · ${servings}/${CONDIMENTS.servings} → ${CONDIMENTS.servings}`);
+  }
+  // FB2 A3: the old drip pot in hand only goes in the sink (dumped) or back on its machine (R, still stale).
+  if (player.tool === 'pot') {
+    if (station && spotOf(station) === 'sink') return sinkHint(state, player);
+    return idle('Carry it to the sink', 'E at the sink dumps it · R puts it back (still stale)');
   }
   if (!station) {
     if (player.tool === null && player.holding === null && canTakeBox(state, player)) return go('Pick up a condiment box', `${state.condimentBoxes} in the corner · fills the bar to ${CONDIMENTS.servings}`);
@@ -237,10 +295,23 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
     return idle('Bring a drink here', where);
   }
   const kind = station.kind;
+  // FB2 A3 (mirrors sim/sink.ts potPress): a pot that's out, stale or cold won't pour or brew; empty hands lift it.
+  if (state.gear === true && potMachine(station)) {
+    if (station.potOut !== undefined) {
+      const who = state.players.find((p) => p.id === station.potOut);
+      return idle(who?.id === me ? 'Your pot: take it to the sink' : 'The pot is out at the sink', who && who.id !== me ? `${where} · ${who.name} has it` : where);
+    }
+    if (needsDump(state, station)) {
+      const what = station.stale ? 'Stale pot' : 'Pot went cold';
+      if (station.busyTicksLeft > 0) return idle(`${what}: wait`, where);
+      return held === null && player.tool === null
+        ? go(`${what}: lift the pot (E)`, `${where} · then dump it at the sink`)
+        : idle(`${what}: empty hands to lift it`, `${where} · dump it at the sink`);
+    }
+  }
   // Gear G4d: a drip pot pours a cup per press.
   if (station.output !== null && held === null && station.potLeft !== undefined) {
-    const cold = station.potOff === 'cold' || (station.potColdAt !== undefined && state.tick >= station.potColdAt);
-    const temp = cold ? ' · pot went cold, −1★' : station.potOff === 'hot' ? ' · scalding, −1★' : '';
+    const temp = station.potOff === 'hot' ? ' · scalding, −1★' : station.potColdAt !== undefined && !potCold(state, station) && station.potColdAt - state.tick <= 10 * TICK_RATE ? ' · cooling, pour soon' : '';
     return go(`Pour a cup of drip`, `${where} · ${station.potLeft} left${temp}`);
   }
   if (station.output !== null && held === null) {
@@ -287,6 +358,8 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     }),
     crew: crewOf(state, me),
     holding: player?.holding ?? null,
+    ...(player?.tool ? { tool: TOOL_LABEL[player.tool] } : {}),
+    ...(player && heldColdNow(state, player) ? { heldCold: true as const } : {}),
     ...(podsOnly(state) ? { pods: true } : {}),
     ...(state.gear === true ? { gear: true } : {}),
     meName: player?.role ? `${ROLES[player.role].icon} ${player.name} the ${ROLES[player.role].name}` : (player?.name ?? ''),
@@ -299,7 +372,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
 /** Keys for the HUD's independently rebuilt blocks (everything except per-tick values). */
 export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}${o.pickup ? '^' : ''}`).join(',');
 export const crewKey = (l: HudLive) => l.crew.map((c) => `${c.id}:${c.name}:${c.connected ? 1 : 0}:${c.me ? 1 : 0}:${c.bot ?? ''}`).join(',');
-export const handKey = (l: HudLive) => `${l.holding}|${l.meName}|${l.hint.go}|${l.hint.title}|${l.hint.detail}`;
+export const handKey = (l: HudLive) => `${l.holding}|${l.tool?.label ?? ''}|${l.heldCold ? 'c' : ''}|${l.meName}|${l.hint.go}|${l.hint.title}|${l.hint.detail}`;
 
 export interface NightExtras {
   day: number;

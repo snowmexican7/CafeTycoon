@@ -328,7 +328,7 @@ async function main(): Promise<void> {
   }
 
   function startSolo(choice: StartChoice): void {
-    const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: nightLengthForSim(choice.nightLengthSec) });
+    const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: nightLengthForSim(choice.nightLengthSec), ...(choice.soloBots !== undefined ? { soloBots: choice.soloBots } : {}) });
     stores.hostRoom.clear(); // a solo run never reopens an old room
     const tele = newTelemetry(settings.playerName);
     const local = withTelemetry(createLocalTransport(), tele);

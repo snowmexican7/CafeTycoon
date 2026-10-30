@@ -79,10 +79,12 @@ export class PickupVisuals {
     const cool = passCool(state);
     pickupCups(state).forEach((c, i) => {
       const { x, y } = pickupSlotXY(lay.pickup, i);
-      if (c.stale && Math.floor(timeSec * 4) % 2 === 0) g.ellipse(x, y + 5, 11, 5).fill({ color: PALETTE.bad, alpha: 0.6 });
+      // 3.3.3 (FB2 A2): a cold hot cup sits on a steady blue coaster (no pay if taken: dump it at the sink)
+      if (c.cold) g.ellipse(x, y + 5, 11, 5).fill({ color: 0x3d79b0, alpha: 0.7 });
+      else if (c.stale && Math.floor(timeSec * 4) % 2 === 0) g.ellipse(x, y + 5, 11, 5).fill({ color: PALETTE.bad, alpha: 0.6 });
       else if (c.wanted) g.ellipse(x, y + 5, 11, 5).fill({ color: 0xfff2b8, alpha: 0.75 });
       drawItem(g, c.item, x, y - 4, 0.85);
-      // 3.3.2: the cooling ring: empties red → orange → yellow, then the cup is binned as stale
+      // 3.3.2: the cooling ring: empties red → orange → yellow → blue (3.3.3: by the A2 cooling clock for hot cups)
       if (cool[i] !== undefined) drawCoolRing(g, x, y - 26, 5, cool[i]);
     });
 

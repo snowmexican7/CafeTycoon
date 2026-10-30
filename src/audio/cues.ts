@@ -60,7 +60,13 @@ export type CueId =
   | 'ringUp'
   | 'refill'
   | 'grumble'
-  | 'boxDown';
+  | 'boxDown'
+  | 'sinkDump'
+  | 'potLift'
+  | 'potBack'
+  | 'stalePot'
+  | 'binLeak'
+  | 'coldCup';
 
 export interface Cue {
   id: CueId;
@@ -138,6 +144,19 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'condiment.refill': cues.push({ id: 'refill', mine }); break;
       case 'condiment.black': cues.push({ id: 'grumble' }); break;
       case 'trash': cues.push({ id: 'trash', mine }); break;
+      // 3.3.3 (FB2 A3): the back sink, the drip pot carried to it, yesterday's pot, a leaking bin bag, steamer/grinder messes
+      case 'sink.dump': cues.push({ id: 'sinkDump', mine }); break;
+      case 'pot.lift': cues.push({ id: 'potLift', mine }); break;
+      case 'pot.stale': cues.push({ id: 'stalePot' }); break;
+      case 'bin.leak': cues.push({ id: 'binLeak', mine }); break;
+      case 'mess.spawn':
+        // spills already splash on their own drop/bump event, and a leak sounds once on bin.leak
+        if (e.data.kind === 'milk') cues.push({ id: 'splash' });
+        else if (e.data.kind === 'grounds') cues.push({ id: 'scatter' });
+        break;
+      // FB2 A2: a cold cup handed over (no pay) or a cold review
+      case 'pickup.cold':
+      case 'review.bad': cues.push({ id: 'coldCup' }); break;
       case 'bot.mistake': cues.push({ id: 'botOops' }); break;
       case 'event.start': {
         const cue = EVENT_CUE[e.data.kind as EventKind];
@@ -151,6 +170,7 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'slip': cues.push({ id: 'slip', mine: e.data.player === me }); break;
       case 'drop':
         if (e.data.item === 'mop') cues.push({ id: 'mopDown' });
+        else if (e.data.item === 'pot') cues.push({ id: 'potBack', mine });
         else if (e.data.item === 'box') cues.push({ id: 'boxDown' });
         // Gear: an R-drop on the till or the pickup counter sets the cup down like E does
         else if (e.data.station === 'pickup') cues.push({ id: 'cupDown', mine });

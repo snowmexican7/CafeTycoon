@@ -1,4 +1,4 @@
-import { LAYOUT, layoutFor } from '../data/layout';
+import { LAYOUT, layoutFor, SINK_ID } from '../data/layout';
 import type { GameState, MessKind, RogueStage, Vec2 } from '../sim/types';
 
 /**
@@ -71,7 +71,11 @@ export type Burst =
   | { kind: 'smoke'; at: Vec2 }
   | { kind: 'review'; at: Vec2; text: string }
   | { kind: 'secret'; at: Vec2; text: string }
-  | { kind: 'walkout'; at: Vec2; text: string };
+  | { kind: 'walkout'; at: Vec2; text: string }
+  /** 3.3.3 (FB2 A3): a drink or the old pot glugging down the back sink. */
+  | { kind: 'drain'; at: Vec2; pot: boolean }
+  /** 3.3.3 (FB2 A3): the bin bag leaked a puddle onto the floor. */
+  | { kind: 'leak'; at: Vec2 };
 
 /** FB1 WP4: what someone says as they read a sold-out board and walk away (picked by log seq). */
 export const WALKOUT_LINES = ['Sold out?!', 'Nothing left?', 'Aw, sold out.', 'Maybe tomorrow.'] as const;
@@ -104,6 +108,14 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
         binless = true;
         bursts.push({ kind: 'walkout', at, text: 'No bin!' });
       }
+    }
+    // 3.3.3 (FB2 A3): steamer drips and grinder spills make their own messes; a leak shows once, on bin.leak
+    else if (e.kind === 'mess.spawn' && at && d.kind === 'milk') bursts.push({ kind: 'splash', at, item: 'latte' });
+    else if (e.kind === 'mess.spawn' && at && d.kind === 'grounds') bursts.push({ kind: 'scatter', at });
+    else if (e.kind === 'bin.leak' && at) bursts.push({ kind: 'leak', at });
+    else if (e.kind === 'sink.dump') {
+      const sink = next.stations.find((s) => s.id === SINK_ID);
+      if (sink) bursts.push({ kind: 'drain', at: sink.pos, pot: d.item === 'pot' });
     }
     else if (e.kind === 'clean' && at) bursts.push({ kind: 'sparkle', at });
     else if (e.kind === 'rogue.upset') bursts.push({ kind: 'hmph', at: queueFront(), text: 'That\u2019s not right\u2026' });

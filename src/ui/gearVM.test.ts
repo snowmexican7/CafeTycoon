@@ -129,6 +129,11 @@ describe('Gear G4d: drip on the HUD', () => {
     expect([line().status, line().warn]).toEqual(['3/4 cups', false]);
     s.tick += 200;
     expect([line().status, line().warn]).toEqual(['3/4 cups · cold', true]);
+    // 3.3.3 (FB2 A3): yesterday's pot, and a pot carried to the sink
+    st.stale = true;
+    expect([line().status, line().warn]).toEqual(['stale pot', true]);
+    st.potOut = 'p1';
+    expect([line().status, line().warn]).toEqual(['pot out (sink)', true]);
   });
 });
 

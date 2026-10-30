@@ -113,3 +113,94 @@ describe('Gear counter hints (3.3.1)', () => {
     expect(html).not.toContain('Hand off');
   });
 });
+
+describe('sink and pot hints (3.3.3, FB2 A3)', () => {
+  const drip = (): GameState => {
+    const s = gearDay(['d1', 'e1']);
+    s.unlocked = [...(s.unlocked ?? []), 'drip'];
+    s.menu.drip = true;
+    return s;
+  };
+  const below = (s: GameState, id: string) => { const p = s.stations.find((x) => x.id === id)!.pos; s.players[0].pos = { x: p.x, y: p.y + 1 }; };
+  const atSink = (s: GameState) => { const p = s.stations.find((x) => x.id === 'sink')!.pos; s.players[0].pos = { x: p.x - 1, y: p.y }; };
+
+  it('names the back sink', () => {
+    expect(counterName({ id: 'sink' })).toBe('Back sink');
+  });
+
+  it('a stale pot says lift it with empty hands, and wait with full ones', () => {
+    const s = drip();
+    const d = s.stations.find((x) => x.id === 'drip')!;
+    d.stale = true;
+    below(s, 'drip');
+    expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Stale pot: lift the pot (E)' });
+    expect(handHint(s, 'p1').detail).toMatch(/sink/);
+    s.players[0].holding = 'latte';
+    expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Stale pot: empty hands to lift it' });
+  });
+
+  it('a cold pot no longer offers a pour', () => {
+    const s = drip();
+    const d = s.stations.find((x) => x.id === 'drip')!;
+    d.output = 'drip';
+    d.potLeft = 3;
+    d.potColdAt = s.tick - 1;
+    below(s, 'drip');
+    expect(handHint(s, 'p1').title).toBe('Pot went cold: lift the pot (E)');
+    d.potColdAt = s.tick + 9999;
+    expect(handHint(s, 'p1').title).toBe('Pour a cup of drip');
+  });
+
+  it('carrying the pot points at the sink, then says dump it there', () => {
+    const s = drip();
+    s.players[0].tool = 'pot';
+    s.stations.find((x) => x.id === 'drip')!.potOut = 'p1';
+    below(s, 'drip');
+    expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Carry it to the sink' });
+    expect(hudLive(s, 'p1').tool).toMatchObject({ label: 'Old drip pot' });
+    atSink(s);
+    expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Dump the pot' });
+  });
+
+  it('at the sink: nothing with empty hands, dump a cold cup, warn on a warm one, grounds go in the bin', () => {
+    const s = drip();
+    atSink(s);
+    expect(handHint(s, 'p1')).toMatchObject({ go: false, title: '' });
+    s.players[0].holding = 'drip';
+    s.players[0].heldSince = s.tick;
+    expect(handHint(s, 'p1').title).toBe('Dump it');
+    s.tick += 10_000;
+    expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Dump it: the drip coffee went cold' });
+    expect(hudLive(s, 'p1').heldCold).toBe(true);
+    s.players[0].holding = 'grounds';
+    expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Grounds go in the bin' });
+  });
+
+  it('a cold cup elsewhere adds "dump it at the sink"; take-back names the cold cup', () => {
+    const s = drip();
+    s.players[0].holding = 'drip';
+    s.players[0].heldSince = s.tick - 10_000;
+    at(s, 'pickup');
+    expect(handHint(s, 'p1').detail).toMatch(/cold: dump it at the sink/);
+    s.players[0].holding = null;
+    s.players[0].heldSince = undefined;
+    s.pass.push({ item: 'drip', ticksLeft: 999, by: 'p1', madeAt: s.tick - 10_000 });
+    expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Take back the cold drip coffee' });
+  });
+});
+
+describe('Play solo helper picker (3.3.3, FB2 A1)', () => {
+  it('draws Off / 1 / 2 with the stored choice checked, and reads it back', async () => {
+    const { readSoloBots, soloBotsSeg } = await import('./title');
+    const html = soloBotsSeg(1);
+    expect(html).toMatch(/value="0"[^>]*><span>Off/);
+    expect(html).toMatch(/value="1" checked/);
+    expect(html).toMatch(/2 bots/);
+    expect(soloBotsSeg('auto')).not.toMatch(/checked/);
+    expect(readSoloBots('0')).toBe(0);
+    expect(readSoloBots('2')).toBe(2);
+    expect(readSoloBots('3')).toBeUndefined();
+    expect(readSoloBots(undefined)).toBeUndefined();
+    expect(readSoloBots('')).toBeUndefined();
+  });
+});

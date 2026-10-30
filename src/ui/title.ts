@@ -1,5 +1,5 @@
 import { ECONOMY } from '../data/economy';
-import type { Pace } from '../sim/types';
+import type { BotsChoice, Pace } from '../sim/types';
 import type { LocalSettings } from '../storage/settingsStore';
 import { esc, hide, onAction, show } from './dom';
 import { logoCup } from './icons';
@@ -18,6 +18,23 @@ export interface StartChoice {
   nightLengthSec: number;
   /** P3 B16: the head start picked (absent = none). */
   perk?: PerkId;
+  /** FB2 A1 (3.3.3): bot helpers for Play solo (Off/1/2); absent = keep the stored setting (3 or auto from old JSON). */
+  soloBots?: BotsChoice;
+}
+
+export const SOLO_BOT_CHOICES = [0, 1, 2] as const;
+
+/** FB2 A1: the Play solo helper picker, Off / 1 / 2 bots. A stored 3 or 'auto' shows none picked and stays as is. */
+export function soloBotsSeg(current: BotsChoice): string {
+  return `<div class="seg solo-bots" role="radiogroup" aria-label="Solo helpers">${SOLO_BOT_CHOICES.map(
+    (n) => `<label><input type="radio" name="soloBots" value="${n}" ${current === n ? 'checked' : ''}><span>${n === 0 ? 'Off' : `${n} bot${n > 1 ? 's' : ''}`}</span></label>`,
+  ).join('')}</div>`;
+}
+
+/** Reads the picked solo helper count, or undefined when none is picked. */
+export function readSoloBots(value: string | undefined): BotsChoice | undefined {
+  const n = Number(value);
+  return value !== undefined && value !== '' && (SOLO_BOT_CHOICES as readonly number[]).includes(n) ? (n as BotsChoice) : undefined;
 }
 
 const DAY_LENGTHS = [60, 90, 120, 150, 180, 240, 300];
@@ -79,6 +96,8 @@ export function createTitle(
       dayLengthSec: Number(q<HTMLSelectElement>('[name=dayLength]').value),
       nightLengthSec: Number(container.querySelector<HTMLSelectElement>('[name=nightLength]')?.value ?? DEFAULT_NIGHT_LENGTH),
     };
+    const solo = readSoloBots(container.querySelector<HTMLInputElement>('[name=soloBots]:checked')?.value);
+    if (solo !== undefined) choice.soloBots = solo;
     const perk = container.querySelector<HTMLSelectElement>('[name=perk]')?.value;
     return isPerkId(perk) ? { ...choice, perk } : choice;
   };
@@ -132,7 +151,10 @@ export function createTitle(
             <label class="fld"><span class="lbl">Night length</span><select class="inp" name="nightLength" title="How long you get to plan each night. Relaxed has no timer: the night ends when everyone is ready.">${nightOptions(settings.nightLengthSec)}</select></label>
             ${perkField(vm)}
           </div>
-          <div class="fld"><span class="lbl">Pace</span>${paceSeg(settings.pace)}</div>
+          <div class="row-pace">
+            <div class="fld"><span class="lbl">Pace</span>${paceSeg(settings.pace)}</div>
+            <div class="fld"><span class="lbl">Solo helpers <small>bots in Play solo</small></span>${soloBotsSeg(settings.soloBots)}</div>
+          </div>
           <div class="btns">
             <button class="btn primary" data-action="host">Host a co-op run</button>
             <div class="join"><input class="inp code" name="code" placeholder="ROOM CODE" maxlength="5" autocapitalize="characters" spellcheck="false" aria-label="Room code"><button class="btn mint" data-action="join">Join room</button></div>
