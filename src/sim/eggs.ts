@@ -190,13 +190,13 @@ export function maybeNameMix(state: GameState, customer: Customer): void {
   emitLog(state, 'egg.nameMix', { id: customer.id, name: customer.name, wrong });
 }
 
-/** Correct a name mix-up at the counter (empty hands) — they stay happy, no remake needed. */
-export function tryCorrectName(state: GameState, playerId: PlayerId): boolean {
+/** Correct a name mix-up at the counter (empty hands) — they stay happy, no remake needed. In range of `at` (Gear: the pickup counter), else the till. */
+export function tryCorrectName(state: GameState, playerId: PlayerId, at?: Station): boolean {
   const p = state.players.find((x) => x.id === playerId);
   if (!p || p.holding !== null) return false;
   const c = state.customers.find((x) => x.egg === 'nameMix');
   if (!c) return false;
-  const counter = state.stations.find((s) => s.kind === 'counter');
+  const counter = at ?? state.stations.find((s) => s.kind === 'counter');
   if (!counter) return false;
   if (Math.hypot(p.pos.x - counter.pos.x, p.pos.y - counter.pos.y) > ECONOMY.interactRangeTiles) return false;
   delete c.egg;
