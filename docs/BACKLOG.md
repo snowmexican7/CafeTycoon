@@ -1957,3 +1957,13 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Tests: gearFlag default, 3 records-split tests (old blob migrates, Gear vs classic folding, dialog line). Browser check `/workspace/overnight/pw/g11check.mjs` at 1512x982 and 1280x800 + `?link=local` co-op (host and guest both Gear, $120), no page errors. Screenshots: `/workspace/overnight/sprint/g11/{title,records,resumed-classic,new-run-night0}-{1512,1280}.png`, `coop-guest-night0-1280.png`.
 - Note: GEAR_TREE §10 asked for "at least one good `?gear=1` playtest" before the flip. Kennedy asked overnight for the flip once the integration smoke was clean; the overnight smokes (4 full weeks, solo and co-op, both sizes) stand in for it. If the first real game night disagrees, roll back to `v2.2.0`.
 
+## Ideas from Kennedy, 2026-10-30 (later, not scheduled)
+
+- **Overcooked-style recipe orders.** Customers come in with a specific build, not just a menu drink: "oat
+  latte, extra shot, vanilla", shown on the ticket as the steps and add-ins to assemble. Today tickets show the
+  fixed recipe steps for a menu drink, and twists are set by the crew per drink at night, never per customer, so
+  this is new. It pairs with longer patience for heavily customized drinks (see the batch/pickup design) and
+  with the station-tuning idea in "Kennedy's design notes, 2026-10-29".
+- **Wrong drink at pickup, names on cups.** Once customers pick up their own drinks, someone may grab the wrong
+  one, and names on cups become the fix. Follows the batch/pickup work
+  (docs/superpowers/specs/2026-10-30-batch-pickup-design.md).
