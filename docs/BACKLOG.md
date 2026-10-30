@@ -1802,6 +1802,13 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 6 polish P6-6 — headless café-start Phase 4 run (p6-p4-path, tag p6-06)
+
+- [x] `playGear(..., start?)` / `p4Run(..., start?)` can start a Gear run at a later tier with a given till (sets `tier` and `cash`/`startingCash` like the dev fixtures; `createRun` ignores a `tier` option). Such runs ask the scripted crew first each night, so the till isn't spent on gear before the branch.
+- [x] `CAFE=1 npx tsx scripts/p4Smoke.ts 14 2`: OK. Seeds 200/201 opened the branch on night 1, branch profit $456/$269 over 14 days, 3/7 calls, 3/2 stock runs, both bronze after week 2, no NaN, save round-trip and replay identical.
+- [x] Vitest: `src/p4Smoke.test.ts` adds a 6-day café-start case (branch opens, calls answered, finite, deterministic).
+- [ ] Note for balance (not a bug): week 1 at the café tier with $500 loses $57–234 with two stand-ins; the branch is what pays it back.
+
 ### Phase 6 polish P6-5 — real old-save fixtures (p6-old-saves, tag p6-05)
 
 - [x] Saves generated in `v2.1.0` and `v3.1.0` worktrees (seeded stand-in crews; v2.1.0 classic run night 4 = snapshot 22; v3.1.0 Gear run night 5 and week-end, snapshot 27): `src/storage/{v2.1.0-save,v3.1.0-night,v3.1.0-weekend}.fixture.json`.
@@ -1838,7 +1845,7 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - [x] `scripts/p4Smoke.ts`: headless Gear runs with a scripted crew that answers calls, counters promos, buys the stamp card, opens the branch and sends stock; checks finite cash, a finished season at 28 days, save round-trip, records fold, and determinism. `npx tsx scripts/p4Smoke.ts 28 3` was OK (seeds 200–202; two went bankrupt around day 25, the third finished the season with a bronze, so the scripted crew is weak, not the sim). A 6-day version runs in vitest (`src/p4Smoke.test.ts`).
 - [x] Browser smoke on the built game (`overnight/pw/p4smoke.mjs`): solo and `?link=local` co-op (2 tabs, peer joins the lobby) at 1512×982 and 1280×800, 2 days each, no page errors.
 - [x] Released as **3.2.0** (Phase 4 lite). **4.0.0** stays reserved for Phase 4 complete (travel, 2v2, human playtests).
-- [ ] The scripted crew never got a phone call or reached the branch in 28 days at 2 humans with no bots (cash stays under the $420 it waits for). Worth a seeded fixture run that starts at the café tier with $500 so the branch/call/send path gets exercised headlessly end to end.
+- [x] ~~The scripted crew never got a phone call or reached the branch in 28 days at 2 humans with no bots (cash stays under the $420 it waits for). Worth a seeded fixture run that starts at the café tier with $500 so the branch/call/send path gets exercised headlessly end to end.~~ Done in P6-6 (`CAFE=1 npx tsx scripts/p4Smoke.ts`, plus a vitest case).
 - [ ] Human co-op playtest of a full season with the branch and calls (Kennedy).
 - [ ] Bots ignore calls, the stamp card, the branch and send-stock (logged for Claude in the morning prompt).
 

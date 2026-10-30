@@ -4,7 +4,7 @@
  * rival's happy hours, the stamp card against the loyalty card, the second shop once there's a cushion,
  * stock sent over, and every phone call answered. Checks invariants (finite cash, season recorded and
  * medalled, saves round-trip through JSON, the same seed replays identically) and prints one row per run.
- * Usage: npx tsx scripts/p4Smoke.ts [days=28] [seeds=3]
+ * Usage: npx tsx scripts/p4Smoke.ts [days=28] [seeds=3]   (CAFE=1 starts at the café tier with $500)
  */
 import { playGear, type ExtraMoves } from './gearBalance';
 import { canOpenBranch, branchAreas, BRANCH } from '../src/sim/branch';
@@ -34,10 +34,10 @@ export function crew(trace: P4Trace): ExtraMoves {
   };
 }
 
-export function p4Run(seed: number, humans = 2, days = 28) {
+export function p4Run(seed: number, humans = 2, days = 28, start?: Parameters<typeof playGear>[7]) {
   const trace: P4Trace = { counters: 0, stamps: null, branchDay: null, calls: 0, sends: 0 };
   let end: GameState | null = null;
-  const r = playGear(humans, seed, null, days, 0, crew(trace), (s) => (end = s));
+  const r = playGear(humans, seed, null, days, 0, crew(trace), (s) => (end = s), start);
   const s = end as unknown as GameState;
   const problems: string[] = [];
   if (!Number.isFinite(s.cash)) problems.push('cash not finite');
@@ -61,9 +61,10 @@ export function p4Run(seed: number, humans = 2, days = 28) {
 if (process.argv[1]?.endsWith('p4Smoke.ts')) {
   const days = Number(process.argv[2] ?? 28);
   const seeds = Number(process.argv[3] ?? 3);
+  const start = process.env.CAFE ? { tier: 'cafe' as const, cash: 500 } : undefined;
   let bad = 0;
   for (let i = 0; i < seeds; i++) {
-    const row = p4Run(200 + i, 2, days);
+    const row = p4Run(200 + i, 2, days, start);
     console.log(JSON.stringify(row));
     bad += row.problems.length;
   }
