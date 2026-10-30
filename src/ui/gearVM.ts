@@ -179,12 +179,18 @@ export function sellLabel(id: GearId, sell: number): { text: string; title: stri
   return { text: 'Toss it', title: 'Worth nothing, but frees the slot ($0).' };
 }
 
-export interface HudGearVM { icon: string; name: string; status: string; warn: boolean }
+/** 3.3.2: a short "which machine" word for the HUD row ("7/8 left" alone didn't say what). */
+export const HUD_MACHINE: Record<GearTree, string> = { coldBrew: 'Cold brew', espresso: 'Espresso', grinder: 'Grinder', steamer: 'Steamer', drip: 'Drip', pourOver: 'Pour-over', bin: 'Bin' };
+
+export interface HudGearVM { icon: string; name: string; status: string; warn: boolean; /** 3.3.2: "Cold brew", "Drip 2"… */ label: string }
 
 /** G5: one short line per machine on the counter for the day HUD (the bin is left out). */
 export function hudGearVM(state: GameState): HudGearVM[] {
-  return state.stations
-    .filter((s) => s.gear && s.gear !== 'b0' && !s.twin)
+  const machines = state.stations.filter((s) => s.gear && s.gear !== 'b0' && !s.twin);
+  const total = new Map<GearTree, number>();
+  for (const s of machines) total.set(GEAR[s.gear!].tree, (total.get(GEAR[s.gear!].tree) ?? 0) + 1);
+  const seen = new Map<GearTree, number>();
+  return machines
     .map((s) => {
       const g = GEAR[s.gear!];
       let status = 'ready';
@@ -198,6 +204,9 @@ export function hudGearVM(state: GameState): HudGearVM[] {
         [status, warn] = [`${s.potLeft}/${g.pot.cups} cups${cold ? ' · cold' : s.potOff === 'hot' ? ' · scalding' : ''}`, cold || s.potOff === 'hot'];
       } else if (g.pot) status = 'empty pot (E)';
       else if (s.lucky) status = 'lucky ✨';
-      return { icon: ICON[g.tree], name: g.name, status, warn };
+      const k = (seen.get(g.tree) ?? 0) + 1;
+      seen.set(g.tree, k);
+      const label = (total.get(g.tree) ?? 1) > 1 ? `${HUD_MACHINE[g.tree]} ${k}` : HUD_MACHINE[g.tree];
+      return { icon: ICON[g.tree], name: g.name, status, warn, label };
     });
 }

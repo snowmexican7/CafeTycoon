@@ -36,7 +36,7 @@ describe('stores', () => {
     const st = memoryStorage();
     let n = 0;
     const s = createSettingsStore(st, () => `tok${++n}`);
-    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120, bots: 'auto' });
+    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120, bots: 'auto', soloBots: 1 });
     expect(createSettingsStore(st, () => 'other').get().playerToken).toBe('tok1');
     expect(s.set({ playerName: 'Ken' }).playerName).toBe('Ken');
     expect(s.get().pace).toBe(3);
@@ -54,6 +54,23 @@ describe('stores', () => {
     }
     st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', bots: 2 }));
     expect(s.get().bots).toBe(2);
+  });
+
+  it('soloBots defaults to 1, even for saved settings that predate it, and round-trips 0', () => {
+    const st = memoryStorage();
+    const s = createSettingsStore(st, () => 'tok');
+    expect(s.get().soloBots).toBe(1);
+    st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', playerName: 'K', bots: 'auto' }));
+    expect(s.get().soloBots).toBe(1);
+    expect(s.get().bots).toBe('auto');
+    for (const bad of ['lots', -1, 7, 1.5, null]) {
+      st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', soloBots: bad }));
+      expect(s.get().soloBots).toBe(1);
+    }
+    expect(s.set({ soloBots: 0 }).soloBots).toBe(0);
+    expect(createSettingsStore(st, () => 'x').get().soloBots).toBe(0);
+    expect(s.set({ soloBots: 'auto' }).soloBots).toBe('auto');
+    expect(s.get().soloBots).toBe('auto');
   });
 });
 
