@@ -1,3 +1,4 @@
+import { AREAS, AREA_TIP, DRINK_FAMILY, type AreaId } from '../data/areas';
 /**
  * Gear Tree G2 (docs/GEAR_TREE.md): the sim side of a Gear run. Everything here is a no-op unless
  * `state.gear === true`, which only `createRun({ gear: true })` sets (the UI only with `?gear=1`).
@@ -244,4 +245,29 @@ export function gearPriceMul(state: GameState, drink: DrinkId): number {
 export function applyGearPrices(state: GameState, m: Modifiers): void {
   if (!isGearRun(state)) return;
   for (const d of Object.keys(m.price) as DrinkId[]) m.price[d] *= gearPriceMul(state, d);
+}
+
+/**
+ * Gear Tree G7: the run's hidden area. A pure function of the scenario and seed (no RNG draw), so classic
+ * replays and Gear replays stay deterministic. Classic runs have no area.
+ */
+export function gearArea(state: GameState): AreaId | null {
+  if (!state.gear) return null;
+  if (state.scenario === 'campusTown') return 'campus';
+  if (state.scenario === 'rainyWeek') return 'drizzleton';
+  if (state.scenario === 'touristSeason') return 'tourist';
+  const others: AreaId[] = ['office', 'arts', 'gym'];
+  return others[(Math.imul(state.seed >>> 0, 2654435761) >>> 0) % others.length];
+}
+
+/** Gear Tree G7: tip multiplier for a drink in this run's area (1 in classic runs). */
+export function areaTipMul(state: GameState, drink: DrinkId): number {
+  const id = gearArea(state);
+  if (!id) return 1;
+  const a = AREAS[id];
+  const fam = DRINK_FAMILY[drink];
+  let mul = a.all ?? 1;
+  if (fam && a.loves.includes(fam)) mul *= AREA_TIP.loved;
+  else if (fam && a.meh.includes(fam)) mul *= AREA_TIP.meh;
+  return mul;
 }

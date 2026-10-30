@@ -1,5 +1,5 @@
 import { signatureServed, sigPremium, sigShare } from './signature';
-import { batchOut } from './gear';
+import { areaTipMul, batchOut } from './gear';
 import { rivalAskFactor } from './rival';
 import { roleCraft, roleTip } from './roles';
 import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
@@ -247,7 +247,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   noteCup(state.today, stars);
   const combo = serveCombo(state, drink, state.today, sig?.twist);
   const sigBonus = sig && combo ? signatureServed(state.today, combo.stars) : 0;
-  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) + roleCraft(state, by));
+  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) * areaTipMul(state, drink) + roleCraft(state, by));
   // P3 B12: the card terminal's cut of the sale.
   const fee = checkoutFee(state, price + tip);
   if (fee > 0) state.today.checkoutFees = round2((state.today.checkoutFees ?? 0) + fee);
