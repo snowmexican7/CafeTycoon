@@ -37,8 +37,8 @@ export const BRANCH = {
 /** P4 B5: supplies that can be driven over to the branch at night. */
 export const BRANCH_SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour'];
 
-/** Someone on the crew holds the Manager role. */
-export const hasManager = (state: GameState): boolean => state.players.some((p) => p.role === 'manager');
+/** Someone on the crew who is still here holds the Manager role (review M8: a disconnected one runs nothing). */
+export const hasManager = (state: GameState): boolean => state.players.some((p) => p.role === 'manager' && p.connected);
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
