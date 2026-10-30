@@ -20,7 +20,7 @@ import { gearArea, tapCupRecipe } from '../gear';
 import { nearestMess, returnMop } from '../mop';
 import { rogueNear, rogueTiles } from '../rogue';
 import { passSlots } from '../pickup';
-import { heldCool, oldestCupCold, slotCool } from '../cooling';
+import { heldCool, takeBackCold, slotCool } from '../cooling';
 import { tillNext } from '../till';
 import { CONDIMENTS_ID, PICKUP_ID, layoutFor } from '../../data/layout';
 import { CONDIMENTS, canTakeBox, returnBox } from '../condiments';
@@ -488,9 +488,9 @@ function ringPlanned(state: GameState, self: Player): boolean {
   return state.players.some((o) => o !== self && o.bot?.plan.some((x) => x.kind === 'use' && x.action === 'ring'));
 }
 
-/** A2: the oldest cup on the pickup counter is cold and no other bot is already on its way to take one back. */
+/** A2: a cup on the pickup counter is cold (take-back grabs it first) and no other bot is already on its way to take one back. */
 function shouldClearCold(state: GameState, p: Player): boolean {
-  if (state.gear !== true || !oldestCupCold(state)) return false;
+  if (state.gear !== true || !takeBackCold(state)) return false;
   return !state.players.some((o) => o !== p && o.bot?.plan.some((x) => x.kind === 'use' && x.station === PICKUP_ID && x.action === 'take'));
 }
 
@@ -518,6 +518,12 @@ export function think(state: GameState, p: Player): BotStep[] {
   // 0b. Collect a drink left in a machine (e.g. its customer left mid-chain), or stray grounds; rule 0 then places or bins it.
   const orphan = orphanedDrink(state, p);
   if (orphan) return [{ kind: 'use', station: orphan.id, action: 'take' }];
+  // 0c. Gear (A2, fix round 1 I1): a cold cup on the pickup counter is taken back and binned before anyone is rung
+  // up, or the next customer for that drink would take it cold. A few seconds' work.
+  if (shouldClearCold(state, p)) {
+    const take = spotStep(state, PICKUP_ID, 'take');
+    if (take) return [take, binStep(state, p)];
+  }
   if (state.gear === true) {
     // 1. Gear (batch/pickup): ring up the queue when nobody else is on their way to the till. Only a thinking
     // bot (nothing in progress) gets here, so it never leaves a machine mid-chain for it.
@@ -539,11 +545,6 @@ export function think(state: GameState, p: Player): BotStep[] {
   // 3. Prep cold brew for the pass.
   const prep = shouldPrep(state, p) ? chainFor(state, p, 'coldBrew', 'put') : [];
   if (prep.length > 0) return prep;
-  // 3-. Gear (A2): nothing to make and the oldest cup on the pickup counter is cold: take it back and bin it.
-  if (shouldClearCold(state, p)) {
-    const take = spotStep(state, PICKUP_ID, 'take');
-    if (take) return [take, binStep(state, p)];
-  }
   // 3a. Gear (Task 15): nothing to make, the condiment bar is empty or low and a box waits: carry one over.
   if (shouldFetchBox(state, p)) {
     const refill = spotStep(state, CONDIMENTS_ID, 'refill');
@@ -594,6 +595,15 @@ export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKi
   }
   if (!b || heldBefore !== null || !isDrink(p.holding)) return;
   const st = nearestStation(state, p.pos);
+  // A2 (fix round 1 M5): a take-back meant to bin a cold cup came up with a warm one (someone cleared the cold cup
+  // earlier this tick): put it back instead of binning it.
+  if (st?.id === PICKUP_ID && state.gear === true) {
+    if (!coldInHand(state, p)) {
+      const put = spotStep(state, PICKUP_ID, 'put');
+      if (put) setPlan(b, [put]);
+    }
+    return;
+  }
   if (!st || !isRecipeKind(st.kind)) return;
   // Batch/pickup: the insert press put the cup straight into the hands (a Gear tap pours a steeped cup at once),
   // so the machine has nothing left for the planned take: that take is done too.
@@ -771,8 +781,8 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       return abandon(state, p);
     }
     case 'take':
-      // A2: empty hands at the pickup counter take back its oldest cup, only while that cup is cold (to bin it).
-      if (st.id === PICKUP_ID) return p.holding === null && p.tool === null && oldestCupCold(state) ? execute(p) : setPlan(b, []);
+      // A2: empty hands at the pickup counter take back a cup, only while the one take-back grabs is cold (to bin it).
+      if (st.id === PICKUP_ID) return p.holding === null && p.tool === null && takeBackCold(state) ? execute(p) : setPlan(b, []);
       if (st.output !== null && p.holding === null) return execute(p);
       if (pullsEarly(state, p, st)) return execute(p); // the interact early-pull takes the cup, one star off
       if (st.busyTicksLeft > 0) return wait(state, p, brewSlack(st));
