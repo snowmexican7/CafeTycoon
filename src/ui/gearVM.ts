@@ -9,11 +9,13 @@ import { GEAR, GEAR_TREES, treeTiers, type GearId, type GearTree } from '../data
 import { slotCount } from '../sim/slots';
 import type { DrinkId, GameState } from '../sim/types';
 
-export type GearTierState = 'owned' | 'passed' | 'buy' | 'upgrade' | 'poor' | 'noSlot';
+export type GearTierState = 'owned' | 'another' | 'passed' | 'buy' | 'upgrade' | 'poor' | 'noSlot';
 
 export interface GearTierVM {
   id: GearId;
   name: string;
+  /** G4e: how many of this machine the crew has in its slots. */
+  copies: number;
   price: number;
   sell: number;
   sticker: string;
@@ -95,12 +97,14 @@ export function gearVM(state: GameState): GearVM {
       const tradeIn = top ? top.sell : 0;
       const net = Math.max(0, g.price - tradeIn);
       let st: GearTierState;
-      if (top && top.id === g.id) st = 'owned';
+      // G4e: the machine you have can be bought again when a slot is free.
+      if (top && top.id === g.id) st = freeSlots > 0 && state.cash >= g.price ? 'another' : 'owned';
       else if (top && top.tier > g.tier) st = 'passed';
       else if (state.cash + tradeIn < g.price) st = 'poor';
       else if (!top && freeSlots === 0) st = 'noSlot';
       else st = top ? 'upgrade' : 'buy';
-      return { id: g.id, name: g.name, price: g.price, sell: g.sell, sticker: g.sticker, blurb: g.blurb, stats: gearStats(g.id), state: st, net };
+      const copies = owned.filter((o) => o.id === g.id).length;
+      return { copies, id: g.id, name: g.name, price: g.price, sell: g.sell, sticker: g.sticker, blurb: g.blurb, stats: gearStats(g.id), state: st, net };
     });
     return { id: t.id, name: t.name, icon: t.icon, tiers };
   });

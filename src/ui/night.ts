@@ -133,7 +133,8 @@ export function stationsBoard(st: StationsVM, sel: number | null): string {
 // ---------------------------------------------------------------------------------------------- Spend: gear (Gear Tree G3)
 
 const GEAR_BTN: Record<GearTierState, (t: GearTierVM) => string> = {
-  owned: () => 'Yours ✓',
+  owned: (t) => (t.copies > 1 ? `Yours ×${t.copies} ✓` : 'Yours ✓'),
+  another: (t) => `${t.copies > 1 ? `×${t.copies} · ` : ''}Buy another · $${t.price}`,
   passed: () => 'Upgraded past',
   buy: (t) => `Buy · $${t.price}`,
   upgrade: (t) => `Upgrade · $${t.net}`,
@@ -154,9 +155,9 @@ export function gearBoard(g: GearVM): string {
     .join('');
   const trees = g.trees
     .map((t) => `<div class="gr-tree"><div class="gr-tree-h"><span aria-hidden="true">${t.icon}</span> ${esc(t.name)}</div><div class="gr-tiers">${t.tiers
-      .map((x) => `<div class="gr-tier ${x.state}" title="${esc(`${x.blurb} Real-life sticker: ${x.sticker}. Sells back for $${x.sell}.`)}">
+      .map((x) => `<div class="gr-tier ${x.state === 'another' ? 'owned another' : x.state}" title="${esc(`${x.blurb} Real-life sticker: ${x.sticker}. Sells back for $${x.sell}.`)}">
           <b>${esc(x.name)}</b><span class="gr-stats">${esc(x.stats)}</span>
-          <button class="btn ${x.state === 'buy' || x.state === 'upgrade' ? '' : 'ghost'}" data-action="gear-buy" data-gear="${x.id}" ${x.state === 'buy' || x.state === 'upgrade' ? '' : 'disabled'}>${esc(GEAR_BTN[x.state](x))}</button>
+          <button class="btn ${x.state === 'buy' || x.state === 'upgrade' || x.state === 'another' ? '' : 'ghost'}" data-action="gear-buy" data-gear="${x.id}" ${x.state === 'buy' || x.state === 'upgrade' || x.state === 'another' ? '' : 'disabled'}>${esc(GEAR_BTN[x.state](x))}</button>
         </div>`).join('')}</div></div>`)
     .join('');
   const book = g.notebook.length && !g.pickNight
@@ -165,7 +166,7 @@ export function gearBoard(g: GearVM): string {
         .join('')}</div>`
     : '';
   return `<div class="st-board gr-board">${head}${note}${book}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
-    <div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have.</small></div>${trees}</div>`;
+    <div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have. Got a free slot? Buy a second of the same machine.</small></div>${trees}</div>`;
 }
 
 // ---------------------------------------------------------------------------------------------- Spend: ads, pitch, grow, checkout

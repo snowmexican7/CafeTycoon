@@ -1690,3 +1690,7 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Office-park walk-ins asking for filter now stop once drip is on the menu; the notebook gains a Filter row.
 - **Bots (Claude):** `recipeChain('drip')` exists, so bots can probably brew and pour already (screenshots show
   bots serving drip), but they don't know pots go cold or prefer pouring from a full pot. Worth checking.
+
+## G4e — Buy multiples of the same machine (UI lane, tag `gear-g04e`)
+- Playtest: buying the machine you already own now adds a second copy into a free slot (no trade-in). Board shows "Buy another · $X" and "Yours ×N ✓". Lower tiers still do nothing; a higher tier upgrades one copy.
+- Bots: nothing needed (they already pick any station of a kind).
