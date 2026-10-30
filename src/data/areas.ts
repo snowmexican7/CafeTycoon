@@ -33,3 +33,7 @@ export const AREAS: Record<AreaId, AreaInfo> = {
 };
 
 export const AREA_TIP = { loved: 1.2, meh: 0.85 };
+
+/** G7c: chance an arriving walk-in wants a loved family you don't serve, and leaves (no rating hit). */
+export const AREA_ASK = 0.12;
+export const FAMILY_WORD: Record<DrinkFamily, string> = { espresso: 'a straight espresso', milky: 'something milky', iced: 'something iced', filter: 'filter coffee' };
