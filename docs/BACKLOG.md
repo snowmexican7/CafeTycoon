@@ -2102,3 +2102,26 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   longer runs down for hot Gear cups: read `slotCool` instead (note it runs 0 fresh → 1 cold, the opposite of
   `countsModel.coolFraction`). Settles pickup M2. Open: no thermal gear yet; p4Smoke end cash is lower (served
   within 2%), to revisit in the A balance pass.
+- **A3 back sink, stale pots, more messes (`fb2-a3`, protocol 43).** Spawns: `src/sim/spawn.ts` `freeSpot`/`settle` keep
+  every barista placed off fixtures.
+  - Fixed counter-kind spot `sink` (`SINK_ID`, `layoutFor(tier).sink`, `spotOf` → `'sink'`): stand (7,4), cart (9,4), café (11,4). It is worked from the tile to its left or the one above it, and is never bought, sold or moved.
+  - E or R with a drink at the sink: `sink.dump { by, item }` (counts as wasted, no money back, clears the cup clock).
+  - E with empty hands at a cold (past `potColdAt` with cups left) or stale drip pot lifts it: `Player.tool = 'pot'`, `Station.potOut = playerId`, `pot.lift { by, station }`. The machine can't pour, brew or take a parked drink while the pot is out.
+  - The pot dumped at the sink goes home empty: `sink.dump { by, item: 'pot' }`. Put back undumped (R away from the sink, leaving, closing, an espresso collapse) it goes home stale: `drop { item: 'pot', station, by }`.
+  - A pot with cups left at closing is stale next morning (`Station.stale = true`). `pot.stale { station }` fires **each morning** while it stays undumped. A stale pot can't pour or brew until dumped.
+  - Cold pots no longer pour half-tip cups. A brew miss (`potOff`) still does.
+  - Bin leak: 1% per binned drink, a spill on the bin's front tile, `bin.leak { by, at, x, y }`. Milk drip at a steamer or wand: 3% per steam. Grounds at a grinder: 3% per grind.
+  - Every Gear mess logs `mess.spawn { kind: 'milk'|'grounds'|'leak'|'spill', x, y, at? }`.
+  - Gear floor meter: −8 per new mess, then −0.12/s per mess while it sits, and +0.12/s once the floor is clear (a mess mopped at once heals in about a minute). Customers mind the floor only below 80%.
+  - Bots:
+    - dump an old pot when they need the drip machine, or when idle and no person is working it (A1 `heldByPerson`);
+    - skip a machine whose pot a person carries;
+    - pour spare and cold drinks down the sink when it is as close as the bin;
+    - mop any mess when they have nothing to make (orders still interrupt).
+  - **UI lane to wire:**
+    - sink art and a hint (`spotOf` → `'sink'`; today `counterName` says "Till", `gearCounterHint` falls into the condiment-bar branch, and `render/pickupModel.counterSpotOf` draws a till);
+    - the pot in hand (`tool === 'pot'`, hint "carry it to the sink");
+    - a cold or stale pot hint and a "STALE: dump at sink" badge (`Station.stale`);
+    - a machine with its pot out (`Station.potOut`);
+    - puddle splashes on `mess.spawn` / `bin.leak`;
+    - sounds for `sink.dump` / `pot.lift`.
