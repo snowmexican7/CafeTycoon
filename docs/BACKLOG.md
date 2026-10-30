@@ -1759,3 +1759,13 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - **Snob regulars:** owning top-tier gear (E5/E6, S3, C5, D5b; `SNOB_GEAR`) makes the next regular a snob (🎩 Margaux, then Sebastian; at most 2, one per family). They order the fanciest drink of that family on the menu and tip ×1.3 for a perfect 3★ cup, ×0.5 for 1★ or less. A toast announces them; tickets read "🎩 Margaux · snob: wants it perfect"; the regulars drawer marks them. `Regular.snob` is optional, so old saves load. Snobs do not use up the three ordinary regular names.
 - Deferred: tourist "crowds" (more arrivals) and the doc's ×1.4/×1.5 per-area tip strengths (all loves stay ×1.2) are for the G10 balance pass.
 
+### Gear G9 — dual boiler and two-group twin stations (gear-g09)
+- **E4 Double Trouble** now really has two sides: the espresso machine plus a **steam wand** half a tile (`TWIN_OFFSET` 0.55) to its right, both in one slot (`GearInfo.twin`, `Station.twin`). There are no new buttons: a barista picks a side by standing nearer it, so one person can pull a shot and steam milk at the same time.
+- **E5/E6** keep the steam wand (so upgrading from E4 never loses steam; a design call, GEAR_TREE §5 only says "two group heads") and add a **second group head** on the other side, with the same gear (`espresso-2`).
+- On the floor's last column the first twin goes left. Bots: from the slot's own whole tile the main side is nearest; from the next tile over only the twin is in reach (1.097 ≤ 1.1). On an edge slot the far twin can have no walkable node, so it is human-only there (see the Claude prompt).
+- The E4 steam wand counts as "a milk steamer" for the café au lait level-up (`levelUpGearOk`).
+- Render: twins are drawn at 0.7 scale behind the main side with no name plate, so the pair reads as one machine. The gear HUD lists the machine once; gear cards say "Steam wand built in" / "Two groups + steam wand".
+- No snapshot/protocol bump: `twin` is optional and stations are rebuilt from `slotGear` at night. Classic runs never get twins.
+- Screenshots: /workspace/overnight/sprint/g09-twin-{e4,e5}-{1512x982,1280x800}.png.
+- Tests: src/sim/gearTwin.test.ts (11, incl. a headless bot day: two bots used both groups and the built-in wand).
+

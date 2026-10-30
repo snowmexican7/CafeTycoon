@@ -29,13 +29,21 @@
 import { ECONOMY } from '../data/economy';
 import { EQUIPMENT, EQUIPMENT_KINDS } from '../data/equipment';
 import type { EquipmentKind } from '../data/equipment';
-import type { GearId } from '../data/gear';
+import { GEAR, type GearId } from '../data/gear';
 import { batchOut } from './gear';
 import { SLOT_POSITIONS, layoutFor } from '../data/layout';
 import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
 export type SlotContent = StationKind | null;
+
+/**
+ * Gear G9: how far a twin station sits from its slot. Bots stand on whole tiles one row below: from the slot's
+ * own tile the main side is nearest; from the next tile over, only the twin is within reach (0.55 → 1.097 tiles
+ * away, inside the 1.1 interact range), and the neighbouring slot is not.
+ */
+export const TWIN_OFFSET = 0.55;
+
 export type OffReason = 'noStation' | 'noStock' | 'off';
 
 /** How many back-bar slots the tier has (absent = the café). */
@@ -63,6 +71,19 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
     const gid = gear?.[i];
     if (gid) st.gear = gid;
     out.push(st);
+    // Gear G9: a machine with two sides is two (or three) stations in one slot, TWIN_OFFSET apart, so a barista
+    // picks a side by standing nearer it. The first twin goes right (left on the floor's last column, where no
+    // one can stand to its right); a second twin takes the other side.
+    const twins = gid ? (GEAR[gid].twin ?? []) : [];
+    const right = pos.x + 1 <= layoutFor(tier).width - 1;
+    twins.forEach((tk, j) => {
+      const side = (j === 0) === right ? 1 : -1;
+      const tn = (seen.get(tk) ?? 0) + 1;
+      seen.set(tk, tn);
+      const tw: Station = { id: tn === 1 ? tk : `${tk}-${tn}`, kind: tk, pos: { x: pos.x + side * TWIN_OFFSET, y: pos.y }, busyTicksLeft: 0, output: null, occupiedBy: null, twin: true };
+      if (tk === kind && gid) tw.gear = gid;
+      out.push(tw);
+    });
   });
   const counter = layoutFor(tier).stations.find((s) => s.kind === 'counter');
   if (counter) out.push({ id: counter.id, kind: counter.kind, pos: { ...counter.pos }, busyTicksLeft: 0, output: null, occupiedBy: null });

@@ -89,7 +89,10 @@ export class Scene {
     if (key === this.stationKey) return;
     this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
-    this.stationArt = list.map((s) => buildStation(s.kind, s.pos, checkout, stationNumber(s.id)));
+    this.stationArt = list.map((s) => {
+      const twin = 'twin' in s && s.twin === true;
+      return buildStation(s.kind, s.pos, checkout, twin ? 1 : stationNumber(s.id), twin);
+    });
     for (const pos of emptySlotPositions(tier, list)) this.stationArt.push(buildEmptySlot(pos));
     for (const c of this.stationArt) this.depth.addChild(c);
     const lotKey = tier ?? 'cafe';
