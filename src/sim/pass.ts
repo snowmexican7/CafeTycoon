@@ -6,6 +6,7 @@ import { serveCustomer, serveTarget } from './customers';
 import { tryCorrectName, tryKickCamper } from './eggs';
 import { tally } from './tally';
 import { passSlots, spotOf } from './pickup';
+import { coolsOnCounter, madeAtFromHand, oldestCupIndex, slotCool } from './cooling';
 import type { GameState, Player, PlayerId, Station } from './types';
 
 /**
@@ -71,10 +72,12 @@ function gearCounter(state: GameState, player: Player, at?: Station): GameState 
         ...(player.cupSlips ? { slips: player.cupSlips } : {}),
         ...(player.cupTemp ? { temp: true } : {}),
         by: player.id,
+        madeAt: madeAtFromHand(state, player), // A2: the cup's clock follows it onto the counter
       });
       player.holding = null;
       delete player.cupSlips;
       delete player.cupTemp;
+      delete player.heldSince;
       emitLog(state, 'pass.put', { item: drink, by: player.id });
     }
     return state;
@@ -87,15 +90,19 @@ function gearCounter(state: GameState, player: Player, at?: Station): GameState 
   return state;
 }
 
-/** Empty hands take the stalest cup back off the pass. */
+/** Empty hands take a cup back off the pass: classic, the stalest; Gear (A2), the oldest, carrying its clock. */
 function takeBack(state: GameState, player: Player): void {
-  const [item] = state.pass.splice(stalestIndex(state), 1);
+  const gear = state.gear === true;
+  const [item] = state.pass.splice(gear ? oldestCupIndex(state) : stalestIndex(state), 1);
   player.holding = item.item;
   if (item.slips) player.cupSlips = item.slips;
   else delete player.cupSlips;
   if (item.temp) player.cupTemp = true;
   else delete player.cupTemp;
+  if (gear && item.madeAt !== undefined) player.heldSince = item.madeAt;
+  else delete player.heldSince;
   emitLog(state, 'pass.take', { item: item.item, by: player.id });
+  if (gear) emitLog(state, 'pickup.takeBack', { drink: item.item, by: player.id, cold: slotCool(state, item) >= 1 });
 }
 
 /** The matching customer to serve: an upset one first, else the most impatient. */
@@ -112,10 +119,17 @@ function stalestIndex(state: GameState, drink?: string): number {
   return best;
 }
 
-/** Drinks on the pass go stale; a stale one is thrown away and counts as waste. */
+/**
+ * Drinks on the pass go stale; a stale one is thrown away and counts as waste. Gear (A2): a hot cup with a known
+ * made tick cools instead (src/sim/cooling.ts) and stays until someone takes it.
+ */
 export function stepPass(state: GameState): GameState {
   const kept = [];
   for (const item of state.pass) {
+    if (coolsOnCounter(state, item)) {
+      kept.push(item);
+      continue;
+    }
     item.ticksLeft -= 1;
     if (item.ticksLeft > 0) kept.push(item);
     else {

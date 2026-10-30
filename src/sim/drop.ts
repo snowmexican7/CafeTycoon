@@ -7,6 +7,7 @@ import { nearestStation } from './movement';
 import { passSlots, spotOf } from './pickup';
 import { PICKUP_ID } from '../data/layout';
 import { STATION_RECIPES } from './stations';
+import { madeAtFromHand } from './cooling';
 import { tally } from './tally';
 import type { GameState, Player } from './types';
 
@@ -41,10 +42,12 @@ function resolveDrop(state: GameState, p: Player): void {
           ...(p.cupSlips ? { slips: p.cupSlips } : {}),
           ...(p.cupTemp ? { temp: true } : {}),
           by: p.id,
+          madeAt: madeAtFromHand(state, p), // A2: the cup's clock follows it onto the counter
         });
         p.holding = null;
         delete p.cupSlips;
         delete p.cupTemp;
+        delete p.heldSince;
         emitLog(state, 'drop', { item, station: PICKUP_ID, by: p.id });
       }
     } else if (station.kind === 'counter') {
@@ -56,7 +59,7 @@ function resolveDrop(state: GameState, p: Player): void {
     } else if (station.kind in STATION_RECIPES) {
       if (station.busyTicksLeft === 0 && station.output === null && station.occupiedBy === null) {
         station.output = item;
-        station.outputSince = state.tick;
+        station.outputSince = state.gear === true ? madeAtFromHand(state, p) : state.tick; // A2: the clock follows the cup
         p.holding = null;
         emitLog(state, 'drop', { item, station: station.id, by: p.id });
       }

@@ -356,6 +356,7 @@ export function gearTapPour(state: GameState, s: Station, p: Player): boolean {
   if (p.holding !== null || p.tool !== null || s.busyTicksLeft !== 0 || s.output !== null) return false;
   if (!takeTapCup(s)) return true;
   p.holding = 'coldBrew';
+  p.heldSince = state.tick; // A2: poured now (iced: never cools)
   const marks = gearMarks(s);
   if (marks > 0) p.cupSlips = marks;
   else delete p.cupSlips;
