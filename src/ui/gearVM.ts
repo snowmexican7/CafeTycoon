@@ -86,3 +86,21 @@ export function sellLabel(id: GearId, sell: number): { text: string; title: stri
   if (id === 's1') return { text: 'Toss it', title: 'Even the dollar store won\'t take it back. Frees the slot ($0).' };
   return { text: 'Toss it', title: 'Worth nothing, but frees the slot ($0).' };
 }
+
+export interface HudGearVM { icon: string; name: string; status: string; warn: boolean }
+
+/** G5: one short line per machine on the counter for the day HUD (the bin is left out). */
+export function hudGearVM(state: GameState): HudGearVM[] {
+  return state.stations
+    .filter((s) => s.gear && s.gear !== 'b0')
+    .map((s) => {
+      const g = GEAR[s.gear!];
+      let status = '';
+      let warn = false;
+      if (s.dead) [status, warn] = ['dead till tonight', true];
+      else if (s.jammed) [status, warn] = ['jammed: whack it (E)', true];
+      else if (s.batchLeft !== undefined) [status, warn] = [s.batchLeft > 0 ? `${s.batchLeft}/${g.batch} cups left` : 'sold out', s.batchLeft === 0];
+      else if (s.lucky) status = 'lucky today ✨';
+      return { icon: ICON[g.tree], name: g.name, status, warn };
+    });
+}

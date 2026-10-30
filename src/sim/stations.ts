@@ -6,7 +6,7 @@ import { computeModifiers } from './effects';
 import { eventActive } from './events';
 import { emitLog } from './log';
 import { counterInteract } from './pass';
-import { gearMarks, gearRecipe, gearSpeed } from './gear';
+import { gearAfterUse, gearBlocked, gearMarks, gearRecipe, gearSpeed } from './gear';
 import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
@@ -112,6 +112,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     return state;
   }
   const idle = station.busyTicksLeft === 0 && station.output === null;
+  if (idle && gearBlocked(state, station, player)) return state;
   const own = gearRecipe(station, player.holding);
   const recipe = own !== undefined ? (own && recipeAllowed(state, own.gives) ? own : null) : recipeFor(state, station.kind, player.holding);
   if (idle && recipe && stocked(state, recipe) && station.batchLeft !== 0) {
@@ -127,6 +128,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     const seconds = recipe.seconds ?? ECONOMY.stationSeconds[station.kind as RecipeStation];
     station.busyTicksLeft = Math.round(((seconds * roleMachineTime(state, playerId)) / (speed * gearSpeed(station))) * TICK_RATE);
     station.busyTotal = station.busyTicksLeft;
+    gearAfterUse(state, station, player);
   } else if (idle && !recipe && player.holding !== null && player.holding !== 'grounds' && isRecipeStation(station.kind)) {
     // P3 B5: a cup offered to a station with no step for it: the wrong order, one star off.
     markCup(player);

@@ -1,5 +1,5 @@
 import { SIG, sigShare } from '../sim/signature';
-import { gearVM, type GearVM } from './gearVM';
+import { gearVM, hudGearVM, type GearVM, type HudGearVM } from './gearVM';
 import { AD_IDS, ADS } from '../sim/ads';
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../sim/checkout';
 import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
@@ -71,6 +71,8 @@ function espressoLines(d: DayStats): { ambulance?: string; tabPaid?: string } {
 export { profitOf } from '../sim/profit';
 
 export interface HudVM {
+  /** Gear Tree G5: the crew's machines and how each is doing (Gear runs only). */
+  gear?: HudGearVM[];
   dayLabel: string;
   clock: string;
   cash: string;
@@ -177,6 +179,7 @@ export function hudViewModel(state: GameState): HudVM {
   const available = availableDrinks(state);
   const soldOut = (state.phase === 'day' || state.phase === 'closing') && menuDrinks(state).length > 0 && available.length === 0;
   return {
+    ...(state.gear ? { gear: hudGearVM(state) } : {}),
     dayLabel: dayLabelFor(state.day),
     ...(soldOut ? { soldOut: true } : {}),
     forecast: (() => {
@@ -895,7 +898,7 @@ export function nightStructureKey(vm: NightVM): string {
 
 /** Everything about the HUD except the clock and cash. */
 export function hudStructureKey(vm: HudVM): string {
-  const { clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, closing, scrutiny, results: _results, challenges, ...rest } = vm;
+  const { gear: _gear, clock: _clock, cash: _cash, pass, events, messes, cleanliness: _cleanliness, mop, stuns, cleaning, rogue, closing, scrutiny, results: _results, challenges, ...rest } = vm;
   // per-tick values are patched, not rebuilt: the pass keys on its items only
   return JSON.stringify({
     ...rest,
