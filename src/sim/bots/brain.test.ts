@@ -90,8 +90,9 @@ describe('bot brain', () => {
     const steamer = (x: GameState) => x.stations.find((st) => st.id === 'steamer')!;
     s = runUntil(s, (x) => {
       const first = bot(x, 'bot-1').bot!.plan[0];
-      return steamer(x).busyTicksLeft > 0 && first?.kind === 'use' && first.station === 'steamer' && first.action === 'take';
-    }, 60 * 30);
+      // bot-2 must still be empty-handed: with bumps a collision can delay bot-1 until bot-2 has already made the other latte.
+      return steamer(x).busyTicksLeft > 0 && first?.kind === 'use' && first.station === 'steamer' && first.action === 'take' && bot(x, 'bot-2').holding === null;
+    }, 60 * 60);
     const bot1 = bot(s, 'bot-1').bot!.claim;
     const other = bot1 === 920 ? 921 : 920;
     expect(uncoveredOrder(s, bot(s, 'bot-2'))?.id).toBe(other);
@@ -462,7 +463,7 @@ describe('bot feel: yielding', () => {
     expect(s.players.find((p) => p.id === 'p1')!.pos).toEqual(nextWaypoint(headingToGrinder()));
   });
 
-  it('humans never collide with bots', () => {
+  it('humans bump into a standing bot (collisions: they used to walk straight through)', () => {
     const walk = (withBot: boolean) => {
       let s = cafe(1);
       const p1 = s.players.find((p) => p.id === 'p1')!;
@@ -476,11 +477,11 @@ describe('bot feel: yielding', () => {
         s = step(s, [{ kind: 'move', playerId: 'p1', x: 1, y: 0, interact: false }]);
         trail.push({ ...s.players.find((p) => p.id === 'p1')!.pos });
       }
-      return trail;
+      return { trail, s };
     };
-    const trail = walk(true);
-    expect(trail.some((q) => Math.abs(q.x - 6) < 0.1)).toBe(true); // passed through the bot's tile
-    expect(trail).toEqual(walk(false));
+    const { trail, s } = walk(true);
+    expect(s.log.some((e) => e.kind === 'bump' && e.data.a === 'p1' && e.data.b === 'bot-1')).toBe(true);
+    expect(trail[59].x).toBeLessThan(walk(false).trail[59].x); // the stumble costs ground
   });
 
   it('a bot leaves a finished drink alone while a person is working that machine', () => {

@@ -31,7 +31,7 @@ export function placeMess(state: GameState, kind: MessKind, tile: Vec2): boolean
 }
 
 /** The player's own tile if walkable, else the nearest walkable node. */
-function ownTile(state: GameState, p: Player): Vec2 {
+export function ownTile(state: GameState, p: Player): Vec2 {
   const own = tileOf(p.pos);
   return isWalkable(state, own) ? own : nodeOf(state, p.pos);
 }
