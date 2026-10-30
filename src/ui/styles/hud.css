@@ -271,6 +271,12 @@
 .hud-gear .hg { display: inline-flex; align-items: center; gap: 3px; font: 700 var(--fs-s) var(--font-display); line-height: 1.15; white-space: nowrap; }
 .hud-gear .hg-ic { font-size: 17px; }
 .hud-gear .hg.warn { color: #b23a1d; }
+/* 3.3.2: one machine per row, its name before its count ("Cold brew  7/8 left") */
+.hud-gear { flex-direction: column; align-items: stretch; }
+.hud-gear .hg { gap: 5px; }
+.hud-gear .hg-l { font-weight: 800; }
+.hud-gear .hg-l::after { content: ':'; }
+.hud-gear .hg-s { font-weight: 600; margin-left: auto; padding-left: 6px; }
 /* P4 B6: the second shop's phone call. */
 #hud .hud-call { position: absolute; top: calc(var(--topbar) + 150px); left: 50%; transform: translateX(-50%); z-index: 4; pointer-events: auto; display: flex; gap: 14px; align-items: center;
   max-width: min(760px, 62vw); padding: 14px 18px; border-radius: 18px; background: #fffaf0; color: var(--ink); box-shadow: 0 0 0 3px #e8a33a, 0 12px 30px rgba(40,20,0,0.35); animation: hc-pop 0.3s ease-out; }
