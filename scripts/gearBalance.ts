@@ -84,12 +84,14 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
   let floorTicks = 0;
   let floorMin = 100;
   let messTicks = 0;
+  const floorEnd: number[] = [];
   while (s.phase !== 'ended' && s.days.length < days) {
     if (s.phase === 'day') {
       floorSum += s.cleanliness;
       floorTicks += 1;
       floorMin = Math.min(floorMin, s.cleanliness);
       if (s.messes.length > 0) messTicks += 1;
+      if (s.phaseTicksLeft === 1) floorEnd.push(s.cleanliness); // the meter as the doors lock
     }
     if (s.phase === 'weekEnd') {
       // P4 B2: KEEP=1 plays on through a season (as the host pressing Keep going).
@@ -149,6 +151,7 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
     floor: floorTicks ? Math.round((floorSum / floorTicks) * 10) / 10 : null,
     floorMin: Math.round(floorMin),
     messy: floorTicks ? Math.round((messTicks / floorTicks) * 100) : null,
+    floorEnd: floorEnd.length ? Math.round(floorEnd.reduce((a, x) => a + x, 0) / floorEnd.length) : null,
     cashByDay: d.map((x) => Math.round(x.sales + x.tips)),
     ...(s.season ? { season: s.season.weeks.map((w) => `w${w.week}:${Math.round(w.profit)}${w.target !== null ? '/' + w.target : ''}`).join(' ') } : {}),
   };
