@@ -28,7 +28,12 @@ export function tillRingUp(state: GameState, playerId: PlayerId): boolean {
   c.stage = 'pickup';
   c.patienceLeft = Math.min(c.patienceMax, c.patienceLeft + c.patienceMax * TILL.patienceBoost);
   const what = DRINK_INFO[c.drink].name.toLowerCase();
-  emitLog(state, 'gear.quirk', { gear: '', text: `🧾 Rang up ${c.name ? `${c.name}'s ` : 'a '}${what}. Set it on the pickup counter fast for a tip.`, by: playerId });
+  const n = c.items?.length ?? 1; // FB2 B6: a multi-drink ticket
+  const text =
+    n > 1
+      ? `🧾 Rang up ${c.order === 'office' ? 'an office run' : 'an order'} of ${n} drinks. They pay when the last one is on the pickup counter.`
+      : `🧾 Rang up ${c.name ? `${c.name}'s ` : 'a '}${what}. Set it on the pickup counter fast for a tip.`;
+  emitLog(state, 'gear.quirk', { gear: '', text, by: playerId });
   emitLog(state, 'till.rung', { customer: c.id, drink: c.drink, by: playerId });
   return true;
 }

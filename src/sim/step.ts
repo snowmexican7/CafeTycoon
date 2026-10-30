@@ -39,6 +39,7 @@ import { clearFloorFields, floorFields, stepStuns, trackTiles } from './tiles';
 import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
 import { stepPickup } from './pickup';
+import { stepOffice } from './orders';
 import { stepCooling } from './cooling';
 import { stepCleaning } from './mop';
 import { applySteepInput } from './steep';
@@ -247,6 +248,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepCooling(s); // A2: cups go cold (Gear only)
   stepCleanliness(s);
   if (doorsOpen) spawnCustomers(s);
+  if (doorsOpen) stepOffice(s); // FB2 B6: the office run's phone call, then the office run
   stepCustomers(s);
   stepRogue(s);
   stepEggs(s);

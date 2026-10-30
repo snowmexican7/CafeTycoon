@@ -73,7 +73,8 @@ export function finishDay(state: GameState): GameState {
   settleEspresso(state);
   settleBranch(state);
 
-  const { served, lost } = state.today;
+  const { lost } = state.today;
+  const served = state.today.served - (state.today.officeExtra ?? 0); // FB2 B6: an office run is one customer here
   const weighted = lost + (state.today.lostRegulars ?? 0) * (ECONOMY.customers.regular.lostWeight - 1);
   const ratio = served + lost === 0 ? 1 : served / (served + weighted);
   const r = ECONOMY.reputation;

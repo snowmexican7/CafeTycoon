@@ -11,6 +11,7 @@ import { CONDIMENTS, noteCondiments, wantsCondiments } from './condiments';
 import { loseCustomer, serveCustomer } from './customers';
 import { LUKEWARM, coolTicks, slotCool } from './cooling';
 import { emitLog } from './log';
+import { takeItem, wantsItem } from './orders';
 import type { Customer, DrinkId, GameState, Station } from './types';
 
 export const PICKUP = { slots: 4 } as const;
@@ -31,8 +32,9 @@ export function passSlots(state: GameState): number {
   return state.gear === true ? PICKUP.slots : ECONOMY.pass.slots;
 }
 
-/** The customer still wants this drink: their current one, or one still owed to their group. */
+/** The customer still wants this drink: their current one, or one still owed to their group (FB2 B6: an item still to come on their ticket). */
 export function wantsDrink(c: Customer, d: DrinkId): boolean {
+  if (c.items) return wantsItem(c, d);
   return c.drink === d || (c.extra?.includes(d) ?? false);
 }
 
@@ -90,6 +92,11 @@ export function stepPickup(state: GameState): void {
     const i = takeIndex(state, hit.item.item);
     const item = state.pass[i];
     state.pass.splice(i, 1);
+    if (c.items) {
+      // FB2 B6: a multi-drink ticket marks the item done; it pays when the last one is taken.
+      takeItem(state, c, item, slotCool(state, item));
+      continue;
+    }
     if (c.drink !== item.item && c.extra) {
       // A group's later drink landed first: they take it now and keep waiting for the rest.
       const k = c.extra.indexOf(item.item);

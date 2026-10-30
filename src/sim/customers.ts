@@ -24,6 +24,7 @@ import { comboTip, serveCombo, TASTE } from './taste';
 import { checkoutFee } from './checkout';
 import { tierInfo } from './growth';
 import { menuDrinks, unlockedDrinks } from './unlocks';
+import { comboDrinks, loseTicket, makeTicket, ORDERS } from './orders';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
 
@@ -110,7 +111,7 @@ export function rollKind(state: GameState): Exclude<CustomerKind, 'influencer'> 
   return 'normal';
 }
 
-function patienceFor(m: Modifiers, mul: number): number {
+export function patienceFor(m: Modifiers, mul: number): number {
   return Math.round(ECONOMY.patienceSeconds * m.patience * mul * TICK_RATE);
 }
 
@@ -164,13 +165,23 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const sig = state.signature;
   const asksSig = !regular && count === 1 && sig !== undefined && menu.includes(sig.drink) && rngNext(state) < sigShare(sig) * rivalAskFactor(state);
   if (asksSig) drinks[0] = sig.drink;
-  const mul = kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1;
+  // FB2 B6: a Gear walk-in may order a second drink (a combo, from day 2): the ticket waits longer.
+  const combo = !regular && !asksSig && (kind === 'normal' || kind === 'impatient') && comboDrinks(state, menu, drinks);
+  const mul = (kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1) * (combo ? ORDERS.combo.patience : 1);
   // Gear runs: poured drinks wait less, made-to-order ones more (GEAR_WAIT); a group waits as long as its slowest order
   const wait = Math.max(...drinks.map((d) => drinkWait(state, d) * pricePatience(state, d)));
   const patienceMax = patienceFor(m, mul * wait * areaPatienceMul(state, drinks));
   const customer: Customer = { id: state.nextCustomerId++, drink: drinks[0], patienceLeft: patienceMax, patienceMax };
   if (kind === 'impatient' || kind === 'group') customer.kind = kind;
-  if (kind === 'group') customer.extra = drinks.slice(1);
+  // FB2 B6: a Gear group is one multi-drink ticket; a classic group keeps its queue of extra drinks.
+  if (kind === 'group') {
+    if (state.gear === true) makeTicket(customer, drinks);
+    else customer.extra = drinks.slice(1);
+  }
+  if (combo) {
+    makeTicket(customer, drinks);
+    customer.order = 'combo';
+  }
   if (asksSig) customer.sig = true;
   if (state.gear === true) customer.stage = 'order';
   if (regular) {
@@ -180,11 +191,13 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
     maybeNameMix(state, customer);
   }
   state.customers.push(customer);
+  if (combo) emitLog(state, 'order.combo', { customer: customer.id, items: drinks.join(',') });
   return customer;
 }
 
 /** A customer leaves unserved: one lost per drink still owed, plus regular and influencer bookkeeping. */
 export function loseCustomer(state: GameState, c: Customer): void {
+  if (c.items) return loseTicket(state, c); // FB2 B6: a multi-drink ticket
   state.today.lost += 1 + (c.extra?.length ?? 0);
   if (c.kind === 'regular') {
     const regular = state.regulars.find((r) => r.name === c.name);
@@ -270,6 +283,23 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     emitLog(state, 'rogue.upset', { drink });
     return;
   }
+  payCup(state, customer, drink, by, slips, tempMiss, tipMul);
+  if (customer.extra && customer.extra.length > 0) {
+    customer.drink = customer.extra.shift() as DrinkId;
+    customer.patienceLeft = Math.min(
+      customer.patienceMax,
+      customer.patienceLeft + Math.round(ECONOMY.customers.group.refill * customer.patienceMax),
+    );
+    return;
+  }
+  state.customers = state.customers.filter((c) => c !== customer);
+}
+
+/**
+ * Charge one cup to `customer` (who stays in the queue): price, patience-scaled tip, cash, stats, the `served` event.
+ * Returns the price and the tip (FB2 B6: a multi-drink ticket sums them).
+ */
+export function payCup(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId, slips = 0, tempMiss = false, tipMul = 1): { price: number; tip: number } {
   const m = computeModifiers(state);
   const sig = customer.sig && state.signature?.drink === drink ? state.signature : undefined;
   const price = round2(menuPrice(state, drink) * m.price[drink] + (sig ? sigPremium(sig) : 0));
@@ -336,15 +366,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     state.today.influencer = 'served';
     emitLog(state, 'influencer', { result: 'served' });
   }
-  if (customer.extra && customer.extra.length > 0) {
-    customer.drink = customer.extra.shift() as DrinkId;
-    customer.patienceLeft = Math.min(
-      customer.patienceMax,
-      customer.patienceLeft + Math.round(ECONOMY.customers.group.refill * customer.patienceMax),
-    );
-    return;
-  }
-  state.customers = state.customers.filter((c) => c !== customer);
+  return { price, tip };
 }
 
 /** Serve target among `match`: an upset customer first, else the most impatient. */
