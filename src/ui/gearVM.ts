@@ -37,6 +37,8 @@ export interface GearVM {
   note: string | null;
   /** G7b: the street notebook. One row per drink family; stars once you've served enough of it. */
   notebook: NotebookRowVM[];
+  /** G4g: co-op pick-night hint (absent solo or after day 1). */
+  coopHint?: string;
 }
 
 export interface NotebookRowVM { family: DrinkFamily; label: string; icon: string; served: number; stars: number | null; left: number }
@@ -113,7 +115,12 @@ export function gearVM(state: GameState): GearVM {
   if (!has('coldBrew') && !has('espresso')) note = 'Nothing to sell yet: buy a cold brew rig or an espresso machine.';
   else if (has('espresso') && !has('grinder') && !slots.some((s) => s.id && GEAR[s.id].pods)) note = 'Espresso needs beans ground first: buy a grinder.';
   else if (!Object.values(state.supplies).some((x) => x > 0)) note = 'No supplies yet: restock on the Restock tab.';
-  return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook: notebookVM(state) };
+  // G4g: co-op pick night nudges toward two cheap machines so everyone has a job (plus the till).
+  const humans = state.players.filter((p) => !p.bot).length;
+  const coopHint = state.day <= 1 && humans > 1
+    ? `Playing with ${humans}? Two cheap machines give two people a job (try The Hanes Method $5 + Pod-o-Matic $45). Whoever's free runs the till: ring up orders at the counter for speed tips.`
+    : null;
+  return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook: notebookVM(state), ...(coopHint ? { coopHint } : {}) };
 }
 
 /** Polish: what the sell button says. Worthless gear gets tossed, not sold. */

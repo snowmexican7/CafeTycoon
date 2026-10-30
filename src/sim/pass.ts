@@ -1,6 +1,7 @@
 import { secondsToTicks } from './constants';
 import { ECONOMY } from '../data/economy';
 import { emitLog } from './log';
+import { tillRingUp } from './till';
 import { serveCustomer, serveTarget } from './customers';
 import { tryCorrectName, tryKickCamper } from './eggs';
 import { tally } from './tally';
@@ -40,6 +41,9 @@ export function counterInteract(state: GameState, playerId: PlayerId): GameState
     const [item] = state.pass.splice(index, 1);
     serveCustomer(state, customer, item.item, playerId, item.slips ?? 0);
     emitLog(state, 'pass.serve', { item: item.item, by: playerId });
+  } else if (tillRingUp(state, playerId)) {
+    // Gear G4g: nothing to hand off, so the till takes the next order.
+    return state;
   } else if (state.pass.length > 0) {
     const [item] = state.pass.splice(stalestIndex(state), 1);
     player.holding = item.item;

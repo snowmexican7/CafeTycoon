@@ -1697,3 +1697,15 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 
 ## G4f — One clear night order (UI lane, tag `gear-g04f`)
 - Playtest: night tabs were confusing. Gear runs now show numbered steps ① Restock (stock first, full width) → ② Gear shop (its own tab; no longer under Spend › Stations) → ③ Menu → ④ Extras (cards, ads, pitch, grow, checkout). Pick-your-gear night puts Gear first (nothing to stock yet). A green "Next: N … ▸" footer button walks the order. Classic runs unchanged.
+
+## G4g — Till job + co-op hint (UI lane, tag `gear-g04g`)
+- Playtest: in co-op the register is now a real job (Gear runs, humans only). At the counter with empty hands, E first serves a ready drink from the pass; otherwise it **rings up** the next waiting customer (`tillRingUp` in `src/sim/till.ts`): sets `rungAt`, +25% patience, log line. Serving a rung customer within 30 s adds +$0.50 tip, within 60 s +$0.25 (`tillSpeedTip`, added in `serveCustomer`; served event carries `till`). Unrung customers are served exactly as before, so solo is unaffected (optional). Hand hint shows "Ring up: <drink>".
+- Pick-your-gear night with 2+ humans shows a 👥 Co-op tip: two cheap machines (Hanes $5 + Pod-o-Matic $45) give two people a job; whoever's free runs the till.
+- **Bots (Claude):** bots never ring up (`tillRingUp` refuses `player.bot`). Optional: let a free bot run the till in Gear co-op.
+
+## Bot-side Gear work for Claude (collected)
+- Bots on pods (E1 Pod-o-Matic: no grinder, pods stock) — they can't make espresso there today.
+- Bots handling jams/dead machines: whack a jam (the G5 quirks), avoid walking to a dead machine.
+- Drip pot awareness: prefer pouring from a full pot, rebrew when empty/cold.
+- Till: a free bot may ring up in co-op (Gear only).
+- Planner `equip` advice for Gear runs; any new Gear drinks (G6 americano/cappuccino when built).
