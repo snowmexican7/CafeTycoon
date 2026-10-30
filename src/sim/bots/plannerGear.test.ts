@@ -7,6 +7,8 @@ import { countered, hasStamps, isPromoDay, RIVAL } from '../rival';
 import { ECONOMY } from '../../data/economy';
 import { BRANCH, branchAreas, branchDay } from '../branch';
 import { profitOf } from '../profit';
+import { TIERS } from '../growth';
+import { CHECKOUT } from '../checkout';
 import { rentForDay } from '../effects';
 import { restockCost } from '../night';
 import { billsForDay, wagesForDay } from '../staff';
@@ -423,5 +425,68 @@ describe('item 5d: send surplus stock to the branch', () => {
     expect(sendAd(s)).toHaveLength(1);
     s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'send', supply: 'beans' }]);
     expect(sendAd(s)).toEqual([]);
+  });
+});
+
+describe('item 6: sorted and pure with every new kind in play', () => {
+  const rich = (withBranch: boolean): GameState => {
+    const s = equipped(['c1', 'e1', 'g1'], { tier: 'cafe', bots: 2 }, 3000);
+    s.tier = 'cafe';
+    const day = [15, 16, 17, 18, 19, 20, 21].find((d) => isPromoDay(s, d))!;
+    s.day = day;
+    s.checkout = { owned: ['register', 'kiosk', 'squarely'], active: 'squarely', since: 1, by: 'K' };
+    s.days.push(dayStats({ sales: 100, tips: 10, wages: 10, cups: 20, cupStars: 40, byPlayer: { p1: { serves: 20, takings: 100 } }, ...(withBranch ? { branch: { served: 12, walked: 9, takings: 60, costs: 50, profit: 10 } } : {}) }));
+    s.supplies = { ...FULL, beans: 900, milk: 900 };
+    if (withBranch) {
+      s.branch = { area: 'tourist', staff: 1, openedDay: 1, spent: BRANCH.cost, by: 'K' };
+      s.players[0]!.role = 'manager';
+    }
+    return s;
+  };
+
+  it('covers the new kinds in one plan, sorted by priority then id', () => {
+    const closed = planNight(rich(false)).map((a) => a.id);
+    for (const id of ['rival:promo', 'rival:loyalty', 'branch:open', 'staff:fire']) expect(closed).toContain(id);
+    expect(closed.some((id) => id.startsWith('gear:'))).toBe(true);
+    const open = planNight(rich(true)).map((a) => a.id);
+    for (const id of ['branch:staff', 'branch:send:beans', 'branch:send:milk']) expect(open).toContain(id);
+    for (const s of [rich(false), rich(true)]) {
+      const plan = planNight(s);
+      for (let i = 1; i < plan.length; i++) {
+        const [a, b] = [plan[i - 1]!, plan[i]!];
+        expect(a.priority > b.priority || (a.priority === b.priority && a.id < b.id)).toBe(true);
+      }
+    }
+  });
+
+  it('is pure and deterministic: the state is deep-equal before and after, and a clone plans the same', () => {
+    for (const s of [rich(false), rich(true), gearRun(), classicRun(2)]) {
+      const before = structuredClone(s);
+      const a = planNight(s);
+      crewTips(s, 4);
+      expect(s).toEqual(before);
+      expect(planNight(structuredClone(before))).toEqual(a);
+    }
+  });
+
+  it('total spending advice (restock, grow, branch, checkout, gear, stamp, equip, scout) stays within cash after bills', () => {
+    for (const cash of [0, 40, 120, 250, 330, 500, 900, 3000]) {
+      for (const withBranch of [false, true]) {
+        const s = rich(withBranch);
+        s.cash = cash;
+        const total = planNight(s).reduce((n, a) => {
+          const i = a.input;
+          if (i.kind === 'restock') return n + restockCost(s, i.supply, i.packs);
+          if (i.kind === 'gear' && i.action === 'buy') return n + GEAR[i.gear].price - 0; // trade-ins only lower it
+          if (i.kind === 'branch' && i.action === 'open') return n + BRANCH.cost;
+          if (i.kind === 'stampCard') return n + RIVAL.stampCost;
+          if (i.kind === 'grow') return n + TIERS[i.tier].cost;
+          if (i.kind === 'checkout') return n + CHECKOUT[i.checkout].cost;
+          if (i.kind === 'scout') return n + RIVAL.scoutCost;
+          return n;
+        }, 0);
+        expect(total).toBeLessThanOrEqual(Math.max(0, cash - billsForDay(s)) + 1e-9 + 0);
+      }
+    }
   });
 });

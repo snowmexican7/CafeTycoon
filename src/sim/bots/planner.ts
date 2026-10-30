@@ -1,32 +1,61 @@
 /**
  * FB1 WP6: the night planner. A pure, deterministic read of the night that lists what a sensible
  * crew would do before opening: restock, prices, twists, the signature, the rival, growing, the
- * checkout path and the back bar. Bot crewmates voice the top of the list as tips; the balance
- * tester's `planner` policy applies all of it. Advice never spends money in a real game: each item
- * carries the night input a human would send.
+ * checkout path, the back bar and, in Gear runs, machines, staff and the Phase 4 systems. Bot
+ * crewmates voice the top of the list as tips; the balance tester's `planner` policy applies the
+ * classic part of it. Advice never spends money in a real game, and bots never send inputs: each
+ * item carries the night input a HUMAN would send.
  *
  * Final shapes:
  *
  *   interface Advice {
  *     id: string;   // restock:<supply> | price:<drink> | twist:<drink> | signature | scout | rival |
  *                   // grow:<tier> | checkout:<id> | slot:<index> | equip:espresso | menu:<drink>
- *     kind: 'restock' | 'price' | 'twist' | 'signature' | 'scout' | 'rival' | 'grow' | 'checkout' | 'slot' | 'equip' | 'menu';
+ *                   // Gear runs: gear:<gearId> | staff:fire | rival:promo | rival:loyalty |
+ *                   // branch:open | branch:staff | branch:send:<supply>
+ *     kind: AdviceKind;  // restock | price | twist | signature | scout | rival | grow | checkout | slot | equip | menu
  *     text: string;
  *     input: NightFix;   // the input without its playerId
- *     priority: number;  // restock out 100, low 90; rival 80; grow 70; checkout 60; slot 55; price 50;
- *                        // twist 40; signature 35; equip 30; scout 20; menu 10
+ *     priority: number;  // see the table below
  *   }
  *   planNight(state): Advice[]                                   // priority desc, then id asc
  *   crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots (before they clock in: the ids the roster spawns)
  *
- * In a Gear run there is no `slot` or `equip` advice (the Gear board replaces the stations shop).
- * Opening night is for stocking up: grow, checkout and equip advice wait for a finished day (as
- * `nightBrief` does). A drink with no station is only taken off the board when nothing in this plan
- * or in `state.equipment` could bring that station back (no grow advice, the kind not unplaced).
+ * Priorities (PLAN_PRIORITY); Gear-only rows marked G:
  *
- * Money: one day's rent is held back, and every advice that spends (restock, grow, checkout, equip,
- * scout) draws on what is left in priority order, so applying the whole list never overdraws the
- * till or eats tomorrow's rent.
+ *   100 restock, out of stock          55 slot (classic)               40 twist
+ *    90 restock, low                   53 staff:fire (G, kind equip)   35 signature
+ *    80 rival (knock-off)              52 branch:staff (G, kind grow)  30 equip (classic)
+ *    75 rival:promo (G, rivalCounter)  50 price                        20 scout
+ *    70 grow                           48 branch:send:* (G, restock)   10 menu
+ *    65 branch:open (G, kind grow)     45 rival:loyalty (G, stampCard)
+ *    60 checkout
+ *    58 gear:<id> (G, kind equip)
+ *
+ * Gear rows reuse the existing AdviceKind values (the UI keeps a `Record<AdviceKind, ...>` of icons), so
+ * tell them apart by `id` or `input.kind`: `gear` buys, `staff` (fire only, never hire), `rivalCounter`,
+ * `stampCard` and `branch` (open / staff / send).
+ *
+ * Gear runs: there is no `slot` or `equip` advice (the Gear board replaces the stations shop). The gear
+ * hint walks the gearBalance upgrade path: it never trades the E1 pods for E2+ before a grinder is in a
+ * slot, puts the polished C5 / E6 first when yesterday's cups averaged under 3 stars and they are affordable
+ * tonight, says nothing while a crew vote is open, and leaves a flowing D4b alone (a daytime thing). A $50+
+ * buy in a co-op crew becomes a proposal; the input is the same. `staff:fire` appears when yesterday's wages
+ * beat the bots' takings in `DayStats.byPlayer`. Phase 4: match the rival's happy hour on a promo night,
+ * print the stamp card once the rival's loyalty card is live (cash after bills >= $30 + a day's restock),
+ * open the second shop at the café tier (cash after bills >= lease + a day's restock, a profitable day, the area
+ * with the best `branchDay` estimate), add or cut a branch barista from yesterday's branch day (only if
+ * `branchDay` says it pays), and send a pack of beans or milk when a Manager is on the crew and home stock is
+ * more than two packs over tomorrow's use. Season pacing has no input to attach, so there is no season advice.
+ *
+ * Opening night is for stocking up: grow, checkout and equip advice wait for a finished day (as
+ * `nightBrief` does). A drink with no station is only taken off the board when something can be made at all
+ * and nothing in this plan or in `state.equipment` could bring that station back (no grow advice, the kind
+ * not unplaced).
+ *
+ * Money: tomorrow's bills (rent plus wages: `billsForDay`) are held back, and every advice that spends
+ * (restock, grow, branch:open, checkout, gear, rival:loyalty, equip, scout) draws on what is left in
+ * priority order, so applying the whole list never overdraws the till or eats tomorrow's bills.
  *
  * Pure: no RNG, no Date, no mutation of `state`. Reads only what the crew can see (the taste
  * notebook, the scouted rival copy), never hidden state (`comboStars`, `adOutcome`, `rivalMenu`).
@@ -636,7 +665,7 @@ function menuAdvice(state: GameState, growing: boolean): Advice[] {
 /** Everything worth doing tonight, highest priority first (ties by id). Pure and deterministic. */
 export function planNight(state: GameState): Advice[] {
   const budget: Budget = { left: round2(state.cash - billsForDay(state)) };
-  // Spending advice draws on the budget in priority order: restock, grow, checkout, gear, equip, scout.
+  // Spending advice draws on the budget in priority order: restock, grow, branch:open, checkout, gear, rival:loyalty, equip, scout.
   const restock = restockAdvice(state, budget);
   const grow = growAdvice(state, budget);
   const branchOpen = branchOpenAdvice(state, budget);
