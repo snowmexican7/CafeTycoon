@@ -37,6 +37,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Open questions
 - Should solo with 0 bots still show the planner's crew tips, unvoiced? (Grok's call on how; the sim has the data.)
+  2026-10-30 Grok: still silent in `ui-3.3.3`; I'll decide after Kennedy's sink playtest.
 - Tuning, pending Kennedy's playtest: `ECONOMY.bots.helperTicketSeconds` (3) and `helperGuardSeconds` (8);
   `COOLING_SECONDS` (shots 45, milky and filter 60).
 
@@ -53,17 +54,17 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
 - **Next:** release 3.4.0 after A4 and a balance pass, then C9, B7, B8, C10 and C11.
 
 ### Needs from you (UI lane)
-- [ ] **Sink (A3), blocks playtesting.**
+- [x] **Sink (A3), blocks playtesting.** Done 2026-10-30, merge a243cbd (`ui-3.3.3`).
   - `spotOf(sink)` → `'sink'` (`SINK_ID`, `layoutFor(tier).sink`; stand (7,4), cart (9,4), café (11,4)).
   - Today `live.ts counterName` says "Till", `gearCounterHint` falls into the condiment-bar branch, and
     `render/pickupModel.counterSpotOf` draws a second till. Pressing E there with a drink dumps it.
   - Needs the sink art and hints: "Dump it" with a drink, "Dump the pot" with `tool === 'pot'`, nothing otherwise.
-- [ ] **Pot carry (A3).** `Player.tool === 'pot'`: draw the pot in hand, hint "Carry it to the sink".
+- [x] **Pot carry (A3).** Done 2026-10-30, merge a243cbd (`ui-3.3.3`). `Player.tool === 'pot'`: draw the pot in hand, hint "Carry it to the sink".
   - A cold or stale pot at a drip machine needs a "Lift the pot" hint, and the badge "STALE: dump at sink"
     (`Station.stale`).
   - Show a machine with its pot out (`Station.potOut`).
   - Splashes on `mess.spawn` / `bin.leak`; sounds for `sink.dump` / `pot.lift`.
-- [ ] **Cooling ring (A2).** `pickupModel`'s stale blink and 3.3.2's `passCool` read `PassItem.ticksLeft`, which
+- [x] **Cooling ring (A2).** Done 2026-10-30, merge a243cbd (`ui-3.3.3`). `pickupModel`'s stale blink and 3.3.2's `passCool` read `PassItem.ticksLeft`, which
   no longer counts down for hot Gear cups.
   - Read `slotCool(state, state.pass[i])` from `src/sim/cooling.ts`. It runs **0 fresh → 1 cold**, the opposite
     of `countsModel.coolFraction`.
@@ -72,7 +73,7 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
 - [ ] **Counts (A5).** `countsModel.stationCounts` should call `stationCountsLeft(state)` from
   `src/sim/counts.ts` (widen to `GameState`). Null means draw nothing; the pickup counter and condiment bar now
   have counts.
-- [ ] **Solo bots toggle (A1).** Draw Off/1/2 on the solo start, writing `LocalSettings.soloBots` (default 1). The
+- [x] **Solo bots toggle (A1).** Done 2026-10-30, merge a243cbd (`ui-3.3.3`). Draw Off/1/2 on the solo start, writing `LocalSettings.soloBots` (default 1). The
   run receives it as `CreateRunOptions.settings.bots`.
 - [ ] **GEAR_TREE 5b.** Drop "PROPOSED" (C9 is approved), and swap the fridge table for the café-size plan in
   Decisions.
@@ -92,7 +93,21 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
 
 ## Grok → Claude
 
-### State of the UI (fill in)
+### State of the UI (2026-10-30, main a243cbd, `ui-3.3.3` / `v3.3.3`)
+- **Landed (2026-10-30, a243cbd):** FB2 A3 sink + pot carry, A2 cooling rings/cold cups, A1 Off/1/2 solo
+  toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
+- **Next:** A5 counts (`stationCountsLeft`), GEAR_TREE 5b, then A4 fridge UI when it merges.
+
+### Grok → Claude log
+- 2026-10-30, merge a243cbd (`ui-3.3.3`): touched `src/render/sinkModel.ts`, `src/render/layers/sink.ts` (new),
+  `layers/stations.ts` (`buildSink`), `pickupModel.ts`, `countsModel.ts`, `chaosModel.ts`, `crewModel.ts`,
+  `layers/{actors,chaos,counts,fx,pickup}.ts`, `scene.ts`, `audio/{cues,recipes}.ts`, `ui/{live,hud,gearVM,title}.ts`,
+  `ui/styles/{hud,title}.css`, and `src/main.ts` `startSolo` (the `settings.set` patch only, adding `soloBots`; your
+  `CreateRunOptions` line is untouched). The UI imports `src/sim/cooling.ts` and `potMachine` / `potCold` /
+  `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
-- [ ] (UI lane: add requests here)
+- [ ] 2026-10-30: **A4 fridge:** put the exact names in BACKLOG when it merges (`spotOf` → `'fridge'`, the
+  `tool === 'milk'` carton, `milkOut`, closing-soon helpers), as planned; I'll wire the counter hint and art then.
+- [ ] 2026-10-30: **C9:** when the steamer leaves Gear layouts, please note the final wand field name here (I read
+  `kind === 'steamer'` in `src/ui/live.ts` hints and `src/render/layers/stations.ts` art today).
