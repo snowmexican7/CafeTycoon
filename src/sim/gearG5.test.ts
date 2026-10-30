@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from './run';
-import { applyGearInput, gearMorning } from './gear';
+import { applyGearInput, gearAfterUse, gearMorning } from './gear';
+import { ECONOMY } from '../data/economy';
 import { interact, stepStations } from './stations';
 import { GEAR, type GearId } from '../data/gear';
 import type { CreateRunOptions, GameState } from './types';
@@ -109,5 +110,20 @@ describe('Gear Tree G5: downsides and funny events', () => {
     let cracked = 0;
     for (let i = 0; i < 400; i++) { j.morningNotes = []; gearMorning(j); const tap = j.stations.find((x) => x.kind === 'coldBrewTap')!; if (tap.batchLeft === 12) cracked++; }
     expect(cracked).toBeGreaterThan(0);
+  });
+
+  it('the goose spill only says "coffee on the floor" when a puddle actually lands', () => {
+    const s = createRun(opts(true));
+    buy(s, 'e2');
+    startDay(s);
+    const st = at(s, 'espresso');
+    const spills = () => s.log.filter((e) => e.kind === 'gear.quirk' && String(e.data.text).includes('portafilter')).length;
+    s.messes = Array.from({ length: ECONOMY.mess.max }, () => ({ ...s.messes[0], kind: 'spill' as const, tile: { x: 0, y: 0 }, amount: 1 })) as GameState['messes'];
+    for (let i = 0; i < 300; i++) gearAfterUse(s, st, s.players[0]);
+    expect(spills()).toBe(0);
+    s.messes = [];
+    for (let i = 0; i < 300 && spills() === 0; i++) gearAfterUse(s, st, s.players[0]);
+    expect(spills()).toBe(1);
+    expect(s.messes.length).toBeGreaterThan(0);
   });
 });
