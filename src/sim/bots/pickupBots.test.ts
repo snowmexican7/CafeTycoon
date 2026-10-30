@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from '../run';
 import { step } from '../step';
 import { TICK_RATE } from '../constants';
-import { afterBotInteract, chainFor, dropPlan, think } from './brain';
+import { BOX_LOW, afterBotInteract, boxNode, chainFor, dropPlan, think } from './brain';
+import { layoutFor } from '../../data/layout';
+import { ECONOMY } from '../../data/economy';
+import { nearestStation } from '../movement';
 import { addStandIns } from './roster';
 import type { GearId } from '../../data/gear';
 import { BASE_DRINKS } from '../../data/drinks';
@@ -230,4 +233,91 @@ describe('bots at the steeped tap (Task 14)', () => {
       expect(s.pass).toEqual([]);
     });
   }
+});
+
+describe('bots carry the condiment box (Task 15)', () => {
+  /** A quiet Gear stand with an empty bar and `boxes` boxes in the corner. */
+  const boxStand = (bots = 1, servings = 0, boxes = 1): GameState => {
+    const s = tapStand(bots);
+    s.customers = [];
+    s.condiments = { servings };
+    s.condimentBoxes = boxes;
+    return s;
+  };
+  const isBox = (x: BotStep) => (x.kind === 'floor' && x.action === 'takeBox') || (x.kind === 'use' && x.action === 'refill');
+
+  it('an idle bot with an empty bar and a box plans takeBox + refill, and stepped, fills the bar from the corner', () => {
+    let s = boxStand();
+    const plan = think(s, sim(s));
+    expect(plan).toEqual([
+      { kind: 'floor', node: boxNode(s), action: 'takeBox' },
+      { kind: 'use', station: 'condiments', action: 'refill' },
+    ]);
+    for (let i = 0; i < 40 * TICK_RATE && s.condiments!.servings === 0; i++) s = step(s, []);
+    expect(s.condiments!.servings).toBe(20);
+    expect(s.condimentBoxes).toBe(0);
+    expect(sim(s).tool).toBeNull();
+    expect(s.log.find((e) => e.kind === 'condiment.refill')?.data).toEqual({ by: 'sim-1' });
+  });
+
+  it('a low bar counts; a bar above the low mark, or no box in the corner, does not', () => {
+    expect(think(boxStand(1, BOX_LOW), sim(boxStand(1, BOX_LOW))).some(isBox)).toBe(true);
+    const ok = boxStand(1, BOX_LOW + 1);
+    expect(think(ok, sim(ok)).some(isBox)).toBe(false);
+    const none = boxStand(1, 0, 0);
+    expect(think(none, sim(none)).some(isBox)).toBe(false);
+  });
+
+  it('two bots never both plan it', () => {
+    const s = boxStand(2);
+    const a = think(s, sim(s, 1));
+    expect(a.some(isBox)).toBe(true);
+    sim(s, 1).bot!.plan = a;
+    expect(think(s, sim(s, 2)).some(isBox)).toBe(false);
+    // Nor while one is already carrying a box.
+    sim(s, 1).bot!.plan = [];
+    sim(s, 1).tool = 'box';
+    expect(think(s, sim(s, 2)).some(isBox)).toBe(false);
+  });
+
+  it('an order it can make comes first: no box run planned, and a carried box goes back to the corner', () => {
+    let s = boxStand();
+    s.customers = [order(1, { drink: 'coldBrew', stage: 'pickup', rungAt: s.tick })];
+    expect(think(s, sim(s)).some(isBox)).toBe(false);
+    s.customers = [];
+    const p = sim(s);
+    p.tool = 'box';
+    s.condimentBoxes = 0;
+    p.bot!.plan = [{ kind: 'use', station: 'condiments', action: 'refill' }];
+    s.customers = [order(1, { drink: 'coldBrew', stage: 'pickup', rungAt: s.tick })];
+    s = step(s, []);
+    expect(sim(s).tool).toBeNull();
+    expect(s.condimentBoxes).toBe(1);
+    expect(sim(s).bot!.claim).toBe(1);
+  });
+
+  it('a box in hand at a bar that someone else filled goes back to the corner', () => {
+    let s = boxStand(1, 20, 0);
+    const p = sim(s);
+    p.tool = 'box';
+    expect(think(s, p)).toEqual([{ kind: 'floor', node: expect.anything(), action: 'drop' }]);
+    p.bot!.plan = think(s, p);
+    p.bot!.thinkTicksLeft = 999;
+    for (let i = 0; i < 10 * TICK_RATE && sim(s).tool !== null; i++) s = step(s, []);
+    expect([sim(s).tool, s.condimentBoxes, s.condiments!.servings]).toEqual([null, 1, 20]);
+  });
+
+  it('on every tier, "use" at the box node takes the box (not the mop, not a station)', () => {
+    for (const tier of ['stand', 'cart', 'cafe'] as const) {
+      const s = startDay(createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true, ...(tier !== 'cafe' ? { tier } : {}) }));
+      const n = boxNode(s);
+      const corner = layoutFor(s.tier).boxCorner;
+      expect(Math.hypot(n.x - corner.x, n.y - corner.y)).toBeLessThanOrEqual(ECONOMY.interactRangeTiles);
+      expect(nearestStation(s, n)).toBeNull();
+      s.condimentBoxes = 1;
+      s.players[0].pos = { ...n };
+      const t = step(s, [{ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: true }]);
+      expect([t.players[0].tool, t.condimentBoxes]).toEqual(['box', 0]);
+    }
+  });
 });

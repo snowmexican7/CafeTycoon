@@ -21,7 +21,7 @@ export type EventKind = 'rushHour' | 'powerFlicker' | 'influencerVisit' | 'healt
 export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer';
 export type Personality = 'rookie' | 'steady' | 'veteran' | 'hurried' | 'human'; // 'human' = tester stand-in
 export type BotSkill = 1 | 2 | 3 | 4 | 5;
-export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring';
+export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill';
 
 export interface Vec2 {
   x: number;
@@ -36,8 +36,11 @@ export interface Rogue {
   customerId: number; name?: string; drink: DrinkId; stage: RogueStage;
   pos: Vec2; path: Vec2[]; station: string | null; ticksLeft: number; waitTicks: number;
 }
-/** Mop steps (takeMop, clean, returnMop), and `drop`: put what is in hand on the floor (no bin in the shop). */
-export type FloorAction = 'takeMop' | 'clean' | 'returnMop' | 'drop';
+/**
+ * Mop steps (takeMop, clean, returnMop), `takeBox` (batch/pickup: a condiment box from the corner), and `drop`: put
+ * what is in hand on the floor (no bin in the shop; a carried tool goes home).
+ */
+export type FloorAction = 'takeMop' | 'clean' | 'returnMop' | 'takeBox' | 'drop';
 /** `makes`: on a bot's insert step, what the machine should make from what the bot will hold there (absent on old saves). */
 export type BotStep = { kind: 'use'; station: string; action: BotAction; makes?: ItemKind } | { kind: 'idle'; node: Vec2 }
   | { kind: 'floor'; node: Vec2; action: FloorAction };
