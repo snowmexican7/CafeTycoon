@@ -791,7 +791,7 @@ describe('bots with duplicate or missing stations', () => {
     esp.making = 'espresso';
     s = runUntil(s, (x) => { const st = bot(x).bot!.plan[0]; return st?.kind === 'use' && st.station === 'espresso-2'; }, 60 * 30);
     expect(bot(s).bot!.plan.slice(0, 2)).toEqual([
-      { kind: 'use', station: 'espresso-2', action: 'insert' },
+      { kind: 'use', station: 'espresso-2', action: 'insert', makes: 'espresso' },
       { kind: 'use', station: 'espresso-2', action: 'take' },
     ]);
     const served = s.today.served;

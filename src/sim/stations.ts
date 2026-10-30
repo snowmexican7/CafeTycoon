@@ -12,7 +12,7 @@ import { nearestStation } from './movement';
 import { mopInteract } from './mop';
 import { BASE_DRINKS, RECIPES, type Recipe, type RecipeStation } from '../data/drinks';
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
-import type { GameState, ItemKind, PlayerId, StationKind, SupplyId } from './types';
+import type { GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from './types';
 
 /** Each working station's first (classic) recipe: what it takes, gives back and uses up. See RECIPES for all of them. */
 export const STATION_RECIPES: Record<RecipeStation, { takes: ItemKind | null; gives: ItemKind; consumes: SupplyId | null }> = {
@@ -44,6 +44,16 @@ export function recipeFor(state: GameState, kind: StationKind, held: ItemKind | 
     if (want) return all.find((r) => r.gives === want.drink)!;
   }
   return all[0] ?? null;
+}
+
+/**
+ * The recipe a particular station runs for what is in hand: its gear's own recipe first (a pod machine
+ * pulls a shot from empty hands, a pour-over bar pours a Pour-over; either only while that drink is
+ * allowed), else the station kind's recipes (`recipeFor`). Exactly what `interact` uses; bots plan with it.
+ */
+export function recipeAt(state: GameState, station: Station, held: ItemKind | null): Recipe | null {
+  const own = gearRecipe(station, held);
+  return own !== undefined ? (own && recipeAllowed(state, own.gives) ? own : null) : recipeFor(state, station.kind, held);
 }
 
 /** Every supply the recipe uses is in stock. */
@@ -129,8 +139,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   }
   const idle = station.busyTicksLeft === 0 && station.output === null;
   if (idle && gearBlocked(state, station, player)) return state;
-  const own = gearRecipe(station, player.holding);
-  const recipe = own !== undefined ? (own && recipeAllowed(state, own.gives) ? own : null) : recipeFor(state, station.kind, player.holding);
+  const recipe = recipeAt(state, station, player.holding);
   if (idle && recipe && stocked(state, recipe) && station.batchLeft !== 0) {
     for (const s of recipe.consumes) state.supplies[s] -= 1;
     cupIntoStation(player, station);

@@ -479,7 +479,7 @@ describe('bots and the rogue', () => {
       if (walking && s.rogue && s.rogue.stage !== 'walking') {
         arrived = true;
         expect(dist(botOf(s).pos, tap.pos)).toBeLessThanOrEqual(ECONOMY.interactRangeTiles);
-        expect(botOf(s).bot!.plan[0]).toEqual({ kind: 'use', station: 'coldBrewTap', action: 'insert' });
+        expect(botOf(s).bot!.plan[0]).toEqual({ kind: 'use', station: 'coldBrewTap', action: 'insert', makes: 'coldBrew' });
       }
       expect(s.rogue?.stage).not.toBe('waiting'); // a bot never holds a rogue up
       if (tap.occupiedBy !== null) {
