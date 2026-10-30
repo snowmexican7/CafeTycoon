@@ -40,6 +40,8 @@ export function gearStats(id: GearId): string {
   const out: string[] = [];
   out.push(g.speed < 1 ? 'Slow' : g.speed > 1 ? 'Fast' : 'Normal speed');
   if (g.marks) out.push(`-${g.marks}★ per cup`);
+  if (g.pods) out.push('Pods, no grinder');
+  if (g.priceMul && g.priceMul !== 1) out.push(`Sells at ×${g.priceMul}`);
   if (g.batch) out.push(`${g.batch} cups/day`);
   else if (g.tree === 'coldBrew') out.push('No daily cap');
   return out.join(' · ');
@@ -72,7 +74,15 @@ export function gearVM(state: GameState): GearVM {
   const has = (tree: GearTree) => slots.some((s) => s.id && GEAR[s.id].tree === tree);
   let note: string | null = null;
   if (!has('coldBrew') && !has('espresso')) note = 'Nothing to sell yet: buy a cold brew rig or an espresso machine.';
-  else if (has('espresso') && !has('grinder')) note = 'Espresso needs beans ground first: buy a grinder.';
+  else if (has('espresso') && !has('grinder') && !slots.some((s) => s.id && GEAR[s.id].pods)) note = 'Espresso needs beans ground first: buy a grinder.';
   else if (!Object.values(state.supplies).some((x) => x > 0)) note = 'No supplies yet: restock on the Tonight tab.';
   return { pickNight: state.day <= 1, slots, trees, freeSlots, note };
+}
+
+/** Polish: what the sell button says. Worthless gear gets tossed, not sold. */
+export function sellLabel(id: GearId, sell: number): { text: string; title: string } {
+  if (sell > 0) return { text: `Sell · $${sell}`, title: `Sell it back for $${sell}.` };
+  if (id === 'c1') return { text: 'Bin the sock', title: 'Nobody wants the sock. Frees the slot ($0).' };
+  if (id === 's1') return { text: 'Toss it', title: 'Even the dollar store won\'t take it back. Frees the slot ($0).' };
+  return { text: 'Toss it', title: 'Worth nothing, but frees the slot ($0).' };
 }

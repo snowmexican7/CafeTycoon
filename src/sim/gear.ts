@@ -23,7 +23,9 @@
 import { GEAR, GEAR_START, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
 import { stationsFromSlots, slotCount } from './slots';
-import type { GameState, PlayerInput, Station, StationKind, TierId } from './types';
+import { usesShot, type Recipe } from '../data/drinks';
+import type { Modifiers } from './effects';
+import type { DrinkId, GameState, ItemKind, PlayerInput, Station, StationKind, TierId } from './types';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -131,4 +133,39 @@ export function growGearSlots(state: GameState, to: TierId): void {
   state.slots = slots.slice(0, n);
   state.slotGear = gear.slice(0, n);
   state.stations = stationsFromSlots(to, state.slots, state.slotGear);
+}
+
+// ---------------------------------------------------------------------------------------------- G4: pods and price multipliers
+
+const POD_SHOT: Recipe = { takes: null, gives: 'espresso', consumes: ['beans'], seconds: 5 };
+
+/**
+ * G4: a gear machine's own recipe for what is in hand, or undefined to use the station's normal recipes.
+ * The Pod-o-Matic makes a shot from empty hands (a pod; no grinder) and does not take grounds.
+ */
+export function gearRecipe(s: Station, held: ItemKind | null): Recipe | null | undefined {
+  if (!s.gear || !GEAR[s.gear].pods) return undefined;
+  return held === null ? POD_SHOT : held === 'grounds' ? null : undefined;
+}
+
+/** G4: a Gear run with a pod machine can make espresso drinks without a grinder. */
+export function podsCoverGrinder(state: GameState): boolean {
+  return isGearRun(state) && state.stations.some((s) => s.gear && GEAR[s.gear].pods);
+}
+
+/** G4: the price multiplier the crew's gear puts on a drink (1 = none). Espresso drinks follow the
+ *  espresso machine (the best one if there are several); plain cold brew follows the cold brew tap. */
+export function gearPriceMul(state: GameState, drink: DrinkId): number {
+  if (!isGearRun(state)) return 1;
+  const station: StationKind | null = usesShot(drink) ? 'espresso' : drink === 'coldBrew' ? 'coldBrewTap' : null;
+  if (!station) return 1;
+  let best: GearId | null = null;
+  for (const s of state.stations) if (s.kind === station && s.gear && (!best || GEAR[s.gear].tier > GEAR[best].tier)) best = s.gear;
+  return best ? (GEAR[best].priceMul ?? 1) : 1;
+}
+
+/** G4: fold gear price multipliers into the day's modifiers (no-op outside a Gear run). */
+export function applyGearPrices(state: GameState, m: Modifiers): void {
+  if (!isGearRun(state)) return;
+  for (const d of Object.keys(m.price) as DrinkId[]) m.price[d] *= gearPriceMul(state, d);
 }

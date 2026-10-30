@@ -1,4 +1,5 @@
 import { recipeFor } from '../sim/stations';
+import { GEAR } from '../data/gear';
 import { ACCURACY } from '../sim/accuracy';
 import { ROLES } from '../sim/roles';
 import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
@@ -148,6 +149,11 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
     return go(`Rush it out now (−1★)`, `${where} · ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`);
   if (station.busyTicksLeft > 0) return idle(`Ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`, where);
   if (station.output !== null) return idle('Hands full', where);
+  // Gear G4: the Pod-o-Matic takes empty hands (a pod), not grounds.
+  if (station.gear && GEAR[station.gear].pods) {
+    if (held === 'grounds') return idle('Pods only: no grounds here', where);
+    if (held === null) return state.supplies.beans < 1 ? idle('Out of pods (beans)', where) : go('Pop in a pod', `${where} · ${(5 / GEAR[station.gear].speed).toFixed(1)} s`);
+  }
   const need = TAKES[kind];
   if (held !== null && held !== 'grounds' && !recipeFor(state, kind, held)) return idle(`Wrong station: E fumbles it (−1★)`, `${where} needs ${need ? ITEM_LABEL[need].toLowerCase() : 'empty hands'}`);
   if (held !== need) return idle(need ? `Needs ${ITEM_LABEL[need].toLowerCase()}` : 'Hands full', where);

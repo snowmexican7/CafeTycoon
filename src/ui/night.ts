@@ -1,6 +1,6 @@
 import { TASTE, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
 import { isGearId, type GearId } from '../data/gear';
-import type { GearTierState, GearTierVM, GearVM } from './gearVM';
+import { sellLabel, type GearTierState, type GearTierVM, type GearVM } from './gearVM';
 import { catalogueById } from '../data/catalogue';
 import { DRINK_INFO } from '../data/drinks';
 import type { AdId, CheckoutId, DrinkId, PitchKind, SupplyId, TierId } from '../sim/types';
@@ -150,7 +150,7 @@ export function gearBoard(g: GearVM): string {
   const slots = g.slots
     .map((s) => `<div class="st-slot gr-slot ${s.id ? '' : 'empty'}" aria-label="Slot ${s.index + 1}: ${esc(s.name)}">
         <span class="st-ic" aria-hidden="true">${s.icon}</span><b>${esc(s.name)}</b><small>Slot ${s.index + 1}</small>
-        ${s.id && s.id !== 'b0' ? `<button class="btn mini ghost" data-action="gear-sell" data-index="${s.index}">Sell · $${s.sell}</button>` : ''}</div>`)
+        ${s.id && s.id !== 'b0' ? ((l) => `<button class="btn mini ghost" data-action="gear-sell" data-index="${s.index}" title="${esc(l.title)}">${esc(l.text)}</button>`)(sellLabel(s.id, s.sell)) : ''}</div>`)
     .join('');
   const trees = g.trees
     .map((t) => `<div class="gr-tree"><div class="gr-tree-h"><span aria-hidden="true">${t.icon}</span> ${esc(t.name)}</div><div class="gr-tiers">${t.tiers

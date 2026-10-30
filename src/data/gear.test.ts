@@ -28,7 +28,8 @@ describe('gear data (Gear Tree G1)', () => {
   });
   it('isGearId and the start', () => {
     expect(isGearId('e2')).toBe(true);
-    expect(isGearId('e1')).toBe(false);
+    expect(isGearId('e1')).toBe(true); // G4: the Pod-o-Matic
+    expect(isGearId('e0')).toBe(false);
     expect(isGearId('toString')).toBe(false);
     expect(GEAR_START.cash).toBe(120);
   });

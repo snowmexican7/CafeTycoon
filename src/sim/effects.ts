@@ -1,4 +1,5 @@
 import { ECONOMY } from '../data/economy';
+import { applyGearPrices } from './gear';
 import { dayCurveFor } from '../data/challenges';
 import { scenarioById } from '../data/scenarios';
 import { catalogueById } from '../data/catalogue';
@@ -192,6 +193,7 @@ export function computeModifiers(state: GameState): Modifiers {
   applyPitch(state, m);
   applyCheckout(state, m);
   applyGrowth(state, m);
+  applyGearPrices(state, m);
   return m;
 }
 
