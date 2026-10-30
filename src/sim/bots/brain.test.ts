@@ -118,12 +118,15 @@ describe('bot brain', () => {
   it('a drink orphaned in a machine by a departed customer is collected, not left blocking it', () => {
     let s = cafe(1);
     s.menu.coldBrew = false; // no pass prep, so the bot's next think goes straight to the orphaned drink
+    s.players.find((p) => p.id === 'p1')!.pos = { x: 11, y: 5 }; // clear of the 2.5-tile person guard
     s.customers = [{ id: 900, drink: 'espresso', ...huge }];
     const machine = (x: GameState) => x.stations.find((st) => st.id === 'espresso')!;
     s = runUntil(s, (x) => machine(x).busyTicksLeft > 0 || machine(x).output === 'espresso', 60 * 30);
     expect(bot(s).bot!.claim).toBe(900);
     s.customers = [];
-    s = runUntil(s, (x) => machine(x).output === null && machine(x).busyTicksLeft === 0 && bot(x).holding === null && x.pass.some((i) => i.item === 'espresso'), 60 * 15); // brew, plus a reaction delay per adopted job
+    const wasted = s.today.wasted ?? 0;
+    // Brew, then the 15 s orphan wait (under the 18 s smoke egg), a walk and a reaction delay; a slow walk can still meet the smoke.
+    s = runUntil(s, (x) => machine(x).output === null && machine(x).busyTicksLeft === 0 && bot(x).holding === null && (x.pass.some((i) => i.item === 'espresso') || (x.today.wasted ?? 0) > wasted), 60 * 40);
     expect(bot(s).bot!.claim).toBeNull();
   });
 
@@ -986,5 +989,62 @@ describe('hurried bots pull cups early under a queue', () => {
     expect(ECONOMY.bots.personalities.hurried).toEqual({ speed: 1.15, reaction: 0.85, mistake: 0.08, preps: false });
     s.settings.botSkill = 3;
     expect(botSpeed(s, makeBotState('hurried'))).toBeCloseTo(1.15);
+  });
+});
+
+describe('bots wait before taking an item a person may be using', () => {
+  const sec = (n: number) => n * 60;
+  /** A quiet café: no pass prep, p1 parked at `at`, `out` sitting in `station` since `age` ticks ago. */
+  function parked(station: string, out: 'grounds' | 'latte' | 'espresso', at: Vec2, age: number): GameState {
+    const s = cafe(1);
+    s.menu.coldBrew = false;
+    const st = s.stations.find((x) => x.id === station)!;
+    st.output = out;
+    st.outputSince = s.tick - age;
+    s.players.find((p) => p.id === 'p1')!.pos = at;
+    return s;
+  }
+  const take = (id: string) => [{ kind: 'use', station: id, action: 'take' }];
+
+  it('grounds in the espresso machine with a person 2 tiles away are not taken or binned', () => {
+    let s = parked('espresso', 'grounds', { x: 3, y: 3 }, sec(1));
+    for (let i = 0; i < 300; i++) {
+      s = step(s, []);
+      expect(s.stations.find((x) => x.id === 'espresso')!.output).toBe('grounds');
+      expect(bot(s).holding).toBeNull();
+    }
+  });
+
+  it('the same grounds, person gone and 15 s elapsed, are taken', () => {
+    const young = parked('espresso', 'grounds', { x: 11, y: 5 }, sec(14));
+    expect(think(young, bot(young))[0].kind).toBe('idle');
+    const old = parked('espresso', 'grounds', { x: 11, y: 5 }, sec(15));
+    expect(think(old, bot(old))).toEqual(take('espresso'));
+  });
+
+  it('a finished latte is not taken while a person walks toward it from 3 tiles', () => {
+    const s = parked('steamer', 'latte', { x: 5, y: 4 }, sec(30));
+    const p1 = s.players.find((p) => p.id === 'p1')!;
+    p1.moveDir = { x: 0, y: -1 };
+    expect(think(s, bot(s))[0].kind).toBe('idle');
+    p1.moveDir = { x: 0, y: 1 }; // walking away
+    p1.pos = { x: 5, y: 3.5 };
+    expect(think(s, bot(s))[0].kind).toBe('idle'); // still within the 2.5-tile guard
+    p1.pos = { x: 5, y: 5 };
+    expect(think(s, bot(s))).toEqual(take('steamer'));
+  });
+
+  it('a finished latte that has sat 12 s with nobody around is taken', () => {
+    const young = parked('steamer', 'latte', { x: 11, y: 5 }, sec(11));
+    expect(think(young, bot(young))[0].kind).toBe('idle');
+    const old = parked('steamer', 'latte', { x: 11, y: 5 }, sec(12));
+    expect(think(old, bot(old))).toEqual(take('steamer'));
+  });
+
+  it('an espresso shot waits the longer prep time, and is rescued before the 18 s smoke', () => {
+    const young = parked('espresso', 'espresso', { x: 11, y: 5 }, sec(14));
+    expect(think(young, bot(young))[0].kind).toBe('idle');
+    const old = parked('espresso', 'espresso', { x: 11, y: 5 }, sec(15));
+    expect(think(old, bot(old))).toEqual(take('espresso'));
   });
 });

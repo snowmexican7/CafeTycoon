@@ -136,6 +136,7 @@ export function tryClearSmoke(state: GameState, playerId: PlayerId): boolean {
   if (Math.hypot(p.pos.x - st.pos.x, p.pos.y - st.pos.y) > ECONOMY.interactRangeTiles) return false;
   // Dump from the machine directly (no hands needed) — soft clear, one waste.
   st.output = null;
+  delete st.outputSince;
   eggs.smoke = undefined;
   if (eggs.outputAge) eggs.outputAge[st.id] = 0;
   state.today.wasted = (state.today.wasted ?? 0) + 1;

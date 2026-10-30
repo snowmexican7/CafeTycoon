@@ -39,6 +39,7 @@ function resolveDrop(state: GameState, p: Player): void {
     } else if (station.kind in STATION_RECIPES) {
       if (station.busyTicksLeft === 0 && station.output === null && station.occupiedBy === null) {
         station.output = item;
+        station.outputSince = state.tick;
         p.holding = null;
         emitLog(state, 'drop', { item, station: station.id, by: p.id });
       }

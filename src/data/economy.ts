@@ -99,6 +99,9 @@ export const ECONOMY = {
     maxWaitTicks: 900, // above a rogue's make (10 s) plus a power flicker (4 s)
     prepColdBrews: 2, // prepping bots keep at most this many cold brews ahead (pass + hands + tap)
     arriveRadius: 0.08,
+    orphanDrinkSeconds: 12, // a bot leaves a finished drink in a machine alone until it has sat this long
+    orphanPrepSeconds: 15, // ...and a shot or stray grounds (a person may be prepping the next step); under the 18 s smoke egg so a rescued shot is passed, not dumped
+    orphanGuardTiles: 2.5, // a connected person this close to the machine, or walking toward it, keeps it theirs
   },
   mess: {
     max: 12,

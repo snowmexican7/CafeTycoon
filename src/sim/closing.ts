@@ -36,6 +36,7 @@ export function finishDay(state: GameState): GameState {
   for (const s of state.stations) {
     s.busyTicksLeft = 0;
     s.output = null;
+    delete s.outputSince;
     s.occupiedBy = null;
     s.making = null;
   }
