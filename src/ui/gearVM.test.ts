@@ -13,7 +13,7 @@ describe('gearVM (Gear Tree G3)', () => {
     expect(vm.freeSlots).toBe(3);
     const cold = vm.trees.find((t) => t.id === 'coldBrew')!;
     expect(cold.tiers.map((t) => t.state)).toEqual(['buy', 'buy', 'buy', 'buy', 'poor']);
-    expect(vm.trees.find((t) => t.id === 'espresso')!.tiers.map((t) => t.state)).toEqual(['buy', 'poor', 'poor', 'poor', 'poor']);
+    expect(vm.trees.find((t) => t.id === 'espresso')!.tiers.map((t) => t.state)).toEqual(['buy', 'buy', 'poor', 'poor', 'poor', 'poor']);
     expect(vm.note).toMatch(/Nothing to sell/);
   });
   it('after buying: owned, passed and upgrade with the trade-in taken off', () => {
@@ -47,5 +47,14 @@ describe('Gear UI wiring (G3)', () => {
     expect(html).toContain('Pick your gear');
     expect(html).toContain('data-gear="c1"');
     expect(html).not.toContain('data-action="gear-sell"');
+  });
+});
+
+describe('Gear polish: tossing worthless gear', () => {
+  it('$0 gear says toss, not "Sell · $0"', async () => {
+    const { sellLabel } = await import('./gearVM');
+    expect(sellLabel('c1', 0).text).toBe('Bin the sock');
+    expect(sellLabel('s1', 0).text).toBe('Toss it');
+    expect(sellLabel('c2', 8).text).toBe('Sell · $8');
   });
 });

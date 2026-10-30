@@ -6,7 +6,7 @@ import { computeModifiers } from './effects';
 import { eventActive } from './events';
 import { emitLog } from './log';
 import { counterInteract } from './pass';
-import { gearMarks, gearSpeed } from './gear';
+import { gearMarks, gearRecipe, gearSpeed } from './gear';
 import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
@@ -110,7 +110,8 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     return state;
   }
   const idle = station.busyTicksLeft === 0 && station.output === null;
-  const recipe = recipeFor(state, station.kind, player.holding);
+  const own = gearRecipe(station, player.holding);
+  const recipe = own !== undefined ? (own && recipeAllowed(state, own.gives) ? own : null) : recipeFor(state, station.kind, player.holding);
   if (idle && recipe && stocked(state, recipe) && station.batchLeft !== 0) {
     for (const s of recipe.consumes) state.supplies[s] -= 1;
     cupIntoStation(player, station);
