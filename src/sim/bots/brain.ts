@@ -22,6 +22,7 @@ import { rogueNear, rogueTiles } from '../rogue';
 import { passSlots } from '../pickup';
 import { tillNext } from '../till';
 import { PICKUP_ID } from '../../data/layout';
+import { answerPhone } from './phone';
 
 const BOTS = ECONOMY.bots;
 const MESS = ECONOMY.mess;
@@ -917,6 +918,7 @@ function stepBot(state: GameState, p: Player): void {
 
 /** Every connected bot, in players order, picks its moveDir and whether to press "use" this tick. */
 export function stepBots(state: GameState, _m: Modifiers): GameState {
+  answerPhone(state);
   for (const p of state.players) {
     if (p.bot && p.connected && p.stunTicksLeft === 0) stepBot(state, p);
   }

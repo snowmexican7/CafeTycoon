@@ -137,7 +137,9 @@ export type SimEventKind =
   | 'condiment.use'
   | 'condiment.black'
   | 'condiment.refill'
-  | 'steep';
+  | 'steep'
+  /** P4 B6: someone (a person or a bot) picked up the branch's phone. */
+  | 'call.answer';
 
 export interface SimEvent {
   seq: number;
