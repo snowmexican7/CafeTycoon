@@ -76,3 +76,20 @@ describe('Gear G5: the day HUD gear card', () => {
     expect('gear' in hudViewModel(classic)).toBe(false);
   });
 });
+
+describe('Gear G7b: the street notebook', () => {
+  it('counts served per family over finished days and shows stars after 10', async () => {
+    const { notebookVM } = await import('./gearVM');
+    const { gearArea } = await import('../sim/gear');
+    const s = run();
+    const rainy = { ...s, scenario: 'rainyWeek' as const };
+    expect(gearArea(rainy)).toBe('drizzleton');
+    const day = (drinks: Record<string, number>) => ({ ...(s.today as object), drinks }) as (typeof s.days)[number];
+    rainy.days = [day({ latte: 6, icedLatte: 3 }), day({ mocha: 5, coldBrew: 8, espresso: 2 })];
+    const nb = notebookVM(rainy);
+    expect(nb.map((r) => [r.family, r.served, r.stars])).toEqual([['espresso', 2, null], ['milky', 11, 5], ['iced', 11, 2]]);
+    expect(nb[0].left).toBe(8);
+    const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
+    expect(notebookVM(classic)).toEqual([]);
+  });
+});

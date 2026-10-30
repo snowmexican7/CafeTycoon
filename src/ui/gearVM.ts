@@ -1,3 +1,5 @@
+import { AREAS, DRINK_FAMILY, type DrinkFamily } from '../data/areas';
+import { gearArea } from '../sim/gear';
 /**
  * Gear Tree G3: the Spend › Gear card (replaces Spend › Stations in a Gear run). Pure view model over
  * sim/gear.ts: the back-bar slots with the gear in each, then one row per tree with every tier and what
@@ -5,7 +7,7 @@
  */
 import { GEAR, GEAR_TREES, treeTiers, type GearId, type GearTree } from '../data/gear';
 import { slotCount } from '../sim/slots';
-import type { GameState } from '../sim/types';
+import type { DrinkId, GameState } from '../sim/types';
 
 export type GearTierState = 'owned' | 'passed' | 'buy' | 'upgrade' | 'poor' | 'noSlot';
 
@@ -31,6 +33,35 @@ export interface GearVM {
   freeSlots: number;
   /** One line about what's missing ("No grinder: espresso can't be made"), or null. */
   note: string | null;
+  /** G7b: the street notebook. One row per drink family; stars once you've served enough of it. */
+  notebook: NotebookRowVM[];
+}
+
+export interface NotebookRowVM { family: DrinkFamily; label: string; icon: string; served: number; stars: number | null; left: number }
+
+/** G7b: serve this many of a family before the street tells you how it feels about it. */
+export const NOTEBOOK_AFTER = 10;
+const FAMILIES: { family: DrinkFamily; label: string; icon: string }[] = [
+  { family: 'espresso', label: 'Espresso', icon: '☕' },
+  { family: 'milky', label: 'Milky', icon: '🥛' },
+  { family: 'iced', label: 'Iced', icon: '🧊' },
+];
+
+/** G7b: served counts per family over finished days, and a 2–5★ verdict once there are enough. */
+export function notebookVM(state: GameState): NotebookRowVM[] {
+  const id = gearArea(state);
+  if (!id) return [];
+  const area = AREAS[id];
+  const served: Record<DrinkFamily, number> = { espresso: 0, milky: 0, iced: 0, filter: 0 };
+  for (const d of state.days) for (const [drink, n] of Object.entries(d.drinks ?? {})) {
+    const fam = DRINK_FAMILY[drink as DrinkId];
+    if (fam) served[fam] += n ?? 0;
+  }
+  return FAMILIES.map((f) => {
+    const n = served[f.family];
+    const stars = n < NOTEBOOK_AFTER ? null : area.loves.includes(f.family) ? 5 : area.meh.includes(f.family) ? 2 : area.all ? 4 : 3;
+    return { ...f, served: n, stars, left: Math.max(0, NOTEBOOK_AFTER - n) };
+  });
 }
 
 const ICON: Record<GearTree, string> = Object.fromEntries(GEAR_TREES.map((t) => [t.id, t.icon])) as Record<GearTree, string>;
@@ -76,7 +107,7 @@ export function gearVM(state: GameState): GearVM {
   if (!has('coldBrew') && !has('espresso')) note = 'Nothing to sell yet: buy a cold brew rig or an espresso machine.';
   else if (has('espresso') && !has('grinder') && !slots.some((s) => s.id && GEAR[s.id].pods)) note = 'Espresso needs beans ground first: buy a grinder.';
   else if (!Object.values(state.supplies).some((x) => x > 0)) note = 'No supplies yet: restock on the Tonight tab.';
-  return { pickNight: state.day <= 1, slots, trees, freeSlots, note };
+  return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook: notebookVM(state) };
 }
 
 /** Polish: what the sell button says. Worthless gear gets tossed, not sold. */
