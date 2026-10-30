@@ -380,7 +380,7 @@ function receiptBody(vm: NightVM, day: number): string {
   if (!t) return '<p>No sales yet.</p>';
   const line = (a: string, b: string, cls = '') => `<div class="line ${cls}"><span>${a}</span><span>${b}</span></div>`;
   return `<div class="rc-paper"><h3>DAY ${day - 1}</h3>
-    ${line('Sales', esc(t.sales))}${line('Tips', esc(t.tips))}${line('Rent', `<span class="neg">−${esc(t.rent)}</span>`)}
+    ${line('Sales', esc(t.sales))}${line('Tips', esc(t.tips))}${t.familyTips ? t.familyTips.map((f) => line(`&nbsp;&nbsp;${esc(f.label)}`, esc(f.amount), 'sub fam-tip')).join('') : ''}${line('Rent', `<span class="neg">−${esc(t.rent)}</span>`)}
     ${t.bonus ? line('Bonuses', `+${esc(t.bonus)}`) : ''}
     ${t.combos ? t.combos.map((c) => line(`New combo: ${TWIST_INFO[c.twist].icon} ${esc(TWIST_INFO[c.twist].name)} ${esc(DRINK_INFO[c.drink].short.toLowerCase())}`, `<span class="stars">${starRow(c.stars)}</span>`, 'combo')).join('') : ''}
     ${t.ad ? line(esc(t.ad), '') : ''}

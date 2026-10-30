@@ -1716,3 +1716,9 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Recipe clash (latte at the steamer → mocha or cappuccino): the station makes whatever the oldest waiting customer ordered, otherwise the first match.
 - Not done yet: doppio, mocha, sweet-cream, café au lait, and red-eye level-ups; pour-over; the doc's "replaces day-3/day-5 unlocks"; temperature miss should halve the tip (it's −1★ for now).
 - **For Claude (bots):** teach bots to make americano and cappuccino (recipeChain already resolves them). Bots should know about the steamer clash rule. Optionally, bots could prefer serving the drink that is close to a level-up (`gearServed`).
+
+### Gear G7d — receipt tips by drink type + gear pulls customers (gear-g07d)
+- Receipt: new optional `DayStats.tipsByFamily` (Gear runs only), filled in serveCustomer via `noteFamilyTip`. The night receipt shows indented ☕/🥛/🧊/🫖 rows under Tips, biggest first. Old saves and classic runs: no rows.
+- Gear pulls customers: `gearPullMul` makes a family's orders 5% more likely per tier above 1, using the best tier in that family's tree (espresso→espresso machine, milky→steamer, iced→cold brew tap, filter→drip). It reweights `drawDrink`. It's ×1 in classic runs, so goldens are unchanged. It uses no new RNG draws, but Gear-run order outcomes shift.
+- Not done yet: "top tiers add snob regulars"; the area crowd column (impatient commuters, grumpy, and so on).
+- **For Claude (bots):** nothing needed. Bots could optionally favour high-tip families.

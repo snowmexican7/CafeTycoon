@@ -289,6 +289,32 @@ export function areaTipMul(state: GameState, drink: DrinkId): number {
   return mul;
 }
 
+/** G7: the gear tree that makes each drink family (the family's "best tier" for gear pull). */
+export const FAMILY_TREE: Record<DrinkFamily, StationKind> = { espresso: 'espresso', milky: 'steamer', iced: 'coldBrewTap', filter: 'drip' };
+export const GEAR_PULL = 0.05;
+
+/**
+ * Gear Tree G7 "gear pulls customers": the best tier the crew owns in a drink's family adds 5% to that
+ * family's orders per tier above 1 (×1 in classic runs, with no gear in the family, or for specials).
+ * Pure (no RNG); it reweights the existing order draw.
+ */
+export function gearPullMul(state: GameState, drink: DrinkId): number {
+  if (!isGearRun(state)) return 1;
+  const fam = DRINK_FAMILY[drink];
+  if (!fam) return 1;
+  let best = 0;
+  for (const s of state.stations) if (s.kind === FAMILY_TREE[fam] && s.gear) best = Math.max(best, GEAR[s.gear].tier);
+  return 1 + GEAR_PULL * Math.max(0, best - 1);
+}
+
+/** G7: add a served cup's tip to today's per-family tally (Gear runs only). */
+export function noteFamilyTip(state: GameState, drink: DrinkId, tip: number): void {
+  const fam = DRINK_FAMILY[drink];
+  if (!isGearRun(state) || !fam || tip <= 0) return;
+  const t = (state.today.tipsByFamily ??= {});
+  t[fam] = round2((t[fam] ?? 0) + tip);
+}
+
 /**
  * Gear Tree G7c: an arriving walk-in sometimes wants a family the area loves that isn't on today's menu.
  * They leave without costing rating; the count becomes tomorrow's morning note. Returns true when the

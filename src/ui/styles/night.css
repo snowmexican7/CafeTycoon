@@ -296,3 +296,5 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .gr-tier .btn { width: 100%; }
 #night .gr-tier.owned { box-shadow: 0 0 0 3px #6aa36f, 0 3px 0 #e2cfb2; }
 #night .gr-tier.passed, #night .gr-tier.poor, #night .gr-tier.noSlot { opacity: .62; }
+/* Gear G7: receipt tips by drink type */
+#night .rc-paper .line.fam-tip { font-size: var(--fs-s, 0.95em); color: var(--ink-soft); padding-left: 10px; }
