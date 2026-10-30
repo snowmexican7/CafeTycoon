@@ -39,15 +39,19 @@ export interface AreaInfo {
   mehDrink?: DrinkId[];
   /** G10b: snobs notice quality: tips swing with the cup's stars. */
   quality?: boolean;
+  /** G10: how much more often walk-ins order a loved family (doc §7 "×1.5"). The scenario areas (campus,
+   *  Drizzleton, tourists) already tilt orders through their scenario, so only the hidden three set this. */
+  pull?: Partial<Record<DrinkFamily, number>>;
+  pullDrink?: Partial<Record<DrinkId, number>>;
 }
 
 /** Hidden per run (nothing shown up front). Loved families tip ×1.2, meh ×0.85 (GEAR_TREE.md §7). */
 export const AREAS: Record<AreaId, AreaInfo> = {
   campus: { name: 'Campus town', loves: ['iced'], meh: ['filter'], all: 0.9, crowd: 'Students: low tips, love iced' },
   drizzleton: { name: 'Drizzleton', loves: ['milky'], meh: ['iced'], patienceFam: { milky: 1.25 }, crowd: 'Grumpy, but patient for lattes' },
-  office: { name: 'Office park', loves: ['filter'], meh: [], patience: 0.85, mehDrink: ['pourOver'], crowd: 'Commuters: impatient, love filter, pour-over is too slow' },
-  arts: { name: 'Arts district', loves: ['espresso'], meh: ['filter'], lovesDrink: ['pourOver'], quality: true, crowd: 'Snobs: love espresso and pour-over, notice quality' },
-  gym: { name: 'Gym strip', loves: ['iced', 'espresso'], meh: ['milky'], patience: 0.85, crowd: 'Early and in a hurry: iced or espresso' },
+  office: { name: 'Office park', loves: ['filter'], meh: [], patience: 0.85, mehDrink: ['pourOver'], pull: { filter: 1.5 }, pullDrink: { pourOver: 1 / 1.5 }, crowd: 'Commuters: impatient, love filter, pour-over is too slow' },
+  arts: { name: 'Arts district', loves: ['espresso'], meh: ['filter'], lovesDrink: ['pourOver'], quality: true, pull: { espresso: 1.4 }, pullDrink: { pourOver: 1.4 }, crowd: 'Snobs: love espresso and pour-over, notice quality' },
+  gym: { name: 'Gym strip', loves: ['iced', 'espresso'], meh: ['milky'], patience: 0.85, pull: { iced: 1.3, espresso: 1.3 }, crowd: 'Early and in a hurry: iced or espresso' },
   tourist: { name: 'Tourist season', loves: [], meh: [], all: 1.15, crowd: 'Crowds with big tips' },
 };
 

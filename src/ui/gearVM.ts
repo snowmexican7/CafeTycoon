@@ -105,6 +105,10 @@ export function gearStats(id: GearId): string {
   out.push(g.pour ? (g.pour.seconds >= 6 ? `Slow: one cup, ${g.pour.seconds} s` : `3 cones: a cup every ${g.pour.seconds} s`) : g.speed < 1 ? 'Slow' : g.speed > 1 ? 'Fast' : 'Normal speed');
   if (g.marks) out.push(`-${g.marks}★ per cup`);
   if (g.pods) out.push('Pods, no grinder');
+  if (g.polish) out.push('Forgives 1 slip per cup (+1★)');
+  if (g.flow) out.push('Rare flow state: ×2 speed');
+  if (g.draws) out.push(`+${Math.round((g.draws.mul - 1) * 100)}% ${g.draws.family} orders`);
+  if (g.influencerOdds) out.push(`Influencers ×${g.influencerOdds}`);
   if (g.twin) out.push(g.twin.includes('espresso') ? 'Two groups + steam wand' : 'Steam wand built in');
   if (g.pot) out.push(`${g.pot.cups}-cup pot · ${g.pot.coldAfter === null ? 'stays hot' : `cold after ${g.pot.coldAfter} s`}${g.pot.miss ? ` · ${Math.round(g.pot.miss * 100)}% too hot/cold` : ''}`);
   if (g.priceMul && g.priceMul !== 1) out.push(`Sells at ×${g.priceMul}`);

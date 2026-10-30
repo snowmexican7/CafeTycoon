@@ -6,7 +6,7 @@ import { computeModifiers } from './effects';
 import { eventActive } from './events';
 import { emitLog } from './log';
 import { counterInteract } from './pass';
-import { gearAfterUse, gearBlocked, gearMarks, gearPotFinished, gearPotPour, gearRecipe, gearSpeed, gearTempMiss } from './gear';
+import { gearAfterUse, gearBlocked, gearMarks, gearPolish, gearPotFinished, gearPotPour, gearRecipe, gearSpeed, gearTempMiss } from './gear';
 import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
@@ -138,11 +138,12 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     if (station.batchLeft !== undefined) station.batchLeft -= 1;
     const gm = gearMarks(station);
     if (gm > 0) station.cupSlips = Math.min(ACCURACY.maxStars, (station.cupSlips ?? 0) + gm);
+    else gearPolish(station);
     player.holding = null;
     station.making = recipe.gives;
     const speed = computeModifiers(state).stationSpeed[station.kind];
     const seconds = recipe.seconds ?? ECONOMY.stationSeconds[station.kind as RecipeStation];
-    station.busyTicksLeft = Math.round(((seconds * roleMachineTime(state, playerId)) / (speed * gearSpeed(station))) * TICK_RATE);
+    station.busyTicksLeft = Math.round(((seconds * roleMachineTime(state, playerId)) / (speed * gearSpeed(station, state.tick))) * TICK_RATE);
     station.busyTotal = station.busyTicksLeft;
     gearAfterUse(state, station, player);
   } else if (idle && !recipe && player.holding !== null && player.holding !== 'grounds' && isRecipeStation(station.kind)) {

@@ -8,6 +8,7 @@ import { nearestStation } from '../movement';
 import { emitLog } from '../log';
 import { rngInt, rngNext } from '../rng';
 import { STATION_RECIPES, recipeFor, stocked } from '../stations';
+import { gearRecipe, podsCoverGrinder } from '../gear';
 import { RECIPES, recipeChain, usesShot } from '../../data/drinks';
 import { zeroDrinks } from '../tally';
 import { tally } from '../tally';
@@ -90,6 +91,8 @@ export function chainFor(state: GameState, p: Player, drink: DrinkId, finish: 's
   // Every station on the drink's recipe ticket, in order (a mocha visits the steamer twice).
   const steps: BotStep[] = [];
   for (const { station } of recipeChain(drink)) {
+    // Gear G10: a pod machine pulls its shot from empty hands, so with no grinder the grind step drops out.
+    if (station === 'grinder' && !state.stations.some((s) => s.kind === 'grinder') && podsCoverGrinder(state)) continue;
     const insert = use(state, p, station, 'insert');
     if (insert === null || insert.kind !== 'use') return [];
     steps.push(insert, { kind: 'use', station: insert.station, action: 'take' });
@@ -420,7 +423,9 @@ function act(state: GameState, p: Player, action: BotAction, st: Station): void 
       if (!isRecipeKind(st.kind)) return abandon(state, p);
       // A drink not yet checked stays in hand: a botched espresso must not become a latte.
       if (b.noticeTicksLeft > 0 && isDrink(p.holding)) return wait(state, p);
-      const r = recipeFor(state, st.kind, p.holding);
+      // Gear G10: the station's own gear recipe first (a pod machine pulls a shot from empty hands), as stations.ts does.
+      const own = gearRecipe(st, p.holding);
+      const r = own !== undefined ? own : recipeFor(state, st.kind, p.holding);
       const idle = st.busyTicksLeft === 0 && st.output === null;
       if (idle && r && stocked(state, r)) return execute(p);
       const kind = st.kind;
