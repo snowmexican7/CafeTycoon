@@ -25,6 +25,25 @@ when a build goes out, the line moves under its version with the date.
   before brewing. Steamers drip milk, grinders spill grounds and the bin sometimes leaks: each mess knocks 8% off
   the floor meter, and a quick mop wins it back within a minute.
 
+## 3.3.3 — 2026-10-30 · The back sink on screen
+
+The screen catches up with the sink, cold cups and stale pots. This build also carries the sim changes listed under
+Unreleased above (solo helpers, cups going cold, the sink and new messes); they get their full write-up when they
+are released.
+
+- **The back sink.** A steel sink with a tap at the back of the bar. Walk up holding a drink and the hint says
+  "Dump it"; holding the old drip pot it says "Dump the pot". A blue ring pulses on the sink while you're carrying
+  something it takes, and the dump gurgles.
+- **Old and stale pots.** A drip pot that went cold or sat overnight gets a "STALE: dump at sink" (or "COLD") badge,
+  and the hint tells you to lift it with empty hands. While the pot is out the machine shows "POT OUT · name", the
+  pot rides in your hands, and your hand slot reads "Old drip pot".
+- **Cold cups.** The cooling rings on the pickup counter and drip pot now follow the new cooling clock. A cup in
+  your hands that has gone cold is tagged "cold", the hint points you to the sink, and empty hands at pickup say
+  "Take back the cold …". Cold pickups and bad reviews get a sound and a pop-up.
+- **Messes you can see.** Bin leaks, milk drips and spilled grounds splash where they land, with a short pop-up.
+- **Solo helpers.** The start screen has an Off / 1 / 2 picker for how many bots help in Play solo.
+- **Pop-ups stay longer.** Event pop-ups over the café are brighter and stay up about three seconds.
+
 ## 3.3.2 — 2026-10-30 · How many are left?
 
 Small screen-only changes from Kennedy's playtest. Nothing about how the game plays has changed.
