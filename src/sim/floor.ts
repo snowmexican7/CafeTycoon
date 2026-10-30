@@ -28,7 +28,10 @@ export function placeMess(state: GameState, kind: MessKind, tile: Vec2, source?:
   } else {
     state.messes.push({ id: state.nextMessId++, kind, x: tile.x, y: tile.y, amount: 1 });
   }
-  if (state.gear === true) emitLog(state, 'mess.spawn', { kind: source?.kind ?? kind, x: tile.x, y: tile.y, ...(source?.at ? { at: source.at } : {}) });
+  if (state.gear === true) {
+    state.cleanliness = Math.max(0, state.cleanliness - GEAR_FLOOR.hit);
+    emitLog(state, 'mess.spawn', { kind: source?.kind ?? kind, x: tile.x, y: tile.y, ...(source?.at ? { at: source.at } : {}) });
+  }
   return true;
 }
 
@@ -99,10 +102,22 @@ function slip(state: GameState, p: Player): void {
 }
 
 /**
- * FB2 A3, Gear runs: the floor meter per tick, down per mess on the floor and up when there is none. Faster down and
- * slower back than classic (ECONOMY.mess), so a mess left through a rush shows on the meter for a while.
+ * FB2 A3, Gear runs: every new mess knocks `hit` points off the floor meter at once (placeMess); then, per tick, it
+ * drifts down per mess on the floor and comes back when there is none. Both slower than classic (ECONOMY.mess), so a
+ * mess shows on the meter for the rest of the day, and one left through a rush does not sink it to the inspector's bar.
+ * Customers only start to mind below `patienceFrom` (see floorPatience).
  */
-export const GEAR_FLOOR = { dirtPerMessPerTick: 0.006, recoverPerTick: 0.003 } as const;
+export const GEAR_FLOOR = { hit: 8, dirtPerMessPerTick: 0.002, recoverPerTick: 0.0003, patienceFrom: 80 } as const;
+
+/**
+ * The floor's patience multiplier for a new arrival: classic, a straight line from 1 (spotless) down to
+ * ECONOMY.mess.patienceFloor (filthy). FB2 A3, Gear runs: 1 down to GEAR_FLOOR.patienceFrom, then the same line
+ * squeezed into what is left, so a floor scuffed into the 80s and 90s costs no patience.
+ */
+export function floorPatience(state: GameState): number {
+  const clean = state.gear === true ? Math.min(100, (state.cleanliness * 100) / GEAR_FLOOR.patienceFrom) : state.cleanliness;
+  return M.patienceFloor + ((1 - M.patienceFloor) * clean) / 100;
+}
 
 /** Cleanliness drifts down with each mess on the floor and recovers when there are none. */
 export function stepCleanliness(state: GameState): void {

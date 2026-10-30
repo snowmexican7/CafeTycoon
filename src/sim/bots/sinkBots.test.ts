@@ -117,4 +117,32 @@ describe('FB2 A3: bots and the sink', () => {
     p.pos = { x: 10, y: 3 };
     expect(ids(think(s, p))).toEqual(['trash:trash']); // grounds never go down the sink
   });
+
+  it('Gear: a bot with nothing to make mops even a single mess (classic waits for a dirtier floor)', () => {
+    const s = POT();
+    s.messes = [{ id: s.nextMessId++, kind: 'spill', x: 6, y: 4, amount: 1 }];
+    expect(ids(think(s, sim(s)))[0]).toBe('floor');
+    expect(think(s, sim(s))[0]).toMatchObject({ kind: 'floor', action: 'takeMop' });
+    const c = startDay(createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    addStandIns(c, 1);
+    c.messes = [{ id: c.nextMessId++, kind: 'spill', x: 6, y: 4, amount: 1 }];
+    expect(think(c, sim(c)).some((x) => x.kind === 'floor')).toBe(false);
+  });
+
+  it('Gear: a bot with the mop in hand finishes its trip even when an order comes in', () => {
+    let s = POT();
+    s.messes = [{ id: s.nextMessId++, kind: 'spill', x: 6, y: 4, amount: 1 }];
+    let guard = 0;
+    while (sim(s).tool !== 'mop' && guard++ < 60 * 20) s = step(s, []);
+    expect(sim(s).tool).toBe('mop');
+    s.customers = [rung(1, 'espresso')];
+    guard = 0;
+    while (s.messes.length > 0 && guard++ < 60 * 20) {
+      s = step(s, []);
+      expect(sim(s).bot!.claim).toBeNull();
+    }
+    expect(s.messes).toEqual([]);
+    const { s: t } = runUntil(s, (x) => x.customers.length === 0, 60 * 60);
+    expect(t.today.served).toBe(1);
+  });
 });

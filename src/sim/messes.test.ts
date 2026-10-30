@@ -3,7 +3,8 @@ import { createRun, startDay } from './run';
 import { step } from './step';
 import { stationsFromSlots } from './slots';
 import { interact } from './stations';
-import { stepCleanliness, placeMess } from './floor';
+import { floorPatience, stepCleanliness, placeMess } from './floor';
+import { computeModifiers } from './effects';
 import { nodeOf } from './bots/path';
 import { rngNext } from './rng';
 import { GEAR_FLOOR, MESSES } from './messes';
@@ -124,7 +125,21 @@ describe('FB2 A3: milk drips and spilled grounds', () => {
 });
 
 describe('FB2 A3: the floor meter in Gear runs', () => {
-  it('drops faster per mess and recovers slower than classic', () => {
+  it('every new mess knocks GEAR_FLOOR.hit off the meter at once (merges too); classic has no hit', () => {
+    const s = gearStand();
+    placeMess(s, 'spill', { x: 3, y: 4 });
+    expect(s.cleanliness).toBe(100 - GEAR_FLOOR.hit);
+    placeMess(s, 'spill', { x: 3, y: 4 });
+    expect(s.cleanliness).toBe(100 - 2 * GEAR_FLOOR.hit);
+    s.cleanliness = 2;
+    placeMess(s, 'grounds', { x: 2, y: 4 });
+    expect(s.cleanliness).toBe(0);
+    const c = classicDay();
+    placeMess(c, 'spill', { x: 3, y: 4 });
+    expect(c.cleanliness).toBe(100);
+  });
+
+  it('drifts down slower per mess than classic, and recovers slower too (the hit is what shows)', () => {
     const s = gearStand();
     s.messes = [{ id: 1, kind: 'spill', x: 3, y: 4, amount: 1 }];
     for (let i = 0; i < 60; i++) stepCleanliness(s);
@@ -133,8 +148,30 @@ describe('FB2 A3: the floor meter in Gear runs', () => {
     const low = s.cleanliness;
     stepCleanliness(s);
     expect(s.cleanliness).toBeCloseTo(low + GEAR_FLOOR.recoverPerTick, 6);
-    expect(GEAR_FLOOR.dirtPerMessPerTick).toBeGreaterThan(ECONOMY.mess.dirtPerMessPerTick);
+    expect(GEAR_FLOOR.dirtPerMessPerTick).toBeLessThan(ECONOMY.mess.dirtPerMessPerTick);
     expect(GEAR_FLOOR.recoverPerTick).toBeLessThan(ECONOMY.mess.recoverPerTick);
+  });
+});
+
+describe('FB2 A3: the floor and patience in Gear runs', () => {
+  it('patience is untouched down to GEAR_FLOOR.patienceFrom, then falls to the classic floor at 0', () => {
+    const s = gearStand();
+    expect(floorPatience(s)).toBe(1);
+    s.cleanliness = GEAR_FLOOR.patienceFrom;
+    expect(floorPatience(s)).toBe(1);
+    s.cleanliness = GEAR_FLOOR.patienceFrom / 2;
+    expect(floorPatience(s)).toBeCloseTo(ECONOMY.mess.patienceFloor + (1 - ECONOMY.mess.patienceFloor) / 2, 6);
+    s.cleanliness = 0;
+    expect(floorPatience(s)).toBeCloseTo(ECONOMY.mess.patienceFloor, 6);
+    const at = (c: number) => { s.cleanliness = c; return computeModifiers(s).patience; };
+    expect(at(90)).toBe(at(100));
+    expect(at(40)).toBeLessThan(at(100));
+  });
+
+  it('classic keeps the straight line', () => {
+    const c = classicDay();
+    c.cleanliness = 90;
+    expect(floorPatience(c)).toBeCloseTo(ECONOMY.mess.patienceFloor + (1 - ECONOMY.mess.patienceFloor) * 0.9, 6);
   });
 });
 

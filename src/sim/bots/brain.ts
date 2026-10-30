@@ -461,12 +461,15 @@ export function mopPlan(state: GameState, _p: Player): BotStep[] {
   return plan;
 }
 
-/** The mop is free, the floor is dirty enough, and no other bot is already on a mop plan. */
+/**
+ * The mop is free, the floor is dirty enough, and no other bot is already on a mop plan. FB2 A3: in a Gear run any mess
+ * will do (a quiet moment's job; the Gear floor meter barely moves until a mess has done its damage).
+ */
 function shouldMop(state: GameState, p: Player): boolean {
   return (
     state.mop.heldBy === null &&
     state.messes.length > 0 &&
-    (state.cleanliness < MESS.botMopBelow || state.messes.length >= MESS.botMopMesses) &&
+    (state.gear === true || state.cleanliness < MESS.botMopBelow || state.messes.length >= MESS.botMopMesses) &&
     !state.players.some((o) => o !== p && o.bot?.plan.some(isMopStep))
   );
 }
@@ -999,7 +1002,10 @@ function stepBot(state: GameState, p: Player): void {
   }
   // Orders come first: an uncovered order the bar can make now interrupts any floor step, a clean in
   // progress included (one it can't make would cancel the mop every tick and leave the floor dirty).
-  if ((isMopStep(b.plan[0]) || p.cleaningTicksLeft > 0) && claimable(state, p) !== null) {
+  // FB2 A3, Gear runs: once the mop is in hand the trip is finished (at most botMopMax messes); in a busy shop a
+  // trip broken off at every new ticket cleaned nothing all day.
+  const mopTrip = state.gear === true && p.tool === 'mop';
+  if (!mopTrip && (isMopStep(b.plan[0]) || p.cleaningTicksLeft > 0) && claimable(state, p) !== null) {
     p.cleaningTicksLeft = 0;
     p.cleaningMess = null;
     if (p.tool === 'mop') returnMop(state, p);
