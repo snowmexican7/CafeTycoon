@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRun, startDay, startNight } from './run';
 import { finishDay } from './closing';
 import { step } from './step';
-import { areaFit, BRANCH, branchAreas, branchDay } from './branch';
+import { areaFit, BRANCH, branchAreas, branchDay, canOpenBranch } from './branch';
 import { branchViewModel } from '../ui/branchView';
 import { gearArea } from './gear';
 import { fittingsValue, scoreRun } from './score';
@@ -33,6 +33,15 @@ describe('second shop (P4 B4)', () => {
     expect(s.cash).toBe(1000 - BRANCH.cost);
     // Score-neutral-ish: the lease counts at half, like any fitting.
     expect(fittingsValue(s) - fittingsValue(night())).toBeCloseTo(BRANCH.cost / 2, 2);
+  });
+
+  it('review M1: a café made by createRun (tier absent) can open a branch', () => {
+    const s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], settings: { bots: 0 }, tier: 'cafe', gear: true });
+    expect(s.tier).toBeUndefined();
+    s.cash = 1000;
+    expect(canOpenBranch(s)).toBe(true);
+    s.tier = 'cart';
+    expect(canOpenBranch(s)).toBe(false);
   });
 
   it('banks a deterministic off-screen day at closing, capped by staff, and counts it in the profit', () => {

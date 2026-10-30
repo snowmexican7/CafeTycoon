@@ -62,9 +62,9 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
 export type ExtraMoves = (state: GameState, ids: string[]) => PlayerInput[];
 
 export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0, extra?: ExtraMoves, onState?: (s: GameState) => void, start?: { tier: TierId; cash: number }) {
-  let s = createRun({ seed, hostId: 'tester', players: [], tier: 'stand', gear: true, settings: { bots, dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4 } });
-  // P6-6: start further along (e.g. the café tier with cash) so later systems get exercised.
-  if (start) { s.tier = start.tier; s.cash = s.startingCash = start.cash; }
+  let s = createRun({ seed, hostId: 'tester', players: [], tier: start?.tier ?? 'stand', gear: true, settings: { bots, dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4 } });
+  // P6-6: start further along (e.g. the café tier with cash) so later systems get exercised. createRun builds the tier's floor.
+  if (start) s.cash = s.startingCash = start.cash;
   addStandIns(s, humans);
   if (bots) syncBots(s);
   if (scenario) s.scenario = scenario;
@@ -126,7 +126,7 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
   return {
     humans, seed, area: gearArea(s), days: d.length, cash: r2(s.cash), bankrupt: s.bankrupt,
     served: d.reduce((a, x) => a + x.served, 0), lost: d.reduce((a, x) => a + x.lost, 0),
-    stars: cups ? r2(stars / cups) : null, tier: s.tier, gear: (s.slotGear ?? []).filter(Boolean).join(' '),
+    stars: cups ? r2(stars / cups) : null, tier: s.tier ?? 'cafe', gear: (s.slotGear ?? []).filter(Boolean).join(' '),
     drinks: d.reduce((a, x) => { for (const [k, v] of Object.entries(x.drinks ?? {})) if (v) a[k] = (a[k] ?? 0) + v; return a; }, {} as Record<string, number>),
     botMistakes: d.reduce((a, x) => a + (x.botMistakes ?? 0), 0),
     cashByDay: d.map((x) => Math.round(x.sales + x.tips)),

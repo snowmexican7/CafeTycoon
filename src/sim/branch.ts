@@ -50,7 +50,7 @@ export function branchAreas(state: GameState): AreaId[] {
 }
 
 export function canOpenBranch(state: GameState): boolean {
-  return !!state.gear && state.tier === 'cafe' && !state.branch && state.cash >= BRANCH.cost;
+  return !!state.gear && (state.tier ?? 'cafe') === 'cafe' && !state.branch && state.cash >= BRANCH.cost;
 }
 
 /** The drinks on tonight's board. */
