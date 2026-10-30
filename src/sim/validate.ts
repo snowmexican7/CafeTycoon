@@ -12,6 +12,8 @@ import { isRole } from './roles';
 import { LAYOUT } from '../data/layout';
 import { DRINK_IDS } from '../data/drinks';
 import { isReservedId } from './constants';
+import { STEEP } from './steep';
+import { CONDIMENTS } from './condiments';
 import type { BotSkill, Pace, PlayerInput, Settings, SupplyId } from './types';
 
 const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour'];
@@ -106,6 +108,14 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
     }
     case 'staff':
       return input.action === 'hire' || input.action === 'fire' ? { kind: 'staff', playerId: input.playerId, action: input.action } : null;
+    case 'steep':
+      return Number.isInteger(input.cups) && input.cups >= 0 && input.cups <= STEEP.maxInput
+        ? { kind: 'steep', playerId: input.playerId, cups: input.cups }
+        : null;
+    case 'condimentBox':
+      return Number.isInteger(input.boxes) && input.boxes >= 1 && input.boxes <= CONDIMENTS.maxBoxes
+        ? { kind: 'condimentBox', playerId: input.playerId, boxes: input.boxes }
+        : null;
     case 'equip':
       return isEquipmentKind(input.station) ? { kind: 'equip', playerId: input.playerId, station: input.station } : null;
     case 'ad':

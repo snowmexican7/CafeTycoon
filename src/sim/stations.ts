@@ -109,7 +109,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     return state;
   }
   if (station.kind === 'counter') {
-    return counterInteract(state, playerId);
+    return counterInteract(state, playerId, station);
   }
 
   if (station.output !== null && player.holding === null) {

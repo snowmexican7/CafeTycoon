@@ -36,7 +36,10 @@ function gearShop(slots: SlotContent[], gear: (GearId | null)[], o: { standIns?:
 const huge = { patienceLeft: 100_000, patienceMax: 100_000 };
 const order = (id: number, drink: DrinkId, extra: Partial<Customer> = {}): Customer => ({ id, drink, ...huge, ...extra });
 const sim = (s: GameState, n = 1): Player => s.players.find((p) => p.id === `sim-${n}`)!;
-const ids = (plan: BotStep[]) => plan.map((x) => (x.kind === 'use' ? `${x.station}:${x.action}` : x.kind));
+// Batch/pickup Task 2: Gear shops have three counter-kind spots (till, pickup, condiments) and a bot's counter step
+// goes to the nearest idle one; they all read as 'counter' here until bots learn the pickup flow (Task 13).
+const SPOTS = new Set(['pickup', 'condiments']);
+const ids = (plan: BotStep[]) => plan.map((x) => (x.kind === 'use' ? `${SPOTS.has(x.station) ? 'counter' : x.station}:${x.action}` : x.kind));
 
 function runUntil(state: GameState, done: (s: GameState) => boolean, maxTicks: number, each?: (s: GameState) => void): GameState {
   let s = state;

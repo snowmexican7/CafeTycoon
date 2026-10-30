@@ -42,6 +42,10 @@ export const LAYOUT: {
   rogueStart: { x: 6, y: 7 },
 };
 
+/** Batch/pickup: the ids of the two Gear-run counter spots beside the till (which keeps the id `counter`). */
+export const PICKUP_ID = 'pickup';
+export const CONDIMENTS_ID = 'condiments';
+
 /** P3 B13: what changes between the stand, the cart and the café. Door, spawn points, counter and the front of the queue stay put. */
 export interface TierLayout {
   /** Floor width in tiles: the rest of the 12-wide lot is hoarding ("space for lease"). */
@@ -50,7 +54,16 @@ export interface TierLayout {
   stations: { id: string; kind: StationKind; pos: Vec2 }[];
   queueSlots: Vec2[];
   mopHome: Vec2;
+  /** Batch/pickup (Gear runs): the pickup counter, left of the till. */
+  pickup: Vec2;
+  /** Batch/pickup (Gear runs): the condiment bar, left of the pickup counter. */
+  condiments: Vec2;
+  /** Batch/pickup (Gear runs): where condiment stock boxes wait, two tiles left of the mop's home. */
+  boxCorner: Vec2;
 }
+
+/** Batch/pickup: the same spots on every tier (the till, door and front of the queue never move either). */
+const SPOTS = { pickup: { x: 5, y: 6 }, condiments: { x: 4, y: 6 } };
 
 const COUNTER = { id: 'counter', kind: 'counter' as const, pos: { x: 6, y: 6 } };
 
@@ -66,6 +79,8 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
     ],
     queueSlots: [{ x: 6, y: 7.6 }, { x: 7, y: 7.6 }, { x: 5, y: 7.6 }, { x: 4, y: 7.6 }],
     mopHome: { x: 3, y: 7 },
+    ...SPOTS,
+    boxCorner: { x: 1, y: 7 },
   },
   cart: {
     width: 10,
@@ -79,8 +94,10 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
     ],
     queueSlots: [{ x: 6, y: 7.6 }, { x: 7, y: 7.6 }, { x: 8, y: 7.6 }, { x: 9, y: 7.6 }, { x: 5, y: 7.6 }, { x: 4, y: 7.6 }],
     mopHome: { x: 9, y: 7 },
+    ...SPOTS,
+    boxCorner: { x: 7, y: 7 },
   },
-  cafe: { width: LAYOUT.width, stations: LAYOUT.stations, queueSlots: LAYOUT.queueSlots, mopHome: LAYOUT.mopHome },
+  cafe: { width: LAYOUT.width, stations: LAYOUT.stations, queueSlots: LAYOUT.queueSlots, mopHome: LAYOUT.mopHome, ...SPOTS, boxCorner: { x: 9, y: 7 } },
 };
 
 /**

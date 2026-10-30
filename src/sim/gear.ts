@@ -26,6 +26,7 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SN
 import { GEAR, GEAR_START, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
 import { stationsFromSlots, slotCount } from './slots';
+import { CONDIMENTS } from './condiments';
 import { BASE_DRINKS, DRINK_IDS, usesShot, type Recipe } from '../data/drinks';
 import { TICK_RATE } from './constants';
 import type { Modifiers } from './effects';
@@ -58,6 +59,9 @@ export function gearStart(state: GameState): void {
   state.equipment = [];
   state.gearLog = [];
   state.stations = stationsFromSlots(state.tier, slots, gear);
+  // Batch/pickup: a full condiment bar and no stock boxes yet.
+  state.condiments = { servings: CONDIMENTS.servings };
+  state.condimentBoxes = 0;
 }
 
 function rebuild(state: GameState): void {

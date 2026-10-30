@@ -167,6 +167,7 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   if (kind === 'impatient' || kind === 'group') customer.kind = kind;
   if (kind === 'group') customer.extra = drinks.slice(1);
   if (asksSig) customer.sig = true;
+  if (state.gear === true) customer.stage = 'order';
   if (regular) {
     regular.visits += 1;
     customer.kind = 'regular';
@@ -201,6 +202,7 @@ export function spawnInfluencer(state: GameState): Customer | null {
   const drink = tied.includes('latte') ? 'latte' : tied[0];
   const patienceMax = patienceFor(m, ECONOMY.events.influencer.patience);
   const customer: Customer = { id: state.nextCustomerId++, drink, patienceLeft: patienceMax, patienceMax, kind: 'influencer' };
+  if (state.gear === true) customer.stage = 'order';
   state.customers.push(customer);
   return customer;
 }
@@ -247,7 +249,7 @@ function rollsUpset(state: GameState, customer: Customer): boolean {
 export const PERFECT_PATIENCE = 0.75;
 
 /** Pay out one served customer: price, patience-scaled tip, cash, stats, and leave the queue. */
-export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId, slips = 0, tempMiss = false): void {
+export function serveCustomer(state: GameState, customer: Customer, drink: DrinkId, by?: PlayerId, slips = 0, tempMiss = false, tipMul = 1): void {
   if (customer.egg === 'nameMix' && !customer.upset) {
     // Wrong name on the cup — they refuse until remade or the name is corrected.
     customer.upset = { ticksLeft: secondsToTicks(ECONOMY.rogue.remakeSeconds) };
@@ -281,6 +283,8 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   if (quality !== 1) tip = round2(tip * quality);
   // Gear G4h (doc §4.2): a too-hot or too-cold cup earns half the tip.
   if (tempMiss) tip = round2(tip / 2);
+  // Batch/pickup: e.g. black coffee from an empty condiment bar (×0.8).
+  if (tipMul !== 1) tip = round2(tip * tipMul);
   // Gear G4g: rung up at the till and handed off fast.
   const speedTip = tillSpeedTip(state, customer);
   if (speedTip) tip = round2(tip + speedTip);

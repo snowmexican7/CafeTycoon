@@ -39,6 +39,8 @@ import { clearFloorFields, floorFields, stepStuns, trackTiles } from './tiles';
 import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
 import { stepCleaning } from './mop';
+import { applySteepInput } from './steep';
+import { applyCondimentBoxInput, returnBox } from './condiments';
 import { stepRogue } from './rogue';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
@@ -76,6 +78,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
         p.interactQueued = false;
         dropCloseVote(s, p.id);
         settleVote(s); // an open gear vote may now have its majority (or be lost)
+        if (p.tool === 'box') returnBox(s, p);
         clearFloorFields(p);
         if (s.mop.heldBy === p.id) {
           s.mop.heldBy = null;
@@ -146,6 +149,12 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'gear':
       applyGearInput(s, input);
+      break;
+    case 'steep':
+      applySteepInput(s, input);
+      break;
+    case 'condimentBox':
+      applyCondimentBoxInput(s, input);
       break;
     case 'ad':
       applyAdInput(s, input);

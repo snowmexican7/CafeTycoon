@@ -16,6 +16,7 @@ import { startNight } from './run';
 import { layoutFor } from '../data/layout';
 import { resetBotsForNight } from './bots/roster';
 import { clearFloorFields } from './tiles';
+import { returnBox } from './condiments';
 import type { GameState } from './types';
 import { settleEspresso } from './espresso';
 import { settleChallenges } from './challenges';
@@ -49,6 +50,7 @@ export function finishDay(state: GameState): GameState {
   }
   for (const p of state.players) {
     p.holding = null;
+    if (p.tool === 'box') returnBox(state, p);
     clearFloorFields(p);
   }
   resetBotsForNight(state);

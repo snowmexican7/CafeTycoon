@@ -2,7 +2,7 @@ import { secondsToTicks } from './constants';
 import { ECONOMY } from '../data/economy';
 import { dropTile, placeMess } from './floor';
 import { emitLog } from './log';
-import { returnMop } from './mop';
+import { returnTool } from './mop';
 import { nearestStation } from './movement';
 import { STATION_RECIPES } from './stations';
 import { tally } from './tally';
@@ -16,8 +16,8 @@ export function resolveDrops(state: GameState): void {
 }
 
 function resolveDrop(state: GameState, p: Player): void {
-  if (p.tool === 'mop') {
-    returnMop(state, p);
+  if (p.tool !== null) {
+    returnTool(state, p);
     return;
   }
   const item = p.holding;
