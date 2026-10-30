@@ -1,3 +1,4 @@
+import type { ReportVM } from './report';
 import { TASTE, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
 import { isGearId, type GearId } from '../data/gear';
 import { sellLabel, type GearTierState, type GearTierVM, type GearVM } from './gearVM';
@@ -72,7 +73,7 @@ export const SPEND_VIEWS: { id: SpendView; label: string }[] = [
   { id: 'checkout', label: '🧾 Checkout' },
 ];
 /** What opens over the board. `twist:<drink>` is that drink's twist picker. */
-export type Drawer = 'receipt' | 'paper' | 'regulars' | 'signature' | 'pricing' | `twist:${DrinkId}`;
+export type Drawer = 'receipt' | 'report' | 'paper' | 'regulars' | 'signature' | 'pricing' | `twist:${DrinkId}`;
 
 function needText(cost: number, cash: number): string {
   const need = cost - cash;
@@ -370,7 +371,7 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
   const stats = extras ? `<div class="yd-stats">${extras.served} served · <span class="${extras.lost ? 'neg' : ''}">${extras.lost} walked</span> · ${extras.reputation.toFixed(1)}★</div>` : '';
   const yday = b.profit
     ? `<div class="tn-card yd"><div class="tn-h">Day ${day - 1}</div><div class="yd-hero ${b.loss ? 'loss' : ''}">${esc(b.profit)}</div>${stats}
-        <button class="btn mini ghost" data-action="drawer" data-d="receipt">Receipt ▸</button></div>`
+        <div class="yd-btns"><button class="btn mini ghost" data-action="drawer" data-d="receipt">Receipt ▸</button>${vm.report ? '<button class="btn mini ghost" data-action="drawer" data-d="report">📋 Report ▸</button>' : ''}</div></div>`
     : `<div class="tn-card yd"><div class="tn-h">In the till</div><div class="yd-hero">${esc(vm.cash)}</div><div class="yd-stats">Keep enough for stock.</div></div>`;
   const h = b.headline;
   const tmrw = h
@@ -422,6 +423,30 @@ function receiptBody(vm: NightVM, day: number): string {
     ${t.ambulance ? line('Ambulance ride', `<span class="neg">−${esc(t.ambulance)}</span>`, 'ambulance') : ''}
     ${line('Profit', t.profit.startsWith('-') ? esc(t.profit) : `+${esc(t.profit)}`, `total ${t.profit.startsWith('-') ? 'loss' : ''}`)}
     ${vm.tab ? line('Hospital tab (half of each profit pays it)', esc(vm.tab)) : ''}</div>`;
+}
+
+/** P4 B3: the manager's report drawer. */
+function reportBody(r: ReportVM | undefined): string {
+  if (!r) return '<p>No report yet: open the shop first.</p>';
+  const $ = (n: number) => `$${n.toFixed(2)}`;
+  const bar = (pct: number) => `<span class="mr-bar" aria-hidden="true"><i style="width:${Math.max(2, Math.min(100, pct))}%"></i></span>`;
+  const wait = r.waitSec === null ? '—' : `${r.waitSec}s${r.waitDelta ? ` <small class="${r.waitDelta > 0 ? 'neg' : 'pos'}">${r.waitDelta > 0 ? '▲' : '▼'}${Math.abs(r.waitDelta)}s</small>` : ''}`;
+  const kpis = `<div class="mr-kpis">
+    <div><small>TAKINGS</small><b>${$(r.takings)}</b></div>
+    <div><small>PROFIT</small><b class="${r.profit < 0 ? 'neg' : ''}">${r.profit < 0 ? '−' : '+'}${$(Math.abs(r.profit))}</b></div>
+    <div><small>SERVED</small><b>${r.served}</b><small class="${r.walkedPct >= 25 ? 'neg' : ''}">${r.walked} walked (${r.walkedPct}%)</small></div>
+    <div><small>AVG WAIT</small><b>${wait}</b></div></div>`;
+  const costs = `<div class="mr-sec"><div class="sec-h">Costs</div>
+    <div class="mr-row two"><span>Rent</span><b>${$(r.rent)}</b></div>
+    <div class="mr-row two"><span>Wages</span><b>${r.wages ? `${$(r.wages)} <small class="${r.wagePct >= 35 ? 'neg' : ''}">${r.wagePct}% of takings</small>` : 'none'}</b></div></div>`;
+  const drinks = r.drinks.length
+    ? `<div class="mr-sec"><div class="sec-h">Money drinks</div>${r.drinks.map((x) => `<div class="mr-row"><span>${x.icon} ${esc(x.name)} <small>×${x.cups}</small></span>${bar(x.pct)}<b>${$(x.takings)}</b></div>`).join('')}</div>`
+    : '';
+  const crew = r.crew.length
+    ? `<div class="mr-sec"><div class="sec-h">Who served</div>${r.crew.map((c) => `<div class="mr-row"><span>${c.bot ? '🤖' : '🧑'} ${esc(c.name)} <small>${c.serves} cups</small></span>${bar(c.pct)}<b>${$(c.takings)}</b></div>`).join('')}</div>`
+    : '';
+  const notes = `<div class="mr-notes">${r.notes.map((n) => `<p>📝 ${esc(n)}</p>`).join('')}</div>`;
+  return `<div class="mreport">${kpis}${notes}${costs}${drinks}${crew}</div>`;
 }
 
 function newspaper(f: ForecastVM | undefined): string {
@@ -512,6 +537,7 @@ function drawerHtml(d: Drawer | null, vm: NightVM, extras: NightExtras | undefin
   let title = '';
   let body = '';
   if (d === 'receipt') { title = 'Receipt'; body = receiptBody(vm, extras?.day ?? 1); }
+  else if (d === 'report') { title = `📋 Manager's report · Day ${vm.report?.day ?? ''}`; body = reportBody(vm.report); }
   else if (d === 'paper') { title = 'The paper'; body = newspaper(vm.forecast) + rivalCard(vm.rival); }
   else if (d === 'regulars') { title = 'Regulars'; body = regularsBody(vm.regulars ?? []); }
   else if (d === 'signature') { title = '⭐ Signature drink'; body = signatureCard(vm.signature, sig); }

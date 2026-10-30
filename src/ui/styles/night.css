@@ -311,3 +311,18 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .gr-tier.passed, #night .gr-tier.poor, #night .gr-tier.noSlot { opacity: .62; }
 /* Gear G7: receipt tips by drink type */
 #night .rc-paper .line.fam-tip { font-size: var(--fs-s, 0.95em); color: var(--ink-soft); padding-left: 10px; }
+/* P4 B3: the manager's report drawer. */
+#night .yd-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+#night .mreport { display: flex; flex-direction: column; gap: 12px; font: 600 16px var(--font-body); color: var(--ink); }
+#night .mr-kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+#night .mr-kpis > div { background: #fff; border-radius: 14px; padding: 8px 12px; box-shadow: 0 1px 0 rgba(0, 0, 0, .08); display: flex; flex-direction: column; }
+#night .mr-kpis small { font-size: 12px; letter-spacing: .06em; color: var(--ink-soft); }
+#night .mr-kpis b { font: 700 22px var(--font-display); }
+#night .mr-kpis .neg, #night .mreport .neg { color: #b8452e; } #night .mreport .pos { color: #2f7a4b; }
+#night .mr-sec .sec-h { margin: 0 0 4px; }
+#night .mr-row { display: grid; grid-template-columns: 1.3fr 1fr auto; align-items: center; gap: 10px; padding: 4px 0; border-top: 1px dashed #e6d6bd; }
+#night .mr-row:first-of-type { border-top: 0; }
+#night .mr-row > b { text-align: right; } #night .mr-row small { color: var(--ink-soft); font-size: 14px; }
+#night .mr-row.two { grid-template-columns: 1fr auto; }
+#night .mr-bar { height: 10px; border-radius: 6px; background: #f0e3cf; overflow: hidden; } #night .mr-bar i { display: block; height: 100%; background: #d98a3d; border-radius: 6px; }
+#night .mr-notes p { margin: 0 0 6px; padding: 8px 12px; border-radius: 12px; background: #fff6df; box-shadow: 0 0 0 2px #e8c76a; font-size: 15px; }
