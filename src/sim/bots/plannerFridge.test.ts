@@ -29,7 +29,8 @@ describe('FB2 A4: the planner and the brief know the fridge', () => {
 
   it('a fridge too small for tomorrow: the planner suggests the next one that holds it, the brief warns', () => {
     const s = night(['e1', 's2'], 300, 600);
-    const need = Math.ceil(expectedUse(s).milk * RESTOCK_MARGIN);
+    const need = expectedUse(s).milk;
+    expect(need).toBeGreaterThan(fridgeCapacity(s));
     const want = (['f2', 'f3', 'f4'] as const).find((id) => GEAR[id].fridge!.holds >= need) ?? 'f4';
     const a = restockOf(s, `gear:${want}`);
     expect(a).toMatchObject({ kind: 'equip', input: { kind: 'gear', action: 'buy', gear: want }, priority: PLAN_PRIORITY.fridge });
@@ -43,7 +44,7 @@ describe('FB2 A4: the planner and the brief know the fridge', () => {
 
   it('a fridge that holds tomorrow\'s milk: no fridge advice, no warning', () => {
     const s = night(['e1', 's2']);
-    expect(Math.ceil(expectedUse(s).milk * RESTOCK_MARGIN)).toBeLessThanOrEqual(fridgeCapacity(s));
+    expect(expectedUse(s).milk).toBeLessThanOrEqual(fridgeCapacity(s));
     expect(planNight(s).some((x) => x.id.startsWith('gear:f'))).toBe(false);
     expect(nightBrief(s).alerts.some((x) => x.id === 'fridge')).toBe(false);
   });

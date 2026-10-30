@@ -60,9 +60,6 @@ export interface NightBrief {
   alerts: NightAlert[];
 }
 
-/** FB2 A4: the margin on tomorrow's milk the fridge should hold (the planner's RESTOCK_MARGIN). */
-const FRIDGE_MARGIN = 1.25;
-
 /** A supply counts as "low" when it would not cover this share of the expected use (same as the night warnings). */
 const LOW_SUPPLY_SHARE = 0.75;
 
@@ -216,10 +213,10 @@ export function nightBrief(state: GameState): NightBrief {
     }
   }
 
-  // 2c. FB2 A4 (Gear): tomorrow's milk won't fit in the fridge (restocks stop at what it holds).
+  // 2c. FB2 A4 (Gear): a day's expected milk won't fit in the fridge (restocks stop at what it holds; no margin, as the planner).
   const fridge = fridgeGear(state);
   if (fridge && use.milk > 0 && needed.includes('milk')) {
-    const need = Math.ceil(use.milk * FRIDGE_MARGIN);
+    const need = use.milk;
     const cap = fridgeCapacity(state);
     if (need > cap) {
       const better = (Object.keys(GEAR) as GearId[]).filter((id) => GEAR[id].fridge && GEAR[id].tier > GEAR[fridge].tier).sort((a, b) => GEAR[a].tier - GEAR[b].tier);

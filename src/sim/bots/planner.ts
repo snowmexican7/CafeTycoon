@@ -574,13 +574,14 @@ function gearAdvice(state: GameState, budget: Budget): Advice[] {
 }
 
 /**
- * FB2 A4, Gear runs: tomorrow's milk (expected use × RESTOCK_MARGIN) won't fit in the fridge. Suggest the cheapest
+ * FB2 A4, Gear runs: a day's expected milk won't fit in the fridge (no margin: the expected use already runs high, it
+ * counts every arrival). Suggest the cheapest
  * better fridge that holds it (else the biggest), net of the old one's trade-in, when the budget covers it.
  */
 function fridgeAdvice(state: GameState, budget: Budget): Advice[] {
   const now = fridgeGear(state);
   if (!now || state.gearVote) return [];
-  const need = Math.ceil(expectedUse(state).milk * RESTOCK_MARGIN);
+  const need = expectedUse(state).milk;
   const want = fridgeFor(state, need);
   if (!want) return [];
   const g = GEAR[want];
