@@ -13,7 +13,8 @@ import { addStandIns } from './roster';
 /**
  * A Gear run with the back bar set by hand: `slots`/`gear` per slot, `standIns` stand-in bots (no reaction,
  * no mistakes), one parked human p1, no walk-ins, no scheduled events, plenty of every supply, and `drinks`
- * unlocked and on the menu on top of the classics.
+ * unlocked and on the menu on top of the classics. FB2 C9: a 'steamer' slot with no gear is a plain steam station (a
+ * Gear shop only gets one as an espresso machine's wand twin; for the bots the station works the same).
  */
 function gearShop(slots: SlotContent[], gear: (GearId | null)[], o: { standIns?: number; tier?: TierId; drinks?: DrinkId[]; seed?: number } = {}): GameState {
   const tier = o.tier ?? 'cafe';
@@ -57,7 +58,7 @@ const serveAll = (s: GameState, ticks = 60 * 120, each?: (s: GameState) => void)
 
 describe('item 1: the UI lane bot edits (pods-only bar, gear recipe in act)', () => {
   it('recipeAt is the recipe interact runs: gear first, allowed only when on the menu', () => {
-    const s = gearShop(['grinder', 'espresso', 'drip', 'steamer', 'trash', null], ['g2', 'e1', 'd4b', 's3', 'b0', null], { drinks: ['pourOver'] });
+    const s = gearShop(['grinder', 'espresso', 'drip', 'steamer', 'trash', null], ['g2', 'e1', 'd4b', null, 'b0', null], { drinks: ['pourOver'] });
     const at = (id: string) => s.stations.find((x) => x.id === id)!;
     expect(recipeAt(s, at('espresso'), null)?.gives).toBe('espresso');
     expect(recipeAt(s, at('espresso'), 'grounds')).toBeNull();
@@ -68,7 +69,7 @@ describe('item 1: the UI lane bot edits (pods-only bar, gear recipe in act)', ()
   });
 
   it('pods only, no grinder: the shot comes from empty hands and a latte is served end to end', () => {
-    let s = gearShop(['espresso', 'steamer', 'trash', null, null, null], ['e1', 's3', 'b0', null, null, null]);
+    let s = gearShop(['espresso', 'steamer', 'trash', null, null, null], ['e1', null, 'b0', null, null, null]);
     expect(ids(chainFor(s, sim(s), 'latte', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'steamer:insert', 'steamer:take', 'pickup:put']);
     s.customers = [order(900, 'latte')];
     const beans = s.supplies.beans;
@@ -105,7 +106,7 @@ describe('item 1: the UI lane bot edits (pods-only bar, gear recipe in act)', ()
 
 describe('item 2: pods (E1) and the mixed bar', () => {
   // grinder, Pod-o-Matic, Brevelle (E2), steamer, bin: the pod machine is 'espresso', the E2 'espresso-2'.
-  const MIXED: [SlotContent[], (GearId | null)[]] = [['grinder', 'espresso', 'espresso', 'steamer', 'trash', null], ['g2', 'e1', 'e2', 's3', 'b0', null]];
+  const MIXED: [SlotContent[], (GearId | null)[]] = [['grinder', 'espresso', 'espresso', 'steamer', 'trash', null], ['g2', 'e1', 'e2', null, 'b0', null]];
   const mixed = (o: Parameters<typeof gearShop>[2] = {}) => gearShop(...MIXED, o);
   const station = (s: GameState, id: string) => s.stations.find((x) => x.id === id)!;
 
@@ -128,7 +129,7 @@ describe('item 2: pods (E1) and the mixed bar', () => {
   });
 
   it('grounds in hand, no bin, floor at the mess cap: pulled through the E2, never the pod machine', () => {
-    const s = gearShop(['grinder', 'espresso', 'espresso', 'steamer', null, null], ['g2', 'e1', 'e2', 's3', null, null]);
+    const s = gearShop(['grinder', 'espresso', 'espresso', 'steamer', null, null], ['g2', 'e1', 'e2', null, null, null]);
     const p = sim(s);
     p.holding = 'grounds';
     p.pos = { x: station(s, 'espresso').pos.x, y: 2 };
@@ -147,7 +148,7 @@ describe('item 2: pods (E1) and the mixed bar', () => {
   });
 
   it('a mixed bar with no grinder: shots come from the pod machine', () => {
-    let s = gearShop(['espresso', 'espresso', 'steamer', 'trash', null, null], ['e1', 'e2', 's3', 'b0', null, null]);
+    let s = gearShop(['espresso', 'espresso', 'steamer', 'trash', null, null], ['e1', 'e2', null, 'b0', null, null]);
     expect(ids(chainFor(s, sim(s), 'espresso', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'pickup:put']);
     s.customers = [order(920, 'espresso'), order(921, 'latte')];
     s = serveAll(s);
@@ -211,7 +212,7 @@ describe('item 3: jams and dead machines (G5)', () => {
   });
 
   it('a dead steamer is treated as absent: a latte goes to the live one', () => {
-    const s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', null], ['g2', 'e3', 's1', 's2', 'b0', null]);
+    const s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', null], ['g2', 'e3', null, null, 'b0', null]);
     station(s, 'steamer').dead = true;
     const steps = ids(chainFor(s, sim(s), 'latte', 'serve'));
     expect(steps).toContain('steamer-2:insert');
@@ -219,7 +220,7 @@ describe('item 3: jams and dead machines (G5)', () => {
   });
 
   it('the only steamer dead: latte orders are skipped for ones the bar can still make', () => {
-    let s = gearShop(['grinder', 'espresso', 'steamer', 'trash', null, null], ['g2', 'e3', 's1', 'b0', null, null]);
+    let s = gearShop(['grinder', 'espresso', 'steamer', 'trash', null, null], ['g2', 'e3', null, 'b0', null, null]);
     station(s, 'steamer').dead = true;
     s.customers = [rung(940, 'latte'), rung(941, 'espresso')];
     expect(ids(think(s, sim(s)))[0]).toBe('grinder:insert');
@@ -230,7 +231,7 @@ describe('item 3: jams and dead machines (G5)', () => {
   });
 
   it('a steamer dies mid-chain: the bot re-plans to the other one and serves the latte', () => {
-    let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', null], ['g2', 'e3', 's1', 's2', 'b0', null]);
+    let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', null], ['g2', 'e3', null, null, 'b0', null]);
     s.customers = [order(950, 'latte')];
     s = runUntil(s, (x) => sim(x).holding === 'espresso', 60 * 60);
     const plan = sim(s).bot!.plan;
@@ -246,7 +247,7 @@ describe('item 3: jams and dead machines (G5)', () => {
   });
 
   it('the only steamer dies mid-chain: the shot goes on the pass and the bot does not stall', () => {
-    let s = gearShop(['grinder', 'espresso', 'steamer', 'trash', null, null], ['g2', 'e3', 's1', 'b0', null, null]);
+    let s = gearShop(['grinder', 'espresso', 'steamer', 'trash', null, null], ['g2', 'e3', null, 'b0', null, null]);
     s.customers = [order(960, 'latte')];
     s = runUntil(s, (x) => sim(x).holding === 'espresso', 60 * 60);
     station(s, 'steamer').dead = true;
@@ -356,7 +357,7 @@ describe('item 4: drip pots (G4d)', () => {
 describe('item 5: level-up drinks (G6/G6b/G6c, G10a) and the recipe clash', () => {
   const NEW: DrinkId[] = ['americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye', 'icedLatte', 'mocha', 'drip'];
   const FULL = (o: Parameters<typeof gearShop>[2] = {}) =>
-    gearShop(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'drip', 'trash'], ['g2', 'e3', 's3', 'c4', 'd3', 'b0'], { drinks: NEW, ...o });
+    gearShop(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'drip', 'trash'], ['g2', 'e3', null, 'c4', 'd3', 'b0'], { drinks: NEW, ...o });
 
   for (const d of ['americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye', 'icedLatte', 'mocha'] as DrinkId[]) {
     it(`a bot makes and serves a ${d} end to end`, () => {
@@ -463,7 +464,7 @@ describe('item 6: multiples and twins (G4e, G9)', () => {
   const planned = (s: GameState) => s.players.flatMap((p) => (p.bot ? p.bot.plan : [])).filter((x) => x.kind === 'use').map((x) => (x as { station: string }).station);
 
   it('E5 twins: two bots on two espresso orders pull on different groups, and both are served', () => {
-    let s = gearShop(['grinder', 'grinder', 'espresso', 'steamer', 'trash', null], ['g2', 'g2', 'e5', 's3', 'b0', null], { standIns: 2 });
+    let s = gearShop(['grinder', 'grinder', 'espresso', 'steamer', 'trash', null], ['g2', 'g2', 'e5', null, 'b0', null], { standIns: 2 });
     expect(s.stations.filter((x) => x.kind === 'espresso').map((x) => x.id)).toEqual(['espresso', 'espresso-2']);
     s.customers = [rung(1400, 'espresso'), rung(1401, 'espresso')];
     for (let i = 0; i < 12; i++) s = step(s, []);
@@ -475,7 +476,7 @@ describe('item 6: multiples and twins (G4e, G9)', () => {
   });
 
   it('a second copy of a machine (G4e): two latte orders steam on both steamers', () => {
-    let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', 'grinder'], ['g2', 'e3', 's2', 's2', 'b0', 'g2'], { standIns: 2 });
+    let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', 'grinder'], ['g2', 'e3', null, null, 'b0', 'g2'], { standIns: 2 });
     s.customers = [rung(1410, 'latte'), rung(1411, 'latte')];
     const used = new Set<string>();
     s = serveAll(s, 60 * 90, (x) => { for (const st of x.stations) if (st.kind === 'steamer' && st.busyTicksLeft > 0) used.add(st.id); });
@@ -485,7 +486,7 @@ describe('item 6: multiples and twins (G4e, G9)', () => {
 
   it('edge slot: an outer twin with no node to stand on is human-only; bots never target it and do not hang', () => {
     // E5 in the stand's first slot: the second group sits at x 0.45, out of reach of every whole tile.
-    let s = gearShop(['espresso', 'grinder', 'steamer', 'trash'], ['e5', 'g2', 's3', 'b0'], { standIns: 2, tier: 'stand' });
+    let s = gearShop(['espresso', 'grinder', 'steamer', 'trash'], ['e5', 'g2', null, 'b0'], { standIns: 2, tier: 'stand' });
     const outer = s.stations.find((x) => x.id === 'espresso-2')!;
     expect(outer.twin).toBe(true);
     expect(outer.pos.x).toBeLessThan(1);
@@ -498,7 +499,7 @@ describe('item 6: multiples and twins (G4e, G9)', () => {
   });
 
   it('edge slot on the last column: the same for the outer twin on the right', () => {
-    let s = gearShop(['grinder', 'steamer', 'trash', 'espresso'], ['g2', 's3', 'b0', 'e6'], { standIns: 1, tier: 'stand' });
+    let s = gearShop(['grinder', 'steamer', 'trash', 'espresso'], ['g2', null, 'b0', 'e6'], { standIns: 1, tier: 'stand' });
     const outer = s.stations.find((x) => x.id === 'espresso-2')!;
     expect(outer.pos.x).toBeGreaterThan(7);
     s.players[0].pos = { x: 4, y: 4 };
@@ -558,7 +559,7 @@ describe('item 7: careful cups (G10b): no early pulls for the arts crowd or a sn
 
 describe('fix round 1', () => {
   it('I1: the steamer dies while the shot is still pulling: the re-plan carries that shot to the other steamer', () => {
-    let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', null], ['g2', 'e3', 's1', 's2', 'b0', null]);
+    let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', null], ['g2', 'e3', null, null, 'b0', null]);
     const s1 = s.stations.find((x) => x.id === 'steamer')!;
     sim(s).pos = { x: s1.pos.x, y: 2 }; // it plans the latte on s1
     s.customers = [rung(1600, 'latte')];
@@ -576,7 +577,7 @@ describe('fix round 1', () => {
   });
 
   it('I2: a drink left on an out-of-reach edge twin is no orphan for bots: the bot keeps serving', () => {
-    let s = gearShop(['espresso', 'grinder', 'steamer', 'trash'], ['e5', 'g2', 's3', 'b0'], { standIns: 1, tier: 'stand' });
+    let s = gearShop(['espresso', 'grinder', 'steamer', 'trash'], ['e5', 'g2', null, 'b0'], { standIns: 1, tier: 'stand' });
     const outer = s.stations.find((x) => x.id === 'espresso-2')!;
     outer.output = 'espresso';
     outer.outputSince = s.tick - 10_000; // a person's shot, long abandoned

@@ -98,7 +98,7 @@ describe('G10b: snob regulars', () => {
     expect(snobFamilies(s)).toEqual([]);
     s.slotGear = ['e5', 'e6', 'd5b', 'b0'];
     expect(snobFamilies(s)).toEqual(['espresso', 'filter']);
-    s.slotGear = ['e6', 'c5', 's3', 'd5b'];
+    s.slotGear = ['e6', 'c5', 'd5b', null];
     expect(snobFamilies(s)).toHaveLength(SNOB.max);
   });
 

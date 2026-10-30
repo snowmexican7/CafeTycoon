@@ -144,7 +144,7 @@ describe('Gear G8: co-op majority vote for big buys', () => {
     const s = run(2);
     buy(s, 'p1', 'e4');
     const other = gearBoard(gearVM(s, 'p2'));
-    expect(other).toContain('Kay wants to buy Double Trouble ($260).');
+    expect(other).toContain('Kay wants to buy La Marzipana Due ($260).'); // FB2 C9: E4 is La Marzipana Due
     expect(other).toContain('data-action="gear-vote" data-yes="1"');
     const mine = gearBoard(gearVM(s, 'p1'));
     expect(mine).toContain('Withdraw');

@@ -3,6 +3,7 @@ import { createRun } from './run';
 import { levelUpOnServe } from './levelUp';
 import { recipeFor } from './stations';
 import { gearRecipe } from './gear';
+import { stationsFromSlots } from './slots';
 import { recipeChain, DRINK_IDS, DRINK_INFO } from '../data/drinks';
 import { levelUpVM } from '../ui/gearVM';
 import { growthVM } from '../ui/viewModels';
@@ -12,7 +13,7 @@ import type { GearId } from '../data/gear';
 
 const run = (gear = true): GameState => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'P1' }], settings: { bots: 0 }, tier: 'stand', gear });
 const serve = (s: GameState, d: DrinkId, n: number) => { const out: DrinkId[] = []; for (let i = 0; i < n; i++) out.push(...levelUpOnServe(s, d)); return out; };
-const own = (s: GameState, ...ids: GearId[]) => { s.slotGear = ids; };
+const own = (s: GameState, ...ids: (GearId | null)[]) => { s.slotGear = ids; };
 
 describe('G6c: the rest of the level-up drinks', () => {
   it('new drinks are appended to DRINK_IDS (seeds keep their ladders)', () => {
@@ -38,9 +39,10 @@ describe('G6c: the rest of the level-up drinks', () => {
     expect(levelUpVM(s).find((l) => l.drink === 'doppio')!.needs).toBeUndefined();
   });
 
-  it('drips learn café au lait (needs a steamer) at 12 and red-eye (needs E2+) at 20', () => {
+  it('drips learn café au lait (needs a steam wand) at 12 and red-eye (needs E2+) at 20', () => {
     const s = run();
-    own(s, 'd1', 's1', 'e2');
+    own(s, 'd1', 'e5', null, null);
+    s.stations = stationsFromSlots('stand', ['drip', 'espresso', null, null], s.slotGear); // FB2 C9: E5's built-in wand
     const got = serve(s, 'drip', 20);
     expect(got).toEqual(['cafeAuLait', 'redEye']);
     const t = run();

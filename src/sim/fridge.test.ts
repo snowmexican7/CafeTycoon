@@ -19,14 +19,17 @@ import { GEAR, type GearId } from '../data/gear';
 import { secondsToTicks } from './constants';
 import type { GameState, Player, SimEvent, TierId } from './types';
 
+/** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
+type Kit = GearId | 'steamer';
+
 /** A Gear run at night with `gear` in the first slots. The stand gets the Dorm Room Cube unless `fridge` says otherwise. */
-function gearNight(gear: GearId[], tier: TierId = 'stand', fridge: FridgeId | null = 'f1'): GameState {
+function gearNight(gear: Kit[], tier: TierId = 'stand', fridge: FridgeId | null = 'f1'): GameState {
   const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
-    slots[i] = GEAR[id].station;
-    slotGear[i] = id;
+    slots[i] = (id === 'steamer' ? 'steamer' : GEAR[id].station);
+    slotGear[i] = id === 'steamer' ? null : id;
   });
   s.slots = slots;
   s.slotGear = slotGear;
@@ -37,7 +40,7 @@ function gearNight(gear: GearId[], tier: TierId = 'stand', fridge: FridgeId | nu
 }
 
 /** Stand tier: s2 steamer in slot 0 (x 1), e2 espresso in slot 1 (x 3), the cardboard box in the last slot. */
-function gearDay(gear: GearId[] = ['s2', 'e2'], fridge: FridgeId | null = 'f1'): GameState {
+function gearDay(gear: Kit[] = ['steamer', 'e2'], fridge: FridgeId | null = 'f1'): GameState {
   const s = gearNight(gear, 'stand', fridge);
   s.supplies.milk = 20;
   s.supplies.beans = 20;
@@ -103,7 +106,7 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
     const poor = gearNight([], 'stand', null);
     poor.cash = 19;
     expect(buy(poor, 'f1').fridge).toBeUndefined();
-    const day = gearDay(['s2', 'e2'], null);
+    const day = gearDay(['steamer', 'e2'], null);
     day.cash = 100;
     expect(buy(day, 'f1').fridge).toBeUndefined(); // night only
   });
@@ -127,10 +130,10 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
   });
 
   it('no fridge: no milk can be bought, the bar can\'t be put away and spoils at close', () => {
-    const s = gearNight(['s2', 'e2'], 'stand', null);
+    const s = gearNight(['steamer', 'e2'], 'stand', null);
     s.cash = 100;
     expect(step(s, [{ kind: 'restock', playerId: 'p1', supply: 'milk', packs: 2 }]).supplies.milk).toBe(0);
-    const d = gearDay(['s2', 'e2'], null);
+    const d = gearDay(['steamer', 'e2'], null);
     d.condiments = { servings: 9 };
     d.closingSoonAt = d.tick;
     standAt(d, CONDIMENTS_ID);
@@ -141,7 +144,7 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
   });
 
   it('I1: every Gear state gets the fridge its shop has, on load (any snapshot version) and every morning, once', () => {
-    const s = gearNight(['s2', 'e2'], 'cart', null);
+    const s = gearNight(['steamer', 'e2'], 'cart', null);
     s.stations = s.stations.filter((x) => x.id !== FRIDGE_ID);
     const loaded = migrateSnapshot(SNAPSHOT_VERSION, JSON.parse(JSON.stringify(s)) as GameState)!;
     expect(hasFridge(loaded)).toBe(1);
@@ -192,13 +195,13 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
   });
 
   it('re-review M-1: with no fridge, milk in the pantry puts no milk drink on the board', () => {
-    const s = gearDay(['s2', 'e1'], null); // pods: a latte needs no grinder
+    const s = gearDay(['steamer', 'e1'], null); // pods: a latte needs no grinder
     s.supplies.milk = 10; // the pantry perk, say
     expect(availableDrinks(s)).not.toContain('latte');
     expect(reasonOff(s, 'latte')).toBe('noStock');
     s.milkOut = 2; // milk already out at the bar still counts
     expect(availableDrinks(s)).toContain('latte');
-    const f = gearDay(['s2', 'e1']);
+    const f = gearDay(['steamer', 'e1']);
     expect(availableDrinks(f)).toContain('latte');
   });
 
@@ -359,7 +362,7 @@ describe('FB2 A4: milk from the fridge to the bar', () => {
 
 describe('FB2 A4: closing soon and the close', () => {
   it('closing soon starts once, 30 s before the doors lock (Gear only)', () => {
-    let s = gearNight(['s2', 'e2']);
+    let s = gearNight(['steamer', 'e2']);
     s.settings.dayLengthSec = 40;
     s = startDay(s);
     const soon = secondsToTicks(ECONOMY.closingSoonSeconds);
@@ -399,7 +402,7 @@ describe('FB2 A4: closing soon and the close', () => {
   });
 
   it('the checklist reads a hand-built state', () => {
-    const s = gearDay(['s2', 'e2', 'd2']);
+    const s = gearDay(['steamer', 'e2', 'd2']);
     s.milkOut = 0;
     s.condiments = { servings: 0 };
     expect(closingChecklist(s)).toEqual({ milkAway: true, barAway: true, potsEmpty: true, floorClean: true, counterClear: true });
@@ -483,7 +486,7 @@ describe('FB2 A4: closing soon and the close', () => {
   });
 
   it('during closing soon a wanted empty-hands drink still gets made instead of lifting the milk', () => {
-    const s = gearDay(['c2', 's2']);
+    const s = gearDay(['c2', 'steamer']);
     s.milkOut = 4;
     s.closingSoonAt = s.tick;
     const tap = at(s, 'coldBrewTap');

@@ -14,7 +14,8 @@ import { restockCost } from '../night';
 import { billsForDay, wagesForDay } from '../staff';
 import { crewTips, planNight, PLAN_PRIORITY } from './planner';
 import type { Advice } from './planner';
-import { GEAR, type GearId } from '../../data/gear';
+import { GEAR, WANDS, type GearId } from '../../data/gear';
+import { stationsFromSlots } from '../slots';
 import type { DayStats, GameState, TierId } from '../types';
 
 const dayStats = (over: Partial<DayStats> = {}): DayStats => ({ day: 1, served: 23, lost: 2, turnedAway: 0, sales: 40.84, tips: 3, rent: 25, ...over });
@@ -135,46 +136,51 @@ describe('item 3: Gear buying hints', () => {
   });
 
   it('walks the path: owned and better machines are skipped, a trade-in lowers the price', () => {
-    const s = equipped(['c1', 'e1'], {}, 400);
-    expect(gearAd(s).map((a) => a.id)).toEqual(['gear:s1']);
-    const t = equipped(['c1', 'e1', 's1'], {}, 400); // the stand has 4 slots, all full: c2 trades c1 in
+    const t = equipped(['c1', 'e1'], {}, 400); // c2 trades c1 in
     const ad = gearAd(t)[0];
     expect(ad?.id).toBe('gear:c2');
     expect(ad?.text).toContain('back on');
+    expect(gearAd(equipped(['c1', 'e1', 'c2'], {}, 400)).map((a) => a.id)).toEqual(['gear:g1']);
+    // FB2 C9: the Sylvia comes with its little wand (milk drinks need it), E1 traded in
+    const e3 = gearAd(equipped(['c2', 'e1', 'g1'], {}, 400))[0]!;
+    expect(e3).toMatchObject({ id: 'gear:e3', input: { kind: 'gear', action: 'buy', gear: 'e3', wand: 'weak' } });
+    expect(e3.text).toContain('$175');
   });
 
   it('is silent in a classic run, and while a crew vote is open, and when it cannot pay', () => {
     expect(planNight(classicRun()).some((a) => a.input.kind === 'gear')).toBe(false);
     const open = equipped(['c1', 'e1'], {}, 400);
-    open.gearVote = { by: 'p1', byName: 'K', action: 'buy', gear: 's1', amount: 10, yes: ['p1'], no: [] };
+    open.gearVote = { by: 'p1', byName: 'K', action: 'buy', gear: 'c2', amount: 25, yes: ['p1'], no: [] };
     expect(gearAd(open)).toEqual([]);
     const poor = equipped(['c1', 'e1'], {}, 5);
     expect(gearAd(poor)).toEqual([]);
   });
 
   it('never trades the E1 pods for E2+ while no grinder is in a slot (a full stand)', () => {
-    // [b0, e1, c5, s3]: no free slot for a grinder, no grinder: the E2 trade-in would be the next buy
-    const s = equipped(['e1', 'c5', 's3'], {}, 5000);
+    // [e1, c5, d1, b0]: no free slot for a grinder, no grinder: the E3 trade-in would be the next buy
+    const s = equipped(['e1', 'c5', 'd1'], {}, 5000);
     expect(s.stations.some((x) => x.kind === 'grinder')).toBe(false);
     expect(s.slots!.every((x) => x !== null)).toBe(true);
     expect(planNight(s).filter((a) => a.input.kind === 'gear' && a.input.action === 'buy' && ['e2', 'e3', 'e4', 'e5', 'e6'].includes(a.input.gear))).toEqual([]);
     // with a grinder in a slot the trade is fine
     const g = equipped(['e1', 'c5', 'g1'], {}, 5000);
-    expect(gearAd(g).map((a) => a.id)).toEqual(['gear:e2']);
+    expect(gearAd(g).map((a) => a.id)).toEqual(['gear:e3']);
   });
 
   it('prefers the polished C5 when yesterday’s cups averaged under 3★ and it is affordable', () => {
-    const base = () => equipped(['e1', 'c4', 'g1'], {}, 1000);
+    const base = () => equipped(['e1', 'c4', 'g1'], {}, 300); // C5 in reach, the polished E5 (FB2 C9) not
     expect(gearAd(withYesterday(base(), 20, 40)).map((a) => a.id)).toEqual(['gear:c5']); // 2.0★
     const text = gearAd(withYesterday(base(), 20, 40))[0]!.text;
     expect(text).toContain('2.0★');
-    expect(gearAd(withYesterday(base(), 20, 60)).map((a) => a.id)).toEqual(['gear:e2']); // a perfect 3.0★
-    expect(gearAd(base()).map((a) => a.id)).toEqual(['gear:e2']); // no day on the books
-    expect(gearAd(withYesterday(base(), 0, 0)).map((a) => a.id)).toEqual(['gear:e2']); // no cup scored
-    // too dear: falls back to the normal path rather than waiting for it
-    const poor = withYesterday(equipped(['e1', 'c4', 'g1'], {}, 85), 20, 40);
+    expect(gearAd(withYesterday(base(), 20, 60)).map((a) => a.id)).toEqual(['gear:e3']); // a perfect 3.0★
+    expect(gearAd(base()).map((a) => a.id)).toEqual(['gear:e3']); // no day on the books
+    expect(gearAd(withYesterday(base(), 0, 0)).map((a) => a.id)).toEqual(['gear:e3']); // no cup scored
+    // too dear: falls back to the normal path rather than waiting for it (an E3 that has its wand: the grinder is next)
+    const poor = withYesterday(equipped(['c4', 'g1', 'e3'], {}, 85), 20, 40);
+    poor.slotWand = [null, null, 'weak', null];
+    poor.stations = stationsFromSlots(poor.tier, poor.slots!, poor.slotGear, poor.slotWand);
     poor.checkout = { owned: ['register', 'kiosk', 'squarely'], active: 'squarely', since: 1, by: 'K' }; // nothing else asks for the till
-    expect(gearAd(poor).map((a) => a.id)).toEqual(['gear:e2']);
+    expect(gearAd(poor).map((a) => a.id)).toEqual(['gear:g2']);
   });
 
   it('draws on the shared budget with the restock first, and never overdraws after bills', () => {
@@ -184,7 +190,7 @@ describe('item 3: Gear buying hints', () => {
       const plan = planNight(s);
       const total = plan.reduce((n, a) => {
         if (a.input.kind === 'restock') return n + restockCost(s, a.input.supply, a.input.packs);
-        if (a.input.kind === 'gear' && a.input.action === 'buy') return n + GEAR[a.input.gear].price;
+        if (a.input.kind === 'gear' && a.input.action === 'buy') return n + GEAR[a.input.gear].price + (a.input.wand ? WANDS[a.input.wand].withMachine : 0);
         return n;
       }, 0);
       expect(total).toBeLessThanOrEqual(Math.max(0, cash - billsForDay(s)) + 1e-9);
@@ -192,12 +198,12 @@ describe('item 3: Gear buying hints', () => {
   });
 
   it('says a co-op buy needs a crew vote when two humans are connected and it costs $50 or more', () => {
-    const s = equipped(['e1', 'c4', 'g1'], {}, 1000);
+    const s = equipped(['e1', 'c4', 'g1'], {}, 300);
     s.players.push({ ...s.players[0]!, id: 'p2', name: 'L' });
     const ad = gearAd(withYesterday(s, 20, 40))[0]!;
     expect(ad.id).toBe('gear:c5');
     expect(ad.text).toContain('vote');
-    const solo = gearAd(withYesterday(equipped(['e1', 'c4', 'g1'], {}, 1000), 20, 40))[0]!;
+    const solo = gearAd(withYesterday(equipped(['e1', 'c4', 'g1'], {}, 300), 20, 40))[0]!;
     expect(solo.text).not.toContain('vote');
   });
 });

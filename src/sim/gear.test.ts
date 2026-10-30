@@ -60,11 +60,11 @@ describe('Gear Tree G2: the sim', () => {
     s.cash = 1000;
     buy(s, 'c1');
     buy(s, 'g1');
-    buy(s, 's1');
+    buy(s, 'd1');
     const before = s.cash;
     buy(s, 'e2'); // stand has 4 slots, all full
     expect(s.cash).toBe(before);
-    expect(s.slotGear).toEqual(['c1', 'g1', 's1', 'b0']);
+    expect(s.slotGear).toEqual(['c1', 'g1', 'd1', 'b0']);
   });
 
   it('day only, bots and strangers: nothing happens; classic equip/slot do nothing in a Gear run', () => {

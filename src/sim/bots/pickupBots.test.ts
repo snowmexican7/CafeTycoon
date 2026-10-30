@@ -7,6 +7,7 @@ import { layoutFor } from '../../data/layout';
 import { ECONOMY } from '../../data/economy';
 import { nearestStation } from '../movement';
 import { addStandIns } from './roster';
+import { ensureCounterSpots, stationsFromSlots } from '../slots';
 import type { GearId } from '../../data/gear';
 import { BASE_DRINKS } from '../../data/drinks';
 import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId } from '../types';
@@ -148,11 +149,17 @@ describe('pickup review fixes (M1, M3)', () => {
   });
 });
 
-/** A Gear stand with a C1 tap, E1 pods and an S1 steamer, every tap drink on the menu, plenty of supplies, no walk-ins. */
+/**
+ * A Gear stand with a C1 tap, E1 pods and a plain steam station in the third slot (FB2 C9: a Gear shop only gets one as
+ * a wand; the station works the same), every tap drink on the menu, plenty of supplies, no walk-ins.
+ */
 function tapStand(bots = 1): GameState {
   let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, tier: 'stand', gear: true });
   addStandIns(s, bots);
-  for (const g of ['c1', 'e1', 's1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
+  for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
+  s.slots = s.slots!.map((k, i) => (i === 2 ? 'steamer' : k));
+  s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear, s.slotWand);
+  ensureCounterSpots(s);
   s.unlocked = [...new Set([...BASE_DRINKS, ...s.unlocked, 'icedLatte', 'sweetCream', 'special'] as DrinkId[])];
   for (const d of s.unlocked) s.menu[d] = true;
   for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;

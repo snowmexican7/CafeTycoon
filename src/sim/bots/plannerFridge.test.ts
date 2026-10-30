@@ -21,19 +21,19 @@ const adviceOf = (s: GameState, id: string) => planNight(s).find((a) => a.id ===
 
 describe('FB2 A4: the planner and the brief know the fridge', () => {
   it('milk restock advice never buys more than the fridge holds, and none with no fridge', () => {
-    const s = night(['e1', 's2'], 300, 600);
+    const s = night(['g1', 'e5'], 300, 600);
     expect(expectedUse(s).milk).toBeGreaterThan(fridgeCapacity(s));
     expect(adviceOf(s, 'restock:milk')?.input).toEqual({ kind: 'restock', supply: 'milk', packs: 2 });
     s.supplies.milk = 20; // nothing more fits in the cube
     expect(adviceOf(s, 'restock:milk')).toBeUndefined();
-    expect(adviceOf(night(['e1', 's2'], 300, 150, false), 'restock:milk')).toBeUndefined();
+    expect(adviceOf(night(['g1', 'e5'], 300, 150, false), 'restock:milk')).toBeUndefined();
   });
 
-  it('a stand with a steamer and no fridge: the planner suggests the cube, the brief warns (with a fix when affordable)', () => {
-    const s = night(['e1', 's2'], 300, 150, false);
+  it('a stand with a steam wand (E5) and no fridge: the planner suggests the cube, the brief warns (with a fix when affordable)', () => {
+    const s = night(['g1', 'e5'], 300, 150, false);
     expect(adviceOf(s, 'fridge:f1')).toMatchObject({ kind: 'equip', input: { kind: 'fridge', fridge: 'f1' }, priority: PLAN_PRIORITY.fridge });
     expect(nightBrief(s).alerts.find((x) => x.id === 'fridge')).toMatchObject({ kind: 'stock', severity: 'warn', fix: { kind: 'fridge', fridge: 'f1' } });
-    const poor = night(['e1', 's2'], 10, 150, false);
+    const poor = night(['g1', 'e5'], 10, 150, false);
     expect(adviceOf(poor, 'fridge:f1')).toBeUndefined();
     expect(nightBrief(poor).alerts.find((x) => x.id === 'fridge')?.fix).toBeUndefined();
     // no milk station and the bar kept nothing to lose: no nudge yet
@@ -44,7 +44,7 @@ describe('FB2 A4: the planner and the brief know the fridge', () => {
   });
 
   it('the café suggests the Udder-Matic only when a day\'s milk won\'t fit in the Chrome Reach-In', () => {
-    const s = night(['e1', 's2'], 10_000, 150, false);
+    const s = night(['g1', 'e5'], 10_000, 150, false);
     applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cart' });
     applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cafe' });
     s.cash = 1000;
