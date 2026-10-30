@@ -62,6 +62,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     </aside>
     <aside class="hud-side right">
       <div class="h">Pantry</div><div class="card pantry"></div>
+      <div class="h gear-h" hidden>Gear</div><div class="card hud-gear" hidden></div>
       <div class="card hud-clean" role="meter" aria-label="Floor cleanliness" aria-valuemin="0" aria-valuemax="100" hidden><svg class="spark" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M10 1.5l2 6.5 6.5 2-6.5 2-2 6.5-2-6.5L1.5 10 8 8z" fill="currentColor"/></svg><div class="lab">Floor<small class="cword"></small></div><span class="cbar"><i></i></span><span class="cpct num"></span></div>
       <div class="h">Menu</div><div class="card chalk menu"></div>
       <div class="card note" hidden></div>
@@ -125,6 +126,20 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   const closeEarly = mountCloseEarly(closeBtn, (on) => handlers.onCloseEarly?.(on));
 
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
+  // Gear Tree G5: a small card of the crew's machines and how each is doing (Gear runs only).
+  let gearHtml = '';
+  function renderGear(vm: HudVM): void {
+    const html = (vm.gear ?? [])
+      .map((g) => `<div class="hg ${g.warn ? 'warn' : ''}"><span class="hg-ic" aria-hidden="true">${g.icon}</span><b>${esc(g.name)}</b>${g.status ? `<small>${esc(g.status)}</small>` : ''}</div>`)
+      .join('');
+    if (html === gearHtml) return;
+    gearHtml = html;
+    const card = container.querySelector<HTMLElement>('.hud-gear');
+    const h = container.querySelector<HTMLElement>('.gear-h');
+    if (!card || !h) return;
+    card.innerHTML = html;
+    card.hidden = h.hidden = html === '';
+  }
   let plusTimer: ReturnType<typeof setTimeout> | null = null;
   let lastKey = '';
   let lastWeekKey = '';
@@ -417,6 +432,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
         renderChallenges(vm);
       }
       renderWeek(vm, live);
+      renderGear(vm);
       el.clock.textContent = vm.clock;
       if (vm.closing) {
         const n = String(vm.closing.left);

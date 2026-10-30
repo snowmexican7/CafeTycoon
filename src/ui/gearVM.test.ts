@@ -58,3 +58,21 @@ describe('Gear polish: tossing worthless gear', () => {
     expect(sellLabel('c2', 8).text).toBe('Sell · $8');
   });
 });
+
+describe('Gear G5: the day HUD gear card', () => {
+  it('lists machines (not the bin) with batch, dead and jammed status; absent in classic runs', async () => {
+    const { hudGearVM } = await import('./gearVM');
+    const { hudViewModel } = await import('./viewModels');
+    const { applyGearInput } = await import('../sim/gear');
+    const { startDay } = await import('../sim/run');
+    const s = run();
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 's1' });
+    startDay(s);
+    s.stations.find((x) => x.kind === 'steamer')!.dead = true;
+    expect(hudGearVM(s).map((g) => g.status)).toEqual(['8/8 cups left', 'dead till tonight']);
+    expect(hudViewModel(s).gear?.length).toBe(2);
+    const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
+    expect('gear' in hudViewModel(classic)).toBe(false);
+  });
+});

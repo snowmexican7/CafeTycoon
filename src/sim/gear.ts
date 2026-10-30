@@ -25,7 +25,12 @@ import { SLOT_POSITIONS } from '../data/layout';
 import { stationsFromSlots, slotCount } from './slots';
 import { usesShot, type Recipe } from '../data/drinks';
 import type { Modifiers } from './effects';
-import type { DrinkId, GameState, ItemKind, PlayerInput, Station, StationKind, TierId } from './types';
+import { ACCURACY } from './accuracy';
+import { placeMess } from './floor';
+import { emitLog } from './log';
+import { rngInt, rngNext } from './rng';
+import { tileOf } from './tiles';
+import type { DrinkId, GameState, ItemKind, Player, PlayerInput, Station, StationKind, TierId } from './types';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -104,7 +109,7 @@ export function gearSpeed(s: Station): number {
 }
 
 export function gearMarks(s: Station): number {
-  return s.gear ? GEAR[s.gear].marks : 0;
+  return s.gear && !s.lucky ? GEAR[s.gear].marks : 0;
 }
 
 export function gearMorning(state: GameState): void {
@@ -113,6 +118,77 @@ export function gearMorning(state: GameState): void {
     const cap = s.gear ? GEAR[s.gear].batch : undefined;
     if (cap !== undefined) s.batchLeft = cap;
     else delete s.batchLeft;
+    // G5: overnight everything is reset and today's quirks are rolled (slot order, so it's deterministic).
+    delete s.jammed;
+    delete s.dead;
+    delete s.usesToDie;
+    delete s.lucky;
+    const q = s.gear ? GEAR[s.gear].quirks : undefined;
+    if (!q) continue;
+    const name = GEAR[s.gear!].name;
+    if (q.dieAfter !== undefined) s.usesToDie = q.dieAfter + rngInt(state, q.dieSpread ?? 1);
+    if (q.askAbout && rngNext(state) < q.askAbout) {
+      state.reputation = Math.max(0, round2(state.reputation - 0.05));
+      state.morningNotes.push(`A customer peered over the counter: "is that… a sock?" (−0.05★ rating)`);
+    }
+    if (q.lucky && rngNext(state) < q.lucky) {
+      s.lucky = true;
+      state.morningNotes.push(`🧦✨ Lucky Sock day! Today's cold brew comes out perfect. Don't ask.`);
+    }
+    if (q.crack && s.batchLeft !== undefined && rngNext(state) < q.crack) {
+      s.batchLeft = Math.max(0, s.batchLeft - (q.crackLoss ?? 0));
+      state.morningNotes.push(`A jar cracked overnight: ${q.crackLoss} cups of cold brew down the drain.`);
+    }
+    if (q.morning && rngNext(state) < q.morning) state.morningNotes.push(q.morningText ?? `${name} is acting up.`);
+  }
+}
+
+function quirk(state: GameState, s: Station, text: string, by: string): void {
+  emitLog(state, 'gear.quirk', { gear: s.gear ?? '', text, by });
+}
+
+/**
+ * G5: before a station is used. Returns true when the gear blocks the use: a dead machine does
+ * nothing; a jammed one gets whacked by empty hands (fixed, no brew this press).
+ */
+export function gearBlocked(state: GameState, s: Station, p: Player): boolean {
+  if (!s.gear) return false;
+  if (s.dead) return true;
+  if (s.jammed) {
+    if (p.holding === null) {
+      delete s.jammed;
+      quirk(state, s, `${p.name} whacked the ${GEAR[s.gear].name}. It works again.`, p.id);
+    }
+    return true;
+  }
+  return false;
+}
+
+/** G5: right after a gear machine starts a brew: roll its downsides and jokes (Gear runs only). */
+export function gearAfterUse(state: GameState, s: Station, p: Player): void {
+  const q = s.gear && isGearRun(state) ? GEAR[s.gear].quirks : undefined;
+  if (!q) return;
+  const name = GEAR[s.gear!].name;
+  if (q.jam && rngNext(state) < q.jam) {
+    s.jammed = true;
+    quirk(state, s, `The ${name} jammed! Empty hands + E to whack it.`, p.id);
+  }
+  if (q.spill && rngNext(state) < q.spill) {
+    placeMess(state, 'spill', tileOf(p.pos));
+    quirk(state, s, `The portafilter slipped: coffee on the floor.`, p.id);
+  }
+  if (q.offNote && rngNext(state) < q.offNote) {
+    s.cupSlips = Math.min(ACCURACY.maxStars, (s.cupSlips ?? 0) + 1);
+    quirk(state, s, `A faint note of cumin in that one (−1★).`, p.id);
+  }
+  if (q.funny && rngNext(state) < q.funny) quirk(state, s, q.funnyText ?? `${name} did something weird.`, p.id);
+  if (s.usesToDie !== undefined) {
+    s.usesToDie -= 1;
+    if (s.usesToDie <= 0) {
+      delete s.usesToDie;
+      s.dead = true;
+      quirk(state, s, `The ${name}'s batteries died. Dead until tonight.`, p.id);
+    }
   }
 }
 

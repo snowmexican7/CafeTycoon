@@ -1,5 +1,7 @@
 import './style.css';
 import { gearFlag } from './ui/gearFlag';
+/** Gear Tree G5: the last gear quirk already toasted (log seq). */
+let gearSeenSeq = -1;
 import { ambienceFor, createHeartbeat, diffCues, heartbeatGapMs } from './audio/cues';
 import { createAudioEngine } from './audio/engine';
 import { SNAPSHOT_INTERVAL_MS } from './host/loop';
@@ -468,6 +470,15 @@ async function main(): Promise<void> {
     }
     if (s.peerStatus !== 'hostAway') lobby.hide();
     hud.render(hudViewModel(state), hudLive(state, s.me));
+    // Gear Tree G5: jams, dead batteries and goose noises pop up as a toast.
+    if (state.gear) {
+      if (state.nextLogSeq <= gearSeenSeq) gearSeenSeq = -1; // a new run restarts the log
+      const fresh = state.log.filter((e) => e.kind === 'gear.quirk' && e.seq > gearSeenSeq);
+      if (fresh.length) {
+        gearSeenSeq = fresh[fresh.length - 1].seq;
+        hud.toast(fresh.map((e) => String(e.data.text)));
+      }
+    }
 
     if (state.phase === 'closing') s.lastClosing = state;
     if (state.phase === 'night') night.render(nightViewModel(state, s.me), nightExtras(state, s.me), s.code);

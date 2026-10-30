@@ -118,6 +118,7 @@ export type SimEventKind =
   | 'egg.latteArt'
   | 'egg.secret'
   | 'closedEarly'
+  | 'gear.quirk'
   | 'walkout';
 
 export interface SimEvent {
@@ -180,6 +181,14 @@ export interface Station {
   gear?: GearId;
   /** Gear Tree: cold brew batch cups left today (absent = no cap). */
   batchLeft?: number;
+  /** Gear G5: the Pod-o-Matic jammed; empty hands at it whack it back to life. */
+  jammed?: true;
+  /** Gear G5: dead until tonight (the battery whisk's batteries). */
+  dead?: true;
+  /** Gear G5: uses left before the battery whisk dies today. */
+  usesToDie?: number;
+  /** Gear G5: Lucky Sock day, the sock's lint mark is off. */
+  lucky?: true;
 }
 
 export interface Customer {

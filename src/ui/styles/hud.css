@@ -258,3 +258,10 @@
 #hud .hud-close .ce-t small.ce-nudge { display: block; color: #b8413a; font-weight: 700; }
 @keyframes ce-pulse { 0%, 100% { box-shadow: var(--sh-1), 0 0 0 0 #e0564a66; } 50% { box-shadow: var(--sh-1), 0 0 0 7px #e0564a00; } }
 @media (prefers-reduced-motion: reduce) { #hud .hud-close.nudge { animation: none; outline: 3px solid #e0564a; } }
+
+/* Gear Tree G5: the day's gear card (Gear runs only). */
+.hud-gear { display: flex; flex-direction: column; gap: 4px; }
+.hud-gear .hg { display: grid; grid-template-columns: 22px 1fr; column-gap: 6px; align-items: center; font: 700 var(--fs-s) var(--font-display); line-height: 1.15; }
+.hud-gear .hg-ic { font-size: 18px; grid-row: span 2; }
+.hud-gear .hg small { font: 600 var(--fs-xs) var(--font-body); color: var(--ink-soft); }
+.hud-gear .hg.warn small { color: #b23a1d; font-weight: 800; }

@@ -149,6 +149,9 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
     return go(`Rush it out now (−1★)`, `${where} · ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`);
   if (station.busyTicksLeft > 0) return idle(`Ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`, where);
   if (station.output !== null) return idle('Hands full', where);
+  // Gear G5: dead or jammed machines.
+  if (station.dead) return idle('Dead till tonight', where);
+  if (station.jammed) return held === null ? go('Whack it!', `${where} · jammed`) : idle('Jammed: empty hands to whack it', where);
   // Gear G4: the Pod-o-Matic takes empty hands (a pod), not grounds.
   if (station.gear && GEAR[station.gear].pods) {
     if (held === 'grounds') return idle('Pods only: no grounds here', where);
