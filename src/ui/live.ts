@@ -186,7 +186,9 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
     if (held === null) return state.supplies.beans < 1 ? idle('Out of pods (beans)', where) : go('Pop in a pod', `${where} · ${(5 / GEAR[station.gear].speed).toFixed(1)} s`);
   }
   const need = TAKES[kind];
-  if (held !== null && held !== 'grounds' && !recipeFor(state, kind, held)) return idle(`Wrong station: E fumbles it (−1★)`, `${where} needs ${need ? ITEM_LABEL[need].toLowerCase() : 'empty hands'}`);
+  // Smoke fix: a pod machine never wants grounds, so don't tell the player it does.
+  const needText = station.gear && GEAR[station.gear].pods ? 'empty hands (it takes pods)' : need ? ITEM_LABEL[need].toLowerCase() : 'empty hands';
+  if (held !== null && held !== 'grounds' && !recipeFor(state, kind, held)) return idle(`Wrong station: E fumbles it (−1★)`, `${where} needs ${needText}`);
   if (held !== need) return idle(need ? `Needs ${ITEM_LABEL[need].toLowerCase()}` : 'Hands full', where);
   const supply = USES[kind];
   if (supply && state.supplies[supply] < 1) return idle(`Out of ${SUPPLY_NAME[supply].toLowerCase()}`, where);

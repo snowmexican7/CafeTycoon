@@ -6,7 +6,7 @@ import { applyGearInput, podsOnly } from './gear';
 import { addStandIns } from './bots/roster';
 import { chainFor } from './bots/brain';
 import { gearVM } from '../ui/gearVM';
-import { hudLive } from '../ui/live';
+import { handHint, hudLive } from '../ui/live';
 import { nextStepIndex, ticketSteps, ticketsHtml, ticketsKey, type TicketOpts } from '../ui/tickets';
 import type { GearId } from '../data/gear';
 import type { GameState, StationKind } from './types';
@@ -90,5 +90,19 @@ describe('Smoke fix: a grinder beside a pod-only espresso bar', () => {
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e1' });
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'g1' });
     expect(gearVM(s).note).toMatch(/pods, not grounds/);
+  });
+
+  it('the hand hint at a pod machine says it takes pods, not grounds', () => {
+    const s = run();
+    kit(s, ['c1', 'e1', 'g1', 'b0']);
+    s.phase = 'day';
+    const esp = s.stations.find((st) => st.kind === 'espresso')!;
+    const me = s.players[0];
+    me.pos = { ...esp.pos };
+    me.holding = 'espresso';
+    const h = handHint(s, 'p1');
+    expect(h.title).toBe('Wrong station: E fumbles it (−1★)');
+    expect(h.detail).toContain('takes pods');
+    expect(h.detail).not.toContain('grounds');
   });
 });
