@@ -108,6 +108,24 @@ Written down from a voice note after the Phase 3 playtest. Only the first item i
   knob to turn. This pairs with recipe accuracy (P3 B5) and the taste map (P3 B6). Brainstorm
   only; nothing designed yet.
 
+## Kennedy's notes after the v2.2.0 playtest, 2026-10-29 evening
+
+- **Gear Tree (next big update, v3).** A run starts with almost nothing, opens on "Pick your gear",
+  and every machine has its own silly upgrade tree (Hanes-sock cold brew, thrift-store drip, Pod-o-Matic
+  up to "The Annihilator"), with cheap-gear downsides, drinks that level up with use, a hidden area
+  taste and co-op votes on big buys. Full plan, numbers and build order (G0–G11):
+  [`GEAR_TREE.md`](GEAR_TREE.md). Design only; nothing built yet.
+- **Bots on/off + count in single player** (UI lane). The sim already takes `settings.bots`, and the
+  co-op lobby has the Off/1/2/3 card, but "Play solo" skips the lobby and always sends `'auto'`. Add the
+  picker to the solo start. Zero bots = a full chaos solo run.
+- **Collision spills** (Claude lane). Players don't collide today. First make bodies bump, then a bump
+  while carrying has a chance to spill (Kennedy's guess: about 60%): the cup is lost and a puddle appears.
+- **Bots trashing someone else's prep** (Claude lane). A bot picks up grounds or a shot a human prepped
+  and bins it when no ticket matches yet. Leave items a human started recently alone, and wait longer
+  before binning.
+- Corrections: stations are already buyable (FB1 WP5), and slots replaced the layout editor. Only the
+  mop bucket as a purchase is still open.
+
 ## FB1 WP3+4 reflection
 
 - **What shipped (branch fb1-sim-day).** *Close early:* input `{ kind: 'closeEarly'; playerId; on: boolean }`
