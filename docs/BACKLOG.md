@@ -1991,3 +1991,49 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
   area tip" ordering was skipped (it would break queue order); drip pots, twins and mixed bars are proven by
   unit tests only (gearBalance stays on the stand): worth a browser smoke on a café Gear run.
 
+## 3.3.0: batch coffee, pickup counter, condiment bar (Claude, 2026-10-30)
+
+Design `docs/superpowers/specs/2026-10-30-batch-pickup-design.md` (approved by Kennedy), plan
+`docs/superpowers/plans/2026-10-30-batch-pickup.md` (16 tasks). Tags along the way: `batch-foundation-1`,
+`batch-saves-1` (snapshot 28), `batch-till-1`, `batch-planner-1`, `batch-condiments-1`, `batch-steep-1`,
+`batch-pickup-1`, `phone-bots-1`, `batch-extras-1`, then `v3.3.0` (protocol 41). Final checks on main: 1286 tests; gearBalance 28×3 and p4Smoke 28×3 with no bankruptcies and no black coffees, p4Smoke OK.
+
+What landed (Gear runs; classic is legacy):
+- Steeped cold brew and drip pots pour instantly; cold brew is steeped at night (`steep` input, sticky target,
+  concentrate only for the top-up, leftovers keep a day, `coldBrewLeft`), C4/C5 got a 60-cup steep cap.
+- Gear patience by drink (batch ×0.9 … pour-over ×1.7).
+- Till → pickup: ring-up moves a customer to `stage: 'pickup'` (+50% patience); drinks set on the 4-slot pickup
+  counter are taken by the longest-waiting customer for that drink, who pays and tips there; hand-serve is gone.
+- Condiment bar (20 servings, fixed spot `condiments`) and boxes ($6, carried from the corner, `Player.tool:
+  'box'`); 60% of plain drip / cold brew customers (pure hash of customer id) stop there; empty bar = tip ×0.8.
+- Bots: ring up, set drinks on the pickup counter, pour taps in one step, fetch a box when the bar is at ≤ 2,
+  skip the Wi-Fi camper, never prep cold brew onto the counter, keep counter spots free when idle, answer the
+  branch phone after 10 s (idle bot; order taken after a no-walk-out day, machine fixed with ≥ 2 branch staff).
+- Planner: tomorrow's steep number and condiment boxes; brief alerts for an unaffordable steep and a dry bar.
+- Saves: snapshot 28 moves loaded Gear saves to the order stage and adds the bar.
+
+Events for the UI: `till.rung { customer, drink, by }`, `pickup.take { drink, customer, by }`,
+`condiment.use { customer }`, `condiment.black { customer, text }` (a grumble line), `condiment.refill { by }`,
+`steep { cups, paid }`, `call.answer { by, take, kind }`; a box going home is `drop { item: 'box' }`. Log entries
+are pruned after 120 ticks.
+
+**For the UI lane (Grok):**
+- `src/ui/live.ts` ~177-182: the counter hint still says "Ring up … hand it off in 30s" at every counter spot and
+  "Hand off" when holding a drink. In Gear: at the till empty hands ring up; at the pickup counter empty hands take
+  a cup back and a drink in hand is "Set on the pickup counter"; the condiment bar takes a box. The till hint is
+  hidden whenever a cup matches a customer (old hand-off-first rule): that is now exactly when ringing helps.
+- Draw 4 pickup slots in Gear (`PICKUP.slots`), not `ECONOMY.pass.slots` (3); draw the condiment bar's servings
+  and the box stack in the corner; show customers at the pickup area (`Customer.stage`).
+- `src/render/crewModel.ts` ~131-140: `pickup.take` never shifts `mem.putters`; the teamwork burst only fires on
+  `pass.serve`, which never happens in Gear; R-drops aren't tracked as puts.
+- `src/audio/cues.ts` ~128-130: no cue for `pickup.take`; the serve cue never plays in Gear.
+- `src/ui/nightWarnings.ts` `rentTomorrow` ignores a losing branch (the sim's brief and planner now count it).
+- `src/ui/branchView.ts` values a stock send at list price (the sim uses the restock price).
+- Planner rows reuse existing `AdviceKind` values (`steep`, `restock:condimentBox`, gear/staff/rival/branch rows):
+  tell them apart by `id` / `input.kind`; `coveredBy()` should learn `rival:promo` / `rival:loyalty`.
+
+Open (sim lane):
+- Pickup review minors still open: tests at src/sim/pickup.test.ts:182, :244 and :208-219 would pass without
+  the feature (tighten them); a full counter bins the held drink rather than taking back a cup nobody wants (M2).
+- A cold drip pot can't be dumped; bots serve it at half tip until empty.
+- Bots answer the phone but never travel to the branch (travel is not built).

@@ -16,6 +16,31 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+_Nothing yet._
+
+## 3.3.0 — 2026-10-30 · Batch coffee & pickup
+
+The counter works like a real café now: order at the till, pick up at the counter, doctor your drip at the
+cream-and-sugar bar. Batch coffee pours fast, made-to-order drinks take their time, and bots can work the
+whole Gear bar.
+
+- **Order at the till, pick up at the counter.** Customers order at the till; ring them up and they move to the
+  pickup area with half their patience topped back up. Set finished drinks on the pickup counter (four spots)
+  and whoever has waited longest for that drink takes it, pays and tips. No more handing drinks over directly.
+- **Batch coffee pours instantly.** A brewed drip pot and the cold brew tap pour a cup straight into your hands;
+  only brewing the pot takes time. Pots still go cold, and a cold cup still serves at half tip.
+- **Cold brew is planned the night before.** On the night screen, choose how many cups to steep for tomorrow
+  (up to your gear's cap). You pay concentrate only for the top-up: leftovers keep one more day. The number
+  sticks until you change it, and a new run starts full.
+- **Made-to-order drinks get more patience.** Drip and cold brew customers expect it fast (a touch less patience
+  than before); espresso, lattes and the rest wait longer, up to pour-over, made by hand one cup at a time.
+- **The condiment bar.** Most drip and cold brew customers stop for cream, milk, sugar or sweetener after pickup.
+  It holds 20 servings. Buy condiment boxes at night ($6); they wait in the corner until someone carries one
+  over to refill the bar. An empty bar means black coffee and a smaller tip.
+- **Night alerts and tips** warn when tomorrow's steep can't be paid for or the bar will run dry, with a one-tap fix.
+
+Also in this release:
+
 - **Old saves, checked for real.** Saves written by the released v2.1.0 and v3.1.0 builds now ship as test fixtures: each one loads, plays another day and saves again, and a v3.1.0 save sitting on the week-end screen starts a season when you press Keep going.
 - **Easier-to-read labels.** The small caps labels on the receipt, week-end, Records and title history tables are a touch bigger (12px, up from 10–10.5px), and the day receipt tightens up on shorter screens so it never runs off the bottom at 1280×800.
 - **The week at a glance.** The week-end screen shows the last seven days as little profit bars (red for a day that lost money), with the week's total and customers served beside them.
