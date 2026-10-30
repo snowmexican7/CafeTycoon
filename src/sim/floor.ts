@@ -103,11 +103,11 @@ function slip(state: GameState, p: Player): void {
 
 /**
  * FB2 A3, Gear runs: every new mess knocks `hit` points off the floor meter at once (placeMess); then, per tick, it
- * drifts down per mess on the floor and comes back when there is none. Both slower than classic (ECONOMY.mess), so a
- * mess shows on the meter for the rest of the day, and one left through a rush does not sink it to the inspector's bar.
- * Customers only start to mind below `patienceFrom` (see floorPatience).
+ * drifts down per mess on the floor and comes back when there is none. Fix round 1 (I4): it comes back as fast as it
+ * drifts (0.12/s), so a mess mopped at once heals within about a minute: the meter (and floor80, and the inspector)
+ * rewards the mop, not the dice. Customers only start to mind below `patienceFrom` (see floorPatience).
  */
-export const GEAR_FLOOR = { hit: 8, dirtPerMessPerTick: 0.002, recoverPerTick: 0.0003, patienceFrom: 80 } as const;
+export const GEAR_FLOOR = { hit: 8, dirtPerMessPerTick: 0.002, recoverPerTick: 0.002, patienceFrom: 80 } as const;
 
 /**
  * The floor's patience multiplier for a new arrival: classic, a straight line from 1 (spotless) down to

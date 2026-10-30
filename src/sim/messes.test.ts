@@ -139,6 +139,23 @@ describe('FB2 A3: the floor meter in Gear runs', () => {
     expect(c.cleanliness).toBe(100);
   });
 
+  it('a mess mopped right away heals within about a minute (fix round 1, I4: mopping, not the dice, keeps floor80)', () => {
+    const s = gearStand();
+    placeMess(s, 'spill', { x: 3, y: 4 });
+    s.messes = []; // mopped
+    for (let i = 0; i < 70 * 60; i++) stepCleanliness(s);
+    expect(s.cleanliness).toBe(100);
+    // three messes in a day, each mopped at once, never break floor80
+    const t = gearStand();
+    for (let k = 0; k < 3; k++) {
+      placeMess(t, 'spill', { x: 3, y: 4 });
+      for (let i = 0; i < 5 * 60; i++) stepCleanliness(t); // 5 s to mop it
+      t.messes = [];
+      expect(t.cleanliness).toBeGreaterThan(80);
+      for (let i = 0; i < 40 * 60; i++) stepCleanliness(t);
+    }
+  });
+
   it('drifts down slower per mess than classic, and recovers slower too (the hit is what shows)', () => {
     const s = gearStand();
     s.messes = [{ id: 1, kind: 'spill', x: 3, y: 4, amount: 1 }];
