@@ -102,6 +102,7 @@ describe('G10a: the pour-over branch (D4b / D5b)', () => {
     s.menu.drip = true;
     s.menu.coldBrew = true;
     s.unlocked = ['drip', 'coldBrew'];
+    buy(s, 'c1'); // the cold brew tap makes something, so there is a board to trim (the planner keeps quiet when nothing can be made)
     const tips = planNight(s).map((a) => a.text).join(' | ');
     expect(tips).not.toContain('undefined');
     expect(tips).toContain('drip machine');

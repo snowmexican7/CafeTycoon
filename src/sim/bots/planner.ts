@@ -1,55 +1,91 @@
 /**
  * FB1 WP6: the night planner. A pure, deterministic read of the night that lists what a sensible
  * crew would do before opening: restock, prices, twists, the signature, the rival, growing, the
- * checkout path and the back bar. Bot crewmates voice the top of the list as tips; the balance
- * tester's `planner` policy applies all of it. Advice never spends money in a real game: each item
- * carries the night input a human would send.
+ * checkout path, the back bar and, in Gear runs, machines, staff and the Phase 4 systems. Bot
+ * crewmates voice the top of the list as tips; the balance tester's `planner` policy applies the
+ * classic part of it. Advice never spends money in a real game, and bots never send inputs: each
+ * item carries the night input a HUMAN would send.
  *
  * Final shapes:
  *
  *   interface Advice {
  *     id: string;   // restock:<supply> | price:<drink> | twist:<drink> | signature | scout | rival |
  *                   // grow:<tier> | checkout:<id> | slot:<index> | equip:espresso | menu:<drink>
- *     kind: 'restock' | 'price' | 'twist' | 'signature' | 'scout' | 'rival' | 'grow' | 'checkout' | 'slot' | 'equip' | 'menu';
+ *                   // Gear runs: gear:<gearId> | staff:fire | rival:promo | rival:loyalty |
+ *                   // branch:open | branch:staff | branch:send:<supply>
+ *     kind: AdviceKind;  // restock | price | twist | signature | scout | rival | grow | checkout | slot | equip | menu
  *     text: string;
  *     input: NightFix;   // the input without its playerId
- *     priority: number;  // restock out 100, low 90; rival 80; grow 70; checkout 60; slot 55; price 50;
- *                        // twist 40; signature 35; equip 30; scout 20; menu 10
+ *     priority: number;  // see the table below
  *   }
  *   planNight(state): Advice[]                                   // priority desc, then id asc
  *   crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots (before they clock in: the ids the roster spawns)
  *
- * In a Gear run there is no `slot` or `equip` advice (the Gear board replaces the stations shop).
- * Opening night is for stocking up: grow, checkout and equip advice wait for a finished day (as
- * `nightBrief` does). A drink with no station is only taken off the board when nothing in this plan
- * or in `state.equipment` could bring that station back (no grow advice, the kind not unplaced).
+ * Priorities (PLAN_PRIORITY); Gear-only rows marked G:
  *
- * Money: one day's rent is held back, and every advice that spends (restock, grow, checkout, equip,
- * scout) draws on what is left in priority order, so applying the whole list never overdraws the
- * till or eats tomorrow's rent.
+ *   100 restock, out of stock          55 slot (classic)               40 twist
+ *    90 restock, low                   53 staff:fire (G, kind equip)   35 signature
+ *    80 rival (knock-off)              52 branch:staff (G, kind grow)  30 equip (classic)
+ *    75 rival:promo (G, rivalCounter)  50 price                        20 scout
+ *    70 grow                           48 branch:send:* (G, restock)   10 menu
+ *    65 branch:open (G, kind grow)     45 rival:loyalty (G, stampCard)
+ *    60 checkout
+ *    58 gear:<id> (G, kind equip)
+ *
+ * Gear rows reuse the existing AdviceKind values (the UI keeps a `Record<AdviceKind, ...>` of icons), so
+ * tell them apart by `id` or `input.kind`: `gear` buys, `staff` (fire only, never hire), `rivalCounter`,
+ * `stampCard` and `branch` (open / staff / send).
+ *
+ * Gear runs: there is no `slot` or `equip` advice (the Gear board replaces the stations shop). The gear
+ * hint walks the gearBalance upgrade path: it never trades the E1 pods for E2+ before a grinder is in a
+ * slot, puts the polished C5 / E6 first when yesterday's cups averaged under 3 stars and they are affordable
+ * tonight, says nothing while a crew vote is open, and leaves a flowing D4b alone (a daytime thing). A $50+
+ * buy in a co-op crew becomes a proposal; the input is the same. `staff:fire` appears when yesterday's wages
+ * beat the bots' takings in `DayStats.byPlayer`. Phase 4: match the rival's happy hour on a promo night,
+ * print the stamp card once the rival's loyalty card is live (cash after bills >= $30 + a day's restock),
+ * open the second shop at the café tier (cash after bills >= lease + a day's restock, a profitable day, the area
+ * with the best `branchDay` estimate), add or cut a branch barista from yesterday's branch day (only if
+ * `branchDay` says it pays), and send a pack of beans or milk when a Manager is on the crew and home stock is
+ * more than two packs over tomorrow's use. Season pacing has no input to attach, so there is no season advice.
+ *
+ * Opening night is for stocking up: grow, checkout and equip advice wait for a finished day (as
+ * `nightBrief` does). A drink with no station is only taken off the board when something can be made at all
+ * and nothing in this plan or in `state.equipment` could bring that station back (no grow advice, the kind
+ * not unplaced).
+ *
+ * Money: tomorrow's bills (rent plus wages: `billsForDay`) are held back, and every advice that spends
+ * (restock, grow, branch:open, checkout, gear, rival:loyalty, equip, scout) draws on what is left in
+ * priority order, so applying the whole list never overdraws the till or eats tomorrow's bills.
  *
  * Pure: no RNG, no Date, no mutation of `state`. Reads only what the crew can see (the taste
  * notebook, the scouted rival copy), never hidden state (`comboStars`, `adOutcome`, `rivalMenu`).
  */
+import { AREAS } from '../../data/areas';
+import type { AreaId } from '../../data/areas';
 import { BASE_DRINKS, DRINK_INFO } from '../../data/drinks';
 import { ECONOMY } from '../../data/economy';
+import { GEAR } from '../../data/gear';
+import type { GearId } from '../../data/gear';
 import { EQUIPMENT } from '../../data/equipment';
 import type { EquipmentKind } from '../../data/equipment';
 import { expectedUse } from '../brief';
 import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
 import { computeModifiers } from '../effects';
-import { billsForDay } from '../staff';
-import { isGearRun } from '../gear';
+import { billsForDay, crewCount, crewNames, wageEach } from '../staff';
+import { averageStars } from '../accuracy';
+import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun } from '../gear';
 import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
 import { restockCost } from '../night';
 import { PRICING, priceForecast, priceStep } from '../pricing';
-import { copyIsLive, RIVAL, sigPrice } from '../rival';
+import { BRANCH, branchAreas, branchDay, canOpenBranch, hasManager } from '../branch';
+import { profitOf } from '../profit';
+import { copyIsLive, countered, hasStamps, isPromoDay, loyaltyLive, RIVAL, sigPrice } from '../rival';
 import { SIG } from '../signature';
 import { defaultSlots, reasonOff, slotCount } from '../slots';
 import { knownStars, TWIST_INFO, TWISTS, twistFor } from '../taste';
 import type { TwistId } from '../taste';
-import { menuDrinks, SUPPLY_IDS } from '../unlocks';
+import { menuDrinks, SUPPLY_IDS, unlockedDrinks } from '../unlocks';
 import { BOT_IDS, botsFor, humanCount } from './roster';
 import type { CheckoutId, DrinkId, GameState, PlayerId, StationKind, SupplyId } from '../types';
 
@@ -67,10 +103,17 @@ export const PLAN_PRIORITY = {
   restockOut: 100,
   restockLow: 90,
   rival: 80,
+  rivalCounter: 75,
   grow: 70,
+  branchOpen: 65,
   checkout: 60,
+  gear: 58,
   slot: 55,
+  staff: 53,
+  branchStaff: 52,
   price: 50,
+  branchSend: 48,
+  stampCard: 45,
   twist: 40,
   signature: 35,
   equip: 30,
@@ -373,6 +416,216 @@ function equipAdvice(state: GameState, budget: Budget, slotTaken: boolean): Advi
   ];
 }
 
+/** The upgrade path a sensible Gear crew follows (the same order scripts/gearBalance.ts plays). */
+const GEAR_PATH: GearId[] = ['c1', 'e1', 's1', 'c2', 's2', 'g1', 'e2', 'c3', 'g2', 'e3', 's3', 'd1', 'c4', 'e4', 'd2', 'd3', 'g3', 'e5', 'd4b', 'c5', 'd5b', 'e6'];
+/** Under this many stars on average, the polished machines (C5, E6) jump the path when they are affordable. */
+const POLISH_BELOW = 3;
+
+/**
+ * The next machine to buy in a Gear run (`{ kind: 'gear', action: 'buy', gear }`; with more than one human
+ * a $50+ buy becomes a crew vote, but the input is the same). Walks GEAR_PATH: skips what the crew owns or
+ * has a better one of, what has no slot to go in (a trade-in needs none), a branch whose parent is not far
+ * enough along, and any espresso machine above the E1 pods while no grinder is in a slot (they could not
+ * make a shot). The first one left is the advice; if it is out of reach the plan saves up for it. When
+ * yesterday's cups averaged under 3★ the polished C5 / E6 (they forgive a slip) go first, but only when
+ * they are affordable tonight. A flowing D4b is a daytime thing: no advice for it. No advice while a vote is open.
+ */
+function gearAdvice(state: GameState, budget: Budget): Advice[] {
+  if (!isGearRun(state) || state.gearVote) return [];
+  const slots = state.slots ?? [];
+  const placed = (state.slotGear ?? []).filter((g): g is GearId => !!g);
+  const room = slots.some((x, i) => x === null && i < slotCount(state.tier));
+  const grinder = state.stations.some((s) => s.kind === 'grinder');
+  const humans = state.players.filter((p) => p.connected && !p.bot).length;
+  const last = state.days.at(-1);
+  const avg = last ? averageStars(last) : null;
+  const polishFirst = avg !== null && avg < POLISH_BELOW;
+
+  /** What buying `id` would cost net of the trade-in, or null when it cannot be bought tonight. */
+  const deal = (id: GearId): { net: number; old: GearId | null } | null => {
+    const want = GEAR[id];
+    if (placed.includes(id)) return null;
+    let old: GearId | null = null;
+    for (const o of placed) if (GEAR[o].tree === want.tree && (!old || GEAR[o].tier > GEAR[old].tier)) old = o;
+    if (old && GEAR[old].tier >= want.tier) return null;
+    if (want.tree === 'espresso' && want.tier >= 2 && !grinder) return null;
+    if (!gearRequiresMet(state, id)) return null;
+    if (!old && !room) return null;
+    return { net: round2(want.price - (old ? GEAR[old].sell : 0)), old };
+  };
+
+  const order = polishFirst ? [...GEAR_PATH.filter((id) => GEAR[id].polish), ...GEAR_PATH.filter((id) => !GEAR[id].polish)] : GEAR_PATH;
+  for (const id of order) {
+    const d = deal(id);
+    if (!d) continue;
+    const polished = polishFirst && !!GEAR[id].polish;
+    if (d.net > budget.left) {
+      if (polished) continue; // too dear tonight: carry on down the normal path
+      return []; // saving up for the next machine
+    }
+    budget.left = round2(budget.left - d.net);
+    const g = GEAR[id];
+    const back = d.old ? `, ${dollars(GEAR[d.old].sell)} back on the ${GEAR[d.old].name}` : '';
+    const vote = humans > 1 && g.price >= GEAR_VOTE_MIN ? ', the crew votes' : '';
+    const buy = `buy the ${g.name} (${dollars(g.price)}${back}${vote})`;
+    return [
+      {
+        id: `gear:${id}`,
+        kind: 'equip',
+        text: polished ? `Cups averaged ${avg!.toFixed(1)}★: ${buy}, it forgives a slip` : `${buy[0]!.toUpperCase()}${buy.slice(1)}`,
+        input: { kind: 'gear', action: 'buy', gear: id },
+        priority: PLAN_PRIORITY.gear,
+      },
+    ];
+  }
+  return [];
+}
+
+/**
+ * Gear runs: when yesterday's wages beat what the hired baristas rang up (the bots' share of
+ * `DayStats.byPlayer`), suggest letting the newest one go. Never hiring. Quiet once a firing tonight
+ * has already taken the crew below the count that was paid yesterday.
+ */
+function staffAdvice(state: GameState): Advice[] {
+  if (!isGearRun(state)) return [];
+  const last = state.days.at(-1);
+  const each = wageEach(state);
+  if (!last?.wages || !last.byPlayer || each <= 0 || crewCount(state) <= 0) return [];
+  const paid = Math.max(1, Math.round(last.wages / each));
+  if (crewCount(state) < paid) return [];
+  const takings = round2(BOT_IDS.reduce((n, id) => n + (last.byPlayer![id]?.takings ?? 0), 0));
+  if (last.wages <= takings) return [];
+  const name = crewNames(state).at(-1) ?? 'The newest barista';
+  return [
+    {
+      id: 'staff:fire',
+      kind: 'equip',
+      text: `${name} costs more than they bring in at the ${TIERS[state.tier ?? 'cafe'].short} (wages ${dollars(last.wages)}, crew rang up ${dollars(takings)})`,
+      input: { kind: 'staff', action: 'fire' },
+      priority: PLAN_PRIORITY.staff,
+    },
+  ];
+}
+
+/** What it costs to stock one normal day (expected use, whole packs), whatever is in the pantry. */
+function dayRestockCost(state: GameState): number {
+  const use = expectedUse(state);
+  const menu = menuDrinks(state);
+  return round2(
+    RESTOCKABLE.filter((s) => menu.some((d) => ECONOMY.drinkSupplies[d].includes(s))).reduce(
+      (n, supply) => n + restockCost(state, supply, Math.ceil(use[supply] / ECONOMY.packs[supply].size)),
+      0,
+    ),
+  );
+}
+
+/** P4 B1: tomorrow is one of the rival's happy-hour days and nobody has matched it (a free price cut). */
+function rivalCounterAdvice(state: GameState): Advice[] {
+  if (!isGearRun(state) || !isPromoDay(state) || countered(state)) return [];
+  return [{ id: 'rival:promo', kind: 'rival', text: `Match ${RIVAL.name}'s happy hour`, input: { kind: 'rivalCounter' }, priority: PLAN_PRIORITY.rivalCounter }];
+}
+
+/** P4 F2: the rival's loyalty card is live and ours is not out: print the stamp card once there is $30 and a day's restock to spare. */
+function stampAdvice(state: GameState, budget: Budget): Advice[] {
+  if (!isGearRun(state) || !loyaltyLive(state) || hasStamps(state) || state.rival?.stamps !== undefined) return [];
+  const spare = round2(state.cash - billsForDay(state));
+  if (spare < round2(RIVAL.stampCost + dayRestockCost(state)) || budget.left < RIVAL.stampCost) return [];
+  budget.left = round2(budget.left - RIVAL.stampCost);
+  return [
+    {
+      id: 'rival:loyalty',
+      kind: 'rival',
+      text: `Print our own stamp card (${dollars(RIVAL.stampCost)}) to win back ${RIVAL.name}'s loyalty-card walk-ins`,
+      input: { kind: 'stampCard' },
+      priority: PLAN_PRIORITY.stampCard,
+    },
+  ];
+}
+
+/** The branch as it would be if opened in `area` (for the sim's own `branchDay` estimate). */
+const branchProbe = (state: GameState, branch: NonNullable<GameState['branch']>): GameState => ({ ...state, branch });
+
+/**
+ * P4 B4: open the second shop at the café tier once there is the lease, bills and a day's stock to spare and
+ * yesterday made a profit, in the area whose `branchDay` estimate (two baristas) is best and not a loss.
+ */
+function branchOpenAdvice(state: GameState, budget: Budget): Advice[] {
+  if (!isGearRun(state) || !canOpenBranch(state)) return [];
+  const last = state.days.at(-1);
+  if (!last || profitOf(last) <= 0) return [];
+  if (round2(state.cash - billsForDay(state)) < round2(BRANCH.cost + dayRestockCost(state)) || budget.left < BRANCH.cost) return [];
+  let best: { area: AreaId; profit: number } | null = null;
+  for (const area of branchAreas(state)) {
+    const est = branchDay(branchProbe(state, { area, staff: BRANCH.staff.start, openedDay: state.day, spent: BRANCH.cost, by: 'plan' }));
+    if (est && est.profit > 0 && (!best || est.profit > best.profit)) best = { area, profit: est.profit };
+  }
+  if (!best) return [];
+  budget.left = round2(budget.left - BRANCH.cost);
+  return [
+    {
+      id: 'branch:open',
+      kind: 'grow',
+      text: `Open a second shop in ${AREAS[best.area].name} (${dollars(BRANCH.cost)}, about ${dollars(Math.round(best.profit))} a day)`,
+      input: { kind: 'branch', action: 'open', area: best.area },
+      priority: PLAN_PRIORITY.branchOpen,
+    },
+  ];
+}
+
+/** P4 B4: one more barista at the branch after a day that walked people out (when the estimate says it pays), one fewer after a loss with no walk-outs. */
+function branchStaffAdvice(state: GameState): Advice[] {
+  const b = state.branch;
+  const last = state.days.at(-1)?.branch;
+  if (!isGearRun(state) || !b || !last) return [];
+  const now = branchDay(state)!.profit;
+  const profitWith = (staff: number) => branchDay(branchProbe(state, { ...b, staff }))!.profit;
+  if (last.walked > 0 && b.staff < BRANCH.staff.max && profitWith(b.staff + 1) > now) {
+    return [
+      {
+        id: 'branch:staff',
+        kind: 'grow',
+        text: `${last.walked} walked out of the second shop yesterday: put ${b.staff + 1} baristas there`,
+        input: { kind: 'branch', action: 'staff', staff: b.staff + 1 },
+        priority: PLAN_PRIORITY.branchStaff,
+      },
+    ];
+  }
+  if (last.profit < 0 && last.walked === 0 && b.staff > BRANCH.staff.min && profitWith(b.staff - 1) > now) {
+    return [
+      {
+        id: 'branch:staff',
+        kind: 'grow',
+        text: `The second shop lost ${money(-last.profit)} with nobody walking out: cut to ${b.staff - 1} ${b.staff - 1 === 1 ? 'barista' : 'baristas'} there`,
+        input: { kind: 'branch', action: 'staff', staff: b.staff - 1 },
+        priority: PLAN_PRIORITY.branchStaff,
+      },
+    ];
+  }
+  return [];
+}
+
+/** P4 B5: with a Manager on the crew and a branch open, send a pack of beans or milk when home has more than two packs beyond tomorrow's use. */
+function branchSendAdvice(state: GameState): Advice[] {
+  const b = state.branch;
+  if (!isGearRun(state) || !b || !hasManager(state)) return [];
+  // credit beyond what the branch's next day will draw is already waiting there
+  if ((b.stockCredit ?? 0) > (branchDay(state)?.fromStock ?? 0)) return [];
+  const use = expectedUse(state);
+  const advice: Advice[] = [];
+  for (const supply of ['beans', 'milk'] as const) {
+    const size = ECONOMY.packs[supply].size;
+    if ((state.supplies[supply] ?? 0) <= use[supply] + 2 * size) continue;
+    advice.push({
+      id: `branch:send:${supply}`,
+      kind: 'restock',
+      text: `Plenty of ${STOCK_NAME[supply]} at home: send a pack to the second shop`,
+      input: { kind: 'branch', action: 'send', supply },
+      priority: PLAN_PRIORITY.branchSend,
+    });
+  }
+  return advice;
+}
+
 function scoutAdvice(state: GameState, budget: Budget): Advice[] {
   if (state.day < 2 || state.rival?.scouted === state.day || budget.left < SCOUT_SPARE) return [];
   budget.left = round2(budget.left - RIVAL.scoutCost);
@@ -386,6 +639,8 @@ function scoutAdvice(state: GameState, budget: Budget): Advice[] {
  */
 function menuAdvice(state: GameState, growing: boolean): Advice[] {
   if (growing) return [];
+  // Nothing can be made yet (night 1 of a Gear run with an empty counter): there is no board to trim.
+  if (unlockedDrinks(state).length === 0) return [];
   const unplaced = state.equipment ?? [];
   const on = (state.unlocked ?? BASE_DRINKS).filter((d) => state.menu[d]);
   let stays = on.length;
@@ -410,21 +665,31 @@ function menuAdvice(state: GameState, growing: boolean): Advice[] {
 /** Everything worth doing tonight, highest priority first (ties by id). Pure and deterministic. */
 export function planNight(state: GameState): Advice[] {
   const budget: Budget = { left: round2(state.cash - billsForDay(state)) };
-  // Spending advice draws on the budget in priority order: restock, grow, checkout, equip, scout.
+  // Spending advice draws on the budget in priority order: restock, grow, branch:open, checkout, gear, rival:loyalty, equip, scout.
   const restock = restockAdvice(state, budget);
   const grow = growAdvice(state, budget);
+  const branchOpen = branchOpenAdvice(state, budget);
   const checkout = grow.length ? [] : checkoutAdvice(state, budget);
+  const gear = gearAdvice(state, budget);
   const slot = slotAdvice(state);
+  const stamp = stampAdvice(state, budget);
   const equip = equipAdvice(state, budget, slot.length > 0);
   const scout = scoutAdvice(state, budget);
   const all = [
     ...restock,
     ...rivalAdvice(state),
+    ...rivalCounterAdvice(state),
     ...grow,
+    ...branchOpen,
     ...checkout,
+    ...gear,
     ...slot,
+    ...staffAdvice(state),
+    ...branchStaffAdvice(state),
     ...priceAdvice(state),
     ...twistAdvice(state),
+    ...branchSendAdvice(state),
+    ...stamp,
     ...signatureAdvice(state),
     ...equip,
     ...scout,
