@@ -25,6 +25,13 @@ when a build goes out, the line moves under its version with the date.
   before brewing. Steamers drip milk, grinders spill grounds and the bin sometimes leaks: each mess knocks 8% off
   the floor meter, and a quick mop wins it back within a minute.
 
+## 3.3.5 — 2026-10-30 · Cold brew, not "tap"
+
+- **Plainer cold brew words.** Order steps say "Pour cold brew" instead of "Tap" (an iced latte's step is
+  "Ice + milk"), hints name the "Cold brew" machine, and the morning pop-up says "8 cups of cold brew ready".
+  A card machine's fee reads "% per card sale". Some menu and gear text still says "tap" and will change in a
+  later build.
+
 ## 3.3.4 — 2026-10-30 · Counts from one place
 
 - **Counts come straight from the game rules.** The numbers over the machines and on the Gear card now use the same
