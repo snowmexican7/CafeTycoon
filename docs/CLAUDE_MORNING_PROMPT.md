@@ -1,31 +1,36 @@
 # Claude: morning prompt (paste as-is)
 
-> Written overnight by the UI lane (Grok Bot) while Kennedy slept. It collects every bot, sim and net item
-> the overnight Gear sprint left for you. Please read `docs/GEAR_TREE.md` (the design) and the Gear entries
-> near the end of `docs/BACKLOG.md` (what was built, block by block) first.
+> One consolidated prompt from the overnight sprint (Grok Bot, UI lane, 2026-10-30 00:00–06:45 Toronto).
+> Read `docs/GEAR_TREE.md` (Gear design), `docs/PHASE4_PLAN.md` and the Gear / Phase 4 sections near the end
+> of `docs/BACKLOG.md` first. Everything below is on `main`; nothing is waiting on a branch.
+
+## Where things stand
+
+- **Live: v3.2.0** (tag `v3.2.0`, "Phase 4 lite"). History: v3.0.0 Gear Tree (G11; rollback `pre-gear` / `v2.2.0`),
+  v3.1.0 Phase 3 (hired staff with wages, head starts), v3.2.0 Phase 4 blocks 1–6 + season board + rival loyalty
+  card. Every new run from the title or a co-op lobby is a **Gear run**; `?gear=0` still starts classic, and old
+  classic saves resume as classic. Pages deploys every push to main.
+- SNAPSHOT 27 (all new state is optional fields), **PROTOCOL 40**. 1047 tests in 128 files; tsc and build clean.
+- Integration checks you can reuse: `npx tsx scripts/gearBalance.ts 28 3` (headless Gear runs with stand-in
+  bots; `KEEP=1` plays seasons) and `npx tsx scripts/p4Smoke.ts 28 3` (scripted crew that uses the Phase 4
+  inputs; a 6-day version runs in vitest as `src/p4Smoke.test.ts`).
+- **Not built:** travel to the second shop (B6), 2v2 on a shared street (B7 is a design spike only:
+  `docs/P4_B7_VERSUS_SPIKE.md`; don't start V1 until Kennedy answers its open questions), Phase 5 (AI).
+
+## Already done by you on main (don't redo)
+
+- Solo bots switch (`d401839`), bots leaving your prep alone (`1f2f07a`, `e33a119`), Overcooked-style bumps and
+  collision spills (`47b03d1`, tuned to 5% in `b0d14f4`, snapshot 27 / protocol 30 in `2929d69`), the planner
+  skipping classic slot/equip purchases in Gear runs (`a7695ec`), your review of the Gear G1–G5 sim edits
+  (`76c33dc`), the claimed-drink coverage test (`8cdd209`), and the fb1-sim crewTips fixes.
 
 ## Goal
 
-Make the bots good teammates in **Gear runs**. Everything in the Gear Tree now exists in the sim, but bots
-were only taught the classic stations. A Gear run with bots should feel as smooth as a classic one.
-Also review the overnight sim edits (listed below) and fix anything you'd do differently.
+Make the bots good teammates in **Gear runs**, then teach them the Phase 4 systems. Bots were only taught the
+classic stations, and they ignore everything Phase 4 added. A Gear run with bots should feel as smooth as a
+classic one. Also review the overnight sim edits (list below) and fix anything you'd do differently.
 
-## Already done on main (no need to redo)
-
-- **v3.1.0 is live (tag `v3.1.0`; Phase 3 complete).** The Gear Tree shipped as v3.0.0 (G11, rollback
-  `pre-gear` / `v2.2.0`); 3.1.0 adds hired staff with wages (B15) and head starts carried between runs (B16).
-  Every new run from the title or a co-op lobby is a Gear run, so everything below is what players meet by
-  default. `?gear=0` still starts a classic run for comparison, and old classic saves resume as classic.
-  Phase 4 (Franchise & rivals) is planned block by block in `docs/PHASE4_PLAN.md`; blocks 1–6 (rival
-  happy hours, seasons, manager's report, second shop, manager mode, phone calls) plus a season board in Café records and the rival's loyalty card are merged on main (tags `p4-b01`…`p4-b06`, `p4-f01`, `p4-f02`)
-  with no release tag. **Note:** GitHub Pages deploys every push to main, so these are already live under the
-  3.1.0 label. Playtest the live site, then bump to 3.2.0 (CHANGELOG heading + package.json) after a clean smoke.
-
-- Solo bots switch (`solo-bots-switch`), bots leaving your prep alone (`bot-prep-wait`), collision spills
-  (`collision-spills`, tuned to 5%), planner skipping classic purchases in Gear runs, and the crewTips fixes
-  (fb1-sim-fixes). They were all on main before the sprint.
-
-## The work (bot side, all Gear-only unless noted)
+## The work, part 1: Gear stations (bot side, all Gear-only unless noted)
 
 1. **Pods (E1 Pod-o-Matic).** No grinder, it uses `pods` stock. Empty hands + E = a shot. Today bots can't
    make espresso on E1. `podsCoverGrinder(state)` and `gearRecipe` in `src/sim/gear.ts` say what's allowed.
@@ -43,7 +48,6 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 6. **Multiples (G4e).** A crew can own two of the same machine. Bots should spread out across them.
 7. **Optional niceties:** favour families that tip well in this area (`areaTipMul`), and drinks near a
    level-up (`levelUpProgress`).
-<!-- SPRINT-APPEND: later blocks add items below this line -->
 - **P3 B15 hired staff (bot side, small):** bots now cost wages in Gear runs (`src/sim/staff.ts`: `billsForDay` = rent + wages). I switched the night planner's budget in `sim/bots/planner.ts` (`restockAdvice` default and the night plan) from `rentForDay` to `billsForDay`, please review. Optional: the planner could suggest letting a bot go when wages beat what it adds (at the stand that is often true), and bots should never send the `staff` input.
 - **G6c new level-up drinks:** Doppio (espresso in hand → espresso machine again; clashes with Americano, so take it only when the oldest such ticket is yours), Sweet-cream cold brew (cold brew in hand → tap), Café au lait (drip pour in hand → steamer), Red-eye (drip pour in hand → espresso machine, not on pods). `recipeChain` resolves all four.
 - **G10a Pour-over:** made from empty hands at a `drip`-kind station whose gear has `pour` set (`GEAR[s.gear].pour`). The pot drip machines on the same kind make drip instead, so pick the station by gear. `recipeChain('pourOver')` gives one `drip` step.
@@ -53,6 +57,24 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - **G8 co-op votes (optional polish):** `state.gearVote` and the `gear/vote` input are live (protocol 31). If you touch net/host: call `settleVote(state)` (sim/gear.ts) when a player disconnects so a vote can't hang; a toast on vote pass/fail would be nice. Bots must not vote.
 - **Gear polish (UI only):** rung-up customers now show a receipt above them, so a till bot (item 4) is visible to players. Also, on night 1 of a Gear run with an empty counter, crew tips suggest "Take the Espresso/Latte off the board" though nothing can be made yet. Please make crewTips skip menu advice when `unlockedDrinks(state)` is empty.
 - **Integration smoke fix (bot side, small):** the browser smoke found that a grinder bought next to the Pod-o-Matic made bots grind beans the pod machine refuses, so espresso sales dropped to zero (6–7 cups/day → 0). `chainFor` now also skips the grind step when `podsOnly(state)` (sim/gear.ts: every espresso machine is a pod machine). Still open for you: in a mixed bar (E1 + E2+ with a grinder), `use(state, p, 'espresso', 'insert')` can pick the pod machine while holding grounds; the planner should route grounds to a non-pod machine.
+
+
+## The work, part 2: Phase 4 (bots ignore all of it today; planner hints, not new maths)
+
+1. **Phone calls** (`src/sim/call.ts`): bots never answer. Let a bot Manager answer `{kind:'call', take}` while
+   `callRinging(state)`: fix the machine if branch staff ≥ 2, take the office order when the last branch day had
+   no walk-outs. (Inputs are people-only in `validate.ts` today; widen it for bots deliberately if you do this.)
+2. **Rival:** on a night where `isPromoDay(state)` and not `countered(state)`, an advice row "Match Starbuck$'s
+   happy hour" (`{kind:'rivalCounter'}`); on the loyalty launch night (`loyaltyLive` and not `hasStamps`) suggest
+   the Stamp card (`{kind:'stampCard'}`) when cash ≥ $30 + a day's restock.
+3. **Second shop** (`src/sim/branch.ts`): suggest opening when tier is café, cash ≥ cost + a stock buffer and the
+   home shop is profitable; suggest ±1 barista from `days[-1].branch` (walked > 0 → add; loss with walked 0 →
+   cut). Use `branchDay(state)` for the estimate; don't change branch maths in bot code.
+4. **Send stock** (manager mode): if a bot holds Manager and a branch is open, send surplus beans/milk when
+   home stock > 2 packs (`branch` input `send`).
+5. **Seasons / reports (optional):** `seasonNow(state)` → `{week, target, soFar}` if the planner should lean to
+   cash late in a week short of its target; `reportViewModel(state).crew` gives each bot's cups and takings.
+6. **Staff:** the planner could suggest letting a bot go when wages beat what it adds; bots never send `staff`.
 
 ## Sim edits made overnight (please review)
 
@@ -100,3 +122,9 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - Bot chips and toasts for any new bot behaviour you log (for example "Bo-bot whacked the Pod-o-Matic").
 - Any crew-tip text you add for Gear (it shows on Tonight).
 - Screenshots and a smoke at 1512x982 and 1280x800 once your branch lands.
+
+## When you finish
+
+One dash-named branch per piece of work, merged into main with `--no-ff` and tagged; tsc, vitest and build
+green; tests for new logic; old saves still load. Add a line per change to `docs/BACKLOG.md` and the CHANGELOG
+`## Unreleased` section. Release as 3.3.0 after a clean `gearBalance` + `p4Smoke` run.

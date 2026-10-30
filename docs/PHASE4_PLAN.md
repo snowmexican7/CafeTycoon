@@ -25,7 +25,7 @@ keep loading (new `GameState` fields are optional; a snapshot bump needs a migra
 | 5 | ✅ **Manager mode** (lite, tag `p4-b05`): the Manager role boosts the branch (+2 cups/barista, supply discount); send stock to the branch as credit; branch line in the Manager's report. Moving hired staff between shops is deferred. | who works where | high: depends on 3 and 4 |
 | 6 | ✅ *(lite, tag `p4-b06`: the call and its choice on a day card; travelling to the branch is deferred)* **Phone calls and travel**: the other shop rings with a problem during the day (a broken machine, a big order); answer it, or travel there for the rest of the day | stay or go | highest single-player risk: two live floors |
 | 7 | *(design spike written: [`P4_B7_VERSUS_SPIKE.md`](P4_B7_VERSUS_SPIKE.md); no code yet)* **2v2 rival chains on a shared street**: two teams, two cafés, one customer stream; results screen | the whole game | highest: needs its own design spike first |
-| 8 | **Integration**: full co-op playtests, balance, release **4.0.0** | — | integration |
+| 8 | *(partial, tag `v3.2.0`: headless 28-day smoke `scripts/p4Smoke.ts` + browser smoke solo and `?link=local` co-op at 1512×982 and 1280×800, released as **3.2.0**; human co-op playtests and **4.0.0** wait for B6 travel and B7)* **Integration**: full co-op playtests, balance, release **4.0.0** | — | integration |
 
 ### Block notes
 

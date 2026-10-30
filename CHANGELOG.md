@@ -16,6 +16,10 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+## 3.2.0 — 2026-10-30 · Phase 4 (franchise & rivals, lite)
+
+Most of Phase 4, "Franchise & rivals", in a first playable cut: seasons, a pushier Starbuck$, and a second shop you run from the night screen. Still to come in Phase 4: travelling to the second shop, more than two shops, and 2v2 on a shared street (designed, not built). Old saves load as before.
+
 - **Starbuck$ loyalty card.** From week 3 of a Gear run the rival hands out a loyalty card that keeps about 7% of walk-ins away every day. Heads up warns you the night before, with a **Stamp card · $30** button: print your own once and the walk-ins come back, but every 10th cup is on the house (about 3% off takings). The morning note says when either card comes out.
 - **Season board.** Café records (🏆 on the main menu) now list your four-week seasons, best first: the medal, how many of the three targets you hit, how much you made in weeks 2–4, the crew and the date. A season still being played shows as in progress with the week you're on. Kept in this browser like the rest of the records; older records just have no seasons yet.
 - **Starbuck$ fights back.** From week 2 of a Gear run the rival down the street runs happy-hour days: one in week 2, then two a week. The night before, the Heads up list warns you (about 20% fewer walk-ins) with a **Match it · 15% off** button: match and you keep your walk-ins but sell everything 15% cheaper that day. From week 3 it also copies a new signature after 2 days instead of 3.
@@ -23,6 +27,7 @@ when a build goes out, the line moves under its version with the date.
 - **Second shop.** Once you're a café with $300 in the till, the night board has a **🏪 Open a 2nd shop** button. Pick an area across town (each says whether it likes tonight's menu). The shop runs itself: our reputation and the weather bring people in, the area's taste and your menu decide how many come, and the 1–3 baristas you hire decide how many get served. Its profit or loss lands in the till at closing, shows as a 🏪 chip on the Day card and a line on the receipt, and the drawer shows last day, tomorrow's estimate and a staff −/+. Sell the lease any night for half back (score-neutral).
 - **Phone calls from the second shop.** Some days, partway through opening hours, the other shop rings: a big card pops up on the floor. Either their espresso machine died (send a fix for $25, or it serves half its cups today) or an office wants 10 coffees delivered (+$30, but it uses 10 of the shop's cups). Anyone can answer within 25 seconds; a missed call counts as "no". How it went shows on the second shop's last-day line and in the Manager's report.
 - **Manager mode (lite).** Whoever takes the 📋 Manager role now runs the second shop too: +2 cups per barista there and the Manager's cheaper supplies on its cups. From the second shop drawer you can **send stock over** (up to a pack of beans, milk, cold brew or flavours at a time); it pays for the shop's cups before it buys its own. The Manager's report gains a 🏪 line for the second shop.
+- The in-game Roadmap shows Phase 4's rival, seasons and Manager goals done, and the second shop and phone calls under way.
 - **Manager's report.** At night, the Day card has a **📋 Report** button next to Receipt. It opens the day's report: takings, profit, served and walked out, average wait (and whether it got worse), rent and wages (with wages as a share of takings), the money drinks with bars, who served how many cups and for how much, and one or two plain notes on what to fix.
 
 ## 3.1.0 — 2026-10-30 · Phase 3 complete
