@@ -35,7 +35,7 @@ export interface DrinkInfo {
   icon: string;
   /** How often it is ordered next to the classics (orderBias multiplies this). */
   bias: number;
-  /** Patience multiplier: people wait a little longer for a fancy drink (default 1). */
+  /** Patience multiplier in classic runs: people wait a little longer for a fancy drink (default 1). Gear runs use GEAR_WAIT. */
   wait?: number;
   /** The day it joins the menu by itself; absent = only a night card unlocks it. */
   unlockDay?: number;
@@ -82,6 +82,15 @@ export const DRINK_INFO: Record<DrinkId, DrinkInfo> = {
 export function dayUnlocks(day: number): DrinkId[] {
   return DRINK_IDS.filter((d) => BASE_DRINKS.includes(d) || (DRINK_INFO[d].unlockDay !== undefined && day >= DRINK_INFO[d].unlockDay!));
 }
+
+/**
+ * Batch/pickup: Gear runs' patience by drink (multiplies the 33 s base). Poured drinks come fast and their
+ * customers expect it; made-to-order drinks take longer, so they wait longer. Classic runs keep `DRINK_INFO[d].wait`.
+ */
+export const GEAR_WAIT: Record<DrinkId, number> = {
+  drip: 0.9, coldBrew: 0.9, sweetCream: 1, cafeAuLait: 1, espresso: 1.3, americano: 1.3, doppio: 1.4, redEye: 1.4,
+  latte: 1.4, icedLatte: 1.4, matcha: 1.4, cappuccino: 1.5, mocha: 1.5, special: 1.5, pourOver: 1.7,
+};
 
 export type RecipeStation = Exclude<StationKind, 'counter' | 'trash'>;
 
