@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRun } from './run';
 import { levelUpOnServe, LEVEL_UPS } from './levelUp';
+import { unlockForDay } from './unlocks';
 import { recipeFor } from './stations';
 import { gearRecipe } from './gear';
 import { recipeChain, DRINK_IDS } from '../data/drinks';
@@ -64,5 +65,27 @@ describe('G6 drinks level up with use', () => {
     const vm = levelUpVM(s);
     expect(vm).toHaveLength(LEVEL_UPS.length);
     expect(vm[0]).toMatchObject({ drink: 'americano', served: 5, count: 12, learned: false });
+  });
+});
+
+describe('Gear G6b: level-ups replace the day-3/day-5 unlocks', () => {
+  const mk = (gear: boolean) =>
+    createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', ...(gear ? { gear: true } : {}) });
+  it('Gear runs get nothing from the calendar; classic runs still do', () => {
+    const g = mk(true); g.day = 5;
+    expect(unlockForDay(g)).toEqual([]);
+    const c = mk(false); c.day = 5;
+    expect(unlockForDay(c)).toEqual(expect.arrayContaining(['icedLatte', 'mocha']));
+  });
+  it('iced latte needs both 10 espressos and 10 cold brews; mocha needs 25 lattes', () => {
+    const g = mk(true);
+    for (let i = 0; i < 10; i++) levelUpOnServe(g, 'coldBrew');
+    for (let i = 0; i < 9; i++) levelUpOnServe(g, 'espresso');
+    expect(g.unlocked).not.toContain('icedLatte');
+    expect(levelUpOnServe(g, 'espresso')).toEqual(['icedLatte']);
+    for (let i = 0; i < 24; i++) levelUpOnServe(g, 'latte');
+    expect(g.unlocked).not.toContain('mocha');
+    expect(levelUpOnServe(g, 'latte')).toEqual(['mocha']);
+    expect(levelUpVM(g).find((l) => l.drink === 'icedLatte')?.also).toBe('10/10 cold brews');
   });
 });

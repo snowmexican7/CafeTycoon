@@ -1722,3 +1722,7 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Gear pulls customers: `gearPullMul` makes a family's orders 5% more likely per tier above 1, using the best tier in that family's tree (espresso→espresso machine, milky→steamer, iced→cold brew tap, filter→drip). It reweights `drawDrink`. It's ×1 in classic runs, so goldens are unchanged. It uses no new RNG draws, but Gear-run order outcomes shift.
 - Not done yet: "top tiers add snob regulars"; the area crowd column (impatient commuters, grumpy, and so on).
 - **For Claude (bots):** nothing needed. Bots could optionally favour high-tip families.
+
+### Gear G6b — level-ups replace the day-3/day-5 unlocks (gear-g06b)
+- Gear runs skip `unlockForDay`. Iced latte now unlocks after 10 espressos + 10 cold brews (`LevelUp.also`), and Mocha after 25 lattes (the flavour starter pack comes via unlockDrink). Classic runs are unchanged. The night "Drinks to learn" row shows both counts.
+- **For Claude (bots):** bots could aim for level-up counts (`levelUpProgress`). Optional.
