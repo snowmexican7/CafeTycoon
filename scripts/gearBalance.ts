@@ -48,6 +48,13 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
   }
   const nt = nextTier(state);
   if (nt && !skip.has('grow') && state.day >= 3 && state.cash > TIERS[nt].cost + 60) return [{ kind: 'grow', playerId: by, tier: nt }];
+  // FB2 A4: a bigger fridge when tomorrow's milk won't fit (the planner's advice), keeping the reserve.
+  const fridge = planNight(state).find((a) => a.id.startsWith('gear:f') && a.input.kind === 'gear');
+  if (fridge && fridge.input.kind === 'gear' && fridge.input.action === 'buy' && !skip.has(fridge.input.gear)) {
+    const id = fridge.input.gear;
+    const trade = GEAR[state.fridge ?? 'f1'].sell;
+    if (state.cash + trade - GEAR[id].price >= RESERVE) return [{ kind: 'gear', playerId: by, action: 'buy', gear: id }];
+  }
   const owned = new Set(state.slotGear ?? []);
   for (const id of PATH) {
     if (owned.has(id) || skip.has(id)) continue;
@@ -101,7 +108,7 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
     if (extra && start && s.phase === 'night' && stage === 0) inputs = extra(s, ids);
     if (inputs.length === 0 && s.phase === 'night' && stage >= 0) {
       inputs = night(s, ids, stage, skip);
-      const sg = JSON.stringify([s.slotGear, s.tier, s.gearVote]);
+      const sg = JSON.stringify([s.slotGear, s.tier, s.gearVote, s.fridge]);
       if (stage !== 99 && inputs.length && sg === lastSlotGear && ++stuck > 2) {
         // The deal didn't go through (no free slot, a requirement, an open vote): skip it tonight.
         const want = inputs[0]!;
