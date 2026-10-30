@@ -68,6 +68,8 @@ export function applyGearInput(state: GameState, input: Extract<PlayerInput, { k
   if (!isGearRun(state) || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
   if (!p || !p.connected || p.bot) return state;
+  // The proposer's Withdraw comes first, so a vote that only passes because the others left can't buy on the way out.
+  if (input.action === 'vote' && !input.yes && state.gearVote?.by === p.id) return gearCastVote(state, p, false);
   settleVote(state); // someone may have left since the last vote
   if (input.action === 'vote') return gearCastVote(state, p, input.yes);
   // G8: a big buy/sell with more than one human becomes a proposal (one open at a time).

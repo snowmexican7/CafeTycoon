@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from './run';
+import { step } from './step';
 import { applyGearInput, GEAR_VOTE_MIN } from './gear';
 import { validateInput } from './validate';
 import { gearVM } from '../ui/gearVM';
@@ -80,6 +81,29 @@ describe('Gear G8: co-op majority vote for big buys', () => {
     expect(s.gearVote!.yes).toEqual(['p1']);
     vote(s, 'p2', true);
     expect(owns(s, 'e4')).toBe(true);
+  });
+
+  it('review I1: the other voter drops, then the proposer withdraws: nothing is bought', () => {
+    const s = run(2);
+    const cash = s.cash;
+    buy(s, 'p1', 'e4');
+    s.players[1].connected = false; // Mo dropped without the sim noticing yet
+    vote(s, 'p1', false); // Kay clicks Withdraw
+    expect(owns(s, 'e4')).toBe(false);
+    expect(s.cash).toBe(cash);
+    expect(s.gearVote).toBeUndefined();
+    expect(s.gearVoteLast).toMatchObject({ passed: false });
+    expect(s.gearVoteLast!.text).toMatch(/withdrew/);
+  });
+
+  it('review I1: a leave settles the open vote at once', () => {
+    const s = run(3);
+    buy(s, 'p1', 'e3');
+    vote(s, 'p2', false);
+    expect(s.gearVote).toBeDefined(); // 1 yes, 1 no, 1 undecided
+    const after = step(s, [{ kind: 'leave', playerId: 'p3' }]);
+    expect(after.gearVote).toBeUndefined(); // 1 yes of 2 is not a majority and nobody can swing it
+    expect(after.gearVoteLast).toMatchObject({ passed: false });
   });
 
   it('cash is checked when it passes', () => {

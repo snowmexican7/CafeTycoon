@@ -1,6 +1,6 @@
 import { applyBranchInput } from './branch';
 import { applySignatureInput } from './signature';
-import { applyGearInput } from './gear';
+import { applyGearInput, settleVote } from './gear';
 import { applyPitchInput } from './pitch';
 import { applyAdInput } from './ads';
 import { applyCheckoutInput } from './checkout';
@@ -75,6 +75,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
         p.heldDir = { x: 0, y: 0 };
         p.interactQueued = false;
         dropCloseVote(s, p.id);
+        settleVote(s); // an open gear vote may now have its majority (or be lost)
         clearFloorFields(p);
         if (s.mop.heldBy === p.id) {
           s.mop.heldBy = null;
