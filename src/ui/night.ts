@@ -11,7 +11,7 @@ import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import {
   nightStructureKey,
   type AdsVM, type BriefAlert, type CheckoutVM, type GrowthVM, type PitchVM, type ForecastVM, type HandCardVM, type MenuLineVM,
-  type NightTimerVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM,
+  type NightTimerVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM, type StaffVM,
 } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
 import { isEquipmentKind } from '../sim/slots';
@@ -349,6 +349,16 @@ function rolesRow(roles: RoleVM[] | undefined): string {
     .join('');
 }
 
+/** P3 B15: the hired bot baristas, their wage, and hire / let go. */
+function staffRow(s: StaffVM | undefined): string {
+  if (!s) return '';
+  const who = s.crew.length ? s.crew.map((c) => `<span class="sf-who" title="${esc(c.trait)}">🤖 ${esc(c.name)}</span>`).join('') : '<span class="sf-none">No hired help. You run the bar.</span>';
+  return `<div class="staff" aria-label="Hired staff"><div class="sf-h"><b>Hired staff</b><span>${esc(s.wage)}/day each${s.crew.length ? ` · ${esc(s.total)} at closing` : ''}</span></div>
+    <div class="sf-row">${who}</div>
+    <div class="sf-btns"><button class="btn mini" data-action="staff" data-staff="hire" ${s.canHire ? '' : 'disabled'} title="${s.canHire ? 'A bot barista clocks in tomorrow' : 'All four spots behind the bar are taken'}">＋ Hire · ${esc(s.wage)}/day</button>
+    <button class="btn mini ghost" data-action="staff" data-staff="fire" ${s.crew.length ? '' : 'disabled'}>Let ${s.crew.length ? esc(s.crew[s.crew.length - 1].name) : 'one'} go</button></div></div>`;
+}
+
 function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
   const b = vm.brief;
   const day = extras?.day ?? 1;
@@ -387,7 +397,7 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     ${r.scouted ? `<button class="chip" data-action="drawer" data-d="paper">🔭 Scouted ▸</button>` : `<button class="chip" data-action="scout" ${r.affordable ? '' : 'disabled'} title="See ${esc(r.name)}'s menu and prices for tomorrow">🔭 Scout ${esc(r.name)} · ${esc(short$(r.cost))}</button>`}`;
   return `${banner}<div class="tn-grid ${vm.gear ? 'flow' : ''}">${yday}${tmrw}${alerts}
     <div class="tn-card st"><div class="tn-h">Stock</div><div class="restocks" style="--n:${vm.restock?.length || 1}">${stock}</div></div>
-    <div class="tn-card cr"><div class="tn-h">Crew roles</div><div class="roles">${rolesRow(vm.roles)}</div><div class="cr-x">${extrasRow}</div></div></div>`;
+    <div class="tn-card cr"><div class="tn-h">Crew roles</div><div class="roles">${rolesRow(vm.roles)}</div>${staffRow(vm.staff)}<div class="cr-x">${extrasRow}</div></div></div>`;
 }
 
 // ---------------------------------------------------------------------------------------------- Drawers
@@ -397,7 +407,7 @@ function receiptBody(vm: NightVM, day: number): string {
   if (!t) return '<p>No sales yet.</p>';
   const line = (a: string, b: string, cls = '') => `<div class="line ${cls}"><span>${a}</span><span>${b}</span></div>`;
   return `<div class="rc-paper"><h3>DAY ${day - 1}</h3>
-    ${line('Sales', esc(t.sales))}${line('Tips', esc(t.tips))}${t.familyTips ? t.familyTips.map((f) => line(`&nbsp;&nbsp;${esc(f.label)}`, esc(f.amount), 'sub fam-tip')).join('') : ''}${line('Rent', `<span class="neg">−${esc(t.rent)}</span>`)}
+    ${line('Sales', esc(t.sales))}${line('Tips', esc(t.tips))}${t.familyTips ? t.familyTips.map((f) => line(`&nbsp;&nbsp;${esc(f.label)}`, esc(f.amount), 'sub fam-tip')).join('') : ''}${line('Rent', `<span class="neg">−${esc(t.rent)}</span>`)}${t.wages ? line('Crew wages', `<span class="neg">−${esc(t.wages)}</span>`) : ''}
     ${t.bonus ? line('Bonuses', `+${esc(t.bonus)}`) : ''}
     ${t.combos ? t.combos.map((c) => line(`New combo: ${TWIST_INFO[c.twist].icon} ${esc(TWIST_INFO[c.twist].name)} ${esc(DRINK_INFO[c.drink].short.toLowerCase())}`, `<span class="stars">${starRow(c.stars)}</span>`, 'combo')).join('') : ''}
     ${t.ad ? line(esc(t.ad), '') : ''}
@@ -596,7 +606,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onTip?(input: NightFix): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onTip?(input: NightFix): void; onStaff?(action: 'hire' | 'fire'): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
   let lastVm: NightVM | null = null;
@@ -633,6 +643,7 @@ export function createNight(
       ui.sig = null;
       handlers.onSignature?.(null);
     } else if (action === 'scout') handlers.onScout?.();
+    else if (action === 'staff') handlers.onStaff?.(el.dataset.staff === 'fire' ? 'fire' : 'hire');
     else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);
     else if (action === 'checkout' && el.dataset.checkout) handlers.onCheckout?.(el.dataset.checkout as CheckoutId);
     else if (action === 'grow' && el.dataset.tier) handlers.onGrow?.(el.dataset.tier as TierId);

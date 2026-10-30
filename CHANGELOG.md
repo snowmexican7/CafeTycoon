@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Hired staff.** In a Gear run the bot baristas are on the payroll: $1 a day each at the stand, $3 at the cart, $5 at the café, paid at closing. The Tonight tab's crew card lists who's hired, with **Hire** and **Let go** buttons, and the receipt shows the wages. The night warning counts rent and wages together. Classic runs keep free bots.
+
 ## 3.0.0 — 2026-10-30 · Gear Tree
 
 Every new run now starts from almost nothing: a folding table, a cardboard bin and a $120 fund. You build your bar one machine at a time.

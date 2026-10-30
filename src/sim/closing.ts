@@ -6,6 +6,7 @@ import { noteMissedFavourites } from './regulars';
 import { ECONOMY } from '../data/economy';
 import { loseCustomer } from './customers';
 import { computeModifiers, rentForDay } from './effects';
+import { payWages } from './staff';
 import { activeCheckout } from './checkout';
 import { eventActive, judgeInspection } from './events';
 import { emitLog } from './log';
@@ -50,6 +51,7 @@ export function finishDay(state: GameState): GameState {
   const rent = rentForDay(state);
   state.today.rent = rent;
   state.cash = round2(state.cash - rent);
+  payWages(state);
   const licence = activeCheckout(state).daily;
   if (licence > 0) {
     state.cash = round2(state.cash - licence);

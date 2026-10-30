@@ -55,8 +55,8 @@ undercutting), parody ads, "Pitch an idea", the checkout path and the growth pat
   Heads up list from the sim's night brief), bigger order tickets, close the day early, sold-out
   walk-ups, station slots with extra grinders and espresso machines (replacing the layout editor),
   and bot crew tips with personalities.
-- **B15** bots become hired staff with wages · **B16** saves and unlocks carried between runs ·
-  **B17** integration and **v3.0.0**.
+- **B15** bots become hired staff with wages (done, tag `p3-b15`) · **B16** saves and unlocks carried between runs ·
+  **B17** integration and **v3.1.0** (the Gear Tree shipped as v3.0.0 first).
 - Moved: seasons across game nights and rival escalation to Phase 4; the mobile night layout to
   Phase 6.
 

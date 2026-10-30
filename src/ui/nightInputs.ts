@@ -17,6 +17,7 @@ export function nightInputHandlers(send: (input: PlayerInput) => void, me: () =>
     onTwist: (drink, twist) => send({ kind: 'twist', playerId: me(), drink, twist }),
     onSignature: (sig) => send({ kind: 'signature', playerId: me(), sig }),
     onScout: () => send({ kind: 'scout', playerId: me() }),
+    onStaff: (action) => send({ kind: 'staff', playerId: me(), action }),
     onAd: (ad) => send({ kind: 'ad', playerId: me(), ad }),
     onCheckout: (checkout) => send({ kind: 'checkout', playerId: me(), checkout }),
     onGrow: (tier) => send({ kind: 'grow', playerId: me(), tier }),
