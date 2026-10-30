@@ -33,6 +33,8 @@
  */
 import { BASE_DRINKS, DRINK_INFO } from '../../data/drinks';
 import { ECONOMY } from '../../data/economy';
+import { GEAR } from '../../data/gear';
+import type { GearId } from '../../data/gear';
 import { EQUIPMENT } from '../../data/equipment';
 import type { EquipmentKind } from '../../data/equipment';
 import { expectedUse } from '../brief';
@@ -40,7 +42,8 @@ import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
 import { computeModifiers } from '../effects';
 import { billsForDay } from '../staff';
-import { isGearRun } from '../gear';
+import { averageStars } from '../accuracy';
+import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun } from '../gear';
 import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
 import { restockCost } from '../night';
 import { PRICING, priceForecast, priceStep } from '../pricing';
@@ -69,6 +72,7 @@ export const PLAN_PRIORITY = {
   rival: 80,
   grow: 70,
   checkout: 60,
+  gear: 58,
   slot: 55,
   price: 50,
   twist: 40,
@@ -373,6 +377,71 @@ function equipAdvice(state: GameState, budget: Budget, slotTaken: boolean): Advi
   ];
 }
 
+/** The upgrade path a sensible Gear crew follows (the same order scripts/gearBalance.ts plays). */
+const GEAR_PATH: GearId[] = ['c1', 'e1', 's1', 'c2', 's2', 'g1', 'e2', 'c3', 'g2', 'e3', 's3', 'd1', 'c4', 'e4', 'd2', 'd3', 'g3', 'e5', 'd4b', 'c5', 'd5b', 'e6'];
+/** Under this many stars on average, the polished machines (C5, E6) jump the path when they are affordable. */
+const POLISH_BELOW = 3;
+
+/**
+ * The next machine to buy in a Gear run (`{ kind: 'gear', action: 'buy', gear }`; with more than one human
+ * a $50+ buy becomes a crew vote, but the input is the same). Walks GEAR_PATH: skips what the crew owns or
+ * has a better one of, what has no slot to go in (a trade-in needs none), a branch whose parent is not far
+ * enough along, and any espresso machine above the E1 pods while no grinder is in a slot (they could not
+ * make a shot). The first one left is the advice; if it is out of reach the plan saves up for it. When
+ * yesterday's cups averaged under 3★ the polished C5 / E6 (they forgive a slip) go first, but only when
+ * they are affordable tonight. A flowing D4b is a daytime thing: no advice for it. No advice while a vote is open.
+ */
+function gearAdvice(state: GameState, budget: Budget): Advice[] {
+  if (!isGearRun(state) || state.gearVote) return [];
+  const slots = state.slots ?? [];
+  const placed = (state.slotGear ?? []).filter((g): g is GearId => !!g);
+  const room = slots.some((x, i) => x === null && i < slotCount(state.tier));
+  const grinder = state.stations.some((s) => s.kind === 'grinder');
+  const humans = state.players.filter((p) => p.connected && !p.bot).length;
+  const last = state.days.at(-1);
+  const avg = last ? averageStars(last) : null;
+  const polishFirst = avg !== null && avg < POLISH_BELOW;
+
+  /** What buying `id` would cost net of the trade-in, or null when it cannot be bought tonight. */
+  const deal = (id: GearId): { net: number; old: GearId | null } | null => {
+    const want = GEAR[id];
+    if (placed.includes(id)) return null;
+    let old: GearId | null = null;
+    for (const o of placed) if (GEAR[o].tree === want.tree && (!old || GEAR[o].tier > GEAR[old].tier)) old = o;
+    if (old && GEAR[old].tier >= want.tier) return null;
+    if (want.tree === 'espresso' && want.tier >= 2 && !grinder) return null;
+    if (!gearRequiresMet(state, id)) return null;
+    if (!old && !room) return null;
+    return { net: round2(want.price - (old ? GEAR[old].sell : 0)), old };
+  };
+
+  const order = polishFirst ? [...GEAR_PATH.filter((id) => GEAR[id].polish), ...GEAR_PATH.filter((id) => !GEAR[id].polish)] : GEAR_PATH;
+  for (const id of order) {
+    const d = deal(id);
+    if (!d) continue;
+    const polished = polishFirst && !!GEAR[id].polish;
+    if (d.net > budget.left) {
+      if (polished) continue; // too dear tonight: carry on down the normal path
+      return []; // saving up for the next machine
+    }
+    budget.left = round2(budget.left - d.net);
+    const g = GEAR[id];
+    const back = d.old ? `, ${dollars(GEAR[d.old].sell)} back on the ${GEAR[d.old].name}` : '';
+    const vote = humans > 1 && g.price >= GEAR_VOTE_MIN ? ', the crew votes' : '';
+    const buy = `buy the ${g.name} (${dollars(g.price)}${back}${vote})`;
+    return [
+      {
+        id: `gear:${id}`,
+        kind: 'equip',
+        text: polished ? `Cups averaged ${avg!.toFixed(1)}★: ${buy}, it forgives a slip` : `${buy[0]!.toUpperCase()}${buy.slice(1)}`,
+        input: { kind: 'gear', action: 'buy', gear: id },
+        priority: PLAN_PRIORITY.gear,
+      },
+    ];
+  }
+  return [];
+}
+
 function scoutAdvice(state: GameState, budget: Budget): Advice[] {
   if (state.day < 2 || state.rival?.scouted === state.day || budget.left < SCOUT_SPARE) return [];
   budget.left = round2(budget.left - RIVAL.scoutCost);
@@ -412,10 +481,11 @@ function menuAdvice(state: GameState, growing: boolean): Advice[] {
 /** Everything worth doing tonight, highest priority first (ties by id). Pure and deterministic. */
 export function planNight(state: GameState): Advice[] {
   const budget: Budget = { left: round2(state.cash - billsForDay(state)) };
-  // Spending advice draws on the budget in priority order: restock, grow, checkout, equip, scout.
+  // Spending advice draws on the budget in priority order: restock, grow, checkout, gear, equip, scout.
   const restock = restockAdvice(state, budget);
   const grow = growAdvice(state, budget);
   const checkout = grow.length ? [] : checkoutAdvice(state, budget);
+  const gear = gearAdvice(state, budget);
   const slot = slotAdvice(state);
   const equip = equipAdvice(state, budget, slot.length > 0);
   const scout = scoutAdvice(state, budget);
@@ -424,6 +494,7 @@ export function planNight(state: GameState): Advice[] {
     ...rivalAdvice(state),
     ...grow,
     ...checkout,
+    ...gear,
     ...slot,
     ...priceAdvice(state),
     ...twistAdvice(state),

@@ -502,14 +502,14 @@ describe('planNight: Gear runs', () => {
   it('offers no classic equip advice, even after a day that lost more than it served', () => {
     const s = gearRun();
     expect(s.stations.filter((st) => st.kind === 'espresso')).toHaveLength(1);
-    expect(planNight(s).filter((a) => a.kind === 'equip')).toEqual([]);
+    expect(planNight(s).filter((a) => a.input.kind === 'equip')).toEqual([]); // gear buys share the 'equip' advice kind but send `gear`
   });
 
   it('offers no slot advice for spare equipment', () => {
     const s = gearRun();
     s.equipment = ['steamer'];
     expect(s.slots).toContain(null);
-    expect(planNight(s).filter((a) => a.kind === 'slot')).toEqual([]);
+    expect(planNight(s).filter((a) => a.input.kind === 'slot')).toEqual([]);
   });
 
   it('the same day on a classic stand still gets the second-machine tip', () => {
