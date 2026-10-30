@@ -1,5 +1,6 @@
 import { ECONOMY } from '../data/economy';
 import { applyGearPrices } from './gear';
+import { applyRivalPromo } from './rival';
 import { dayCurveFor } from '../data/challenges';
 import { scenarioById } from '../data/scenarios';
 import { catalogueById } from '../data/catalogue';
@@ -194,6 +195,7 @@ export function computeModifiers(state: GameState): Modifiers {
   applyCheckout(state, m);
   applyGrowth(state, m);
   applyGearPrices(state, m);
+  applyRivalPromo(state, m);
   return m;
 }
 

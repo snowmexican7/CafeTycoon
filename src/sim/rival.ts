@@ -4,6 +4,11 @@
  * it launches a knock-off a little cheaper, and fewer walk-ins ask for yours. Counter-moves: price
  * yours at or under the knock-off (it re-undercuts after a while, down to a floor), or design a new
  * signature (it needs a few days to copy that one too). The menu is a pure hash; no RNG draws.
+ *
+ * P4 B1 (Gear runs): the rival grows with you. From week 2 it runs "happy hour" promo days (one a
+ * week in week 2, two from week 3, picked by hash from days 2–7 of the week) that pull walk-ins away;
+ * the crew can counter the night before (our prices down, the walk-ins stay). From week 3 it copies
+ * a signature after 2 days instead of 3.
  */
 import { DRINK_INFO } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
@@ -11,6 +16,7 @@ import { menuPrice } from './pricing';
 import { sigPremium } from './signature';
 import { hash32 } from './taste';
 import { unlockedDrinks } from './unlocks';
+import type { Modifiers } from './effects';
 import type { DrinkId, GameState, PlayerInput, Rival, Signature } from './types';
 
 export const RIVAL = {
@@ -26,6 +32,12 @@ export const RIVAL = {
   /** The rival won't price a knock-off under this fraction of the drink's list price. */
   floor: 0.75,
   menuSize: 3,
+  /** P4 B1: on a promo day we keep this share of walk-ins, unless we counter. */
+  promoTraffic: 0.8,
+  /** P4 B1: countering a promo prices every drink at this share (the walk-ins stay). */
+  counterPrice: 0.85,
+  /** P4 B1: from week 3 the knock-off comes this many days after a new signature. */
+  copyAfterLate: 2,
 };
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -66,7 +78,7 @@ export function rivalAskFactor(state: GameState): number {
 export function daysToCopy(state: GameState): number | null {
   const sig = state.signature;
   if (!sig || copyIsLive(state)) return null;
-  return Math.max(0, sig.since + RIVAL.copyAfter - state.day);
+  return Math.max(0, sig.since + copyAfter(state) - state.day);
 }
 
 /** Morning: copy a signature that has stood long enough, or re-undercut one that was matched. Returns a note. */
@@ -77,7 +89,7 @@ export function rivalMorning(state: GameState): string | null {
   const floor = round2(ECONOMY.prices[sig.drink] * RIVAL.floor);
   const target = Math.max(floor, round2(mine - RIVAL.undercut));
   if (!copyIsLive(state)) {
-    if (state.day - sig.since < RIVAL.copyAfter) return null;
+    if (state.day - sig.since < copyAfter(state)) return null;
     state.rival = { ...(state.rival ?? {}), copy: { drink: sig.drink, twist: sig.twist, since: sig.since, price: target, day: state.day } };
     return `${RIVAL.name} down the street launched a knock-off of “${sig.name}” at $${target.toFixed(2)}. Fewer walk-ins will ask for ours while it's dearer.`;
   }
@@ -87,6 +99,72 @@ export function rivalMorning(state: GameState): string | null {
     return `${RIVAL.name} cut its “${sig.name}” knock-off to $${target.toFixed(2)}.`;
   }
   return null;
+}
+
+/** Which café week a day belongs to (same as effects.weekOf; kept local to avoid an import cycle). */
+const weekNo = (day: number) => Math.ceil(day / ECONOMY.scoredWeekDays);
+
+/** P4 B1: days a signature stands before the knock-off: shorter from week 3 of a Gear run. */
+export function copyAfter(state: GameState): number {
+  return state.gear && weekNo(state.day) >= 3 ? RIVAL.copyAfterLate : RIVAL.copyAfter;
+}
+
+/** P4 B1: how hard the rival pushes: 0 in week 1 (and classic runs), 1 in week 2, 2 from week 3. */
+export function promoLevel(state: GameState, day = state.day): number {
+  if (!state.gear) return 0;
+  return Math.min(2, Math.max(0, weekNo(day) - 1));
+}
+
+/** P4 B1: true when `day` (default: today, or tomorrow at night) is one of the rival's happy-hour days. */
+export function isPromoDay(state: GameState, day = state.day): boolean {
+  const level = promoLevel(state, day);
+  if (level === 0 || day < 1) return false;
+  const week = weekNo(day);
+  const first = (week - 1) * ECONOMY.scoredWeekDays + 1;
+  // Days 2–7 of the week, shuffled by a hash of the seed and week; the first `level` are promo days.
+  const pool = [1, 2, 3, 4, 5, 6].map((k) => first + k);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = hash32(state.seed * 13 + week * 7919 + i * 104729) % (i + 1);
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, level).includes(day);
+}
+
+/** P4 B1: the crew countered the promo on `state.day`. */
+export function countered(state: GameState): boolean {
+  return state.rival?.counter === state.day && isPromoDay(state);
+}
+
+/** P4 B1 modifiers: a promo day costs walk-ins; a counter keeps them and cuts our prices instead. */
+export function applyRivalPromo(state: GameState, m: Modifiers): void {
+  if (!isPromoDay(state)) return;
+  if (countered(state)) {
+    for (const d of Object.keys(m.price) as DrinkId[]) m.price[d] *= RIVAL.counterPrice;
+  } else m.traffic *= RIVAL.promoTraffic;
+}
+
+/** P4 B1 morning note for a promo day. */
+export function promoMorning(state: GameState): string | null {
+  if (!isPromoDay(state)) return null;
+  const off = Math.round((1 - RIVAL.counterPrice) * 100);
+  return countered(state)
+    ? `${RIVAL.name} is running happy hour today, and we matched it: ${off}% off everything, so the walk-ins stay.`
+    : `${RIVAL.name} is running happy hour today. Expect about ${Math.round((1 - RIVAL.promoTraffic) * 100)}% fewer walk-ins.`;
+}
+
+/** P4 B1 night input: counter tomorrow's promo (prices down for the day). Humans, at night, only before a promo day. */
+export function applyRivalCounterInput(state: GameState, input: Extract<PlayerInput, { kind: 'rivalCounter' }>): GameState {
+  if (state.phase !== 'night') return state;
+  const p = state.players.find((x) => x.id === input.playerId);
+  if (!p || !p.connected || p.bot) return state;
+  if (!isPromoDay(state)) return state;
+  const on = input.on !== false;
+  if (on) state.rival = { ...(state.rival ?? {}), counter: state.day };
+  else if (state.rival?.counter === state.day) {
+    const { counter: _drop, ...rest } = state.rival;
+    state.rival = rest;
+  }
+  return state;
 }
 
 /** Night input: pay to peek at the rival's board for tomorrow. Once a night, humans only. */

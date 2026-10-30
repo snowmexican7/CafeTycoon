@@ -18,7 +18,7 @@ keep loading (new `GameState` fields are optional; a snapshot bump needs a migra
 
 | # | Block | Decision it adds | Risk |
 |---|-------|------------------|------|
-| 1 | **Rival escalation**: from week 2 Starbuck$ grows with you (a happy-hour day, a loyalty card, a second shop at the cart/café tier), always announced a night ahead | scout and counter, or ride it out | low–medium: extends `rival.ts` |
+| 1 | *(done: tag `p4-b01`, happy hour + faster knock-offs; loyalty card and a rival second shop are follow-ups)* **Rival escalation**: from week 2 Starbuck$ grows with you (a happy-hour day, a loyalty card, a second shop at the cart/café tier), always announced a night ahead | scout and counter, or ride it out | low–medium: extends `rival.ts` |
 | 2 | **Seasons**: a season is four weeks of Keep going with a target each week, a season board and a season-end screen; the run save already carries it across game nights | push for the target or bank cash | medium: week-end flow |
 | 3 | **Manager reports**: a day report per shop (sales by drink, waits, who did what, wages vs. takings) on the night screen | read it, then staff and price | low: read-only |
 | 4 | **Second shop (franchise)**: at the café tier, open a second site in another area; it runs off-screen on a deterministic summary model (its crew, menu, area taste, rent) with a daily result line | when to expand, where | high: new economy actor |

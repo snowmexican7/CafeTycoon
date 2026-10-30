@@ -8,7 +8,7 @@ import { SCENARIOS } from '../data/scenarios';
 import { scheduleEvents, tuneRadio } from './events';
 import { computeModifiers } from './effects';
 import { morningNotes } from './describe';
-import { rivalMorning } from './rival';
+import { promoMorning, rivalMorning } from './rival';
 import { adMorning } from './ads';
 import { checkoutMorning } from './checkout';
 import { pitchMorning } from './pitch';
@@ -172,6 +172,8 @@ export function startDay(state: GameState): GameState {
   state.morningNotes = morningNotes(state);
   const rivalNote = rivalMorning(state);
   if (rivalNote) state.morningNotes.push(rivalNote);
+  const promoNote = promoMorning(state);
+  if (promoNote) state.morningNotes.push(promoNote);
   if (adNote) state.morningNotes.push(adNote);
   const checkoutNote = checkoutMorning(state);
   if (checkoutNote) state.morningNotes.push(checkoutNote);

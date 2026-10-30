@@ -69,6 +69,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - P3 B15: `sim/staff.ts` (new), `closing.ts` calls `payWages` after rent, `types.ts` `DayStats.wages` + `staff` input, `validate.ts`/`step.ts` staff case, `profit.ts` and `storage/recordsStore.ts` subtract wages, `brief.ts` uses `billsForDay`. PROTOCOL_VERSION 33.
 - P3 B16: `sim/perks.ts` (new, `applyPerk` called at the end of `createRun`), `types.ts` `CreateRunOptions.perk` + `GameState.perk`. Bots are unaffected.
 - B17: `sim/staff.ts` `wageEach` is now paid by the hour (scaled by `settings.dayLengthSec / 150`), so quick 60 s days cost 40%. If the planner budgets wages, use `wagesForDay`/`billsForDay`, not the tier table.
+- P4 B1 (tag `p4-b01`): `sim/rival.ts` adds rival happy-hour days (`isPromoDay`, `promoLevel`, `applyRivalPromo` in `computeModifiers`) and a human-only night input `{kind:'rivalCounter', on?}` (PROTOCOL 34, `Rival.counter`). Bots never send it. For the planner: on a night where `isPromoDay(state)` and not `countered(state)`, an advice row "Match Starbuck$'s happy hour" with input `{kind:'rivalCounter'}` would help solo-with-bots crews; `computeModifiers` already reflects the promo, so walk-in forecasts are right.
 - No snapshot bumps: all new fields are optional. Protocol is 33 since B15.
 
 ## Freedom

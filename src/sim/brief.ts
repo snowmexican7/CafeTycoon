@@ -6,7 +6,7 @@
  *
  *   type NightFix = DistributiveOmit<PlayerInput, 'playerId'>
  *   interface NightAlert {
- *     id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | signature
+ *     id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | rival:promo | signature
  *     kind: 'cash' | 'stock' | 'soldOut' | 'spoil' | 'grow' | 'checkout' | 'rival' | 'signature';
  *     severity: 'info' | 'warn' | 'danger';
  *     text: string;
@@ -30,7 +30,7 @@ import { billsForDay, wagesForDay } from './staff';
 import { nextTier, TIERS } from './growth';
 import { restockCost } from './night';
 import { profitOf } from './profit';
-import { copyIsLive, RIVAL, sigPrice } from './rival';
+import { copyIsLive, countered, isPromoDay, RIVAL, sigPrice } from './rival';
 import { FRESH, spoilCount } from './spoilage';
 import { menuDrinks, neededSupplies, SUPPLY_IDS } from './unlocks';
 import type { CheckoutId, DrinkId, GameState, PlayerInput, SupplyId } from './types';
@@ -209,6 +209,14 @@ export function nightBrief(state: GameState): NightBrief {
         text: `${RIVAL.name} sells a knock-off of ${sig.name} for ${money2(copy.price)}, you charge ${money2(mine)}`,
       });
     }
+  }
+
+  // 7b. P4 B1: the rival's happy hour tomorrow (counter it, or take the hit)
+  if (isPromoDay(state)) {
+    const off = Math.round((1 - RIVAL.counterPrice) * 100);
+    alerts.push(countered(state)
+      ? { id: 'rival:promo', kind: 'rival', severity: 'info', text: `${RIVAL.name} happy hour tomorrow: we match it with ${off}% off everything`, fix: { kind: 'rivalCounter', on: false } }
+      : { id: 'rival:promo', kind: 'rival', severity: 'warn', text: `${RIVAL.name} runs happy hour tomorrow: ~${Math.round((1 - RIVAL.promoTraffic) * 100)}% fewer walk-ins unless we go ${off}% off`, fix: { kind: 'rivalCounter' } });
   }
 
   // 8. signature with no premium

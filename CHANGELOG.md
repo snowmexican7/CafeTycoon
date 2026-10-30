@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Starbuck$ fights back.** From week 2 of a Gear run the rival down the street runs happy-hour days: one in week 2, then two a week. The night before, the Heads up list warns you (about 20% fewer walk-ins) with a **Match it · 15% off** button: match and you keep your walk-ins but sell everything 15% cheaper that day. From week 3 it also copies a new signature after 2 days instead of 3.
+
 ## 3.1.0 — 2026-10-30 · Phase 3 complete
 
 Phase 3, "Real-life growth", is done: your crew is now on the payroll, and every good run makes the next one a little easier.
