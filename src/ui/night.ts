@@ -197,7 +197,7 @@ export function gearBoard(g: GearVM): string {
   const book = g.notebook.length && !g.pickNight
     ? `<div class="gr-book" aria-label="Street notebook"><b>📓 Street notebook</b>${g.notebook
         .map((r) => `<span class="gr-bk" title="${esc(r.stars === null ? `Serve ${r.left} more ${r.label.toLowerCase()} drinks to learn how this street feels about them.` : `${r.label} on this street: ${r.stars} of 5.`)}">${r.icon} ${esc(r.label)}: ${r.stars === null ? `<small>${r.served}/${r.served + r.left} served</small>` : `<span class="gr-stars">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</span>`}</span>`)
-        .join('')}</div>`
+        .join('')}${g.crowd ? `<span class="gr-bk gr-crowd">👥 ${esc(g.crowd)}</span>` : ''}</div>`
     : '';
   // G6: drinks that level up with use.
   const lvl = g.levelUps.length && !g.pickNight
@@ -441,7 +441,7 @@ function rivalCard(r: RivalVM): string {
 
 function regularsBody(regs: RegularVM[]): string {
   const note = { ok: 'happy', off: 'favourite is off: skips tomorrow', pricey: 'thinks it is overpriced' } as const;
-  return `<div class="regs">${regs.map((r) => `<div class="rg-row ${r.status}">${itemIcon(r.drink, 28)}<div class="rg-txt"><b>${esc(r.name)}</b> <span>${esc(r.drinkName)}</span><small>${note[r.status]}</small></div>
+  return `<div class="regs">${regs.map((r) => `<div class="rg-row ${r.status}">${itemIcon(r.drink, 28)}<div class="rg-txt"><b>${r.snob ? '🎩 ' : ''}${esc(r.name)}</b> <span>${esc(r.drinkName)}</span><small>${r.snob && r.status === 'ok' ? 'snob: big tips for a perfect cup, little for sloppy ones' : note[r.status]}</small></div>
       <span class="rg-hearts" aria-label="loyalty ${r.loyalty} of ${r.max}">${'♥'.repeat(r.loyalty)}<i>${'♥'.repeat(r.max - r.loyalty)}</i></span></div>`).join('')}</div>`;
 }
 

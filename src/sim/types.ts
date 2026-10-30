@@ -68,6 +68,8 @@ export interface Regular {
   lost: number;
   /** Phase 3 B3: 0..5; absent = 0. */
   loyalty?: number;
+  /** Gear G10b: drawn by top-tier gear; tips big for a perfect 3★ cup, little for 1★ or less. Absent = ordinary. */
+  snob?: true;
 }
 
 export interface BotState {
