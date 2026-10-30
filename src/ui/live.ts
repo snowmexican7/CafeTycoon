@@ -2,6 +2,7 @@ import { recipeFor } from '../sim/stations';
 import { TILL, tillNext } from '../sim/till';
 import { DRINK_INFO } from '../data/drinks';
 import { GEAR } from '../data/gear';
+import { podsOnly } from '../sim/gear';
 import { ACCURACY } from '../sim/accuracy';
 import { ROLES } from '../sim/roles';
 import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
@@ -111,6 +112,8 @@ export interface HudLive {
   orders: OrderTicket[];
   crew: CrewMember[];
   holding: ItemKind | null;
+  /** Every espresso machine is a pod machine: tickets show "Pod" instead of Grind + Pull. */
+  pods?: boolean;
   meName: string;
   hint: HandHint;
   /** FB1 WP3: the close-early vote (button by the clock). */
@@ -183,7 +186,9 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
     if (held === null) return state.supplies.beans < 1 ? idle('Out of pods (beans)', where) : go('Pop in a pod', `${where} · ${(5 / GEAR[station.gear].speed).toFixed(1)} s`);
   }
   const need = TAKES[kind];
-  if (held !== null && held !== 'grounds' && !recipeFor(state, kind, held)) return idle(`Wrong station: E fumbles it (−1★)`, `${where} needs ${need ? ITEM_LABEL[need].toLowerCase() : 'empty hands'}`);
+  // Smoke fix: a pod machine never wants grounds, so don't tell the player it does.
+  const needText = station.gear && GEAR[station.gear].pods ? 'empty hands (it takes pods)' : need ? ITEM_LABEL[need].toLowerCase() : 'empty hands';
+  if (held !== null && held !== 'grounds' && !recipeFor(state, kind, held)) return idle(`Wrong station: E fumbles it (−1★)`, `${where} needs ${needText}`);
   if (held !== need) return idle(need ? `Needs ${ITEM_LABEL[need].toLowerCase()}` : 'Hands full', where);
   const supply = USES[kind];
   if (supply && state.supplies[supply] < 1) return idle(`Out of ${SUPPLY_NAME[supply].toLowerCase()}`, where);
@@ -207,6 +212,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     }),
     crew: crewOf(state, me),
     holding: player?.holding ?? null,
+    ...(podsOnly(state) ? { pods: true } : {}),
     meName: player?.role ? `${ROLES[player.role].icon} ${player.name} the ${ROLES[player.role].name}` : (player?.name ?? ''),
     hint: handHint(state, me),
     closeEarly: closeEarlyVM(state, me),

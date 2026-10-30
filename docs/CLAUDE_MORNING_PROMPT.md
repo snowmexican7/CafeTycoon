@@ -42,6 +42,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - **G10 pod machine + perks (bot side):** I made two small bot edits so stand-ins could work a fresh Gear stand at all: `chainFor` skips the grind step when a pod machine covers it, and `act` 'insert' checks `gearRecipe(st, held)` before `recipeFor` (same order as `stations.ts`). Please review them in your bot tidy-up. Also worth teaching the planner: prefer the polished C5/E6 for 3★ cups, and treat a flowing D4b (`Station.flowUntil > tick`) as the fast station while it lasts. The night planner should not trade the E1 pods for E2+ before a grinder is in a slot (see scripts/gearBalance.ts for the rule).
 - **G8 co-op votes (optional polish):** `state.gearVote` and the `gear/vote` input are live (protocol 31). If you touch net/host: call `settleVote(state)` (sim/gear.ts) when a player disconnects so a vote can't hang; a toast on vote pass/fail would be nice. Bots must not vote.
 - **Gear polish (UI only):** rung-up customers now show a receipt above them, so a till bot (item 4) is visible to players. Also, on night 1 of a Gear run with an empty counter, crew tips suggest "Take the Espresso/Latte off the board" though nothing can be made yet. Please make crewTips skip menu advice when `unlockedDrinks(state)` is empty.
+- **Integration smoke fix (bot side, small):** the browser smoke found that a grinder bought next to the Pod-o-Matic made bots grind beans the pod machine refuses, so espresso sales dropped to zero (6–7 cups/day → 0). `chainFor` now also skips the grind step when `podsOnly(state)` (sim/gear.ts: every espresso machine is a pod machine). Still open for you: in a mixed bar (E1 + E2+ with a grinder), `use(state, p, 'espresso', 'insert')` can pick the pod machine while holding grounds; the planner should route grounds to a non-pod machine.
 
 ## Sim edits made overnight (please review)
 
@@ -56,6 +57,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - G10b: `data/areas.ts` crowd fields, `SNOB_GEAR`/`SNOB`; `sim/gear.ts` `areaPatienceMul`, `areaQualityTip`, `snobFamilies`, `snobTip`, and per-drink overrides in `areaTipMul`; `sim/customers.ts` `pickRegular` (snob first via `newSnob`, ordinary names now count non-snobs), area patience in `addCustomer`, and the quality/snob tip in `serveCustomer`.
 - G9: `data/gear.ts` `twin`; `sim/types.ts` `Station.twin`; `sim/slots.ts` `stationsFromSlots` adds twins (`TWIN_OFFSET`); `sim/levelUp.ts` `levelUpGearOk` counts the E4 wand as a steamer.
 - G10: `data/gear.ts` `polish`/`flow`/`draws`/`influencerOdds`; `data/areas.ts` `pull`/`pullDrink`; `sim/gear.ts` `gearSpeed(s, tick)`, `gearPolish`, flow roll in `gearAfterUse`, `gearPullMul` area pull, influencer odds in `applyGearPrices`; `sim/stations.ts` calls `gearPolish`; `sim/types.ts` `Station.flowUntil`; `sim/bots/brain.ts` pod chain + `gearRecipe` in `act`; new `scripts/gearBalance.ts`.
+- Smoke fix: `sim/gear.ts` `podsOnly`; `sim/bots/brain.ts` `chainFor` skips the grinder when `podsOnly`.
 - No snapshot bumps: all new fields are optional. Protocol is 31 since G8.
 
 ## Freedom

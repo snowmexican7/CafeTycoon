@@ -39,14 +39,25 @@ export const DRINK_LABEL: Record<DrinkId, string> = {
  * Which step of this drink's recipe comes next, judged only from what I'm holding (display only,
  * mirrors the station chain in live.ts). Null when the held item doesn't belong to this drink.
  */
-export function nextStepIndex(drink: DrinkId, holding: ItemKind | null): number | null {
-  const steps = DRINK_STEPS[drink];
+export function nextStepIndex(drink: DrinkId, holding: ItemKind | null, pods = false): number | null {
+  const steps = ticketSteps(drink, pods);
   if (holding === drink) return steps.length - 1;
   if (holding === null) return 0;
+  if (pods && steps[0] === 'Pod') {
+    if (holding === 'espresso') return steps.length > 2 ? 1 : null;
+    if (holding === 'latte' && (drink === 'mocha' || drink === 'cappuccino')) return 2;
+    return null;
+  }
   if (holding === 'grounds') return steps[0] === 'Grind' ? 1 : null;
   if (holding === 'espresso') return steps[1] === 'Pull' && steps.length > 3 ? 2 : null;
   if (holding === 'latte' && (drink === 'mocha' || drink === 'cappuccino')) return 3;
   return null;
+}
+
+/** A drink's ticket steps; at a pod-only espresso bar Grind + Pull become one "Pod" step. */
+export function ticketSteps(drink: DrinkId, pods = false): string[] {
+  const steps = DRINK_STEPS[drink];
+  return pods && steps[0] === 'Grind' && steps[1] === 'Pull' ? ['Pod', ...steps.slice(2)] : steps;
 }
 
 /** Are this ticket's steps showing? Day 1 of a run opens the first ticket so new players see one recipe. */
@@ -63,22 +74,24 @@ export interface TicketOpts {
   day: number;
   holding: ItemKind | null;
   prices: Partial<Record<DrinkId, string>>;
+  /** Pod-only espresso bar (see ticketSteps). */
+  pods?: boolean;
 }
 
 const tilt = (id: number) => (((id * 37) % 7) - 3) * 0.3;
 
 /** The order rail's markup (pure, so it's testable without a DOM). Patience bars are patched per tick. */
 export function ticketsHtml(orders: readonly OrderTicket[], o: TicketOpts): string {
-  if (!orders.length) return '<div class="empty-orders">No one in line yet.<br>Grind some beans while it\'s quiet.</div>';
+  if (!orders.length) return `<div class="empty-orders">No one in line yet.<br>${o.pods ? 'Tidy up' : 'Grind some beans'} while it's quiet.</div>`;
   const shown = orders.slice(0, MAX_TICKETS);
   return (
     shown
       .map((t, i) => {
         const open = stepsOpen(o.mode, i, t.id, o.open, o.day);
-        const next = open ? nextStepIndex(t.drink, o.holding) : null;
+        const next = open ? nextStepIndex(t.drink, o.holding, o.pods) : null;
         const clickable = o.mode === 'click';
         const steps = open
-          ? `<div class="steps">${DRINK_STEPS[t.drink].map((s, k) => `<span class="${k === next ? 'next' : ''}">${s}</span>`).join('')}</div>`
+          ? `<div class="steps">${ticketSteps(t.drink, o.pods).map((s, k) => `<span class="${k === next ? 'next' : ''}">${s}</span>`).join('')}</div>`
           : clickable ? '<div class="peek">Tap for steps</div>' : '';
         const cls = ['ticket', t.patience < URGENT ? 'urgent' : '', t.tag ? `kind-${t.tag.tone}` : '', open ? 'open' : '', clickable ? 'tap' : ''].filter(Boolean).join(' ');
         const aria = clickable ? ` role="button" aria-expanded="${open}" aria-label="${DRINK_LABEL[t.drink]}: ${open ? 'hide' : 'show'} steps"` : '';
@@ -95,7 +108,7 @@ export function ticketsHtml(orders: readonly OrderTicket[], o: TicketOpts): stri
 
 /** Rebuild key for the rail: the orders plus anything that changes which steps show or which is next. */
 export function ticketsKey(ordersKey: string, o: TicketOpts): string {
-  return `${ordersKey}|${o.mode}|${o.day === 1 ? 1 : 0}|${[...o.open].sort((a, b) => a - b).join('.')}|${o.mode === 'off' ? '' : o.holding ?? '-'}`;
+  return `${ordersKey}|${o.mode}|${o.day === 1 ? 1 : 0}|${[...o.open].sort((a, b) => a - b).join('.')}|${o.mode === 'off' ? '' : o.holding ?? '-'}|${o.pods ? 'p' : ''}`;
 }
 
 /** Toggle a ticket's steps. Day 1's auto-open first ticket records a "shut" marker instead. */

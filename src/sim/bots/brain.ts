@@ -8,7 +8,7 @@ import { nearestStation } from '../movement';
 import { emitLog } from '../log';
 import { rngInt, rngNext } from '../rng';
 import { STATION_RECIPES, recipeFor, stocked } from '../stations';
-import { gearRecipe, podsCoverGrinder } from '../gear';
+import { gearRecipe, podsCoverGrinder, podsOnly } from '../gear';
 import { RECIPES, recipeChain, usesShot } from '../../data/drinks';
 import { zeroDrinks } from '../tally';
 import { tally } from '../tally';
@@ -90,9 +90,11 @@ function groundsPlan(state: GameState, p: Player): BotStep[] {
 export function chainFor(state: GameState, p: Player, drink: DrinkId, finish: 'serve' | 'put'): BotStep[] {
   // Every station on the drink's recipe ticket, in order (a mocha visits the steamer twice).
   const steps: BotStep[] = [];
+  // Gear G10: a pod machine pulls its shot from empty hands, so with no grinder the grind step drops out.
+  // Smoke fix: also when a grinder sits beside a pod-only espresso bar (grounds would be refused there).
+  const skipGrind = podsOnly(state) || (!state.stations.some((s) => s.kind === 'grinder') && podsCoverGrinder(state));
   for (const { station } of recipeChain(drink)) {
-    // Gear G10: a pod machine pulls its shot from empty hands, so with no grinder the grind step drops out.
-    if (station === 'grinder' && !state.stations.some((s) => s.kind === 'grinder') && podsCoverGrinder(state)) continue;
+    if (station === 'grinder' && skipGrind) continue;
     const insert = use(state, p, station, 'insert');
     if (insert === null || insert.kind !== 'use') return [];
     steps.push(insert, { kind: 'use', station: insert.station, action: 'take' });
