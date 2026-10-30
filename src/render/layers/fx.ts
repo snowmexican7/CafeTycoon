@@ -5,6 +5,8 @@ import { drawHeart, drawStar, label } from './draw';
 interface Pop {
   text: Text;
   age: number;
+  /** Seconds on screen (default 1.2, fading from the start); a set life holds solid then fades. */
+  life?: number;
 }
 
 interface Toast {
@@ -64,12 +66,12 @@ export class Effects {
     if (gained > 0.004) this.spawn(`+$${gained.toFixed(2)}`, x, y);
   }
 
-  spawn(text: string, x: number, y: number, color: number = PALETTE.honey, size = 16): void {
+  spawn(text: string, x: number, y: number, color: number = PALETTE.honey, size = 16, life?: number): void {
     const t = label(text, size, color, '700');
     t.style.stroke = { color: PALETTE.espresso, width: 4 };
     t.position.set(x, y);
     this.root.addChild(t);
-    this.pops.push({ text: t, age: 0 });
+    this.pops.push({ text: t, age: 0, ...(life ? { life } : {}) });
   }
 
   /** A pill toast in the server's colour, stacked above (x, y). */
@@ -118,10 +120,12 @@ export class Effects {
     for (let i = this.pops.length - 1; i >= 0; i--) {
       const p = this.pops[i];
       p.age += dt;
-      p.text.y -= dt * 40;
-      p.text.alpha = Math.max(0, 1 - p.age / 1.2);
+      const life = p.life ?? 1.2;
+      // a held line (3.3.3 sink notes) rises slower and stays solid until its last 0.6 s
+      p.text.y -= dt * (p.life ? 14 : 40);
+      p.text.alpha = p.life ? Math.max(0, Math.min(1, (life - p.age) / 0.6)) : Math.max(0, 1 - p.age / 1.2);
       p.text.scale.set(Math.min(1, 0.6 + p.age * 4));
-      if (p.age >= 1.2) {
+      if (p.age >= life) {
         p.text.destroy();
         this.pops.splice(i, 1);
       }

@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { GameState, PlayerId, StationKind, Vec2 } from '../../sim/types';
 import { coolColor, heldRecipe, stationCounts, type HeldRecipe } from '../countsModel';
+import { heldFreshness } from '../sinkModel';
 import { PALETTE, PROGRESS_BAR_RISE, sx, sy } from '../theme';
 import { label } from './draw';
 
@@ -60,10 +61,13 @@ export class CountsLayer {
     for (const id of humans) {
       const pos = playerPos.get(id);
       const recipe = pos ? heldRecipe(state, id) : null;
-      if (!pos || !recipe) continue;
+      // 3.3.3 (FB2 A2): a hot cup in hand gets its cooling ring on the end of the strip (or on its own)
+      const p = state.players.find((x) => x.id === id);
+      const fresh = pos && p ? heldFreshness(state, p) : null;
+      if (!pos || (!recipe && fresh === null)) continue;
       seen.add(id);
       const s = this.strips.get(id) ?? this.makeStrip(id);
-      this.drawStrip(s, recipe);
+      this.drawStrip(s, recipe, fresh);
       s.root.position.set(sx(pos.x), sy(pos.y) - 116);
       s.root.visible = true;
     }
@@ -91,21 +95,24 @@ export class CountsLayer {
     return s;
   }
 
-  private drawStrip(s: Strip, r: HeldRecipe): void {
-    const key = `${r.drink}|${r.steps.map((x) => x.state[0]).join('')}`;
+  private drawStrip(s: Strip, r: HeldRecipe | null, fresh: number | null): void {
+    const steps = r?.steps ?? [];
+    const key = `${r?.drink ?? '-'}|${steps.map((x) => x.state[0]).join('')}|${fresh === null ? '-' : Math.round(fresh * 40)}`;
     if (key === s.key) return;
     s.key = key;
-    const n = r.steps.length;
+    const n = steps.length;
     const step = 24;
-    const w = n * step + 6;
+    const ring = fresh !== null ? 22 : 0;
+    const w = n * step + 6 + ring;
     s.bg.clear();
     s.bg.roundRect(-w / 2, -14, w, 28, 14).fill({ color: 0xfffaf2, alpha: 0.95 }).stroke({ width: 2, color: PALETTE.espresso });
+    if (fresh !== null) drawCoolRing(s.bg, w / 2 - 13, 0, 8, fresh);
     while (s.icons.length < n) {
       const t = label('', 13, 0xffffff, '700', 'system-ui, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif');
       s.root.addChild(t);
       s.icons.push(t);
     }
-    r.steps.forEach((st, i) => {
+    steps.forEach((st, i) => {
       const x = -w / 2 + 3 + step * i + step / 2;
       const t = s.icons[i];
       t.text = st.icon;

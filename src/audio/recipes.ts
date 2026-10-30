@@ -146,6 +146,25 @@ export const RECIPES: Record<CueId, Layer[]> = {
   ],
   grumble: [{ synth: 'hmph', gain: 0.55 }],
   boxDown: [{ sample: 'box', gain: 0.4, rate: [0.9, 1] }],
+  // 3.3.3 (FB2 A3): a glug down the drain, then the faucet's little splash
+  sinkDump: [
+    { synth: 'pour', gain: 0.7 },
+    { synth: 'splash', gain: 0.45, delay: 0.25 },
+  ],
+  potLift: [
+    { sample: 'clink', gain: 0.45, rate: [0.8, 0.88] },
+    { synth: 'clack', gain: 0.35, delay: 0.04 },
+  ],
+  potBack: [{ sample: 'clink', gain: 0.4, rate: [0.7, 0.78] }],
+  stalePot: [
+    { synth: 'buzz', gain: 0.35 },
+    { synth: 'hmph', gain: 0.5, delay: 0.25 },
+  ],
+  binLeak: [
+    { synth: 'splash', gain: 0.9 },
+    { synth: 'oops', gain: 0.6, delay: 0.15 },
+  ],
+  coldCup: [{ synth: 'hmph', gain: 0.65 }],
 };
 
 /** Seconds a cue will sound for, used to hold its voice slot in the gate. */

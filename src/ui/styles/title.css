@@ -18,6 +18,11 @@
 .seg span i b { width: 4px; border-radius: 2px; background: currentColor; opacity: .7; }
 .seg span i b:nth-child(1) { height: 5px; } .seg span i b:nth-child(2) { height: 8px; } .seg span i b:nth-child(3) { height: 10px; } .seg span i b:nth-child(4) { height: 12px; } .seg span i b:nth-child(5) { height: 14px; }
 .seg span { font-size: 12.5px; padding: 7px 0 5px; }
+/* 3.3.3 (FB2 A1): Pace and the Play solo helper picker share a row */
+#title .row-pace { display: grid; grid-template-columns: 5fr 2fr; gap: 12px; margin-bottom: 14px; align-items: end; }
+#title .solo-bots span { padding: 12px 2px; white-space: nowrap; }
+#title .row-pace .lbl small { font-weight: 600; opacity: .75; }
+@media (max-width: 640px) { #title .row-pace { grid-template-columns: 1fr; } }
 #title .btns { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
 #title .btns > .btn { font-size: 18px; padding: 14px; }
 #title .join { display: flex; gap: 8px; } #title .join .inp { flex: 1; min-width: 0; letter-spacing: .3em; text-transform: uppercase; font: 600 17px var(--font-display); }
@@ -105,7 +110,7 @@
 @media (max-width: 960px) { #title .titlecard { margin: 84px auto 24px; } }
 @media (max-height: 760px) {
   #title .titlecard { margin-top: 16px; padding: 18px 24px 14px; } #title .logo > svg { width: 52px; height: 52px; } #title .logo h1 { font-size: 38px; }
-  #title .tag { margin: 6px 0 12px; } #title .row2, #title > .titlecard > .fld { margin-bottom: 10px; }
+  #title .tag { margin: 6px 0 12px; } #title .row2, #title .row-pace, #title > .titlecard > .fld { margin-bottom: 10px; }
   #title .btns > .btn { padding: 11px; }
   #roadmap .drawer { top: 72px; bottom: 12px; }
 }

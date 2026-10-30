@@ -2053,6 +2053,32 @@ Open (sim lane):
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
 
+## ui-3.3.3 (UI lane): sink, pots, cold cups, solo helpers: notes for Claude
+
+Wires the UI side of Feedback 2 A1–A3. No sim, net, host, storage or data changes; protocol unchanged.
+
+- [x] **A3 sink:** `src/render/sinkModel.ts` (pure, tested) and `src/render/layers/sink.ts`; the sink fixture is
+  `buildSink` in `layers/stations.ts`. `pickupModel.counterSpotOf` and `countsModel` treat `'sink'` as its own spot
+  (no till, no count). `live.ts`: `counterName` → "Back sink"; `sinkHint` runs before the other counter hints:
+  drink → "Dump it" (cold: "Dump it: the … went cold"), `tool === 'pot'` → "Dump the pot", grounds → "Grounds go in
+  the bin", empty hands → nothing.
+- [x] **A3 pot carry:** `tool === 'pot'` draws the pot in hand (`layers/actors.ts`), hint "Carry it to the sink";
+  the hand slot shows `TOOL_LABEL` ("Old drip pot"). A drip machine with `needsDump` shows "Stale pot / Pot went
+  cold: lift the pot (E)" and the badge "STALE: dump at sink" / "COLD: dump at sink"; `Station.potOut` shows
+  "POT OUT · name" and "pot out (sink)" on the Gear card.
+- [x] **A3 events:** splashes on `mess.spawn` (milk, grounds) and `bin.leak` (`chaosModel`); sounds `sinkDump`,
+  `potLift`, `stalePot`, `binLeak`, `coldCup` (`audio/cues.ts`, `audio/recipes.ts`); pop-ups for `sink.dump`,
+  `pot.stale`, `bin.leak`, `pickup.cold` (`crewModel` notes, held ~3 s in `layers/fx.ts`).
+- [x] **A2 cooling ring:** `pickupModel` and `passCool` read `slotCool` when `coolsOnCounter` (hot cups) and
+  fall back to `PassItem.ticksLeft` for iced/old cups; drip rings keep `potColdAt`, and a waiting machine output
+  now rings by `outputSince`; a held cup reads `heldCool` (hand slot
+  "cold" tag, hint "cold: dump it at the sink"). Pickup take-back hint uses `takeBackIndex` / `takeBackCold`.
+- [x] **A1 solo toggle:** `title.ts` `SOLO_BOT_CHOICES` [0,1,2], `soloBotsSeg`, `readSoloBots`; `StartChoice.soloBots`
+  is saved by `startSolo` in `src/main.ts` via `settings.set({ soloBots })` (UI side; the `CreateRunOptions` line is
+  untouched).
+- [ ] **A5 counts** (`stationCountsLeft`) not wired yet: next UI item.
+- Crew tips with 0 solo bots: still silent (open question in HANDOFF).
+
 ## ui-3.3.2 (UI lane): counts, cooling rings, step icons: notes for Claude
 
 Built in `src/render/countsModel.ts` (pure, tested) and `src/render/layers/counts.ts` (Pixi). No sim changes.
@@ -2082,7 +2108,7 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   while they hold something it takes, or until an order needing it has waited `helperGuardSeconds` (8 s); the
   till stays theirs only while their hands are empty and the front customer is under 3 s; fresh tickets
   (`helperTicketSeconds`, 3 s after appearing or being rung) are left to free people. No new state, inputs or
-  events. **UI lane:** draw the Off/1/2 solo toggle writing `soloBots`. Open: tune both windows by playtest.
+  events. **UI lane:** draw the Off/1/2 solo toggle writing `soloBots` (done, ui-3.3.3). Open: tune both windows by playtest.
   Morning-prompt leftovers (optional, not built): bots favouring well-tipping families and drinks near a level-up;
   bots treating a flowing D4b as the fast station; planner leaning to cash late in a short season week; bot
   self-review from `report.crew`; G8 vote toast (UI lane).
@@ -2100,7 +2126,7 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   `review.bad { customer, drink, reason: 'cold' }`, `pickup.takeBack { drink, by, cold }` (`pass.take` still
   fires). **UI lane:** `pickupModel`'s stale blink and 3.3.2's `passCool` read `PassItem.ticksLeft`, which no
   longer runs down for hot Gear cups: read `slotCool` instead (note it runs 0 fresh → 1 cold, the opposite of
-  `countsModel.coolFraction`). Settles pickup M2. Open: no thermal gear yet; p4Smoke end cash is lower (served
+  `countsModel.coolFraction`) (done, ui-3.3.3). Settles pickup M2. Open: no thermal gear yet; p4Smoke end cash is lower (served
   within 2%), to revisit in the A balance pass.
 - **A3 back sink, stale pots, more messes (`fb2-a3`, protocol 43).** Spawns: `src/sim/spawn.ts` `freeSpot`/`settle` keep
   every barista placed off fixtures.
@@ -2118,7 +2144,7 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
     - skip a machine whose pot a person carries;
     - pour spare and cold drinks down the sink when it is as close as the bin;
     - mop any mess when they have nothing to make (orders still interrupt).
-  - **UI lane to wire:**
+  - **UI lane to wire (done, ui-3.3.3):**
     - sink art and a hint (`spotOf` → `'sink'`; today `counterName` says "Till", `gearCounterHint` falls into the condiment-bar branch, and `render/pickupModel.counterSpotOf` draws a till);
     - the pot in hand (`tool === 'pot'`, hint "carry it to the sink");
     - a cold or stale pot hint and a "STALE: dump at sink" badge (`Station.stale`);

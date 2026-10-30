@@ -3,6 +3,8 @@ import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from '../sim/constants';
 import { podsOnly } from '../sim/gear';
 import { passSlots } from '../sim/pickup';
+import { coolsOnCounter, slotCool } from '../sim/cooling';
+import { outputFreshness } from './sinkModel';
 import type { DrinkId, GameState, PlayerId, Station, Vec2 } from '../sim/types';
 import { nextStepIndex, ticketSteps } from '../ui/tickets';
 
@@ -33,19 +35,28 @@ export const COUNT_LOW = 2;
  * pot, or a finished item sitting at the machine (a pulled shot = 1). Counters, the bin and empty or
  * still-brewing machines get nothing.
  */
-export function stationCounts(state: Pick<GameState, 'stations' | 'tick'>): StationCount[] {
+export function stationCounts(state: Pick<GameState, 'stations' | 'tick'> & Partial<Pick<GameState, 'gear'>>): StationCount[] {
   const out: StationCount[] = [];
   for (const s of state.stations) {
     if (s.kind === 'counter' || s.kind === 'trash') continue;
     let n = 0;
     let cool: number | null = null;
     let cold = false;
+    // 3.3.3 (FB2 A3): a pot that is out at the sink, or stale, can't pour: its STALE/POT OUT badge says so instead.
+    if (s.potOut !== undefined || s.stale === true) continue;
     if (s.batchLeft !== undefined) n = s.batchLeft;
     else if (s.potLeft !== undefined && s.busyTicksLeft <= 0) {
       n = s.potLeft;
       cool = potCool(s, state.tick);
       cold = s.potOff === 'cold' || cool === 0;
-    } else if (s.output) n = 1;
+    } else if (s.output) {
+      n = 1;
+      // 3.3.3 (FB2 A2): a shot or steamed milk waiting at the machine cools by its own clock (`outputSince`)
+      if (state.gear === true) {
+        cool = outputFreshness(state as GameState, s);
+        cold = cool === 0;
+      }
+    }
     if (n <= 0) continue;
     out.push({ id: s.id, pos: s.pos, n, tone: cold ? 'cold' : n <= COUNT_LOW && s.batchLeft !== undefined ? 'low' : 'ok', cool });
   }
@@ -65,9 +76,13 @@ export function potCool(s: Pick<Station, 'gear' | 'potColdAt'>, tick: number): n
   return coolFraction(s.potColdAt - tick, Math.round(pot.coldAfter * TICK_RATE));
 }
 
-/** Each cup on the pickup coasters (left to right): 1 when set down, 0 when it goes stale and is binned. */
-export function passCool(state: Pick<GameState, 'pass' | 'gear' | 'stations'>): number[] {
-  return state.pass.slice(0, passSlots(state as GameState)).map((p) => coolFraction(p.ticksLeft, Math.round((ECONOMY.pass.staleSeconds[p.item] ?? 60) * TICK_RATE)));
+/** Each cup on the pickup coasters (left to right): 1 when made, 0 when cold (hot Gear cups) or stale (iced, old saves). */
+export function passCool(state: Pick<GameState, 'pass' | 'gear' | 'stations' | 'tick'>): number[] {
+  const st = state as GameState;
+  return state.pass.slice(0, passSlots(st)).map((p) =>
+    // 3.3.3 (FB2 A2): a hot Gear cup with a clock cools by `slotCool` (0 fresh → 1 cold), not the old pass timer
+    coolsOnCounter(st, p) ? 1 - slotCool(st, p) : coolFraction(p.ticksLeft, Math.round((ECONOMY.pass.staleSeconds[p.item] ?? 60) * TICK_RATE)),
+  );
 }
 
 /** Ring colours, hot to cold. */
