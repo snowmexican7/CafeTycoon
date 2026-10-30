@@ -204,3 +204,12 @@ describe('Play solo helper picker (3.3.3, FB2 A1)', () => {
     expect(readSoloBots('')).toBeUndefined();
   });
 });
+
+describe('3.3.5: no "tap" in cold brew wording (Kennedy found it confusing)', () => {
+  it('step words and station names say cold brew, not tap', async () => {
+    const { DRINK_STEPS, STATION_NAME } = await import('./live');
+    const words = [...Object.values(DRINK_STEPS).flat(), ...Object.values(STATION_NAME)];
+    expect(words.filter((w) => /\btaps?\b/i.test(w))).toEqual([]);
+    expect(DRINK_STEPS.coldBrew[0]).toBe('Pour cold brew');
+  });
+});
