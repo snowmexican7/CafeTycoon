@@ -7,7 +7,7 @@ import type { DrinkId, GameState, Personality } from '../sim/types';
  */
 
 const DRINK_PHRASE: Record<DrinkId, string> = {
-  espresso: 'an espresso', latte: 'a latte', coldBrew: 'a cold brew', icedLatte: 'an iced latte', mocha: 'a mocha', matcha: 'a matcha latte', special: 'a maple cold foam', drip: 'a drip coffee', americano: 'an americano', cappuccino: 'a cappuccino',
+  espresso: 'an espresso', latte: 'a latte', coldBrew: 'a cold brew', icedLatte: 'an iced latte', mocha: 'a mocha', matcha: 'a matcha latte', special: 'a maple cold foam', drip: 'a drip coffee', americano: 'an americano', cappuccino: 'a cappuccino', doppio: 'a doppio', sweetCream: 'a sweet-cream cold brew', cafeAuLait: 'a café au lait', redEye: 'a red-eye',
 };
 
 /** "Dev served a latte +$6.10" (amount is price plus tip). */

@@ -1737,3 +1737,9 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Solo and cheap buys are unchanged. The night Gear board shows a blue banner with 👍 Yes / 👎 No (Withdraw for the proposer), plus a 🗳️ mark on vote-needing buy buttons in co-op.
 - **PROTOCOL_VERSION 30 → 31** (new input shape). The snapshot is unchanged (optional fields).
 - **For Claude (bots/net):** bots never vote, so a human-majority-only rule needs no bot work. Optional: a toast for the vote result, and a host-side `settleVote` call when a player leaves (it currently re-settles on the next gear input).
+
+### Gear G6c — the rest of the level-up drinks (gear-g06c)
+- New drinks, appended to `DRINK_IDS` (seeds are safe): **doppio** (30 espressos, needs E3+; espresso in hand at the machine, +beans, 3 s), **sweetCream** (15 cold brews; cold brew in hand at the tap, +milk), **cafeAuLait** (12 drips, needs a steamer; drip in hand at the steamer, +milk), **redEye** (20 drips, needs E2+; drip in hand at the machine, +beans). Gear gates are `LevelUp.needs` and `levelUpGearOk`. The night row shows "needs a Sylvia or better" and similar. Pod machines refuse drip and espresso in hand.
+- Americano vs doppio at the machine uses the existing recipe-clash rule (the oldest ticket decides). Prices are $4.50, $5, $3.75 and $4.25. All have Pixi and DOM cup art.
+- Classic runs are unchanged (nothing unlocks them). The growth cards now hide Gear-only drinks in classic runs (`GEAR_ONLY_DRINKS`).
+- **For Claude (bots):** teach bots the new chains (`recipeChain` resolves them). Red-eye and au lait start from a drip pour. Doppio clashes with americano like mocha clashes with cappuccino.

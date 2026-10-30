@@ -98,6 +98,10 @@ export const DRINK_STATIONS: Record<DrinkId, StationKind[]> = {
   drip: ['drip'],
   americano: ['grinder', 'espresso'],
   cappuccino: ['grinder', 'espresso', 'steamer'],
+  doppio: ['grinder', 'espresso'],
+  sweetCream: ['coldBrewTap'],
+  cafeAuLait: ['drip', 'steamer'],
+  redEye: ['drip', 'espresso'],
 };
 
 export function isTierId(x: unknown): x is TierId {

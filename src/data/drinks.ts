@@ -1,7 +1,10 @@
 import type { DrinkId, ItemKind, StationKind, SupplyId } from '../sim/types';
 
 /** Every drink, in menu order. Hot or iced decides how weather and forecasts tilt orders. */
-export const DRINK_IDS: DrinkId[] = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'mocha', 'matcha', 'special', 'drip', 'americano', 'cappuccino'];
+export const DRINK_IDS: DrinkId[] = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'mocha', 'matcha', 'special', 'drip', 'americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye'];
+
+/** Drinks that only exist in Gear runs (drip machines and level-ups). */
+export const GEAR_ONLY_DRINKS: DrinkId[] = ['drip', 'americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye'];
 
 /** On the menu from day 1. The rest unlock by day or by a night card (Phase 2 B5). */
 export const BASE_DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
@@ -18,6 +21,10 @@ export const DRINK_TEMP: Record<DrinkId, DrinkTemp> = {
   drip: 'hot',
   americano: 'hot',
   cappuccino: 'hot',
+  doppio: 'hot',
+  sweetCream: 'iced',
+  cafeAuLait: 'hot',
+  redEye: 'hot',
 };
 
 export interface DrinkInfo {
@@ -61,6 +68,11 @@ export const DRINK_INFO: Record<DrinkId, DrinkInfo> = {
   // G6: Gear runs only, learned by serving (sim/levelUp.ts): 12 espressos → americano, 12 lattes → cappuccino.
   americano: { name: 'Americano', short: 'Americano', icon: '☕', bias: 0.8, ticket: ['Grind', 'Pull', 'Espresso machine again (hot water)'], blurb: 'A shot topped up with hot water. Learned after 12 espressos.' },
   cappuccino: { name: 'Cappuccino', short: 'Cappuccino', icon: '☁️', bias: 0.8, wait: 1.1, ticket: ['Grind', 'Pull', 'Steam', 'Steam again (extra foam)'], blurb: 'A latte with a tall cap of foam. Learned after 12 lattes.' },
+  // G6c: more level-ups (Gear runs only).
+  doppio: { name: 'Doppio', short: 'Doppio', icon: '⚡', bias: 0.6, ticket: ['Grind', 'Pull', 'Espresso machine again (second shot)'], blurb: 'A double shot. Learned after 30 espressos on a Sylvia or better.' },
+  sweetCream: { name: 'Sweet-cream cold brew', short: 'Sweet cream', icon: '🧋', bias: 0.8, wait: 1.1, ticket: ['Tap', 'Tap again (sweet cream)'], blurb: 'Cold brew under a float of sweet cream. Learned after 15 cold brews.' },
+  cafeAuLait: { name: 'Café au lait', short: 'Au lait', icon: '🫗', bias: 0.8, ticket: ['Drip', 'Steamer (hot milk)'], blurb: 'Drip coffee and hot milk, half and half. Learned after 12 drips.' },
+  redEye: { name: 'Red-eye', short: 'Red-eye', icon: '👁️', bias: 0.6, ticket: ['Drip', 'Espresso machine (shot on top)'], blurb: 'Drip coffee with a shot dropped in. Learned after 20 drips with a real espresso machine.' },
 };
 
 /** Base drinks plus every drink whose unlock day has come. */
@@ -89,6 +101,9 @@ export const RECIPES: Record<RecipeStation, Recipe[]> = {
     { takes: 'grounds', gives: 'espresso', consumes: [] },
     // G6: an espresso in hand back at the machine gets hot water (Gear runs, once learned).
     { takes: 'espresso', gives: 'americano', consumes: [], seconds: 1.5 },
+    // G6c: a second shot (clash with americano: the oldest ticket decides, see recipeFor); a shot on drip.
+    { takes: 'espresso', gives: 'doppio', consumes: ['beans'], seconds: 3 },
+    { takes: 'drip', gives: 'redEye', consumes: ['beans'], seconds: 3 },
   ],
   steamer: [
     { takes: 'espresso', gives: 'latte', consumes: ['milk'] },
@@ -96,11 +111,13 @@ export const RECIPES: Record<RecipeStation, Recipe[]> = {
     // G6: a latte back on the steamer gets extra foam (Gear runs, once learned). Clash with mocha: see recipeFor.
     { takes: 'latte', gives: 'cappuccino', consumes: ['milk'], seconds: 2 },
     { takes: 'coldBrew', gives: 'special', consumes: ['milk', 'flavour'], seconds: 3 },
+    { takes: 'drip', gives: 'cafeAuLait', consumes: ['milk'], seconds: 2 },
     { takes: null, gives: 'matcha', consumes: ['milk', 'flavour'], seconds: 4 },
   ],
   coldBrewTap: [
     { takes: null, gives: 'coldBrew', consumes: ['concentrate'] },
     { takes: 'espresso', gives: 'icedLatte', consumes: ['milk'], seconds: 2.5 },
+    { takes: 'coldBrew', gives: 'sweetCream', consumes: ['milk'], seconds: 2 },
   ],
   // G4d: a pot of filter coffee (one unit of beans, no grinder); the pot then pours cups (sim/gear.ts gearPotPour).
   drip: [{ takes: null, gives: 'drip', consumes: ['beans'] }],
@@ -108,7 +125,7 @@ export const RECIPES: Record<RecipeStation, Recipe[]> = {
 
 /** Drinks that start with a shot (grounds or an espresso in flight can still become one). */
 export function usesShot(drink: DrinkId): boolean {
-  return drink === 'espresso' || drink === 'latte' || drink === 'icedLatte' || drink === 'mocha' || drink === 'americano' || drink === 'cappuccino';
+  return drink === 'espresso' || drink === 'latte' || drink === 'icedLatte' || drink === 'mocha' || drink === 'americano' || drink === 'cappuccino' || drink === 'doppio';
 }
 
 /** The station recipes a drink walks through, in order (the last one gives the drink). */

@@ -160,6 +160,33 @@ export function drawItem(g: Graphics, kind: ItemKind, x: number, y: number, k = 
     g.rect(X(-7), Y(-3), 14 * k, 3 * k).fill({ color: PALETTE.mint, alpha: 0.9 });
     g.ellipse(X(0), Y(-9), 7 * k, 2.2 * k).fill(0x4a2a18);
     g.moveTo(X(7), Y(-5)).quadraticCurveTo(X(13), Y(-3), X(7), Y(4)).stroke({ width: 2.6 * k, color: 0xe8e1d6 });
+  } else if (kind === 'doppio') {
+    // G6c: a demitasse, two crema rings, a gold band.
+    g.ellipse(X(0), Y(6), 13 * k, 3.6 * k).fill(0xffffff).stroke(cupStroke);
+    g.poly([X(-8), Y(-7), X(8), Y(-7), X(6), Y(5), X(-6), Y(5)]).fill(0xffffff).stroke(cupStroke);
+    g.rect(X(-7.4), Y(-2), 14.8 * k, 2.4 * k).fill(0xd9a63a);
+    g.ellipse(X(0), Y(-7), 8 * k, 2.4 * k).fill(0x3a1e10);
+    g.ellipse(X(0), Y(-7.2), 4.5 * k, 1.2 * k).fill(0xc98a4a);
+    g.moveTo(X(8), Y(-4)).quadraticCurveTo(X(13), Y(-3), X(9), Y(2)).stroke({ width: 2.4 * k, color: 0xffffff });
+  } else if (kind === 'sweetCream') {
+    // G6c: cold brew with a white float of sweet cream.
+    g.poly([X(-8), Y(-12), X(8), Y(-12), X(6), Y(8), X(-6), Y(8)]).fill({ color: 0xc9e7f7, alpha: 0.9 }).stroke({ width: 1, color: 0x9fc9e2 });
+    g.poly([X(-7.3), Y(-4), X(7.3), Y(-4), X(5.9), Y(7.5), X(-5.9), Y(7.5)]).fill(0x5b3420);
+    g.poly([X(-7.9), Y(-12), X(7.9), Y(-12), X(7.3), Y(-4), X(-7.3), Y(-4)]).fill(0xfff4e0);
+    g.poly([X(2), Y(-21), X(4.6), Y(-20.5), X(4.2), Y(-7), X(1.6), Y(-7.5)]).fill(PALETTE.cherry);
+  } else if (kind === 'cafeAuLait') {
+    // G6c: a wide bowl-cup of milky coffee.
+    g.ellipse(X(0), Y(7), 12 * k, 3 * k).fill(0xe8e1d6).stroke({ width: 1, color: 0xc9bca8 });
+    g.poly([X(-10), Y(-7), X(10), Y(-7), X(7), Y(6), X(-7), Y(6)]).fill(0xe8e1d6).stroke({ width: 1, color: 0xc9bca8 });
+    g.rect(X(-9), Y(-2), 18 * k, 3 * k).fill({ color: PALETTE.mint, alpha: 0.9 });
+    g.ellipse(X(0), Y(-7), 10 * k, 2.6 * k).fill(0xb07a50);
+  } else if (kind === 'redEye') {
+    // G6c: a diner mug of drip with a red stripe and a crema dot on top.
+    g.poly([X(-7), Y(-9), X(7), Y(-9), X(7), Y(8), X(-7), Y(8)]).fill(0xe8e1d6).stroke({ width: 1, color: 0xc9bca8 });
+    g.rect(X(-7), Y(-3), 14 * k, 3 * k).fill({ color: PALETTE.cherry, alpha: 0.9 });
+    g.ellipse(X(0), Y(-9), 7 * k, 2.2 * k).fill(0x3e2214);
+    g.ellipse(X(0), Y(-9.2), 3 * k, 1 * k).fill(0xc98a4a);
+    g.moveTo(X(7), Y(-5)).quadraticCurveTo(X(13), Y(-3), X(7), Y(4)).stroke({ width: 2.6 * k, color: 0xe8e1d6 });
   }
 }
 

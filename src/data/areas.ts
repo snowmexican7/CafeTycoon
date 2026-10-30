@@ -15,6 +15,10 @@ export const DRINK_FAMILY: Record<DrinkId, DrinkFamily | null> = {
   drip: 'filter',
   americano: 'espresso',
   cappuccino: 'milky',
+  doppio: 'espresso',
+  sweetCream: 'iced',
+  cafeAuLait: 'filter',
+  redEye: 'filter',
 };
 
 export interface AreaInfo {

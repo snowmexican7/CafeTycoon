@@ -35,7 +35,7 @@ import type { PeerStatus } from '../net/peerSession';
 import type { BotsChoice, Member } from '../net/protocol';
 import type { AdId, AdOutcome, PitchKind, PitchTier, CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
-import { BASE_DRINKS, DRINK_IDS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
+import { BASE_DRINKS, DRINK_IDS, GEAR_ONLY_DRINKS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
 import { menuDrinks, neededSupplies, unlockedDrinks } from '../sim/unlocks';
 import { forecastById } from '../data/forecasts';
 import { WEEKDAY_NAMES, forecastFor, forecastName, forecastOf, weekdayOf } from '../sim/forecast';
@@ -508,7 +508,7 @@ export function growthVM(state: GameState): GrowthVM {
       const t = TIERS[id];
       const lay = layoutFor(id);
       const kinds = lay.stations.map((s) => s.kind);
-      const drinks = DRINK_IDS.filter((d) => DRINK_STATIONS[d].every((k) => kinds.includes(k)))
+      const drinks = DRINK_IDS.filter((d) => (state.gear === true || !GEAR_ONLY_DRINKS.includes(d)) && DRINK_STATIONS[d].every((k) => kinds.includes(k)))
         .map((d) => DRINK_INFO[d].short).join(', ');
       return {
         id, name: t.name, icon: t.icon, blurb: t.blurb, width: lay.width,

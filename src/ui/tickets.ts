@@ -32,7 +32,7 @@ export function saveRecipeHints(store: KV | undefined, v: RecipeHints): void {
 }
 
 export const DRINK_LABEL: Record<DrinkId, string> = {
-  espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew', icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha', special: 'Maple foam', drip: 'Drip', americano: 'Americano', cappuccino: 'Cappuccino',
+  espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew', icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha', special: 'Maple foam', drip: 'Drip', americano: 'Americano', cappuccino: 'Cappuccino', doppio: 'Doppio', sweetCream: 'Sweet cream', cafeAuLait: 'Au lait', redEye: 'Red-eye',
 };
 
 /**
