@@ -119,3 +119,23 @@ describe('bots ring up and set drinks on the pickup counter (Task 13)', () => {
     expect(takes.length).toBe(s.today.served); // every serve was a customer taking a drink off the pickup counter
   });
 });
+
+describe('pickup review fixes (M1, M3)', () => {
+  it('M3: a Wi-Fi camper is never an order a bot claims', () => {
+    const s = quiet(gearStand());
+    s.customers = [order(1, { drink: 'coldBrew', egg: 'camper' })];
+    const plan = think(s, sim(s));
+    expect(sim(s).bot!.claim).toBeNull();
+    expect(plan.some((x) => x.kind === 'use' && x.station === 'pickup' && x.action === 'put')).toBe(false);
+  });
+
+  it('M1: an idle bot does not park on a counter spot a carrier needs', async () => {
+    const { targetNodes, idleNode } = await import('./path');
+    const s = quiet(gearStand());
+    sim(s).pos = { x: 5, y: 5 }; // standing right where a carrier sets drinks down
+    const spots = s.stations.filter((st) => st.kind === 'counter');
+    const blocked = spots.flatMap((st) => targetNodes(s, st, sim(s).pos)).map((n) => `${n.x},${n.y}`);
+    const node = idleNode(s, sim(s));
+    expect(blocked).not.toContain(`${node.x},${node.y}`);
+  });
+});

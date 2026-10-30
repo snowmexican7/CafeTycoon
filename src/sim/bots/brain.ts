@@ -307,6 +307,7 @@ export function uncoveredOrders(state: GameState, self: Player): Customer[] {
   const menu = availableDrinks(state);
   const out: Customer[] = [];
   for (const c of state.customers) {
+    if (c.egg === 'camper') continue; // the Wi-Fi camper never orders (pickup review M3)
     if (claimedByOther(state, self, c.id)) continue;
     if (!menu.includes(c.drink)) continue;
     if (drinks[c.drink] > 0) {
