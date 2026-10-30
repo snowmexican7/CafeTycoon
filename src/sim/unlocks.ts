@@ -22,6 +22,7 @@ export function unlockDrink(state: GameState, drink: DrinkId): boolean {
 
 /** Drinks whose unlock day is `state.day` and that were not already known: they join tonight. */
 export function unlockForDay(state: GameState): DrinkId[] {
+  if (state.gear === true) return []; // G6b: Gear runs learn drinks by serving (sim/levelUp.ts) instead.
   const fresh: DrinkId[] = [];
   for (const d of dayUnlocks(state.day)) if (unlockDrink(state, d)) fresh.push(d);
   return fresh;

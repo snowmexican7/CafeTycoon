@@ -45,7 +45,7 @@ export interface GearVM {
   coopHint?: string;
 }
 
-export interface LevelUpVM { drink: DrinkId; name: string; icon: string; from: string; served: number; count: number; learned: boolean }
+export interface LevelUpVM { drink: DrinkId; name: string; icon: string; from: string; served: number; count: number; learned: boolean; also?: string }
 
 export interface NotebookRowVM { family: DrinkFamily; label: string; icon: string; served: number; stars: number | null; left: number }
 
@@ -65,6 +65,7 @@ export function levelUpVM(state: GameState): LevelUpVM[] {
   return LEVEL_UPS.map((l) => ({
     drink: l.unlocks, name: DRINK_INFO[l.unlocks].name, icon: DRINK_INFO[l.unlocks].icon, from: DRINK_INFO[l.from].name.toLowerCase(),
     served: Math.min(l.count, state.gearServed?.[l.from] ?? 0), count: l.count, learned: known.includes(l.unlocks),
+    ...(l.also ? { also: `${Math.min(l.also.count, state.gearServed?.[l.also.from] ?? 0)}/${l.also.count} ${DRINK_INFO[l.also.from].name.toLowerCase()}s` } : {}),
   }));
 }
 
