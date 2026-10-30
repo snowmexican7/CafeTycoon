@@ -25,7 +25,9 @@ function gearNight(gear: GearId[]): GameState {
 }
 
 function gearDay(gear: GearId[]): GameState {
-  return startDay(gearNight(gear));
+  const s = gearNight(gear);
+  s.supplies.concentrate = 20; // the morning steeps the taps from concentrate (batch/pickup Task 4)
+  return startDay(s);
 }
 
 const classicRun = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });

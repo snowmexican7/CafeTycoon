@@ -15,7 +15,7 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SN
  *      sell: empty slot `index` and get its `sell` value back.
  *  - `gearSpeed(station)` / `gearMarks(station)`: the machine's speed (1 = today) and the slip marks it
  *    puts on every cup. Stations with no gear id: 1 and 0, exactly as before.
- *  - `gearMorning(state)`: refill each capped cold brew station's batch for the day.
+ *  - `gearMorning(state)`: steep the taps' cups for the day (`steepMorning`) and roll the day's quirks.
  *  - `batchOut(state)`: a Gear run whose cold brew stations have all used up today's batch (cold
  *    brew drinks are then sold out, the existing sold-out flow).
  *  - `growGearSlots(state, to)`: growing keeps the gear in its slots and adds empty ones.
@@ -27,14 +27,16 @@ import { GEAR, GEAR_START, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
 import { stationsFromSlots, slotCount } from './slots';
 import { CONDIMENTS } from './condiments';
-import { BASE_DRINKS, DRINK_IDS, usesShot, type Recipe } from '../data/drinks';
+import { steepMorning } from './steep';
+import { BASE_DRINKS, DRINK_IDS, TAP_DRINKS, usesShot, type Recipe } from '../data/drinks';
+import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import type { Modifiers } from './effects';
 import { ACCURACY } from './accuracy';
 import { ownTile, placeMess } from './floor';
 import { emitLog } from './log';
 import { rngInt, rngNext } from './rng';
-import type { DrinkId, GameState, GearVote, ItemKind, Player, PlayerInput, Station, StationKind, TierId } from './types';
+import type { DrinkId, GameState, GearVote, ItemKind, Player, PlayerInput, Station, StationKind, SupplyId, TierId } from './types';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -233,11 +235,9 @@ export function gearMorning(state: GameState): void {
   // G6: yesterday's level-ups.
   if (state.gearLearned?.length) state.morningNotes.push(...state.gearLearned);
   delete state.gearLearned;
+  steepMorning(state); // the taps' cups: yesterday's first, then steeped fresh from concentrate
   for (const s of state.stations) {
     delete s.flowUntil;
-    const cap = s.gear ? GEAR[s.gear].batch : undefined;
-    if (cap !== undefined) s.batchLeft = cap;
-    else delete s.batchLeft;
     // G5: overnight everything is reset and today's quirks are rolled (slot order, so it's deterministic).
     delete s.jammed;
     delete s.dead;
@@ -260,6 +260,10 @@ export function gearMorning(state: GameState): void {
     }
     if (q.crack && s.batchLeft !== undefined && rngNext(state) < q.crack) {
       s.batchLeft = Math.max(0, s.batchLeft - (q.crackLoss ?? 0));
+      if (s.batchOld !== undefined) {
+        s.batchOld = Math.min(s.batchOld, s.batchLeft);
+        if (s.batchOld === 0) delete s.batchOld;
+      }
       state.morningNotes.push(`A jar cracked overnight: ${q.crackLoss} cups of cold brew down the drain.`);
     }
     if (q.morning && rngNext(state) < q.morning) state.morningNotes.push(q.morningText ?? `${name} is acting up.`);
@@ -327,6 +331,45 @@ export function batchOut(state: GameState): boolean {
   return taps.length > 0 && taps.every((s) => s.batchLeft === 0);
 }
 
+/** Batch/pickup: recipes that draw a steeped cup from the tap (the plain pour, and the iced latte step). */
+export function tapCupRecipe(r: Recipe): boolean {
+  return r.gives === 'coldBrew' || r.gives === 'icedLatte';
+}
+
+/** Batch/pickup: take one steeped cup off a tap, yesterday's first. False when the tap is empty (or has no batch). */
+export function takeTapCup(s: Station): boolean {
+  if (s.batchLeft === undefined || s.batchLeft <= 0) return false;
+  s.batchLeft -= 1;
+  if (s.batchOld !== undefined && s.batchOld > 0) {
+    s.batchOld -= 1;
+    if (s.batchOld === 0) delete s.batchOld;
+  }
+  return true;
+}
+
+/**
+ * Batch/pickup: a press at a Gear tap with empty hands pours a steeped cup at once. Returns whether the press
+ * was handled (the tap pours, or is empty and pours nothing); false leaves the press to the normal rules.
+ */
+export function gearTapPour(state: GameState, s: Station, p: Player): boolean {
+  if (!isGearRun(state) || s.kind !== 'coldBrewTap' || !s.gear) return false;
+  if (p.holding !== null || p.tool !== null || s.busyTicksLeft !== 0 || s.output !== null) return false;
+  if (!takeTapCup(s)) return true;
+  p.holding = 'coldBrew';
+  const marks = gearMarks(s);
+  if (marks > 0) p.cupSlips = marks;
+  else delete p.cupSlips;
+  delete p.cupTemp;
+  gearAfterUse(state, s, p);
+  return true;
+}
+
+/** Batch/pickup: every supply a drink needs while it is being served; Gear cold brew comes from steeped cups, not concentrate. */
+export function drinkSuppliesFor(state: GameState, d: DrinkId): SupplyId[] {
+  const all = ECONOMY.drinkSupplies[d];
+  return isGearRun(state) ? all.filter((x) => x !== 'concentrate') : all;
+}
+
 /** Growing a Gear run: gear stays in its slots, the bigger shop adds empty ones. */
 export function growGearSlots(state: GameState, to: TierId): void {
   const n = SLOT_POSITIONS[to].length;
@@ -341,6 +384,9 @@ export function growGearSlots(state: GameState, to: TierId): void {
 
 // ---------------------------------------------------------------------------------------------- G4: pods and price multipliers
 
+/** Batch/pickup: the steeped tap's pour: empty hands, a cup of cold brew, nothing used up (concentrate was paid at night). */
+export const TAP_POUR: Recipe = { takes: null, gives: 'coldBrew', consumes: [] };
+
 const POD_SHOT: Recipe = { takes: null, gives: 'espresso', consumes: ['beans'], seconds: 5 };
 
 /**
@@ -348,6 +394,8 @@ const POD_SHOT: Recipe = { takes: null, gives: 'espresso', consumes: ['beans'], 
  * The Pod-o-Matic makes a shot from empty hands (a pod; no grinder) and does not take grounds.
  */
 export function gearRecipe(s: Station, held: ItemKind | null): Recipe | null | undefined {
+  // Batch/pickup: a tap in a Gear shop pours a steeped cup from empty hands (no concentrate, no wait).
+  if (s.kind === 'coldBrewTap' && s.gear && held === null) return TAP_POUR;
   // G10a: a pour-over station makes one handmade cup from empty hands, and nothing else.
   const pour = s.gear ? GEAR[s.gear].pour : undefined;
   if (pour) return held === null ? { takes: null, gives: 'pourOver', consumes: ['beans'], seconds: pour.seconds } : null;

@@ -23,8 +23,9 @@ describe('gear data (Gear Tree G1)', () => {
   it('the "today" tiers match today\'s machines (speed 1, no marks)', () => {
     for (const id of ['e3', 'g2', 's3', 'c4', 'b0'] as const) expect([GEAR[id].speed, GEAR[id].marks]).toEqual([1, 0]);
   });
-  it('only cold brew tiers 1-3 have a batch cap', () => {
-    expect(GEAR_IDS.filter((id) => GEAR[id].batch !== undefined)).toEqual(['c1', 'c2', 'c3']);
+  it('every cold brew tier has a batch cap (the kegerator and the tower steep 60)', () => {
+    expect(GEAR_IDS.filter((id) => GEAR[id].batch !== undefined)).toEqual(['c1', 'c2', 'c3', 'c4', 'c5']);
+    expect([GEAR.c4.batch, GEAR.c5.batch]).toEqual([60, 60]);
   });
   it('isGearId and the start', () => {
     expect(isGearId('e2')).toBe(true);

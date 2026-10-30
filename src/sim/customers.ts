@@ -1,5 +1,5 @@
 import { signatureServed, sigPremium, sigShare } from './signature';
-import { areaPatienceMul, areaQualityTip, areaTipMul, batchOut, gearAskedFor, gearPullMul, noteFamilyTip, snobFamilies, snobTip } from './gear';
+import { areaPatienceMul, areaQualityTip, areaTipMul, batchOut, drinkSuppliesFor, gearAskedFor, gearPullMul, noteFamilyTip, snobFamilies, snobTip } from './gear';
 import { DRINK_FAMILY, SNOB } from '../data/areas';
 import { rivalAskFactor } from './rival';
 import { roleCraft, roleTip } from './roles';
@@ -15,7 +15,7 @@ import { rngInt, rngNext } from './rng';
 import { rogueActive, startRogue } from './rogue';
 import { tally } from './tally';
 import { tallyDrink } from './tally';
-import { BASE_DRINKS, DRINK_IDS, DRINK_INFO } from '../data/drinks';
+import { BASE_DRINKS, DRINK_IDS, DRINK_INFO, GEAR_WAIT, TAP_DRINKS } from '../data/drinks';
 import { clearNameMixOnServe, maybeNameMix, maybeSpawnCamper, secretServeBonus } from './eggs';
 import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, SimEvent } from './types';
 import { sellPastry } from './spoilage';
@@ -36,8 +36,13 @@ export function availableDrinks(state: GameState): DrinkId[] {
   const unlocked = unlockedDrinks(state);
   const coldOut = batchOut(state);
   return DRINKS.filter(
-    (d) => unlocked.includes(d) && state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => (state.supplies[s] ?? 0) >= 1) && !(coldOut && ECONOMY.drinkSupplies[d].includes('concentrate')),
+    (d) => unlocked.includes(d) && state.menu[d] && drinkSuppliesFor(state, d).every((s) => (state.supplies[s] ?? 0) >= 1) && !(coldOut && TAP_DRINKS.includes(d)),
   );
+}
+
+/** How long people ordering `d` expect to wait (1 = the base 33 s): the Gear table by drink, else the drink's own `wait`. */
+export function drinkWait(state: GameState, d: DrinkId): number {
+  return state.gear === true ? GEAR_WAIT[d] : DRINK_INFO[d].wait ?? 1;
 }
 
 /** Spots in the queue today: the layout's six (plus the kiosk's spot), less any a forecast takes (never below three). */
@@ -160,8 +165,8 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const asksSig = !regular && count === 1 && sig !== undefined && menu.includes(sig.drink) && rngNext(state) < sigShare(sig) * rivalAskFactor(state);
   if (asksSig) drinks[0] = sig.drink;
   const mul = kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1;
-  // fancy drinks buy a little patience; a group waits as long as its fanciest order
-  const wait = Math.max(...drinks.map((d) => (DRINK_INFO[d].wait ?? 1) * pricePatience(state, d)));
+  // Gear runs: poured drinks wait less, made-to-order ones more (GEAR_WAIT); a group waits as long as its slowest order
+  const wait = Math.max(...drinks.map((d) => drinkWait(state, d) * pricePatience(state, d)));
   const patienceMax = patienceFor(m, mul * wait * areaPatienceMul(state, drinks));
   const customer: Customer = { id: state.nextCustomerId++, drink: drinks[0], patienceLeft: patienceMax, patienceMax };
   if (kind === 'impatient' || kind === 'group') customer.kind = kind;

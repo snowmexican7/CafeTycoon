@@ -32,7 +32,8 @@ import { ECONOMY } from '../data/economy';
 import { EQUIPMENT, EQUIPMENT_KINDS } from '../data/equipment';
 import type { EquipmentKind } from '../data/equipment';
 import { GEAR, type GearId } from '../data/gear';
-import { batchOut } from './gear';
+import { batchOut, drinkSuppliesFor } from './gear';
+import { TAP_DRINKS } from '../data/drinks';
 import { CONDIMENTS_ID, PICKUP_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
 import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
@@ -200,8 +201,8 @@ export function equipmentSpent(state: GameState): number {
 /** Why a drink is off the board: no station for it, a supply has run out, or the crew switched it off (null = on). */
 export function reasonOff(state: GameState, drink: DrinkId): OffReason | null {
   if (!canMake(state, drink)) return 'noStation';
-  if (ECONOMY.drinkSupplies[drink].some((s) => (state.supplies[s] ?? 0) < 1)) return 'noStock';
-  if (ECONOMY.drinkSupplies[drink].includes('concentrate') && batchOut(state)) return 'noStock';
+  if (drinkSuppliesFor(state, drink).some((s) => (state.supplies[s] ?? 0) < 1)) return 'noStock';
+  if (TAP_DRINKS.includes(drink) && batchOut(state)) return 'noStock';
   if (!state.menu[drink]) return 'off';
   return null;
 }

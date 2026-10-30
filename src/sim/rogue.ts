@@ -1,4 +1,6 @@
 import { ECONOMY } from '../data/economy';
+import { TAP_DRINKS } from '../data/drinks';
+import { drinkSuppliesFor, takeTapCup } from './gear';
 import { LAYOUT } from '../data/layout';
 import { findPath, nodeOf, targetNodes } from './bots/path';
 import { TICK_RATE, secondsToTicks } from './constants';
@@ -114,9 +116,11 @@ function make(state: GameState, r: Rogue, st: Station): void {
   r.ticksLeft = ticks;
   r.waitTicks = 0;
   r.stage = 'making';
-  for (const supply of ECONOMY.drinkSupplies[r.drink]) {
+  for (const supply of drinkSuppliesFor(state, r.drink)) {
     if (state.supplies[supply] >= 1) state.supplies[supply] -= 1;
   }
+  // Batch/pickup: in a Gear shop a rogue's tap drink uses a steeped cup too.
+  if (state.gear === true && st.kind === 'coldBrewTap' && TAP_DRINKS.includes(r.drink)) takeTapCup(st);
 }
 
 /** At the station (just arrived, or waiting): re-pick, wait for the player to move, or make. */

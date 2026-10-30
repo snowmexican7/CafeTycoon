@@ -6,7 +6,7 @@ import { computeModifiers } from './effects';
 import { eventActive } from './events';
 import { emitLog } from './log';
 import { counterInteract } from './pass';
-import { gearAfterUse, gearBlocked, gearMarks, gearPolish, gearPotFinished, gearPotPour, gearRecipe, gearSpeed, gearTempMiss } from './gear';
+import { gearAfterUse, gearBlocked, gearMarks, gearPolish, gearPotFinished, gearPotPour, gearRecipe, gearSpeed, gearTapPour, gearTempMiss, takeTapCup, tapCupRecipe } from './gear';
 import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
@@ -137,14 +137,15 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     emitLog(state, 'cup.early', { by: playerId, item: player.holding });
     return state;
   }
+  if (gearTapPour(state, station, player)) return state;
   const idle = station.busyTicksLeft === 0 && station.output === null;
   if (idle && gearBlocked(state, station, player)) return state;
   const recipe = recipeAt(state, station, player.holding);
-  if (idle && recipe && stocked(state, recipe) && station.batchLeft !== 0) {
+  if (idle && recipe && stocked(state, recipe) && (station.batchLeft !== 0 || !tapCupRecipe(recipe))) {
     for (const s of recipe.consumes) state.supplies[s] -= 1;
     cupIntoStation(player, station);
-    // Gear Tree: a capped cold brew batch runs down; cheap gear marks the cup.
-    if (station.batchLeft !== undefined) station.batchLeft -= 1;
+    // Gear Tree: the iced latte step uses a steeped cup (the sweet-cream step does not); cheap gear marks the cup.
+    if (tapCupRecipe(recipe)) takeTapCup(station);
     const gm = gearMarks(station);
     if (gm > 0) station.cupSlips = Math.min(ACCURACY.maxStars, (station.cupSlips ?? 0) + gm);
     else gearPolish(station);
