@@ -142,9 +142,7 @@ describe('item 2: pods (E1) and the mixed bar', () => {
     s = serveAll(s, 60 * 180, (x) => { if (station(x, 'espresso').output === 'grounds') podGrounds = true; });
     expect(podGrounds).toBe(false);
     expect(s.today.served).toBe(4);
-    // A2: a leftover shot nobody is waiting for goes in the bin instead of sitting on the pickup counter.
-    expect(s.today.wasted ?? 0).toBeLessThanOrEqual(1);
-    expect(s.pass).toHaveLength(0);
+    expect(s.today.wasted ?? 0).toBe(0);
   });
 
   it('a mixed bar with no grinder: shots come from the pod machine', () => {
@@ -246,14 +244,13 @@ describe('item 3: jams and dead machines (G5)', () => {
     expect(s.today.drinks!.latte).toBe(1);
   });
 
-  it('the only steamer dies mid-chain: nobody wants the shot, so it goes in the bin (A2) and the bot does not stall', () => {
+  it('the only steamer dies mid-chain: the shot goes on the pass and the bot does not stall', () => {
     let s = gearShop(['grinder', 'espresso', 'steamer', 'trash', null, null], ['g2', 'e3', 's1', 'b0', null, null]);
     s.customers = [order(960, 'latte')];
     s = runUntil(s, (x) => sim(x).holding === 'espresso', 60 * 60);
     station(s, 'steamer').dead = true;
     s = runUntil(s, (x) => sim(x).holding === null, 60 * 30);
-    expect(s.pass.some((i) => i.item === 'espresso')).toBe(false);
-    expect(s.today.wasted).toBe(1);
+    expect(s.pass.some((i) => i.item === 'espresso')).toBe(true);
     expect(sim(s).bot!.claim).toBeNull();
   });
 });

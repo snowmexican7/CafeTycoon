@@ -52,22 +52,17 @@ describe('bots and cold cups', () => {
     expect(think(s, bot(s)).some((x) => x.kind === 'use' && x.station === 'pickup')).toBe(false);
   });
 
-  it('a bot never sets down a cold cup, nor one nobody is waiting for', () => {
+  it('a bot never sets down a cold cup; a warm one goes on the counter', () => {
     const s = botStand();
     const p = bot(s);
     p.holding = 'latte';
     p.heldSince = s.tick - secs(61);
     s.customers = [atPickup(1, 'latte', s.tick)];
     expect(think(s, p)).toEqual([{ kind: 'use', station: 'trash', action: 'trash' }]);
+    expect(dropPlan(s, p)).toEqual([{ kind: 'use', station: 'trash', action: 'trash' }]);
     p.heldSince = s.tick;
     expect(think(s, p)).toEqual([{ kind: 'use', station: 'pickup', action: 'put' }]);
-    s.customers = [];
-    expect(think(s, p)).toEqual([{ kind: 'use', station: 'trash', action: 'trash' }]);
-    expect(dropPlan(s, p)).toEqual([{ kind: 'use', station: 'trash', action: 'trash' }]);
-    // One customer, a fresh latte for them already on the counter: a second one is not wanted.
-    s.customers = [atPickup(1, 'latte', s.tick, { stage: 'order', rungAt: undefined })];
-    s.pass = [cup('latte', s.tick)];
-    expect(think(s, p)).toEqual([{ kind: 'use', station: 'trash', action: 'trash' }]);
+    expect(dropPlan(s, p)).toEqual([{ kind: 'use', station: 'pickup', action: 'put' }]);
   });
 
   it('a claiming bot whose cup went cold in hand bins it and remakes instead of putting it down', () => {

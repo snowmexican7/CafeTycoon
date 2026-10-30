@@ -261,29 +261,14 @@ export function chainFor(state: GameState, p: Player, drink: DrinkId, finish: 's
   return steps === null || last === null ? [] : [...steps, last];
 }
 
-/**
- * A2 (Gear): the cup in hand may go on the pickup counter: it is not cold, and the customers still waiting want
- * more of that drink than the counter's warm cups cover. Classic: always.
- */
-function wantedOnCounter(state: GameState, p: Player): boolean {
-  if (state.gear !== true) return true;
-  const drink = p.holding;
-  if (!isDrink(drink) || heldCool(state, p) >= 1) return false;
-  let want = 0;
-  for (const c of state.customers) {
-    if (c.egg === 'camper') continue;
-    if (c.drink === drink) want += 1;
-    for (const x of c.extra ?? []) if (x === drink) want += 1;
-  }
-  const have = state.pass.filter((i) => i.item === drink && slotCool(state, i) < 1).length;
-  return want > have;
-}
+/** A2 (Gear): a cup gone cold in hand is never set down on the pickup counter. */
+const coldInHand = (state: GameState, p: Player): boolean => state.gear === true && heldCool(state, p) >= 1;
 
 /** What to do with whatever is in hand when the plan falls through: park a drink, bin anything else (floor if no bin). */
 export function dropPlan(state: GameState, p: Player): BotStep[] {
   if (p.holding === null) return [];
   if (p.holding === 'grounds') return groundsPlan(state, p);
-  const put = isDrink(p.holding) && wantedOnCounter(state, p) ? finishStep(state, p, 'put') : null;
+  const put = isDrink(p.holding) && !coldInHand(state, p) ? finishStep(state, p, 'put') : null;
   return [put ?? binStep(state, p)];
 }
 
@@ -526,8 +511,8 @@ export function think(state: GameState, p: Player): BotStep[] {
     const drink = p.holding;
     // Gear runs: nobody hands over; the drink goes on the pickup counter while it has room.
     const serve = state.gear !== true && state.customers.some((c) => c.drink === drink) ? use(state, p, 'counter', 'serve') : null;
-    // A2: never a cold cup, nor one nobody is waiting for.
-    const put = state.pass.length < passSlots(state) && wantedOnCounter(state, p) ? finishStep(state, p, 'put') : null;
+    // A2: never a cold cup.
+    const put = state.pass.length < passSlots(state) && !coldInHand(state, p) ? finishStep(state, p, 'put') : null;
     return [serve ?? put ?? binStep(state, p)];
   }
   // 0b. Collect a drink left in a machine (e.g. its customer left mid-chain), or stray grounds; rule 0 then places or bins it.
@@ -807,7 +792,7 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       if (!isDrink(p.holding)) return abandon(state, p);
       if (b.noticeTicksLeft > 0) return wait(state, p);
       // A2: a cup that went cold on the way is never set down: bin it and remake the claimed order (if still on one).
-      if (state.gear === true && heldCool(state, p) >= 1) {
+      if (coldInHand(state, p)) {
         const remake = b.claim !== null && b.claimDrink ? chainFor(state, p, b.claimDrink, 'serve') : [];
         return setPlan(b, [binStep(state, p), ...remake]);
       }
