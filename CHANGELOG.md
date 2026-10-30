@@ -18,6 +18,22 @@ when a build goes out, the line moves under its version with the date.
 
 _Nothing yet._
 
+## 3.3.1 — 2026-10-30 · The pickup counter on screen
+
+The screen catches up with 3.3.0's counter.
+
+- **See the pickup counter.** Four coasters with the cups waiting on them. A cup someone is waiting for glows, and a
+  stale one blinks red. Customers who have ordered wait on a "Pickup · wait here" mark.
+- **See the cream-and-sugar bar.** A servings gauge over the bar turns amber when it runs low and blinks red
+  "EMPTY: bring a box". The box stack sits in the corner, and you can see who's carrying a box.
+- **Hints that match the new flow.** The till says ring up, the pickup counter says set the drink down, and the bar
+  takes a box. Planner tips for steeping, condiment boxes, gear, staff, rivals and the branch now each have their
+  own wording.
+- **Sounds and pop-ups.** Pickups play the serve sound and count toward teamwork. Grumbles at an empty bar, the
+  morning's cold brew steep and branch phone calls each get a pop-up.
+- **Fixes.** "Tomorrow's bills" counts what a losing branch costs, and a stock send to the branch is valued at what
+  you'd pay to restock it.
+
 ## 3.3.0 — 2026-10-30 · Batch coffee & pickup
 
 The counter works like a real café now: order at the till, pick up at the counter, doctor your drip at the
