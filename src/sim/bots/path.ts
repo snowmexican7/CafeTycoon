@@ -1,5 +1,5 @@
 import { ECONOMY } from '../../data/economy';
-import { LAYOUT } from '../../data/layout';
+import { FRIDGE_ID, LAYOUT } from '../../data/layout';
 import { floorWidth } from '../growth';
 import { blocked, nearestStation } from '../movement';
 import { spillTiles } from '../floor';
@@ -111,7 +111,7 @@ export function targetNodes(state: GameState, station: Station, from: Vec2): Vec
     (n) =>
       dist(n, station.pos) <= ECONOMY.interactRangeTiles &&
       nearestStation(state, n)?.id === station.id &&
-      (station.kind !== 'counter' || n.y <= station.pos.y),
+      (station.kind !== 'counter' || station.id === FRIDGE_ID || n.y <= station.pos.y),
   );
   return byDistance(candidates, from);
 }

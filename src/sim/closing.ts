@@ -17,6 +17,7 @@ import { layoutFor } from '../data/layout';
 import { resetBotsForNight } from './bots/roster';
 import { clearFloorFields } from './tiles';
 import { returnBox } from './condiments';
+import { fridgeClose } from './fridge';
 import { steepClosing } from './steep';
 import type { GameState } from './types';
 import { settleEspresso } from './espresso';
@@ -50,6 +51,7 @@ export function finishDay(state: GameState): GameState {
     delete s.potColdAt;
     delete s.potOff;
   }
+  fridgeClose(state); // FB2 A4: cartons go in the fridge, whatever is still out goes bad
   for (const p of state.players) {
     p.holding = null;
     if (p.tool === 'box') returnBox(state, p);

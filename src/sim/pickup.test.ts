@@ -6,6 +6,7 @@ import { stepCustomers } from './customers';
 import { stepPass } from './pass';
 import { PICKUP, passSlots, pickupTarget, spotOf, stepPickup, wantsDrink } from './pickup';
 import { ECONOMY } from '../data/economy';
+import { FRIDGE_ID } from '../data/layout';
 import { TICK_RATE } from './constants';
 import { GEAR, type GearId } from '../data/gear';
 import type { Customer, GameState, PlayerInput, SupplyId } from './types';
@@ -49,7 +50,7 @@ describe('the pickup counter (Task 7)', () => {
     expect(PICKUP.slots).toBe(4);
     expect(spotOf()).toBe('till');
     const s = gearDay(['c1', 'e1']);
-    expect(s.stations.filter((x) => x.kind === 'counter').map((x) => spotOf(x))).toEqual(['till', 'pickup', 'condiments']);
+    expect(s.stations.filter((x) => x.kind === 'counter' && x.id !== FRIDGE_ID).map((x) => spotOf(x))).toEqual(['till', 'pickup', 'condiments']);
     expect(passSlots(s)).toBe(4);
     expect(passSlots(classicDay())).toBe(ECONOMY.pass.slots);
     const g: Customer = { id: 1, drink: 'latte', extra: ['coldBrew'], patienceLeft: 1, patienceMax: 1 };

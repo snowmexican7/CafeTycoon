@@ -39,6 +39,7 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
         ['counter', { x: 6, y: 6 }],
         ['pickup', { x: 5, y: 6 }],
         ['condiments', { x: 4, y: 6 }],
+        ['fridge', { x: 1, y: 3 }], // FB2 A4
       ]);
       const spot = s.stations.find((x) => x.id === 'pickup')!;
       expect(spot).toEqual({ id: 'pickup', kind: 'counter', pos: { x: 5, y: 6 }, busyTicksLeft: 0, output: null, occupiedBy: null });
@@ -65,7 +66,7 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
   it('every spot has a barista tile; the door, rogue start and both corners stay clear', () => {
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
       const s = fullShop(tier);
-      for (const id of ['counter', 'pickup', 'condiments']) {
+      for (const id of ['counter', 'pickup', 'condiments', 'fridge']) {
         expect(targetNodes(s, s.stations.find((x) => x.id === id)!, LAYOUT.door).length, `${tier} ${id}`).toBeGreaterThan(0);
       }
       expect(findPath(s, LAYOUT.rogueStart, LAYOUT.door)).not.toBeNull();
@@ -82,15 +83,15 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
     expect(s.stations.some((x) => x.gear === 'c1')).toBe(true);
     const ids = () => s.stations.filter((x) => x.kind === 'counter').map((x) => x.id);
-    expect(ids()).toEqual(['counter', 'pickup', 'condiments']);
+    expect(ids()).toEqual(['counter', 'pickup', 'condiments', 'fridge']);
 
-    s.stations = s.stations.filter((x) => x.id !== 'pickup' && x.id !== 'condiments');
+    s.stations = s.stations.filter((x) => x.id !== 'pickup' && x.id !== 'condiments' && x.id !== 'fridge');
     ensureCounterSpots(s);
     ensureCounterSpots(s);
-    expect(ids()).toEqual(['counter', 'pickup', 'condiments']);
-    s.stations = s.stations.filter((x) => x.id !== 'condiments');
+    expect(ids()).toEqual(['counter', 'pickup', 'condiments', 'fridge']);
+    s.stations = s.stations.filter((x) => x.id !== 'fridge');
     ensureCounterSpots(s);
-    expect(ids()).toEqual(['counter', 'pickup', 'condiments']);
+    expect(ids()).toEqual(['counter', 'pickup', 'condiments', 'fridge']);
 
     const classic = createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 } });
     ensureCounterSpots(classic);

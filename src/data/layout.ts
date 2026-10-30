@@ -45,6 +45,8 @@ export const LAYOUT: {
 /** Batch/pickup: the ids of the two Gear-run counter spots beside the till (which keeps the id `counter`). */
 export const PICKUP_ID = 'pickup';
 export const CONDIMENTS_ID = 'condiments';
+/** FB2 A4: the fridge's id (a counter-kind spot of every Gear shop; its tier is `GameState.fridge`). */
+export const FRIDGE_ID = 'fridge';
 
 /** P3 B13: what changes between the stand, the cart and the café. Door, spawn points, counter and the front of the queue stay put. */
 export interface TierLayout {
@@ -60,10 +62,12 @@ export interface TierLayout {
   condiments: Vec2;
   /** Batch/pickup (Gear runs): where condiment stock boxes wait, two tiles left of the mop's home. */
   boxCorner: Vec2;
+  /** FB2 A4 (Gear runs): the fridge, against the left wall two tiles below the first back-bar slot. */
+  fridge: Vec2;
 }
 
 /** Batch/pickup: the same spots on every tier (the till, door and front of the queue never move either). */
-const SPOTS = { pickup: { x: 5, y: 6 }, condiments: { x: 4, y: 6 } };
+const SPOTS = { pickup: { x: 5, y: 6 }, condiments: { x: 4, y: 6 }, fridge: { x: 1, y: 3 } };
 
 const COUNTER = { id: 'counter', kind: 'counter' as const, pos: { x: 6, y: 6 } };
 

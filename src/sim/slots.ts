@@ -34,7 +34,8 @@ import type { EquipmentKind } from '../data/equipment';
 import { GEAR, type GearId } from '../data/gear';
 import { batchOut, drinkSuppliesFor } from './gear';
 import { TAP_DRINKS } from '../data/drinks';
-import { CONDIMENTS_ID, PICKUP_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
+import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
+import { stockOf } from './fridge';
 import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
@@ -95,12 +96,13 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
   return out;
 }
 
-/** The Gear-run counter spots beside the till: the pickup counter, then the condiment bar (fresh and idle). */
+/** The Gear-run counter spots: the pickup counter, then the condiment bar beside the till, then the fridge (FB2 A4) (fresh and idle). */
 function counterSpots(tier: TierId | undefined): Station[] {
   const l = layoutFor(tier);
   return [
     { id: PICKUP_ID, kind: 'counter', pos: { ...l.pickup }, busyTicksLeft: 0, output: null, occupiedBy: null },
     { id: CONDIMENTS_ID, kind: 'counter', pos: { ...l.condiments }, busyTicksLeft: 0, output: null, occupiedBy: null },
+    { id: FRIDGE_ID, kind: 'counter', pos: { ...l.fridge }, busyTicksLeft: 0, output: null, occupiedBy: null },
   ];
 }
 
@@ -201,7 +203,7 @@ export function equipmentSpent(state: GameState): number {
 /** Why a drink is off the board: no station for it, a supply has run out, or the crew switched it off (null = on). */
 export function reasonOff(state: GameState, drink: DrinkId): OffReason | null {
   if (!canMake(state, drink)) return 'noStation';
-  if (drinkSuppliesFor(state, drink).some((s) => (state.supplies[s] ?? 0) < 1)) return 'noStock';
+  if (drinkSuppliesFor(state, drink).some((s) => stockOf(state, s) < 1)) return 'noStock';
   if (TAP_DRINKS.includes(drink) && batchOut(state)) return 'noStock';
   if (!state.menu[drink]) return 'off';
   return null;

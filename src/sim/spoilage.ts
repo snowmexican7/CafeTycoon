@@ -2,6 +2,7 @@ import { ECONOMY } from '../data/economy';
 import { computeModifiers } from './effects';
 import { rngNext } from './rng';
 import { roleHolders } from './roles';
+import { fridgeSpoilMul } from './fridge';
 import type { GameState, PlayerId, SupplyId } from './types';
 
 /**
@@ -29,7 +30,9 @@ export function spoilRate(state: GameState, supply: SupplyId): number {
   const base = SPOIL.rate[supply] ?? 0;
   if (base === 0) return 0;
   const manager = roleHolders(state).manager ? SPOIL.managerMul : 1;
-  return Math.max(0, Math.min(1, base * manager * computeModifiers(state).spoil));
+  // FB2 A4: Gear milk keeps in the fridge; a better fridge keeps it better.
+  const fridge = supply === 'milk' ? fridgeSpoilMul(state) : 1;
+  return Math.max(0, Math.min(1, base * manager * fridge * computeModifiers(state).spoil));
 }
 
 /** How many of `count` would be thrown out tonight at the current rate. */
@@ -37,19 +40,21 @@ export function spoilCount(state: GameState, supply: SupplyId, count: number): n
   return Math.floor(Math.max(0, count) * spoilRate(state, supply) + 1e-9);
 }
 
-/** At closing: throw out the spoiled share of fresh stock and note it (count and stock value) on today's record. */
+/** At closing: throw out the spoiled share of fresh stock and note it (count and stock value) on today's record (added to anything already there: FB2 A4's left-out stock). */
 export function spoilOvernight(state: GameState): void {
-  const spoiled: Partial<Record<SupplyId, number>> = {};
-  let value = 0;
+  const spoiled: Partial<Record<SupplyId, number>> = { ...state.today.spoiled };
+  let value = state.today.spoiledValue ?? 0;
+  let any = false;
   for (const s of FRESH) {
     const have = state.supplies[s] ?? 0;
     const n = spoilCount(state, s, have);
     if (n <= 0) continue;
     state.supplies[s] = have - n;
-    spoiled[s] = n;
+    spoiled[s] = (spoiled[s] ?? 0) + n;
     value += (n * ECONOMY.packs[s].cost) / ECONOMY.packs[s].size;
+    any = true;
   }
-  if (Object.keys(spoiled).length === 0) return;
+  if (!any) return;
   state.today.spoiled = spoiled;
   state.today.spoiledValue = round2(value);
 }

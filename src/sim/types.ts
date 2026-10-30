@@ -21,7 +21,9 @@ export type EventKind = 'rushHour' | 'powerFlicker' | 'influencerVisit' | 'healt
 export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer';
 export type Personality = 'rookie' | 'steady' | 'veteran' | 'hurried' | 'human'; // 'human' = tester stand-in
 export type BotSkill = 1 | 2 | 3 | 4 | 5;
-export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill';
+/** FB2 A4: `fetch` a milk carton at the fridge, `stock` it at a milk station (or the lifted bar back on the bar),
+ *  `lift` the milk or the bar during closing soon, `store` what is carried in the fridge. */
+export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill' | 'fetch' | 'stock' | 'lift' | 'store';
 
 export interface Vec2 {
   x: number;
@@ -142,7 +144,16 @@ export type SimEventKind =
   | 'condiment.refill'
   | 'steep'
   /** P4 B6: someone (a person or a bot) picked up the branch's phone. */
-  | 'call.answer';
+  | 'call.answer'
+  /** FB2 A4 (src/sim/fridge.ts): the fridge, milk out at the bar, putting away, spoiling at close, closing soon. */
+  | 'fridge.take'
+  | 'fridge.put'
+  | 'milk.out'
+  | 'milk.lift'
+  | 'bar.lift'
+  | 'fridge.auto'
+  | 'supply.spoil'
+  | 'closing.soon';
 
 export interface SimEvent {
   seq: number;
@@ -176,8 +187,12 @@ export interface Player {
   staggerTicksLeft?: number;
   /** Bumps: ticks before this barista can be part of another bump (absent = 0). */
   bumpCooldown?: number;
-  /** What the barista carries instead of a cup: the mop, or a condiment stock box (Gear runs). */
-  tool: 'mop' | 'box' | null;
+  /** What the barista carries instead of a cup: the mop, or a condiment stock box (Gear runs).
+   *  FB2 A4: `milk`, a milk carton (from the fridge, or lifted off the bar at closing); `bar`, what was left on the
+   *  condiment bar, lifted to put away in the fridge. Both hold `carry` servings. */
+  tool: 'mop' | 'box' | 'milk' | 'bar' | null;
+  /** FB2 A4: servings in the carried milk carton or bar box (absent with any other tool). */
+  carry?: number;
   cleaningTicksLeft: number;
   cleaningMess: number | null;
   dropQueued: boolean;
@@ -491,6 +506,8 @@ export interface DayStats {
   soldOutAt?: number;
   /** Batch/pickup: drip and cold brew customers who found the condiment bar empty and took it black. */
   blackCoffees?: number;
+  /** FB2 A4: condiment servings left out on the bar at closing and thrown out (their cost is in `spoiledValue`). */
+  spoiledBar?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -575,6 +592,14 @@ export interface GameState {
   condiments?: { servings: number };
   /** Batch/pickup: condiment stock boxes waiting in the corner (Gear runs). */
   condimentBoxes?: number;
+  /** FB2 A4: the fridge's gear tier (Gear runs; absent = the Dorm Room Cube, f1). `supplies.milk` is what is inside it. */
+  fridge?: GearId;
+  /** FB2 A4: milk servings out at the bar, where the steamer, a steam wand and the tap draw from (Gear runs; absent = 0). */
+  milkOut?: number;
+  /** FB2 A4: condiment servings put away in the fridge at closing; they go back on the bar next morning (absent = 0). */
+  barAway?: number;
+  /** FB2 A4: the tick "closing soon" began today (Gear runs; absent = not yet, or night). */
+  closingSoonAt?: number;
   /** Gear Tree G6: drinks served this run, for drinks that level up with use (absent = none yet). */
   gearServed?: Partial<Record<DrinkId, number>>;
   /** Gear Tree G6: drinks learned today, for tomorrow's morning note (cleared each morning). */

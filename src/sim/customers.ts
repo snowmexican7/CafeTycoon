@@ -19,6 +19,7 @@ import { BASE_DRINKS, DRINK_IDS, DRINK_INFO, GEAR_WAIT, TAP_DRINKS } from '../da
 import { clearNameMixOnServe, maybeNameMix, maybeSpawnCamper, secretServeBonus } from './eggs';
 import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, SimEvent } from './types';
 import { sellPastry } from './spoilage';
+import { stockOf } from './fridge';
 import { accuracyTip, noteCup, starsFor } from './accuracy';
 import { comboTip, serveCombo, TASTE } from './taste';
 import { checkoutFee } from './checkout';
@@ -36,7 +37,7 @@ export function availableDrinks(state: GameState): DrinkId[] {
   const unlocked = unlockedDrinks(state);
   const coldOut = batchOut(state);
   return DRINKS.filter(
-    (d) => unlocked.includes(d) && state.menu[d] && drinkSuppliesFor(state, d).every((s) => (state.supplies[s] ?? 0) >= 1) && !(coldOut && TAP_DRINKS.includes(d)),
+    (d) => unlocked.includes(d) && state.menu[d] && drinkSuppliesFor(state, d).every((s) => stockOf(state, s) >= 1) && !(coldOut && TAP_DRINKS.includes(d)),
   );
 }
 

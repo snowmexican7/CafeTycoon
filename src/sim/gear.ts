@@ -27,6 +27,7 @@ import { GEAR, GEAR_START, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
 import { stationsFromSlots, slotCount } from './slots';
 import { CONDIMENTS } from './condiments';
+import { buyFridge } from './fridge';
 import { steepMorning } from './steep';
 import { BASE_DRINKS, DRINK_IDS, TAP_DRINKS, usesShot, type Recipe } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
@@ -163,6 +164,11 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
   } else {
     const want = GEAR[input.gear];
     if (!want) return state;
+    // FB2 A4: the fridge is not in a slot; an upgrade trades the old one in.
+    if (want.fridge) {
+      buyFridge(state, want.id, p.name);
+      return state;
+    }
     // the highest tier of this tree already in a slot
     let at = -1;
     gear.forEach((id, i) => {

@@ -16,7 +16,7 @@
  */
 import type { StationKind } from '../sim/types';
 
-export type GearTree = 'coldBrew' | 'espresso' | 'grinder' | 'steamer' | 'drip' | 'pourOver' | 'bin';
+export type GearTree = 'coldBrew' | 'espresso' | 'grinder' | 'steamer' | 'drip' | 'pourOver' | 'bin' | 'fridge';
 
 export type GearId =
   | 'c1' | 'c2' | 'c3' | 'c4' | 'c5'
@@ -25,14 +25,16 @@ export type GearId =
   | 's1' | 's2' | 's3'
   | 'd1' | 'd2' | 'd3' | 'd4'
   | 'd4b' | 'd5b'
-  | 'b0';
+  | 'b0'
+  | 'f1' | 'f2' | 'f3' | 'f4';
 
 export interface GearInfo {
   id: GearId;
   tree: GearTree;
   /** 1 = the cheapest tier of its tree (the bin's cardboard box is 0). */
   tier: number;
-  station: Exclude<StationKind, 'counter'>;
+  /** The station kind it stands as. Every slot tree is a machine kind; the fridge (FB2 A4) is a fixed counter-kind spot. */
+  station: StationKind;
   name: string;
   price: number;
   sell: number;
@@ -66,6 +68,9 @@ export interface GearInfo {
   twin?: Exclude<StationKind, 'counter'>[];
   /** G10a: buying it needs this tree at this tier or better in a slot (the drip branch opens after D3). */
   requires?: { tree: GearTree; tier: number; label: string };
+  /** FB2 A4: a fridge (never in a slot; `GameState.fridge`). `holds`: milk it keeps (the restock cap); `spoil`: × tonight's
+   *  milk spoil inside it; `auto`: the milk out at the bar tops itself up from the fridge and goes back by itself at close. */
+  fridge?: { holds: number; spoil: number; auto?: true };
   blurb: string;
 }
 
@@ -101,6 +106,7 @@ export const GEAR_TREES: { id: GearTree; name: string; icon: string }[] = [
   { id: 'drip', name: 'Drip', icon: '🫖' },
   { id: 'pourOver', name: 'Pour-over', icon: '🫘' },
   { id: 'bin', name: 'Bin', icon: '🗑️' },
+  { id: 'fridge', name: 'Fridge', icon: '❄️' },
 ];
 
 const g = (info: GearInfo): GearInfo => info;
@@ -132,6 +138,12 @@ export const GEAR: Record<GearId, GearInfo> = {
   d4b: g({ id: 'd4b', tree: 'pourOver', tier: 4, station: 'drip', name: 'Pour-Over Bar', price: 70, sell: 30, sticker: '$120', speed: 1, marks: 0, pour: { seconds: 8 }, flow: { chance: 0.02, seconds: 20 }, requires: { tree: 'drip', tier: 3, label: 'Office Urn' }, quirks: { spill: 0.03 }, blurb: 'A V60 cone and a gooseneck kettle. No pot: one handmade Pour-over at a time, 8 s. Unlocks the Pour-over ($4.50). The kettle sometimes pours on your shoe; now and then you hit flow state and pour twice as fast.' }),
   d5b: g({ id: 'd5b', tree: 'pourOver', tier: 5, station: 'drip', name: 'The Pour-Over Lab', price: 150, sell: 75, sticker: '$600', speed: 1, marks: 0, priceMul: 1.15, pour: { seconds: 2.5 }, requires: { tree: 'drip', tier: 3, label: 'Office Urn' }, blurb: 'Three cones and a Chemex: three cups in about 7 s. Pour-overs sell for ×1.15. Snobs start dropping by.' }),
   b0: g({ id: 'b0', tree: 'bin', tier: 0, station: 'trash', name: 'Cardboard box', price: 0, sell: 0, sticker: 'free', speed: 1, marks: 0, blurb: 'Today\'s bin, but it says FRAGILE on the side.' }),
+  // FB2 A4: the fridge tree. Never in a slot: it stands at its own spot (data/layout.ts FRIDGE_ID), a run owns f1 from
+  // the start, and an upgrade trades the old one in. It can't be sold (there is no slot to empty).
+  f1: g({ id: 'f1', tree: 'fridge', tier: 1, station: 'counter', name: 'Dorm Room Cube', price: 0, sell: 0, sticker: '$89', speed: 1, marks: 0, fridge: { holds: 24, spoil: 1 }, blurb: 'A mini fridge with a freezer box the size of a sandwich. Holds 24 milk.' }),
+  f2: g({ id: 'f2', tree: 'fridge', tier: 2, station: 'counter', name: 'Garage Beer Fridge', price: 60, sell: 25, sticker: '$250', speed: 1, marks: 0, fridge: { holds: 48, spoil: 1 }, blurb: 'Still has a faded beer logo on the door. Holds 48 milk.' }),
+  f3: g({ id: 'f3', tree: 'fridge', tier: 3, station: 'counter', name: 'Chrome Reach-In', price: 150, sell: 70, sticker: '$2,400', speed: 1, marks: 0, fridge: { holds: 96, spoil: 0.5 }, blurb: 'A proper commercial fridge. Holds 96 milk, and half as much goes off overnight.' }),
+  f4: g({ id: 'f4', tree: 'fridge', tier: 4, station: 'counter', name: 'Udder-Matic 3000', price: 320, sell: 150, sticker: '$6,000', speed: 1, marks: 0, fridge: { holds: 128, spoil: 0.25, auto: true }, blurb: 'Holds 128 milk, barely lets any go off, and pours milk to the bar by itself. It moos when the door is left open.' }),
 };
 
 export const GEAR_IDS = Object.keys(GEAR) as GearId[];

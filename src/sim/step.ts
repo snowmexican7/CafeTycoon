@@ -42,6 +42,7 @@ import { stepPickup } from './pickup';
 import { stepCleaning } from './mop';
 import { applySteepInput } from './steep';
 import { applyCondimentBoxInput, returnBox } from './condiments';
+import { putAwayPending, startClosingSoon, stepClosingSoon, stepFridge, storeInFridge } from './fridge';
 import { stepRogue } from './rogue';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
@@ -80,6 +81,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
         dropCloseVote(s, p.id);
         settleVote(s); // an open gear vote may now have its majority (or be lost)
         if (p.tool === 'box') returnBox(s, p);
+        storeInFridge(s, p); // FB2 A4: a carried carton or bar box goes in the fridge
         clearFloorFields(p);
         if (s.mop.heldBy === p.id) {
           s.mop.heldBy = null;
@@ -207,6 +209,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
 /** Doors lock: score the beforeGrace goals, enter the closing phase and start its grace timer. */
 export function enterClosing(s: GameState): void {
   markBeforeGrace(s);
+  startClosingSoon(s); // FB2 A4: closing early skips straight to it
   s.phase = 'closing';
   s.phaseTicksLeft = secondsToTicks(ECONOMY.closingGraceSeconds);
 }
@@ -239,6 +242,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   }
   stepCleaning(s);
   stepStations(s);
+  stepFridge(s); // FB2 A4: the Udder-Matic pours milk out by itself
   stepPass(s);
   stepCleanliness(s);
   if (doorsOpen) spawnCustomers(s);
@@ -261,6 +265,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   }
   if (doorsOpen) noteCallRang(s);
   s.phaseTicksLeft -= 1;
+  if (doorsOpen) stepClosingSoon(s); // FB2 A4: the last 30 s
   if (s.phaseTicksLeft > 0) return;
   if (doorsOpen) {
     enterClosing(s);
@@ -279,7 +284,8 @@ function stepClosing(s: GameState): void {
   stepDay(s, false);
   if (s.phase !== 'closing') return;
   const elapsed = secondsToTicks(ECONOMY.closingGraceSeconds) - s.phaseTicksLeft;
-  if (elapsed >= secondsToTicks(ECONOMY.closingMinSeconds) && shopEmpty(s)) finishDay(s);
+  // FB2 A4: with bots on the crew, the day also waits for them to put the milk and the bar away (the grace timer still ends it).
+  if (elapsed >= secondsToTicks(ECONOMY.closingMinSeconds) && shopEmpty(s) && !putAwayPending(s)) finishDay(s);
 }
 
 /** Advance the game by one tick. Pure: the input state is never modified. */

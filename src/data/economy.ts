@@ -27,6 +27,8 @@ export const ECONOMY = {
   queueCapacity: 6,
   /** Doors lock at 0:00; whoever is inside can still be served for up to this long. */
   closingGraceSeconds: 30,
+  /** FB2 A4 (Gear runs): the last seconds of the day are "closing soon" (put the milk and the bar away). */
+  closingSoonSeconds: 30,
   /** The closing beat lasts at least this long, even when the shop is already empty. */
   closingMinSeconds: 1,
   /** Most human baristas in one room (one spawn point each). */
@@ -102,6 +104,8 @@ export const ECONOMY = {
     hurriedQueue: 3, // a hurried bot pulls a nearly-done cup early once this many customers wait
     /** The agency temp from the hire-temp card (B6). */
     tempName: 'Robin (temp)',
+    /** FB2 A4: extra seconds a bot waits at a milk station for a carton someone is bringing. */
+    milkWaitSeconds: 10,
     maxWaitTicks: 900, // above a rogue's make (10 s) plus a power flicker (4 s)
     prepColdBrews: 2, // prepping bots keep at most this many cold brews ahead (pass + hands + tap)
     arriveRadius: 0.08,
