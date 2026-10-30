@@ -5,10 +5,10 @@ import { tillRingUp } from './till';
 import { serveCustomer, serveTarget } from './customers';
 import { tryCorrectName, tryKickCamper } from './eggs';
 import { tally } from './tally';
-import type { GameState, PlayerId } from './types';
+import type { GameState, PlayerId, Station } from './types';
 
-/** The counter pass: hand a drink to a customer, park it on the pass, or take one back. */
-export function counterInteract(state: GameState, playerId: PlayerId): GameState {
+/** The counter pass: hand a drink to a customer, park it on the pass, or take one back. `at`: the counter-kind spot pressed (unused until the pickup flow). */
+export function counterInteract(state: GameState, playerId: PlayerId, at?: Station): GameState {
   const player = state.players.find((p) => p.id === playerId);
   if (!player || player.holding === 'grounds') return state;
 

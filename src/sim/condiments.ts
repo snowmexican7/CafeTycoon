@@ -33,6 +33,6 @@ export function returnBox(state: GameState, p: Player): void {
   if (p.tool !== 'box') return;
   p.tool = null;
   state.condimentBoxes = (state.condimentBoxes ?? 0) + 1;
-  const at = layoutFor(state.tier).mopHome; // Task 2 moves boxes to their own corner
+  const at = layoutFor(state.tier).boxCorner;
   emitLog(state, 'drop', { item: 'box', x: at.x, y: at.y });
 }

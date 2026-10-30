@@ -12,7 +12,9 @@
  *  - `slotCount(tier): number`.
  *  - `stationsFromSlots(tier, slots): Station[]`: fresh idle stations in slot order (empty slots
  *    skipped), ids `kind` for the first of a kind then `kind-2`, `kind-3`, …, positions from
- *    `SLOT_POSITIONS`, then the counter. Default slots give exactly the pre-WP5 stations.
+ *    `SLOT_POSITIONS`, then the counter. Default slots give exactly the pre-WP5 stations. With `gear` (Gear runs),
+ *    the pickup counter and the condiment bar follow the counter (kind 'counter', ids `pickup`, `condiments`).
+ *  - `ensureCounterSpots(state)`: a Gear run gets whichever of those two spots is missing (old saves).
  *  - `growSlots(state, to)`: on growing, owned stations (placed + equipment, per kind) and the tier's gifts are
  *    conserved: per kind `equipment = max(0, owned + max(0, defaults(to) - defaults(from)) - defaults(to))`, the new
  *    tier's defaults go on the floor, the surplus stays in `equipment` (kind order grinder, espresso, steamer,
@@ -31,7 +33,7 @@ import { EQUIPMENT, EQUIPMENT_KINDS } from '../data/equipment';
 import type { EquipmentKind } from '../data/equipment';
 import { GEAR, type GearId } from '../data/gear';
 import { batchOut } from './gear';
-import { SLOT_POSITIONS, layoutFor } from '../data/layout';
+import { CONDIMENTS_ID, PICKUP_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
 import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
@@ -87,7 +89,26 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
   });
   const counter = layoutFor(tier).stations.find((s) => s.kind === 'counter');
   if (counter) out.push({ id: counter.id, kind: counter.kind, pos: { ...counter.pos }, busyTicksLeft: 0, output: null, occupiedBy: null });
+  // Batch/pickup: Gear shops get the pickup counter and the condiment bar after the till (the till stays first).
+  if (gear) out.push(...counterSpots(tier));
   return out;
+}
+
+/** The Gear-run counter spots beside the till: the pickup counter, then the condiment bar (fresh and idle). */
+function counterSpots(tier: TierId | undefined): Station[] {
+  const l = layoutFor(tier);
+  return [
+    { id: PICKUP_ID, kind: 'counter', pos: { ...l.pickup }, busyTicksLeft: 0, output: null, occupiedBy: null },
+    { id: CONDIMENTS_ID, kind: 'counter', pos: { ...l.condiments }, busyTicksLeft: 0, output: null, occupiedBy: null },
+  ];
+}
+
+/** A Gear run gets whichever counter spot it is missing (appended, so each appears once). */
+export function ensureCounterSpots(state: GameState): void {
+  if (state.gear !== true) return;
+  for (const spot of counterSpots(state.tier)) {
+    if (!state.stations.some((s) => s.id === spot.id)) state.stations.push(spot);
+  }
 }
 
 const KIND_ORDER: EquipmentKind[] = EQUIPMENT_KINDS;
