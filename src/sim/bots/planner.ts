@@ -19,6 +19,7 @@
  *   planNight(state): Advice[]                                   // priority desc, then id asc
  *   crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots (before they clock in: the ids the roster spawns)
  *
+ * In a Gear run there is no `slot` or `equip` advice (the Gear board replaces the stations shop).
  * Opening night is for stocking up: grow, checkout and equip advice wait for a finished day (as
  * `nightBrief` does). A drink with no station is only taken off the board when nothing in this plan
  * or in `state.equipment` could bring that station back (no grow advice, the kind not unplaced).
@@ -38,6 +39,7 @@ import { expectedUse } from '../brief';
 import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
 import { computeModifiers, rentForDay } from '../effects';
+import { isGearRun } from '../gear';
 import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
 import { restockCost } from '../night';
 import { PRICING, priceForecast, priceStep } from '../pricing';
@@ -317,6 +319,7 @@ function slotsOf(state: GameState): (StationKind | null)[] {
 }
 
 function slotAdvice(state: GameState): Advice[] {
+  if (isGearRun(state)) return []; // Gear runs replace the classic stations shop: `slot` does nothing there.
   const equipment = state.equipment ?? [];
   if (equipment.length === 0) return [];
   const index = slotsOf(state).indexOf(null);
@@ -344,6 +347,7 @@ function freeableSlot(state: GameState, slots: (StationKind | null)[]): boolean 
 }
 
 function equipAdvice(state: GameState, budget: Budget, slotTaken: boolean): Advice[] {
+  if (isGearRun(state)) return []; // ...and `equip` does nothing there either (the Gear board sells machines).
   if (state.days.length === 0) return [];
   const last = state.days.at(-1)!;
   if (last.lost <= last.served) return [];
