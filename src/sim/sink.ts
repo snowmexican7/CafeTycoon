@@ -53,6 +53,7 @@ export function dumpDrink(state: GameState, p: Player): boolean {
   p.holding = null;
   delete p.cupSlips;
   delete p.cupTemp;
+  delete p.heldSince; // A2: no cup, no clock
   tally(state.today, 'wasted');
   emitLog(state, 'sink.dump', { by: p.id, item });
   return true;

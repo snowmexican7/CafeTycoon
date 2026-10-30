@@ -3,7 +3,7 @@ import { ECONOMY } from '../data/economy';
 import { dropTile, placeMess } from './floor';
 import { emitLog } from './log';
 import { returnTool } from './mop';
-import { dumpDrink, dumpPot, isSink } from './sink';
+import { dumpDrink, dumpPot, isSink, needsDump } from './sink';
 import { rollBinLeak } from './messes';
 import { nearestStation } from './movement';
 import { passSlots, spotOf } from './pickup';
@@ -63,7 +63,9 @@ function resolveDrop(state: GameState, p: Player): void {
         emitLog(state, 'drop', { item, station: station.id, by: p.id });
       }
     } else if (station.kind in STATION_RECIPES) {
-      if (station.busyTicksLeft === 0 && station.output === null && station.occupiedBy === null) {
+      // FB2 A3 fix round 1 (M1): a drip machine whose pot is stale or out takes nothing (the lift would lose the cup).
+      const potBlocked = needsDump(state, station) || station.potOut !== undefined;
+      if (station.busyTicksLeft === 0 && station.output === null && station.occupiedBy === null && !potBlocked) {
         station.output = item;
         station.outputSince = state.gear === true ? madeAtFromHand(state, p) : state.tick; // A2: the clock follows the cup
         p.holding = null;

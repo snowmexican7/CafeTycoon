@@ -25,6 +25,23 @@ function gearShop(slots: SlotContent[], gear: (GearId | null)[], standIns = 1): 
   return s;
 }
 
+/** A café Gear run with one person (p1) and one crew bot (bot-1, an A1 helper): drip, espresso, bin. */
+function crewShop(): GameState {
+  let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 600 }, gear: true });
+  s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
+  s.slots = ['drip', 'espresso', 'trash', null, null, null];
+  s.slotGear = ['d2', 'e1', 'b0', null, null, null];
+  s.stations = stationsFromSlots('cafe', s.slots, s.slotGear);
+  s.unlocked = [...BASE_DRINKS, 'drip'];
+  for (const d of s.unlocked) s.menu[d] = true;
+  for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
+  s = startDay(s);
+  s.eventSchedule = [];
+  s.players[0].pos = { x: 6, y: 5 };
+  return s;
+}
+const crew = (s: GameState): Player => s.players.find((p) => p.id === 'bot-1')!;
+
 const POT = () => gearShop(['drip', 'espresso', 'trash', null, null, null], ['d2', 'e1', 'b0', null, null, null]);
 const sim = (s: GameState, n = 1): Player => s.players.find((p) => p.id === `sim-${n}`)!;
 const station = (s: GameState, id: string): Station => s.stations.find((x) => x.id === id)!;
@@ -86,13 +103,26 @@ describe('FB2 A3: bots and the sink', () => {
     const { s } = runUntil(s0, (x) => station(x, 'drip').potLeft === undefined && station(x, 'drip').potOut === undefined, 60 * 30);
     expect([station(s, 'drip').output, sim(s).tool]).toEqual([null, null]);
 
-    const t = POT();
+    // FB2 A1 helper bot (fix round 1, M2): a person at the machine keeps it theirs (heldByPerson).
+    const t = crewShop();
     t.stations.find((x) => x.id === 'drip')!.stale = true;
     t.players[0].pos = { x: 1, y: 2 }; // p1 at the drip machine
     let u = t;
     for (let i = 0; i < 60 * 10; i++) u = step(u, []);
     expect(station(u, 'drip').stale).toBe(true);
-    expect(sim(u).tool).toBeNull();
+    expect(crew(u).tool).toBeNull();
+  });
+
+  it('a helper about to lift steps back when a person walks up to the machine (lift yields, M2)', () => {
+    let s = crewShop();
+    const d = station(s, 'drip');
+    d.stale = true;
+    const b = crew(s);
+    b.pos = { x: 1, y: 2 };
+    b.bot!.plan = [{ kind: 'use', station: 'drip', action: 'lift' }, { kind: 'use', station: 'sink', action: 'dump' }];
+    s.players[0].pos = { x: 1.6, y: 2 }; // p1 steps up beside it
+    for (let i = 0; i < 60; i++) s = step(s, []);
+    expect([crew(s).tool, station(s, 'drip').stale]).toEqual([null, true]);
   });
 
   it('a bot carrying a pot takes it to the sink', () => {
@@ -159,5 +189,16 @@ describe('FB2 A3: bots and the sink', () => {
     sim(t, 2).tool = 'pot';
     t.customers = [rung(1, 'drip')];
     expect(ids(think(t, sim(t)))).toEqual(['drip:insert', 'drip:take', 'pickup:put']);
+  });
+
+  it('a cold cup a bot clears off the pickup counter goes down the sink when it is nearer than the bin (A2 + A3)', () => {
+    const s = gearShop(['drip', 'espresso', null, null, null, 'trash'], ['d2', 'e1', null, null, null, 'b0']);
+    s.pass = [{ item: 'latte', ticksLeft: 99_999, madeAt: s.tick - 60 * 70 }];
+    s.customers = [{ id: 1, drink: 'latte', patienceLeft: 1e5, patienceMax: 1e5, stage: 'order' }];
+    expect(ids(think(s, sim(s))).slice(0, 2)).toEqual(['pickup:take', 'sink:dump']); // from the counter (5,6): sink (11,4) 6.3, bin (11,1) 7.8
+    const t = POT(); // bin at (5,1): 5 tiles from the counter, nearer than the sink
+    t.pass = [{ item: 'latte', ticksLeft: 99_999, madeAt: t.tick - 60 * 70 }];
+    t.customers = [{ id: 1, drink: 'latte', patienceLeft: 1e5, patienceMax: 1e5, stage: 'order' }];
+    expect(ids(think(t, sim(t))).slice(0, 2)).toEqual(['pickup:take', 'trash:trash']);
   });
 });

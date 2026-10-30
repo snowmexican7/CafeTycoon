@@ -90,12 +90,13 @@ function finishStep(state: GameState, p: Player, finish: 'serve' | 'put'): BotSt
  * Put what is in hand in the bin; with no bin in the shop, on the floor away from every station. FB2 A3 (Gear runs): a
  * drink goes down the back sink instead when the sink is as close as the bin or closer (no leak there).
  */
-function binStep(state: GameState, p: Player): BotStep {
+function binStep(state: GameState, p: Player, drink = isDrink(p.holding), from: Vec2 = p.pos): BotStep {
   const bin = use(state, p, 'trash', 'trash');
-  if (state.gear === true && isDrink(p.holding)) {
+  // `drink`/`from`: a cup still to be picked up (A2: a cold cup off the pickup counter), judged from where it will be.
+  if (state.gear === true && drink) {
     const sink = state.stations.find(isSink);
     const binAt = bin?.kind === 'use' ? state.stations.find((st) => st.id === bin.station) : undefined;
-    if (sink && (!binAt || dist(sink.pos, p.pos) <= dist(binAt.pos, p.pos))) return { kind: 'use', station: sink.id, action: 'dump' };
+    if (sink && (!binAt || dist(sink.pos, from) <= dist(binAt.pos, from))) return { kind: 'use', station: sink.id, action: 'dump' };
   }
   return bin ?? { kind: 'floor', node: floorDropNode(state, p.pos), action: 'drop' };
 }
@@ -530,13 +531,12 @@ const liftPlanned = (state: GameState, self: Player, st: Station): boolean =>
   state.players.some((o) => o !== self && o.bot?.plan.some((x) => isLiftAt(x, st)));
 
 /**
- * FB2 A3: a pot machine (nearest first) whose pot needs the sink, that no other bot is on and no person stands near
- * (a person there may be about to lift it themselves).
+ * FB2 A3: a pot machine (nearest first) whose pot needs the sink, that no other bot is on and (A1 helpers) no person is
+ * working (`heldByPerson`: they may be about to lift it themselves).
  */
 function potToDump(state: GameState, p: Player): Station | null {
   if (state.gear !== true) return null;
-  const personNear = (st: Station) => state.players.some((o) => !o.bot && o.connected && dist(o.pos, st.pos) <= BOTS.orphanGuardTiles);
-  const pots = state.stations.filter((st) => needsDump(state, st) && reachable(state, st) && !liftPlanned(state, p, st) && !personNear(st));
+  const pots = state.stations.filter((st) => needsDump(state, st) && reachable(state, st) && !liftPlanned(state, p, st) && !heldByPerson(state, p, st));
   return pots.sort((a, b) => dist(a.pos, p.pos) - dist(b.pos, p.pos))[0] ?? null;
 }
 
@@ -566,7 +566,7 @@ function tillHeld(state: GameState, p: Player): boolean {
  * A take (the bot's own cup) goes ahead. True when the bot should not walk on this tick.
  */
 function yieldToPerson(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }>, st: Station): boolean {
-  if ((step.action !== 'insert' && step.action !== 'ring') || !heldByPerson(state, p, st)) return false;
+  if ((step.action !== 'insert' && step.action !== 'ring' && step.action !== 'lift') || !heldByPerson(state, p, st)) return false;
   const b = p.bot!;
   if (step.action === 'ring') {
     setPlan(b, []);
@@ -608,7 +608,8 @@ export function think(state: GameState, p: Player): BotStep[] {
   // up, or the next customer for that drink would take it cold. A few seconds' work.
   if (shouldClearCold(state, p)) {
     const take = spotStep(state, PICKUP_ID, 'take');
-    if (take) return [take, binStep(state, p)];
+    const counter = state.stations.find((st) => st.id === PICKUP_ID);
+    if (take && counter) return [take, binStep(state, p, true, counter.pos)]; // FB2 A3: the bin or the sink, whichever is nearer the counter
   }
   if (state.gear === true) {
     // 1. Gear (batch/pickup): ring up the queue when nobody else is on their way to the till. Only a thinking
@@ -853,7 +854,7 @@ function disposeStep(state: GameState, p: Player, warmDrink: boolean): BotStep {
 function binColdAndRemake(state: GameState, p: Player): void {
   const b = p.bot!;
   const remake = b.claim !== null && b.claimDrink ? chainFor(state, p, b.claimDrink, 'serve') : [];
-  setPlan(b, [binStep(state, p), ...remake]);
+  setPlan(b, [binStep(state, p, true), ...remake]); // the cold cup is in hand, or about to be
 }
 
 /** At the station: press "use" when the step can happen, wait while the machine is busy, else give up. */

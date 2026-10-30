@@ -143,6 +143,28 @@ describe('FB2 A3: dumping at the sink', () => {
     expect([s.messes, s.cash, s.today.wasted]).toEqual([[], cash, 1]);
   });
 
+  it('the cup clock goes with the cup (A2 heldSince cleared, fix round 1 M3)', () => {
+    const s = stand();
+    p1(s).holding = 'latte';
+    p1(s).heldSince = s.tick - 600;
+    atSink(s, p1(s));
+    interact(s, 'p1');
+    expect(p1(s).heldSince).toBeUndefined();
+  });
+
+  it('no drink parks in a drip machine whose pot is stale or out (fix round 1, M1)', () => {
+    let s = stand();
+    st(s, 'drip').stale = true;
+    p1(s).holding = 'latte';
+    below(s, p1(s), 'drip');
+    s = step(s, [{ kind: 'drop', playerId: 'p1' }]);
+    expect([p1(s).holding, st(s, 'drip').output]).toEqual(['latte', null]);
+    delete st(s, 'drip').stale;
+    st(s, 'drip').potOut = 'p2';
+    s = step(s, [{ kind: 'drop', playerId: 'p1' }]);
+    expect([p1(s).holding, st(s, 'drip').output]).toEqual(['latte', null]);
+  });
+
   it('R at the sink dumps the drink too (it never lands on the pickup counter)', () => {
     let s = stand();
     p1(s).holding = 'drip';
