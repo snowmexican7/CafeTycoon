@@ -68,7 +68,7 @@ describe('Smoke fix: a grinder beside a pod-only espresso bar', () => {
   it('tickets show one Pod step instead of Grind + Pull, and the HUD passes the flag', () => {
     expect(ticketSteps('latte', true)).toEqual(['Pod', 'Steam', 'Hand off']);
     expect(ticketSteps('latte', false)).toEqual(['Grind', 'Pull', 'Steam', 'Hand off']);
-    expect(ticketSteps('coldBrew', true)).toEqual(['Tap', 'Hand off']);
+    expect(ticketSteps('coldBrew', true)).toEqual(['Pour cold brew', 'Hand off']);
     expect(nextStepIndex('latte', 'espresso', true)).toBe(1);
     expect(nextStepIndex('espresso', 'espresso', true)).toBe(1); // holding the drink itself: hand it off
     expect(nextStepIndex('cappuccino', 'latte', true)).toBe(2);

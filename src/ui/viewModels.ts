@@ -503,7 +503,7 @@ export interface GrowthVM {
   waiting?: string;
 }
 
-const STATION_ICON: Record<string, string> = { grinder: '⚙️ grinder', espresso: '☕ espresso', steamer: '🥛 steamer', coldBrewTap: '🧊 cold-brew tap' };
+const STATION_ICON: Record<string, string> = { grinder: '⚙️ grinder', espresso: '☕ espresso', steamer: '🥛 steamer', coldBrewTap: '🧊 cold brew' };
 
 function waitingNote(state: GameState): { waiting?: string } {
   // FB1 WP5: from reasonOff, so a swapped-out steamer reads the same as a stand that never had one.
@@ -555,7 +555,7 @@ export function checkoutVM(state: GameState): CheckoutVM {
       const owned = c.owned.includes(id);
       const terms = [
         o.daily ? `${money(o.daily)}/day licence` : '',
-        o.fee ? `${Math.round(o.fee * 100)}% per tap` : '',
+        o.fee ? `${Math.round(o.fee * 100)}% per card sale` : '',
       ].filter(Boolean).join(' · ') || 'no running costs';
       return {
         id, name: o.name, icon: o.icon, blurb: o.blurb, pros: o.pros, cons: o.cons,

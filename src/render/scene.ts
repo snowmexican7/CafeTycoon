@@ -277,7 +277,7 @@ export class Scene {
     } else if (b.kind === 'steep') {
       if (b.cups > 0) {
         const fresh = b.paid < b.cups ? ` (${b.paid} fresh)` : '';
-        this.fx.spawn(`🧊 ${b.cups} cold ${b.cups === 1 ? 'brew' : 'brews'} on tap${fresh}`, SCENE_WIDTH / 2, sy(2), 0x9fd3ff, 17);
+        this.fx.spawn(`🧊 ${b.cups} ${b.cups === 1 ? 'cup' : 'cups'} of cold brew ready${fresh}`, SCENE_WIDTH / 2, sy(2), 0x9fd3ff, 17);
       }
     } else if (b.kind === 'call') {
       const text = !b.take ? `${b.by} let the phone ring` : b.call === 'machine' ? `📞 ${b.by} talked the branch through the machine` : `📞 ${b.by} took the branch's order`;

@@ -2053,6 +2053,14 @@ Open (sim lane):
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
 
+## ui-3.3.5 (UI lane): no "tap" in cold brew wording
+
+- [x] UI strings: `live.ts` `DRINK_STEPS` ('Tap' → 'Pour cold brew'; iced latte 'Ice + milk') and
+  `STATION_NAME.coldBrewTap` → 'Cold brew'; `countsModel.STEP_ICON` keys follow; `viewModels` station list
+  '🧊 cold brew' and checkout fee '% per card sale'; `scene.ts` steep pop-up "N cups of cold brew ready".
+  Touch-gesture "tap" ("Tap for steps", "tap to undo", "Tap a slot") is left as is: it means tapping the screen.
+- [ ] Sim/data strings still saying tap: listed for Claude in `docs/HANDOFF.md` (Grok → Claude, 2026-10-30).
+
 ## ui-3.3.4 (UI lane): A5 counts, GEAR_TREE 5b: notes for Claude
 
 - [x] **A5 counts:** `render/countsModel.stationCounts(state: GameState)` now loops `stationCountsLeft(state)` and only

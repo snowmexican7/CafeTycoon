@@ -102,7 +102,7 @@ export interface HeldRecipe { drink: DrinkId; steps: HeldStep[] }
 /** A small icon per ticket step word (src/ui/live.ts DRINK_STEPS + ticketSteps). */
 export const STEP_ICON: Record<string, string> = {
   Grind: '⚙️', Pull: '☕', 'Pull again': '☕', Pod: '☕', Shot: '☕', Steam: '♨️', Foam: '☁️', Milk: '🥛', Cream: '🥛',
-  Cocoa: '🍫', Tap: '🧊', Whisk: '🍵', Pour: '🫖', Drip: '🫖', Water: '💧', 'Hand off': '🛎️', Pickup: '🛎️',
+  Cocoa: '🍫', 'Pour cold brew': '🧊', 'Ice + milk': '🧊', Whisk: '🍵', Pour: '🫖', Drip: '🫖', Water: '💧', 'Hand off': '🛎️', Pickup: '🛎️',
 };
 
 /**
