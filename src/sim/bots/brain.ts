@@ -99,10 +99,13 @@ const pair = (st: Station, gives: ItemKind): BotStep[] => [
 
 /**
  * `st` can take this visit: the recipe it would run for `held` makes `gives` (a gear recipe first, the
- * menu, and the oldest-ticket clash rule all included, as in `interact`), and a capped batch is not used up.
+ * menu, and the oldest-ticket clash rule all included, as in `interact`), a capped batch is not used up,
+ * the machine is not dead, and it is not jammed unless the bot arrives empty-handed (to whack it).
  */
 function canMake(state: GameState, st: Station, need: Need): boolean {
   if (st.kind !== need.kind || st.batchLeft === 0) return false;
+  // G5: a dead machine is gone until tonight; a jammed one is fine for empty hands (they whack it first).
+  if (st.dead || (st.jammed && need.held !== null)) return false;
   return recipeAt(state, st, need.held)?.gives === need.gives;
 }
 
@@ -496,6 +499,34 @@ function pullsEarly(state: GameState, p: Player, st: Station): boolean {
   );
 }
 
+/**
+ * G5: an insert planned at a machine that has died since (the battery whisk). Re-plan from that step with
+ * what the bot will be holding there; when nothing else can make it, keep the steps before it and drop the
+ * claim (rule 0 of think places whatever ends up in hand). A take at a dead machine still collects its last cup.
+ */
+function replanAroundDead(state: GameState, p: Player): void {
+  const b = p.bot!;
+  const dead = (x: BotStep) => x.kind === 'use' && x.action === 'insert' && state.stations.some((st) => st.id === x.station && st.dead);
+  const i = b.plan.findIndex(dead);
+  if (i < 0) return;
+  const inserts = b.plan.filter((x): x is Extract<BotStep, { kind: 'use' }> => x.kind === 'use' && x.action === 'insert');
+  const before = b.plan.slice(0, i).filter((x): x is Extract<BotStep, { kind: 'use' }> => x.kind === 'use' && x.action === 'insert');
+  const drink = b.claimDrink ?? inserts[inserts.length - 1]?.makes;
+  const held = before.length > 0 ? before[before.length - 1].makes : p.holding;
+  const lastStep = b.plan[b.plan.length - 1];
+  const finish = lastStep?.kind === 'use' && lastStep.action === 'put' ? 'put' : 'serve';
+  const tail = drink && isDrink(drink) && held !== undefined ? chainFor(state, p, drink, finish, held) : [];
+  if (tail.length > 0) {
+    b.plan = [...b.plan.slice(0, i), ...tail];
+    if (i === 0) setPlan(b, b.plan);
+    return;
+  }
+  if (i === 0) return abandon(state, p);
+  b.claim = null;
+  b.claimDrink = null;
+  b.plan = b.plan.slice(0, i);
+}
+
 /** At the station: press "use" when the step can happen, wait while the machine is busy, else give up. */
 function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }>, st: Station): void {
   const b = p.bot!;
@@ -510,6 +541,16 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       const idle = st.busyTicksLeft === 0 && st.output === null;
       // The planned product, when the step knows it: a recipe clash (the oldest ticket wants the other drink) waits.
       const right = r !== null && (step.makes === undefined || r.gives === step.makes);
+      // G5: a jammed machine. Empty hands whack it (gearBlocked fixes it; this step stays, so the next tick
+      // brews). Full hands can't: try a free twin, else wait for someone to whack it, up to the wait cap.
+      if (idle && st.jammed) {
+        if (p.holding === null) {
+          p.interactQueued = true;
+          return;
+        }
+        const twin = step.makes !== undefined ? pick(state, p, { kind: st.kind as RecipeKind, held: p.holding, gives: step.makes }, st, true)?.st : null;
+        return twin ? retarget(b, st, twin) : wait(state, p);
+      }
       if (idle && r && right && stocked(state, r) && st.batchLeft !== 0) return execute(p);
       const kind = st.kind;
       const leftover =
@@ -663,6 +704,7 @@ function stepBot(state: GameState, p: Player): void {
   }
   // A step at a station the shop no longer has (slots changed under the plan): the plan is moot.
   if (b.plan.some((x) => x.kind === 'use' && !state.stations.some((st) => st.id === x.station))) abandon(state, p);
+  replanAroundDead(state, p);
   if (b.noticeTicksLeft > 0) {
     b.noticeTicksLeft -= 1;
     if (b.noticeTicksLeft === 0) {

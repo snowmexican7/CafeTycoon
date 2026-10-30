@@ -150,3 +150,104 @@ describe('item 2: pods (E1) and the mixed bar', () => {
     expect(s.today.served).toBe(2);
   });
 });
+
+describe('item 3: jams and dead machines (G5)', () => {
+  const station = (s: GameState, id: string) => s.stations.find((x) => x.id === id)!;
+
+  it('a jammed Pod-o-Matic: the bot whacks it with empty hands, then pulls the shot and serves', () => {
+    let s = gearShop(['espresso', 'trash', null, null, null, null], ['e1', 'b0', null, null, null, null]);
+    station(s, 'espresso').jammed = true;
+    s.customers = [order(930, 'espresso')];
+    let whacked = false;
+    let claimed = false;
+    let dropped = false; // the whack is part of the chain: the claim is never let go in between
+    s = serveAll(s, 60 * 60, (x) => {
+      if (x.log.some((e) => e.kind === 'gear.quirk' && String(e.data.text).includes('whacked'))) whacked = true;
+      if (sim(x).bot!.claim === 930) claimed = true;
+      else if (claimed && x.customers.length > 0) dropped = true;
+    });
+    expect(s.today.drinks!.espresso).toBe(1);
+    expect(whacked).toBe(true);
+    expect(dropped).toBe(false);
+  });
+
+  it('holding grounds at a jammed machine: waits for a whack, and goes on once someone fixes it', () => {
+    let s = gearShop(['grinder', 'espresso', 'trash', null, null, null], ['g2', 'e2', 'b0', null, null, null]);
+    const p = sim(s);
+    const esp = station(s, 'espresso');
+    esp.jammed = true;
+    p.holding = 'grounds';
+    p.pos = { x: esp.pos.x, y: 2 };
+    s.customers = [order(931, 'espresso')];
+    p.bot!.claim = 931;
+    p.bot!.claimDrink = 'espresso';
+    p.bot!.plan = chainFor(s, p, 'espresso', 'serve', 'grounds');
+    expect(p.bot!.plan).toEqual([]); // a jammed machine is no plan for full hands...
+    p.bot!.plan = [{ kind: 'use', station: 'espresso', action: 'insert', makes: 'espresso' }, { kind: 'use', station: 'espresso', action: 'take' }, { kind: 'use', station: 'counter', action: 'serve' }];
+    for (let i = 0; i < 300; i++) s = step(s, []); // ...but one that jams under the bot's feet is waited out
+    expect(sim(s).holding).toBe('grounds');
+    expect(sim(s).bot!.plan[0]).toMatchObject({ station: 'espresso', action: 'insert' });
+    delete station(s, 'espresso').jammed; // the human whacks it
+    s = serveAll(s, 60 * 60);
+    expect(s.today.drinks!.espresso).toBe(1);
+  });
+
+  it('holding grounds at a jammed machine nobody whacks: past the wait cap the grounds go in the bin', () => {
+    let s = gearShop(['grinder', 'espresso', 'trash', null, null, null], ['g2', 'e2', 'b0', null, null, null]);
+    const p = sim(s);
+    const esp = station(s, 'espresso');
+    esp.jammed = true;
+    p.holding = 'grounds';
+    p.pos = { x: esp.pos.x, y: 2 };
+    p.bot!.plan = [{ kind: 'use', station: 'espresso', action: 'insert', makes: 'espresso' }, { kind: 'use', station: 'espresso', action: 'take' }, { kind: 'use', station: 'counter', action: 'put' }];
+    for (let i = 0; i < 800; i++) s = step(s, []);
+    expect(sim(s).holding).toBe('grounds'); // still within the cap
+    s = runUntil(s, (x) => sim(x).holding === null, 60 * 30);
+    expect(station(s, 'espresso').jammed).toBe(true); // full hands never whack
+  });
+
+  it('a dead steamer is treated as absent: a latte goes to the live one', () => {
+    const s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', null], ['g2', 'e3', 's1', 's2', 'b0', null]);
+    station(s, 'steamer').dead = true;
+    const steps = ids(chainFor(s, sim(s), 'latte', 'serve'));
+    expect(steps).toContain('steamer-2:insert');
+    expect(steps).not.toContain('steamer:insert');
+  });
+
+  it('the only steamer dead: latte orders are skipped for ones the bar can still make', () => {
+    let s = gearShop(['grinder', 'espresso', 'steamer', 'trash', null, null], ['g2', 'e3', 's1', 'b0', null, null]);
+    station(s, 'steamer').dead = true;
+    s.customers = [order(940, 'latte'), order(941, 'espresso')];
+    expect(ids(think(s, sim(s)))[0]).toBe('grinder:insert');
+    expect(sim(s).bot!.claim).toBe(941);
+    s = runUntil(s, (x) => !x.customers.some((c) => c.id === 941), 60 * 60);
+    expect(s.today.drinks!.espresso).toBe(1);
+    expect(station(s, 'steamer').busyTicksLeft).toBe(0);
+  });
+
+  it('a steamer dies mid-chain: the bot re-plans to the other one and serves the latte', () => {
+    let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', null], ['g2', 'e3', 's1', 's2', 'b0', null]);
+    s.customers = [order(950, 'latte')];
+    s = runUntil(s, (x) => sim(x).holding === 'espresso', 60 * 60);
+    const plan = sim(s).bot!.plan;
+    const target = plan.find((x) => x.kind === 'use' && x.action === 'insert');
+    expect(target).toBeDefined();
+    const first = (target as { station: string }).station;
+    station(s, first).dead = true;
+    s = step(s, []);
+    const next = sim(s).bot!.plan.find((x) => x.kind === 'use' && x.action === 'insert') as { station: string };
+    expect(next.station).not.toBe(first);
+    s = serveAll(s, 60 * 60);
+    expect(s.today.drinks!.latte).toBe(1);
+  });
+
+  it('the only steamer dies mid-chain: the shot goes on the pass and the bot does not stall', () => {
+    let s = gearShop(['grinder', 'espresso', 'steamer', 'trash', null, null], ['g2', 'e3', 's1', 'b0', null, null]);
+    s.customers = [order(960, 'latte')];
+    s = runUntil(s, (x) => sim(x).holding === 'espresso', 60 * 60);
+    station(s, 'steamer').dead = true;
+    s = runUntil(s, (x) => sim(x).holding === null, 60 * 30);
+    expect(s.pass.some((i) => i.item === 'espresso')).toBe(true);
+    expect(sim(s).bot!.claim).toBeNull();
+  });
+});
