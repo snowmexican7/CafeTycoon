@@ -282,6 +282,8 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .gr-book { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font: 600 var(--fs-m) var(--font-body); background: #fffdf6; border: 2px dashed #d9c6a0; border-radius: 14px; padding: 8px 16px; }
 #night .gr-book > b { font: 700 var(--fs-l) var(--font-display); }
 #night .gr-book small { color: var(--ink-soft); }
+#night .gr-lvl { border-color: #b9d7a8; background: #f7fdf2; }
+#night .gr-lvl .gr-bk.done b { color: #3f8a5c; }
 #night .gr-stars { color: #d98b1c; letter-spacing: 1px; }
 #night .gr-slot { cursor: default; min-height: 104px; }
 #night .gr-slot .btn { margin-top: 4px; }

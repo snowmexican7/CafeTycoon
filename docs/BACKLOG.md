@@ -1709,3 +1709,10 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Drip pot awareness: prefer pouring from a full pot, rebrew when empty/cold.
 - Till: a free bot may ring up in co-op (Gear only).
 - Planner `equip` advice for Gear runs; any new Gear drinks (G6 americano/cappuccino when built).
+
+### Gear G6 — drinks level up with use (gear-g06)
+- Built: 12 espresso served → **Americano** unlocks (espresso + water at the espresso machine, 1.5s; not on the pod machine). 12 lattes served → **Cappuccino** unlocks (latte + milk at the steamer, 2s). Unlocks happen mid-day with a "🎉 … unlocked!" toast, plus a morning note the next day. The night board's "🎓 Drinks to learn" row shows progress. Gear only; classic runs are unchanged.
+- Save: optional `gearServed` / `gearLearned` fields. SNAPSHOT_VERSION stays 27.
+- Recipe clash (latte at the steamer → mocha or cappuccino): the station makes whatever the oldest waiting customer ordered, otherwise the first match.
+- Not done yet: doppio, mocha, sweet-cream, café au lait, and red-eye level-ups; pour-over; the doc's "replaces day-3/day-5 unlocks"; temperature miss should halve the tip (it's −1★ for now).
+- **For Claude (bots):** teach bots to make americano and cappuccino (recipeChain already resolves them). Bots should know about the steamer clash rule. Optionally, bots could prefer serving the drink that is close to a level-up (`gearServed`).

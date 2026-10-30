@@ -32,7 +32,7 @@ export function saveRecipeHints(store: KV | undefined, v: RecipeHints): void {
 }
 
 export const DRINK_LABEL: Record<DrinkId, string> = {
-  espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew', icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha', special: 'Maple foam', drip: 'Drip',
+  espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew', icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha', special: 'Maple foam', drip: 'Drip', americano: 'Americano', cappuccino: 'Cappuccino',
 };
 
 /**
@@ -45,7 +45,7 @@ export function nextStepIndex(drink: DrinkId, holding: ItemKind | null): number 
   if (holding === null) return 0;
   if (holding === 'grounds') return steps[0] === 'Grind' ? 1 : null;
   if (holding === 'espresso') return steps[1] === 'Pull' && steps.length > 3 ? 2 : null;
-  if (holding === 'latte' && drink === 'mocha') return 3;
+  if (holding === 'latte' && (drink === 'mocha' || drink === 'cappuccino')) return 3;
   return null;
 }
 

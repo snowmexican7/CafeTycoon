@@ -126,6 +126,9 @@ export function gearMarks(s: Station): number {
 export function gearMorning(state: GameState): void {
   if (!isGearRun(state)) return;
   state.morningNotes.push(...gearAskedNotes(state));
+  // G6: yesterday's level-ups.
+  if (state.gearLearned?.length) state.morningNotes.push(...state.gearLearned);
+  delete state.gearLearned;
   for (const s of state.stations) {
     const cap = s.gear ? GEAR[s.gear].batch : undefined;
     if (cap !== undefined) s.batchLeft = cap;
@@ -235,7 +238,8 @@ const POD_SHOT: Recipe = { takes: null, gives: 'espresso', consumes: ['beans'], 
  */
 export function gearRecipe(s: Station, held: ItemKind | null): Recipe | null | undefined {
   if (!s.gear || !GEAR[s.gear].pods) return undefined;
-  return held === null ? POD_SHOT : held === 'grounds' ? null : undefined;
+  // G6: no hot-water tap on a pod machine, so no americano there (doc: E2+).
+  return held === null ? POD_SHOT : held === 'grounds' || held === 'espresso' ? null : undefined;
 }
 
 /** G4: a Gear run with a pod machine can make espresso drinks without a grinder. */

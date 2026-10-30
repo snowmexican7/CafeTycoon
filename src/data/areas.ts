@@ -13,6 +13,8 @@ export const DRINK_FAMILY: Record<DrinkId, DrinkFamily | null> = {
   icedLatte: 'iced',
   special: null,
   drip: 'filter',
+  americano: 'espresso',
+  cappuccino: 'milky',
 };
 
 export interface AreaInfo {

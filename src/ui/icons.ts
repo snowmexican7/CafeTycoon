@@ -22,6 +22,12 @@ function itemShape(kind: ItemKind): string {
     return '<path d="M-8 -12 h16 l-2 20 h-12z" fill="#fff" stroke="#e5d6c2"/><rect x="-8.5" y="-6" width="17" height="6" fill="#6fa84a" opacity=".9"/><ellipse cx="0" cy="-12" rx="8" ry="2.6" fill="#a8d07a"/><path d="M-3 -12.4 q3 -3 6 0 q-3 2 -6 0" fill="#e9f5dc"/>';
   if (kind === 'special')
     return '<path d="M-8 -12 h16 l-2 20 h-12z" fill="#c9e7f7" opacity=".9" stroke="#9fc9e2"/><path d="M-7.3 -4 h14.6 l-1.3 11.5 h-12z" fill="#5b3420"/><path d="M-7.9 -12 h15.8 l-.6 8 h-14.6z" fill="#f2c48d"/><path d="M0 -19 l1.6 2.6 2.8 -1 -1 2.8 2.4 1.4 -3.4.6 .4 2.6 -2.8 -1.8 -2.8 1.8 .4 -2.6 -3.4 -.6 2.4 -1.4 -1 -2.8 2.8 1z" fill="#d9542b"/>';
+  if (kind === 'americano')
+    return '<path d="M-7 -11 h14 l-1 19 h-12z" fill="#fff" stroke="#e5d6c2"/><ellipse cx="0" cy="-11" rx="7" ry="2.3" fill="#3e2416"/><path d="M7 -7 q6 2 0 9" stroke="#fff" stroke-width="2.4" fill="none"/><path d="M-2 -14 q-3 -4 1 -7" stroke="#c9b9a6" stroke-width="1.4" fill="none"/>';
+  if (kind === 'cappuccino')
+    return '<ellipse cx="0" cy="7" rx="11" ry="3" fill="#fff" stroke="#e5d6c2"/><path d="M-9 -6 h18 l-3 12 h-12z" fill="#fff" stroke="#e5d6c2"/><rect x="-8.4" y="-2" width="16.8" height="4" fill="#4c8fd6" opacity=".85"/><ellipse cx="0" cy="-7" rx="9" ry="5.5" fill="#fff8ee" stroke="#ead9c2"/><circle cx="-3" cy="-8" r=".9" fill="#8a5a3a"/><circle cx="1" cy="-10" r=".9" fill="#8a5a3a"/><circle cx="3" cy="-7" r=".9" fill="#8a5a3a"/>';
+  if (kind === 'drip')
+    return '<path d="M-7 -9 h14 v17 h-14z" fill="#e8e1d6" stroke="#c9bca8"/><rect x="-7" y="-3" width="14" height="3" fill="#7fcfb4"/><ellipse cx="0" cy="-9" rx="7" ry="2.2" fill="#4a2a18"/><path d="M7 -5 q6 2 0 9" stroke="#e8e1d6" stroke-width="2.6" fill="none"/>';
   return '<path d="M-8 -12 h16 l-2 20 h-12z" fill="#c9e7f7" opacity=".9" stroke="#9fc9e2"/><path d="M-7.3 -6 h14.6 l-1.4 13.5 h-11.8z" fill="#5b3420"/><rect x="-5" y="-5" width="5" height="5" rx="1" fill="#e6f5ff" opacity=".85"/><rect x="1" y="-2" width="4.5" height="4.5" rx="1" fill="#e6f5ff" opacity=".8"/><rect x="2" y="-21" width="2.6" height="14" rx="1" fill="#7fcfb4" transform="rotate(12 3 -14)"/>';
 }
 
