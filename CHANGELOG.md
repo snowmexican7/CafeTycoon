@@ -17,6 +17,7 @@ when a build goes out, the line moves under its version with the date.
 ## Unreleased
 
 - **Starbuck$ fights back.** From week 2 of a Gear run the rival down the street runs happy-hour days: one in week 2, then two a week. The night before, the Heads up list warns you (about 20% fewer walk-ins) with a **Match it · 15% off** button: match and you keep your walk-ins but sell everything 15% cheaper that day. From week 3 it also copies a new signature after 2 days instead of 3.
+- **Seasons.** In a Gear run, Keep going after week 1 (the button now reads **Start the season**) starts a four-week season. Weeks 2–4 each get a profit target that grows from your own week-1 score (never below $30), the night header shows the week's progress (🏆 Week 2 of 4 · $20 of $60), and each week ends on the week-end screen with a target-vs-made table. After week 4 you get a medal (gold, silver or bronze for three, two or one targets hit), then Keep going plays on with no more targets. Saves carry the season across game nights.
 
 ## 3.1.0 — 2026-10-30 · Phase 3 complete
 

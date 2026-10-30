@@ -237,6 +237,11 @@ export interface Rival {
   counter?: number;
 }
 
+/** P4 B2: one week of a season: its profit target (none for week 1) and the score it added. */
+export interface SeasonWeek { week: number; target: number | null; profit: number }
+/** P4 B2: `base` is the week-1 score (floored); `startScore` the run score when the current week began. */
+export interface Season { base: number; startScore: number; weeks: SeasonWeek[]; done?: true }
+
 /** P3 B10: parody ad platforms, and how a campaign landed. */
 export type AdId = 'palmbook' | 'nextdoorish' | 'linkedout' | 'glimpse' | 'tiktak';
 export type AdOutcome = 'flop' | 'ok' | 'viral';
@@ -462,6 +467,8 @@ export interface GameState {
   phaseTicksLeft: number;
   day: number;
   unlimited: boolean;
+  /** P4 B2: the four-week season started by Keep going after week 1 (Gear runs). */
+  season?: Season;
   bankrupt: boolean;
   hostId: PlayerId;
   settings: Settings;

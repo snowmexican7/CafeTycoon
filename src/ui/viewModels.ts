@@ -18,6 +18,7 @@ import { ROLE_IDS, ROLES, roleHolders, type RoleId } from '../sim/roles';
 import { awardsFor, awardsText, type Award } from '../sim/awards';
 import { catalogueById } from '../data/catalogue';
 import { GEAR } from '../data/gear';
+import { SEASON, seasonMedal, seasonTarget, targetsHit, type Medal } from '../sim/season';
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
 import { TICK_RATE, secondsToTicks } from '../sim/constants';
@@ -883,6 +884,38 @@ export interface WeekEndVM {
   unlocks?: string[];
   /** Lost customers as a share of everyone who walked in, e.g. "23%". */
   lostPct: string;
+  /** P4 B2: the season, once Keep going started one (or a teaser at the end of week 1 of a Gear run). */
+  season?: SeasonVM;
+}
+
+export interface SeasonVM {
+  /** The week that just ended (1..4). */
+  week: number;
+  of: number;
+  rows: { week: number; target: string | null; made: string; hit: boolean | null }[];
+  done: boolean;
+  medal: Medal;
+  hits: number;
+  /** End of week 1: what Keep going plays for next. */
+  teaser?: string;
+  /** Mid-season: next week's target. */
+  next?: string;
+}
+
+/** P4 B2: the season block on the week-end screen. */
+export function seasonViewModel(state: GameState): SeasonVM | undefined {
+  const s = state.season;
+  if (!s) {
+    if (!state.gear || state.unlimited || state.bankrupt || state.days.length < ECONOMY.scoredWeekDays) return undefined;
+    const base = Math.max(SEASON.floor, scoreRun(state));
+    return { week: 1, of: SEASON.weeks, rows: [], done: false, medal: null, hits: 0, teaser: `Keep going to start a ${SEASON.weeks}-week season: make ${money(seasonTarget(base, 2))} profit next week, a bit more each week after.` };
+  }
+  const last = s.weeks[s.weeks.length - 1]!;
+  const rows = s.weeks.map((w) => ({ week: w.week, target: w.target === null ? null : money(w.target), made: money(w.profit), hit: w.target === null ? null : w.profit >= w.target }));
+  return {
+    week: last.week, of: SEASON.weeks, rows, done: !!s.done, medal: seasonMedal(s), hits: targetsHit(s),
+    ...(!s.done ? { next: money(seasonTarget(s.base, last.week + 1)) } : {}),
+  };
 }
 
 export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
@@ -891,6 +924,7 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
   const awards = awardsFor(state);
   const lost = state.days.reduce((n, d) => n + d.lost, 0);
   const walkIns = lost + state.days.reduce((n, d) => n + d.served, 0);
+  const season = seasonViewModel(state);
   return {
     score: money(scoreRun(state)),
     cash: money(state.cash),
@@ -911,6 +945,7 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
     awards,
     awardsText: awardsText(state, awards),
     lostPct: `${walkIns ? Math.round((100 * lost) / walkIns) : 0}%`,
+    ...(season ? { season } : {}),
   };
 }
 

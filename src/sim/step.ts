@@ -4,6 +4,7 @@ import { applyPitchInput } from './pitch';
 import { applyAdInput } from './ads';
 import { applyCheckoutInput } from './checkout';
 import { applyRivalCounterInput, applyScoutInput } from './rival';
+import { beginSeason } from './season';
 import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
 import { applyCloseEarly, closeVoteUnanimous, dropCloseVote } from './closeEarly';
@@ -171,6 +172,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
       if (isHost && s.phase === 'weekEnd') {
         if (input.choice === 'stop') s.phase = 'ended';
         else {
+          beginSeason(s);
           s.unlimited = true;
           s.day += 1;
           startNight(s);
