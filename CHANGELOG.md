@@ -16,7 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 - Bots stop snatching your prep: they leave a shot, grounds or a drink in a machine alone for a while (and while anyone is near it or heading its way) before tidying it up.
-- Watch where you're going: bump into another barista and you both stumble for a moment, and whatever you're carrying has a coin-flip chance of hitting the floor. Drinks leave a puddle, grounds leave a pile, and the mop gets busy.
+- Watch where you're going: bump into another barista and you both stumble for a moment, and now and then (about one bump in twenty) whatever you're carrying hits the floor. Drinks leave a puddle, grounds leave a pile, and the mop gets busy.
 
 ## 2.2.0 — 2026-10-29 · Feedback round 1 (game-night build)
 
