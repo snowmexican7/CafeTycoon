@@ -1793,3 +1793,11 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - **HUD.** An empty menu says "Nothing on the menu yet" with a hint to check the Gear tab, instead of an empty chalk pill. The right rail no longer squashes Pantry/Gear/Floor/Menu at 1280x800; only the morning note shrinks and scrolls.
 - Screenshots: `/workspace/overnight/sprint/polish-{before,after,day,till,night-gear,night-tonight}-*.png`.
 - Still open: HUD order tickets don't show a "rung" mark; crew tips on night 1 of a Gear run suggest "Take the Espresso off the board" while nothing can be made (bot/crewTips side, for Claude).
+
+### Gear integration smoke (gear-smoke)
+- Ran `/workspace/overnight/pw/weekgear.mjs` (week.mjs + `GEAR=1`: buys C1 + E1 night 1, a Spice grinder night 3, restocks beans/milk/cold brew) for a full 7-day week, 60 s days: solo at 1512x982 and 1280x800, `?link=local` co-op (2 tabs + 2 bots) at 1280x800 and 1512x982. No page errors, every night's sync check "same", week-end ceremony reached in all runs.
+- **Found and fixed:** a grinder beside a pod-only espresso bar made bots grind beans the Pod-o-Matic refuses; espresso sales went to zero (solo days 3–7 fell from 6–7 served to 0–2). Fix: `podsOnly(state)` in sim/gear.ts; bot `chainFor` skips the grind step; order tickets show one "Pod" step instead of Grind + Pull (and the empty rail says "Tidy up"); the Gear tab warns "The Pod-o-Matic takes pods, not grounds". Headless A/B (1 stand-in, 150 s day): espresso with grinder 0 → same as without (9/6/8 on seeds 1–3). Tests: `src/sim/podsGrinder.test.ts` (5).
+- Harness note: the board re-renders after every click, so Playwright element handles go stale; click by selector (week.mjs's classic restock loop has the same issue).
+- Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
+- Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
+

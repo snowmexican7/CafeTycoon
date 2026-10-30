@@ -149,6 +149,7 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
   // G10a fix: a drip machine or a pour-over bar sells drinks too.
   if (!has('coldBrew') && !has('espresso') && !has('drip') && !has('pourOver')) note = 'Nothing to sell yet: buy a cold brew rig, an espresso machine or a drip machine.';
   else if (has('espresso') && !has('grinder') && !slots.some((s) => s.id && GEAR[s.id].pods)) note = 'Espresso needs beans ground first: buy a grinder.';
+  else if (has('grinder') && has('espresso') && slots.every((s) => !s.id || GEAR[s.id].tree !== 'espresso' || GEAR[s.id].pods)) note = 'The Pod-o-Matic takes pods, not grounds: the grinder pays off with a real espresso machine.';
   else if (!Object.values(state.supplies).some((x) => x > 0)) note = 'No supplies yet: restock on the Restock tab.';
   // G4g: co-op pick night nudges toward two cheap machines so everyone has a job (plus the till).
   const humans = state.players.filter((p) => !p.bot).length;

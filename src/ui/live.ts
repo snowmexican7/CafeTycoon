@@ -2,6 +2,7 @@ import { recipeFor } from '../sim/stations';
 import { TILL, tillNext } from '../sim/till';
 import { DRINK_INFO } from '../data/drinks';
 import { GEAR } from '../data/gear';
+import { podsOnly } from '../sim/gear';
 import { ACCURACY } from '../sim/accuracy';
 import { ROLES } from '../sim/roles';
 import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
@@ -111,6 +112,8 @@ export interface HudLive {
   orders: OrderTicket[];
   crew: CrewMember[];
   holding: ItemKind | null;
+  /** Every espresso machine is a pod machine: tickets show "Pod" instead of Grind + Pull. */
+  pods?: boolean;
   meName: string;
   hint: HandHint;
   /** FB1 WP3: the close-early vote (button by the clock). */
@@ -207,6 +210,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     }),
     crew: crewOf(state, me),
     holding: player?.holding ?? null,
+    ...(podsOnly(state) ? { pods: true } : {}),
     meName: player?.role ? `${ROLES[player.role].icon} ${player.name} the ${ROLES[player.role].name}` : (player?.name ?? ''),
     hint: handHint(state, me),
     closeEarly: closeEarlyVM(state, me),

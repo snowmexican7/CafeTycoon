@@ -351,6 +351,15 @@ export function gearRecipe(s: Station, held: ItemKind | null): Recipe | null | u
   return held === null ? POD_SHOT : held === 'grounds' || held === 'espresso' || held === 'drip' ? null : undefined;
 }
 
+/**
+ * Smoke fix: every espresso machine in the shop is a pod machine, so shots come from empty hands and a
+ * grinder (if one is installed) has nothing to feed. Bots and tickets then skip the Grind step.
+ */
+export function podsOnly(state: GameState): boolean {
+  const esp = state.stations.filter((s) => s.kind === 'espresso');
+  return isGearRun(state) && esp.length > 0 && esp.every((s) => s.gear && GEAR[s.gear].pods);
+}
+
 /** G4: a Gear run with a pod machine can make espresso drinks without a grinder. */
 export function podsCoverGrinder(state: GameState): boolean {
   return isGearRun(state) && state.stations.some((s) => s.gear && GEAR[s.gear].pods);
