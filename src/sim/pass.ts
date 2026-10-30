@@ -5,12 +5,17 @@ import { tillRingUp } from './till';
 import { serveCustomer, serveTarget } from './customers';
 import { tryCorrectName, tryKickCamper } from './eggs';
 import { tally } from './tally';
-import type { GameState, PlayerId, Station } from './types';
+import { passSlots, spotOf } from './pickup';
+import type { GameState, Player, PlayerId, Station } from './types';
 
-/** The counter pass: hand a drink to a customer, park it on the pass, or take one back. `at`: the counter-kind spot pressed (unused until the pickup flow). */
+/**
+ * The counter. Classic: hand a drink to a customer, park it on the pass, or take one back. Gear (batch/pickup):
+ * `at` is the counter-kind spot pressed (see `gearCounter`).
+ */
 export function counterInteract(state: GameState, playerId: PlayerId, at?: Station): GameState {
   const player = state.players.find((p) => p.id === playerId);
   if (!player || player.holding === 'grounds') return state;
+  if (state.gear === true) return gearCounter(state, player, at);
 
   // B8: empty hands at the counter can politely kick a Wi-Fi camper or fix a name mix-up.
   if (player.holding === null) {
@@ -43,19 +48,54 @@ export function counterInteract(state: GameState, playerId: PlayerId, at?: Stati
     const [item] = state.pass.splice(index, 1);
     serveCustomer(state, customer, item.item, playerId, item.slips ?? 0, item.temp === true);
     emitLog(state, 'pass.serve', { item: item.item, by: playerId });
-  } else if (tillRingUp(state, playerId)) {
-    // Gear G4g: nothing to hand off, so the till takes the next order.
-    return state;
   } else if (state.pass.length > 0) {
-    const [item] = state.pass.splice(stalestIndex(state), 1);
-    player.holding = item.item;
-    if (item.slips) player.cupSlips = item.slips;
-    else delete player.cupSlips;
-    if (item.temp) player.cupTemp = true;
-    else delete player.cupTemp;
-    emitLog(state, 'pass.take', { item: item.item, by: playerId });
+    takeBack(state, player);
   }
   return state;
+}
+
+/**
+ * Gear: nobody hands a drink over. A drink in hand at any counter spot (the till, the pickup counter and the bar
+ * are one long counter) is set on the pickup counter, and its customer takes it (`stepPickup`). Empty hands:
+ * the till shoos a camper or rings up the next order; the pickup counter fixes a name mix-up or takes the
+ * stalest cup back; the bar does nothing here.
+ */
+function gearCounter(state: GameState, player: Player, at?: Station): GameState {
+  const spot = spotOf(at);
+  if (player.holding !== null) {
+    if (player.holding !== 'grounds' && state.pass.length < passSlots(state)) {
+      const drink = player.holding;
+      state.pass.push({
+        item: drink,
+        ticksLeft: secondsToTicks(ECONOMY.pass.staleSeconds[drink]),
+        ...(player.cupSlips ? { slips: player.cupSlips } : {}),
+        ...(player.cupTemp ? { temp: true } : {}),
+        by: player.id,
+      });
+      player.holding = null;
+      delete player.cupSlips;
+      delete player.cupTemp;
+      emitLog(state, 'pass.put', { item: drink, by: player.id });
+    }
+    return state;
+  }
+  if (spot === 'till') {
+    if (!tryKickCamper(state, player.id)) tillRingUp(state, player.id);
+  } else if (spot === 'pickup') {
+    if (!tryCorrectName(state, player.id, at) && state.pass.length > 0) takeBack(state, player);
+  }
+  return state;
+}
+
+/** Empty hands take the stalest cup back off the pass. */
+function takeBack(state: GameState, player: Player): void {
+  const [item] = state.pass.splice(stalestIndex(state), 1);
+  player.holding = item.item;
+  if (item.slips) player.cupSlips = item.slips;
+  else delete player.cupSlips;
+  if (item.temp) player.cupTemp = true;
+  else delete player.cupTemp;
+  emitLog(state, 'pass.take', { item: item.item, by: player.id });
 }
 
 /** The matching customer to serve: an upset one first, else the most impatient. */

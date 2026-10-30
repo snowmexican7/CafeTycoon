@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from './run';
 import { serveCustomer } from './customers';
 import { counterInteract } from './pass';
+import { stepPickup } from './pickup';
 import type { GameState } from './types';
 
 const run = (): GameState => {
@@ -30,8 +31,18 @@ describe('Gear G4h: too hot / too cold = half tip', () => {
     counterInteract(s, 'p1');
     expect(s.pass[0]?.temp).toBe(true);
     expect(p.cupTemp).toBeUndefined();
-    counterInteract(s, 'p1');
+    // Batch/pickup: empty hands take a cup back at the pickup counter (the till rings up instead).
+    counterInteract(s, 'p1', s.stations.find((x) => x.id === 'pickup'));
     expect(p.holding).toBe('drip');
     expect(p.cupTemp).toBe(true);
+    // Set down again, a rung customer takes it: half tip, as a hand-served miss did.
+    counterInteract(s, 'p1');
+    const a = run();
+    const ca = cust(a);
+    a.customers.push(ca);
+    serveCustomer(a, ca, 'drip', 'p1', 0, true);
+    s.customers.push({ ...cust(s), stage: 'pickup' });
+    stepPickup(s);
+    expect([s.today.served, s.today.tips, s.pass.length]).toEqual([1, a.today.tips, 0]);
   });
 });

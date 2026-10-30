@@ -138,6 +138,11 @@ export function idleNode(state: GameState, self: Player): Vec2 {
         n.y <= counter.pos.y &&
         others.every((p) => dist(p.pos, n) > ECONOMY.bots.yieldRadius),
     );
+    // Gear: don't park where people ring up or set drinks down (pickup review M1); fall back if that leaves nothing.
+    const spots = state.gear ? state.stations.filter((s) => s.kind === 'counter') : [];
+    const busy = new Set(spots.flatMap((st) => targetNodes(state, st, self.pos)).map((n) => `${n.x},${n.y}`));
+    const clear = free.filter((n) => !busy.has(`${n.x},${n.y}`));
+    if (clear.length > 0) return byDistance(clear, self.pos)[0];
     if (free.length > 0) return byDistance(free, self.pos)[0];
   }
   return nodeOf(state, self.pos);

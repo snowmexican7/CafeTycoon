@@ -38,6 +38,7 @@ import { stepBumps } from './bumps';
 import { clearFloorFields, floorFields, stepStuns, trackTiles } from './tiles';
 import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
+import { stepPickup } from './pickup';
 import { stepCleaning } from './mop';
 import { applySteepInput } from './steep';
 import { applyCondimentBoxInput, returnBox } from './condiments';
@@ -231,6 +232,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
     if (p.bot) afterBotInteract(s, p, held);
   }
   resolveDrops(s);
+  stepPickup(s); // batch/pickup: customers at pickup take their drinks (Gear only)
   for (const p of s.players) {
     p.interactQueued = false;
     p.dropQueued = false;
