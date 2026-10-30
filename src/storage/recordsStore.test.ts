@@ -99,4 +99,30 @@ describe('records', () => {
       expect(recordsHtml(recordsViewModel(emptyRecords()))).not.toContain('Classic (retired)');
     });
   });
+
+  it('keeps a season board: one row per run, updated each season week, best medal first; old records have none', () => {
+    const a = week(31, [20, 20, 20, 20, 20, 20, 20]);
+    a.season = { base: 100, startScore: 0, weeks: [{ week: 1, target: null, profit: 100 }, { week: 2, target: 100, profit: 120 }] };
+    let r = foldRecords(emptyRecords(), a, [], '2026-10-30', 100);
+    expect(r.seasons).toEqual([expect.objectContaining({ seed: 31, hit: 1, weeksPlayed: 1, made: 120, medal: 'bronze', done: false })]);
+    a.season.weeks.push({ week: 3, target: 115, profit: 130 }, { week: 4, target: 130, profit: 140 });
+    a.season.done = true;
+    r = foldRecords(r, a, [], '2026-10-30', 500);
+    expect(r.seasons).toHaveLength(1);
+    expect(r.seasons![0]).toMatchObject({ hit: 3, medal: 'gold', done: true, made: 390 });
+    const b = week(32, [10]);
+    b.season = { base: 100, startScore: 0, weeks: [{ week: 1, target: null, profit: 50 }, { week: 2, target: 100, profit: 300 }] };
+    r = foldRecords(r, b, [], '2026-10-30', 50);
+    expect(r.seasons!.map((x) => x.seed)).toEqual([31, 32]);
+    const html = recordsHtml(recordsViewModel(r));
+    expect(html).toMatch(/Season board/);
+    expect(html).toMatch(/3 of 3 targets/);
+    expect(html).toMatch(/in progress \(week 3 of 4\)/);
+    expect(foldRecords(emptyRecords(), week(33, [10]), [], 'd', 1).seasons).toBeUndefined();
+    expect(recordsHtml(recordsViewModel(emptyRecords()))).not.toMatch(/Season board/);
+    const mem = memoryStorage();
+    mem.setItem('cafetycoon.records', JSON.stringify({ version: 1, weeks: 2, totals: {}, hall: {}, mvps: [], counted: [], seasons: 'junk' }));
+    const store = createRecordsStore(mem);
+    expect(store.get().seasons).toBeUndefined();
+  });
 });

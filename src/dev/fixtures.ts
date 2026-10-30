@@ -683,6 +683,13 @@ async function main(): Promise<void> {
       w.days = w.days.slice(0, cut);
       r = foldRecords(r, w, awardsFor(w), `2026-10-${20 + seed}`, score || w.cash - 100);
     }
+    // P4 follow-up: two seasons on the board (one done, one in progress).
+    for (const [seed, profits, done] of [[21, [140, 150, 120, 200], true], [22, [120, 130], false]] as const) {
+      const w = structuredClone(state);
+      w.seed = seed;
+      w.season = { base: profits[0], startScore: 0, weeks: profits.map((p, i) => ({ week: i + 1, target: i ? Math.round((profits[0] * (1 + 0.15 * (i - 1))) / 5) * 5 : null, profit: p })), ...(done ? { done: true as const } : {}) };
+      r = foldRecords(r, w, [], `2026-10-${seed}`, 100);
+    }
     createRecordsDialog(() => r).open();
   }
   const renderer = await createRenderer($('#game'));

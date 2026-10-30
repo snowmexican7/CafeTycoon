@@ -1802,6 +1802,14 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 4 follow-up F1 — season board (p4-f01-season-board, tag p4-f01)
+
+- [x] `recordsStore.ts`: optional `Records.seasons` (`SeasonRecord {key, seed, date, crew, weeksPlayed, hit, made, medal, done}`), upserted by `foldRecords` whenever the run has a `season` (one row per run, refreshed at each season week-end), sorted by medal → hits → made (`seasonOrder`), keeps the best 6; `sanitize` drops junk. No version bump: old records load with no seasons.
+- [x] UI `records.ts`: "Season board" section (medal, "N of 3 targets · $X made", crew · date, "in progress (week N of 4)" with a caramel ring), only when there is at least one season; `.seasons` in menus.css.
+- [x] Tests: `recordsStore.test.ts` +1 (upsert across weeks, gold at 3 hits, order, HTML, no seasons for plain runs / empty records, junk sanitised). 1043 tests.
+- [x] Shots: `/workspace/overnight/sprint/p4-f01/records-*` (fixture `records` now folds two seasons).
+- [ ] Follow-ups: per-season detail (week-by-week table) on tap; share a season card.
+
 ### Phase 4 B6 — phone calls, lite (p4-b06-phone-calls, tag p4-b06)
 
 - [x] Sim `src/sim/call.ts`: deterministic calls (hash, no RNG): 45% of days once the branch has run a full day, Gear runs only; `machine` (fix $25, or the branch serves half its cups) or `order` (+$30, uses 10 of its cups). Rings 25–55% into the day for 25 s. Input `call {take}` (people only, while ringing) → `GameState.callAnswer`; closing applies it via `branchDay(…, withCall)`, records `DayStats.branch.call`, clears the answer. The night estimate never shows tomorrow's call. PROTOCOL 38 → 39; optional fields, old saves load.
