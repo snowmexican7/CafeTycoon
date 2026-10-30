@@ -33,10 +33,24 @@ describe('stores', () => {
     const st = memoryStorage();
     let n = 0;
     const s = createSettingsStore(st, () => `tok${++n}`);
-    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120 });
+    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120, bots: 'auto' });
     expect(createSettingsStore(st, () => 'other').get().playerToken).toBe('tok1');
     expect(s.set({ playerName: 'Ken' }).playerName).toBe('Ken');
     expect(s.get().pace).toBe(3);
+  });
+
+  it('bots defaults to auto, persists a choice, and ignores garbage', () => {
+    const st = memoryStorage();
+    const s = createSettingsStore(st, () => 'tok');
+    expect(s.get().bots).toBe('auto');
+    expect(s.set({ bots: 0 }).bots).toBe(0);
+    expect(createSettingsStore(st, () => 'x').get().bots).toBe(0);
+    for (const bad of ['lots', -1, 7, 1.5, null]) {
+      st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', bots: bad }));
+      expect(s.get().bots).toBe('auto');
+    }
+    st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', bots: 2 }));
+    expect(s.get().bots).toBe(2);
   });
 });
 

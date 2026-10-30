@@ -1,6 +1,6 @@
 import { ECONOMY } from '../../data/economy';
 import { LAYOUT } from '../../data/layout';
-import type { BotState, GameState, Personality, Player } from '../types';
+import type { BotsChoice, BotState, GameState, Personality, Player } from '../types';
 import { floorFields } from '../tiles';
 
 /** Who the bot baristas are: their ids, names, personalities, and how many the café wants. */
@@ -38,6 +38,13 @@ export function wantedBots(state: GameState): number {
 export function botsFor(n: GameState['settings']['bots'], humans: number): number {
   const wanted = n === 'auto' ? ECONOMY.bots.autoCrew - humans : Math.min(n, MAX_BARISTAS - humans, ECONOMY.bots.names.length);
   return Math.max(0, wanted);
+}
+
+/** The bots choices on offer for a crew of this many people: 'auto', off, then each count up to the cap. The lobby and the solo screen share it. */
+export function botChoices(humans: number): BotsChoice[] {
+  const out: BotsChoice[] = ['auto'];
+  for (let n = 0; n <= botsFor(3, humans); n++) out.push(n);
+  return out;
 }
 
 export function makeBotState(personality: Personality): BotState {

@@ -321,6 +321,9 @@ export interface Scenario {
   effects: Effect[];
 }
 
+/** Off (0), a fixed count, or 'auto' (fill empty seats). */
+export type BotsChoice = Settings['bots'];
+
 export interface Settings {
   dayLengthSec: number;
   nightLengthSec: number;
