@@ -8,7 +8,7 @@ import type { Customer, DrinkId, GameState, Rogue, Station, StationKind, Vec2 } 
 
 /** The kind of station a rogue heads for first, by drink (the first of a kind has the kind as its id). */
 export const ROGUE_STATION: Record<DrinkId, StationKind> = {
-  espresso: 'espresso', latte: 'steamer', coldBrew: 'coldBrewTap', icedLatte: 'coldBrewTap', mocha: 'steamer', matcha: 'steamer', special: 'steamer', drip: 'drip',
+  espresso: 'espresso', latte: 'steamer', coldBrew: 'coldBrewTap', icedLatte: 'coldBrewTap', mocha: 'steamer', matcha: 'steamer', special: 'steamer', drip: 'drip', americano: 'espresso', cappuccino: 'steamer',
 };
 
 const dist = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);

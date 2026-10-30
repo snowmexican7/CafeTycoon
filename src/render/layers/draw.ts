@@ -141,6 +141,25 @@ export function drawItem(g: Graphics, kind: ItemKind, x: number, y: number, k = 
       leaf.push(X(0) + Math.cos(a) * r, Y(-16) + Math.sin(a) * r);
     }
     g.poly(leaf).fill(0xd9542b);
+  } else if (kind === 'americano') {
+    // G6: a tall black coffee in a white mug with a curl of steam.
+    g.poly([X(-7), Y(-11), X(7), Y(-11), X(6), Y(8), X(-6), Y(8)]).fill(0xffffff).stroke(cupStroke);
+    g.ellipse(X(0), Y(-11), 7 * k, 2.3 * k).fill(0x3e2416);
+    g.moveTo(X(7), Y(-7)).quadraticCurveTo(X(13), Y(-5), X(7), Y(2)).stroke({ width: 2.4 * k, color: 0xffffff });
+    g.moveTo(X(-2), Y(-14)).quadraticCurveTo(X(-5), Y(-18), X(-1), Y(-21)).stroke({ width: 1.4 * k, color: 0xffffff, alpha: 0.7 });
+  } else if (kind === 'cappuccino') {
+    // G6: a wide cup with a tall dome of foam and a cocoa dusting.
+    g.ellipse(X(0), Y(7), 11 * k, 3 * k).fill(0xffffff).stroke(cupStroke);
+    g.poly([X(-9), Y(-6), X(9), Y(-6), X(6), Y(6), X(-6), Y(6)]).fill(0xffffff).stroke(cupStroke);
+    g.rect(X(-8.4), Y(-2), 16.8 * k, 4 * k).fill({ color: 0x4c8fd6, alpha: 0.85 });
+    g.ellipse(X(0), Y(-7), 9 * k, 5.5 * k).fill(0xfff8ee).stroke({ width: 1, color: 0xead9c2 });
+    for (const [cx, cy] of [[-3, -8], [1, -10], [3, -7]]) g.circle(X(cx), Y(cy), 0.9 * k).fill(0x8a5a3a);
+  } else if (kind === 'drip') {
+    // G4d follow-up: a diner mug of filter coffee.
+    g.poly([X(-7), Y(-9), X(7), Y(-9), X(7), Y(8), X(-7), Y(8)]).fill(0xe8e1d6).stroke({ width: 1, color: 0xc9bca8 });
+    g.rect(X(-7), Y(-3), 14 * k, 3 * k).fill({ color: PALETTE.mint, alpha: 0.9 });
+    g.ellipse(X(0), Y(-9), 7 * k, 2.2 * k).fill(0x4a2a18);
+    g.moveTo(X(7), Y(-5)).quadraticCurveTo(X(13), Y(-3), X(7), Y(4)).stroke({ width: 2.6 * k, color: 0xe8e1d6 });
   }
 }
 

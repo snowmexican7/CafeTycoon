@@ -8,7 +8,7 @@ import type { ForecastId } from '../data/forecasts';
 import type { CrewStats } from './stats';
 
 export type PlayerId = string;
-export type DrinkId = 'espresso' | 'latte' | 'coldBrew' | 'icedLatte' | 'mocha' | 'matcha' | 'special' | 'drip';
+export type DrinkId = 'espresso' | 'latte' | 'coldBrew' | 'icedLatte' | 'mocha' | 'matcha' | 'special' | 'drip' | 'americano' | 'cappuccino';
 export type SupplyId = 'beans' | 'milk' | 'concentrate' | 'flavour' | 'pastry';
 export type ItemKind = 'grounds' | DrinkId;
 export type StationKind = 'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'counter' | 'trash' | 'drip';
@@ -495,6 +495,10 @@ export interface GameState {
   equipLog?: { station: StationKind; day: number; by: string }[];
   /** Gear Tree (docs/GEAR_TREE.md): true for a Gear run (absent = today's game; off unless created with `gear`). */
   gear?: true;
+  /** Gear Tree G6: drinks served this run, for drinks that level up with use (absent = none yet). */
+  gearServed?: Partial<Record<DrinkId, number>>;
+  /** Gear Tree G6: drinks learned today, for tomorrow's morning note (cleared each morning). */
+  gearLearned?: string[];
   /** Gear Tree G7c: walk-ins today who asked for a loved family you don't serve (for tomorrow's morning note). */
   gearAsked?: Partial<Record<DrinkFamily, number>>;
   /** Gear Tree: the gear in each slot, parallel to `slots` (Gear runs only). */

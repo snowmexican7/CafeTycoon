@@ -36,7 +36,14 @@ export function recipeAllowed(state: GameState, gives: ItemKind): boolean {
 /** The recipe a station runs for what is in hand (null = empty hands), or null when there is none. */
 export function recipeFor(state: GameState, kind: StationKind, held: ItemKind | null): Recipe | null {
   if (!isRecipeStation(kind)) return null;
-  return RECIPES[kind].find((r) => r.takes === held && recipeAllowed(state, r.gives)) ?? null;
+  const all = RECIPES[kind].filter((r) => r.takes === held && recipeAllowed(state, r.gives));
+  // G6 (doc §6 recipe clash): a latte at the steamer could become a mocha or a cappuccino. Make what the
+  // oldest waiting ticket wants; otherwise the first match (classic runs only ever have one match).
+  if (all.length > 1) {
+    const want = state.customers.find((c) => !c.upset && all.some((r) => r.gives === c.drink));
+    if (want) return all.find((r) => r.gives === want.drink)!;
+  }
+  return all[0] ?? null;
 }
 
 /** Every supply the recipe uses is in stock. */

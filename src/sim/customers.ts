@@ -9,6 +9,7 @@ import { TICK_RATE, secondsToTicks } from './constants';
 import { computeModifiers, type Modifiers } from './effects';
 import { emitLog } from './log';
 import { tillSpeedTip } from './till';
+import { levelUpOnServe } from './levelUp';
 import { rngInt, rngNext } from './rng';
 import { rogueActive, startRogue } from './rogue';
 import { tally } from './tally';
@@ -261,6 +262,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   state.today.tips = round2(state.today.tips + tip);
   state.today.served += 1;
   tallyDrink(state.today, drink);
+  levelUpOnServe(state, drink); // Gear G6: drinks level up with use
   // For the "Dev served a latte +$6" toast: who, what, how much, and whether it was a perfect serve.
   const perfect = customer.patienceLeft / customer.patienceMax >= PERFECT_PATIENCE;
   if (perfect) state.today.perfect = (state.today.perfect ?? 0) + 1;

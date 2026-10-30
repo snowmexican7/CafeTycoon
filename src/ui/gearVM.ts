@@ -1,5 +1,7 @@
 import { AREAS, DRINK_FAMILY, type DrinkFamily } from '../data/areas';
 import { gearArea } from '../sim/gear';
+import { DRINK_INFO } from '../data/drinks';
+import { LEVEL_UPS } from '../sim/levelUp';
 /**
  * Gear Tree G3: the Spend › Gear card (replaces Spend › Stations in a Gear run). Pure view model over
  * sim/gear.ts: the back-bar slots with the gear in each, then one row per tree with every tier and what
@@ -37,9 +39,13 @@ export interface GearVM {
   note: string | null;
   /** G7b: the street notebook. One row per drink family; stars once you've served enough of it. */
   notebook: NotebookRowVM[];
+  /** G6: drinks that level up with use: progress toward each (learned ones show done). */
+  levelUps: LevelUpVM[];
   /** G4g: co-op pick-night hint (absent solo or after day 1). */
   coopHint?: string;
 }
+
+export interface LevelUpVM { drink: DrinkId; name: string; icon: string; from: string; served: number; count: number; learned: boolean }
 
 export interface NotebookRowVM { family: DrinkFamily; label: string; icon: string; served: number; stars: number | null; left: number }
 
@@ -53,6 +59,15 @@ const FAMILIES: { family: DrinkFamily; label: string; icon: string }[] = [
 ];
 
 /** G7b: served counts per family over finished days, and a 2–5★ verdict once there are enough. */
+/** G6: one row per level-up drink (served so far toward the count, or learned). */
+export function levelUpVM(state: GameState): LevelUpVM[] {
+  const known = state.unlocked ?? [];
+  return LEVEL_UPS.map((l) => ({
+    drink: l.unlocks, name: DRINK_INFO[l.unlocks].name, icon: DRINK_INFO[l.unlocks].icon, from: DRINK_INFO[l.from].name.toLowerCase(),
+    served: Math.min(l.count, state.gearServed?.[l.from] ?? 0), count: l.count, learned: known.includes(l.unlocks),
+  }));
+}
+
 export function notebookVM(state: GameState): NotebookRowVM[] {
   const id = gearArea(state);
   if (!id) return [];
@@ -120,7 +135,7 @@ export function gearVM(state: GameState): GearVM {
   const coopHint = state.day <= 1 && humans > 1
     ? `Playing with ${humans}? Two cheap machines give two people a job (try The Hanes Method $5 + Pod-o-Matic $45). Whoever's free runs the till: ring up orders at the counter for speed tips.`
     : null;
-  return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook: notebookVM(state), ...(coopHint ? { coopHint } : {}) };
+  return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook: notebookVM(state), levelUps: levelUpVM(state), ...(coopHint ? { coopHint } : {}) };
 }
 
 /** Polish: what the sell button says. Worthless gear gets tossed, not sold. */

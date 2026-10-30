@@ -183,7 +183,13 @@ export function gearBoard(g: GearVM): string {
         .map((r) => `<span class="gr-bk" title="${esc(r.stars === null ? `Serve ${r.left} more ${r.label.toLowerCase()} drinks to learn how this street feels about them.` : `${r.label} on this street: ${r.stars} of 5.`)}">${r.icon} ${esc(r.label)}: ${r.stars === null ? `<small>${r.served}/${r.served + r.left} served</small>` : `<span class="gr-stars">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</span>`}</span>`)
         .join('')}</div>`
     : '';
-  return `<div class="st-board gr-board">${head}${note}${book}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
+  // G6: drinks that level up with use.
+  const lvl = g.levelUps.length && !g.pickNight
+    ? `<div class="gr-book gr-lvl" aria-label="Drinks to learn"><b>🎓 Drinks to learn</b>${g.levelUps
+        .map((l) => `<span class="gr-bk${l.learned ? ' done' : ''}" title="${esc(l.learned ? `${l.name} learned: it's on your menu.` : `Serve ${l.count - l.served} more ${l.from}s to learn the ${l.name.toLowerCase()}.`)}">${l.icon} ${esc(l.name)}: ${l.learned ? '<b>learned ✓</b>' : `<small>${l.served}/${l.count} ${esc(l.from)}s</small>`}</span>`)
+        .join('')}</div>`
+    : '';
+  return `<div class="st-board gr-board">${head}${note}${book}${lvl}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
     <div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have. Got a free slot? Buy a second of the same machine.</small></div>${trees}</div>`;
 }
 
