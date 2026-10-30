@@ -44,6 +44,16 @@
 .weekend .unlocks { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 10px 0 4px; padding: 10px 14px; border-radius: 14px; background: #eaf6ee; box-shadow: 0 0 0 2px #9fd3b0; font: 700 15px var(--font-body); color: var(--ink); }
 .weekend .unlocks b { font-family: var(--font-display); color: #2f7a4b; } .weekend .unlocks small { flex-basis: 100%; font-size: 13px; color: var(--ink-soft); }
 /* P4 B2: the season card on the week-end screen. */
+/* P6-3: the week at a glance */
+.weekend .weekstrip { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: end; padding: 8px 14px; border-radius: 14px; background: #fff; box-shadow: var(--sh-1); }
+.weekstrip .ws-t { display: flex; flex-direction: column; font: 700 14px var(--font-body); color: var(--ink-soft); }
+.weekstrip .ws-t small { font-size: 12px; letter-spacing: .1em; } .weekstrip .ws-t b { font: 400 22px var(--font-display); color: var(--caramel-dk); } .weekstrip .ws-t b.neg { color: var(--bad); }
+.weekstrip .ws-bars { display: flex; gap: 6px; align-items: end; height: 54px; }
+.weekstrip .wb { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: end; align-items: center; gap: 2px; }
+.weekstrip .wbar { flex: 1; min-height: 0; width: 100%; display: flex; align-items: end; justify-content: center; }
+.weekstrip .wb i { display: block; width: 100%; max-width: 30px; border-radius: 5px 5px 2px 2px; background: #e0a14a; }
+.weekstrip .wb.neg i { background: #c8573e; }
+.weekstrip .wb small { font: 700 12px var(--font-body); color: var(--ink-soft); line-height: 1; }
 .weekend .season { margin: 10px 0 4px; padding: 8px 14px 10px; border-radius: 14px; background: #fff6df; box-shadow: 0 0 0 2px #e8c76a; font: 700 16px var(--font-body); color: var(--ink); }
 .weekend .season .sec-h { margin: 2px 0 6px; }
 .weekend .season .sr { display: grid; grid-template-columns: 1fr 1.4fr 1fr 28px; align-items: baseline; gap: 8px; padding: 3px 0; border-top: 1px dashed #e3cf95; }
@@ -167,7 +177,7 @@
 @keyframes aw-pop { from { transform: scale(.6) translateY(8px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ceremony .mvp, .award { animation: none; } }
 @media (max-width: 900px) { .we-cols { grid-template-columns: 1fr; } }
-@media (max-height: 820px) { .menu.weekend { gap: 10px; padding: 16px 20px 14px; } .weekend .score { font-size: 38px; padding: 8px; } .award { padding: 6px 8px; } }
+@media (max-height: 820px) { .menu.weekend { gap: 10px; padding: 16px 20px 14px; } .weekstrip .ws-bars { height: 34px; } .weekend .weekstrip { padding: 5px 12px; } .weekstrip .ws-t { flex-direction: row; align-items: baseline; gap: 8px; } .weekstrip .ws-t b { font-size: 18px; } .weekend .season { margin: 2px 0 0; padding: 6px 14px 6px; } .weekend .season .sr { padding: 1px 0; } .weekend .score { font-size: 38px; padding: 8px; } .award { padding: 6px 8px; } }
 
 /* B10: lifetime records (from the title screen) */
 #records { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto; background: rgba(30, 18, 10, .55); color: var(--ink); }

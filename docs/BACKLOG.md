@@ -1802,6 +1802,13 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 6 polish P6-3 — week strip on the week-end screen (p6-week-strip, tag p6-03)
+
+- [x] `weekStripViewModel` (last ≤7 `state.days`, profit per day via `profitOf`, bar height relative to the biggest |profit|, loss days flagged) → `WeekEndVM.week`; `weekStripHtml` renders "LAST 7 DAYS · total · served" plus 7 bars. UI only, no sim/save changes. Compact layout under 820px tall (fits the 4-row season card at 1280×800).
+- [x] Tests: `viewModels.test.ts` (week-end VM includes the strip; 9-day slice, loss day, HTML). Shots: `overnight/sprint/p6-03/{weekEnd,seasonDone}-{1512,1280}.png`.
+- [x] Resolves the B3 follow-up "a week view (sum of days) on the week-end screen".
+- [ ] Follow-ups: tap a bar for that day's report; per-shop split once the branch has its own day stats.
+
 ### Phase 6 polish P6-2 — season detail on tap (p6-season-detail, tag p6-02)
 
 - [x] `SeasonRecord.weeks?` (week, target, profit) folded by `foldRecords`; load drops malformed rows (`cleanSeasonWeeks`). Records store version unchanged. `seasonRowHtml` renders a `<details>` row with a Target / Made / ✅ table. Screens: `overnight/sprint/p6-02/records-{1512,1280}.png`.
@@ -1847,7 +1854,7 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - [x] UI: a big ringing card on the day HUD (where, what, seconds left, two buttons); the outcome on the branch drawer's last-day line and in the Manager's report.
 - [x] Tests: `src/sim/call.test.ts` (5: frequency/gating/determinism, window + people only + validation, machine outcomes, order outcome + closing record/clear, card HTML + bots + old saves). 1042 tests.
 - [x] Shots: `/workspace/overnight/sprint/p4-b06/branchCall-*`, `branchCallOrder-*` (fixtures `branchCall`, `branchCallOrder`).
-- [ ] Follow-ups: travel to the branch for the rest of the day (two live floors, the original B6 scope); more call kinds (staff sick, inspector); a phone sound; bots answering (Claude prompt); playtest whether the card over the station row is in the way (it sits for ≤25 s).
+- [ ] Follow-ups: travel to the branch for the rest of the day (two live floors, the original B6 scope); more call kinds (staff sick, inspector); ~~a phone sound~~ (P6-1); bots answering (Claude prompt); playtest whether the card over the station row is in the way (it sits for ≤25 s).
 
 ### Phase 4 B5 — manager mode, lite (p4-b05-manager-mode, tag p4-b05)
 
@@ -1873,7 +1880,7 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - [x] Night UI: "📋 Report ▸" next to Receipt on the Day card opens a drawer (KPIs, notes, costs, money drinks and crew with bars).
 - [x] Tests: `src/ui/report.test.ts` (4: sim tallies, VM maths and notes, old saves / first night, night HTML button and drawer).
 - [x] Shots: `/workspace/overnight/sprint/p4-b03/managerReport-{1512,1280}.png` (fixture `managerReport`, `CLICK='[data-d=report]'` in fxshot).
-- [ ] Follow-ups: per-shop tabs once the second shop lands (B4); a week view (sum of days) on the week-end screen.
+- [ ] Follow-ups: per-shop tabs once the second shop lands (B4); ~~a week view (sum of days) on the week-end screen~~ (done in P6-3).
 
 ### Phase 4 B2 — seasons (p4-b02-seasons, tag p4-b02)
 

@@ -894,6 +894,30 @@ export interface WeekEndVM {
   lostPct: string;
   /** P4 B2: the season, once Keep going started one (or a teaser at the end of week 1 of a Gear run). */
   season?: SeasonVM;
+  /** P6-3: the week at a glance: one profit bar per day for the last (up to) seven days. */
+  week?: WeekStripVM;
+}
+
+export interface WeekStripVM {
+  /** Days in the strip (≤ 7). */
+  n: number;
+  days: { day: number; profit: string; h: number; neg: boolean }[];
+  profit: string;
+  served: number;
+}
+
+/** P6-3: the last (up to) seven days as a bar strip; null with fewer than two days to compare. */
+export function weekStripViewModel(state: GameState): WeekStripVM | undefined {
+  const days = state.days.slice(-ECONOMY.scoredWeekDays);
+  if (days.length < 2) return undefined;
+  const ps = days.map(profitOf);
+  const top = Math.max(1, ...ps.map(Math.abs));
+  return {
+    n: days.length,
+    days: days.map((d, i) => ({ day: d.day, profit: money(ps[i]!), h: Math.round((Math.abs(ps[i]!) / top) * 100) / 100, neg: ps[i]! < 0 })),
+    profit: money(ps.reduce((a, b) => a + b, 0)),
+    served: days.reduce((n, d) => n + d.served, 0),
+  };
 }
 
 export interface SeasonVM {
@@ -933,6 +957,7 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
   const lost = state.days.reduce((n, d) => n + d.lost, 0);
   const walkIns = lost + state.days.reduce((n, d) => n + d.served, 0);
   const season = seasonViewModel(state);
+  const week = weekStripViewModel(state);
   return {
     score: money(scoreRun(state)),
     cash: money(state.cash),
@@ -954,6 +979,7 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
     awardsText: awardsText(state, awards),
     lostPct: `${walkIns ? Math.round((100 * lost) / walkIns) : 0}%`,
     ...(season ? { season } : {}),
+    ...(week ? { week } : {}),
   };
 }
 

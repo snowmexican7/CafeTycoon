@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createRun } from '../sim/run';
 import type { RunRecord } from '../sim/types';
-import { cleanMeter, EVENT_INTRO, followerBump, forecastViewModel, scrutinyFor, closingViewModel, hudStructureKey, hudViewModel, lobbyViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel } from './viewModels';
+import { cleanMeter, EVENT_INTRO, followerBump, forecastViewModel, scrutinyFor, closingViewModel, hudStructureKey, hudViewModel, lobbyViewModel, money, nightStructureKey, nightViewModel, titleViewModel, weekEndViewModel, weekStripViewModel } from './viewModels';
+import { weekStripHtml } from './weekEnd';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 
@@ -86,7 +87,24 @@ describe('view models', () => {
       seed: 5,
       isHost: false,
       bankrupt: false,
+      week: { n: 2, days: [{ day: 1, profit: '$10.00', h: 0.43, neg: false }, { day: 2, profit: '$23.00', h: 1, neg: false }], profit: '$33.00', served: 16 },
     });
+  });
+
+  it('P6-3: the week strip covers the last seven days, marks loss days and renders bars', () => {
+    const s = run();
+    expect(weekStripViewModel(s)).toBeUndefined(); // nothing to compare yet
+    s.days = Array.from({ length: 9 }, (_, i) => ({ day: i + 1, served: 10, lost: 0, turnedAway: 0, sales: i === 7 ? 10 : 50, tips: 0, rent: 30 }));
+    const w = weekStripViewModel(s)!;
+    expect(w.n).toBe(7);
+    expect(w.days.map((d) => d.day)).toEqual([3, 4, 5, 6, 7, 8, 9]);
+    expect(w.days[5]).toEqual({ day: 8, profit: '-$20.00', h: 1, neg: true });
+    expect(w.profit).toBe('$100.00'); // 6 × $20 − $20
+    expect(w.served).toBe(70);
+    const html = weekStripHtml(w);
+    expect(html).toContain('LAST 7 DAYS');
+    expect(html.match(/class="wb[ "]/g)).toHaveLength(7);
+    expect(html).toContain('class="wb neg" title="Day 8: -$20.00"');
   });
 
   it('lists Gear buys as bought this run (B17)', () => {
