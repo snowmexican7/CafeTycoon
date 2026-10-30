@@ -26,7 +26,8 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, FAMILY_WORD, type AreaId, type
 import { GEAR, GEAR_START, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
 import { stationsFromSlots, slotCount } from './slots';
-import { usesShot, type Recipe } from '../data/drinks';
+import { BASE_DRINKS, DRINK_IDS, usesShot, type Recipe } from '../data/drinks';
+import { TICK_RATE } from './constants';
 import type { Modifiers } from './effects';
 import { ACCURACY } from './accuracy';
 import { ownTile, placeMess } from './floor';
@@ -99,6 +100,12 @@ export function applyGearInput(state: GameState, input: Extract<PlayerInput, { k
     slots[at] = want.station;
     gear[at] = want.id;
     state.gearLog = [...(state.gearLog ?? []), { gear: want.id, action: 'buy', day: state.day, by: p.name, cash: -want.price }];
+    // G4d: the first drip machine puts drip coffee on the menu for good.
+    if (want.pot) {
+      const known = state.unlocked ?? [...BASE_DRINKS];
+      if (!known.includes('drip')) state.unlocked = DRINK_IDS.filter((d) => d === 'drip' || known.includes(d));
+      state.menu.drip = true;
+    }
   }
   state.slots = slots;
   state.slotGear = gear;
@@ -126,6 +133,9 @@ export function gearMorning(state: GameState): void {
     delete s.dead;
     delete s.usesToDie;
     delete s.lucky;
+    delete s.potLeft;
+    delete s.potColdAt;
+    delete s.potOff;
     const q = s.gear ? GEAR[s.gear].quirks : undefined;
     if (!q) continue;
     const name = GEAR[s.gear!].name;
@@ -298,4 +308,52 @@ export function gearAskedNotes(state: GameState): string[] {
   return (Object.entries(asked) as [DrinkFamily, number][])
     .filter(([, n]) => n > 0)
     .map(([f, n]) => `${n === 1 ? 'Someone' : `${n} people`} asked for ${FAMILY_WORD[f]} yesterday and walked on.`);
+}
+
+// ---------------------------------------------------------------------------------------------- G4d: drip pots
+
+/**
+ * G4d: a drip machine finished brewing: fill the pot. Rolls one draw for a temperature miss (Gear runs,
+ * pot machines only), so classic streams are unchanged.
+ */
+export function gearPotFinished(state: GameState, s: Station): void {
+  const pot = s.gear ? GEAR[s.gear].pot : undefined;
+  if (!pot || !isGearRun(state)) return;
+  s.potLeft = pot.cups;
+  if (pot.coldAfter !== null) s.potColdAt = state.tick + Math.round(pot.coldAfter * TICK_RATE);
+  else delete s.potColdAt;
+  delete s.potOff;
+  if (pot.miss > 0) {
+    const r = rngNext(state);
+    if (r < pot.miss) s.potOff = r < pot.miss / 2 ? 'hot' : 'cold';
+  }
+}
+
+/**
+ * G4d: someone picks a cup off a drip machine. Returns whether the pot keeps pouring (the station keeps
+ * its output) and the cup's temperature miss, if any: a scalding pot, a lukewarm one, or a pot that
+ * went cold on the hot plate. Stations without a pot: `{ pot: false, more: false, temp: null }`.
+ */
+export function gearPotPour(state: GameState, s: Station): { pot: boolean; more: boolean; temp: 'hot' | 'cold' | null } {
+  if (s.potLeft === undefined) return { pot: false, more: false, temp: null };
+  const temp = s.potOff ?? (s.potColdAt !== undefined && state.tick >= s.potColdAt ? 'cold' : null);
+  s.potLeft -= 1;
+  const more = s.potLeft > 0;
+  if (!more) {
+    delete s.potLeft;
+    delete s.potColdAt;
+    delete s.potOff;
+  }
+  return { pot: true, more, temp };
+}
+
+const TOO_HOT = ['"Ow! This is lava."', '"Is this coffee or a dare?"', '"I can\'t feel my tongue."'];
+const TOO_COLD = ['"This is… room temperature."', '"Did this sit out since breakfast?"', '"Lukewarm. Like my enthusiasm."'];
+
+/** G4d: a too-hot or too-cold cup: one mark on it (−1★, a smaller tip) and a complaint line. */
+export function gearTempMiss(state: GameState, s: Station, p: Player, temp: 'hot' | 'cold'): void {
+  p.cupSlips = Math.min(ACCURACY.maxStars, (p.cupSlips ?? 0) + 1);
+  const lines = temp === 'hot' ? TOO_HOT : TOO_COLD;
+  const line = lines[state.tick % lines.length];
+  quirk(state, s, `${temp === 'hot' ? 'Too hot' : 'Too cold'}: ${line} (−1★)`, p.id);
 }

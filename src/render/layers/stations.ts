@@ -195,6 +195,16 @@ function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId): Co
     g.rect(cx - 14, top - 30, 28, 8).fill(PALETTE.sky);
     g.moveTo(cx + 12, top - 44).quadraticCurveTo(cx + 26, top - 42, cx + 24, top - 20).stroke({ width: 3, color: 0x8d989f, cap: 'round' });
     g.poly([cx + 12, top - 18, cx + 30, top - 18, cx + 27, top, cx + 15, top]).fill(CHROME).stroke({ width: 1, color: 0x8d989f });
+  } else if (kind === 'drip') {
+    // G4d: a drip coffee maker: dark body, hot plate, a glass carafe of coffee.
+    g.roundRect(cx - 22, top - 60, 44, 14, 6).fill(0x2d2a30);
+    g.roundRect(cx + 10, top - 50, 12, 48, 4).fill(0x2d2a30);
+    g.roundRect(cx - 24, top - 6, 48, 6, 3).fill(0x56616a);
+    g.circle(cx + 16, top - 40, 2.5).fill(PALETTE.cherry);
+    g.poly([cx - 18, top - 34, cx + 6, top - 34, cx + 8, top - 6, cx - 20, top - 6]).fill({ color: 0xdde8ee, alpha: 0.9 }).stroke({ width: 1.5, color: 0x8d989f });
+    g.poly([cx - 19, top - 22, cx + 7, top - 22, cx + 8, top - 6, cx - 20, top - 6]).fill(0x5a3320);
+    g.roundRect(cx - 14, top - 38, 16, 5, 2).fill(0x2d2a30);
+    g.moveTo(cx - 10, top - 46).quadraticCurveTo(cx - 7, top - 52, cx - 4, top - 46).stroke({ width: 2, color: 0xffffff, alpha: 0.6 });
   } else if (kind === 'coldBrewTap') {
     g.roundRect(cx - 20, top - 62, 40, 60, 11).fill(KEG);
     g.rect(cx - 20, top - 48, 40, 4).fill({ color: 0x2f6f9e, alpha: 0.6 });

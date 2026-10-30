@@ -22,7 +22,7 @@ export interface NightWarning {
 
 const NAME: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'cold brew', flavour: 'flavours', pastry: 'pastries' };
 const DRINK_PLURAL: Record<DrinkId, string> = {
-  espresso: 'Espressos', latte: 'Lattes', coldBrew: 'Cold brews', icedLatte: 'Iced lattes', mocha: 'Mochas', matcha: 'Matchas', special: 'Maple foams',
+  espresso: 'Espressos', latte: 'Lattes', coldBrew: 'Cold brews', icedLatte: 'Iced lattes', mocha: 'Mochas', matcha: 'Matchas', special: 'Maple foams', drip: 'Drips',
 };
 
 const dollars = (n: number) => `$${Math.abs(n).toFixed(2).replace(/\.00$/, '')}`;

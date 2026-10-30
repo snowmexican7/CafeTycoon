@@ -14,7 +14,7 @@
  */
 import type { StationKind } from '../sim/types';
 
-export type EquipmentKind = Exclude<StationKind, 'counter'>;
+export type EquipmentKind = Exclude<StationKind, 'counter' | 'drip'>; // G4d: the drip machine is Gear-only (data/gear.ts)
 
 export interface EquipmentInfo {
   name: string;

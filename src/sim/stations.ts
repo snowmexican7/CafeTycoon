@@ -6,7 +6,7 @@ import { computeModifiers } from './effects';
 import { eventActive } from './events';
 import { emitLog } from './log';
 import { counterInteract } from './pass';
-import { gearAfterUse, gearBlocked, gearMarks, gearRecipe, gearSpeed } from './gear';
+import { gearAfterUse, gearBlocked, gearMarks, gearPotFinished, gearPotPour, gearRecipe, gearSpeed, gearTempMiss } from './gear';
 import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
@@ -20,6 +20,7 @@ export const STATION_RECIPES: Record<RecipeStation, { takes: ItemKind | null; gi
   espresso: { takes: 'grounds', gives: 'espresso', consumes: null },
   steamer: { takes: 'espresso', gives: 'latte', consumes: 'milk' },
   coldBrewTap: { takes: null, gives: 'coldBrew', consumes: 'concentrate' },
+  drip: { takes: null, gives: 'drip', consumes: 'beans' },
 };
 
 function isRecipeStation(kind: StationKind): kind is RecipeStation {
@@ -55,6 +56,7 @@ export function stepStations(state: GameState): GameState {
         s.making = null;
         s.doneAt = state.tick;
         s.outputSince = state.tick;
+        gearPotFinished(state, s); // G4d: a drip machine fills its pot
         if (s.output) onStationFinished(state, s, s.output);
       }
     }
@@ -95,9 +97,16 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
 
   if (station.output !== null && player.holding === null) {
     player.holding = station.output;
-    station.output = null;
-    delete station.outputSince;
-    cupOutOfStation(state, player, station, ACCURACY.sitSeconds * TICK_RATE);
+    // G4d: a drip pot keeps pouring until it's empty; pot cups don't "sit" (they go cold instead).
+    const pour = gearPotPour(state, station);
+    if (!pour.more) {
+      station.output = null;
+      delete station.outputSince;
+    }
+    const doneAt = station.doneAt;
+    cupOutOfStation(state, player, station, pour.pot ? Infinity : ACCURACY.sitSeconds * TICK_RATE);
+    if (pour.more && doneAt !== undefined) station.doneAt = doneAt;
+    if (pour.temp) gearTempMiss(state, station, player, pour.temp);
     return state;
   }
   // P3 B5: pull it early. Empty hands at a machine near the end of its run take the drink now, one star off.

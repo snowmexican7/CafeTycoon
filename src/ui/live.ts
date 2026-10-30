@@ -20,13 +20,14 @@ export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
 
 export const ITEM_LABEL: Record<ItemKind, string> = {
   grounds: 'Grounds', espresso: 'Espresso', latte: 'Latte', coldBrew: 'Cold brew',
-  icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha latte', special: 'Maple cold foam',
+  icedLatte: 'Iced latte', mocha: 'Mocha', matcha: 'Matcha latte', special: 'Maple cold foam', drip: 'Drip coffee',
 };
 export const STATION_NAME: Record<StationKind, string> = {
   grinder: 'Grinder',
   espresso: 'Espresso machine',
   steamer: 'Steamer',
   coldBrewTap: 'Cold brew tap',
+  drip: 'Drip machine',
   counter: 'Pick-up counter',
   trash: 'Trash',
 };
@@ -40,6 +41,7 @@ export const DRINK_STEPS: Record<DrinkId, string[]> = {
   mocha: ['Grind', 'Pull', 'Steam', 'Cocoa', 'Hand off'],
   matcha: ['Whisk', 'Hand off'],
   special: ['Tap', 'Foam', 'Hand off'],
+  drip: ['Pour', 'Hand off'],
 };
 
 export interface CrewMember {
@@ -118,14 +120,15 @@ export function crewOf(state: GameState, me: PlayerId): CrewMember[] {
   }));
 }
 
-const VERB: Record<'grinder' | 'espresso' | 'steamer' | 'coldBrewTap', string> = {
+const VERB: Record<'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'drip', string> = {
   grinder: 'Grind beans',
   espresso: 'Pull a shot',
   steamer: 'Steam milk',
   coldBrewTap: 'Pour cold brew',
+  drip: 'Brew a pot',
 };
-const TAKES: Record<keyof typeof VERB, ItemKind | null> = { grinder: null, espresso: 'grounds', steamer: 'espresso', coldBrewTap: null };
-const USES: Record<keyof typeof VERB, SupplyId | null> = { grinder: 'beans', espresso: null, steamer: 'milk', coldBrewTap: 'concentrate' };
+const TAKES: Record<keyof typeof VERB, ItemKind | null> = { grinder: null, espresso: 'grounds', steamer: 'espresso', coldBrewTap: null, drip: null };
+const USES: Record<keyof typeof VERB, SupplyId | null> = { grinder: 'beans', espresso: null, steamer: 'milk', coldBrewTap: 'concentrate', drip: 'beans' };
 
 /** A plain-words hint for the nearest station, mirroring the interact rules (display only). */
 export function handHint(state: GameState, me: PlayerId): HandHint {
@@ -140,6 +143,12 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
   if (station.kind === 'trash') return held ? go(`Bin the ${ITEM_LABEL[held].toLowerCase()}`, where) : idle('Hands are empty', where);
   if (station.kind === 'counter') return held && held !== 'grounds' ? go(`Hand off ${ITEM_LABEL[held].toLowerCase()}`, where) : idle('Bring a drink here', where);
   const kind = station.kind;
+  // Gear G4d: a drip pot pours a cup per press.
+  if (station.output !== null && held === null && station.potLeft !== undefined) {
+    const cold = station.potOff === 'cold' || (station.potColdAt !== undefined && state.tick >= station.potColdAt);
+    const temp = cold ? ' · pot went cold, −1★' : station.potOff === 'hot' ? ' · scalding, −1★' : '';
+    return go(`Pour a cup of drip`, `${where} · ${station.potLeft} left${temp}`);
+  }
   if (station.output !== null && held === null) {
     const sat = station.doneAt !== undefined && state.tick - station.doneAt > ACCURACY.sitSeconds * TICK_RATE;
     return go(`Pick up ${ITEM_LABEL[station.output].toLowerCase()}`, sat ? `${where} · sat too long, −1★` : where);

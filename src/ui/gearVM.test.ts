@@ -87,9 +87,29 @@ describe('Gear G7b: the street notebook', () => {
     const day = (drinks: Record<string, number>) => ({ ...(s.today as object), drinks }) as (typeof s.days)[number];
     rainy.days = [day({ latte: 6, icedLatte: 3 }), day({ mocha: 5, coldBrew: 8, espresso: 2 })];
     const nb = notebookVM(rainy);
-    expect(nb.map((r) => [r.family, r.served, r.stars])).toEqual([['espresso', 2, null], ['milky', 11, 5], ['iced', 11, 2]]);
+    expect(nb.map((r) => [r.family, r.served, r.stars])).toEqual([['espresso', 2, null], ['milky', 11, 5], ['iced', 11, 2], ['filter', 0, null]]);
     expect(nb[0].left).toBe(8);
     const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
     expect(notebookVM(classic)).toEqual([]);
+  });
+});
+
+describe('Gear G4d: drip on the HUD', () => {
+  it('shows the pot: empty, brewing, cups left, and cold', async () => {
+    const { hudGearVM } = await import('./gearVM');
+    const { applyGearInput } = await import('../sim/gear');
+    const s = run();
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'd1' });
+    const st = s.stations.find((x) => x.kind === 'drip')!;
+    const line = () => hudGearVM(s).find((r) => r.name === 'Thrift Store Special')!;
+    expect(line().status).toBe('empty pot (E)');
+    st.busyTicksLeft = 10;
+    expect(line().status).toBe('brewing…');
+    st.busyTicksLeft = 0;
+    st.potLeft = 3;
+    st.potColdAt = s.tick + 100;
+    expect([line().status, line().warn]).toEqual(['3/4 cups', false]);
+    s.tick += 200;
+    expect([line().status, line().warn]).toEqual(['3/4 cups · cold', true]);
   });
 });
