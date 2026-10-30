@@ -1659,7 +1659,7 @@ Answers to the four questions:
   G11 covers it. Snapshot 26/27 and protocol 29/30 were taken by the bot-prep and collision tweaks.
 
 Findings:
-- **Planner suggests classic purchases in a Gear run (Claude's lane, fix pending Kennedy's OK).** On a Gear run
+- **Planner suggested classic purchases in a Gear run (Claude's lane; fixed 2026-10-29, tag `fix-planner-gear`).** On a Gear run
   `planNight` still proposes `equip` (e.g. a second espresso machine), which `applyEquipInput` ignores there, so a
   crew-tip chip would do nothing. Fix: skip `equip`/`slot` advice when `isGearRun(state)`.
 - **Bots can't use a Pod-o-Matic (Claude's lane, low priority; Gear's G5b note agrees).** Probe: a Gear run with the E1 pod machine, one bot, an espresso
