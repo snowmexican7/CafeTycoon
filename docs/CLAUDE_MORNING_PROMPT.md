@@ -12,9 +12,11 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 
 ## Already done on main (no need to redo)
 
-- **v3.0.0 is live (G11, tag `v3.0.0`, rollback `pre-gear` / `v2.2.0`).** Every new run from the title or a
-  co-op lobby is now a Gear run, so everything below is what players meet by default. `?gear=0` still starts a
-  classic run for comparison, and old classic saves resume as classic.
+- **v3.1.0 is live (tag `v3.1.0`; Phase 3 complete).** The Gear Tree shipped as v3.0.0 (G11, rollback
+  `pre-gear` / `v2.2.0`); 3.1.0 adds hired staff with wages (B15) and head starts carried between runs (B16).
+  Every new run from the title or a co-op lobby is a Gear run, so everything below is what players meet by
+  default. `?gear=0` still starts a classic run for comparison, and old classic saves resume as classic.
+  Phase 4 (Franchise & rivals) is planned block by block in `docs/PHASE4_PLAN.md`.
 
 - Solo bots switch (`solo-bots-switch`), bots leaving your prep alone (`bot-prep-wait`), collision spills
   (`collision-spills`, tuned to 5%), planner skipping classic purchases in Gear runs, and the crewTips fixes
@@ -66,6 +68,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - G11 (storage + net, please review): `storage/recordsStore.ts` records split (still version 1: `split` marker + `classic` bests; `splitRecords` moves pre-v3 bests to "Classic (retired)"; classic runs fold into `classic` only), and PROTOCOL_VERSION 32 so v2 tabs are told to refresh. `createRun` itself still defaults to classic (goldens untouched); the UI passes `gear: true`.
 - P3 B15: `sim/staff.ts` (new), `closing.ts` calls `payWages` after rent, `types.ts` `DayStats.wages` + `staff` input, `validate.ts`/`step.ts` staff case, `profit.ts` and `storage/recordsStore.ts` subtract wages, `brief.ts` uses `billsForDay`. PROTOCOL_VERSION 33.
 - P3 B16: `sim/perks.ts` (new, `applyPerk` called at the end of `createRun`), `types.ts` `CreateRunOptions.perk` + `GameState.perk`. Bots are unaffected.
+- B17: `sim/staff.ts` `wageEach` is now paid by the hour (scaled by `settings.dayLengthSec / 150`), so quick 60 s days cost 40%. If the planner budgets wages, use `wagesForDay`/`billsForDay`, not the tier table.
 - No snapshot bumps: all new fields are optional. Protocol is 33 since B15.
 
 ## Freedom

@@ -56,7 +56,7 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
 }
 
 export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0) {
-  let s = createRun({ seed, hostId: 'tester', players: [], tier: 'stand', gear: true, settings: { bots, dayLengthSec: 150, nightLengthSec: 4 } });
+  let s = createRun({ seed, hostId: 'tester', players: [], tier: 'stand', gear: true, settings: { bots, dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4 } });
   addStandIns(s, humans);
   if (bots) syncBots(s);
   if (scenario) s.scenario = scenario;

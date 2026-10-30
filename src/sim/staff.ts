@@ -34,9 +34,15 @@ export function crewNames(state: GameState): string[] {
   return here.length >= n ? here : ECONOMY.bots.names.slice(0, n);
 }
 
-/** One hired barista's daily wage (0 in classic runs). */
+/**
+ * One hired barista's daily wage (0 in classic runs). Paid by the hour: the tier's rate is for the
+ * default day length, so a 60 s "quick" day pays 40% of it (B17: quick-day Gear runs were going
+ * bankrupt on wages alone).
+ */
 export function wageEach(state: GameState): number {
-  return state.gear ? WAGE_BY_TIER[state.tier ?? 'cafe'] : 0;
+  if (!state.gear) return 0;
+  const hours = Math.max(0, state.settings.dayLengthSec) / ECONOMY.dayLengthSec;
+  return round2(WAGE_BY_TIER[state.tier ?? 'cafe'] * hours);
 }
 
 /** Wages owed at today's closing. */

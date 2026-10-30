@@ -89,6 +89,16 @@ describe('view models', () => {
     });
   });
 
+  it('lists Gear buys as bought this run (B17)', () => {
+    const s = run();
+    s.gearLog = [
+      { gear: 'c1', action: 'buy', day: 1, by: 'K', cash: -5 },
+      { gear: 'c1', action: 'sell', day: 2, by: 'K', cash: 0 },
+      { gear: 'c2', action: 'buy', day: 3, by: 'S', cash: -25 },
+    ];
+    expect(weekEndViewModel(s, 'p1').itemsBought).toEqual(['The Hanes Method', 'Mason Jar Army']);
+  });
+
   it('builds the title screen', () => {
     const rec: RunRecord = { date: '2026-10-28', seed: 1, scenario: 'rainyWeek', players: ['K', 'S'], daysCompleted: 7, score: 412.25, itemsBought: [] };
     const t = titleViewModel([rec], null);

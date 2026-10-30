@@ -52,6 +52,17 @@ describe('P3 B15: hired staff and wages', () => {
     expect(wagesForDay(s)).toBe(2 * WAGE_BY_TIER.cafe);
   });
 
+  it('wages are paid by the hour: quick days pay less, long days more (B17)', () => {
+    const s = gearRun();
+    s.settings.dayLengthSec = 60;
+    expect(wageEach(s)).toBe(0.4);
+    expect(wagesForDay(s)).toBe(0.8);
+    s.tier = 'cafe';
+    expect(wageEach(s)).toBe(2);
+    s.settings.dayLengthSec = 300;
+    expect(wageEach(s)).toBe(2 * WAGE_BY_TIER.cafe);
+  });
+
   it('hire adds a bot up to the four spots; fire lets the newest go', () => {
     let s = gearRun();
     s = hire(s);

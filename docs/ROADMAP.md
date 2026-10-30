@@ -40,7 +40,7 @@ needs people: a real game night (2 players plus 1 bot finishing a week, and the 
 second) and the analysis agent reading that night's telemetry file. Both carry over to the next
 game night. Phase 1's "first game night" goal carries over the same way.
 
-### Phase 3: Real-life growth *(in progress, v2.1.0 preview live)*
+### Phase 3: Real-life growth *(done: v3.1.0, 2026-10-30)*
 - **Why here:** saves that carry across nights are where bugs start to matter.
 - **Goals:** upgrade path stand → cart → café · checkout path register → kiosk → "Squarely" tap terminal · parody ads tab (Palm Book and friends) · "Pitch an idea", scripted with a keyword judge and no AI · a layout editor to move stations between nights · saves and unlocks carried between runs.
 - **Done when:** a run feels like "we started tiny and built something", every night tab that shows as locked today is live, and saves survive a refresh and a new game night with no lost progress.
@@ -56,11 +56,12 @@ undercutting), parody ads, "Pitch an idea", the checkout path and the growth pat
   walk-ups, station slots with extra grinders and espresso machines (replacing the layout editor),
   and bot crew tips with personalities.
 - **B15** bots become hired staff with wages (done, tag `p3-b15`) · **B16** saves and unlocks carried between runs (done, tag `p3-b16`) ·
-  **B17** integration and **v3.1.0** (the Gear Tree shipped as v3.0.0 first).
+  **B17** integration and **v3.1.0** (done, tag `v3.1.0`; the Gear Tree shipped as v3.0.0 first). **Phase 3 is complete.**
 - Moved: seasons across game nights and rival escalation to Phase 4; the mobile night layout to
   Phase 6.
 
-### Phase 4: Franchise & rivals
+### Phase 4: Franchise & rivals *(next)*
+- **Plan:** block by block in [`PHASE4_PLAN.md`](PHASE4_PLAN.md) (rival escalation → seasons → manager reports → a second shop → manager mode → phone calls and travel → 2v2 chains → 4.0.0).
 - **Why here:** big new systems, but still deterministic code we can test.
 - **Goals:** campus franchise of several cafés · manager mode (assign crews, read reports) · phone calls and travel between sites · 2v2 rival chains on a shared street, competing for the same customers · seasons across game nights.
 - **Done when:** 4 players finish a 2v2 match with a results screen, and the crew plays one season across 2+ game nights without a save problem.
