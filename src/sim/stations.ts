@@ -54,6 +54,7 @@ export function stepStations(state: GameState): GameState {
         s.output = s.making ?? STATION_RECIPES[s.kind].gives;
         s.making = null;
         s.doneAt = state.tick;
+        s.outputSince = state.tick;
         if (s.output) onStationFinished(state, s, s.output);
       }
     }
@@ -95,6 +96,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   if (station.output !== null && player.holding === null) {
     player.holding = station.output;
     station.output = null;
+    delete station.outputSince;
     cupOutOfStation(state, player, station, ACCURACY.sitSeconds * TICK_RATE);
     return state;
   }

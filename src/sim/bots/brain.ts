@@ -1,6 +1,7 @@
 import { ECONOMY } from '../../data/economy';
 import { ACCURACY } from '../accuracy';
 import { availableDrinks } from '../customers';
+import { secondsToTicks } from '../constants';
 import { eventActive } from '../events';
 import type { Modifiers } from '../effects';
 import { nearestStation } from '../movement';
@@ -187,11 +188,24 @@ const strayGrounds = (st: Station): boolean => st.kind !== 'grinder' && st.outpu
 function orphanedDrink(state: GameState, self: Player): Station | null {
   const takenBy = (st: Station) =>
     state.players.some((p) => p !== self && p.bot && isTakeAt(p.bot.plan[0], st));
-  // A person standing at the machine is about to take it themselves.
+  // A person near the machine, or walking toward it, is about to take (or use) it themselves.
   const personAt = (st: Station) =>
-    state.players.some((p) => !p.bot && p.connected && dist(p.pos, st.pos) <= ECONOMY.interactRangeTiles);
+    state.players.some((p) => {
+      if (p.bot || !p.connected) return false;
+      const d = dist(p.pos, st.pos);
+      if (d <= BOTS.orphanGuardTiles) return true;
+      return d <= 4 && p.moveDir.x * (st.pos.x - p.pos.x) + p.moveDir.y * (st.pos.y - p.pos.y) > 0;
+    });
+  // Not its own item until it has sat a while: a drink 12 s, a shot or grounds 20 s. Unknown age (old saves,
+  // hand-built states) falls back to `doneAt`, then to "sat long enough" so a leftover never blocks a machine forever.
+  const sat = (st: Station) => {
+    const since = st.outputSince ?? st.doneAt;
+    if (since === undefined) return true;
+    const secs = st.output === 'espresso' || st.output === 'grounds' ? BOTS.orphanPrepSeconds : BOTS.orphanDrinkSeconds;
+    return state.tick - since >= secondsToTicks(secs);
+  };
   const candidates = state.stations
-    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st)) && !takenBy(st) && !personAt(st))
+    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st)) && !takenBy(st) && !personAt(st) && sat(st))
     .map((st) => ({ st, d: dist(st.pos, self.pos) }))
     .sort((a, b) => a.d - b.d || a.st.pos.y - b.st.pos.y || a.st.pos.x - b.st.pos.x);
   return candidates[0]?.st ?? null;

@@ -168,6 +168,8 @@ export interface Station {
   cupSlips?: number;
   busyTotal?: number;
   doneAt?: number;
+  /** The tick `output` appeared (machine finished, or an R-drop); bots leave an item alone until it has sat a while. Absent = unknown. */
+  outputSince?: number;
   /** Gear Tree: which tier of gear this station is (absent = today's machine, every non-Gear run). */
   gear?: GearId;
   /** Gear Tree: cold brew batch cups left today (absent = no cap). */
