@@ -305,6 +305,15 @@ export function uncoveredOrders(state: GameState, self: Player): Customer[] {
   return out;
 }
 
+/** The first uncovered order the shop can make now, with its chain (think's rule 2), or null. */
+function claimable(state: GameState, p: Player): { order: Customer; chain: BotStep[] } | null {
+  for (const order of uncoveredOrders(state, p)) {
+    const chain = chainFor(state, p, order.drink, 'serve');
+    if (chain.length > 0) return { order, chain };
+  }
+  return null;
+}
+
 /** The first uncovered order (see uncoveredOrders), or null. */
 export function uncoveredOrder(state: GameState, self: Player): Customer | null {
   return uncoveredOrders(state, self)[0] ?? null;
@@ -426,12 +435,11 @@ export function think(state: GameState, p: Player): BotStep[] {
   const serve = use(state, p, 'counter', 'serve');
   if (serve && state.customers.some((c) => !claimedByOther(state, p, c.id) && onPass.has(c.drink))) return [serve];
   // 2. An order nobody is covering that the shop can make now (queue order): claim it and make it.
-  for (const order of uncoveredOrders(state, p)) {
-    const chain = chainFor(state, p, order.drink, 'serve');
-    if (chain.length === 0) continue;
-    b.claim = order.id;
-    b.claimDrink = order.drink;
-    return chain;
+  const job = claimable(state, p);
+  if (job) {
+    b.claim = job.order.id;
+    b.claimDrink = job.order.drink;
+    return job.chain;
   }
   // 3. Prep cold brew for the pass.
   const prep = shouldPrep(state, p) ? chainFor(state, p, 'coldBrew', 'put') : [];
@@ -799,8 +807,9 @@ function stepBot(state: GameState, p: Player): void {
     const again = better && better.score < 3 ? chainFor(state, p, 'drip', 'serve') : [];
     if (again.length > 0) setPlan(b, [binStep(state, p), ...again]);
   }
-  // Orders come first: an uncovered order interrupts any floor step, a clean in progress included.
-  if ((isMopStep(b.plan[0]) || p.cleaningTicksLeft > 0) && uncoveredOrder(state, p) !== null) {
+  // Orders come first: an uncovered order the bar can make now interrupts any floor step, a clean in
+  // progress included (one it can't make would cancel the mop every tick and leave the floor dirty).
+  if ((isMopStep(b.plan[0]) || p.cleaningTicksLeft > 0) && claimable(state, p) !== null) {
     p.cleaningTicksLeft = 0;
     p.cleaningMess = null;
     if (p.tool === 'mop') returnMop(state, p);

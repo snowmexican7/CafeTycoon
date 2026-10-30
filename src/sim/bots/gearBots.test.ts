@@ -585,4 +585,18 @@ describe('fix round 1', () => {
     expect(touched).toBe(false);
     expect(s.today.served).toBeGreaterThanOrEqual(2);
   });
+
+  it('I3: an order the bar cannot make (americano on pods only) does not stop the bot mopping', () => {
+    let s = gearShop(['espresso', 'trash', null, null, null, null], ['e1', 'b0', null, null, null, null], { drinks: ['americano'] });
+    for (let i = 0; i < 6; i++) s.messes.push({ id: 700 + i, kind: 'spill', x: 2 + i, y: 4, amount: 1 });
+    s.cleanliness = 0.1;
+    s.customers = [order(1620, 'americano')];
+    let mopped = 0;
+    for (let i = 0; i < 60 * 30; i++) {
+      s = step(s, []);
+      if (sim(s).tool === 'mop') mopped++;
+    }
+    expect(mopped).toBeGreaterThan(0);
+    expect(s.messes.length).toBe(0);
+  });
 });
