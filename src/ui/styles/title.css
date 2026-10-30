@@ -11,6 +11,8 @@
 #title .resume { margin: -2px 0 14px; }
 #title .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
 #title .row2 > .fld:first-child { grid-column: 1 / -1; }
+#title .row2 > .fld.perk { grid-column: 1 / -1; }
+#title .fld.perk .lbl small { font-size: 12px; font-weight: 600; color: var(--ink-soft); text-transform: none; letter-spacing: 0; margin-left: 4px; }
 #title .fld { margin-bottom: 0; } #title > .titlecard > .fld { margin-bottom: 14px; }
 .seg span i { display: flex; justify-content: center; align-items: flex-end; gap: 2px; height: 14px; margin-bottom: 3px; }
 .seg span i b { width: 4px; border-radius: 2px; background: currentColor; opacity: .7; }

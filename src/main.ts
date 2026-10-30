@@ -23,6 +23,8 @@ import { createKeyboard } from './render/keyboard';
 import { scoreRun, summarizeRun } from './sim/score';
 import { awardsFor } from './sim/awards';
 import { createRecordsStore } from './storage/recordsStore';
+import { createMetaStore } from './storage/metaStore';
+import { PERKS, type PerkId } from './data/perks';
 import { createRecordsDialog } from './ui/records';
 import type { CreateRunOptions, GameState, Phase, PlayerId, PlayerInput } from './sim/types';
 import { createHistoryStore } from './storage/historyStore';
@@ -68,6 +70,8 @@ const stores = {
   peerRoom: createRoomStore(localStorage, 'cafetycoon.room.peer'),
   seats: createSeatStore(localStorage),
   records: createRecordsStore(localStorage),
+  // P3 B16: head starts carried between runs (own key and version; never blocks a new run).
+  meta: createMetaStore(localStorage),
 };
 // FB1 WP1: nights default to 2:00 now, and Relaxed is a real 0. Migrate a stored old value once
 // per step (60 s default -> 120 s; the 600 s Relaxed stand-in -> 0); a later pick sticks.
@@ -124,6 +128,8 @@ interface Session {
   lastClosing: GameState | null;
   lastSaveMs: number;
   recorded: boolean;
+  /** P3 B16: head starts this run unlocked (shown on the week-end screen). */
+  perksNew: PerkId[];
   /** Highest log seq already turned into sound (client-side only). */
   soundSeq: number;
   members: Member[];
@@ -177,7 +183,7 @@ async function main(): Promise<void> {
   );
 
   const roadmap = createRoadmap();
-  const records = createRecordsDialog(() => stores.records.get());
+  const records = createRecordsDialog(() => stores.records.get(), () => stores.meta.get());
   const title = createTitle($('#title'), {
     onStart: (choice) => startSolo(choice),
     onHost: (choice) => startHost(choice),
@@ -225,10 +231,28 @@ async function main(): Promise<void> {
   });
 
   function showTitle(notice?: string): void {
-    title.render(titleViewModel(stores.history.list(), stores.snapshot.load(), stores.peerRoom.load()), stores.settings.get(), notice);
+    title.render(titleViewModel(stores.history.list(), stores.snapshot.load(), stores.peerRoom.load(), safeMeta()), stores.settings.get(), notice);
     title.show();
     for (const o of [hud, night, closing, weekEnd, pause, lobby]) o.hide();
     audio.setAmbience(ambienceFor(null));
+  }
+
+  /** The meta save must never get in the way of the title or a new run. */
+  function safeMeta(): { unlocked: PerkId[]; lastPerk: PerkId | null } | undefined {
+    try {
+      return stores.meta.get();
+    } catch (e) {
+      console.warn('meta save unreadable', e);
+      return undefined;
+    }
+  }
+
+  function rememberPerk(choice: StartChoice): void {
+    try {
+      stores.meta.setLastPerk(choice.perk ?? null);
+    } catch {
+      /* never block a run */
+    }
   }
 
   function runOptions(choice: StartChoice, hostId: PlayerId, players: Member[], bots: BotsChoice = 'auto'): CreateRunOptions {
@@ -242,6 +266,8 @@ async function main(): Promise<void> {
       tier: 'stand',
       // G11 (v3.0.0): every new run is a Gear run; ?gear=0 is a hidden classic escape hatch.
       ...(gearFlag() ? { gear: true } : {}),
+      // P3 B16: the host's head start (the sim ignores it in classic runs).
+      ...(gearFlag() && choice.perk ? { perk: choice.perk } : {}),
     };
   }
 
@@ -264,6 +290,7 @@ async function main(): Promise<void> {
       lastClosing: null,
       lastSaveMs: 0,
       recorded: false,
+      perksNew: [],
       soundSeq: 0,
       members: [],
       peerStatus: 'hosting',
@@ -309,6 +336,7 @@ async function main(): Promise<void> {
     const s = createSession('solo', null, local, id);
     attachTelemetry(s, tele);
     armWatchdog(s);
+    rememberPerk(choice);
     local.start(runOptions(choice, id, [{ token: id, name: settings.playerName }]));
   }
 
@@ -341,6 +369,7 @@ async function main(): Promise<void> {
     const s = session;
     if (!s || s.role !== 'host' || s.started || !s.pendingStart || !s.room) return;
     armWatchdog(s);
+    rememberPerk(s.pendingStart);
     s.transport.start(runOptions(s.pendingStart, s.me, s.room.members(), s.room.bots().bots));
     s.pendingStart = null;
   }
@@ -498,7 +527,13 @@ async function main(): Promise<void> {
       if (state.phase === 'day') hud.toast(state.morningNotes);
       state.phase === 'night' ? night.show() : night.hide();
       if (state.phase === 'weekEnd' || state.phase === 'ended') {
-        weekEnd.render(weekEndViewModel(state, s.me), state.phase === 'ended');
+        // P3 B16: fold the run into this browser's meta progress first, so the screen can name new head starts.
+        try {
+          s.perksNew = [...new Set([...s.perksNew, ...stores.meta.record(state)])];
+        } catch (e) {
+          console.warn('meta save failed', e);
+        }
+        weekEnd.render({ ...weekEndViewModel(state, s.me), unlocks: s.perksNew.map((p) => `${PERKS[p].icon} ${PERKS[p].name}: ${PERKS[p].effect}`) }, state.phase === 'ended');
         weekEnd.show();
         // Lifetime records (this browser): a week counts once; a later stop adds only the new days.
         stores.records.record(state, awardsFor(state), today(), scoreRun(state));

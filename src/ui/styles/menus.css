@@ -41,6 +41,8 @@
 .rep .lbl { flex: 1; } .rep .st { display: inline-flex; } .rep .arrow { color: var(--ink-soft); font-weight: 800; } .rep b { font: 700 15px var(--font-display); }
 .rep.up b { color: var(--good); } .rep.down b { color: var(--bad); }
 .weekend .items { display: flex; flex-wrap: wrap; gap: 6px; } .weekend .chip.item { background: #fff; color: var(--ink); box-shadow: var(--sh-1); text-transform: none; letter-spacing: 0; font-size: 13px; }
+.weekend .unlocks { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 10px 0 4px; padding: 10px 14px; border-radius: 14px; background: #eaf6ee; box-shadow: 0 0 0 2px #9fd3b0; font: 700 15px var(--font-body); color: var(--ink); }
+.weekend .unlocks b { font-family: var(--font-display); color: #2f7a4b; } .weekend .unlocks small { flex-basis: 100%; font-size: 13px; color: var(--ink-soft); }
 .weekend .muted { color: var(--ink-soft); font-weight: 700; } .weekend .waiting { margin: 0; flex: 1; text-align: center; font: 600 15px var(--font-display); color: var(--ink-soft); }
 .weekend.broke .score { color: var(--bad); }
 
@@ -171,6 +173,12 @@
 .rec-tot b { font-family: var(--font-display); }
 .rec-classic { margin: 8px 0 0; padding: 6px 12px; background: #f1e7d6; border-radius: 10px; font: 600 14px var(--font-body); color: #6b5440; text-align: left; }
 .rec-classic b { font-family: var(--font-display); }
+.perks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.perks li { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; background: #fff; box-shadow: var(--sh-1); font: 600 14px var(--font-body); text-align: left; }
+.perks li b { font: 700 16px var(--font-display); } .perks li .ic { font-size: 22px; } .perks li small { color: var(--ink-soft); font-size: 13px; }
+.perks li.locked { background: #f3ece1; color: #6b5440; } .perks li.on small { color: #2f7a4b; font-weight: 800; }
+.sec-h small { font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--ink-soft); margin-left: 6px; }
+@media (max-width: 640px) { .perks { grid-template-columns: 1fr; } }
 .hall { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .hall li { display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 12px; padding: 6px 10px; box-shadow: var(--sh-1); font: 700 14px var(--font-display); }
 .hall li .av { background: var(--roast); color: var(--crema); } .hall li span.n { margin-left: auto; font: 700 12px var(--font-body); color: var(--ink-soft); }

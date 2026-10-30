@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Head starts carried between runs.** Finishing a week, serving 100 drinks across your runs, or growing a stand into a cart each unlocks a head start for later runs: a Nest egg (+$20), a Stocked pantry (+10 beans and milk) or Word of mouth (open at 3★). Pick one under **Head start** on the title screen; the week-end screen tells you when you earn one, and Records lists them all. Progress lives in this browser, separately from your run save, so a damaged progress save can never stop you starting a game.
+
 - **Hired staff.** In a Gear run the bot baristas are on the payroll: $1 a day each at the stand, $3 at the cart, $5 at the café, paid at closing. The Tonight tab's crew card lists who's hired, with **Hire** and **Let go** buttons, and the receipt shows the wages. The night warning counts rent and wages together. Classic runs keep free bots.
 
 ## 3.0.0 — 2026-10-30 · Gear Tree

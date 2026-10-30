@@ -65,6 +65,7 @@ Also review the overnight sim edits (listed below) and fix anything you'd do dif
 - Smoke fix: `sim/gear.ts` `podsOnly`; `sim/bots/brain.ts` `chainFor` skips the grinder when `podsOnly`.
 - G11 (storage + net, please review): `storage/recordsStore.ts` records split (still version 1: `split` marker + `classic` bests; `splitRecords` moves pre-v3 bests to "Classic (retired)"; classic runs fold into `classic` only), and PROTOCOL_VERSION 32 so v2 tabs are told to refresh. `createRun` itself still defaults to classic (goldens untouched); the UI passes `gear: true`.
 - P3 B15: `sim/staff.ts` (new), `closing.ts` calls `payWages` after rent, `types.ts` `DayStats.wages` + `staff` input, `validate.ts`/`step.ts` staff case, `profit.ts` and `storage/recordsStore.ts` subtract wages, `brief.ts` uses `billsForDay`. PROTOCOL_VERSION 33.
+- P3 B16: `sim/perks.ts` (new, `applyPerk` called at the end of `createRun`), `types.ts` `CreateRunOptions.perk` + `GameState.perk`. Bots are unaffected.
 - No snapshot bumps: all new fields are optional. Protocol is 33 since B15.
 
 ## Freedom

@@ -7,6 +7,7 @@ import { roadmapIcon, type RoadmapDrawer } from './roadmap';
 import { storefrontSVG } from './storefront';
 import { DEFAULT_NIGHT_LENGTH, NIGHT_LENGTHS, nightLengthChoice, type TitleVM } from './viewModels';
 import { APP_VERSION } from '../version';
+import { isPerkId, PERKS, type PerkId } from '../data/perks';
 
 export interface StartChoice {
   name: string;
@@ -15,6 +16,8 @@ export interface StartChoice {
   dayLengthSec: number;
   /** FB1 WP1: seconds of night planning; 0 = Relaxed (untimed, ready-up, 30 s last call). */
   nightLengthSec: number;
+  /** P3 B16: the head start picked (absent = none). */
+  perk?: PerkId;
 }
 
 const DAY_LENGTHS = [60, 90, 120, 150, 180, 240, 300];
@@ -46,6 +49,14 @@ export const nightOptions = (current: number) => {
     .join('');
 };
 
+/** P3 B16: the head-start picker, only once something is unlocked (full width under the timers). */
+export function perkField(vm: TitleVM): string {
+  const perks = vm.perks ?? [];
+  if (!perks.length) return '';
+  const opts = [`<option value="">None</option>`, ...perks.map((p) => `<option value="${p}" ${vm.lastPerk === p ? 'selected' : ''}>${PERKS[p].icon} ${esc(PERKS[p].name)} · ${esc(PERKS[p].effect)}</option>`)];
+  return `<label class="fld perk"><span class="lbl">Head start <small>earned in past runs</small></span><select class="inp" name="perk">${opts.join('')}</select></label>`;
+}
+
 export function createTitle(
   container: HTMLElement,
   handlers: {
@@ -61,13 +72,15 @@ export function createTitle(
   const q = <T extends HTMLInputElement | HTMLSelectElement>(sel: string) => container.querySelector<T>(sel)!;
   const readChoice = (): StartChoice => {
     const seedRaw = q<HTMLInputElement>('[name=seed]').value.trim();
-    return {
+    const choice: StartChoice = {
       name: q<HTMLInputElement>('[name=name]').value.trim() || 'Barista',
       seed: seedRaw === '' || Number.isNaN(Number(seedRaw)) ? null : Math.floor(Number(seedRaw)),
       pace: Number(container.querySelector<HTMLInputElement>('[name=pace]:checked')?.value ?? 3) as Pace,
       dayLengthSec: Number(q<HTMLSelectElement>('[name=dayLength]').value),
       nightLengthSec: Number(container.querySelector<HTMLSelectElement>('[name=nightLength]')?.value ?? DEFAULT_NIGHT_LENGTH),
     };
+    const perk = container.querySelector<HTMLSelectElement>('[name=perk]')?.value;
+    return isPerkId(perk) ? { ...choice, perk } : choice;
   };
   onAction(container, (action, el) => {
     if (action === 'resume') handlers.onResume();
@@ -117,6 +130,7 @@ export function createTitle(
             <label class="fld"><span class="lbl">Your name</span><input class="inp" name="name" maxlength="16" value="${esc(settings.playerName)}" autocomplete="nickname"></label>
             <label class="fld"><span class="lbl">Day length</span><select class="inp" name="dayLength">${dayOptions(settings.dayLengthSec)}</select></label>
             <label class="fld"><span class="lbl">Night length</span><select class="inp" name="nightLength" title="How long you get to plan each night. Relaxed has no timer: the night ends when everyone is ready.">${nightOptions(settings.nightLengthSec)}</select></label>
+            ${perkField(vm)}
           </div>
           <div class="fld"><span class="lbl">Pace</span>${paceSeg(settings.pace)}</div>
           <div class="btns">

@@ -23,7 +23,7 @@ import { awardsFor } from '../sim/awards';
 import { blank } from '../sim/stats';
 import { emptyRecords, foldRecords } from '../storage/recordsStore';
 
-type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; records?: boolean; night?: boolean };
+type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean };
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
@@ -96,6 +96,8 @@ function weekPlayed(s: GameState): void {
 const FIXTURES: Record<string, Fixture> = {
   /** Block 10: the week-end awards ceremony. */
   weekEnd: { weekEnd: true, setup: weekPlayed, timeline: [] },
+  /** P3 B16: the week-end screen naming the head starts the run unlocked. */
+  weekEndUnlock: { weekEnd: true, unlocks: ['🪙 Nest egg: +$20 to start', '🥫 Stocked pantry: Start with 10 beans and 10 milk'], setup: weekPlayed, timeline: [] },
   /** Block 11: the night shop with set progress (one Espresso bar card owned), for card-face density checks. */
   night: {
     night: true,
@@ -519,7 +521,7 @@ async function main(): Promise<void> {
   }
   if (fx.weekEnd) {
     const we = createWeekEnd($('#weekEnd'), { onContinue() {}, onStop() {}, onBackToTitle() {} });
-    we.render(weekEndViewModel(state, 'ana'), false);
+    we.render({ ...weekEndViewModel(state, 'ana'), ...(fx.unlocks ? { unlocks: fx.unlocks } : {}) }, false);
     we.show();
   }
   if (fx.night) {

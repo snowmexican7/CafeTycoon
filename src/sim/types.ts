@@ -1,3 +1,4 @@
+import type { PerkId } from '../data/perks';
 import type { DrinkFamily } from '../data/areas';
 import type { GearId } from '../data/gear';
 import type { TwistId } from './taste';
@@ -450,6 +451,8 @@ export interface DayStats {
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
 export interface GameState {
+  /** P3 B16: the head start this run opened with (Gear runs only; absent in old saves). */
+  perk?: PerkId;
   seed: number;
   rng: number;
   tick: number;
@@ -604,6 +607,8 @@ export interface CreateRunOptions {
   tier?: TierId;
   /** Gear Tree: start a Gear run ($120, no stations, no supplies). The sim default stays classic (old saves, golden tests); since v3.0.0 the UI sets it for every new run (`?gear=0` opts out). */
   gear?: boolean;
+  /** P3 B16: a head start earned in earlier runs (Gear runs only; applied once at createRun). */
+  perk?: PerkId;
 }
 
 export interface RunRecord {
