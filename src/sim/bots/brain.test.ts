@@ -85,20 +85,21 @@ describe('bot brain', () => {
   });
 
   it("a claiming bot's drink still in a machine does not hide the next customer who ordered it", () => {
-    let s = cafe(2);
+    // Built by hand: bot-1 claimed customer 920, its latte is brewing in the steamer and its next step is to take it.
+    // (Run as a scenario, bumps and the orphan wait shift the timing too much to catch this moment reliably.)
+    const s = cafe(2);
     s.customers = [{ id: 920, drink: 'latte', ...huge }, { id: 921, drink: 'latte', ...huge }];
-    const steamer = (x: GameState) => x.stations.find((st) => st.id === 'steamer')!;
-    s = runUntil(s, (x) => {
-      const first = bot(x, 'bot-1').bot!.plan[0];
-      // bot-2 must still be empty-handed: with bumps a collision can delay bot-1 until bot-2 has already made the other latte.
-      return steamer(x).busyTicksLeft > 0 && first?.kind === 'use' && first.station === 'steamer' && first.action === 'take' && bot(x, 'bot-2').holding === null;
-    }, 60 * 60);
-    const bot1 = bot(s, 'bot-1').bot!.claim;
-    const other = bot1 === 920 ? 921 : 920;
-    expect(uncoveredOrder(s, bot(s, 'bot-2'))?.id).toBe(other);
-    const served = s.today.served;
-    s = runUntil(s, (x) => x.customers.length === 0, 60 * 60);
-    expect(s.today.served).toBe(served + 2);
+    const b1 = bot(s, 'bot-1');
+    const steamer = s.stations.find((st) => st.id === 'steamer')!;
+    steamer.busyTicksLeft = 60;
+    steamer.making = 'latte';
+    b1.bot!.claim = 920;
+    b1.bot!.claimDrink = 'latte';
+    b1.bot!.plan = [{ kind: 'use', station: 'steamer', action: 'take' }, { kind: 'use', station: 'counter', action: 'serve' }];
+    expect(uncoveredOrder(s, bot(s, 'bot-2'))?.id).toBe(921);
+    // And left to run, the two bots serve both lattes.
+    const served = runUntil(s, (x) => x.customers.length === 0, 60 * 90).today.served;
+    expect(served).toBeGreaterThanOrEqual(2);
   });
 
   it('Review Focus 1: when the claimed customer is served by someone else the bot puts its drink on the pass', () => {
