@@ -17,16 +17,21 @@ function messAt(state: GameState, tile: Vec2): Mess | undefined {
 /**
  * Put a mess on a tile: a new one at amount 1, or merged into the one already there (a spill
  * landing on grounds makes it a spill). At the cap nothing is placed or merged.
+ * FB2 A3: in a Gear run every mess placed logs `mess.spawn { kind, x, y, at? }` (`source` names it; default: the mess kind).
  */
-export function placeMess(state: GameState, kind: MessKind, tile: Vec2): boolean {
+export function placeMess(state: GameState, kind: MessKind, tile: Vec2, source?: { kind: string; at?: string }): boolean {
   if (state.messes.length >= M.max) return false;
   const here = messAt(state, tile);
   if (here) {
     here.amount = Math.min(1, here.amount + M.mergeAdd);
     if (kind === 'spill') here.kind = 'spill';
-    return true;
+  } else {
+    state.messes.push({ id: state.nextMessId++, kind, x: tile.x, y: tile.y, amount: 1 });
   }
-  state.messes.push({ id: state.nextMessId++, kind, x: tile.x, y: tile.y, amount: 1 });
+  if (state.gear === true) {
+    state.cleanliness = Math.max(0, state.cleanliness - GEAR_FLOOR.hit);
+    emitLog(state, 'mess.spawn', { kind: source?.kind ?? kind, x: tile.x, y: tile.y, ...(source?.at ? { at: source.at } : {}) });
+  }
   return true;
 }
 
@@ -96,10 +101,29 @@ function slip(state: GameState, p: Player): void {
   emitLog(state, 'slip', data);
 }
 
+/**
+ * FB2 A3, Gear runs: every new mess knocks `hit` points off the floor meter at once (placeMess); then, per tick, it
+ * drifts down per mess on the floor and comes back when there is none. Fix round 1 (I4): it comes back as fast as it
+ * drifts (0.12/s), so a mess mopped at once heals within about a minute: the meter (and floor80, and the inspector)
+ * rewards the mop, not the dice. Customers only start to mind below `patienceFrom` (see floorPatience).
+ */
+export const GEAR_FLOOR = { hit: 8, dirtPerMessPerTick: 0.002, recoverPerTick: 0.002, patienceFrom: 80 } as const;
+
+/**
+ * The floor's patience multiplier for a new arrival: classic, a straight line from 1 (spotless) down to
+ * ECONOMY.mess.patienceFloor (filthy). FB2 A3, Gear runs: 1 down to GEAR_FLOOR.patienceFrom, then the same line
+ * squeezed into what is left, so a floor scuffed into the 80s and 90s costs no patience.
+ */
+export function floorPatience(state: GameState): number {
+  const clean = state.gear === true ? Math.min(100, (state.cleanliness * 100) / GEAR_FLOOR.patienceFrom) : state.cleanliness;
+  return M.patienceFloor + ((1 - M.patienceFloor) * clean) / 100;
+}
+
 /** Cleanliness drifts down with each mess on the floor and recovers when there are none. */
 export function stepCleanliness(state: GameState): void {
   const n = state.messes.length;
-  const next = n > 0 ? state.cleanliness - M.dirtPerMessPerTick * n : state.cleanliness + M.recoverPerTick;
+  const f = state.gear === true ? GEAR_FLOOR : M;
+  const next = n > 0 ? state.cleanliness - f.dirtPerMessPerTick * n : state.cleanliness + f.recoverPerTick;
   state.cleanliness = Math.min(100, Math.max(0, next));
 }
 

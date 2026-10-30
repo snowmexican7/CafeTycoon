@@ -19,6 +19,7 @@ import { clearFloorFields } from './tiles';
 import { returnBox } from './condiments';
 import { fridgeClose } from './fridge';
 import { steepClosing } from './steep';
+import { stalePotsAtClose } from './sink';
 import type { GameState } from './types';
 import { settleEspresso } from './espresso';
 import { settleChallenges } from './challenges';
@@ -40,6 +41,7 @@ export function finishDay(state: GameState): GameState {
   for (const e of state.events) emitLog(state, 'event.end', { kind: e.kind });
   state.events = [];
   state.eventSchedule = [];
+  stalePotsAtClose(state); // FB2 A3: carried pots go home; a pot with cups left is stale tomorrow
   for (const s of state.stations) {
     s.busyTicksLeft = 0;
     s.output = null;
@@ -54,6 +56,7 @@ export function finishDay(state: GameState): GameState {
   fridgeClose(state); // FB2 A4: cartons go in the fridge, whatever is still out goes bad
   for (const p of state.players) {
     p.holding = null;
+    delete p.heldSince; // A2: no cup, no clock
     if (p.tool === 'box') returnBox(state, p);
     clearFloorFields(p);
   }

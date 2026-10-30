@@ -28,6 +28,7 @@ import { SLOT_POSITIONS } from '../data/layout';
 import { ensureCounterSpots, stationsFromSlots, slotCount } from './slots';
 import { CONDIMENTS } from './condiments';
 import { steepMorning } from './steep';
+import { keepStale } from './sink';
 import { BASE_DRINKS, DRINK_IDS, TAP_DRINKS, usesShot, type Recipe } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
@@ -68,7 +69,9 @@ export function gearStart(state: GameState): void {
 }
 
 function rebuild(state: GameState): void {
+  const old = state.stations;
   state.stations = stationsFromSlots(state.tier, state.slots ?? [], state.slotGear ?? []);
+  keepStale(old, state.stations); // FB2 A3: a stale pot stays stale on the same machine
   ensureCounterSpots(state);
 }
 
@@ -358,6 +361,7 @@ export function gearTapPour(state: GameState, s: Station, p: Player): boolean {
   if (p.holding !== null || p.tool !== null || s.busyTicksLeft !== 0 || s.output !== null) return false;
   if (!takeTapCup(s)) return true;
   p.holding = 'coldBrew';
+  p.heldSince = state.tick; // A2: poured now (iced: never cools)
   const marks = gearMarks(s);
   if (marks > 0) p.cupSlips = marks;
   else delete p.cupSlips;
@@ -381,7 +385,9 @@ export function growGearSlots(state: GameState, to: TierId): void {
   while (gear.length < n) gear.push(null);
   state.slots = slots.slice(0, n);
   state.slotGear = gear.slice(0, n);
+  const old = state.stations;
   state.stations = stationsFromSlots(to, state.slots, state.slotGear);
+  keepStale(old, state.stations); // FB2 A3
 }
 
 // ---------------------------------------------------------------------------------------------- G4: pods and price multipliers

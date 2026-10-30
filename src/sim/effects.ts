@@ -6,6 +6,7 @@ import { scenarioById } from '../data/scenarios';
 import { catalogueById } from '../data/catalogue';
 import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { eventActive } from './events';
+import { floorPatience } from './floor';
 import { rngNext } from './rng';
 import { applyAd } from './ads';
 import { applyPitch } from './pitch';
@@ -188,8 +189,7 @@ export function computeModifiers(state: GameState): Modifiers {
   }
   if (state.today.influencer === 'served') m.traffic *= ECONOMY.events.influencer.trafficAfter;
   // A dirty floor wears on patience; read once when a customer arrives, so waiting ones keep theirs.
-  const { patienceFloor } = ECONOMY.mess;
-  m.patience *= patienceFloor + ((1 - patienceFloor) * state.cleanliness) / 100;
+  m.patience *= floorPatience(state); // FB2 A3: Gear runs only start to mind below 80%
   applyAd(state, m);
   applyPitch(state, m);
   applyCheckout(state, m);

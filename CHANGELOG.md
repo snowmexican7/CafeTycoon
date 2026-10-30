@@ -18,6 +18,12 @@ when a build goes out, the line moves under its version with the date.
 
 - Solo runs now start with one bot barista instead of a full crew (0 to 3 can be picked), and bots act as
   helpers: they leave the machine you're working and give you a few seconds to grab new orders.
+- Drinks go cold: hot cups cool on the pickup counter, in the machine and in your hands. A lukewarm cup earns half
+  the tip; a cold one is taken but not paid for, and earns a bad review. Empty hands at pickup take back the
+  coldest cup so you can bin it. Iced drinks never cool.
+- A back sink to pour away cold drinks and old pots. Drip pots left full overnight go stale and must be dumped
+  before brewing. Steamers drip milk, grinders spill grounds and the bin sometimes leaks: each mess knocks 8% off
+  the floor meter, and a quick mop wins it back within a minute.
 
 ## 3.3.2 — 2026-10-30 · How many are left?
 

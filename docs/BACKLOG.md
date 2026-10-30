@@ -2086,3 +2086,42 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   Morning-prompt leftovers (optional, not built): bots favouring well-tipping families and drinks near a level-up;
   bots treating a flowing D4b as the fast station; planner leaning to cash late in a short season week; bot
   self-review from `report.crew`; G8 vote toast (UI lane).
+- **A2 cups go cold (`fb2-a2`, protocol 42).** Hot drinks cool from the tick they're made; the clock follows the
+  cup: `Station.outputSince` (machine output), `Player.heldSince` (in hand), `PassItem.madeAt` (pickup counter);
+  absent = fresh. Helpers in `src/sim/cooling.ts`: `coolFraction(state, madeAt, drink)` (0 fresh .. 1 cold; always
+  0 for iced), `slotCool(state, state.pass[i])`, `stationCool(state, station)` (a drip pot by its own `potColdAt`,
+  else the waiting output), `heldCool(state, player)`, `takeBackIndex(state)` / `takeBackCold(state)`. Thresholds
+  `LUKEWARM` 0.5 (half tip) and 1 (cold: taken, not paid, counts as a walk-out). `COOLING_SECONDS`: shots 45 s,
+  milky and filter 60 s, iced never. Customers take the freshest matching cup; empty hands at pickup take back
+  cooling cups coldest first, then oldest. Hot cups with a clock no longer go stale on the counter (iced and
+  old-save cups still do). Bots clear a cold counter cup before ringing, bin and remake a claim whose cup went
+  cold, clear a cold or stray output blocking a machine (a warm stray goes on the counter). Events:
+  `cup.cold { slot | station, drink }` (once per cup), `pickup.cold { customer, drink }`,
+  `review.bad { customer, drink, reason: 'cold' }`, `pickup.takeBack { drink, by, cold }` (`pass.take` still
+  fires). **UI lane:** `pickupModel`'s stale blink and 3.3.2's `passCool` read `PassItem.ticksLeft`, which no
+  longer runs down for hot Gear cups: read `slotCool` instead (note it runs 0 fresh → 1 cold, the opposite of
+  `countsModel.coolFraction`). Settles pickup M2. Open: no thermal gear yet; p4Smoke end cash is lower (served
+  within 2%), to revisit in the A balance pass.
+- **A3 back sink, stale pots, more messes (`fb2-a3`, protocol 43).** Spawns: `src/sim/spawn.ts` `freeSpot`/`settle` keep
+  every barista placed off fixtures.
+  - Fixed counter-kind spot `sink` (`SINK_ID`, `layoutFor(tier).sink`, `spotOf` → `'sink'`): stand (7,4), cart (9,4), café (11,4). It is worked from the tile to its left or the one above it, and is never bought, sold or moved.
+  - E or R with a drink at the sink: `sink.dump { by, item }` (counts as wasted, no money back, clears the cup clock).
+  - E with empty hands at a cold (past `potColdAt` with cups left) or stale drip pot lifts it: `Player.tool = 'pot'`, `Station.potOut = playerId`, `pot.lift { by, station }`. The machine can't pour, brew or take a parked drink while the pot is out.
+  - The pot dumped at the sink goes home empty: `sink.dump { by, item: 'pot' }`. Put back undumped (R away from the sink, leaving, closing, an espresso collapse) it goes home stale: `drop { item: 'pot', station, by }`.
+  - A pot with cups left at closing is stale next morning (`Station.stale = true`). `pot.stale { station }` fires **each morning** while it stays undumped. A stale pot can't pour or brew until dumped.
+  - Cold pots no longer pour half-tip cups. A brew miss (`potOff`) still does.
+  - Bin leak: 1% per binned drink, a spill on the bin's front tile, `bin.leak { by, at, x, y }`. Milk drip at a steamer or wand: 3% per steam. Grounds at a grinder: 3% per grind.
+  - Every Gear mess logs `mess.spawn { kind: 'milk'|'grounds'|'leak'|'spill', x, y, at? }`.
+  - Gear floor meter: −8 per new mess, then −0.12/s per mess while it sits, and +0.12/s once the floor is clear (a mess mopped at once heals in about a minute). Customers mind the floor only below 80%.
+  - Bots:
+    - dump an old pot when they need the drip machine, or when idle and no person is working it (A1 `heldByPerson`);
+    - skip a machine whose pot a person carries;
+    - pour spare and cold drinks down the sink when it is as close as the bin;
+    - mop any mess when they have nothing to make (orders still interrupt).
+  - **UI lane to wire:**
+    - sink art and a hint (`spotOf` → `'sink'`; today `counterName` says "Till", `gearCounterHint` falls into the condiment-bar branch, and `render/pickupModel.counterSpotOf` draws a till);
+    - the pot in hand (`tool === 'pot'`, hint "carry it to the sink");
+    - a cold or stale pot hint and a "STALE: dump at sink" badge (`Station.stale`);
+    - a machine with its pot out (`Station.potOut`);
+    - puddle splashes on `mess.spawn` / `bin.leak`;
+    - sounds for `sink.dump` / `pot.lift`.

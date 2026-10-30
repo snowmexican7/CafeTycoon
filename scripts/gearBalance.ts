@@ -88,7 +88,20 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
   let lastSlotGear = '';
   let stuck = 0;
   const skip = new Set<string>();
+  // FB2 A3: the floor meter while the doors are open (time-weighted mean, and the lowest it got).
+  let floorSum = 0;
+  let floorTicks = 0;
+  let floorMin = 100;
+  let messTicks = 0;
+  const floorEnd: number[] = [];
   while (s.phase !== 'ended' && s.days.length < days) {
+    if (s.phase === 'day') {
+      floorSum += s.cleanliness;
+      floorTicks += 1;
+      floorMin = Math.min(floorMin, s.cleanliness);
+      if (s.messes.length > 0) messTicks += 1;
+      if (s.phaseTicksLeft === 1) floorEnd.push(s.cleanliness); // the meter as the doors lock
+    }
     if (s.phase === 'weekEnd') {
       // P4 B2: KEEP=1 plays on through a season (as the host pressing Keep going).
       if (extra) {
@@ -145,6 +158,10 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
     drinks: d.reduce((a, x) => { for (const [k, v] of Object.entries(x.drinks ?? {})) if (v) a[k] = (a[k] ?? 0) + v; return a; }, {} as Record<string, number>),
     botMistakes: d.reduce((a, x) => a + (x.botMistakes ?? 0), 0),
     black: d.reduce((a, x) => a + (x.blackCoffees ?? 0), 0),
+    floor: floorTicks ? Math.round((floorSum / floorTicks) * 10) / 10 : null,
+    floorMin: Math.round(floorMin),
+    messy: floorTicks ? Math.round((messTicks / floorTicks) * 100) : null,
+    floorEnd: floorEnd.length ? Math.round(floorEnd.reduce((a, x) => a + x, 0) / floorEnd.length) : null,
     cashByDay: d.map((x) => Math.round(x.sales + x.tips)),
     ...(s.season ? { season: s.season.weeks.map((w) => `w${w.week}:${Math.round(w.profit)}${w.target !== null ? '/' + w.target : ''}`).join(' ') } : {}),
   };

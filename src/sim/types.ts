@@ -22,9 +22,10 @@ export type EventKind = 'rushHour' | 'powerFlicker' | 'influencerVisit' | 'healt
 export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer';
 export type Personality = 'rookie' | 'steady' | 'veteran' | 'hurried' | 'human'; // 'human' = tester stand-in
 export type BotSkill = 1 | 2 | 3 | 4 | 5;
-/** FB2 A4: `fetch` a milk carton at the fridge, `stock` it at a milk station (or the lifted bar back on the bar),
- *  `lift` the milk or the bar during closing soon, `store` what is carried in the fridge. */
-export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill' | 'fetch' | 'stock' | 'lift' | 'store';
+/** FB2 A3: `lift` a cold or stale drip pot off its machine, `dump` what is in hand (or the pot) at the back sink.
+ *  FB2 A4: `fetch` a milk carton at the fridge, `stock` it at a milk station (or the lifted bar back on the bar),
+ *  `stow` (lift) the milk or the bar during closing soon, `store` what is carried in the fridge. */
+export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill' | 'lift' | 'dump' | 'fetch' | 'stock' | 'stow' | 'store';
 
 export interface Vec2 {
   x: number;
@@ -57,6 +58,8 @@ export interface PassItem {
   temp?: boolean;
   /** Batch/pickup: who set the cup on the pickup counter (absent = unknown, or classic). */
   by?: PlayerId;
+  /** Feedback 2 A2 (Gear): the tick the drink was made; it cools from here (src/sim/cooling.ts). Absent = fresh. */
+  madeAt?: number;
 }
 
 /** Absolute state.tick at which the event starts. */
@@ -146,6 +149,17 @@ export type SimEventKind =
   | 'steep'
   /** P4 B6: someone (a person or a bot) picked up the branch's phone. */
   | 'call.answer'
+  /** FB2 A3 (Gear runs): the back sink, drip pots and messes. */
+  | 'sink.dump'
+  | 'pot.lift'
+  | 'pot.stale'
+  | 'bin.leak'
+  | 'mess.spawn'
+  /** Feedback 2 A2: cups go cold (src/sim/cooling.ts). */
+  | 'cup.cold'
+  | 'pickup.cold'
+  | 'pickup.takeBack'
+  | 'review.bad'
   /** FB2 A4 (src/sim/fridge.ts): the fridge, milk out at the bar, putting away, spoiling at close, closing soon. */
   | 'fridge.take'
   | 'fridge.put'
@@ -174,6 +188,8 @@ export interface Player {
   cupSlips?: number;
   /** Gear G4h: the cup in hand came out too hot or too cold (half tip when served). */
   cupTemp?: boolean;
+  /** Feedback 2 A2 (Gear): the made tick of the cup in hand (its clock keeps running); cleared when the hands empty. */
+  heldSince?: number;
   connected: boolean;
   bot?: BotState;
   idleTicks: number;
@@ -188,10 +204,10 @@ export interface Player {
   staggerTicksLeft?: number;
   /** Bumps: ticks before this barista can be part of another bump (absent = 0). */
   bumpCooldown?: number;
-  /** What the barista carries instead of a cup: the mop, or a condiment stock box (Gear runs).
+  /** What the barista carries instead of a cup: the mop, a condiment stock box, or (FB2 A3) a drip pot on its way to the sink (Gear runs).
    *  FB2 A4: `milk`, a milk carton (from the fridge, or lifted off the bar at closing); `bar`, what was left on the
-   *  condiment bar, lifted to put away in the fridge. Both hold `carry` servings. */
-  tool: 'mop' | 'box' | 'milk' | 'bar' | null;
+   *  condiment bar, lifted to put away in the fridge. Both hold `carry` servings. Neither is a cup: they don't cool. */
+  tool: 'mop' | 'box' | 'pot' | 'milk' | 'bar' | null;
   /** FB2 A4: servings in the carried milk carton or bar box (absent with any other tool). */
   carry?: number;
   cleaningTicksLeft: number;
@@ -235,6 +251,10 @@ export interface Station {
   potColdAt?: number;
   /** Gear G4d: this pot came out too hot or too cold (every cup from it complains). */
   potOff?: 'hot' | 'cold';
+  /** FB2 A3: the pot is off the machine, carried by this player to the sink; the machine can't brew until it is back. */
+  potOut?: PlayerId;
+  /** FB2 A3: the pot sat overnight with cups in it: no pour and no brew until it is dumped at the sink. */
+  stale?: true;
   /** Gear G5: the Pod-o-Matic jammed; empty hands at it whack it back to life. */
   jammed?: true;
   /** Gear G5: dead until tonight (the battery whisk's batteries). */

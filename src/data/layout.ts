@@ -47,6 +47,8 @@ export const PICKUP_ID = 'pickup';
 export const CONDIMENTS_ID = 'condiments';
 /** FB2 A4: the fridge's id (a counter-kind spot of every Gear shop; its tier is `GameState.fridge`). */
 export const FRIDGE_ID = 'fridge';
+/** FB2 A3: the back sink (Gear runs), a fixed counter-kind spot like the condiment bar. */
+export const SINK_ID = 'sink';
 
 /** P3 B13: what changes between the stand, the cart and the café. Door, spawn points, counter and the front of the queue stay put. */
 export interface TierLayout {
@@ -64,6 +66,12 @@ export interface TierLayout {
   boxCorner: Vec2;
   /** FB2 A4 (Gear runs): the fridge, against the left wall two tiles below the first back-bar slot. */
   fridge: Vec2;
+  /**
+   * FB2 A3 (Gear runs): the back sink, against the right wall three rows below the back bar (`x = width - 1, y = 4`).
+   * Bots work it from the tile to its left or the one above it; no tile in its reach is in reach of any other station
+   * (fix round 1: at y = 3 it shared the last slot's only tile, and the bar lost ~9% of its serves to the detours).
+   */
+  sink: Vec2;
 }
 
 /** Batch/pickup: the same spots on every tier (the till, door and front of the queue never move either). */
@@ -85,6 +93,7 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
     mopHome: { x: 3, y: 7 },
     ...SPOTS,
     boxCorner: { x: 1, y: 7 },
+    sink: { x: 7, y: 4 },
   },
   cart: {
     width: 10,
@@ -100,8 +109,9 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
     mopHome: { x: 9, y: 7 },
     ...SPOTS,
     boxCorner: { x: 7, y: 7 },
+    sink: { x: 9, y: 4 },
   },
-  cafe: { width: LAYOUT.width, stations: LAYOUT.stations, queueSlots: LAYOUT.queueSlots, mopHome: LAYOUT.mopHome, ...SPOTS, boxCorner: { x: 9, y: 7 } },
+  cafe: { width: LAYOUT.width, stations: LAYOUT.stations, queueSlots: LAYOUT.queueSlots, mopHome: LAYOUT.mopHome, ...SPOTS, boxCorner: { x: 9, y: 7 }, sink: { x: 11, y: 4 } },
 };
 
 /**

@@ -55,7 +55,7 @@ export function p4Run(seed: number, humans = 2, days = 28, start?: Parameters<ty
     counters: trace.counters, stamps: trace.stamps, branchDay: trace.branchDay,
     branchProfit: Math.round(branchDays.reduce((a, d) => a + (d.branch!.profit ?? 0), 0)),
     calls: branchDays.filter((d) => d.branch!.call).length, sends: trace.sends,
-    served: r.served, lost: r.lost, problems,
+    served: r.served, lost: r.lost, floor: r.floor, floorEnd: r.floorEnd, problems,
   };
 }
 

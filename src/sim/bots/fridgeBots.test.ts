@@ -105,7 +105,7 @@ describe('FB2 A4: bots and the fridge', () => {
     enterClosing(s);
     s.customers = [rung(1, 'latte')];
     const plan = ids(think(s, sim(s)));
-    expect(plan.some((x) => x.endsWith(':lift'))).toBe(false);
+    expect(plan.some((x) => x.endsWith(':stow'))).toBe(false);
     expect(plan[0]).toBe('grinder:insert');
   });
 
@@ -155,7 +155,7 @@ describe('FB2 A4: bots and the fridge', () => {
     enterClosing(s);
     s.customers = [rung(1, 'latte')];
     s.pass.push({ item: 'latte', ticksLeft: 9999 }); // made, not yet collected
-    expect(ids(think(s, sim(s)))).toEqual(['steamer:lift', `${FRIDGE_ID}:store`]);
+    expect(ids(think(s, sim(s)))).toEqual(['steamer:stow', `${FRIDGE_ID}:store`]);
   });
 
   it('I3: in the last 8 s of closing the milk and the bar go away whatever is still wanted', () => {
@@ -164,11 +164,11 @@ describe('FB2 A4: bots and the fridge', () => {
     s.condiments = { servings: 4 };
     enterClosing(s);
     s.customers = [rung(1, 'latte'), rung(2, 'drip')];
-    expect(ids(think(s, sim(s))).some((x) => x.endsWith(':lift'))).toBe(false);
+    expect(ids(think(s, sim(s))).some((x) => x.endsWith(':stow'))).toBe(false);
     s.phaseTicksLeft = 60 * 8;
-    expect(ids(think(s, sim(s)))).toEqual(['steamer:lift', `${FRIDGE_ID}:store`]);
+    expect(ids(think(s, sim(s)))).toEqual(['steamer:stow', `${FRIDGE_ID}:store`]);
     s.milkOut = 0;
-    expect(ids(think(s, sim(s)))).toEqual(['condiments:lift', `${FRIDGE_ID}:store`]);
+    expect(ids(think(s, sim(s)))).toEqual(['condiments:stow', `${FRIDGE_ID}:store`]);
   });
 
   it('M2: no box is carried to the bar during closing soon (it would only be lifted back into the fridge)', () => {

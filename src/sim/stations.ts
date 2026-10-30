@@ -10,6 +10,8 @@ import { gearAfterUse, gearBlocked, gearMarks, gearPolish, gearPotFinished, gear
 import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
+import { dumpDrink, dumpPot, isSink, potPress } from './sink';
+import { rollBinLeak, rollStationMess } from './messes';
 import { BASE_DRINKS, RECIPES, type Recipe, type RecipeStation } from '../data/drinks';
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
 import { fridgeInteract, readyStock, useStock } from './fridge';
@@ -94,6 +96,10 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return state;
   if (player.holding === null) { delete player.cupSlips; delete player.cupTemp; } // P3 B5: empty hands, no cup, no marks
+  if (player.tool === 'pot') {
+    dumpPot(state, player); // FB2 A3: only the sink takes the pot
+    return state;
+  }
   // FB2 A4 (Gear): the fridge, a carried carton or bar box, and closing soon's lifts come first.
   if (state.gear === true) {
     const near = nearestStation(state, player.pos);
@@ -112,11 +118,18 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   }
   if (station.occupiedBy !== null) return state;
   if (catBlocking(state, station.id)) return state;
+  // FB2 A3: the back sink pours a drink away; a drip machine with its pot out, or a cold or stale pot, handles the press itself.
+  if (isSink(station) && state.gear === true) {
+    dumpDrink(state, player);
+    return state;
+  }
+  if (potPress(state, player, station)) return state;
 
   if (station.kind === 'trash') {
     if (player.holding !== null && player.holding !== 'grounds') {
       tally(state.today, 'wasted');
       emitLog(state, 'trash', { item: player.holding, by: playerId });
+      rollBinLeak(state, station, player, player.holding); // FB2 A3: 1% of binned drinks leak (Gear runs)
     }
     player.holding = null;
     return state;
@@ -129,6 +142,8 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     player.holding = station.output;
     // G4d: a drip pot keeps pouring until it's empty; pot cups don't "sit" (they go cold instead).
     const pour = gearPotPour(state, station);
+    // A2: a cup's clock: a pour from a pot starts now; a machine's output was made when it appeared.
+    if (state.gear === true) player.heldSince = pour.pot ? state.tick : (station.outputSince ?? state.tick);
     if (!pour.more) {
       station.output = null;
       delete station.outputSince;
@@ -142,6 +157,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   // P3 B5: pull it early. Empty hands at a machine near the end of its run take the drink now, one star off.
   if (player.holding === null && station.busyTicksLeft > 0 && station.making && station.busyTotal && station.busyTicksLeft <= station.busyTotal * ACCURACY.earlyShare) {
     player.holding = station.making;
+    if (state.gear === true) player.heldSince = state.tick; // A2: made now
     station.making = null;
     station.busyTicksLeft = 0;
     delete station.doneAt;
@@ -169,6 +185,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     station.busyTicksLeft = Math.round(((seconds * roleMachineTime(state, playerId)) / (speed * gearSpeed(station, state.tick))) * TICK_RATE);
     station.busyTotal = station.busyTicksLeft;
     gearAfterUse(state, station, player);
+    rollStationMess(state, station, player); // FB2 A3: milk drips at the steamer, grounds by the grinder (Gear runs)
   } else if (idle && !recipe && player.holding !== null && player.holding !== 'grounds' && isRecipeStation(station.kind)) {
     // P3 B5: a cup offered to a station with no step for it: the wrong order, one star off.
     markCup(player);
