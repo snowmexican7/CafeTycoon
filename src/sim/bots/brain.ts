@@ -655,6 +655,8 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       return abandon(state, p);
     }
     case 'take':
+      // Batch/pickup Task 3 (stopgap until Task 13): a Gear tap poured the cup on the insert step, so it is already in hand.
+      if (st.kind === 'coldBrewTap' && st.gear && st.output === null && st.busyTicksLeft === 0 && p.holding === 'coldBrew') return pop(b);
       if (st.output !== null && p.holding === null) return execute(p);
       if (pullsEarly(state, p, st)) return execute(p); // the interact early-pull takes the cup, one star off
       if (st.busyTicksLeft > 0) return wait(state, p, brewSlack(st));

@@ -113,7 +113,7 @@ describe('Gear Tree G2: the sim', () => {
     const tap = s.stations.find((x) => x.kind === 'coldBrewTap')!;
     s.players[0].pos = { ...tap.pos, y: tap.pos.y + 1 };
     interact(s, 'p1');
-    expect(tap.cupSlips).toBe(GEAR.c1.marks);
+    expect(s.players[0].cupSlips).toBe(GEAR.c1.marks); // the tap pours at once: the lint is on the cup in hand
   });
 
   it('cold brew batch caps: sold out after the day\'s batch, refilled next morning', () => {

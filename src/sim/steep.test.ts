@@ -46,7 +46,7 @@ describe('steeping cold brew at night (Task 1 shapes)', () => {
   it('caps add up over taps', () => {
     expect(steepCap(gearNight(['c1', 'c1']))).toBe(16);
     expect(steepCap(gearNight(['c2']))).toBe(16);
-    expect(steepCap(gearNight(['c4']))).toBe(0); // no daily cap: nothing to steep
+    expect(steepCap(gearNight(['c4']))).toBe(60);
   });
 
   it('steepPlan: leftovers first, concentrate for the top-up only', () => {

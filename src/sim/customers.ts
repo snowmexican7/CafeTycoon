@@ -1,5 +1,5 @@
 import { signatureServed, sigPremium, sigShare } from './signature';
-import { areaPatienceMul, areaQualityTip, areaTipMul, batchOut, gearAskedFor, gearPullMul, noteFamilyTip, snobFamilies, snobTip } from './gear';
+import { areaPatienceMul, areaQualityTip, areaTipMul, batchOut, drinkSuppliesFor, gearAskedFor, gearPullMul, noteFamilyTip, snobFamilies, snobTip } from './gear';
 import { DRINK_FAMILY, SNOB } from '../data/areas';
 import { rivalAskFactor } from './rival';
 import { roleCraft, roleTip } from './roles';
@@ -15,7 +15,7 @@ import { rngInt, rngNext } from './rng';
 import { rogueActive, startRogue } from './rogue';
 import { tally } from './tally';
 import { tallyDrink } from './tally';
-import { BASE_DRINKS, DRINK_IDS, DRINK_INFO } from '../data/drinks';
+import { BASE_DRINKS, DRINK_IDS, DRINK_INFO, TAP_DRINKS } from '../data/drinks';
 import { clearNameMixOnServe, maybeNameMix, maybeSpawnCamper, secretServeBonus } from './eggs';
 import type { Customer, CustomerKind, DrinkId, GameState, PlayerId, Regular, SimEvent } from './types';
 import { sellPastry } from './spoilage';
@@ -36,7 +36,7 @@ export function availableDrinks(state: GameState): DrinkId[] {
   const unlocked = unlockedDrinks(state);
   const coldOut = batchOut(state);
   return DRINKS.filter(
-    (d) => unlocked.includes(d) && state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => (state.supplies[s] ?? 0) >= 1) && !(coldOut && ECONOMY.drinkSupplies[d].includes('concentrate')),
+    (d) => unlocked.includes(d) && state.menu[d] && drinkSuppliesFor(state, d).every((s) => (state.supplies[s] ?? 0) >= 1) && !(coldOut && TAP_DRINKS.includes(d)),
   );
 }
 
