@@ -1119,10 +1119,7 @@ function stepBot(state: GameState, p: Player): void {
   }
   // Orders come first: an uncovered order the bar can make now interrupts any floor step, a clean in
   // progress included (one it can't make would cancel the mop every tick and leave the floor dirty).
-  // FB2 A3, Gear runs: once the mop is in hand the trip is finished (at most botMopMax messes); in a busy shop a
-  // trip broken off at every new ticket cleaned nothing all day.
-  const mopTrip = state.gear === true && p.tool === 'mop';
-  if (!mopTrip && (isMopStep(b.plan[0]) || p.cleaningTicksLeft > 0) && claimable(state, p) !== null) {
+  if ((isMopStep(b.plan[0]) || p.cleaningTicksLeft > 0) && claimable(state, p) !== null) {
     p.cleaningTicksLeft = 0;
     p.cleaningMess = null;
     if (p.tool === 'mop') returnMop(state, p);

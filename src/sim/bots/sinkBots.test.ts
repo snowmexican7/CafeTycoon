@@ -129,20 +129,15 @@ describe('FB2 A3: bots and the sink', () => {
     expect(think(c, sim(c)).some((x) => x.kind === 'floor')).toBe(false);
   });
 
-  it('Gear: a bot with the mop in hand finishes its trip even when an order comes in', () => {
+  it('Gear: orders come first, a mop trip included (fix round 1, I2)', () => {
     let s = POT();
     s.messes = [{ id: s.nextMessId++, kind: 'spill', x: 6, y: 4, amount: 1 }];
     let guard = 0;
     while (sim(s).tool !== 'mop' && guard++ < 60 * 20) s = step(s, []);
     expect(sim(s).tool).toBe('mop');
     s.customers = [rung(1, 'espresso')];
-    guard = 0;
-    while (s.messes.length > 0 && guard++ < 60 * 20) {
-      s = step(s, []);
-      expect(sim(s).bot!.claim).toBeNull();
-    }
-    expect(s.messes).toEqual([]);
-    const { s: t } = runUntil(s, (x) => x.customers.length === 0, 60 * 60);
-    expect(t.today.served).toBe(1);
+    s = step(s, []);
+    expect([sim(s).tool, sim(s).bot!.claim]).toEqual([null, 1]);
+    expect(s.mop.heldBy).toBeNull();
   });
 });
