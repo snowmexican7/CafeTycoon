@@ -41,7 +41,7 @@ import { expectedUse } from '../brief';
 import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
 import { computeModifiers } from '../effects';
-import { billsForDay } from '../staff';
+import { billsForDay, crewCount, crewNames, wageEach } from '../staff';
 import { averageStars } from '../accuracy';
 import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun } from '../gear';
 import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
@@ -74,6 +74,7 @@ export const PLAN_PRIORITY = {
   checkout: 60,
   gear: 58,
   slot: 55,
+  staff: 53,
   price: 50,
   twist: 40,
   signature: 35,
@@ -442,6 +443,32 @@ function gearAdvice(state: GameState, budget: Budget): Advice[] {
   return [];
 }
 
+/**
+ * Gear runs: when yesterday's wages beat what the hired baristas rang up (the bots' share of
+ * `DayStats.byPlayer`), suggest letting the newest one go. Never hiring. Quiet once a firing tonight
+ * has already taken the crew below the count that was paid yesterday.
+ */
+function staffAdvice(state: GameState): Advice[] {
+  if (!isGearRun(state)) return [];
+  const last = state.days.at(-1);
+  const each = wageEach(state);
+  if (!last?.wages || !last.byPlayer || each <= 0 || crewCount(state) <= 0) return [];
+  const paid = Math.max(1, Math.round(last.wages / each));
+  if (crewCount(state) < paid) return [];
+  const takings = round2(BOT_IDS.reduce((n, id) => n + (last.byPlayer![id]?.takings ?? 0), 0));
+  if (last.wages <= takings) return [];
+  const name = crewNames(state).at(-1) ?? 'The newest barista';
+  return [
+    {
+      id: 'staff:fire',
+      kind: 'equip',
+      text: `${name} costs more than they bring in at the ${TIERS[state.tier ?? 'cafe'].short} (wages ${dollars(last.wages)}, crew rang up ${dollars(takings)})`,
+      input: { kind: 'staff', action: 'fire' },
+      priority: PLAN_PRIORITY.staff,
+    },
+  ];
+}
+
 function scoutAdvice(state: GameState, budget: Budget): Advice[] {
   if (state.day < 2 || state.rival?.scouted === state.day || budget.left < SCOUT_SPARE) return [];
   budget.left = round2(budget.left - RIVAL.scoutCost);
@@ -496,6 +523,7 @@ export function planNight(state: GameState): Advice[] {
     ...checkout,
     ...gear,
     ...slot,
+    ...staffAdvice(state),
     ...priceAdvice(state),
     ...twistAdvice(state),
     ...signatureAdvice(state),

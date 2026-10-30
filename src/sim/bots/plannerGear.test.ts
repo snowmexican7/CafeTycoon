@@ -193,3 +193,44 @@ describe('item 3: Gear buying hints', () => {
     expect(solo.text).not.toContain('vote');
   });
 });
+
+describe('item 4: let a barista go when the wages beat what the crew adds', () => {
+  const staffAd = (s: GameState) => planNight(s).filter((a) => a.input.kind === 'staff');
+  const afterDay = (bots: number, wages: number, botTakings: number | null): GameState => {
+    const s = gearRun({ bots });
+    s.cash = 300;
+    s.supplies = { ...FULL };
+    s.days.push(dayStats({
+      wages,
+      ...(botTakings === null ? {} : { byPlayer: { p1: { serves: 12, takings: 30 }, 'bot-1': { serves: 1, takings: botTakings / 2 }, 'bot-2': { serves: 1, takings: botTakings / 2 } } }),
+    }));
+    return s;
+  };
+
+  it('suggests letting the newest one go, naming them, when yesterday’s wages beat the bots’ takings', () => {
+    const s = afterDay(2, 2, 1.5);
+    expect(wagesForDay(s)).toBe(2);
+    const [a, ...rest] = staffAd(s);
+    expect(rest).toEqual([]);
+    expect(a).toMatchObject({ id: 'staff:fire', input: { kind: 'staff', action: 'fire' }, priority: PLAN_PRIORITY.staff });
+    expect(a!.text).toContain('Lu costs more than they bring in at the stand');
+  });
+
+  it('is quiet when the bots earned their keep, with no bots, with no tally, or with no wages', () => {
+    expect(staffAd(afterDay(2, 2, 2))).toEqual([]);
+    expect(staffAd(afterDay(2, 2, 40))).toEqual([]);
+    expect(staffAd(afterDay(0, 0, 0))).toEqual([]);
+    expect(staffAd(afterDay(2, 2, null))).toEqual([]);
+    expect(staffAd(afterDay(2, 0, 0))).toEqual([]);
+  });
+
+  it('stops once someone has been let go tonight, and never suggests hiring', () => {
+    let s = afterDay(2, 2, 0);
+    expect(staffAd(s)).toHaveLength(1);
+    s = step(s, [{ kind: 'staff', playerId: 'p1', action: 'fire' }]);
+    expect(staffAd(s)).toEqual([]);
+    for (const x of [afterDay(2, 2, 0), afterDay(1, 1, 5), afterDay(0, 0, 0), s]) {
+      expect(planNight(x).some((a) => a.input.kind === 'staff' && a.input.action === 'hire')).toBe(false);
+    }
+  });
+});
