@@ -19,6 +19,9 @@ import { floorWidth } from '../growth';
 import { gearArea } from '../gear';
 import { nearestMess, returnMop } from '../mop';
 import { rogueNear, rogueTiles } from '../rogue';
+import { passSlots } from '../pickup';
+import { tillNext } from '../till';
+import { PICKUP_ID } from '../../data/layout';
 
 const BOTS = ECONOMY.bots;
 const MESS = ECONOMY.mess;
@@ -65,6 +68,19 @@ function use(state: GameState, p: Player, kind: StationKind, action: BotAction):
   return { kind: 'use', station: st.id, action };
 }
 
+/** A `use` step at the station with this id (batch/pickup: the till is `counter`, the pickup counter `pickup`); null when the shop has none. */
+export function spotStep(state: GameState, id: string, action: BotAction): BotStep | null {
+  return state.stations.some((st) => st.id === id) ? { kind: 'use', station: id, action } : null;
+}
+
+/**
+ * Where a finished drink goes. Gear runs (batch/pickup): set down on the pickup counter, whatever the plan
+ * meant (its customer takes it there once rung up). Classic: hand it over (`serve`) or park it on the pass (`put`).
+ */
+function finishStep(state: GameState, p: Player, finish: 'serve' | 'put'): BotStep | null {
+  return state.gear === true ? spotStep(state, PICKUP_ID, 'put') : use(state, p, 'counter', finish);
+}
+
 /** Put what is in hand in the bin; with no bin in the shop, on the floor away from every station. */
 function binStep(state: GameState, p: Player): BotStep {
   return use(state, p, 'trash', 'trash') ?? { kind: 'floor', node: floorDropNode(state, p.pos), action: 'drop' };
@@ -81,7 +97,7 @@ function groundsPlan(state: GameState, p: Player): BotStep[] {
   const bin = binStep(state, p);
   if (bin.kind === 'use' || state.messes.length < MESS.max) return [bin];
   const shot = pick(state, p, { kind: 'espresso', held: 'grounds', gives: 'espresso' });
-  const put = use(state, p, 'counter', 'put');
+  const put = finishStep(state, p, 'put');
   if (shot === null || put === null) return [bin];
   return [...pair(shot.st, 'espresso'), put];
 }
@@ -224,11 +240,12 @@ function machineSteps(state: GameState, p: Player, drink: DrinkId, held: ItemKin
 
 /**
  * The steps to make `drink` and hand it over (`serve`) or park it on the pass (`put`), from scratch or
- * from `held` (an item already in hand on its way to the drink). [] when the shop can't make it now.
+ * from `held` (an item already in hand on its way to the drink). In Gear runs both end on the pickup
+ * counter (`finishStep`). [] when the shop can't make it now.
  */
 export function chainFor(state: GameState, p: Player, drink: DrinkId, finish: 'serve' | 'put', held: ItemKind | null = null): BotStep[] {
   const steps = machineSteps(state, p, drink, held);
-  const last = use(state, p, 'counter', finish);
+  const last = finishStep(state, p, finish);
   return steps === null || last === null ? [] : [...steps, last];
 }
 
@@ -236,7 +253,7 @@ export function chainFor(state: GameState, p: Player, drink: DrinkId, finish: 's
 export function dropPlan(state: GameState, p: Player): BotStep[] {
   if (p.holding === null) return [];
   if (p.holding === 'grounds') return groundsPlan(state, p);
-  const put = isDrink(p.holding) ? use(state, p, 'counter', 'put') : null;
+  const put = isDrink(p.holding) ? finishStep(state, p, 'put') : null;
   return [put ?? binStep(state, p)];
 }
 
@@ -366,7 +383,7 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
 function shouldPrep(state: GameState, p: Player): boolean {
   return (
     BOTS.personalities[p.bot!.personality].preps &&
-    state.pass.length < ECONOMY.pass.slots &&
+    state.pass.length < passSlots(state) &&
     coldBrewsAhead(state) < BOTS.prepColdBrews &&
     availableDrinks(state).includes('coldBrew')
   );
@@ -413,6 +430,11 @@ function shouldMop(state: GameState, p: Player): boolean {
   );
 }
 
+/** Another bot is already on its way to ring up the queue. */
+function ringPlanned(state: GameState, self: Player): boolean {
+  return state.players.some((o) => o !== self && o.bot?.plan.some((x) => x.kind === 'use' && x.action === 'ring'));
+}
+
 /** Pick the next job. First match wins. A thinking bot has nothing in progress, so it starts unclaimed. */
 export function think(state: GameState, p: Player): BotStep[] {
   const b = p.bot!;
@@ -423,17 +445,25 @@ export function think(state: GameState, p: Player): BotStep[] {
   if (p.holding === 'grounds') return groundsPlan(state, p);
   if (isDrink(p.holding)) {
     const drink = p.holding;
-    const serve = state.customers.some((c) => c.drink === drink) ? use(state, p, 'counter', 'serve') : null;
-    const put = state.pass.length < ECONOMY.pass.slots ? use(state, p, 'counter', 'put') : null;
+    // Gear runs: nobody hands over; the drink goes on the pickup counter while it has room.
+    const serve = state.gear !== true && state.customers.some((c) => c.drink === drink) ? use(state, p, 'counter', 'serve') : null;
+    const put = state.pass.length < passSlots(state) ? finishStep(state, p, 'put') : null;
     return [serve ?? put ?? binStep(state, p)];
   }
   // 0b. Collect a drink left in a machine (e.g. its customer left mid-chain), or stray grounds; rule 0 then places or bins it.
   const orphan = orphanedDrink(state, p);
   if (orphan) return [{ kind: 'use', station: orphan.id, action: 'take' }];
-  // 1. A drink on the pass that a customer (not another bot's) is waiting for.
-  const onPass = new Set(state.pass.map((i) => i.item));
-  const serve = use(state, p, 'counter', 'serve');
-  if (serve && state.customers.some((c) => !claimedByOther(state, p, c.id) && onPass.has(c.drink))) return [serve];
+  if (state.gear === true) {
+    // 1. Gear (batch/pickup): ring up the queue when nobody else is on their way to the till. Only a thinking
+    // bot (nothing in progress) gets here, so it never leaves a machine mid-chain for it.
+    const ring = tillNext(state) && !ringPlanned(state, p) ? spotStep(state, 'counter', 'ring') : null;
+    if (ring) return [ring];
+  } else {
+    // 1. Classic: a drink on the pass that a customer (not another bot's) is waiting for.
+    const onPass = new Set(state.pass.map((i) => i.item));
+    const serve = use(state, p, 'counter', 'serve');
+    if (serve && state.customers.some((c) => !claimedByOther(state, p, c.id) && onPass.has(c.drink))) return [serve];
+  }
   // 2. An order nobody is covering that the shop can make now (queue order): claim it and make it.
   const job = claimable(state, p);
   if (job) {
@@ -474,7 +504,8 @@ export function reactionDelay(state: GameState, bot: BotState): number {
 }
 
 /**
- * Right after a bot's "use": a drink just taken from a recipe station with empty hands may be botched.
+ * Right after a bot's "use": a cup that came straight into the hands at an insert completes the planned take.
+ * A drink just taken from a recipe station with empty hands may be botched.
  * The bot does not know yet; it notices after a while (see stepBot) and bins it.
  */
 export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKind | null): void {
@@ -482,6 +513,9 @@ export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKi
   if (!b || heldBefore !== null || !isDrink(p.holding)) return;
   const st = nearestStation(state, p.pos);
   if (!st || !isRecipeKind(st.kind)) return;
+  // Batch/pickup: the insert press put the cup straight into the hands (a Gear tap pours a steeped cup at once),
+  // so the machine has nothing left for the planned take: that take is done too.
+  if (isTakeAt(b.plan[0], st) && st.output === null && st.busyTicksLeft === 0) pop(b);
   const chance =
     BOTS.personalities[b.personality].mistake *
     skillFactor(state, b, BOTS.skill.mistake) *
@@ -674,6 +708,10 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
     case 'put':
       if (b.noticeTicksLeft > 0) return wait(state, p);
       return execute(p);
+    case 'ring':
+      // Batch/pickup: ring up the next order, if there still is one and the hands are free.
+      if (p.holding === null && !p.tool && tillNext(state)) return execute(p);
+      return setPlan(b, []);
     case 'trash':
       return execute(p);
   }

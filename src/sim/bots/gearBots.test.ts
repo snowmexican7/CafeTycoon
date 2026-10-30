@@ -36,10 +36,9 @@ function gearShop(slots: SlotContent[], gear: (GearId | null)[], o: { standIns?:
 const huge = { patienceLeft: 100_000, patienceMax: 100_000 };
 const order = (id: number, drink: DrinkId, extra: Partial<Customer> = {}): Customer => ({ id, drink, ...huge, ...extra });
 const sim = (s: GameState, n = 1): Player => s.players.find((p) => p.id === `sim-${n}`)!;
-// Batch/pickup Task 2: Gear shops have three counter-kind spots (till, pickup, condiments) and a bot's counter step
-// goes to the nearest idle one; they all read as 'counter' here until bots learn the pickup flow (Task 13).
-const SPOTS = new Set(['pickup', 'condiments']);
-const ids = (plan: BotStep[]) => plan.map((x) => (x.kind === 'use' ? `${SPOTS.has(x.station) ? 'counter' : x.station}:${x.action}` : x.kind));
+const ids = (plan: BotStep[]) => plan.map((x) => (x.kind === 'use' ? `${x.station}:${x.action}` : x.kind));
+/** Batch/pickup (Task 13): a customer already rung up at the till, so `think` goes straight to making the drink. */
+const rung = (id: number, drink: DrinkId, extra: Partial<Customer> = {}): Customer => order(id, drink, { stage: 'pickup', rungAt: 0, ...extra });
 
 function runUntil(state: GameState, done: (s: GameState) => boolean, maxTicks: number, each?: (s: GameState) => void): GameState {
   let s = state;
@@ -69,7 +68,7 @@ describe('item 1: the UI lane bot edits (pods-only bar, gear recipe in act)', ()
 
   it('pods only, no grinder: the shot comes from empty hands and a latte is served end to end', () => {
     let s = gearShop(['espresso', 'steamer', 'trash', null, null, null], ['e1', 's3', 'b0', null, null, null]);
-    expect(ids(chainFor(s, sim(s), 'latte', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'steamer:insert', 'steamer:take', 'counter:serve']);
+    expect(ids(chainFor(s, sim(s), 'latte', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'steamer:insert', 'steamer:take', 'pickup:put']);
     s.customers = [order(900, 'latte')];
     const beans = s.supplies.beans;
     s = serveAll(s);
@@ -79,7 +78,7 @@ describe('item 1: the UI lane bot edits (pods-only bar, gear recipe in act)', ()
 
   it('pods only with a grinder in a slot (smoke fix): bots skip the grinder and still serve', () => {
     let s = gearShop(['grinder', 'espresso', 'trash', null, null, null], ['g2', 'e1', 'b0', null, null, null]);
-    expect(ids(chainFor(s, sim(s), 'espresso', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'counter:serve']);
+    expect(ids(chainFor(s, sim(s), 'espresso', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'pickup:put']);
     s.customers = [order(901, 'espresso')];
     let ground = false;
     s = serveAll(s, 60 * 60, (x) => { if (x.stations.find((st) => st.kind === 'grinder')!.busyTicksLeft > 0) ground = true; });
@@ -98,8 +97,8 @@ describe('item 1: the UI lane bot edits (pods-only bar, gear recipe in act)', ()
 
   it('think plans from empty hands on a pods-only bar', () => {
     const s = gearShop(['espresso', 'trash', null, null, null, null], ['e1', 'b0', null, null, null, null]);
-    s.customers = [order(902, 'espresso')];
-    expect(ids(think(s, sim(s)))).toEqual(['espresso:insert', 'espresso:take', 'counter:serve']);
+    s.customers = [rung(902, 'espresso')];
+    expect(ids(think(s, sim(s)))).toEqual(['espresso:insert', 'espresso:take', 'pickup:put']);
   });
 });
 
@@ -112,19 +111,19 @@ describe('item 2: pods (E1) and the mixed bar', () => {
   it('both routes free: grinder + the E2 (no pod mark); grounds never go to the pod machine', () => {
     const s = mixed();
     expect(ids(chainFor(s, sim(s), 'latte', 'serve'))).toEqual([
-      'grinder:insert', 'grinder:take', 'espresso-2:insert', 'espresso-2:take', 'steamer:insert', 'steamer:take', 'counter:serve',
+      'grinder:insert', 'grinder:take', 'espresso-2:insert', 'espresso-2:take', 'steamer:insert', 'steamer:take', 'pickup:put',
     ]);
     // From grounds in hand, only the E2 will do, even standing right by the pod machine.
     const p = sim(s);
     p.pos = { x: station(s, 'espresso').pos.x, y: 2 };
-    expect(ids(chainFor(s, p, 'espresso', 'serve', 'grounds'))).toEqual(['espresso-2:insert', 'espresso-2:take', 'counter:serve']);
+    expect(ids(chainFor(s, p, 'espresso', 'serve', 'grounds'))).toEqual(['espresso-2:insert', 'espresso-2:take', 'pickup:put']);
   });
 
   it('the grinder route busy: the pod machine pulls the shot from empty hands', () => {
     const s = mixed();
     station(s, 'espresso-2').busyTicksLeft = 300;
     station(s, 'espresso-2').making = 'espresso';
-    expect(ids(chainFor(s, sim(s), 'espresso', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'counter:serve']);
+    expect(ids(chainFor(s, sim(s), 'espresso', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'pickup:put']);
   });
 
   it('grounds in hand, no bin, floor at the mess cap: pulled through the E2, never the pod machine', () => {
@@ -133,7 +132,7 @@ describe('item 2: pods (E1) and the mixed bar', () => {
     p.holding = 'grounds';
     p.pos = { x: station(s, 'espresso').pos.x, y: 2 };
     for (let i = 0; s.messes.length < 12; i++) s.messes.push({ id: 500 + i, kind: 'spill', x: 1 + (i % 9), y: 4 + Math.floor(i / 9), amount: 1 });
-    expect(ids(think(s, p))).toEqual(['espresso-2:insert', 'espresso-2:take', 'counter:put']);
+    expect(ids(think(s, p))).toEqual(['espresso-2:insert', 'espresso-2:take', 'pickup:put']);
   });
 
   it('a mixed bar serves a run of lattes end to end, and the pod machine never holds grounds', () => {
@@ -148,7 +147,7 @@ describe('item 2: pods (E1) and the mixed bar', () => {
 
   it('a mixed bar with no grinder: shots come from the pod machine', () => {
     let s = gearShop(['espresso', 'espresso', 'steamer', 'trash', null, null], ['e1', 'e2', 's3', 'b0', null, null]);
-    expect(ids(chainFor(s, sim(s), 'espresso', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'counter:serve']);
+    expect(ids(chainFor(s, sim(s), 'espresso', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'pickup:put']);
     s.customers = [order(920, 'espresso'), order(921, 'latte')];
     s = serveAll(s);
     expect(s.today.served).toBe(2);
@@ -221,7 +220,7 @@ describe('item 3: jams and dead machines (G5)', () => {
   it('the only steamer dead: latte orders are skipped for ones the bar can still make', () => {
     let s = gearShop(['grinder', 'espresso', 'steamer', 'trash', null, null], ['g2', 'e3', 's1', 'b0', null, null]);
     station(s, 'steamer').dead = true;
-    s.customers = [order(940, 'latte'), order(941, 'espresso')];
+    s.customers = [rung(940, 'latte'), rung(941, 'espresso')];
     expect(ids(think(s, sim(s)))[0]).toBe('grinder:insert');
     expect(sim(s).bot!.claim).toBe(941);
     s = runUntil(s, (x) => !x.customers.some((c) => c.id === 941), 60 * 60);
@@ -267,8 +266,8 @@ describe('item 4: drip pots (G4d)', () => {
 
   it('an empty Thrift Store Special: the bot brews a pot (20 s, past the wait cap), pours and serves', () => {
     let s = POTS('d1');
-    s.customers = [order(1000, 'drip')];
-    expect(ids(think(s, sim(s)))).toEqual(['drip:insert', 'drip:take', 'counter:serve']);
+    s.customers = [rung(1000, 'drip')];
+    expect(ids(think(s, sim(s)))).toEqual(['drip:insert', 'drip:take', 'pickup:put']);
     let dropped = false; // waits the brew out instead of giving up at the wait cap
     s = serveAll(s, 60 * 60, (x) => { if (x.customers.length > 0 && sim(x).bot!.claim !== 1000) dropped = true; });
     expect(s.today.drinks!.drip).toBe(1);
@@ -368,16 +367,16 @@ describe('item 5: level-up drinks (G6/G6b/G6c, G10a) and the recipe clash', () =
 
   it('the chains: drip pours in hand go on to the steamer or the espresso machine', () => {
     const s = FULL();
-    expect(ids(chainFor(s, sim(s), 'cafeAuLait', 'serve'))).toEqual(['drip:insert', 'drip:take', 'steamer:insert', 'steamer:take', 'counter:serve']);
-    expect(ids(chainFor(s, sim(s), 'redEye', 'serve'))).toEqual(['drip:insert', 'drip:take', 'espresso:insert', 'espresso:take', 'counter:serve']);
-    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve'))).toEqual(['coldBrewTap:insert', 'coldBrewTap:take', 'coldBrewTap:insert', 'coldBrewTap:take', 'counter:serve']);
+    expect(ids(chainFor(s, sim(s), 'cafeAuLait', 'serve'))).toEqual(['drip:insert', 'drip:take', 'steamer:insert', 'steamer:take', 'pickup:put']);
+    expect(ids(chainFor(s, sim(s), 'redEye', 'serve'))).toEqual(['drip:insert', 'drip:take', 'espresso:insert', 'espresso:take', 'pickup:put']);
+    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve'))).toEqual(['coldBrewTap:insert', 'coldBrewTap:take', 'coldBrewTap:insert', 'coldBrewTap:take', 'pickup:put']);
     expect(chainFor(s, sim(s), 'americano', 'serve').find((x) => x.kind === 'use' && x.makes === 'americano')).toMatchObject({ station: 'espresso' });
   });
 
   it('americano and red-eye never go on a pod machine: the shot may, the top-up goes to the E2', () => {
     const s = gearShop(['espresso', 'espresso', 'drip', 'trash', null, null], ['e1', 'e2', 'd3', 'b0', null, null], { drinks: ['americano', 'redEye', 'drip'] });
-    expect(ids(chainFor(s, sim(s), 'americano', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'espresso-2:insert', 'espresso-2:take', 'counter:serve']);
-    expect(ids(chainFor(s, sim(s), 'redEye', 'serve'))).toEqual(['drip:insert', 'drip:take', 'espresso-2:insert', 'espresso-2:take', 'counter:serve']);
+    expect(ids(chainFor(s, sim(s), 'americano', 'serve'))).toEqual(['espresso:insert', 'espresso:take', 'espresso-2:insert', 'espresso-2:take', 'pickup:put']);
+    expect(ids(chainFor(s, sim(s), 'redEye', 'serve'))).toEqual(['drip:insert', 'drip:take', 'espresso-2:insert', 'espresso-2:take', 'pickup:put']);
     const pods = gearShop(['espresso', 'drip', 'trash', null, null, null], ['e1', 'd3', 'b0', null, null, null], { drinks: ['americano', 'redEye', 'drip'] });
     expect(chainFor(pods, sim(pods), 'americano', 'serve')).toEqual([]);
     expect(chainFor(pods, sim(pods), 'redEye', 'serve')).toEqual([]);
@@ -385,7 +384,7 @@ describe('item 5: level-up drinks (G6/G6b/G6c, G10a) and the recipe clash', () =
 
   it('clash: an older mocha ticket claimed by someone else keeps this bot off the cappuccino', () => {
     let s = FULL({ standIns: 2 });
-    s.customers = [order(1200, 'mocha'), order(1201, 'cappuccino')];
+    s.customers = [rung(1200, 'mocha'), rung(1201, 'cappuccino')];
     const other = sim(s, 2);
     other.bot!.claim = 1200;
     other.bot!.claimDrink = 'mocha';
@@ -394,8 +393,8 @@ describe('item 5: level-up drinks (G6/G6b/G6c, G10a) and the recipe clash', () =
     const plan = think(s, sim(s));
     expect(sim(s).bot!.claim).toBeNull(); // (it preps cold brew instead)
     expect(plan.some((x) => x.kind === 'use' && x.station.startsWith('steamer'))).toBe(false);
-    s.customers = [order(1201, 'cappuccino')]; // the mocha is gone: now the steamer makes cappuccino
-    expect(ids(think(s, sim(s)))).toContain('counter:serve');
+    s.customers = [rung(1201, 'cappuccino')]; // the mocha is gone: now the steamer makes cappuccino
+    expect(ids(think(s, sim(s)))).toContain('pickup:put');
     expect(sim(s).bot!.claim).toBe(1201);
   });
 
@@ -440,8 +439,8 @@ describe('item 5: level-up drinks (G6/G6b/G6c, G10a) and the recipe clash', () =
     let s = gearShop(['drip', 'drip', 'trash', null, null, null], ['d3', 'd4b', 'b0', null, null, null], { drinks: ['drip', 'pourOver'] });
     const p = sim(s);
     p.pos = { x: s.stations[0].pos.x, y: 2 }; // standing by the urn
-    expect(ids(chainFor(s, p, 'pourOver', 'serve'))).toEqual(['drip-2:insert', 'drip-2:take', 'counter:serve']);
-    expect(ids(chainFor(s, p, 'drip', 'serve'))).toEqual(['drip:insert', 'drip:take', 'counter:serve']);
+    expect(ids(chainFor(s, p, 'pourOver', 'serve'))).toEqual(['drip-2:insert', 'drip-2:take', 'pickup:put']);
+    expect(ids(chainFor(s, p, 'drip', 'serve'))).toEqual(['drip:insert', 'drip:take', 'pickup:put']);
     s.customers = [order(1240, 'pourOver'), order(1241, 'drip')];
     s = serveAll(s, 60 * 90);
     expect(s.today.drinks!.pourOver).toBe(1);
@@ -450,7 +449,7 @@ describe('item 5: level-up drinks (G6/G6b/G6c, G10a) and the recipe clash', () =
 
   it('a busy afternoon of every new drink with two bots: all served, nothing binned', () => {
     let s = FULL({ standIns: 2 });
-    s.customers = NEW.map((d, i) => order(1300 + i, d));
+    s.customers = NEW.map((d, i) => rung(1300 + i, d)); // already rung: this is about the drinks (ringing: pickupBots.test.ts)
     s = serveAll(s, 60 * 300);
     expect(s.today.served).toBe(NEW.length);
     expect(s.today.wasted ?? 0).toBe(0);
@@ -463,7 +462,7 @@ describe('item 6: multiples and twins (G4e, G9)', () => {
   it('E5 twins: two bots on two espresso orders pull on different groups, and both are served', () => {
     let s = gearShop(['grinder', 'grinder', 'espresso', 'steamer', 'trash', null], ['g2', 'g2', 'e5', 's3', 'b0', null], { standIns: 2 });
     expect(s.stations.filter((x) => x.kind === 'espresso').map((x) => x.id)).toEqual(['espresso', 'espresso-2']);
-    s.customers = [order(1400, 'espresso'), order(1401, 'espresso')];
+    s.customers = [rung(1400, 'espresso'), rung(1401, 'espresso')];
     for (let i = 0; i < 12; i++) s = step(s, []);
     const groups = [sim(s, 1), sim(s, 2)].map((p) => p.bot!.plan.find((x) => x.kind === 'use' && x.makes === 'espresso' && x.station.startsWith('espresso')) as { station: string });
     expect(groups.every(Boolean)).toBe(true);
@@ -474,7 +473,7 @@ describe('item 6: multiples and twins (G4e, G9)', () => {
 
   it('a second copy of a machine (G4e): two latte orders steam on both steamers', () => {
     let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', 'grinder'], ['g2', 'e3', 's2', 's2', 'b0', 'g2'], { standIns: 2 });
-    s.customers = [order(1410, 'latte'), order(1411, 'latte')];
+    s.customers = [rung(1410, 'latte'), rung(1411, 'latte')];
     const used = new Set<string>();
     s = serveAll(s, 60 * 90, (x) => { for (const st of x.stations) if (st.kind === 'steamer' && st.busyTicksLeft > 0) used.add(st.id); });
     expect(s.today.drinks!.latte).toBe(2);
@@ -559,7 +558,7 @@ describe('fix round 1', () => {
     let s = gearShop(['grinder', 'espresso', 'steamer', 'steamer', 'trash', null], ['g2', 'e3', 's1', 's2', 'b0', null]);
     const s1 = s.stations.find((x) => x.id === 'steamer')!;
     sim(s).pos = { x: s1.pos.x, y: 2 }; // it plans the latte on s1
-    s.customers = [order(1600, 'latte')];
+    s.customers = [rung(1600, 'latte')];
     s = runUntil(s, (x) => {
       const plan = sim(x).bot!.plan;
       return plan[0]?.kind === 'use' && plan[0].station === 'espresso' && plan[0].action === 'take' && plan[1]?.kind === 'use' && plan[1].station === 'steamer';
