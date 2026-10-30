@@ -13,6 +13,7 @@ import { gearArea } from './gear';
 import { menuPrice, unitCost } from './pricing';
 import { wageEach } from './staff';
 import { roleSupplyCost } from './roles';
+import { restockCost } from './night';
 import { ECONOMY } from '../data/economy';
 import type { DrinkId, GameState, PlayerInput, SupplyId } from './types';
 
@@ -142,7 +143,7 @@ export function applyBranchInput(state: GameState, input: Extract<PlayerInput, {
     sendStock(state, input.supply);
   } else if (input.action === 'close') {
     if (!state.branch) return state;
-    state.cash = r2(state.cash + state.branch.spent / 2);
+    state.cash = r2(state.cash + state.branch.spent / 2 + (state.branch.stockCredit ?? 0)); // review M3: unspent stock comes back as cash
     delete state.branch;
   }
   return state;
@@ -156,7 +157,8 @@ export function sendStock(state: GameState, supply: SupplyId | undefined): void 
   const units = Math.min(state.supplies[supply] ?? 0, pack.size);
   if (units <= 0) return;
   state.supplies[supply] -= units;
-  b.stockCredit = r2((b.stockCredit ?? 0) + (units * pack.cost) / pack.size);
+  // Review M3: valued at what a pack costs the crew tonight (a Manager or card discount counts), so a send can't be a money-maker.
+  b.stockCredit = r2((b.stockCredit ?? 0) + (units * restockCost(state, supply, 1)) / pack.size);
 }
 
 /** Score: the branch counts like a fitting (half what it cost). */

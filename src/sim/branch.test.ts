@@ -5,6 +5,7 @@ import { step } from './step';
 import { areaFit, BRANCH, branchAreas, branchDay, canOpenBranch } from './branch';
 import { branchViewModel } from '../ui/branchView';
 import { gearArea } from './gear';
+import { restockCost } from './night';
 import { fittingsValue, scoreRun } from './score';
 import { profitOf } from './profit';
 import { validateInput } from './validate';
@@ -108,6 +109,28 @@ describe('manager mode (P4 B5)', () => {
     expect(after.days[after.days.length - 1].branch?.fromStock).toBe(est.fromStock);
     expect(after.branch?.stockCredit ?? 0).toBeCloseTo(credit - est.fromStock!, 2);
     expect(validateInput({ kind: 'branch', playerId: 'p1', action: 'send', supply: 'pastry' })).toBeNull();
+  });
+
+  it('review M3: stock is valued at what the crew would pay to restock it (a Manager discount counts)', () => {
+    let s = open(night());
+    s.players[0]!.role = 'manager';
+    s.supplies.beans = 7;
+    const perUnit = restockCost(s, 'beans', 1) / 10;
+    expect(perUnit).toBeLessThan(8 / 10);
+    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'send', supply: 'beans' }]);
+    expect(s.branch?.stockCredit).toBeCloseTo(7 * perUnit, 2);
+  });
+
+  it('review M3: selling the lease refunds any unspent stock credit', () => {
+    let s = open(night());
+    s.supplies.beans = 10;
+    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'send', supply: 'beans' }]);
+    const credit = s.branch!.stockCredit!;
+    expect(credit).toBeGreaterThan(0);
+    const cash = s.cash;
+    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'close' }]);
+    expect(s.branch).toBeUndefined();
+    expect(s.cash).toBeCloseTo(cash + BRANCH.cost / 2 + credit, 2);
   });
 
   it('a Manager adds cups per barista and their supplier discount, and the drawer says so', () => {
