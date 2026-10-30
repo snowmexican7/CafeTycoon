@@ -129,3 +129,35 @@ describe('bots and cold cups', () => {
     expect(bot(s).bot!.plan.length).toBeGreaterThan(1);
   });
 });
+
+describe('cold cups with FB2 A1 helper bots', () => {
+  /** A Gear stand with one person (p1) at the till and one crew bot (a helper). */
+  function helperStand(): GameState {
+    let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 150 }, tier: 'stand', gear: true });
+    for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
+    s.supplies.beans = 40;
+    s.supplies.milk = 40;
+    s = quiet(startDay(s));
+    const till = s.stations.find((x) => x.id === 'counter')!;
+    s.players[0].pos = { x: till.pos.x, y: till.pos.y - 1 };
+    return s;
+  }
+  const helper = (s: GameState) => s.players.find((p) => p.id === 'bot-1')!;
+
+  it('a helper still clears a cold counter cup first while the person holds the till, and the person rings no one into it', () => {
+    let s = helperStand();
+    s.pass = [cup('espresso', s.tick - secs(50))];
+    s.customers = [{ id: 1, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'order' }];
+    expect(think(s, helper(s))).toEqual([{ kind: 'use', station: 'pickup', action: 'take' }, { kind: 'use', station: 'trash', action: 'trash' }]);
+    const kinds: string[] = [];
+    for (let i = 0; i < secs(20) && !kinds.includes('pickup.takeBack'); i++) {
+      s = step(s, idle);
+      for (const e of s.log) if (e.tick === s.tick) kinds.push(e.kind);
+    }
+    expect(kinds).toContain('pickup.takeBack');
+    expect(kinds).not.toContain('till.rung'); // the helper leaves the till to the person
+    s = step(s, [{ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: true }]); // the person rings the espresso order
+    expect(s.log.some((e) => e.kind === 'till.rung')).toBe(true);
+    expect(s.log.some((e) => e.kind === 'pickup.cold')).toBe(false);
+  });
+});
