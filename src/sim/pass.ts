@@ -63,6 +63,7 @@ export function counterInteract(state: GameState, playerId: PlayerId, at?: Stati
  */
 function gearCounter(state: GameState, player: Player, at?: Station): GameState {
   const spot = spotOf(at);
+  if (spot === 'sink') return state; // FB2 A3: the sink has its own rules (src/sim/sink.ts), never the counter's
   if (player.holding !== null) {
     if (player.holding !== 'grounds' && state.pass.length < passSlots(state)) {
       const drink = player.holding;
