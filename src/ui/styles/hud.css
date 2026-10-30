@@ -76,6 +76,7 @@
 #hud .chalk .row b { color: var(--honey); font-family: var(--font-display); }
 #hud .chalk .row .d { display: flex; align-items: center; gap: 6px; }
 #hud .chalk .row.off { opacity: .55; } #hud .chalk .row.off b { color: #f1ebdf; font-size: 13px; }
+#hud .chalk .row.empty { opacity: .85; } #hud .chalk .menu-hint { display: block; font: 600 13px var(--font-body); color: #d8d0c2; line-height: 1.3; margin-top: 4px; }
 /* FB1 WP4: the sold-out sign hung on the menu card */
 #hud .chalk .soldout-sign { display: flex; flex-direction: column; align-items: center; margin: -2px -4px 8px; padding: 6px 8px; border-radius: 8px;
   background: #e0564a; color: #fff; transform: rotate(-2.5deg); box-shadow: 0 3px 0 #b8413a; }
@@ -89,7 +90,13 @@
   #hud .supply .lab small { display: none; }
   #hud .chalk.sold-out .row { display: none; }
   #hud .chalk .soldout-sign { margin-bottom: 2px; }
+  #hud .chalk .row { padding: 1px 0; }
+  #hud .hud-side.right .h { margin: 2px 4px -4px; }
 }
+/* The right rail never squashes pantry, gear, floor or menu (they clipped each other at 1280x800 with a
+   four-drink menu); only the morning note gives way and scrolls. */
+#hud .hud-side.right > :not(.note) { flex-shrink: 0; }
+#hud .hud-side.right > .note { flex: 0 1 auto; min-height: 48px; }
 #hud .note { background: #fff1b8; transform: rotate(1.5deg); font-size: 13.5px; line-height: 1.35; overflow: auto; }
 #hud .note b { font: 600 13px var(--font-display); display: block; letter-spacing: .08em; color: #7a5c0e; margin-bottom: 2px; }
 #hud .note p { margin: 0 0 4px; }

@@ -178,7 +178,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     el.menu.classList.toggle('sold-out', !!vm.soldOut);
     el.menu.innerHTML = (vm.soldOut ? `<div class="soldout-sign" role="status"><b>SOLD OUT</b><small>Nothing left to make today</small></div>` : '') + vm.menu
       .map((m) => `<div class="row ${m.available ? '' : 'off'}"><span class="d">${itemIcon(m.id, 24)}${DRINK_LABEL[m.id]}</span><b>${m.available ? esc(m.price) : m.offMenu ? 'off menu' : 'sold out'}</b></div>`)
-      .join('');
+      .join('') + (vm.menu.length === 0 ? `<div class="row off empty"><span class="d">Nothing on the menu yet</span></div><small class="menu-hint">Your machines can't make a drink. Check the Gear tab tonight.</small>` : '');
     notes = vm.notes;
     prices = Object.fromEntries(vm.menu.map((m) => [m.id, m.price]));
     lastOrders = '';

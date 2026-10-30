@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRun } from '../sim/run';
 import type { GameState, SimEvent } from '../sim/types';
-import { botLook, botTag, crewBursts, emotePhase, newCrewMemory, toastText, vibeLabel, VIBE_START } from './crewModel';
+import { botLook, botTag, crewBursts, tillText, emotePhase, newCrewMemory, toastText, vibeLabel, VIBE_START } from './crewModel';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }, { id: 'p2', name: 'Dev' }] });
 const clone = (s: GameState): GameState => structuredClone(s);
@@ -127,5 +127,13 @@ describe('juice pass', () => {
     expect(vibeLabel(80).tone).toBe('high');
     expect(vibeLabel(50).tone).toBe('mid');
     expect(vibeLabel(20).tone).toBe('low');
+  });
+});
+
+describe('Gear polish: till tip in the serve toast', () => {
+  it('shows the fast hand-off tip only when there is one', () => {
+    expect(tillText(0.5)).toBe(' · 🧾 +$0.50');
+    expect(tillText(undefined)).toBe('');
+    expect(tillText(0)).toBe('');
   });
 });

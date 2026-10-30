@@ -16,8 +16,9 @@ import { Effects } from './layers/fx';
 import { ESPRESSO } from '../sim/espresso';
 import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
-import { StationOverlay, buildEmptySlot, buildStation, stationNumber, type StationOverlayState } from './layers/stations';
-import { emptySlotPositions } from './slotModel';
+import { StationOverlay, buildEmptySlot, buildStation, type StationOverlayState } from './layers/stations';
+import { emptySlotPositions, stationBadges, wallMenuRows } from './slotModel';
+import { GEAR } from '../data/gear';
 import { buildWall } from './layers/wall';
 import { buildLot } from './layers/lot';
 import { layoutFor } from '../data/layout';
@@ -85,13 +86,16 @@ export class Scene {
     // FB1 WP5: the art follows state.stations (bought duplicates, swapped slots), with a plinth in every empty slot.
     const lay = layoutFor(tier);
     const list = stations ?? lay.stations;
-    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}`).join('|')}`;
+    const gearOf = (s: (typeof list)[number]) => ('gear' in s ? s.gear : undefined);
+    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}`;
     if (key === this.stationKey) return;
     this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
-    this.stationArt = list.map((s) => {
+    const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: 'twin' in s && s.twin === true })));
+    this.stationArt = list.map((s, i) => {
       const twin = 'twin' in s && s.twin === true;
-      return buildStation(s.kind, s.pos, checkout, twin ? 1 : stationNumber(s.id), twin);
+      const g = gearOf(s);
+      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : undefined);
     });
     for (const pos of emptySlotPositions(tier, list)) this.stationArt.push(buildEmptySlot(pos));
     for (const c of this.stationArt) this.depth.addChild(c);
@@ -143,6 +147,7 @@ export class Scene {
     this.lighting.setNight(night);
 
     const mods = computeModifiers(state);
+    this.wall.setMenu(wallMenuRows(state, mods.price));
     const stations: StationOverlayState[] = state.stations.map((s) => {
       let progress: number | null = null;
       if (s.busyTicksLeft > 0 && s.kind !== 'counter' && s.kind !== 'trash') {

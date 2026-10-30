@@ -372,7 +372,8 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
   const warned = new Map(vm.warnings.filter((w) => w.supply).map((w) => [w.supply!, w.level]));
   const stock = vm.restock
     .map((r) => {
-      const lvl = r.count <= 0 ? 'danger' : warned.get(r.supply);
+      // Gear runs only flag what tonight's menu needs (no machine, no alarm); pastries are an optional side.
+      const lvl = vm.gear ? warned.get(r.supply) : r.count <= 0 && r.supply !== 'pastry' ? 'danger' : warned.get(r.supply);
       const tip = r.spoilPct ? `${r.spoilPct}% of what's left goes off at close${r.spoiled ? ` (${r.spoiled} went off last night)` : ''}` : '';
       return `<div class="restock ${lvl ?? ''}" data-supply="${r.supply}" ${tip ? `title="${esc(tip)}"` : ''}>${jar(Math.min(1, r.count / 30), SUPPLY_COLOR[r.supply], 30)}
         <div class="rs-lab"><b>${SUPPLY_LABEL[r.supply]}</b><span>${r.count}${lvl === 'danger' ? ' · out' : lvl ? ' · low' : ''}</span></div>
@@ -529,7 +530,7 @@ export interface NightUiState { tab: NightTab; spend: SpendView; drawer: Drawer 
 export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: string | null | undefined, ui: NightUiState): string {
   const cash = parseMoney(vm.cash);
   const day = extras?.day ?? 1;
-  const title = day <= 1 ? (vm.gear ? 'Pick your gear' : 'Opening night') : `After Day ${day - 1}`;
+  const title = day <= 1 ? (vm.gear && ui.tab === 'gear' ? 'Pick your gear' : 'Opening night') : `After Day ${day - 1}`;
   const sub = `planning ${extras ? `${extras.weekday}, ` : ''}Day ${day}`;
   const alertN = vm.brief.alerts.filter((a) => a.severity === 'danger' || a.severity === 'warn').length;
   const badge: Record<NightTab, string> = { tonight: alertN ? `${alertN}` : '', menu: '', spend: vm.hand.length ? `${vm.hand.length}` : '', gear: '' };

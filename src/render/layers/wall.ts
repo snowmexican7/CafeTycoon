@@ -4,7 +4,7 @@ import { FONT_BODY, MAT, PALETTE, WALL } from '../theme';
 import { label, vertical } from './draw';
 
 /** The back wall band (render-only, above sim row 0): wallpaper, shelf, chalkboard menu, window, wainscot. */
-export function buildWall(width: number): { root: Container; setNight(night: boolean): void } {
+export function buildWall(width: number): { root: Container; setNight(night: boolean): void; setMenu(rows: readonly [string, string][]): void } {
   const root = new Container();
   const g = new Graphics();
   root.addChild(g);
@@ -34,22 +34,36 @@ export function buildWall(width: number): { root: Container; setNight(night: boo
   g.ellipse(207, 28, 13, 9).fill(0x6fb36b);
   g.ellipse(200, 24, 6, 8).fill(0x82c47c);
 
-  // chalkboard menu (prices are the base menu prices)
+  // chalkboard menu (the scene keeps it in step with the live menu)
   g.roundRect(378, 18, 98, 70, 8).fill(MAT.frame);
   g.roundRect(384, 24, 86, 58, 4).fill(MAT.chalk);
   const menu = label('MENU', 11, 0xf6efe2, '600');
   menu.position.set(427, 36);
   root.addChild(menu);
-  const rows: [string, number][] = [['Espresso', ECONOMY.prices.espresso], ['Latte', ECONOMY.prices.latte], ['Cold brew', ECONOMY.prices.coldBrew]];
-  rows.forEach(([name, price], i) => {
-    const n = label(name, 8.5, 0xe9e3d6, '700', FONT_BODY);
-    n.anchor.set(0, 0.5);
-    n.position.set(392, 52 + i * 11);
-    const p = label(price.toFixed(2), 8.5, PALETTE.honey, '800', FONT_BODY);
-    p.anchor.set(1, 0.5);
-    p.position.set(462, 52 + i * 11);
-    root.addChild(n, p);
-  });
+  const chalkRows = new Container();
+  root.addChild(chalkRows);
+  let chalkKey = '';
+  const setMenu = (rows: readonly [string, string][]) => {
+    const key = JSON.stringify(rows);
+    if (key === chalkKey) return;
+    chalkKey = key;
+    for (const c of chalkRows.removeChildren()) c.destroy();
+    const list: readonly [string, string][] = rows.length ? rows : [['Coming soon', '']];
+    const gap = list.length > 3 ? 8.5 : 11;
+    list.forEach(([name, price], i) => {
+      const n = label(name, list.length > 3 ? 7.5 : 8.5, 0xe9e3d6, '700', FONT_BODY);
+      n.anchor.set(0, 0.5);
+      n.position.set(392, 50 + i * gap);
+      chalkRows.addChild(n);
+      if (!price) return;
+      const p = label(price, list.length > 3 ? 7.5 : 8.5, PALETTE.honey, '800', FONT_BODY);
+      p.anchor.set(1, 0.5);
+      p.position.set(462, 50 + i * gap);
+      chalkRows.addChild(p);
+    });
+  };
+  // Until the scene hands over the live menu: the three classics at list price.
+  setMenu([['Espresso', ECONOMY.prices.espresso.toFixed(2)], ['Latte', ECONOMY.prices.latte.toFixed(2)], ['Cold brew', ECONOMY.prices.coldBrew.toFixed(2)]]);
 
   // hanging plant
   g.moveTo(560, 0).lineTo(560, 18).stroke({ width: 2, color: MAT.trim });
@@ -88,6 +102,7 @@ export function buildWall(width: number): { root: Container; setNight(night: boo
 
   return {
     root,
+    setMenu,
     setNight(night) {
       if (dayGlass.visible === !night) return;
       dayGlass.visible = !night;
