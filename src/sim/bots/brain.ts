@@ -26,6 +26,7 @@ import { CONDIMENTS_ID, PICKUP_ID, SINK_ID, layoutFor } from '../../data/layout'
 import { CONDIMENTS, canTakeBox, returnBox } from '../condiments';
 import { isSink, needsDump } from '../sink';
 import { answerPhone } from './phone';
+import { undoneDrinks, wantsItem } from '../orders';
 import { heldByPerson, heldForPeople, ringsAtOnce } from './helper';
 
 const BOTS = ECONOMY.bots;
@@ -349,7 +350,11 @@ function coveragePool(state: GameState): Coverage {
   return { drinks, pending };
 }
 
-/** Every customer, in queue order, that no other bot claimed, is on the menu, and no drink in flight covers. */
+/**
+ * Every order, in queue order, that no other bot claimed, is on the menu, and no drink in flight covers. FB2 B6: each
+ * item still to come on a multi-drink ticket is an order of its own (a copy of the customer with that `drink`), and
+ * each other bot's claim on the ticket covers one item of its drink.
+ */
 export function uncoveredOrders(state: GameState, self: Player): Customer[] {
   const { drinks, pending } = coveragePool(state);
   let shots = pending;
@@ -357,19 +362,38 @@ export function uncoveredOrders(state: GameState, self: Player): Customer[] {
   const out: Customer[] = [];
   for (const c of state.customers) {
     if (c.egg === 'camper') continue; // the Wi-Fi camper never orders (pickup review M3)
-    if (claimedByOther(state, self, c.id)) continue;
-    if (!menu.includes(c.drink)) continue;
-    if (drinks[c.drink] > 0) {
-      drinks[c.drink] -= 1;
-      continue;
+    const wants = c.items ? undoneDrinks(c) : [c.drink];
+    const claims = c.items ? ticketClaims(state, self, c.id) : null;
+    if (!claims && claimedByOther(state, self, c.id)) continue;
+    for (const d of wants) {
+      if (claims && (claims.get(d) ?? 0) > 0) {
+        claims.set(d, claims.get(d)! - 1);
+        continue;
+      }
+      if (!menu.includes(d)) continue;
+      if (drinks[d] > 0) {
+        drinks[d] -= 1;
+        continue;
+      }
+      if (usesShot(d) && shots > 0) {
+        shots -= 1;
+        continue;
+      }
+      out.push(c.items ? { ...c, drink: d } : c);
     }
-    if (usesShot(c.drink) && shots > 0) {
-      shots -= 1;
-      continue;
-    }
-    out.push(c);
   }
   return out;
+}
+
+/** FB2 B6: other bots' claims on ticket `id`, counted by drink. */
+function ticketClaims(state: GameState, self: Player, id: number): Map<DrinkId, number> {
+  const claims = new Map<DrinkId, number>();
+  for (const p of state.players) {
+    const b = p.bot;
+    if (p === self || !b || b.claim !== id || !b.claimDrink) continue;
+    claims.set(b.claimDrink, (claims.get(b.claimDrink) ?? 0) + 1);
+  }
+  return claims;
 }
 
 /** The first uncovered order the shop can make now, with its chain (think's rule 2), or null. FB2 A1: a helper skips fresh tickets held for free people. */
@@ -754,6 +778,7 @@ function execute(p: Player): void {
 
 function claimLost(state: GameState, b: BotState): boolean {
   const c = state.customers.find((x) => x.id === b.claim);
+  if (c?.items) return b.claimDrink === null || !wantsItem(c, b.claimDrink); // FB2 B6: an item of its drink is still to come
   return c === undefined || c.drink !== b.claimDrink;
 }
 
