@@ -1694,3 +1694,6 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 ## G4e — Buy multiples of the same machine (UI lane, tag `gear-g04e`)
 - Playtest: buying the machine you already own now adds a second copy into a free slot (no trade-in). Board shows "Buy another · $X" and "Yours ×N ✓". Lower tiers still do nothing; a higher tier upgrades one copy.
 - Bots: nothing needed (they already pick any station of a kind).
+
+## G4f — One clear night order (UI lane, tag `gear-g04f`)
+- Playtest: night tabs were confusing. Gear runs now show numbered steps ① Restock (stock first, full width) → ② Gear shop (its own tab; no longer under Spend › Stations) → ③ Menu → ④ Extras (cards, ads, pitch, grow, checkout). Pick-your-gear night puts Gear first (nothing to stock yet). A green "Next: N … ▸" footer button walks the order. Classic runs unchanged.
