@@ -106,7 +106,7 @@ export const GEAR_VOTE_MIN = 50;
 const voters = (state: GameState) => state.players.filter((x) => x.connected && !x.bot);
 
 /** G8: is this buy or sell a "big" one ($50 or more)? Returns the proposal body, or null. */
-function bigDeal(state: GameState, input: Extract<PlayerInput, { kind: 'gear' }>): Pick<GearVote, 'action' | 'gear' | 'index' | 'amount'> | null {
+function bigDeal(state: GameState, input: Extract<PlayerInput, { kind: 'gear' }>): Pick<GearVote, 'action' | 'gear' | 'index' | 'amount' | 'wand'> | null {
   if (input.action === 'buy') {
     const want = GEAR[input.gear];
     const wand = buyWand(input.gear, input.wand);
