@@ -1,5 +1,6 @@
 import type { Patch } from './delta';
 import { RESERVED_TELE_KINDS, type TeleEvent } from '../host/telemetry';
+import { isReservedId } from '../sim/constants';
 import type { BotsChoice, GameState, PlayerInput } from '../sim/types';
 
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
@@ -72,6 +73,9 @@ export interface TeleMsg {
 }
 
 const MAX_TOKEN = 64;
+/** Review I4: a token becomes a player id and a key in tallies, so it is a plain id word (the app makes UUIDs). */
+const TOKEN_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const okToken = (v: unknown): v is string => str(v) && TOKEN_RE.test(v) && !isReservedId(v);
 const MAX_TELE_EVENTS = 200;
 const MAX_TELE_KIND = 40;
 const MAX_TELE_DATA = 1000;
@@ -95,15 +99,14 @@ export function parseHello(data: unknown): HelloMsg | null {
 }
 
 export function parseJoin(data: unknown): JoinMsg | null {
-  if (!isObj(data) || data.t !== 'join' || !finite(data.protocol) || !str(data.token)) return null;
-  if (data.token.length < 1 || data.token.length > MAX_TOKEN) return null;
+  if (!isObj(data) || data.t !== 'join' || !finite(data.protocol) || !okToken(data.token)) return null;
   const msg: JoinMsg = { t: 'join', protocol: data.protocol, token: data.token, name: cleanName(data.name) };
-  if (str(data.prev) && data.prev.length >= 1 && data.prev.length <= MAX_TOKEN && data.prev !== data.token) msg.prev = data.prev;
+  if (okToken(data.prev) && data.prev !== data.token) msg.prev = data.prev;
   return msg;
 }
 
 export function parseSeat(data: unknown): SeatMsg | null {
-  if (!isObj(data) || data.t !== 'seat' || !str(data.token) || data.token.length < 1 || data.token.length > MAX_TOKEN) return null;
+  if (!isObj(data) || data.t !== 'seat' || !okToken(data.token)) return null;
   return { t: 'seat', token: data.token };
 }
 

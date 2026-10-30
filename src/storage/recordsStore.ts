@@ -6,6 +6,7 @@
 import type { Award } from '../sim/awards';
 import type { DayStats, GameState } from '../sim/types';
 import { isGearRun } from '../sim/gear';
+import { profitOf } from '../sim/profit';
 import { SEASON, seasonMedal, targetsHit, type Medal } from '../sim/season';
 import { readJson, type StorageLike } from './storageLike';
 
@@ -83,7 +84,7 @@ export function splitRecords(r: Records): Records {
   return { ...r, ...NO_BESTS, split: true, ...(hasBests(old) ? { classic: old } : {}) };
 }
 
-const dayProfit = (d: DayStats) => Math.round((d.sales + d.tips + (d.bonus ?? 0) - d.rent - (d.fines ?? 0) - (d.debtPaid ?? 0) - (d.wages ?? 0)) * 100) / 100;
+const dayProfit = profitOf; // review M2: the day's full net (branch, twists, licences, wages), like the rest of the game
 
 export function runTotals(state: GameState): Totals {
   const crew = state.crew?.players ?? [];
@@ -127,7 +128,9 @@ export function foldRecords(prev: Records, state: GameState, awards: Award[], da
   if (fresh) {
     for (const a of awards) {
       if (a.bot || a.tone === 'joke') continue;
-      const h = (r.hall[a.winner] ??= { mvp: 0, awards: 0 });
+      // Own-key check: a crew name is a network string ("__proto__", "constructor") and must not find an inherited member (review I4).
+      if (!Object.hasOwn(r.hall, a.winner)) Object.defineProperty(r.hall, a.winner, { value: { mvp: 0, awards: 0 }, enumerable: true, writable: true, configurable: true });
+      const h = r.hall[a.winner]!;
       if (a.id === 'mvp') {
         h.mvp += 1;
         r.mvps = [{ name: a.winner, seed: state.seed, date }, ...r.mvps].slice(0, KEEP_MVPS);

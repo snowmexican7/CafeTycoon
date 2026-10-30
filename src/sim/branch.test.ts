@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { createRun, startDay, startNight } from './run';
 import { finishDay } from './closing';
 import { step } from './step';
-import { areaFit, BRANCH, branchAreas, branchDay } from './branch';
+import { areaFit, BRANCH, branchAreas, branchDay, canOpenBranch, hasManager } from './branch';
 import { branchViewModel } from '../ui/branchView';
 import { gearArea } from './gear';
+import { restockCost } from './night';
 import { fittingsValue, scoreRun } from './score';
 import { profitOf } from './profit';
 import { validateInput } from './validate';
@@ -33,6 +34,15 @@ describe('second shop (P4 B4)', () => {
     expect(s.cash).toBe(1000 - BRANCH.cost);
     // Score-neutral-ish: the lease counts at half, like any fitting.
     expect(fittingsValue(s) - fittingsValue(night())).toBeCloseTo(BRANCH.cost / 2, 2);
+  });
+
+  it('review M1: a café made by createRun (tier absent) can open a branch', () => {
+    const s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], settings: { bots: 0 }, tier: 'cafe', gear: true });
+    expect(s.tier).toBeUndefined();
+    s.cash = 1000;
+    expect(canOpenBranch(s)).toBe(true);
+    s.tier = 'cart';
+    expect(canOpenBranch(s)).toBe(false);
   });
 
   it('banks a deterministic off-screen day at closing, capped by staff, and counts it in the profit', () => {
@@ -99,6 +109,40 @@ describe('manager mode (P4 B5)', () => {
     expect(after.days[after.days.length - 1].branch?.fromStock).toBe(est.fromStock);
     expect(after.branch?.stockCredit ?? 0).toBeCloseTo(credit - est.fromStock!, 2);
     expect(validateInput({ kind: 'branch', playerId: 'p1', action: 'send', supply: 'pastry' })).toBeNull();
+  });
+
+  it('review M3: stock is valued at what the crew would pay to restock it (a Manager discount counts)', () => {
+    let s = open(night());
+    s.players[0]!.role = 'manager';
+    s.supplies.beans = 7;
+    const perUnit = restockCost(s, 'beans', 1) / 10;
+    expect(perUnit).toBeLessThan(8 / 10);
+    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'send', supply: 'beans' }]);
+    expect(s.branch?.stockCredit).toBeCloseTo(7 * perUnit, 2);
+  });
+
+  it('review M3: selling the lease refunds any unspent stock credit', () => {
+    let s = open(night());
+    s.supplies.beans = 10;
+    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'send', supply: 'beans' }]);
+    const credit = s.branch!.stockCredit!;
+    expect(credit).toBeGreaterThan(0);
+    const cash = s.cash;
+    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'close' }]);
+    expect(s.branch).toBeUndefined();
+    expect(s.cash).toBeCloseTo(cash + BRANCH.cost / 2 + credit, 2);
+  });
+
+  it('review M8: a Manager who has disconnected adds no cups', () => {
+    let s = open(night());
+    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'staff', staff: 1 }]);
+    const without = branchDay(s)!;
+    s.players[0]!.role = 'manager';
+    const withM = branchDay(s)!;
+    expect(withM.served).toBeGreaterThan(without.served);
+    s.players[0]!.connected = false;
+    expect(hasManager(s)).toBe(false);
+    expect(branchDay(s)!.served).toBe(without.served);
   });
 
   it('a Manager adds cups per barista and their supplier discount, and the drawer says so', () => {

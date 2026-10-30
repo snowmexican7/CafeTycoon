@@ -1,6 +1,6 @@
 import { applyBranchInput } from './branch';
 import { applySignatureInput } from './signature';
-import { applyGearInput } from './gear';
+import { applyGearInput, settleVote } from './gear';
 import { applyPitchInput } from './pitch';
 import { applyAdInput } from './ads';
 import { applyCheckoutInput } from './checkout';
@@ -8,7 +8,7 @@ import { applyRivalCounterInput, applyScoutInput, applyStampCardInput } from './
 import { beginSeason } from './season';
 import { applyTwistInput } from './taste';
 import { applyRoleInput } from './roles';
-import { applyCall } from './call';
+import { applyCall, noteCallRang } from './call';
 import { applyCloseEarly, closeVoteUnanimous, dropCloseVote } from './closeEarly';
 import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
@@ -75,6 +75,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
         p.heldDir = { x: 0, y: 0 };
         p.interactQueued = false;
         dropCloseVote(s, p.id);
+        settleVote(s); // an open gear vote may now have its majority (or be lost)
         clearFloorFields(p);
         if (s.mop.heldBy === p.id) {
           s.mop.heldBy = null;
@@ -247,6 +248,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
       return;
     }
   }
+  if (doorsOpen) noteCallRang(s);
   s.phaseTicksLeft -= 1;
   if (s.phaseTicksLeft > 0) return;
   if (doorsOpen) {

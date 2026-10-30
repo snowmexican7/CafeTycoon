@@ -120,3 +120,28 @@ describe('rival escalation (P4 B1)', () => {
     expect(computeModifiers(json).traffic).toBeCloseTo(computeModifiers(s).traffic, 9);
   });
 });
+
+describe('review M10: the promo-day memo changes no result', () => {
+  const digest = (seeds: number[], days: number[]) => {
+    const bySeed = new Map<number, string>();
+    for (const d of days) {
+      for (const seed of seeds) bySeed.set(seed, (bySeed.get(seed) ?? '') + (isPromoDay(run(seed), d) ? '1' : '0'));
+    }
+    return bySeed;
+  };
+
+  it('matches the unmemoised answers (golden), whatever order seeds and days are asked in', () => {
+    const seeds = Array.from({ length: 25 }, (_, i) => i + 1);
+    const days = Array.from({ length: 42 }, (_, i) => i + 1);
+    const forward = digest(seeds, days);
+    // Same days per seed, but asked backwards and interleaved across seeds (a memo must not leak between seeds or weeks).
+    const backward = digest([...seeds].reverse(), [...days].reverse());
+    for (const seed of seeds) expect([...backward.get(seed)!].reverse().join('')).toBe(forward.get(seed));
+    // Golden, taken from the unmemoised code: 9 promo days per seed over six weeks (1 in week 2, 2 in weeks 3-6).
+    const all = seeds.map((s) => forward.get(s)!).join('');
+    let h = 0;
+    for (const c of all) h = (Math.imul(h, 31) + c.charCodeAt(0)) | 0;
+    expect(all.split('1').length - 1).toBe(225);
+    expect(h).toBe(-199029481);
+  });
+});

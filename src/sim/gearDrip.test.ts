@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from './run';
+import { finishDay } from './closing';
 import { applyGearInput, gearArea, gearAskedFor, gearPotPour } from './gear';
 import { interact, stepStations } from './stations';
 import { GEAR, type GearId } from '../data/gear';
@@ -122,5 +123,22 @@ describe('Gear Tree G4d: drip', () => {
     buy(s, 'd3');
     expect(s.stations.filter((x) => x.kind === 'drip').map((x) => x.gear)).toEqual(['d3']);
     expect(s.cash).toBe(500 - 15 + 2 - 85);
+  });
+
+  it('review M9: closing clears the drip pot (no stale potLeft/potColdAt/potOff in the save)', () => {
+    const s = createRun(opts(true));
+    s.cash = 500;
+    buy(s, 'd1');
+    startDay(s);
+    const st = s.stations.find((x) => x.kind === 'drip')!;
+    st.potLeft = 3;
+    st.potColdAt = s.tick + 99;
+    st.potOff = 'cold';
+    s.phase = 'closing';
+    const after = finishDay(s);
+    const drip = after.stations.find((x) => x.kind === 'drip')!;
+    expect(drip.potLeft).toBeUndefined();
+    expect(drip.potColdAt).toBeUndefined();
+    expect(drip.potOff).toBeUndefined();
   });
 });

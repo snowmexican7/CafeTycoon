@@ -68,6 +68,7 @@ describe('phone calls from the second shop (P4 B6)', () => {
     const s = dayWithCall('machine');
     s.branch!.staff = 3;
     const plain = branchDay(s)!;
+    s.callRang = s.day; // it rang and nobody picked up (a call that never rang doesn't count; review I2)
     const missed = branchDay(s, s.day, true)!;
     expect(missed.call).toEqual({ kind: 'machine', took: false });
     expect(missed.served).toBe(Math.min(plain.served + plain.walked, Math.floor((3 * 12) / 2)));
@@ -76,6 +77,27 @@ describe('phone calls from the second shop (P4 B6)', () => {
     expect(fixed.served).toBe(plain.served);
     expect(fixed.costs).toBeCloseTo(plain.costs + CALL.repair, 2);
     expect(callLine(fixed.call)).toMatch(/Kay sent a fix/);
+  });
+
+  it('review I2: a call that never rang (shop closed early) is not counted as missed', () => {
+    const s = dayWithCall('machine');
+    s.branch!.staff = 3;
+    const c = callFor(s)!;
+    const plain = branchDay(s)!;
+    // Closing before the phone rings: no call outcome, full cups, nothing in the record.
+    at(s, c.ringAt - 40);
+    expect(branchDay(s, s.day, true)!.call).toBeUndefined();
+    expect(branchDay(s, s.day, true)!.served).toBe(plain.served);
+    const early = finishDay(structuredClone(s));
+    expect(early.days.at(-1)!.branch?.call).toBeUndefined();
+    expect(early.days.at(-1)!.branch?.served).toBe(plain.served);
+    // Once it has rung (even if nobody answered), it counts as missed.
+    let t = at(structuredClone(s), c.ringAt);
+    t = step(t, []);
+    expect(t.callRang).toBe(t.day);
+    const missed = finishDay(at(t, c.until + 5));
+    expect(missed.days.at(-1)!.branch?.call).toEqual({ kind: 'machine', took: false });
+    expect(missed.callRang).toBeUndefined();
   });
 
   it('a taken order adds its profit but uses branch cups, and closing records and clears it', () => {

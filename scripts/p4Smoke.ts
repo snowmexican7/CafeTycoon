@@ -49,7 +49,7 @@ export function p4Run(seed: number, humans = 2, days = 28, start?: Parameters<ty
   if (s.season && !rec.seasons?.length) problems.push('season missing from records');
   const branchDays = s.days.filter((d) => d.branch);
   return {
-    seed, humans, days: s.days.length, cash: Math.round(s.cash), tier: s.tier, bankrupt: s.bankrupt,
+    seed, humans, days: s.days.length, cash: Math.round(s.cash), tier: s.tier ?? 'cafe', bankrupt: s.bankrupt,
     season: s.season ? `${s.season.weeks.map((w) => `w${w.week}:${Math.round(w.profit)}${w.target !== null ? '/' + w.target : ''}`).join(' ')} → ${targetsHit(s.season)} hit, ${seasonMedal(s.season) ?? 'no medal'}` : null,
     counters: trace.counters, stamps: trace.stamps, branchDay: trace.branchDay,
     branchProfit: Math.round(branchDays.reduce((a, d) => a + (d.branch!.profit ?? 0), 0)),

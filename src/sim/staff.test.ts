@@ -118,6 +118,32 @@ describe('P3 B15: hired staff and wages', () => {
     expect(vm.wages).toBe('$2.00');
   });
 
+  it('review M6: a cover bot (someone dropped) is not hired, so it draws no wage', () => {
+    const s = gearRun(2);
+    syncBots(s);
+    expect(staff(s).length).toBe(1); // auto crew of 3: two people + one hired bot
+    s.players.find((p) => p.id === 'p2')!.connected = false;
+    syncBots(s); // a second bot covers the empty spot
+    expect(staff(s).length).toBe(2);
+    expect(wagesForDay(s)).toBe(WAGE_BY_TIER.stand); // only the hired one is on the books
+    s.challenges = [];
+    s.phase = 'closing';
+    const after = finishDay(s);
+    expect(after.days.at(-1)!.wages).toBe(WAGE_BY_TIER.stand);
+  });
+
+  it('review M6: a bot the crew did hire is still paid when people are away', () => {
+    const s = gearRun(2);
+    s.settings.bots = 2; // hired two bots for two people
+    syncBots(s);
+    expect(staff(s).length).toBe(2);
+    s.players.find((p) => p.id === 'p2')!.connected = false;
+    syncBots(s);
+    s.challenges = [];
+    s.phase = 'closing';
+    expect(finishDay(s).days.at(-1)!.wages).toBe(2 * WAGE_BY_TIER.stand);
+  });
+
   it('wages can bankrupt a shop that cannot cover them', () => {
     const s = gearRun();
     syncBots(s);

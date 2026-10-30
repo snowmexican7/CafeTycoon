@@ -19,6 +19,13 @@ describe('protocol parsers', () => {
     expect(parseJoin({ t: 'join', protocol: 4, token: 'a', name: 'Sam', prev: 'x'.repeat(65) })!.prev).toBeUndefined();
     expect(parseSeat({ t: 'seat', token: 'b' })).toEqual({ t: 'seat', token: 'b' });
     expect(parseSeat({ t: 'seat', token: '' })).toBeNull();
+    // review I4: tokens become player ids, so only [A-Za-z0-9_-] is allowed
+    for (const bad of ['__proto__', 'constructor', 'prototype', 'toString', 'a b', 'a.b', 'a/b', '☕', '{}', 'a\n']) {
+      expect(parseJoin({ t: 'join', protocol: 4, token: bad, name: 'Sam' })).toBeNull();
+      expect(parseSeat({ t: 'seat', token: bad })).toBeNull();
+    }
+    expect(parseJoin({ t: 'join', protocol: 4, token: '3f2b-A_9', name: 'Sam', prev: 'bad token' })!.prev).toBeUndefined();
+    expect(parseJoin({ t: 'join', protocol: 4, token: crypto.randomUUID(), name: 'Sam' })).not.toBeNull();
     expect(parseSeat({ t: 'seat' })).toBeNull();
   });
 

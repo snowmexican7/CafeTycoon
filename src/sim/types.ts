@@ -510,6 +510,8 @@ export interface GameState {
   closeVotes?: PlayerId[];
   /** P4 B6: who answered the branch's phone call, and whether they fixed it / took the order. */
   callAnswer?: { day: number; take: boolean; by: string };
+  /** Review I2: the day today's branch call first rang (absent = it hasn't, so closing doesn't count it as missed). */
+  callRang?: number;
   /** FB1 WP3: tick stamp of when the queue last emptied (absent while someone is queued). */
   emptySince?: number;
   pass: PassItem[];

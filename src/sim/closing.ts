@@ -42,6 +42,10 @@ export function finishDay(state: GameState): GameState {
     delete s.outputSince;
     s.occupiedBy = null;
     s.making = null;
+    // Review M9: a half-poured pot doesn't keep over the night.
+    delete s.potLeft;
+    delete s.potColdAt;
+    delete s.potOff;
   }
   for (const p of state.players) {
     p.holding = null;

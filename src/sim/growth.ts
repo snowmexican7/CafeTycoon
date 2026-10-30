@@ -11,7 +11,7 @@
  * Runs without a tier (every save before B13) are the café. Pure arithmetic: no RNG of its own, and a
  * café run's numbers are exactly what they were.
  */
-import { podsCoverGrinder } from './gear';
+import { podsCoverGrinder, podsOnly } from './gear';
 import { ECONOMY } from '../data/economy';
 import { layoutFor } from '../data/layout';
 import type { Modifiers } from './effects';
@@ -135,6 +135,8 @@ export function hasStation(state: GameState, kind: StationKind): boolean {
 
 /** True when the floor has every station the drink's recipe needs (a café with its steamer removed cannot make a latte). */
 export function canMake(state: GameState, drink: DrinkId): boolean {
+  // Review I3: a pod machine has no hot-water tap or real group head, so a pods-only bar can't make these.
+  if ((drink === 'americano' || drink === 'doppio' || drink === 'redEye') && podsOnly(state)) return false;
   // G4: a pod machine stands in for the grinder in a Gear run.
   return DRINK_STATIONS[drink].every((k) => hasStation(state, k) || (k === 'grinder' && podsCoverGrinder(state)));
 }

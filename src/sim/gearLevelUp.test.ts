@@ -3,7 +3,9 @@ import { createRun } from './run';
 import { levelUpOnServe, LEVEL_UPS } from './levelUp';
 import { unlockForDay } from './unlocks';
 import { recipeFor } from './stations';
-import { gearRecipe } from './gear';
+import { canMake } from './growth';
+import { gearRecipe, podsOnly } from './gear';
+import { applyGearInput } from './gear';
 import { recipeChain, DRINK_IDS } from '../data/drinks';
 import { levelUpVM } from '../ui/gearVM';
 import type { CreateRunOptions, GameState } from './types';
@@ -15,6 +17,7 @@ const classicRun = (): GameState => createRun(opts(false));
 describe('G6 drinks level up with use', () => {
   it('12 espressos learn the americano (on the menu at once, toast + morning note)', () => {
     const s = gearRun();
+    s.slotGear = ['e2', ...(s.slotGear ?? []).slice(1)]; // review I3: the americano needs a real espresso machine (E2+)
     for (let i = 0; i < 11; i++) expect(levelUpOnServe(s, 'espresso')).toEqual([]);
     expect(s.unlocked).not.toContain('americano');
     expect(levelUpOnServe(s, 'espresso')).toEqual(['americano']);
@@ -87,5 +90,40 @@ describe('Gear G6b: level-ups replace the day-3/day-5 unlocks', () => {
     expect(g.unlocked).not.toContain('mocha');
     expect(levelUpOnServe(g, 'latte')).toEqual(['mocha']);
     expect(levelUpVM(g).find((l) => l.drink === 'icedLatte')?.also).toBe('10/10 cold brews');
+  });
+});
+
+describe('review I3: americano, doppio and red-eye need a real espresso machine, not pods', () => {
+  const withPods = (): GameState => {
+    const s = gearRun();
+    s.phase = 'night';
+    s.cash = 900;
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e1' });
+    expect(podsOnly(s)).toBe(true);
+    return s;
+  };
+
+  it('12 espressos on a pods-only bar do not learn the americano until an E2+ arrives', () => {
+    const s = withPods();
+    for (let i = 0; i < 13; i++) expect(levelUpOnServe(s, 'espresso')).toEqual([]);
+    expect(s.unlocked ?? []).not.toContain('americano');
+    expect(LEVEL_UPS.find((l) => l.unlocks === 'americano')!.needs).toMatchObject({ tree: 'espresso', tier: 2 });
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e2' });
+    expect(levelUpOnServe(s, 'espresso')).toContain('americano');
+  });
+
+  it('a sold-down pod bar takes americano, doppio and red-eye off the board', () => {
+    const s = withPods();
+    s.unlocked = [...(s.unlocked ?? []), 'americano', 'doppio', 'redEye'];
+    for (const d of ['americano', 'doppio', 'redEye'] as const) expect(canMake(s, d)).toBe(false);
+    expect(canMake(s, 'espresso')).toBe(true);
+    // with a real machine in the bar it all comes back
+    const real = withPods();
+    real.unlocked = [...(real.unlocked ?? []), 'americano', 'doppio', 'redEye'];
+    applyGearInput(real, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e3' });
+    applyGearInput(real, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'g1' }); // the real machine's beans are ground
+    applyGearInput(real, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'd1' }); // red-eye walks the drip station too
+    expect(podsOnly(real)).toBe(false);
+    for (const d of ['americano', 'doppio', 'redEye'] as const) expect(canMake(real, d)).toBe(true);
   });
 });

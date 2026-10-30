@@ -11,6 +11,7 @@ import { TWISTS } from './taste';
 import { isRole } from './roles';
 import { LAYOUT } from '../data/layout';
 import { DRINK_IDS } from '../data/drinks';
+import { isReservedId } from './constants';
 import type { BotSkill, Pace, PlayerInput, Settings, SupplyId } from './types';
 
 const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour'];
@@ -131,6 +132,7 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
         ? { kind: 'settings', playerId: input.playerId, settings: sanitizeSettings(input.settings) }
         : null;
     case 'join': {
+      if (isReservedId(input.playerId)) return null;
       const name = typeof input.name === 'string' ? input.name.trim().slice(0, MAX_NAME) : '';
       return { kind: 'join', playerId: input.playerId, name: name || 'Barista' };
     }

@@ -45,9 +45,21 @@ export function wageEach(state: GameState): number {
   return round2(WAGE_BY_TIER[state.tier ?? 'cafe'] * hours);
 }
 
+/**
+ * Review M6: the bots the crew actually hired (the bots setting for everyone on the crew, connected or not).
+ * A cover bot that syncBots adds when somebody drops or collapses is not on the books.
+ */
+export function hiredCount(state: GameState): number {
+  const people = state.players.filter((p) => (p.bot ? p.bot.personality === 'human' : true)).length;
+  return botsFor(state.settings.bots, people);
+}
+
+/** The bots that draw a wage today. */
+const paidCount = (state: GameState): number => Math.min(crewCount(state), hiredCount(state));
+
 /** Wages owed at today's closing. */
 export function wagesForDay(state: GameState): number {
-  return round2(wageEach(state) * crewCount(state));
+  return round2(wageEach(state) * paidCount(state));
 }
 
 /** Everything closing will take from the till: rent plus wages. */
@@ -80,7 +92,7 @@ export function applyStaffInput(state: GameState, input: Extract<PlayerInput, { 
 
 /** Closing: pay the crew. Recorded on the day as `wages`. */
 export function payWages(state: GameState): void {
-  const w = round2(wageEach(state) * staff(state).length);
+  const w = round2(wageEach(state) * Math.min(staff(state).length, hiredCount(state)));
   if (w <= 0) return;
   state.cash = round2(state.cash - w);
   state.today.wages = w;
