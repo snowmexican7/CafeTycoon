@@ -2,6 +2,8 @@ import { AREAS, AREA_TIP, DRINK_FAMILY, type AreaId } from '../data/areas';
 /**
  * Gear Tree G2 (docs/GEAR_TREE.md): the sim side of a Gear run. Everything here is a no-op unless
  * `state.gear === true`, which only `createRun({ gear: true })` sets (the UI only with `?gear=1`).
+ *  RNG: G1–G4 draw none. G5 quirks (`gearMorning`, `gearAfterUse`) roll `state.rng`, only for stations
+ *  that carry gear with quirks, so classic streams are unchanged. G7 `gearArea` is a pure hash (no draw).
  *
  *  - `gearStart(state)`: the run starts with $120, no supplies, an empty back bar and a free
  *    cardboard-box bin in the last slot. The first night is "Pick your gear".
@@ -27,10 +29,9 @@ import { stationsFromSlots, slotCount } from './slots';
 import { usesShot, type Recipe } from '../data/drinks';
 import type { Modifiers } from './effects';
 import { ACCURACY } from './accuracy';
-import { placeMess } from './floor';
+import { ownTile, placeMess } from './floor';
 import { emitLog } from './log';
 import { rngInt, rngNext } from './rng';
-import { tileOf } from './tiles';
 import type { DrinkId, GameState, ItemKind, Player, PlayerInput, Station, StationKind, TierId } from './types';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -175,8 +176,7 @@ export function gearAfterUse(state: GameState, s: Station, p: Player): void {
     quirk(state, s, `The ${name} jammed! Empty hands + E to whack it.`, p.id);
   }
   if (q.spill && rngNext(state) < q.spill) {
-    placeMess(state, 'spill', tileOf(p.pos));
-    quirk(state, s, `The portafilter slipped: coffee on the floor.`, p.id);
+    if (placeMess(state, 'spill', ownTile(state, p))) quirk(state, s, `The portafilter slipped: coffee on the floor.`, p.id);
   }
   if (q.offNote && rngNext(state) < q.offNote) {
     s.cupSlips = Math.min(ACCURACY.maxStars, (s.cupSlips ?? 0) + 1);

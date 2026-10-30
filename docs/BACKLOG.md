@@ -1670,3 +1670,5 @@ Findings:
   `gearAfterUse` uses `tileOf(p.pos)` where the rest of the floor code uses `ownTile` (nearest walkable node).
 - **UI question:** the Gear board is gated on the local `?gear=1` flag. A friend who joins a Gear room without the
   flag gets a Gear run with no Gear board; gating on `state.gear` would follow the host.
+
+UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` and only logs when `placeMess` lands a puddle, with a test) and the gear.ts header now describes the G5 RNG rolls. On the UI question: the Gear board and day HUD card already follow `state.gear` from the host (`nightViewModel`/`hudViewModel`); `?gear=1` only decides `gear: true` when this client creates the run. Planner `equip` advice and bots on pods/jams stay in Claude's lane.
