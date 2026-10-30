@@ -620,6 +620,9 @@ export interface GameState {
   milkOut?: number;
   /** FB2 A4: condiment servings put away in the fridge at closing; they go back on the bar next morning (absent = 0). */
   barAway?: number;
+  /** FB2 A4: an open co-op proposal to buy a $50+ fridge card (the Udder-Matic); voted with the gear vote input, one
+   *  proposal (gear or fridge) at a time, lapses at opening. The result goes to `gearVoteLast`. */
+  fridgeVote?: { by: PlayerId; byName: string; fridge: FridgeId; amount: number; yes: PlayerId[]; no: PlayerId[] };
   /** FB2 A4: the tick "closing soon" began today (Gear runs; absent = not yet, or night). */
   closingSoonAt?: number;
   /** Gear Tree G6: drinks served this run, for drinks that level up with use (absent = none yet). */

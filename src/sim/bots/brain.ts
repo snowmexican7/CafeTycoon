@@ -643,7 +643,10 @@ export const MILK_LOW = 4;
 /** Gear: milk out is low, a milk drink is wanted, the fridge has milk, nobody else is on it: fetch a carton and put it out. */
 function cartonPlan(state: GameState, p: Player): BotStep[] | null {
   if (state.gear !== true || autoMilk(state) || (state.supplies.milk ?? 0) < 1 || milkFree(state, p) > MILK_LOW) return null;
-  if (!milkWanted(state) || fridgeBusy(state, p)) return null;
+  // Re-review I-1: during closing soon only for milk still to steam, and never at last call (no shuttle, nothing put
+  // out just to go bad at close).
+  const wanted = closingSoon(state) ? milkToSteam(state, p) > 0 && !lastCall(state) : milkWanted(state);
+  if (!wanted || fridgeBusy(state, p)) return null;
   const fridge = fridgeReachable(state);
   const out = milkStation(state, p);
   if (!fridge || !out) return null;
@@ -1122,10 +1125,14 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       // FB2 A4: empty hands take a carton, while the fridge has milk.
       if (p.tool === null && p.holding === null && (state.supplies.milk ?? 0) >= 1) return execute(p);
       return abandon(state, p);
-    case 'stock':
+    case 'stock': {
+      // Re-review I-1: closing, and nothing left to steam (or last call): the carton goes into the fridge instead.
+      const fridge = p.tool === 'milk' && milkDone(state, p) ? fridgeReachable(state) : null;
+      if (fridge) return setPlan(b, [{ kind: 'use', station: fridge.id, action: 'store' }]);
       // A carton out at a milk station, or the lifted bar back on the bar.
       if ((p.tool === 'milk' && isMilkStation(st)) || (p.tool === 'bar' && st.id === CONDIMENTS_ID)) return execute(p);
       return abandon(state, p);
+    }
     case 'stow': {
       // Closing soon: lift what is still out (the milk at an idle milk station, or the bar).
       const bar = st.id === CONDIMENTS_ID;

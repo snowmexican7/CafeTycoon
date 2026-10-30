@@ -8,6 +8,8 @@ import { applyGrowInput } from './growth';
 import { CONDIMENTS } from './condiments';
 import { spotOf } from './pickup';
 import { stationLeft } from './counts';
+import { availableDrinks } from './customers';
+import { reasonOff } from './slots';
 import { FRIDGE, closingChecklist, closingSoon, fridgeCapacity, fridgeCards, fridgeGear, fridgeMorning } from './fridge';
 import { migrateSnapshot, SNAPSHOT_VERSION } from '../storage/snapshotStore';
 import { FRIDGE_ID, CONDIMENTS_ID, layoutFor } from '../data/layout';
@@ -187,6 +189,46 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
     s.barAway = 30;
     fridgeMorning(s);
     expect([s.condiments.servings, s.barAway]).toEqual([CONDIMENTS.servings, 15]);
+  });
+
+  it('re-review M-1: with no fridge, milk in the pantry puts no milk drink on the board', () => {
+    const s = gearDay(['s2', 'e1'], null); // pods: a latte needs no grinder
+    s.supplies.milk = 10; // the pantry perk, say
+    expect(availableDrinks(s)).not.toContain('latte');
+    expect(reasonOff(s, 'latte')).toBe('noStock');
+    s.milkOut = 2; // milk already out at the bar still counts
+    expect(availableDrinks(s)).toContain('latte');
+    const f = gearDay(['s2', 'e1']);
+    expect(availableDrinks(f)).toContain('latte');
+  });
+
+  it('the Udder-Matic card goes to a co-op vote like any $50+ gear; the cube does not', () => {
+    const two = () => {
+      let s = gearNight([], 'cafe', null);
+      s = step(s, [{ kind: 'join', playerId: 'p2', name: 'J' }]);
+      s.cash = 1000;
+      return s;
+    };
+    let s = buy(two(), 'f4');
+    expect([fridgeGear(s), s.cash]).toEqual(['f3', 1000]);
+    expect(s.fridgeVote).toMatchObject({ by: 'p1', fridge: 'f4', amount: 320, yes: ['p1'], no: [] });
+    expect(step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e3' }]).gearVote).toBeUndefined(); // one proposal at a time
+    s = step(s, [{ kind: 'gear', playerId: 'p2', action: 'vote', yes: true }]);
+    expect([fridgeGear(s), s.cash, s.fridgeVote, s.gearVoteLast?.passed]).toEqual(['f4', 680, undefined, true]);
+    let t = buy(two(), 'f4');
+    t = step(t, [{ kind: 'gear', playerId: 'p2', action: 'vote', yes: false }]);
+    expect([fridgeGear(t), t.cash, t.fridgeVote, t.gearVoteLast?.passed]).toEqual(['f3', 1000, undefined, false]);
+    let w = buy(two(), 'f4');
+    w = step(w, [{ kind: 'gear', playerId: 'p1', action: 'vote', yes: false }]); // the proposer withdraws
+    expect([w.fridgeVote, fridgeGear(w)]).toEqual([undefined, 'f3']);
+    const lapse = buy(two(), 'f4');
+    startDay(lapse);
+    expect(lapse.fridgeVote).toBeUndefined();
+    // the $20 cube is below the vote line: bought at once
+    let c = gearNight([], 'stand', null);
+    c = step(c, [{ kind: 'join', playerId: 'p2', name: 'J' }]);
+    c.cash = 100;
+    expect(fridgeGear(buy(c, 'f1'))).toBe('f1');
   });
 
   it('A5 counts: the fridge shows the milk it holds, nothing when empty', () => {

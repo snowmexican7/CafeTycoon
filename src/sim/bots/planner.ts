@@ -580,6 +580,7 @@ function gearAdvice(state: GameState, budget: Budget): Advice[] {
  * (no margin: the expected use already runs high). Only when the budget covers it.
  */
 function fridgeAdvice(state: GameState, budget: Budget): Advice[] {
+  if (state.gearVote || state.fridgeVote) return [];
   const want = fridgeWanted(state, expectedUse(state).milk);
   if (!want || want.price > budget.left) return [];
   budget.left = round2(budget.left - want.price);

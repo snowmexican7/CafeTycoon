@@ -1,6 +1,6 @@
 import { applyBranchInput } from './branch';
 import { applySignatureInput } from './signature';
-import { applyGearInput, settleVote } from './gear';
+import { applyFridgeInput, applyGearInput, settleVote } from './gear';
 import { applyPitchInput } from './pitch';
 import { applyAdInput } from './ads';
 import { applyCheckoutInput } from './checkout';
@@ -43,7 +43,7 @@ import { stepCooling } from './cooling';
 import { stepCleaning } from './mop';
 import { applySteepInput } from './steep';
 import { applyCondimentBoxInput, returnBox } from './condiments';
-import { applyFridgeInput, putAwayPending, startClosingSoon, stepClosingSoon, stepFridge, storeInFridge } from './fridge';
+import { putAwayPending, startClosingSoon, stepClosingSoon, stepFridge, storeInFridge } from './fridge';
 import { returnPot } from './sink';
 import { freeSpot } from './spawn';
 import { stepRogue } from './rogue';

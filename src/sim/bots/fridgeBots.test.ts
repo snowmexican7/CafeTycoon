@@ -180,4 +180,39 @@ describe('FB2 A4: bots and the fridge', () => {
     s.closingSoonAt = s.tick;
     expect(ids(think(s, sim(s)))).not.toContain('condiments:refill');
   });
+
+  it('re-review I-1: once the milk is put away at closing, no bot fetches it again for a latte already made', () => {
+    const s = shop();
+    s.milkOut = 0;
+    enterClosing(s);
+    s.customers = [rung(1, 'latte')];
+    s.pass.push({ item: 'latte', ticksLeft: 9999 });
+    expect(ids(think(s, sim(s)))).toEqual(['idle']);
+  });
+
+  it('re-review I-1: a carton already in hand at closing goes into the fridge once there is nothing left to steam', () => {
+    const s = shop();
+    enterClosing(s);
+    const p = sim(s);
+    p.tool = 'milk';
+    p.carry = 6;
+    p.bot!.plan = [{ kind: 'use', station: 'steamer', action: 'stock' }];
+    const { s: t, seen } = run(s, (x) => sim(x).tool === null, 60 * 20);
+    expect(seen.some((e) => e.kind === 'milk.out')).toBe(false);
+    expect(seen.find((e) => e.kind === 'fridge.put')?.data).toMatchObject({ item: 'milk', n: 6 });
+    expect(t.milkOut ?? 0).toBe(0);
+  });
+
+  it('re-review I-1: a latte that can\'t be made through closing causes no milk shuttle, and no carton goes out at last call', () => {
+    const s = shop(2);
+    s.milkOut = 5;
+    s.supplies.beans = 0; // the latte can't be made: it stays on the queue to the end
+    s.customers = [rung(1, 'latte')];
+    enterClosing(s);
+    const { seen } = run(s, (x) => x.phase !== 'closing', 60 * 40);
+    expect(seen.filter((e) => e.kind === 'fridge.take').length).toBeLessThanOrEqual(1);
+    expect(seen.filter((e) => e.kind === 'milk.out')).toHaveLength(0);
+    const spoil = seen.find((e) => e.kind === 'supply.spoil' && e.data.item === 'milk');
+    expect(spoil).toBeUndefined();
+  });
 });

@@ -29,7 +29,7 @@ import { CONDIMENTS } from './condiments';
 import { secondsToTicks } from './constants';
 import { emitLog } from './log';
 import { menuDrinks } from './unlocks';
-import type { GameState, Player, PlayerInput, Station, StationKind, SupplyId } from './types';
+import type { GameState, Player, Station, StationKind, SupplyId } from './types';
 
 export const FRIDGE = {
   /** Servings in a milk carton taken from the fridge. */
@@ -96,7 +96,8 @@ export function useStock(state: GameState, s: SupplyId): void {
 export function stockOf(state: GameState, s: SupplyId): number {
   const have = state.supplies[s] ?? 0;
   if (!isGear(state) || s !== 'milk') return have;
-  return have + (state.milkOut ?? 0) + state.players.reduce((n, p) => n + (p.tool === 'milk' ? (p.carry ?? 0) : 0), 0);
+  // Re-review M-1: milk in the pantry with no fridge to take a carton from can't reach a machine.
+  return (fridgeGear(state) ? have : 0) + (state.milkOut ?? 0) + state.players.reduce((n, p) => n + (p.tool === 'milk' ? (p.carry ?? 0) : 0), 0);
 }
 
 /** The most packs of `supply` that fit tonight: milk packs only while they fit in the fridge (whole packs, nothing lost). */
@@ -134,17 +135,18 @@ export function fridgeWanted(state: GameState, milkUse: number): { id: FridgeId;
   return milkUse > fridgeCapacity(state) ? { ...card, why: 'small' } : null;
 }
 
-/** Night input: buy a fridge card on offer (connected people only, cash in hand). The fridge appears at its spot at once. */
-export function applyFridgeInput(state: GameState, input: Extract<PlayerInput, { kind: 'fridge' }>): GameState {
-  if (!isGear(state) || state.phase !== 'night') return state;
-  const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
-  const card = fridgeCards(state).find((c) => c.id === input.fridge);
-  if (!card || state.cash < card.price) return state;
+/**
+ * Buy fridge card `id` if it is on offer and the cash covers it; the fridge appears at its spot at once. The night input
+ * (people only, and a co-op vote at $50+ like gear) is sim/gear.ts `applyFridgeInput`. False when nothing happened.
+ */
+export function buyFridgeCard(state: GameState, id: FridgeId): boolean {
+  if (!isGear(state)) return false;
+  const card = fridgeCards(state).find((c) => c.id === id);
+  if (!card || state.cash < card.price) return false;
   state.cash = round2(state.cash - card.price);
   state.fridge = card.id;
   ensureFridgeStation(state);
-  return state;
+  return true;
 }
 
 /** The fridge station, added when the shop has a fridge and the floor doesn't show it yet (idempotent; slots.ensureCounterSpots). */
@@ -317,6 +319,7 @@ export function fridgeClose(state: GameState): void {
 /** Morning: nothing is out yet; the bar gets back what was put away last night. */
 export function fridgeMorning(state: GameState): void {
   if (!isGear(state)) return;
+  delete state.fridgeVote; // an open Udder-Matic proposal lapses when the shop opens (as gear votes do)
   delete state.milkOut;
   delete state.closingSoonAt;
   const away = state.barAway ?? 0;
