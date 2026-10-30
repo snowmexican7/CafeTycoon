@@ -581,7 +581,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
     : '';
   return `
     <div class="night-shade"></div>
-    <div class="night-head">${moon(34)}<h1>${title} <small>· ${esc(sub)}</small></h1><div class="spacer"></div>
+    <div class="night-head">${moon(34)}<h1>${title} <small>· ${esc(sub)}</small></h1>${extras?.season ? `<span class="season-chip" title="This week's season target: profit made so far this week">🏆 ${esc(extras.season)}</span>` : ''}<div class="spacer"></div>
       <div class="pill timer ${relaxed ? 'relaxed' : ''}" role="timer" aria-label="${relaxed ? 'Relaxed night' : 'Night time left'}">${relaxed ? '<span aria-hidden="true">☾</span>' : `<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="#ffffff22" stroke-width="5"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#ffcf7a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${RING} ${RING}" transform="rotate(-90 18 18)"/></svg>`}<span class="clock">${relaxed ? 'Relaxed' : esc(vm.clock)}</span>${readyTag(vm.timer)}</div>
       <div class="pill">${coin(24)}<span class="cash">${esc(vm.cash)}</span></div>
       ${room ? `<div class="pill room"><small>ROOM</small><b>${esc(room)}</b></div>` : ''}

@@ -20,12 +20,14 @@ import { createHud } from '../ui/hud';
 import { hudLive } from '../ui/live';
 import { closingViewModel, hudViewModel, nightViewModel, weekEndViewModel } from '../ui/viewModels';
 import { createWeekEnd } from '../ui/weekEnd';
+import { nightExtras } from '../ui/live';
+import { seasonTarget } from '../sim/season';
 import { createRecordsDialog } from '../ui/records';
 import { awardsFor } from '../sim/awards';
 import { blank } from '../sim/stats';
 import { emptyRecords, foldRecords } from '../storage/recordsStore';
 
-type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean };
+type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean };
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
@@ -118,6 +120,46 @@ const FIXTURES: Record<string, Fixture> = {
       s.cash = 90;
       const promo = [9, 10, 11, 12, 13, 14].find((d) => isPromoDay(s, d))!;
       s.day = promo; // at night `day` is already tomorrow
+    },
+    timeline: [],
+  },
+  /** P4 B2: end of week 1 of a Gear run: the screen offers the season. */
+  seasonTeaser: { weekEnd: true, setup(s) { weekPlayed(s); s.gear = true; }, timeline: [] },
+  /** P4 B2: end of season week 2 (target hit), next week's target in the sub-line. */
+  seasonWeek: {
+    weekEnd: true,
+    setup(s) {
+      weekPlayed(s);
+      s.gear = true;
+      s.unlimited = true;
+      s.day = 14;
+      s.season = { base: 312, startScore: 600, weeks: [{ week: 1, target: null, profit: 312 }, { week: 2, target: seasonTarget(312, 2), profit: 338.5 }] };
+    },
+    timeline: [],
+  },
+  /** P4 B2: the season is over (silver: two of three targets hit). */
+  seasonDone: {
+    weekEnd: true,
+    setup(s) {
+      weekPlayed(s);
+      s.gear = true;
+      s.unlimited = true;
+      s.day = 28;
+      s.season = { base: 312, startScore: 900, done: true, weeks: [{ week: 1, target: null, profit: 312 }, { week: 2, target: 310, profit: 338.5 }, { week: 3, target: 360, profit: 291 }, { week: 4, target: 405, profit: 420 }] };
+    },
+    timeline: [],
+  },
+  /** P4 B2: a season night: the header chip shows the week's target and progress. */
+  seasonNight: {
+    night: true,
+    extras: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      s.cash = 160;
+      s.unlimited = true;
+      s.day = 10;
+      s.season = { base: 60, startScore: 20, weeks: [{ week: 1, target: null, profit: 60 }] };
     },
     timeline: [],
   },
@@ -542,7 +584,7 @@ async function main(): Promise<void> {
     state.days.push({ ...state.today });
     state = startNight(state);
     const n = createNight($('#night'), { onBuy() {}, onRestock() {}, onReady() {} });
-    n.render(nightViewModel(state, 'ana'));
+    n.render(nightViewModel(state, 'ana'), fx.extras ? nightExtras(state, 'ana') : undefined);
     n.show();
   }
   if (fx.records) {

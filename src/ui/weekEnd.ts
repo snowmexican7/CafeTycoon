@@ -1,7 +1,7 @@
 import { esc, hide, onAction, show } from './dom';
 import { coin, logoCup } from './icons';
 import type { Award } from '../sim/awards';
-import type { WeekEndVM } from './viewModels';
+import type { SeasonVM, WeekEndVM } from './viewModels';
 
 const avatar = (name: string) => esc(name.trim().charAt(0).toUpperCase() || '?');
 
@@ -42,13 +42,17 @@ export function createWeekEnd(
   return {
     render(vm, ended) {
       text = vm.awardsText;
-      const heading = vm.bankrupt ? "The café couldn't make rent" : ended ? 'Final score' : 'The week is over!';
-      const sub = vm.bankrupt ? 'The landlord changed the locks. There is always next week.' : ended ? 'Thanks for running the shop.' : 'Seven days, one café. Keep going or cash out?';
+      const sn = vm.season;
+      const live = sn && sn.rows.length && !vm.bankrupt && !ended;
+      const heading = vm.bankrupt ? "The café couldn't make rent" : ended ? 'Final score' : live ? (sn.done ? 'The season is over!' : `Week ${sn.week} of ${sn.of} is over!`) : 'The week is over!';
+      const sub = vm.bankrupt ? 'The landlord changed the locks. There is always next week.' : ended ? 'Thanks for running the shop.'
+        : live ? (sn.done ? `${MEDAL_TEXT[sn.medal ?? 'none']} Keep going plays on with no targets.` : `Next week's target: ${sn.next}. Keep going or cash out?`)
+        : 'Seven days, one café. Keep going or cash out?';
       const items = vm.itemsBought.length ? vm.itemsBought.map((n) => `<span class="chip item">${esc(n)}</span>`).join('') : '<span class="muted">Nothing. Bold.</span>';
       const buttons = ended
         ? '<button class="btn primary big block" data-action="title">Back to title</button>'
         : vm.isHost
-          ? '<button class="btn primary big" data-action="continue">Keep going</button><button class="btn big" data-action="stop">See score &amp; stop</button>'
+          ? `<button class="btn primary big" data-action="continue">${sn?.teaser ? 'Start the season' : 'Keep going'}</button><button class="btn big" data-action="stop">See score &amp; stop</button>`
           : '<p class="waiting">Waiting for the host to decide…</p>';
       container.innerHTML = `
         <div class="paper menu weekend ${vm.bankrupt ? 'broke' : ''}" role="dialog" aria-modal="true" aria-labelledby="we-h">
@@ -66,6 +70,7 @@ export function createWeekEnd(
             <div><b>${vm.customersServed}</b><small>SERVED</small></div>
             <div><b>${vm.bestDay ? `Day ${vm.bestDay.day}` : '—'}</b><small>${vm.bestDay ? `BEST · ${esc(vm.bestDay.profit)}` : 'BEST DAY'}</small></div>
           </div>
+          ${sn ? seasonHtml(sn) : ''}
           ${vm.unlocks?.length ? `<div class="unlocks" role="status"><b>🎁 Unlocked for your next run</b>${vm.unlocks.map((u) => `<span>${esc(u)}</span>`).join('')}<small>Pick it under Head start on the title screen.</small></div>` : ''}
           <div class="sec-h">Bought this run</div>
           <div class="items">${items}</div>
@@ -82,4 +87,20 @@ export function createWeekEnd(
     show: () => show(container),
     hide: () => hide(container),
   };
+}
+
+const MEDAL_TEXT: Record<string, string> = {
+  gold: '🥇 Gold: every target hit.',
+  silver: '🥈 Silver: two of three targets hit.',
+  bronze: '🥉 Bronze: one target hit.',
+  none: 'No targets hit this season.',
+};
+
+/** P4 B2: the season card: one row per week, target and what the crew made. */
+function seasonHtml(sn: SeasonVM): string {
+  if (sn.teaser) return `<div class="season teaser" role="note"><b>🏆 Season</b><span>${esc(sn.teaser)}</span></div>`;
+  const rows = sn.rows
+    .map((r) => `<div class="sr ${r.hit === true ? 'hit' : r.hit === false ? 'miss' : ''}"><span>Week ${r.week}</span><span>${r.target ? `target ${esc(r.target)}` : 'warm-up'}</span><b>${esc(r.made)}</b><span class="mk" aria-label="${r.hit === null ? '' : r.hit ? 'hit' : 'missed'}">${r.hit === null ? '' : r.hit ? '✓' : '✗'}</span></div>`)
+    .join('');
+  return `<div class="season" role="group" aria-label="Season"><div class="sec-h">🏆 Season · ${sn.hits} of ${sn.of - 1} targets hit</div>${rows}</div>`;
 }

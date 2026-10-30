@@ -1,3 +1,4 @@
+import { seasonWeekEnd } from './season';
 import { sigRating } from './signature';
 import { comboRating } from './taste';
 import { accuracyRating } from './accuracy';
@@ -79,7 +80,7 @@ export function finishDay(state: GameState): GameState {
     state.phaseTicksLeft = 0;
     return state;
   }
-  if (!state.unlimited && state.day === ECONOMY.scoredWeekDays) {
+  if ((!state.unlimited && state.day === ECONOMY.scoredWeekDays) || seasonWeekEnd(state)) {
     state.phase = 'weekEnd';
     state.phaseTicksLeft = 0;
     return state;

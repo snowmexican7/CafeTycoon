@@ -240,7 +240,7 @@
         },
         {
           "text": "Seasons that carry across game nights",
-          "state": "todo"
+          "state": "done"
         }
       ],
       "doneWhen": "4 players finish a 2v2 match with a results screen, and the crew plays one season across 2+ game nights without a save problem.",

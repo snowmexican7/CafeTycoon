@@ -1,3 +1,5 @@
+import { seasonNow } from '../sim/season';
+import { money } from './viewModels';
 import { recipeFor } from '../sim/stations';
 import { TILL, tillNext } from '../sim/till';
 import { DRINK_INFO } from '../data/drinks';
@@ -234,11 +236,14 @@ export interface NightExtras {
   reputation: number;
   crew: CrewMember[];
   bought: { itemId: string; name: string; category: CatalogueItem['category'] }[];
+  /** P4 B2: e.g. "Week 2 of 4 · $12 of $30" while a season runs. */
+  season?: string;
 }
 
 export function nightExtras(state: GameState, me: PlayerId): NightExtras {
   const last = state.days.length ? state.days[state.days.length - 1] : null;
   const total = state.settings.nightLengthSec * TICK_RATE;
+  const sn = seasonNow(state);
   return {
     day: state.day,
     weekday: WEEKDAYS[(state.day - 1) % 7],
@@ -248,6 +253,7 @@ export function nightExtras(state: GameState, me: PlayerId): NightExtras {
     reputation: state.reputation,
     crew: crewOf(state, me),
     bought: state.boughtTonight.map((id) => ({ itemId: id, name: catalogueById[id]?.name ?? id, category: catalogueById[id]?.category ?? 'oddball' })),
+    ...(sn ? { season: `Week ${sn.week} of ${sn.of} · ${money(sn.soFar)} of ${money(sn.target)}` } : {}),
   };
 }
 

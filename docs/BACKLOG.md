@@ -1802,6 +1802,17 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 4 B2 — seasons (p4-b02-seasons, tag p4-b02)
+
+- [x] `src/sim/season.ts`: `SEASON {weeks 4, floor $30, growth 15%}`, `seasonTarget(base, week)` (rounded to $5), `beginSeason` (first Keep going of a Gear run, base = max(floor, week-1 score)), `seasonWeekEnd` (every 7th day while the season runs; records week profit = score change, once per week), `targetsHit`, `seasonMedal`, `seasonNow`.
+- [x] Hooks: `step.ts` weekEnd continue calls `beginSeason`; `closing.ts` stops at weekEnd on a season checkpoint. `GameState.season?` optional (old saves load and play on without one); PROTOCOL 34 → 35.
+- [x] UI: week-end teaser at end of week 1 ("Start the season"), "Week N of 4 is over!" with next target, season table (target / made / ✓✗), season-over medal line; night header chip "🏆 Week 2 of 4 · $x of $y" (`nightExtras.season`).
+- [x] Records: a season checkpoint re-runs the week-end fold; records are keyed `seed|host` with a `counted` list, so a run still counts once.
+- [x] Tests: `src/sim/season.test.ts` (5: targets, full four-week flow through `finishDay` and `step`, classic runs untouched, idempotent checkpoints, old saves).
+- [x] Headless: `KEEP=1` in `scripts/gearBalance.ts` (28 days, 3 seeds × 1/2/4 stand-ins): stand-ins hit ~1/3 of the $30–40 targets; weekly profit swings a lot when they grow a tier (fittings at half price). Humans should do better; tune after a playtest.
+- [x] Shots: `/workspace/overnight/sprint/p4-b02/season{Teaser,Week,Done,Night}-{1512,1280}.png`.
+- [ ] Follow-ups: season board in Records; season stats per player; planner hint (see Claude prompt).
+
 ### Phase 4 B1 — rival escalation (p4-b01-rival-escalation, tag p4-b01)
 - **Happy hour** (Gear runs only; classic unchanged): `promoLevel` is 0 in week 1, 1 in week 2, 2 from week 3. `isPromoDay` picks that many of days 2–7 of each week by a hash of seed and week (no RNG draws, so it's deterministic and the same for host and guests). On a promo day `applyRivalPromo` (last in `computeModifiers`) cuts traffic to ×0.8.
 - **Counter:** a night input `{kind:'rivalCounter', on?: boolean}`. It is for humans only, at night, and only when tomorrow is a promo day. It sets `Rival.counter = day` (optional field; old saves read as "not countered"); `on:false` undoes it. When countered, every drink sells at ×0.85 and traffic is unchanged. Profit per walk-in is about the same, but you serve more people, so you get more tips, stars and served counts. PROTOCOL 34.

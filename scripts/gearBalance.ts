@@ -4,7 +4,8 @@
  * next tier on a fixed upgrade path while keeping a supply reserve. Prints one row per run.
  * Usage: npx tsx scripts/gearBalance.ts [days=7] [seeds=4]
  */
-import { createRun } from '../src/sim/run';
+import { createRun, startNight } from '../src/sim/run';
+import { beginSeason } from '../src/sim/season';
 import { step } from '../src/sim/step';
 import { addStandIns, syncBots } from '../src/sim/bots/roster';
 import { restockCost } from '../src/sim/night';
@@ -66,7 +67,16 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
   let lastSlotGear = '';
   let stuck = 0;
   const skip = new Set<string>();
-  while (s.phase !== 'weekEnd' && s.phase !== 'ended' && s.days.length < days) {
+  while (s.phase !== 'ended' && s.days.length < days) {
+    if (s.phase === 'weekEnd') {
+      // P4 B2: KEEP=1 plays on through a season (as the host pressing Keep going).
+      if (!process.env.KEEP) break;
+      beginSeason(s);
+      s.unlimited = true;
+      s.day += 1;
+      s = startNight(s);
+      continue;
+    }
     if (s.phase === 'night' && last !== 'night') { stage = 0; stuck = 0; skip.clear(); }
     let inputs: PlayerInput[] = [];
     if (s.phase === 'night' && stage >= 0) {
@@ -103,6 +113,7 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
     drinks: d.reduce((a, x) => { for (const [k, v] of Object.entries(x.drinks ?? {})) if (v) a[k] = (a[k] ?? 0) + v; return a; }, {} as Record<string, number>),
     botMistakes: d.reduce((a, x) => a + (x.botMistakes ?? 0), 0),
     cashByDay: d.map((x) => Math.round(x.sales + x.tips)),
+    ...(s.season ? { season: s.season.weeks.map((w) => `w${w.week}:${Math.round(w.profit)}${w.target !== null ? '/' + w.target : ''}`).join(' ') } : {}),
   };
 }
 
