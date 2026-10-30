@@ -1802,6 +1802,13 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 6 polish P6-5 — real old-save fixtures (p6-old-saves, tag p6-05)
+
+- [x] Saves generated in `v2.1.0` and `v3.1.0` worktrees (seeded stand-in crews; v2.1.0 classic run night 4 = snapshot 22; v3.1.0 Gear run night 5 and week-end, snapshot 27): `src/storage/{v2.1.0-save,v3.1.0-night,v3.1.0-weekend}.fixture.json`.
+- [x] `src/storage/oldSaves.test.ts` (3): load, night VM, play to the next night, save/reload round trip; the v3.1.0 week-end save shows the season teaser and the week strip, and Keep going starts a season.
+- [x] Browser: each save injected into `localStorage` on the built preview, ▶ Resume, no page errors (only the known favicon 404) at 1512 and 1280: `overnight/sprint/p6-05/*.png` (script `overnight/pw/oldsave.mjs`).
+- [ ] Follow-up: add a v3.2.0 save (with a season, branch and stamp card) once 3.3.0 changes the shape; bump SNAPSHOT only when a field stops being optional.
+
 ### Phase 6 polish P6-4 — readable labels (p6-readable-labels, tag p6-04)
 
 - [x] Layout audit over all 54 fixtures at 1512×982 and 1280×800 (`overnight/pw/audit.mjs`: off-screen dialogs, clipped leaf text, text under 11.5px). No clipping found; all sub-11px text was small-caps labels.
