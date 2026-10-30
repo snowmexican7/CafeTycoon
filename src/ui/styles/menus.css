@@ -197,7 +197,16 @@
 @media (max-width: 720px) { .recbtn { top: auto; bottom: 16px; right: 16px; } }
 /* P4 follow-up: the season board in Records. */
 .seasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.seasons li { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; background: #fff; border-radius: 12px; padding: 8px 12px; box-shadow: var(--sh-1); }
+.seasons li { background: #fff; border-radius: 12px; padding: 8px 12px; box-shadow: var(--sh-1); }
+.seasons .srow { display: grid; grid-template-columns: auto 1fr auto; column-gap: 10px; align-items: center; }
+.seasons summary.srow { cursor: pointer; list-style: none; }
+.seasons summary.srow::-webkit-details-marker { display: none; }
+.seasons summary.srow::after { content: '▸ weeks'; grid-row: 1 / span 2; grid-column: 3; font: 700 13px var(--font-display); color: var(--caramel); }
+.seasons details[open] summary.srow::after { content: '▾ weeks'; }
 .seasons li .md { grid-row: span 2; font-size: 28px; }
+.sweeks { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 15px; }
+.sweeks th, .sweeks td { padding: 5px 8px; text-align: right; border-top: 1px solid rgba(0, 0, 0, 0.07); }
+.sweeks th:first-child { text-align: left; } .sweeks thead th { font-size: 12px; color: var(--ink-soft); border-top: 0; }
+.sweeks tr.hit td:nth-child(3) { color: #2f8a4f; font-weight: 700; } .sweeks tr.miss td:nth-child(3) { color: #c0453a; }
 .seasons li b { font: 700 16px var(--font-display); } .seasons li small { font-size: 13px; color: var(--ink-soft); }
 .seasons li.live { box-shadow: var(--sh-1), inset 0 0 0 2px var(--caramel); }
