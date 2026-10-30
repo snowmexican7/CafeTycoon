@@ -1,7 +1,7 @@
 import { DRINK_IDS, dayUnlocks } from '../data/drinks';
 import type { GameState } from '../sim/types';
 import { forecastFor } from '../sim/forecast';
-import { defaultSlots } from '../sim/slots';
+import { defaultSlots, ensureCounterSpots } from '../sim/slots';
 import { readJson, type StorageLike } from './storageLike';
 
 const KEY = 'cafetycoon.run';
@@ -10,7 +10,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 27;
+export const SNAPSHOT_VERSION = 28;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -101,6 +101,19 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   25: () => {},
   // Collisions: Player.staggerTicksLeft / bumpCooldown and DayStats.bumps / bumpSpills are optional (absent = none).
   26: () => {},
+  // Batch coffee / pickup / condiments: Gear runs only (classic saves gain nothing). Customers already rung under the old
+  // till go back to the order stage (stage 'order', rungAt dropped) so the till can ring them again; the condiment bar
+  // starts full with no boxes; the steep target stays absent (= the gear's cap); the pickup and condiment spots appear.
+  27: (s) => {
+    if (s.gear !== true) return;
+    for (const c of s.customers ?? []) {
+      c.stage = 'order';
+      delete c.rungAt;
+    }
+    s.condiments ??= { servings: 20 };
+    s.condimentBoxes ??= 0;
+    ensureCounterSpots(s);
+  },
 };
 
 /** Bring a saved state up to SNAPSHOT_VERSION, or null when no migration path exists. */

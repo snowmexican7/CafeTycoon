@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { createRun } from '../sim/run';
+import { createRun, startDay } from '../sim/run';
+import { applyGearInput } from '../sim/gear';
+import { tillNext } from '../sim/till';
+import type { GameState } from '../sim/types';
 import { defaultSlots } from '../sim/slots';
 import { createHistoryStore } from './historyStore';
 import { createSettingsStore } from './settingsStore';
@@ -55,8 +58,51 @@ describe('stores', () => {
 });
 
 describe('snapshot versioning', () => {
-  it('is on version 9', () => {
-    expect(SNAPSHOT_VERSION).toBe(27);
+  it('pins the snapshot version', () => {
+    expect(SNAPSHOT_VERSION).toBe(28);
+  });
+
+  /** A Gear day as a v3.x build saved it: no pickup/condiment spots, no condiment state, a customer already rung. */
+  const oldGearDay = (gear: boolean): GameState => {
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear });
+    if (gear) applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
+    startDay(s);
+    s.customers = [{ id: 1, drink: 'latte', patienceLeft: 500, patienceMax: 900, rungAt: 3 }];
+    delete (s as { condiments?: unknown }).condiments;
+    delete (s as { condimentBoxes?: unknown }).condimentBoxes;
+    delete (s as { steep?: unknown }).steep;
+    s.stations = s.stations.filter((x) => x.id !== 'pickup' && x.id !== 'condiments');
+    return s;
+  };
+
+  it('a mid-day v27 Gear save puts rung customers back in line (Review Focus 5)', () => {
+    const s = oldGearDay(true);
+    const m = migrateSnapshot(27, s)!;
+    expect(m.customers[0]).toMatchObject({ stage: 'order' });
+    expect(m.customers[0].rungAt).toBeUndefined();
+    expect(tillNext(m)?.id).toBe(1);
+    expect([m.condiments, m.condimentBoxes, m.steep]).toEqual([{ servings: 20 }, 0, undefined]);
+    expect(m.stations.map((x) => x.id)).toEqual(expect.arrayContaining(['pickup', 'condiments']));
+    expect(m.stations.filter((x) => x.id === 'pickup')).toHaveLength(1);
+  });
+
+  it('a v27 Gear save keeps condiment state it already has', () => {
+    const s = oldGearDay(true);
+    s.condiments = { servings: 7 };
+    s.condimentBoxes = 2;
+    const m = migrateSnapshot(27, s)!;
+    expect([m.condiments, m.condimentBoxes]).toEqual([{ servings: 7 }, 2]);
+  });
+
+  it('a v27 classic save gains nothing', () => {
+    const s = oldGearDay(false);
+    const before = JSON.stringify(s);
+    const m = migrateSnapshot(27, s)!;
+    expect(JSON.stringify(m)).toBe(before);
+    expect(m.condiments).toBeUndefined();
+    expect(m.condimentBoxes).toBeUndefined();
+    expect(m.stations.some((x) => x.id === 'pickup' || x.id === 'condiments')).toBe(false);
+    expect(m.customers[0]).toEqual({ id: 1, drink: 'latte', patienceLeft: 500, patienceMax: 900, rungAt: 3 });
   });
 
   it('migrates a version-23 save: lastCall stays absent', () => {

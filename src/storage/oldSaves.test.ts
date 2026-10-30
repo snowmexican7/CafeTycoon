@@ -57,6 +57,9 @@ describe('saves from released builds', () => {
     let s = load(v31night);
     expect(s.gear).toBe(true);
     expect(s.season).toBeUndefined();
+    expect(s.condiments).toEqual({ servings: 20 });
+    expect(s.condimentBoxes).toBe(0);
+    expect(s.stations.map((x) => x.id)).toEqual(expect.arrayContaining(['pickup', 'condiments']));
     expect(() => nightViewModel(s, s.players[0]!.id)).not.toThrow();
     s = nextNight(s);
     expect(Number.isFinite(s.cash)).toBe(true);
