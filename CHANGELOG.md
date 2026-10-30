@@ -16,6 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Old saves, checked for real.** Saves written by the released v2.1.0 and v3.1.0 builds now ship as test fixtures: each one loads, plays another day and saves again, and a v3.1.0 save sitting on the week-end screen starts a season when you press Keep going.
 - **Easier-to-read labels.** The small caps labels on the receipt, week-end, Records and title history tables are a touch bigger (12px, up from 10–10.5px), and the day receipt tightens up on shorter screens so it never runs off the bottom at 1280×800.
 - **The week at a glance.** The week-end screen shows the last seven days as little profit bars (red for a day that lost money), with the week's total and customers served beside them.
 - **Season details.** On the Season board in Café records, tap a season to see it week by week: each week's target, what you made, and whether you hit it. Seasons saved before this update just show their summary line.
