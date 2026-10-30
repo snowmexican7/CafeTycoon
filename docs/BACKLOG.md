@@ -1743,3 +1743,12 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Americano vs doppio at the machine uses the existing recipe-clash rule (the oldest ticket decides). Prices are $4.50, $5, $3.75 and $4.25. All have Pixi and DOM cup art.
 - Classic runs are unchanged (nothing unlocks them). The growth cards now hide Gear-only drinks in classic runs (`GEAR_ONLY_DRINKS`).
 - **For Claude (bots):** teach bots the new chains (`recipeChain` resolves them). Red-eye and au lait start from a drip pour. Doppio clashes with americano like mocha clashes with cappuccino.
+
+### Gear G10a — the pour-over branch, D4b/D5b (gear-g10a)
+- New tree row **Pour-over** (`tree: 'pourOver'`, tiers 4/5 to keep the doc names). Both need the **Office Urn (D3)** or better in a slot first (`GearInfo.requires`, `gearRequiresMet`; the button reads "Needs Office Urn"). It takes its own slot, so the drip machine stays. Owning the bar keeps the branch open after you sell the urn.
+- **D4b Pour-Over Bar** ($70, sells for $30): station kind `drip`, but `gearRecipe` makes one **Pour-over** from empty hands in 8 s (beans). There is no pot. It has a 3% spill quirk and a rare "flow state" funny line. **D5b The Pour-Over Lab** ($150, sells for $75): a cup every 2.5 s (three cones) and Pour-over ×1.15 (`gearPriceMul` follows only pour gear).
+- New drink `pourOver` is appended to `DRINK_IDS`. It is Gear-only, family filter (the arts district loves it), costs $4.50, and goes stale after 90 s. It has Pixi and DOM cup art and a ticket. Buying the bar puts it on the menu. `recipeChain('pourOver')` returns one drip-station step (`POUR_OVER_RECIPE`), which is not in RECIPES, so a drip pot never makes one.
+- **Bug fixes found while shooting:** a Gear run crashed the night screen when drip was on the menu but no drip machine was on the floor (for example after selling it). `STATION_SHORT` and `STATION_ICON` lacked `drip`, and so did the planner's `stationName`. The "Nothing to sell yet" note also ignored drip and pour-over machines.
+- Deferred: the flow state doubling speed (only a line for now), the "+1★ cap", and the snob draw for the Lab (next block: snob regulars). The station still renders as a drip machine sprite (machine polish block).
+- **For Claude (bots):** the pour-over is made at the pour-over gear only (a `drip`-kind station whose `GEAR[gear].pour` is set). Bots must choose that station and not a drip pot.
+

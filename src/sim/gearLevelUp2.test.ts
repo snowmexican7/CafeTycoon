@@ -17,7 +17,7 @@ const own = (s: GameState, ...ids: GearId[]) => { s.slotGear = ids; };
 describe('G6c: the rest of the level-up drinks', () => {
   it('new drinks are appended to DRINK_IDS (seeds keep their ladders)', () => {
     expect(DRINK_IDS.slice(0, 10)).toEqual(['espresso', 'latte', 'coldBrew', 'icedLatte', 'mocha', 'matcha', 'special', 'drip', 'americano', 'cappuccino']);
-    expect(DRINK_IDS.slice(10)).toEqual(['doppio', 'sweetCream', 'cafeAuLait', 'redEye']);
+    expect(DRINK_IDS.slice(10, 14)).toEqual(['doppio', 'sweetCream', 'cafeAuLait', 'redEye']);
   });
 
   it('15 cold brews learn sweet cream (any tap)', () => {

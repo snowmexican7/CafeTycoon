@@ -159,6 +159,7 @@ const GEAR_BTN: Record<GearTierState, (t: GearTierVM) => string> = {
   upgrade: (t) => `Upgrade · $${t.net}`,
   poor: (t) => `$${t.net}`,
   noSlot: () => 'No free slot',
+  needs: (t) => `Needs ${t.needs ?? 'more gear'}`,
 };
 
 /** The back bar (sell from a slot) and one row of tiers per tree. Bigger = better, cheapest on the left. */

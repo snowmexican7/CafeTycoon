@@ -1,10 +1,10 @@
 import type { DrinkId, ItemKind, StationKind, SupplyId } from '../sim/types';
 
 /** Every drink, in menu order. Hot or iced decides how weather and forecasts tilt orders. */
-export const DRINK_IDS: DrinkId[] = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'mocha', 'matcha', 'special', 'drip', 'americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye'];
+export const DRINK_IDS: DrinkId[] = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'mocha', 'matcha', 'special', 'drip', 'americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye', 'pourOver'];
 
 /** Drinks that only exist in Gear runs (drip machines and level-ups). */
-export const GEAR_ONLY_DRINKS: DrinkId[] = ['drip', 'americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye'];
+export const GEAR_ONLY_DRINKS: DrinkId[] = ['drip', 'americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye', 'pourOver'];
 
 /** On the menu from day 1. The rest unlock by day or by a night card (Phase 2 B5). */
 export const BASE_DRINKS: DrinkId[] = ['espresso', 'latte', 'coldBrew'];
@@ -25,6 +25,7 @@ export const DRINK_TEMP: Record<DrinkId, DrinkTemp> = {
   sweetCream: 'iced',
   cafeAuLait: 'hot',
   redEye: 'hot',
+  pourOver: 'hot',
 };
 
 export interface DrinkInfo {
@@ -73,6 +74,8 @@ export const DRINK_INFO: Record<DrinkId, DrinkInfo> = {
   sweetCream: { name: 'Sweet-cream cold brew', short: 'Sweet cream', icon: '🧋', bias: 0.8, wait: 1.1, ticket: ['Tap', 'Tap again (sweet cream)'], blurb: 'Cold brew under a float of sweet cream. Learned after 15 cold brews.' },
   cafeAuLait: { name: 'Café au lait', short: 'Au lait', icon: '🫗', bias: 0.8, ticket: ['Drip', 'Steamer (hot milk)'], blurb: 'Drip coffee and hot milk, half and half. Learned after 12 drips.' },
   redEye: { name: 'Red-eye', short: 'Red-eye', icon: '👁️', bias: 0.6, ticket: ['Drip', 'Espresso machine (shot on top)'], blurb: 'Drip coffee with a shot dropped in. Learned after 20 drips with a real espresso machine.' },
+  // G10a: comes with the Pour-Over Bar (Gear runs).
+  pourOver: { name: 'Pour-over', short: 'Pour-over', icon: '🫘', bias: 0.7, wait: 1.15, ticket: ['Pour-over bar (handmade)'], blurb: 'One cup, poured by hand through a paper cone. Slow and fancy.' },
 };
 
 /** Base drinks plus every drink whose unlock day has come. */
@@ -129,6 +132,9 @@ export function usesShot(drink: DrinkId): boolean {
 }
 
 /** The station recipes a drink walks through, in order (the last one gives the drink). */
+/** G10a: the pour-over bar's own recipe (seconds vary by gear; this is the bar's). */
+export const POUR_OVER_RECIPE: Recipe = { takes: null, gives: 'pourOver', consumes: ['beans'], seconds: 8 };
+
 export function recipeChain(drink: DrinkId): { station: RecipeStation; recipe: Recipe }[] {
   const out: { station: RecipeStation; recipe: Recipe }[] = [];
   let want: ItemKind | null = drink;
@@ -138,6 +144,9 @@ export function recipeChain(drink: DrinkId): { station: RecipeStation; recipe: R
       const r = RECIPES[station].find((x) => x.gives === want);
       if (r) found = { station, recipe: r };
     }
+    // G10a: the pour-over is made only on pour-over gear (sim/gear.ts gearRecipe), not from RECIPES,
+    // so a drip pot never makes one; its one step still shows on tickets and in bot plans.
+    if (!found && want === 'pourOver') found = { station: 'drip', recipe: POUR_OVER_RECIPE };
     if (!found) break;
     out.unshift(found);
     want = found.recipe.takes;

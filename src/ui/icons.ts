@@ -36,6 +36,8 @@ function itemShape(kind: ItemKind): string {
     return '<ellipse cx="0" cy="7" rx="12" ry="3" fill="#e8e1d6" stroke="#c9bca8"/><path d="M-10 -7 h20 l-3 13 h-14z" fill="#e8e1d6" stroke="#c9bca8"/><rect x="-9" y="-2" width="18" height="3" fill="#7fcfb4"/><ellipse cx="0" cy="-7" rx="10" ry="2.6" fill="#b07a50"/>';
   if (kind === 'redEye')
     return '<path d="M-7 -9 h14 v17 h-14z" fill="#e8e1d6" stroke="#c9bca8"/><rect x="-7" y="-3" width="14" height="3" fill="#e0564a"/><ellipse cx="0" cy="-9" rx="7" ry="2.2" fill="#3e2214"/><ellipse cx="0" cy="-9.2" rx="3" ry="1" fill="#c98a4a"/><path d="M7 -5 q6 2 0 9" stroke="#e8e1d6" stroke-width="2.6" fill="none"/>';
+  if (kind === 'pourOver')
+    return '<path d="M-6 -10 h12 l3 16 h-18z" fill="#e6f5ff" opacity=".8" stroke="#9fc9e2"/><path d="M-7.6 -2 h15.2 l1 7.5 h-17.2z" fill="#8a4a22"/><rect x="-6.5" y="-8" width="13" height="3.4" fill="#b07a50"/>';
   return '<path d="M-8 -12 h16 l-2 20 h-12z" fill="#c9e7f7" opacity=".9" stroke="#9fc9e2"/><path d="M-7.3 -6 h14.6 l-1.4 13.5 h-11.8z" fill="#5b3420"/><rect x="-5" y="-5" width="5" height="5" rx="1" fill="#e6f5ff" opacity=".85"/><rect x="1" y="-2" width="4.5" height="4.5" rx="1" fill="#e6f5ff" opacity=".8"/><rect x="2" y="-21" width="2.6" height="14" rx="1" fill="#7fcfb4" transform="rotate(12 3 -14)"/>';
 }
 
