@@ -1,7 +1,7 @@
 import { esc, hide, onAction, show } from './dom';
 import { coin, logoCup } from './icons';
 import type { Award } from '../sim/awards';
-import type { SeasonVM, WeekEndVM } from './viewModels';
+import type { SeasonVM, WeekEndVM, WeekStripVM } from './viewModels';
 
 const avatar = (name: string) => esc(name.trim().charAt(0).toUpperCase() || '?');
 
@@ -70,6 +70,7 @@ export function createWeekEnd(
             <div><b>${vm.customersServed}</b><small>SERVED</small></div>
             <div><b>${vm.bestDay ? `Day ${vm.bestDay.day}` : '—'}</b><small>${vm.bestDay ? `BEST · ${esc(vm.bestDay.profit)}` : 'BEST DAY'}</small></div>
           </div>
+          ${vm.week ? weekStripHtml(vm.week) : ''}
           ${sn ? seasonHtml(sn) : ''}
           ${vm.unlocks?.length ? `<div class="unlocks" role="status"><b>🎁 Unlocked for your next run</b>${vm.unlocks.map((u) => `<span>${esc(u)}</span>`).join('')}<small>Pick it under Head start on the title screen.</small></div>` : ''}
           <div class="sec-h">Bought this run</div>
@@ -103,4 +104,12 @@ function seasonHtml(sn: SeasonVM): string {
     .map((r) => `<div class="sr ${r.hit === true ? 'hit' : r.hit === false ? 'miss' : ''}"><span>Week ${r.week}</span><span>${r.target ? `target ${esc(r.target)}` : 'warm-up'}</span><b>${esc(r.made)}</b><span class="mk" aria-label="${r.hit === null ? '' : r.hit ? 'hit' : 'missed'}">${r.hit === null ? '' : r.hit ? '✓' : '✗'}</span></div>`)
     .join('');
   return `<div class="season" role="group" aria-label="Season"><div class="sec-h">🏆 Season · ${sn.hits} of ${sn.of - 1} targets hit</div>${rows}</div>`;
+}
+
+/** P6-3: the week at a glance: a profit bar per day (red for a loss day), the total beside it. */
+export function weekStripHtml(w: WeekStripVM): string {
+  const bars = w.days
+    .map((d) => `<span class="wb${d.neg ? ' neg' : ''}" title="Day ${d.day}: ${esc(d.profit)}" aria-label="Day ${d.day}: ${esc(d.profit)}"><span class="wbar"><i style="height:${Math.max(6, Math.round(d.h * 100))}%"></i></span><small>${d.day}</small></span>`)
+    .join('');
+  return `<div class="weekstrip" role="group" aria-label="Last ${w.n} days"><div class="ws-t"><small>LAST ${w.n} DAYS</small><b class="${w.profit.startsWith('-') ? 'neg' : ''}">${esc(w.profit)}</b><span>${w.served} served</span></div><div class="ws-bars">${bars}</div></div>`;
 }
