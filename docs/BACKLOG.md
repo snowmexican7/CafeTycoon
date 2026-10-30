@@ -1802,6 +1802,15 @@ UI lane follow-up (`gear-g05c`): fixed the minor one (spill now uses `ownTile` a
 - Balance note (not a blocker): on the 60 s "quick" day setting, Gear runs survive but stagnate (headless sensible crew: cash $29–72 after a week, no growth, no bankruptcies). The default 150 s days meet the G10 targets. Consider a bigger starting cash or cheaper packs for quick days.
 - Open (for Claude): mixed espresso bar (E1 + E2+ with a grinder) can still send grounds to the pod machine.
 
+### Phase 4 B3 — manager reports (p4-b03-manager-reports, tag p4-b03)
+
+- [x] Sim tallies in `serveCustomer` (`noteReport`): `DayStats.waitTicks` (patienceMax − patienceLeft at the hand-off), `takingsByDrink` (price + tip), `byPlayer` ({serves, takings}). Optional fields, PROTOCOL 35 → 36.
+- [x] `src/ui/report.ts` `reportViewModel`: takings, profit, served/walked %, avg wait + trend vs. the day before, rent, wages and wage share, top 4 drinks by takings, crew ranked by cups, up to two rule-based notes (sold-out walkouts, ≥25% walked, wages ≥35% of takings, waits up ≥5s, one drink ≥50% of money; else a tidy/quiet-day line).
+- [x] Night UI: "📋 Report ▸" next to Receipt on the Day card opens a drawer (KPIs, notes, costs, money drinks and crew with bars).
+- [x] Tests: `src/ui/report.test.ts` (4: sim tallies, VM maths and notes, old saves / first night, night HTML button and drawer).
+- [x] Shots: `/workspace/overnight/sprint/p4-b03/managerReport-{1512,1280}.png` (fixture `managerReport`, `CLICK='[data-d=report]'` in fxshot).
+- [ ] Follow-ups: per-shop tabs once the second shop lands (B4); a week view (sum of days) on the week-end screen.
+
 ### Phase 4 B2 — seasons (p4-b02-seasons, tag p4-b02)
 
 - [x] `src/sim/season.ts`: `SEASON {weeks 4, floor $30, growth 15%}`, `seasonTarget(base, week)` (rounded to $5), `beginSeason` (first Keep going of a Gear run, base = max(floor, week-1 score)), `seasonWeekEnd` (every 7th day while the season runs; records week profit = score change, once per week), `targetsHit`, `seasonMedal`, `seasonNow`.

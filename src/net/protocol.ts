@@ -5,7 +5,7 @@ import type { BotsChoice, GameState, PlayerInput } from '../sim/types';
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
 export const APP_ID = 'cafetycoon-v1';
 /** Bump when any message below changes shape; mismatched builds refuse each other politely. */
-export const PROTOCOL_VERSION = 35; // 35: P4 B2 GameState.season (week-end checkpoints after week 1 of a Gear run). 34: P4 B1 rivalCounter input + Rival.counter. 33: P3 B15 staff input + DayStats.wages. 32: G11 v3.0.0 flip (every new run is Gear; v2 tabs must reload). 31: Gear G8 vote input + gearVote state
+export const PROTOCOL_VERSION = 36; // 36: P4 B3 DayStats.waitTicks/takingsByDrink/byPlayer (manager report). 35: P4 B2 GameState.season (week-end checkpoints after week 1 of a Gear run). 34: P4 B1 rivalCounter input + Rival.counter. 33: P3 B15 staff input + DayStats.wages. 32: G11 v3.0.0 flip (every new run is Gear; v2 tabs must reload). 31: Gear G8 vote input + gearVote state
 export const ACTIONS = ['hello', 'join', 'input', 'snap', 'lobby', 'tele', 'seat', 'snapd', 'resync'] as const;
 export type ActionKind = (typeof ACTIONS)[number];
 

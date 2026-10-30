@@ -163,6 +163,28 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P4 B3: the night after a busy Gear day, for the manager's report drawer (click 📋 Report). */
+  managerReport: {
+    night: true,
+    extras: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      s.cash = 240;
+      const base = { served: 30, lost: 5, turnedAway: 0, sales: 120, tips: 22, rent: 25 };
+      s.days = [1, 2, 3].map((day) => ({ ...base, day, waitTicks: 30 * 14 * 60 }));
+      s.day = 5;
+      s.players.push({ ...s.players[0]!, id: 'bot1', name: 'Bo', bot: { personality: 'steady' } } as GameState['players'][number]);
+      Object.assign(s.today, {
+        day: 4, served: 41, lost: 12, turnedAway: 2, sales: 168.5, tips: 31.2, rent: 25, wages: 24, soldOutWalkouts: 0,
+        waitTicks: 41 * 21 * 60,
+        drinks: { latte: 19, espresso: 9, coldBrew: 8, cappuccino: 5 },
+        takingsByDrink: { latte: 98.4, espresso: 31.5, coldBrew: 41.6, cappuccino: 28.2 },
+        byPlayer: { ana: { serves: 15, takings: 76.1 }, ben: { serves: 11, takings: 52.3 }, bot1: { serves: 9, takings: 41.8 }, cleo: { serves: 6, takings: 29.5 } },
+      });
+    },
+    timeline: [],
+  },
   /** P3 B1: the night shop with roles picked (Ana is Chef, Cleo is Host; Ben and Dev free). */
   roles: {
     night: true,
