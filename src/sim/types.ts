@@ -102,6 +102,8 @@ export type SimEventKind =
   | 'espresso.collapse'
   | 'drop'
   | 'slip'
+  | 'bump'
+  | 'bump.spill'
   | 'clean'
   | 'rogue.upset'
   | 'rogue.remade'
@@ -144,6 +146,10 @@ export interface Player {
   /** The latest move input, kept through a stun so a held key resumes motion. */
   heldDir: Vec2;
   stunTicksLeft: number;
+  /** Bumps (src/sim/bumps.ts): ticks left walking at stagger speed after a collision (absent = 0). */
+  staggerTicksLeft?: number;
+  /** Bumps: ticks before this barista can be part of another bump (absent = 0). */
+  bumpCooldown?: number;
   tool: 'mop' | null;
   cleaningTicksLeft: number;
   cleaningMess: number | null;
@@ -374,6 +380,9 @@ export interface DayStats {
   rogues?: number;
   /** Chaos pack: baristas who slipped on a mess today (a receipt line, nothing else). */
   slips?: number;
+  /** Bumps: collisions between baristas today, and how many of them knocked something out of someone's hands. */
+  bumps?: number;
+  bumpSpills?: number;
   /** Perfect serves today (patience left ≥ threshold). */
   perfect?: number;
   /** P3 B5: cups scored today and their stars summed. */

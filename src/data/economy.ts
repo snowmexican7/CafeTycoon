@@ -42,6 +42,12 @@ export const ECONOMY = {
   moveSpeedTilesPerSecond: 4,
   interactRangeTiles: 1.1,
   baristaHalfWidth: 0.35,
+  /**
+   * Overcooked-style bumps (src/sim/bumps.ts): two baristas closer than `bodyTiles` (centre to centre) who are walking
+   * into each other stagger for `staggerSeconds` at `staggerSpeed` x their pace, can't bump again for `cooldownSeconds`,
+   * are shoved `push` tiles apart each, and whoever is carrying something drops it with `spillChance`.
+   */
+  bump: { bodyTiles: 0.6, staggerSeconds: 0.6, staggerSpeed: 0.4, cooldownSeconds: 1.0, spillChance: 0.5, push: 0.15 },
   dayLengthSec: 150,
   nightLengthSec: 120,
   handSize: 4,

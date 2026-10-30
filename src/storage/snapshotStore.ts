@@ -10,7 +10,7 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Saves from a version with a migration below are upgraded;
  * anything older is ignored instead of crashing the worker.
  */
-export const SNAPSHOT_VERSION = 26;
+export const SNAPSHOT_VERSION = 27;
 
 /** Upgrade steps, keyed by the version they upgrade from. Each fills in only what that version lacked. */
 const MIGRATIONS: Record<number, (s: GameState) => void> = {
@@ -99,6 +99,8 @@ const MIGRATIONS: Record<number, (s: GameState) => void> = {
   },
   // Bots wait before taking a machine's output: Station.outputSince is optional (absent = age unknown, falls back to doneAt).
   25: () => {},
+  // Collisions: Player.staggerTicksLeft / bumpCooldown and DayStats.bumps / bumpSpills are optional (absent = none).
+  26: () => {},
 };
 
 /** Bring a saved state up to SNAPSHOT_VERSION, or null when no migration path exists. */

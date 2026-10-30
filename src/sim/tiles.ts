@@ -31,9 +31,11 @@ export function floorFields(
   };
 }
 
-/** Day end or leaving: no stun, no cleaning, no tool, no queued drop. */
+/** Day end or leaving: no stun, no stagger, no cleaning, no tool, no queued drop. */
 export function clearFloorFields(p: Player): void {
   p.stunTicksLeft = 0;
+  delete p.staggerTicksLeft;
+  delete p.bumpCooldown;
   p.cleaningTicksLeft = 0;
   p.cleaningMess = null;
   p.tool = null;

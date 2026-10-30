@@ -30,6 +30,7 @@ import { isBotId, syncBots } from './bots/roster';
 import { afterBotInteract, stepBots } from './bots/brain';
 import { drinkEspresso, stepEspresso } from './espresso';
 import { stepEggs, unlockSecret } from './eggs';
+import { stepBumps } from './bumps';
 import { clearFloorFields, floorFields, stepStuns, trackTiles } from './tiles';
 import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
@@ -186,6 +187,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepStuns(s);
   stepBots(s, m);
   applyMovement(s, m.moveSpeed);
+  stepBumps(s);
   onTileEntry(s, trackTiles(s));
   // Idle total (not a streak): a connected person's ticks with no movement and no interact.
   for (const p of s.players) {

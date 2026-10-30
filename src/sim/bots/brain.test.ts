@@ -85,19 +85,21 @@ describe('bot brain', () => {
   });
 
   it("a claiming bot's drink still in a machine does not hide the next customer who ordered it", () => {
-    let s = cafe(2);
+    // Built by hand: bot-1 claimed customer 920, its latte is brewing in the steamer and its next step is to take it.
+    // (Run as a scenario, bumps and the orphan wait shift the timing too much to catch this moment reliably.)
+    const s = cafe(2);
     s.customers = [{ id: 920, drink: 'latte', ...huge }, { id: 921, drink: 'latte', ...huge }];
-    const steamer = (x: GameState) => x.stations.find((st) => st.id === 'steamer')!;
-    s = runUntil(s, (x) => {
-      const first = bot(x, 'bot-1').bot!.plan[0];
-      return steamer(x).busyTicksLeft > 0 && first?.kind === 'use' && first.station === 'steamer' && first.action === 'take';
-    }, 60 * 30);
-    const bot1 = bot(s, 'bot-1').bot!.claim;
-    const other = bot1 === 920 ? 921 : 920;
-    expect(uncoveredOrder(s, bot(s, 'bot-2'))?.id).toBe(other);
-    const served = s.today.served;
-    s = runUntil(s, (x) => x.customers.length === 0, 60 * 60);
-    expect(s.today.served).toBe(served + 2);
+    const b1 = bot(s, 'bot-1');
+    const steamer = s.stations.find((st) => st.id === 'steamer')!;
+    steamer.busyTicksLeft = 60;
+    steamer.making = 'latte';
+    b1.bot!.claim = 920;
+    b1.bot!.claimDrink = 'latte';
+    b1.bot!.plan = [{ kind: 'use', station: 'steamer', action: 'take' }, { kind: 'use', station: 'counter', action: 'serve' }];
+    expect(uncoveredOrder(s, bot(s, 'bot-2'))?.id).toBe(921);
+    // And left to run, the two bots serve both lattes.
+    const served = runUntil(s, (x) => x.customers.length === 0, 60 * 90).today.served;
+    expect(served).toBeGreaterThanOrEqual(2);
   });
 
   it('Review Focus 1: when the claimed customer is served by someone else the bot puts its drink on the pass', () => {
@@ -462,7 +464,7 @@ describe('bot feel: yielding', () => {
     expect(s.players.find((p) => p.id === 'p1')!.pos).toEqual(nextWaypoint(headingToGrinder()));
   });
 
-  it('humans never collide with bots', () => {
+  it('humans bump into a standing bot (collisions: they used to walk straight through)', () => {
     const walk = (withBot: boolean) => {
       let s = cafe(1);
       const p1 = s.players.find((p) => p.id === 'p1')!;
@@ -476,11 +478,11 @@ describe('bot feel: yielding', () => {
         s = step(s, [{ kind: 'move', playerId: 'p1', x: 1, y: 0, interact: false }]);
         trail.push({ ...s.players.find((p) => p.id === 'p1')!.pos });
       }
-      return trail;
+      return { trail, s };
     };
-    const trail = walk(true);
-    expect(trail.some((q) => Math.abs(q.x - 6) < 0.1)).toBe(true); // passed through the bot's tile
-    expect(trail).toEqual(walk(false));
+    const { trail, s } = walk(true);
+    expect(s.log.some((e) => e.kind === 'bump' && e.data.a === 'p1' && e.data.b === 'bot-1')).toBe(true);
+    expect(trail[59].x).toBeLessThan(walk(false).trail[59].x); // the stumble costs ground
   });
 
   it('a bot leaves a finished drink alone while a person is working that machine', () => {
