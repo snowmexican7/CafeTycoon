@@ -15,6 +15,7 @@ import { ECONOMY } from '../data/economy';
 import { layoutFor } from '../data/layout';
 import type { Modifiers } from './effects';
 import { defaultSlots, growSlots, stationsFromSlots } from './slots';
+import { growGearSlots, isGearRun } from './gear';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
 export interface TierInfo {
@@ -153,7 +154,8 @@ export function applyGrowInput(state: GameState, input: Extract<PlayerInput, { k
   const cost = TIERS[input.tier].cost;
   if (state.cash < cost) return state;
   state.cash = Math.round((state.cash - cost) * 100) / 100;
-  growSlots(state, input.tier);
+  if (isGearRun(state)) growGearSlots(state, input.tier);
+  else growSlots(state, input.tier);
   state.tier = input.tier;
   state.tierLog = [...(state.tierLog ?? []), { tier: input.tier, day: state.day, by: p.name }];
   if (state.mop.heldBy === null) state.mop = { pos: { ...layoutFor(input.tier).mopHome }, heldBy: null };

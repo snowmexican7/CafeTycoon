@@ -22,6 +22,7 @@ import { zeroDrinks } from './tally';
 import { unlockForDay } from './unlocks';
 import { dealChallenges, pruneChallenges } from './challenges';
 import { eggsMorning } from './eggs';
+import { gearMorning, gearStart } from './gear';
 import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
@@ -118,6 +119,7 @@ export function createRun(opts: CreateRunOptions): GameState {
     unlocked: [...BASE_DRINKS],
   };
   state.scenario = SCENARIOS[rngInt(state, SCENARIOS.length)].id;
+  if (opts.gear) gearStart(state);
   return startNight(state);
 }
 
@@ -173,5 +175,6 @@ export function startDay(state: GameState): GameState {
   const pitchNote = pitchMorning(state);
   if (pitchNote) state.morningNotes.push(pitchNote);
   espressoMorning(state);
+  gearMorning(state);
   return state;
 }

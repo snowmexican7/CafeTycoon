@@ -6,6 +6,7 @@ import { computeModifiers } from './effects';
 import { eventActive } from './events';
 import { emitLog } from './log';
 import { counterInteract } from './pass';
+import { gearMarks, gearSpeed } from './gear';
 import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
@@ -110,14 +111,18 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   }
   const idle = station.busyTicksLeft === 0 && station.output === null;
   const recipe = recipeFor(state, station.kind, player.holding);
-  if (idle && recipe && stocked(state, recipe)) {
+  if (idle && recipe && stocked(state, recipe) && station.batchLeft !== 0) {
     for (const s of recipe.consumes) state.supplies[s] -= 1;
     cupIntoStation(player, station);
+    // Gear Tree: a capped cold brew batch runs down; cheap gear marks the cup.
+    if (station.batchLeft !== undefined) station.batchLeft -= 1;
+    const gm = gearMarks(station);
+    if (gm > 0) station.cupSlips = Math.min(ACCURACY.maxStars, (station.cupSlips ?? 0) + gm);
     player.holding = null;
     station.making = recipe.gives;
     const speed = computeModifiers(state).stationSpeed[station.kind];
     const seconds = recipe.seconds ?? ECONOMY.stationSeconds[station.kind as RecipeStation];
-    station.busyTicksLeft = Math.round(((seconds * roleMachineTime(state, playerId)) / speed) * TICK_RATE);
+    station.busyTicksLeft = Math.round(((seconds * roleMachineTime(state, playerId)) / (speed * gearSpeed(station))) * TICK_RATE);
     station.busyTotal = station.busyTicksLeft;
   } else if (idle && !recipe && player.holding !== null && player.holding !== 'grounds' && isRecipeStation(station.kind)) {
     // P3 B5: a cup offered to a station with no step for it: the wrong order, one star off.

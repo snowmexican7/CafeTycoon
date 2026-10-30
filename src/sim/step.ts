@@ -1,4 +1,5 @@
 import { applySignatureInput } from './signature';
+import { applyGearInput } from './gear';
 import { applyPitchInput } from './pitch';
 import { applyAdInput } from './ads';
 import { applyCheckoutInput } from './checkout';
@@ -132,6 +133,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'equip':
       applyEquipInput(s, input);
+      break;
+    case 'gear':
+      applyGearInput(s, input);
       break;
     case 'ad':
       applyAdInput(s, input);

@@ -1,4 +1,5 @@
 import { signatureServed, sigPremium, sigShare } from './signature';
+import { batchOut } from './gear';
 import { rivalAskFactor } from './rival';
 import { roleCraft, roleTip } from './roles';
 import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
@@ -30,7 +31,10 @@ function round2(n: number): number {
 /** Drinks the café can still make: unlocked, on the menu, and every supply the recipe needs has at least one unit. */
 export function availableDrinks(state: GameState): DrinkId[] {
   const unlocked = unlockedDrinks(state);
-  return DRINKS.filter((d) => unlocked.includes(d) && state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => (state.supplies[s] ?? 0) >= 1));
+  const coldOut = batchOut(state);
+  return DRINKS.filter(
+    (d) => unlocked.includes(d) && state.menu[d] && ECONOMY.drinkSupplies[d].every((s) => (state.supplies[s] ?? 0) >= 1) && !(coldOut && ECONOMY.drinkSupplies[d].includes('concentrate')),
+  );
 }
 
 /** Spots in the queue today: the layout's six (plus the kiosk's spot), less any a forecast takes (never below three). */

@@ -30,6 +30,7 @@ import { ECONOMY } from '../data/economy';
 import { EQUIPMENT, EQUIPMENT_KINDS } from '../data/equipment';
 import type { EquipmentKind } from '../data/equipment';
 import type { GearId } from '../data/gear';
+import { batchOut } from './gear';
 import { SLOT_POSITIONS, layoutFor } from '../data/layout';
 import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
@@ -102,7 +103,7 @@ export const isEquipmentKind = (k: unknown): k is EquipmentKind => typeof k === 
 
 /** Night input: put a station from equipment into a slot, or empty the slot (`null`). The old content goes to equipment. Free. */
 export function applySlotInput(state: GameState, input: Extract<PlayerInput, { kind: 'slot' }>): GameState {
-  if (state.phase !== 'night') return state;
+  if (state.phase !== 'night' || state.gear) return state; // Gear runs use the gear input (sim/gear.ts)
   const p = state.players.find((x) => x.id === input.playerId);
   if (!p || !p.connected || p.bot) return state;
   const slots = [...(state.slots ?? defaultSlots(state.tier))];
@@ -128,7 +129,7 @@ export function applySlotInput(state: GameState, input: Extract<PlayerInput, { k
 
 /** Night input: buy a station at its fixed price. It goes into the first empty slot, else into equipment. */
 export function applyEquipInput(state: GameState, input: Extract<PlayerInput, { kind: 'equip' }>): GameState {
-  if (state.phase !== 'night') return state;
+  if (state.phase !== 'night' || state.gear) return state; // Gear runs use the gear input (sim/gear.ts)
   const p = state.players.find((x) => x.id === input.playerId);
   if (!p || !p.connected || p.bot) return state;
   if (!isEquipmentKind(input.station)) return state;
@@ -158,6 +159,7 @@ export function equipmentSpent(state: GameState): number {
 export function reasonOff(state: GameState, drink: DrinkId): OffReason | null {
   if (!canMake(state, drink)) return 'noStation';
   if (ECONOMY.drinkSupplies[drink].some((s) => (state.supplies[s] ?? 0) < 1)) return 'noStock';
+  if (ECONOMY.drinkSupplies[drink].includes('concentrate') && batchOut(state)) return 'noStock';
   if (!state.menu[drink]) return 'off';
   return null;
 }

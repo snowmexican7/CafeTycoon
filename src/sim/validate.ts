@@ -1,4 +1,5 @@
 import { cleanDraft } from './signature';
+import { isGearId } from '../data/gear';
 import { cleanPitch, isPitchKind } from './pitch';
 import { isAdId } from './ads';
 import { isCheckoutId } from './checkout';
@@ -73,6 +74,10 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return Number.isInteger(input.index) && (input.station === null || isEquipmentKind(input.station))
         ? { kind: 'slot', playerId: input.playerId, index: input.index, station: input.station }
         : null;
+    case 'gear':
+      if (input.action === 'buy') return isGearId(input.gear) ? { kind: 'gear', playerId: input.playerId, action: 'buy', gear: input.gear } : null;
+      if (input.action === 'sell') return Number.isInteger(input.index) ? { kind: 'gear', playerId: input.playerId, action: 'sell', index: input.index } : null;
+      return null;
     case 'equip':
       return isEquipmentKind(input.station) ? { kind: 'equip', playerId: input.playerId, station: input.station } : null;
     case 'ad':
