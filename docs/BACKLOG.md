@@ -2086,3 +2086,19 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   Morning-prompt leftovers (optional, not built): bots favouring well-tipping families and drinks near a level-up;
   bots treating a flowing D4b as the fast station; planner leaning to cash late in a short season week; bot
   self-review from `report.crew`; G8 vote toast (UI lane).
+- **A2 cups go cold (`fb2-a2`, protocol 42).** Hot drinks cool from the tick they're made; the clock follows the
+  cup: `Station.outputSince` (machine output), `Player.heldSince` (in hand), `PassItem.madeAt` (pickup counter);
+  absent = fresh. Helpers in `src/sim/cooling.ts`: `coolFraction(state, madeAt, drink)` (0 fresh .. 1 cold; always
+  0 for iced), `slotCool(state, state.pass[i])`, `stationCool(state, station)` (a drip pot by its own `potColdAt`,
+  else the waiting output), `heldCool(state, player)`, `takeBackIndex(state)` / `takeBackCold(state)`. Thresholds
+  `LUKEWARM` 0.5 (half tip) and 1 (cold: taken, not paid, counts as a walk-out). `COOLING_SECONDS`: shots 45 s,
+  milky and filter 60 s, iced never. Customers take the freshest matching cup; empty hands at pickup take back
+  cooling cups coldest first, then oldest. Hot cups with a clock no longer go stale on the counter (iced and
+  old-save cups still do). Bots clear a cold counter cup before ringing, bin and remake a claim whose cup went
+  cold, clear a cold or stray output blocking a machine (a warm stray goes on the counter). Events:
+  `cup.cold { slot | station, drink }` (once per cup), `pickup.cold { customer, drink }`,
+  `review.bad { customer, drink, reason: 'cold' }`, `pickup.takeBack { drink, by, cold }` (`pass.take` still
+  fires). **UI lane:** `pickupModel`'s stale blink and 3.3.2's `passCool` read `PassItem.ticksLeft`, which no
+  longer runs down for hot Gear cups: read `slotCool` instead (note it runs 0 fresh → 1 cold, the opposite of
+  `countsModel.coolFraction`). Settles pickup M2. Open: no thermal gear yet; p4Smoke end cash is lower (served
+  within 2%), to revisit in the A balance pass.
