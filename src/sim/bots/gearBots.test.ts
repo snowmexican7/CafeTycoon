@@ -251,3 +251,98 @@ describe('item 3: jams and dead machines (G5)', () => {
     expect(sim(s).bot!.claim).toBeNull();
   });
 });
+
+describe('item 4: drip pots (G4d)', () => {
+  const station = (s: GameState, id: string) => s.stations.find((x) => x.id === id)!;
+  const POTS = (a: GearId, b: GearId | null = null) => gearShop(['drip', 'trash', b ? 'drip' : null, null, null, null], [a, 'b0', b, null, null, null], { drinks: ['drip'] });
+  const fill = (s: GameState, st: ReturnType<typeof station>, cups: number, cold = false) => {
+    st.output = 'drip';
+    st.potLeft = cups;
+    if (cold) st.potColdAt = s.tick - 1;
+  };
+
+  it('an empty Thrift Store Special: the bot brews a pot (20 s, past the wait cap), pours and serves', () => {
+    let s = POTS('d1');
+    s.customers = [order(1000, 'drip')];
+    expect(ids(think(s, sim(s)))).toEqual(['drip:insert', 'drip:take', 'counter:serve']);
+    let dropped = false; // waits the brew out instead of giving up at the wait cap
+    s = serveAll(s, 60 * 60, (x) => { if (x.customers.length > 0 && sim(x).bot!.claim !== 1000) dropped = true; });
+    expect(s.today.drinks!.drip).toBe(1);
+    expect(dropped).toBe(false);
+  });
+
+  it('three drip orders: one pot brewed (one unit of beans), three cups poured, nothing on the pass or binned', () => {
+    let s = POTS('d2');
+    const beans = s.supplies.beans;
+    s.customers = [order(1001, 'drip'), order(1002, 'drip'), order(1003, 'drip')];
+    s = serveAll(s, 60 * 90);
+    expect(s.today.drinks!.drip).toBe(3);
+    expect(s.supplies.beans).toBe(beans - 1);
+    expect(s.today.wasted ?? 0).toBe(0);
+  });
+
+  it('a pot sitting with cups and no drip orders is left alone (not poured onto the pass)', () => {
+    let s = POTS('d3');
+    fill(s, station(s, 'drip'), 10);
+    for (let i = 0; i < 60 * 30; i++) s = step(s, []);
+    expect(station(s, 'drip').potLeft).toBe(10);
+    expect(s.pass).toEqual([]);
+  });
+
+  it('several pots: pour from the hot one; brew in an empty machine rather than pour a cold cup', () => {
+    const s = POTS('d2', 'd2');
+    const [a, b] = [station(s, 'drip'), station(s, 'drip-2')];
+    fill(s, a, 3, true);
+    fill(s, b, 3);
+    sim(s).pos = { x: a.pos.x, y: 2 }; // standing by the cold one
+    expect(ids(chainFor(s, sim(s), 'drip', 'serve'))[0]).toBe('drip-2:insert');
+    b.output = null;
+    delete b.potLeft;
+    expect(ids(chainFor(s, sim(s), 'drip', 'serve'))[0]).toBe('drip-2:insert'); // brew there
+  });
+
+  it('only a cold pot: the cup is poured and served (half tip), no bin-and-repour loop', () => {
+    let s = POTS('d2');
+    fill(s, station(s, 'drip'), 3, true);
+    s.customers = [order(1010, 'drip')];
+    s = serveAll(s, 60 * 60);
+    expect(s.today.drinks!.drip).toBe(1);
+    expect(s.today.wasted ?? 0).toBe(0);
+    expect(station(s, 'drip').potLeft).toBe(2);
+  });
+
+  it('a temperature miss with a hot pot elsewhere: one retry (bin, pour again), then serve', () => {
+    let s = POTS('d2', 'd2');
+    const [a, b] = [station(s, 'drip'), station(s, 'drip-2')];
+    fill(s, a, 3);
+    fill(s, b, 3);
+    a.potOff = 'cold'; // brewed off: every cup from it complains
+    const p = sim(s);
+    p.pos = { x: a.pos.x, y: 2 };
+    s.customers = [order(1020, 'drip')];
+    p.bot!.claim = 1020;
+    p.bot!.claimDrink = 'drip';
+    p.bot!.plan = [{ kind: 'use', station: 'drip', action: 'insert', makes: 'drip' }, { kind: 'use', station: 'drip', action: 'take' }, { kind: 'use', station: 'counter', action: 'serve' }];
+    s = serveAll(s, 60 * 60);
+    expect(s.today.drinks!.drip).toBe(1);
+    expect(s.today.wasted ?? 0).toBe(1); // the one retry
+    expect(station(s, 'drip').potLeft).toBe(2); // the off cup, binned
+    expect(station(s, 'drip-2').potLeft).toBe(2); // the good cup came from the hot pot
+  });
+
+  it('a second miss on the same claim is served as it is', () => {
+    let s = POTS('d2', 'd2');
+    fill(s, station(s, 'drip-2'), 3);
+    const p = sim(s);
+    s.customers = [order(1030, 'drip')];
+    p.holding = 'drip';
+    p.cupTemp = true;
+    p.bot!.claim = 1030;
+    p.bot!.claimDrink = 'drip';
+    p.bot!.retried = 1030;
+    p.bot!.plan = [{ kind: 'use', station: 'counter', action: 'serve' }];
+    s = serveAll(s, 60 * 30);
+    expect(s.today.wasted ?? 0).toBe(0);
+    expect(station(s, 'drip-2').potLeft).toBe(3);
+  });
+});

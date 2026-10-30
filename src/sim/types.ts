@@ -90,6 +90,8 @@ export interface BotState {
   target?: Vec2 | null;
   waitTicks: number;
   noticeTicksLeft: number;
+  /** Gear G4d: the claim (customer id) this bot already re-poured once after a too-hot/too-cold cup. */
+  retried?: number;
 }
 
 export type SimEventKind =

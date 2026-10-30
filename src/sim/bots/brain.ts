@@ -9,6 +9,7 @@ import { emitLog } from '../log';
 import { rngInt, rngNext } from '../rng';
 import { STATION_RECIPES, recipeAt, stocked } from '../stations';
 import { RECIPES, recipeChain, usesShot } from '../../data/drinks';
+import { GEAR } from '../../data/gear';
 import { zeroDrinks } from '../tally';
 import { tally } from '../tally';
 import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Mess, Player, Station, StationKind, Vec2 } from '../types';
@@ -88,8 +89,37 @@ function groundsPlan(state: GameState, p: Player): BotStep[] {
 // a pot drip machine and a pour-over bar are both 'drip'. So every insert step is chosen by what the
 // machine will make from what the bot will be holding there (`recipeAt`, exactly what `interact` runs).
 
-/** One machine visit: at a station of `kind`, holding `held`, the machine should make `gives`. */
-interface Need { kind: RecipeKind; held: ItemKind | null; gives: ItemKind }
+/** One machine visit: at a station of `kind`, holding `held`, the machine should make `gives` (`last`: the drink itself). */
+interface Need { kind: RecipeKind; held: ItemKind | null; gives: ItemKind; last?: boolean }
+
+/** Gear G4d: a drip machine that brews pots (one press brews, each press after pours a cup). */
+export const hasPot = (st: Station): boolean => !!st.gear && !!GEAR[st.gear].pot;
+
+/** G4d: the pot in `st` would pour a too-hot or too-cold cup (a missed brew, or it sat past going cold). */
+const potBad = (state: GameState, st: Station): boolean =>
+  st.potOff !== undefined || (st.potColdAt !== undefined && state.tick >= st.potColdAt);
+
+/** Other bots with a step at `st` (each will take a cup from a pot). */
+const plannersAt = (state: GameState, self: Player, st: Station): number =>
+  state.players.filter((o) => o !== self && o.bot?.plan.some((x) => x.kind === 'use' && x.station === st.id)).length;
+
+/**
+ * G4d, a cup of drip from a pot machine: 0 pour from a hot pot that has a cup left for this bot; 1 brew a
+ * pot in an empty machine nobody else is about to brew; 2 wait for a pot that is brewing (or about to);
+ * 3 pour from a pot gone cold or brewed off (only plain drip minds: a steamer or a shot on top reheats it);
+ * 4 something else sits in it. A cold pot can't be rebrewed until it is poured out, so with no hot pot and
+ * no empty machine a cold cup (half tip) still beats a walk-out.
+ */
+function potScore(state: GameState, p: Player, st: Station, need: Need): number {
+  const others = plannersAt(state, p, st);
+  if (st.output === 'drip' && st.potLeft !== undefined) {
+    if (need.last && potBad(state, st)) return 3;
+    return others < st.potLeft ? 0 : 2;
+  }
+  if (st.busyTicksLeft > 0) return 2;
+  if (st.output === null) return others === 0 ? 1 : 2;
+  return 4;
+}
 
 /** The insert/take pair at `st`; the insert remembers what it should make. */
 const pair = (st: Station, gives: ItemKind): BotStep[] => [
@@ -109,8 +139,9 @@ function canMake(state: GameState, st: Station, need: Need): boolean {
   return recipeAt(state, st, need.held)?.gives === need.gives;
 }
 
-/** 0: start right away (idle, no other bot heading there); 1: it is busy or someone else plans it. */
-function stationScore(state: GameState, p: Player, st: Station): number {
+/** 0: start right away (idle, no other bot heading there); 1: it is busy or someone else plans it. Pots: potScore. */
+function stationScore(state: GameState, p: Player, st: Station, need: Need): number {
+  if (hasPot(st) && need.held === null && need.gives === 'drip') return potScore(state, p, st, need);
   return isIdle(st) && !plannedByOther(state, p, st) ? 0 : 1;
 }
 
@@ -122,7 +153,7 @@ function pick(state: GameState, p: Player, need: Need, skip: Station | null = nu
   let best: { st: Station; score: number; d: number } | null = null;
   for (const st of state.stations) {
     if (st === skip || !canMake(state, st, need)) continue;
-    const score = stationScore(state, p, st);
+    const score = stationScore(state, p, st, need);
     if (freeOnly && score > 0) continue;
     const d = dist(st.pos, p.pos);
     if (best === null || score < best.score || (score === best.score && d < best.d)) best = { st, score, d };
@@ -134,7 +165,10 @@ function pick(state: GameState, p: Player, need: Need, skip: Station | null = nu
 function needsFrom(drink: DrinkId, held: ItemKind | null): Need[] | null {
   const chain = recipeChain(drink).map(({ station, recipe }) => ({ kind: station, held: recipe.takes, gives: recipe.gives }));
   const at = chain.findIndex((c) => c.held === held);
-  return at < 0 ? null : chain.slice(at);
+  if (at < 0) return null;
+  const out: Need[] = chain.slice(at);
+  out[out.length - 1] = { ...out[out.length - 1], last: true };
+  return out;
 }
 
 /** Pick a station for every visit (each pair keeps its station); null when one has no station. */
@@ -215,6 +249,7 @@ function coveragePool(state: GameState): Coverage {
   }
   for (const st of state.stations) {
     if (st.occupiedBy !== null) continue; // a rogue's drink is not for the queue
+    if (hasPot(st)) continue; // G4d: a pot is a source of cups for whoever claims a drip, not one drink in flight
     if (claimedAtStation(state, st)) continue;
     const brewing = st.busyTicksLeft > 0 && isRecipeKind(st.kind) ? (st.making ?? STATION_RECIPES[st.kind].gives) : null;
     for (const item of [st.output, brewing]) {
@@ -292,7 +327,8 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
     return state.tick - since >= secondsToTicks(secs);
   };
   const candidates = state.stations
-    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st)) && !takenBy(st) && !personAt(st) && sat(st))
+    // G4d: a pot's cups wait in the pot for the orders that claim them (pouring it out would only fill the pass).
+    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st)) && !(hasPot(st) && st.output === 'drip') && !takenBy(st) && !personAt(st) && sat(st))
     .map((st) => ({ st, d: dist(st.pos, self.pos) }))
     .sort((a, b) => a.d - b.d || a.st.pos.y - b.st.pos.y || a.st.pos.x - b.st.pos.x);
   return candidates[0]?.st ?? null;
@@ -455,11 +491,15 @@ function abandon(state: GameState, p: Player): void {
   setPlan(b, dropPlan(state, p));
 }
 
-function wait(state: GameState, p: Player): void {
+/** Wait at the station; past the wait cap (plus `extra` ticks) give the plan up. */
+function wait(state: GameState, p: Player, extra = 0): void {
   const b = p.bot!;
   b.waitTicks += 1;
-  if (b.waitTicks > BOTS.maxWaitTicks) abandon(state, p);
+  if (b.waitTicks > BOTS.maxWaitTicks + extra) abandon(state, p);
 }
+
+/** G4d: a pot takes longer to brew (20 s on the Thrift Store Special) than the wait cap; a brewing pot is worth it. */
+const brewSlack = (st: Station): number => (hasPot(st) && st.busyTicksLeft > 0 ? (st.busyTotal ?? 0) : 0);
 
 function execute(p: Player): void {
   p.interactQueued = true;
@@ -491,6 +531,7 @@ function pullsEarly(state: GameState, p: Player, st: Station): boolean {
   return (
     p.bot!.personality === 'hurried' &&
     p.holding === null &&
+    !hasPot(st) && // pulling a brewing pot early would take one cup and lose the rest of the pot
     st.busyTicksLeft > 0 &&
     !!st.making &&
     !!st.busyTotal &&
@@ -566,14 +607,14 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
         const twin = step.makes !== undefined
           ? pick(state, p, { kind, held: p.holding, gives: step.makes }, st, true)?.st
           : idleOfKind(state, p, kind, st);
-        return twin ? retarget(b, st, twin) : wait(state, p);
+        return twin ? retarget(b, st, twin) : wait(state, p, brewSlack(st));
       }
       return abandon(state, p);
     }
     case 'take':
       if (st.output !== null && p.holding === null) return execute(p);
       if (pullsEarly(state, p, st)) return execute(p); // the interact early-pull takes the cup, one star off
-      if (st.busyTicksLeft > 0) return wait(state, p);
+      if (st.busyTicksLeft > 0) return wait(state, p, brewSlack(st));
       return abandon(state, p);
     case 'serve': {
       if (b.noticeTicksLeft > 0) return wait(state, p);
@@ -714,6 +755,14 @@ function stepBot(state: GameState, p: Player): void {
       const spilled = isDrink(p.holding) && rngNext(state) < MESS.botSpillChance && spillHeld(state, p);
       setPlan(b, spilled ? remake : [binStep(state, p), ...remake]);
     }
+  }
+  // G4d: a too-hot or too-cold cup of drip for a claim: one retry from a better pot (bin it, pour again);
+  // after that, or with no better pot, it is served as it is (half tip beats a walk-out). Never loops.
+  if (p.cupTemp && p.holding === 'drip' && b.claim !== null && b.claimDrink === 'drip' && b.retried !== b.claim) {
+    b.retried = b.claim;
+    const better = pick(state, p, { kind: 'drip', held: null, gives: 'drip', last: true });
+    const again = better && better.score < 3 ? chainFor(state, p, 'drip', 'serve') : [];
+    if (again.length > 0) setPlan(b, [binStep(state, p), ...again]);
   }
   // Orders come first: an uncovered order interrupts any floor step, a clean in progress included.
   if ((isMopStep(b.plan[0]) || p.cleaningTicksLeft > 0) && uncoveredOrder(state, p) !== null) {
