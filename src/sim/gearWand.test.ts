@@ -12,7 +12,7 @@ import { eligibleChallenges } from './challenges';
 import { TICK_RATE } from './constants';
 import { nearestStation } from './movement';
 import { targetNodes } from './bots/path';
-import { planNight } from './bots/planner';
+import { planNight, wandFirst } from './bots/planner';
 import { addStandIns } from './bots/roster';
 import { createSnapshotStore, SNAPSHOT_VERSION } from '../storage/snapshotStore';
 import { memoryStorage } from '../storage/storageLike';
@@ -474,6 +474,22 @@ describe('FB2 C9: the planner and saves', () => {
     s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear, s.slotWand);
     const w = planNight(s).find((a) => a.id.startsWith('gear:wand:'));
     expect(w?.input).toEqual({ kind: 'wand', station: 'espresso', wand: 'weak' });
+  });
+
+  it('at the cart, the Sylvia and its wand come before growing into the café; a stand still grows to the cart', () => {
+    const s = gearRun('cart');
+    s.cash = 1000;
+    s.days.push({ day: 1, served: 20, lost: 0, turnedAway: 0, sales: 60, tips: 5, rent: 17 });
+    expect(wandFirst(s, 'cafe')).toBe(true);
+    expect(planNight(s).some((a) => a.id === 'grow:cafe')).toBe(false);
+    s.slots = ['grinder', 'espresso', null, null, 'trash'];
+    s.slotGear = ['g2', 'e3', null, null, 'b0'];
+    s.slotWand = [null, 'weak', null, null, null];
+    s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear, s.slotWand);
+    expect(wandFirst(s, 'cafe')).toBe(false);
+    expect(planNight(s).some((a) => a.id === 'grow:cafe')).toBe(true);
+    const st = gearRun('stand');
+    expect(wandFirst(st, 'cart')).toBe(false);
   });
 
   it(`saves from before snapshot ${SNAPSHOT_VERSION} are turned away; a current one loads`, () => {

@@ -44,7 +44,8 @@
  * slot, puts the polished C5 / E6 first when yesterday's cups averaged under 3 stars and they are affordable
  * tonight, says nothing while a crew vote is open, and leaves a flowing D4b alone (a daytime thing). FB2 C9: milk
  * needs a wand, so E3 is bought with the little wand and E4 with the proper one (`PATH_WAND`), and an E3/E4 that has
- * none (or E4's little one) gets the add-on first (`wand` input, `gear:wand:<station>` advice). A $50+
+ * none (or E4's little one) gets the add-on first (`wand` input, `gear:wand:<station>` advice), and at the cart there
+ * is no `grow:cafe` advice until a wand is on the floor (`wandFirst`: milk drinks used to come with the cart). A $50+
  * buy in a co-op crew becomes a proposal; the input is the same. `staff:fire` appears when yesterday's wages
  * beat the bots' takings in `DayStats.byPlayer`. Phase 4: match the rival's happy hour on a promo night,
  * print the stamp card once the rival's loyalty card is live (cash after bills >= $30 + a day's restock),
