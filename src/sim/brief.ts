@@ -6,7 +6,7 @@
  *
  *   type NightFix = DistributiveOmit<PlayerInput, 'playerId'>
  *   interface NightAlert {
- *     id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | rival:promo | rival:loyalty | signature | steep | condiments
+ *     id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | rival:promo | rival:loyalty | signature | steep | condiments | fridge
  *     kind: 'cash' | 'stock' | 'soldOut' | 'spoil' | 'grow' | 'checkout' | 'rival' | 'signature';
  *     severity: 'info' | 'warn' | 'danger';
  *     text: string;
@@ -36,6 +36,8 @@ import { profitOf } from './profit';
 import { copyIsLive, countered, isPromoDay, loyaltyLive, RIVAL, sigPrice } from './rival';
 import { FRESH, spoilCount } from './spoilage';
 import { steepPlan } from './steep';
+import { fridgeCapacity, fridgeGear, packsThatFit } from './fridge';
+import { GEAR, type GearId } from '../data/gear';
 import { menuDrinks, neededSupplies, SUPPLY_IDS } from './unlocks';
 import type { CheckoutId, DrinkId, GameState, PlayerInput, SupplyId } from './types';
 
@@ -57,6 +59,9 @@ export interface NightBrief {
   headline: string;
   alerts: NightAlert[];
 }
+
+/** FB2 A4: the margin on tomorrow's milk the fridge should hold (the planner's RESTOCK_MARGIN). */
+const FRIDGE_MARGIN = 1.25;
 
 /** A supply counts as "low" when it would not cover this share of the expected use (same as the night warnings). */
 const LOW_SUPPLY_SHARE = 0.75;
@@ -125,8 +130,9 @@ export function runOutFraction(state: GameState, supply: SupplyId): number | nul
 }
 
 /** A restock fix, or nothing when the till cannot pay for it (applying it would be a silent no-op). */
-function restockFix(state: GameState, supply: SupplyId, packs: number): NightFix | undefined {
-  return state.cash < restockCost(state, supply, packs) ? undefined : { kind: 'restock', supply, packs };
+function restockFix(state: GameState, supply: SupplyId, want: number): NightFix | undefined {
+  const packs = packsThatFit(state, supply, want); // FB2 A4: Gear milk only as much as the fridge holds
+  return packs <= 0 || state.cash < restockCost(state, supply, packs) ? undefined : { kind: 'restock', supply, packs };
 }
 
 function packsToCover(use: number, have: number, supply: SupplyId): number {
@@ -195,7 +201,7 @@ export function nightBrief(state: GameState): NightBrief {
     if (state.condiments) {
       const orders = expectedOrders(state);
       const need = Math.ceil(CONDIMENTS.share * (orders.drip + orders.coldBrew));
-      const have = state.condiments.servings + (state.condimentBoxes ?? 0) * CONDIMENTS.servings;
+      const have = state.condiments.servings + (state.barAway ?? 0) + (state.condimentBoxes ?? 0) * CONDIMENTS.servings;
       if (need > have) {
         const boxes = Math.ceil((need - have) / CONDIMENTS.servings);
         const alert: NightAlert = {
@@ -207,6 +213,20 @@ export function nightBrief(state: GameState): NightBrief {
         if (state.cash >= boxes * CONDIMENTS.boxCost) alert.fix = { kind: 'condimentBox', boxes };
         alerts.push(alert);
       }
+    }
+  }
+
+  // 2c. FB2 A4 (Gear): tomorrow's milk won't fit in the fridge (restocks stop at what it holds).
+  const fridge = fridgeGear(state);
+  if (fridge && use.milk > 0 && needed.includes('milk')) {
+    const need = Math.ceil(use.milk * FRIDGE_MARGIN);
+    const cap = fridgeCapacity(state);
+    if (need > cap) {
+      const better = (Object.keys(GEAR) as GearId[]).filter((id) => GEAR[id].fridge && GEAR[id].tier > GEAR[fridge].tier).sort((a, b) => GEAR[a].tier - GEAR[b].tier);
+      const want = better.find((id) => GEAR[id].fridge!.holds >= need) ?? better.at(-1);
+      const alert: NightAlert = { id: 'fridge', kind: 'stock', severity: 'warn', text: `The fridge holds ${cap} milk; tomorrow needs about ${need}` };
+      if (want && state.cash + GEAR[fridge].sell >= GEAR[want].price) alert.fix = { kind: 'gear', action: 'buy', gear: want };
+      alerts.push(alert);
     }
   }
 
