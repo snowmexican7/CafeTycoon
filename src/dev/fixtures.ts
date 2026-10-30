@@ -1,3 +1,5 @@
+import { callFor } from '../sim/call';
+import { secondsToTicks } from '../sim/constants';
 import { judgePitch } from '../sim/pitch';
 import { gearStart } from '../sim/gear';
 import { isPromoDay } from '../sim/rival';
@@ -48,6 +50,18 @@ function atTier(s: GameState, tier: TierId, n: number): void {
   s.players.forEach((p, i) => (p.pos = { ...spots[i] }));
   const drinks = tier === 'stand' ? (['espresso', 'coldBrew', 'icedLatte', 'espresso'] as const) : (['latte', 'espresso', 'coldBrew', 'mocha', 'latte', 'icedLatte', 'espresso'] as const);
   s.customers = Array.from({ length: n }, (_, i) => ({ id: 70 + i, drink: drinks[i % drinks.length], patienceLeft: 1300 - i * 110, patienceMax: 1600, ...(i === 1 && tier !== 'stand' ? { kind: 'group' as const } : {}) }));
+}
+
+/** P4 B6: a café Gear run with a branch, on the first day its phone rings about `kind`, at the moment it rings. */
+function ringing(s: GameState, kind: 'machine' | 'order'): void {
+  s.gear = true;
+  atTier(s, 'cafe', 4);
+  s.branch = { area: 'tourist', staff: 2, openedDay: 1, spent: 300, by: 'Ana' };
+  for (let d = 2; d < 200; d++) {
+    s.day = d;
+    const c = callFor(s);
+    if (c?.kind === kind) { s.phaseTicksLeft = secondsToTicks(s.settings.dayLengthSec) - c.ringAt - secondsToTicks(2); return; }
+  }
 }
 
 function base(): GameState {
@@ -216,6 +230,9 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** P4 B6: mid-day, the second shop rings (machine broke / big order). */
+  branchCall: { setup: (s) => ringing(s, 'machine'), timeline: [] },
+  branchCallOrder: { setup: (s) => ringing(s, 'order'), timeline: [] },
   /** P4 B5: the branch with a Manager picked, stock credit there, and a report that lists it. */
   branchManaged: {
     night: true,

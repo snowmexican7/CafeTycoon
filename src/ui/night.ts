@@ -452,7 +452,7 @@ function reportBody(r: ReportVM | undefined, br?: BranchVM): string {
   const notes = `<div class="mr-notes">${r.notes.map((n) => `<p>📝 ${esc(n)}</p>`).join('')}</div>`;
   const y = br?.yesterday;
   const shop = y && br?.area
-    ? `<div class="mr-sec"><div class="sec-h">🏪 Second shop · ${esc(br.area.name)}</div><div class="mr-row two"><span>${y.served} served${y.walked ? ` · <span class="neg">${y.walked} walked</span>` : ''}${y.fromStock ? ` · ${$(y.fromStock)} from our stock` : ''}</span><b class="${y.profit < 0 ? 'neg' : ''}">${y.profit < 0 ? '−' : '+'}${$(Math.abs(y.profit))}</b></div></div>`
+    ? `<div class="mr-sec"><div class="sec-h">🏪 Second shop · ${esc(br.area.name)}</div><div class="mr-row two"><span>${y.served} served${y.walked ? ` · <span class="neg">${y.walked} walked</span>` : ''}${y.fromStock ? ` · ${$(y.fromStock)} from our stock` : ''}${y.call ? ` · ${esc(y.call)}` : ''}</span><b class="${y.profit < 0 ? 'neg' : ''}">${y.profit < 0 ? '−' : '+'}${$(Math.abs(y.profit))}</b></div></div>`
     : '';
   return `<div class="mreport">${kpis}${notes}${costs}${shop}${drinks}${crew}</div>`;
 }

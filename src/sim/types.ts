@@ -462,7 +462,7 @@ export interface DayStats {
   /** P4 B3: who handed off what today: serves and takings per player (bots included). */
   byPlayer?: Record<PlayerId, { serves: number; takings: number }>;
   /** P4 B4: the second shop's day (its profit is already in the till). */
-  branch?: { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number };
+  branch?: { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number; /** P4 B6: today's phone call and how it ended. */ call?: { kind: 'machine' | 'order'; took: boolean; by?: string } };
   /** FB1 WP4: seconds into the day when the board first sold out. */
   soldOutAt?: number;
 }
@@ -506,6 +506,8 @@ export interface GameState {
   morningNotes: string[];
   /** FB1 WP3: connected humans who have voted to close early (absent = nobody; cleared each phase). */
   closeVotes?: PlayerId[];
+  /** P4 B6: who answered the branch's phone call, and whether they fixed it / took the order. */
+  callAnswer?: { day: number; take: boolean; by: string };
   /** FB1 WP3: tick stamp of when the queue last emptied (absent while someone is queued). */
   emptySince?: number;
   pass: PassItem[];
@@ -616,6 +618,7 @@ export type PlayerInput =
   | { kind: 'espresso'; playerId: PlayerId }
   /** FB1 WP3: vote (on) or withdraw (off) to close the shop early; every connected human must agree. */
   | { kind: 'closeEarly'; playerId: PlayerId; on: boolean }
+  | { kind: 'call'; playerId: PlayerId; take: boolean }
   | { kind: 'join'; playerId: PlayerId; name: string }
   | { kind: 'leave'; playerId: PlayerId }
   | { kind: 'drop'; playerId: PlayerId }

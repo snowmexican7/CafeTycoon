@@ -8,6 +8,8 @@ import { podsOnly } from '../sim/gear';
 import { ACCURACY } from '../sim/accuracy';
 import { ROLES } from '../sim/roles';
 import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
+import { CALL, callRinging } from '../sim/call';
+import { AREAS } from '../data/areas';
 /**
  * Presentational helpers for the restyled overlays. They read GameState directly for the things
  * the view models do not carry (order tickets, crew, what you hold, the day bar), and never change
@@ -120,7 +122,23 @@ export interface HudLive {
   hint: HandHint;
   /** FB1 WP3: the close-early vote (button by the clock). */
   closeEarly?: CloseEarlyVM;
+  /** P4 B6: the second shop is ringing. */
+  call?: CallVM;
 }
+
+export interface CallVM { kind: 'machine' | 'order'; where: string; title: string; detail: string; yes: string; no: string; secsLeft: number }
+
+export function callVM(state: GameState, me: PlayerId): CallVM | undefined {
+  const c = callRinging(state);
+  const p = state.players.find((x) => x.id === me);
+  if (!c || !state.branch || !p || p.bot) return undefined;
+  const where = AREAS[state.branch.area]?.name ?? 'the other shop';
+  return c.kind === 'machine'
+    ? { kind: c.kind, where, title: 'Their espresso machine just died!', detail: `Fix it now for $${CALL.repair}, or it serves half its cups today.`, yes: `🔧 Send a fix · $${CALL.repair}`, no: 'Let it ring', secsLeft: c.secsLeft }
+    : { kind: c.kind, where, title: `An office wants ${CALL.orderCups} coffees delivered!`, detail: `+$${CALL.orderProfit} for the order, but it uses ${CALL.orderCups} of the shop's cups today.`, yes: `☕ Take the order · +$${CALL.orderProfit}`, no: 'Turn it down', secsLeft: c.secsLeft };
+}
+
+export const callKey = (c: CallVM | undefined): string => (c ? `${c.kind}|${c.secsLeft}` : '');
 
 export function crewOf(state: GameState, me: PlayerId): CrewMember[] {
   return state.players.map((p, i) => ({
@@ -218,6 +236,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     meName: player?.role ? `${ROLES[player.role].icon} ${player.name} the ${ROLES[player.role].name}` : (player?.name ?? ''),
     hint: handHint(state, me),
     closeEarly: closeEarlyVM(state, me),
+    ...(state.branch ? { call: callVM(state, me) } : {}),
   };
 }
 

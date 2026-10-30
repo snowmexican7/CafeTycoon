@@ -13,7 +13,14 @@ const $ = (n: number) => `${n < 0 ? '−' : ''}$${Math.abs(n).toFixed(2)}`;
 const signed = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`;
 
 export interface BranchAreaVM { id: AreaId; name: string; crowd: string; fit: number; fitWord: string }
-export interface BranchDayVM { served: number; walked: number; profit: number; fromStock?: number }
+export interface BranchDayVM { served: number; walked: number; profit: number; fromStock?: number; call?: string }
+
+/** P4 B6: one line for how the branch's phone call went. */
+export function callLine(c: { kind: 'machine' | 'order'; took: boolean; by?: string } | undefined): string | undefined {
+  if (!c) return undefined;
+  if (c.kind === 'machine') return c.took ? `📞 ${c.by ?? 'We'} sent a fix for the machine` : '📞 Machine broke, nobody fixed it: half the cups';
+  return c.took ? `📞 ${c.by ?? 'We'} took a big office order` : '📞 Turned down an office order';
+}
 export interface BranchSupplyVM { id: SupplyId; name: string; have: number; send: number; worth: number }
 export interface BranchVM {
   open: boolean;
@@ -67,7 +74,8 @@ export function branchViewModel(state: GameState): BranchVM | undefined {
     const m = state.players.find((p) => p.role === 'manager');
     vm.manager = m ? { name: m.name, cups: BRANCH.managerCups, discountPct: Math.round((1 - roleSupplyCost(state)) * 100) } : null;
   }
-  if (last) vm.yesterday = { served: last.served, walked: last.walked, profit: last.profit, ...(last.fromStock ? { fromStock: last.fromStock } : {}) };
+  const cl = callLine(last?.call);
+  if (last) vm.yesterday = { served: last.served, walked: last.walked, profit: last.profit, ...(last.fromStock ? { fromStock: last.fromStock } : {}), ...(cl ? { call: cl } : {}) };
   return vm;
 }
 
@@ -80,7 +88,7 @@ export function branchChip(v: BranchVM | undefined): string {
 export function branchBody(v: BranchVM | undefined): string {
   if (!v) return '<p>Second shops come with Gear runs.</p>';
   const day = (label: string, d: BranchDayVM) =>
-    `<div class="br-day"><small>${label}</small><b class="${d.profit < 0 ? 'neg' : ''}">${signed(d.profit)}</b><span>${d.served} served${d.walked ? ` · <span class="neg">${d.walked} walked</span>` : ''}${d.fromStock ? ` · ${$(d.fromStock)} from our stock` : ''}</span></div>`;
+    `<div class="br-day"><small>${label}</small><b class="${d.profit < 0 ? 'neg' : ''}">${signed(d.profit)}</b><span>${d.served} served${d.walked ? ` · <span class="neg">${d.walked} walked</span>` : ''}${d.fromStock ? ` · ${$(d.fromStock)} from our stock` : ''}${d.call ? `<br>${esc(d.call)}` : ''}</span></div>`;
   if (!v.open || !v.area) {
     const rows = v.areas
       .map((a) => `<div class="br-area"><div><b>${esc(a.name)}</b><small>${esc(a.crowd)}</small><small class="${a.fit < 0.98 ? 'neg' : 'pos'}">${esc(a.fitWord)} (×${a.fit.toFixed(2)})</small></div>
