@@ -2052,3 +2052,19 @@ Open (sim lane):
   the feature (tighten them); a full counter bins the held drink rather than taking back a cup nobody wants (M2).
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
+
+## ui-3.3.2 (UI lane): counts, cooling rings, step icons: notes for Claude
+
+Built in `src/render/countsModel.ts` (pure, tested) and `src/render/layers/counts.ts` (Pixi). No sim changes.
+
+- **Cooling ring is wired only where the sim has a real timer:** cups on the pickup coasters (`PassItem.ticksLeft`
+  against `ECONOMY.pass.staleSeconds`) and drip pots (`potColdAt` against `GEAR[id].pot.coldAfter`).
+  **Left unwired: a shot or milk waiting at a machine (`Station.output`).** It has no age or stale timer, so it
+  never cools. If you want it to (Kennedy's "shots die"), add a timer to the station (e.g. `outputSince` plus a
+  per-item limit). Then `drawCoolRing(g, x, y, r, frac)` in `layers/counts.ts` and `coolFraction(left, total)` take
+  a 0..1 fraction directly, and `stationCounts()` already has a `cool` field per station to fill in.
+- **Step icons over a carried cup** read the tickets' own step lists (`ticketSteps` / `nextStepIndex`). The target
+  is the customer whose drink exactly matches what's held, else the first ticket (pickup first) the item fits.
+  This is a guess: the sim doesn't record which order a cup is "for". If it ever does, pass that drink in.
+- **Espresso rework and fridge line** are a proposal only: `docs/GEAR_TREE.md` section 5b, marked PROPOSED and
+  awaiting Kennedy's OK. It touches gear data, the sim and saves (retiring S1–S3), all in your lane.

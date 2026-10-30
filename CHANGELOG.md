@@ -18,6 +18,22 @@ when a build goes out, the line moves under its version with the date.
 
 _Nothing yet._
 
+## 3.3.2 — 2026-10-30 · How many are left?
+
+Small screen-only changes from Kennedy's playtest. Nothing about how the game plays has changed.
+
+- **Counts over the machines.** A small number floats over each machine that has something waiting: cups left in
+  the cold brew tap, cups left in the drip pot, a shot sitting at the espresso machine. Empty machines show nothing.
+  The number turns amber when the tap is nearly out, and blue when the drip pot has gone cold.
+- **The Gear card names each machine.** "Cold brew: 7/8 left" instead of just "7/8 left". If you own two of the
+  same machine, they're numbered.
+- **Recipe steps over the cup you're carrying.** A little strip over your head shows the drink's steps: done ones
+  get a tick, and the next one is circled.
+- **Cooling rings.** Cups on the pickup counter and a fresh drip pot get a ring that empties as they cool, going
+  red → orange → yellow, then blue once the pot is cold.
+- **Proposed (not built): espresso rework and fridges.** The Gear design doc now has Kennedy's six-tier espresso
+  idea (wands by tier, no separate steamer) and a fridge line. It's waiting for Kennedy's OK.
+
 ## 3.3.1 — 2026-10-30 · The pickup counter on screen
 
 The screen catches up with 3.3.0's counter.
