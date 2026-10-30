@@ -3,6 +3,7 @@ import { createRun, startDay } from '../run';
 import { step } from '../step';
 import { stationsFromSlots, type SlotContent } from '../slots';
 import { recipeAt, interact } from '../stations';
+import { gearArea } from '../gear';
 import { BASE_DRINKS } from '../../data/drinks';
 import type { GearId } from '../../data/gear';
 import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId, TierId } from '../types';
@@ -501,5 +502,51 @@ describe('item 6: multiples and twins (G4e, G9)', () => {
     s = serveAll(s, 60 * 90, (x) => { if (planned(x).includes('espresso-2')) touched = true; });
     expect(touched).toBe(false);
     expect(s.today.served).toBe(2);
+  });
+});
+
+describe('item 7: careful cups (G10b): no early pulls for the arts crowd or a snob regular', () => {
+  /** A hurried bot at the espresso machine, the shot in its last 40%, a queue of four (it would pull early). */
+  function hurriedAtShot(seed: number, snob: boolean): GameState {
+    const s = gearShop(['grinder', 'espresso', 'trash', null, null, null], ['g2', 'e3', 'b0', null, null, null], { seed });
+    const esp = s.stations.find((x) => x.id === 'espresso')!;
+    esp.making = 'espresso';
+    esp.busyTotal = 100;
+    esp.busyTicksLeft = 40;
+    s.customers = Array.from({ length: 4 }, (_, i) => order(1500 + i, 'espresso'));
+    if (snob) {
+      s.regulars.push({ name: 'Ines', drink: 'espresso', visits: 3, lost: 0, snob: true });
+      s.customers[0] = order(1500, 'espresso', { kind: 'regular', name: 'Ines' });
+    }
+    const p = sim(s);
+    p.pos = { x: esp.pos.x, y: 2 };
+    p.bot!.personality = 'hurried';
+    p.bot!.claim = 1500;
+    p.bot!.claimDrink = 'espresso';
+    p.bot!.plan = [{ kind: 'use', station: 'espresso', action: 'take' }, { kind: 'use', station: 'counter', action: 'serve' }];
+    return s;
+  }
+  const seedFor = (arts: boolean) => {
+    for (let seed = 1; ; seed++) if ((gearArea(createRun({ seed, hostId: 'p1', players: [], gear: true })) === 'arts') === arts) return seed;
+  };
+  const pulled = (s: GameState) => {
+    let early = false;
+    for (let i = 0; i < 4; i++) {
+      s = step(s, []);
+      if (s.log.some((e) => e.kind === 'cup.early')) early = true;
+    }
+    return early;
+  };
+
+  it('elsewhere a hurried bot pulls early (the control)', () => {
+    expect(pulled(hurriedAtShot(seedFor(false), false))).toBe(true);
+  });
+
+  it('in the arts district it waits the shot out', () => {
+    expect(pulled(hurriedAtShot(seedFor(true), false))).toBe(false);
+  });
+
+  it('for a snob regular it waits the shot out', () => {
+    expect(pulled(hurriedAtShot(seedFor(false), true))).toBe(false);
   });
 });

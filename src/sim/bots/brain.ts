@@ -16,6 +16,7 @@ import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKi
 import { byDistance, findPath, floorDropNode, idleNode, nodeOf, targetNodes, walkableNodes } from './path';
 import { spillHeld, spillTiles } from '../floor';
 import { floorWidth } from '../growth';
+import { gearArea } from '../gear';
 import { nearestMess, returnMop } from '../mop';
 import { rogueNear, rogueTiles } from '../rogue';
 
@@ -544,10 +545,21 @@ function retarget(b: BotState, from: Station, twin: Station): void {
   b.waitTicks = 0;
 }
 
+/**
+ * Gear G10b: a cup where a slip costs more than the wait: the arts crowd tips by stars, and a snob regular
+ * tips big only for a perfect cup (this bot's claim is one).
+ */
+function carefulCup(state: GameState, p: Player): boolean {
+  if (gearArea(state) === 'arts') return true;
+  const c = state.customers.find((x) => x.id === p.bot!.claim);
+  return !!c && c.kind === 'regular' && state.regulars.some((r) => r.snob && r.name === c.name && r.drink === c.drink);
+}
+
 /** A hurried bot with a queue behind it grabs a cup in the last stretch of its run instead of waiting it out. */
 function pullsEarly(state: GameState, p: Player, st: Station): boolean {
   return (
     p.bot!.personality === 'hurried' &&
+    !carefulCup(state, p) &&
     p.holding === null &&
     !hasPot(st) && // pulling a brewing pot early would take one cup and lose the rest of the pot
     st.busyTicksLeft > 0 &&
