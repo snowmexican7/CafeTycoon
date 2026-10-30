@@ -2176,3 +2176,44 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   trash: null. Fridge milk joins with A4. No state, inputs or events. **UI lane:** have `countsModel.stationCounts`
   call `stationCountsLeft` (widen its state type to `GameState`) instead of reading fields; cooling stays in
   `src/sim/cooling.ts` (`stationCool`, `slotCool`). (done, ui-3.3.4)
+- **A4 Fridge, morning setup and closing (`fb2-a4`, protocol 44).**
+
+  **Ownership.** Gear runs keep milk in a fridge, a counter-kind station with id `fridge` (`FRIDGE_ID`) at `layoutFor(tier).fridge` = (1,3), and `spotOf` returns `'fridge'`. The fridge follows the shop size (`src/data/fridges.ts`):
+  - the stand has none until it buys the Dorm Room Cube (f1, a $20 card, holds 24);
+  - the cart comes with the Garage Beer Fridge (f2, 48);
+  - the café comes with the Chrome Reach-In (f3, 96, overnight milk spoil ×0.5);
+  - the café can buy the Udder-Matic 3000 (f4, a $320 card, 128, ×0.25, pours milk to the bar by itself).
+
+  Fridges are never sold or downgraded. `GameState.fridge?: FridgeId` is the one bought; `fridgeGear(state)` is the one the shop has (null = none). The shop shows `fridgeCards(state)` (`{ id, price }[]`) as single cards; a buy sends `{ kind: 'fridge', fridge }`.
+
+  **No fridge** means no milk restock, no cartons, and a bar that spoils every night. Milk restock buys only whole packs that fit.
+
+  **Milk out at the bar.** `supplies.milk` is the milk in the fridge; steamers, wands and the tap draw from `GameState.milkOut`. E with empty hands at the fridge takes a carton (`Player.tool = 'milk'`, `Player.carry` ≤ 8; `fridge.take { by, item: 'milk', n }`). E at a steamer, wand or tap puts it out (`milk.out { by, n, station }`).
+
+  **Closing soon** is the last 30 s of the day (`GameState.closingSoonAt`, `closing.soon { left }` once, also on close-early). During it:
+  - empty hands at a milk station lift the milk (`milk.lift { by, n, station }`);
+  - empty hands at the condiment bar lift what's left (`Player.tool = 'bar'`, `bar.lift { by, n }`);
+  - E at the fridge stores either (`fridge.put { by, item: 'milk' | 'bar', n }`). Bar servings go to `GameState.barAway` and come back on the bar next morning; any overflow waits in the fridge.
+
+  **At close**, anything left out spoils: `supply.spoil { item: 'milk' | 'bar', count }`, `DayStats.spoiled.milk` and `DayStats.spoiledBar`, costed in `spoiledValue`. The Udder-Matic emits `fridge.auto { n }`.
+
+  **Helpers** (sim/fridge.ts): `closingChecklist(state) → { milkAway, barAway, potsEmpty, floorClean, counterClear }`, `closingSoon`, `readyStock(state, 'milk')` (what the steamer can draw now), `fridgeGear`, `fridgeCards`, `fridgeCapacity`, `autoMilk`. A5's `stationLeft(state, 'fridge')` is the milk inside the fridge.
+
+  **Bots** put a carton out ahead of milk orders, count cartons on their way, and put the milk and the bar away once the doors lock and nothing is left to steam (or in the last 8 s); the closing waits for them.
+
+  **Planner and brief:** advice `fridge:f1` / `fridge:f4` and alert `fridge`.
+
+  **UI lane:**
+  - the fridge sprite, and its level from `fridgeGear`;
+  - the two fridge cards on the night shop;
+  - a "Put a carton out" hint from `readyStock`;
+  - the Closing soon banner with checklist ticks;
+  - carton and bar-box carry sprites;
+  - fridge hand hints: live.ts `counterName` and `gearCounterHint` currently treat `'fridge'` as the till or the bar, and render `pickupModel.counterSpotOf` draws it as a till;
+  - at the tap during closing soon, a hint that E lifts the milk.
+
+  **No fridge.** Pantry milk doesn't count until a fridge is owned.
+
+  **Co-op vote.** The Udder-Matic card ($320) goes to a co-op vote like $50+ gear: `state.fridgeVote { by, byName, fridge, amount, yes, no }`, voted with the gear vote input, one proposal at a time, lapsing at opening, with the result in `gearVoteLast`. The UI lane draws it like the gear vote.
+
+  **Known limit.** Last call doesn't interrupt a bot that is busy making a drink.

@@ -24,6 +24,10 @@ when a build goes out, the line moves under its version with the date.
 - A back sink to pour away cold drinks and old pots. Drip pots left full overnight go stale and must be dumped
   before brewing. Steamers drip milk, grinders spill grounds and the bin sometimes leaks: each mess knocks 8% off
   the floor meter, and a quick mop wins it back within a minute.
+- Milk now lives in a fridge: the stand buys a $20 Dorm Room Cube, the cart and the café come with bigger ones, and
+  the café can splurge on the self-pouring Udder-Matic 3000. Carry a carton to the steamer before you can steam.
+  In the last 30 seconds the shop is "closing soon": put the milk and the condiment bar back in the fridge, or
+  whatever's left out goes bad.
 
 ## 3.3.5 — 2026-10-30 · Cold brew, not "tap"
 
