@@ -6,11 +6,13 @@ import { applyGearInput } from './gear';
 import { applyGrowInput } from './growth';
 import { ensureCounterSpots, stationsFromSlots } from './slots';
 import { interact } from './stations';
-import { nearestStation } from './movement';
-import { findPath, targetNodes } from './bots/path';
+import { blocked, nearestStation } from './movement';
+import { addStandIns } from './bots/roster';
+import { findPath, targetNodes, walkableNodes } from './bots/path';
 import { SINK_ID, LAYOUT, layoutFor } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
 import { EQUIPMENT_KINDS } from '../data/equipment';
+import { ECONOMY } from '../data/economy';
 import { needsDump } from './sink';
 import type { GameState, Station, TierId } from './types';
 
@@ -53,16 +55,36 @@ const coldPot = (s: GameState, cups = 3) => {
 const events = (s: GameState, kind: string) => s.log.filter((e) => e.kind === kind).map((e) => e.data);
 
 describe('FB2 A3: the back sink fixture', () => {
-  it('every Gear tier has the sink at its fixed spot against the right wall; classic runs have none', () => {
+  it('every Gear tier has the sink against the right wall, in the back half, clear of the bar; classic runs have none', () => {
     expect(SINK_ID).toBe('sink');
-    const want: Record<TierId, { x: number; y: number }> = { stand: { x: 7, y: 3 }, cart: { x: 9, y: 3 }, cafe: { x: 11, y: 3 } };
+    const FRIDGE = [{ x: 1, y: 3 }, { x: 2, y: 3 }, { x: 1, y: 2 }]; // A4: the fridge and its access tiles
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
-      expect(layoutFor(tier).sink).toEqual(want[tier]);
-      const sink = gearRun(tier).stations.find((x) => x.id === SINK_ID)!;
-      expect(sink).toEqual({ id: SINK_ID, kind: 'counter', pos: want[tier], busyTicksLeft: 0, output: null, occupiedBy: null });
+      const s = gearRun(tier);
+      const at = layoutFor(tier).sink;
+      expect(at.x).toBe(layoutFor(tier).width - 1);
+      expect(at.y).toBeGreaterThan(2); // a row of floor between it and the bar
+      expect(at.y).toBeLessThan(6); // behind the counter row
+      expect(FRIDGE.some((f) => f.x === at.x && f.y === at.y)).toBe(false);
+      const sink = s.stations.find((x) => x.id === SINK_ID)!;
+      expect(sink).toEqual({ id: SINK_ID, kind: 'counter', pos: at, busyTicksLeft: 0, output: null, occupiedBy: null });
+      // FB2 A3 fix round 1 (I1): no tile in reach of the sink is also in reach of any other station (no ties).
+      const near = (n: { x: number; y: number }, p: { x: number; y: number }) => Math.hypot(n.x - p.x, n.y - p.y) <= ECONOMY.interactRangeTiles;
+      expect(targetNodes(s, sink, LAYOUT.door).length).toBeGreaterThan(0);
+      for (const n of walkableNodes(s).filter((x) => near(x, at))) {
+        expect(FRIDGE.some((f) => f.x === n.x && f.y === n.y), `${tier} fridge tile`).toBe(false);
+        for (const o of s.stations) if (o !== sink) expect(near(n, o.pos), `${tier} ${o.id} shares ${n.x},${n.y}`).toBe(false);
+      }
       const classic = createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 }, tier });
       expect(classic.stations.some((x) => x.id === SINK_ID)).toBe(false);
     }
+  });
+
+  it('nobody starts the day inside the sink (the stand\'s fourth spawn point is its tile)', () => {
+    const s = createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 }, tier: 'stand', gear: true });
+    addStandIns(s, 4);
+    expect(s.players.some((p) => p.pos.x === layoutFor('stand').sink.x && p.pos.y === layoutFor('stand').sink.y)).toBe(true);
+    startDay(s);
+    for (const p of s.players) expect(blocked(p.pos, s.stations, layoutFor('stand').width), p.id).toBe(false);
   });
 
   it('is not gear, not equipment and not a slot: nothing buys, sells or moves it', () => {

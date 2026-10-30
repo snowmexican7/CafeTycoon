@@ -1,6 +1,8 @@
 import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
-import { canMake, growthMorning } from './growth';
+import { canMake, floorWidth, growthMorning } from './growth';
+import { blocked } from './movement';
+import { nodeOf } from './bots/path';
 import { defaultSlots, stationsFromSlots } from './slots';
 import { secondsToTicks } from './constants';
 import { rngInt, seedRng } from './rng';
@@ -165,6 +167,9 @@ export function startDay(state: GameState): GameState {
   state.mop = { pos: { ...layoutFor(state.tier).mopHome }, heldBy: null };
   state.rogue = null;
   syncBots(state);
+  // FB2 A3: a barista whose spot is now inside a fixture (the stand's fourth spawn point is the back sink's tile, and
+  // old saves gain the sink on load) steps onto the nearest free tile.
+  for (const p of state.players) if (blocked(p.pos, state.stations, floorWidth(state))) p.pos = nodeOf(state, p.pos);
   for (const p of state.players) p.tile = tileOf(p.pos);
   const adNote = adMorning(state);
   scheduleEvents(state);
