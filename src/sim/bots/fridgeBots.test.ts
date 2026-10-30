@@ -118,4 +118,64 @@ describe('FB2 A4: bots and the fridge', () => {
     expect(t.days.at(-1)!.spoiledBar).toBeUndefined();
     expect(t.barAway).toBe(12);
   });
+
+  it('I2: an idle bot puts a carton out ahead of time while milk drinks are on the board (day only, not closing soon)', () => {
+    const s = shop();
+    expect(s.customers).toHaveLength(0);
+    expect(ids(think(s, sim(s)))).toEqual([`${FRIDGE_ID}:fetch`, 'steamer:stock']);
+    s.milkOut = 4; // enough out
+    expect(ids(think(s, sim(s)))).toEqual(['idle']);
+    s.milkOut = 0;
+    s.closingSoonAt = s.tick;
+    expect(ids(think(s, sim(s)))).toEqual(['idle']);
+    const dry = shop();
+    dry.supplies.milk = 0;
+    expect(ids(think(dry, sim(dry)))).toEqual(['idle']);
+  });
+
+  it('I2: a carton on its way counts as milk out, so a latte is claimed and its shot started meanwhile', () => {
+    const s = shop(2);
+    s.customers = [rung(1, 'latte')];
+    const first = think(s, sim(s, 1));
+    expect(ids(first)).toEqual([`${FRIDGE_ID}:fetch`, 'steamer:stock']);
+    sim(s, 1).bot!.plan = first;
+    expect(ids(think(s, sim(s, 2)))[0]).toBe('grinder:insert');
+    const t = shop(2);
+    t.customers = [rung(1, 'latte')];
+    sim(t, 1).tool = 'milk';
+    sim(t, 1).carry = 3;
+    expect(ids(think(t, sim(t, 2)))[0]).toBe('grinder:insert');
+  });
+
+  it('I3: the milk is put away once nothing is left to steam, even with a latte still waiting on the counter', () => {
+    const s = shop();
+    s.milkOut = 5;
+    enterClosing(s);
+    s.customers = [rung(1, 'latte')];
+    s.pass.push({ item: 'latte', ticksLeft: 9999 }); // made, not yet collected
+    expect(ids(think(s, sim(s)))).toEqual(['steamer:lift', `${FRIDGE_ID}:store`]);
+  });
+
+  it('I3: in the last 8 s of closing the milk and the bar go away whatever is still wanted', () => {
+    const s = shop();
+    s.milkOut = 5;
+    s.condiments = { servings: 4 };
+    enterClosing(s);
+    s.customers = [rung(1, 'latte'), rung(2, 'drip')];
+    expect(ids(think(s, sim(s))).some((x) => x.endsWith(':lift'))).toBe(false);
+    s.phaseTicksLeft = 60 * 8;
+    expect(ids(think(s, sim(s)))).toEqual(['steamer:lift', `${FRIDGE_ID}:store`]);
+    s.milkOut = 0;
+    expect(ids(think(s, sim(s)))).toEqual(['condiments:lift', `${FRIDGE_ID}:store`]);
+  });
+
+  it('M2: no box is carried to the bar during closing soon (it would only be lifted back into the fridge)', () => {
+    const s = shop();
+    s.condiments = { servings: 0 };
+    s.condimentBoxes = 3;
+    s.milkOut = 6;
+    expect(ids(think(s, sim(s)))).toContain('condiments:refill');
+    s.closingSoonAt = s.tick;
+    expect(ids(think(s, sim(s)))).not.toContain('condiments:refill');
+  });
 });
