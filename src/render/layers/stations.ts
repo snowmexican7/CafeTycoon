@@ -129,11 +129,24 @@ export function buildEmptySlot(pos: Vec2): Container {
 /** G9: size of a twin station's art next to its main side. */
 const TWIN_SCALE = 0.7;
 
-export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour'): Container {
+/**
+ * 3.3.1 Gear batch/pickup: which of the three counter spots a counter station is. `till` in Gear is the
+ * register only; `pickup` has the four cup coasters; `condiments` is the cream & sugar bar. Classic = undefined.
+ */
+export type CounterSpot = 'till' | 'pickup' | 'condiments';
+
+/** Where pickup coaster `i` (0..3) sits on the pickup counter, in screen px. Shared with the per-frame cups. */
+export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: number } {
+  const span = 46;
+  const step = slots > 1 ? span / (slots - 1) : 0;
+  return { x: sx(pos.x) - span / 2 + i * step, y: sy(pos.y) - 18 };
+}
+
+export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour', spot?: CounterSpot): Container {
   plainArt = twin;
   let root: Container;
   try {
-    root = variant === 'pour' ? buildPourOver(pos) : buildStationArt(kind, pos, checkout);
+    root = variant === 'pour' ? buildPourOver(pos) : kind === 'counter' && spot === 'pickup' ? buildPickupCounter(pos) : kind === 'counter' && spot === 'condiments' ? buildCondimentBar(pos) : buildStationArt(kind, pos, checkout, spot === 'till' ? 'TILL' : undefined);
   } finally {
     plainArt = false;
   }
@@ -190,7 +203,68 @@ function buildPourOver(pos: Vec2): Container {
   return root;
 }
 
-function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId): Container {
+/** The shared counter cabinet (wood front, pale top) every counter spot stands on. */
+function counterBody(g: Graphics, cx: number, cy: number, top = 0xf3efe9): void {
+  const w = 58;
+  const x = cx - w / 2;
+  shadow(g, cx, cy + 32, 38, 9);
+  g.roundRect(x, cy - 8, w, 40, 7).fill(0xa7653c);
+  for (let i = 0; i < 4; i++) g.roundRect(x + 5 + i * 13, cy - 4, 9, 32, 3).fill(0x8f5532);
+  g.roundRect(x - 3, cy - 34, w + 6, 30, 8).fill(top);
+  g.roundRect(x - 3, cy - 10, w + 6, 6, 3).fill(0xd8cdbf);
+}
+
+/** 3.3.1: the Gear pickup counter: a green runner with four numbered coasters, one per waiting cup. */
+function buildPickupCounter(pos: Vec2): Container {
+  const root = new Container();
+  const g = new Graphics();
+  root.addChild(g);
+  const cx = sx(pos.x);
+  const cy = sy(pos.y);
+  root.zIndex = stationDepth(pos);
+  counterBody(g, cx, cy);
+  g.roundRect(cx - 30, cy - 28, 60, 18, 6).fill(0x5fae86).stroke({ width: 1.5, color: 0x3f8a5d });
+  for (let i = 0; i < 4; i++) {
+    const { x, y } = pickupSlotXY(pos, i);
+    g.ellipse(x, y + 6, 6.5, 3).fill({ color: 0xeaf7ef, alpha: 0.9 });
+    const n = label(String(i + 1), 7, 0x2f6d48, '800');
+    n.position.set(x, y + 13.5);
+    root.addChild(n);
+  }
+  // a little "PICK UP HERE" tent card at the back of the counter
+  g.roundRect(cx - 17, cy - 46, 34, 13, 3).fill(0xfffaf2).stroke({ width: 1.5, color: 0x3f8a5d });
+  const tent = label('PICK UP', 7.5, 0x2f6d48, '800', undefined, 0.4);
+  tent.position.set(cx, cy - 39.5);
+  root.addChild(tent);
+  plate(root, g, cx, cy + 4, 'PICKUP', 0x3f8a5d, 1);
+  return root;
+}
+
+/** 3.3.1: the Gear condiment bar: a milk carafe, a sugar pourer and a cup of stir sticks. */
+function buildCondimentBar(pos: Vec2): Container {
+  const root = new Container();
+  const g = new Graphics();
+  root.addChild(g);
+  const cx = sx(pos.x);
+  const cy = sy(pos.y);
+  root.zIndex = stationDepth(pos);
+  counterBody(g, cx, cy, 0xf6efe2);
+  // milk carafe (chrome with a white label)
+  g.roundRect(cx - 24, cy - 44, 14, 26, 5).fill(MAT.chrome).stroke({ width: 1, color: MAT.chromeDk });
+  g.roundRect(cx - 22, cy - 36, 10, 8, 2).fill(0xffffff);
+  g.moveTo(cx - 10, cy - 40).quadraticCurveTo(cx - 4, cy - 36, cx - 10, cy - 26).stroke({ width: 2, color: MAT.chromeDk });
+  // sugar pourer: glass with white sugar and a chrome cap
+  g.roundRect(cx - 4, cy - 40, 12, 22, 4).fill({ color: 0xdde8ee, alpha: 0.9 }).stroke({ width: 1, color: 0x8d989f });
+  g.roundRect(cx - 3, cy - 30, 10, 11, 3).fill(0xffffff);
+  halfDome(g, cx + 2, cy - 40, 6, 5).fill(MAT.chrome);
+  // stir sticks in a cup
+  g.poly([cx + 13, cy - 34, cx + 25, cy - 34, cx + 23, cy - 18, cx + 15, cy - 18]).fill(0xc8874f);
+  for (const [dx, tilt] of [[16, -3], [19, 0], [22, 3]]) g.moveTo(cx + dx, cy - 34).lineTo(cx + dx + tilt, cy - 46).stroke({ width: 1.6, color: 0xe9d6b4, cap: 'round' });
+  plate(root, g, cx, cy + 4, 'CREAM+SUGAR', 0xb87a3c, 1);
+  return root;
+}
+
+function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId, counterLabel?: string): Container {
   const root = new Container();
   const g = new Graphics();
   root.addChild(g);
@@ -226,7 +300,7 @@ function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId): Co
     g.ellipse(cx - 17, cy - 22, 8, 3).fill(0xb88a2a);
     halfDome(g, cx - 17, cy - 23, 7, 7).fill(0xf1cf6e);
     g.circle(cx - 17, cy - 32, 2).fill(0xf1cf6e);
-    plate(root, g, cx, cy + 4, STATION_LABELS.counter, PALETTE.cherry, 1);
+    plate(root, g, cx, cy + 4, counterLabel ?? STATION_LABELS.counter, PALETTE.cherry, 1);
     return root;
   }
 

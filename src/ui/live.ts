@@ -2,6 +2,9 @@ import { seasonNow } from '../sim/season';
 import { money } from './viewModels';
 import { recipeFor } from '../sim/stations';
 import { TILL, tillNext } from '../sim/till';
+import { passSlots, pickupTarget, spotOf } from '../sim/pickup';
+import { CONDIMENTS, canTakeBox } from '../sim/condiments';
+import { CONDIMENTS_ID } from '../data/layout';
 import { DRINK_INFO } from '../data/drinks';
 import { GEAR } from '../data/gear';
 import { podsOnly } from '../sim/gear';
@@ -20,7 +23,7 @@ import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
-import type { CatalogueItem, DrinkId, GameState, ItemKind, PlayerId, StationKind, SupplyId } from '../sim/types';
+import type { CatalogueItem, DrinkId, GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from '../sim/types';
 
 export const PLAYER_HEX = ['#e0564a', '#4c8fd6', '#4fae7b', '#8a6bbf'] as const;
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -76,6 +79,8 @@ export interface OrderTicket {
   patience: number;
   /** Who's asking, when it matters: "Ada · regular", "In a hurry", "Group · 2 more", "Influencer", "Wrong drink!". */
   tag?: { text: string; tone: 'regular' | 'impatient' | 'group' | 'influencer' | 'upset' };
+  /** Batch/pickup (Gear): rung up at the till, now waiting at the pickup area. */
+  pickup?: true;
 }
 
 /** The little tag on an order ticket for the customer kinds worth planning around. */
@@ -118,6 +123,8 @@ export interface HudLive {
   holding: ItemKind | null;
   /** Every espresso machine is a pod machine: tickets show "Pod" instead of Grind + Pull. */
   pods?: boolean;
+  /** Batch/pickup: a Gear run (tickets end in "Pickup"). */
+  gear?: boolean;
   meName: string;
   hint: HandHint;
   /** FB1 WP3: the close-early vote (button by the clock). */
@@ -162,6 +169,48 @@ const VERB: Record<'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'drip', 
 const TAKES: Record<keyof typeof VERB, ItemKind | null> = { grinder: null, espresso: 'grounds', steamer: 'espresso', coldBrewTap: null, drip: null };
 const USES: Record<keyof typeof VERB, SupplyId | null> = { grinder: 'beans', espresso: null, steamer: 'milk', coldBrewTap: 'concentrate', drip: 'beans' };
 
+/** Gear names for the three counter-kind spots (the till keeps the counter's id). */
+export function counterName(station: { id: string }): string {
+  const spot = spotOf(station as Station);
+  return spot === 'pickup' ? 'Pickup counter' : spot === 'condiments' ? 'Condiment bar' : 'Till';
+}
+
+/**
+ * Gear (batch/pickup, mirrors sim/pass.ts gearCounter): a drink in hand at any counter spot goes on the pickup
+ * counter. Empty hands: the till rings up the next order, the pickup counter takes a cup back, the bar needs a box.
+ */
+function gearCounterHint(state: GameState, player: GameState['players'][number], station: Station): HandHint {
+  const where = counterName(station);
+  const held = player.holding;
+  const spot = spotOf(station);
+  if (held && held !== 'grounds') {
+    if (state.pass.length >= passSlots(state)) return { go: false, title: 'Pickup counter is full', detail: `${where} · ${state.pass.length}/${passSlots(state)} slots` };
+    const taker = pickupTarget(state, held);
+    return { go: true, title: 'Set on the pickup counter', detail: taker ? `${where} · a customer is waiting for it` : `${where} · nobody rung up for it yet` };
+  }
+  if (spot === 'till') {
+    const next = tillNext(state);
+    if (!next) return { go: false, title: 'Nobody to ring up', detail: where };
+    const ready = state.pass.some((i) => i.item === next.drink);
+    const rung = state.customers.filter((c) => c.stage === 'pickup').length;
+    return {
+      go: true,
+      title: `Ring up: ${DRINK_INFO[next.drink].short.toLowerCase()}`,
+      detail: ready ? `${where} · it's already on the counter, they take it right away` : `${where} · on the counter in ${TILL.fast.seconds}s = +$${TILL.fast.tip.toFixed(2)} tip${rung ? ` · ${rung} at pickup` : ''}`,
+    };
+  }
+  if (spot === 'pickup') {
+    if (state.pass.length === 0) return { go: false, title: 'Bring a drink here', detail: `${where} · ${passSlots(state)} slots` };
+    return { go: true, title: 'Take a cup back', detail: `${where} · ${state.pass.length}/${passSlots(state)} on the counter` };
+  }
+  const servings = state.condiments?.servings ?? 0;
+  if (servings <= 0) return { go: false, title: 'Bar is empty: bring a box', detail: `${where} · ${state.condimentBoxes ?? 0} in the corner` };
+  return { go: false, title: servings <= CONDIMENTS_LOW ? 'Bar is running low' : 'Cream & sugar', detail: `${where} · ${servings}/${CONDIMENTS.servings} servings` };
+}
+
+/** At or below this many servings the bar reads as low (the bots fetch a box at ≤ 2). */
+export const CONDIMENTS_LOW = 5;
+
 /** A plain-words hint for the nearest station, mirroring the interact rules (display only). */
 export function handHint(state: GameState, me: PlayerId): HandHint {
   const player = state.players.find((p) => p.id === me);
@@ -169,16 +218,22 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
   const go = (title: string, detail: string): HandHint => ({ go: true, title, detail });
   if (!player || (state.phase !== 'day' && state.phase !== 'closing')) return idle('', '');
   const station = nearestStation(state, player.pos);
-  if (!station) return idle('Walk up to a station', 'E uses the nearest one');
+  // Batch/pickup: a condiment box in hand only goes in the bar.
+  if (player.tool === 'box') {
+    if (station?.id !== CONDIMENTS_ID) return idle('Carry the box to the condiment bar', 'R puts it back in the corner');
+    const servings = state.condiments?.servings ?? 0;
+    return servings >= CONDIMENTS.servings ? idle('The bar is full: keep the box', `Condiment bar · ${servings}/${CONDIMENTS.servings}`) : go('Refill the condiment bar', `Condiment bar · ${servings}/${CONDIMENTS.servings} → ${CONDIMENTS.servings}`);
+  }
+  if (!station) {
+    if (player.tool === null && player.holding === null && canTakeBox(state, player)) return go('Pick up a condiment box', `${state.condimentBoxes} in the corner · fills the bar to ${CONDIMENTS.servings}`);
+    return idle('Walk up to a station', 'E uses the nearest one');
+  }
   const where = STATION_NAME[station.kind];
   const held = player.holding;
   if (station.kind === 'trash') return held ? go(`Bin the ${ITEM_LABEL[held].toLowerCase()}`, where) : idle('Hands are empty', where);
   if (station.kind === 'counter') {
+    if (state.gear === true) return gearCounterHint(state, player, station);
     if (held && held !== 'grounds') return go(`Hand off ${ITEM_LABEL[held].toLowerCase()}`, where);
-    // Gear G4g: the till job. Empty hands ring up the next order (patience up; fast hand-off = tip).
-    const next = tillNext(state);
-    const waiting = state.customers.filter((c) => c.rungAt !== undefined).length;
-    if (next && !state.pass.some((i) => state.customers.some((c) => c.drink === i.item))) return go(`Ring up: ${DRINK_INFO[next.drink].short.toLowerCase()}`, `Till · hand it off in ${TILL.fast.seconds}s for +$${TILL.fast.tip.toFixed(2)} tip${waiting ? ` · ${waiting} rung` : ''}`);
     return idle('Bring a drink here', where);
   }
   const kind = station.kind;
@@ -228,11 +283,12 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     open: state.phase === 'day',
     orders: state.customers.map((c) => {
       const tag = ticketTag(c, snobs);
-      return { id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0, ...(tag ? { tag } : {}) };
+      return { id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0, ...(tag ? { tag } : {}), ...(c.stage === 'pickup' ? { pickup: true as const } : {}) };
     }),
     crew: crewOf(state, me),
     holding: player?.holding ?? null,
     ...(podsOnly(state) ? { pods: true } : {}),
+    ...(state.gear === true ? { gear: true } : {}),
     meName: player?.role ? `${ROLES[player.role].icon} ${player.name} the ${ROLES[player.role].name}` : (player?.name ?? ''),
     hint: handHint(state, me),
     closeEarly: closeEarlyVM(state, me),
@@ -241,7 +297,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
 }
 
 /** Keys for the HUD's independently rebuilt blocks (everything except per-tick values). */
-export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}`).join(',');
+export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}${o.pickup ? '^' : ''}`).join(',');
 export const crewKey = (l: HudLive) => l.crew.map((c) => `${c.id}:${c.name}:${c.connected ? 1 : 0}:${c.me ? 1 : 0}:${c.bot ?? ''}`).join(',');
 export const handKey = (l: HudLive) => `${l.holding}|${l.meName}|${l.hint.go}|${l.hint.title}|${l.hint.detail}`;
 

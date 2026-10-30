@@ -56,3 +56,32 @@ describe('crew tips (FB1 WP6)', () => {
     expect(tipsVM(s)).toEqual([]);
   });
 });
+
+describe('reused AdviceKind rows (3.3.1)', () => {
+  it('icons and chip text follow the input, not the shared kind', async () => {
+    const { tipIcon } = await import('./tipsVM');
+    expect(tipIcon({ kind: 'restock', input: { kind: 'steep', cups: 12 } })).toBe('🧊');
+    expect(tipIcon({ kind: 'restock', input: { kind: 'condimentBox', boxes: 2 } })).toBe('🥛');
+    expect(tipIcon({ kind: 'restock', input: { kind: 'restock', supply: 'milk', packs: 1 } })).toBe('📦');
+    expect(tipIcon({ kind: 'restock', input: { kind: 'branch', action: 'send', supply: 'beans' } })).toBe('🏪');
+    expect(tipIcon({ kind: 'rival', input: { kind: 'rivalCounter' } })).toBe('⏰');
+    expect(tipIcon({ kind: 'rival', input: { kind: 'stampCard' } })).toBe('🎟️');
+    expect(tipIcon({ kind: 'equip', input: { kind: 'staff', action: 'fire' } })).toBe('👋');
+    expect(tipIcon({ kind: 'equip', input: { kind: 'gear', action: 'buy', gear: 'grinder' } as never })).toBe('⚙️');
+    expect(shortTip({ kind: 'restock', text: 'Steep 12 cold brews for tomorrow (about 10 cold brew orders expected)', input: { kind: 'steep', cups: 12 } })).toBe('Steep 12 cold brews for tomorrow');
+    expect(shortTip({ kind: 'restock', text: 'x', input: { kind: 'condimentBox', boxes: 1 } })).toMatch(/^Buy 1 condiment box \(\$\d+\)$/);
+    expect(shortTip({ kind: 'restock', text: 'x', input: { kind: 'branch', action: 'send', supply: 'milk' } })).toBe('Send a pack of milk to the branch');
+    expect(shortTip({ kind: 'rival', text: "Match Bean Barn's happy hour", input: { kind: 'rivalCounter' } })).toBe('Match the happy hour');
+  });
+
+  it('coveredBy knows the Gear and Phase 4 brief alerts', async () => {
+    const { coveredBy } = await import('./tipsVM');
+    expect(coveredBy('rival:promo')).toEqual(['rival:promo']);
+    expect(coveredBy('rival:loyalty')).toEqual(['rival:loyalty']);
+    expect(coveredBy('rival')).toEqual([]);
+    expect(coveredBy('condimentBox')).toEqual(['condiments']);
+    expect(coveredBy('restock:concentrate')).toContain('steep');
+    expect(coveredBy('restock:milk')).not.toContain('steep');
+    expect(coveredBy('steep')).toEqual([]);
+  });
+});

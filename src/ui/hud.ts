@@ -233,7 +233,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   const openSteps = new Set<number>();
   const seenTickets = new Set<number>();
   let lastLive: HudLive | null = null;
-  const ticketOpts = (live: HudLive): TicketOpts => ({ mode: recipeHints, open: openSteps, day: live.day ?? 0, holding: live.holding, prices, ...(live.pods ? { pods: true } : {}) });
+  const ticketOpts = (live: HudLive): TicketOpts => ({ mode: recipeHints, open: openSteps, day: live.day ?? 0, holding: live.holding, prices, ...(live.pods ? { pods: true } : {}), ...(live.gear ? { gear: true } : {}) });
   el.tickets.addEventListener('click', (ev) => {
     if (recipeHints !== 'click' || !lastLive) return;
     const t = (ev.target as HTMLElement).closest<HTMLElement>('.ticket[data-id]');

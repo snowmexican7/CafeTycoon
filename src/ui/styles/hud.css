@@ -282,3 +282,8 @@
 @keyframes hc-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 75% { transform: rotate(14deg); } }
 @keyframes hc-pop { from { transform: translateX(-50%) scale(0.85); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { #hud .hud-call, #hud .hud-call .hc-ring { animation: none; } }
+
+/* 3.3.1 batch/pickup: rung-up tickets (the customer is waiting at pickup). */
+#hud .ticket .rungtag { grid-column: 1 / span 3; justify-self: start; font: 800 13px var(--font-body); letter-spacing: .04em; text-transform: uppercase;
+  padding: 1px 8px; border-radius: 99px; margin: -2px 0 2px; background: #dff3e4; color: #2f7a4c; }
+#hud .ticket.rung { box-shadow: 0 0 0 2px #7cc49a, var(--sh-1); }

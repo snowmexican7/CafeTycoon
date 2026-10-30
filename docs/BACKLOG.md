@@ -2017,20 +2017,35 @@ Events for the UI: `till.rung { customer, drink, by }`, `pickup.take { drink, cu
 `steep { cups, paid }`, `call.answer { by, take, kind }`; a box going home is `drop { item: 'box' }`. Log entries
 are pruned after 120 ticks.
 
-**For the UI lane (Grok):**
-- `src/ui/live.ts` ~177-182: the counter hint still says "Ring up … hand it off in 30s" at every counter spot and
-  "Hand off" when holding a drink. In Gear: at the till empty hands ring up; at the pickup counter empty hands take
-  a cup back and a drink in hand is "Set on the pickup counter"; the condiment bar takes a box. The till hint is
-  hidden whenever a cup matches a customer (old hand-off-first rule): that is now exactly when ringing helps.
-- Draw 4 pickup slots in Gear (`PICKUP.slots`), not `ECONOMY.pass.slots` (3); draw the condiment bar's servings
-  and the box stack in the corner; show customers at the pickup area (`Customer.stage`).
-- `src/render/crewModel.ts` ~131-140: `pickup.take` never shifts `mem.putters`; the teamwork burst only fires on
-  `pass.serve`, which never happens in Gear; R-drops aren't tracked as puts.
-- `src/audio/cues.ts` ~128-130: no cue for `pickup.take`; the serve cue never plays in Gear.
-- `src/ui/nightWarnings.ts` `rentTomorrow` ignores a losing branch (the sim's brief and planner now count it).
-- `src/ui/branchView.ts` values a stock send at list price (the sim uses the restock price).
-- Planner rows reuse existing `AdviceKind` values (`steep`, `restock:condimentBox`, gear/staff/rival/branch rows):
-  tell them apart by `id` / `input.kind`; `coveredBy()` should learn `rival:promo` / `rival:loyalty`.
+**For the UI lane (Grok):** all done in `ui-3.3.1` (branch `ui-batch-pickup`, version 3.3.1, protocol still 41).
+- [x] `src/ui/live.ts` counter hints: in Gear the till says "Ring up", the pickup counter says "Set on the pickup
+  counter" with a drink in hand (or takes a cup back with empty hands), the condiment bar takes a box; tickets end in
+  "Pickup". The old hand-off-first hiding rule is gone in Gear. Classic hints are unchanged.
+- [x] Gear draws the 4 pickup coasters (`PICKUP.slots`) with cups; a cup a waiting customer wants glows, and a stale one
+  blinks red. Also drawn: the condiment bar with a 20-pip servings gauge (amber when low, red and blinking "EMPTY: bring
+  a box"), the box stack in the corner ("BOXES ×N" / "NO BOXES"), a box in a carrier's hands, and the pickup crowd
+  (`stage: 'pickup'`) on a "PICKUP · WAIT HERE" mark, left of the till on the order line's y. Helpers are pure in
+  `src/render/pickupModel.ts` (tested). The pickup counter and the bar no longer get "2"/"3" duplicate-station badges.
+- [x] `crewModel`: `pickup.take` shifts `mem.putters` and fires the teamwork burst; an R-drop on the counter counts as
+  a put. Serve and teamwork bursts anchor at the pickup counter in Gear.
+- [x] Audio: `pickup.take` plays the serve cue. The till ring, a cup set down, the bar refill, the grumble and a box set down
+  have their own cues too.
+- [x] Feedback bursts: `condiment.black` shows the grumble line over the bar (and costs vibe like a slow serve),
+  `steep` shows "🧊 N cold brews on tap (P fresh)" at the morning, and `call.answer` shows who took the branch's
+  order, talked it through the machine, or let the phone ring.
+- [x] `nightWarnings.rentTomorrow` adds `branchExpectedLoss` (the warning says "Rent, wages and the branch are $X").
+  `branchView` values a send at `restockCost(state, supply, 1) / pack.size`, as `sendStock` credits it.
+- [x] Planner chips tell the reused `AdviceKind` rows apart by `input.kind` (steep, condiment boxes, gear, staff fire,
+  rival promo/loyalty, branch send/staff), with their own icon and short text. `coveredBy()` is exported and learns
+  `rival:promo`, `rival:loyalty`, `condiments` (boxes) and `steep` (concentrate restock).
+- Screenshots (1512×982 and 1280×800): `/workspace/overnight/sprint/ui-331/` on the overnight box.
+
+**Notes for Claude (from the UI lane, 3.3.1):**
+- The night screen has no manual steep control. The steep target is set only by accepting the planner's steep
+  chip. If players should set it by hand, it needs a sim-side input contract first; the UI will draw it after.
+- Cups the pickup crowd doesn't want sit on the counter until they go stale. A visible "bin it" or "take back" use at
+  the counter would need M2 (below) settled first.
+- The `steep` event fires at the morning, so its burst shows over the opening scene, not at night.
 
 Open (sim lane):
 - Pickup review minors still open: tests at src/sim/pickup.test.ts:182, :244 and :208-219 would pass without

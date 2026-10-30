@@ -49,7 +49,13 @@ export type CrewBurst =
   | { kind: 'storm'; count: number }
   | { kind: 'slip'; playerId: string }
   | { kind: 'wrong'; text: string }
-  | { kind: 'challenge'; label: string; reward: number };
+  | { kind: 'challenge'; label: string; reward: number }
+  /** Gear: a drip / cold brew drinker found the condiment bar empty (said out loud, they are already gone). */
+  | { kind: 'grumble'; text: string }
+  /** Gear morning: the taps were filled (`paid` of `cups` fresh tonight, the rest yesterday's). */
+  | { kind: 'steep'; cups: number; paid: number }
+  /** The branch phone was picked up (`by` is a name) or left to ring. */
+  | { kind: 'call'; by: string; take: boolean; call: 'order' | 'machine' };
 
 /** Visual-only memory between snapshots: pass putters, combo streak, and crew vibe. */
 export interface CrewMemory {
@@ -61,6 +67,8 @@ export interface CrewMemory {
   /** Last seen today.lost, so we can cheer/storm when someone walks out. */
   lostSeen: number;
   day: number;
+  /** Batch/pickup (Gear): who rang each customer up at the till, by customer id (for the teamwork burst). */
+  ringers?: Record<number, string>;
 }
 export const VIBE_START = 55;
 export const newCrewMemory = (): CrewMemory => ({ putters: {}, streak: 0, vibe: VIBE_START, lostSeen: 0, day: 0 });
@@ -84,6 +92,11 @@ function addCombo(mem: CrewMemory, bursts: CrewBurst[]): void {
     bursts.push({ kind: 'streak', count: mem.streak });
     bumpVibe(mem, 8);
   }
+}
+
+/** A drop log entry that set a cup on the counter (classic `counter`, Gear `pickup`), not a spill or a bin. */
+function isCounterDrop(d: Record<string, unknown>): boolean {
+  return (d.station === 'counter' || d.station === 'pickup') && typeof d.item === 'string' && d.item !== 'grounds' && d.item !== 'box';
 }
 
 /** New serve / bot-mistake / influencer / fail log entries since `lastSeq`, as one-shot visuals. */
@@ -128,9 +141,26 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       if (playerIndex >= 0) bursts.push({ kind: 'oops', playerIndex, by: next.players[playerIndex].id });
       resetCombo(mem);
       bumpVibe(mem, -5);
-    } else if (e.kind === 'pass.put') {
+    } else if (e.kind === 'pass.put' || (e.kind === 'drop' && isCounterDrop(e.data))) {
+      // An R-drop on the till or pickup counter puts the cup down just like E.
       const item = e.data.item as DrinkId;
       (mem.putters[item] ??= []).push(String(e.data.by));
+    } else if (e.kind === 'till.rung') {
+      const ringers = (mem.ringers ??= {});
+      ringers[Number(e.data.customer)] = String(e.data.by ?? '');
+      const ids = Object.keys(ringers);
+      if (ids.length > 64) for (const id of ids.slice(0, ids.length - 64)) delete ringers[Number(id)];
+    } else if (e.kind === 'pickup.take') {
+      // Gear: the customer takes the cup themselves. Teamwork = one barista rang them up, another set the drink out.
+      const item = e.data.drink as DrinkId;
+      const from = mem.putters[item]?.shift() ?? String(e.data.by ?? '');
+      const ringer = mem.ringers?.[Number(e.data.customer)];
+      if (ringer && from && ringer !== from) {
+        const name = (id: string) => next.players.find((p) => p.id === id)?.name ?? '?';
+        bursts.push({ kind: 'teamwork', from: name(ringer), to: name(from) });
+        bumpVibe(mem, 5);
+        addCombo(mem, bursts);
+      }
     } else if (e.kind === 'pass.serve' || e.kind === 'pass.take' || e.kind === 'pass.stale') {
       const item = e.data.item as DrinkId;
       const from = mem.putters[item]?.shift();
@@ -159,6 +189,13 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
     } else if (e.kind === 'challenge.won') {
       bursts.push({ kind: 'challenge', label: String(e.data.label ?? e.data.id ?? 'Challenge'), reward: Number(e.data.reward) || 0 });
       bumpVibe(mem, 6);
+    } else if (e.kind === 'condiment.black') {
+      bursts.push({ kind: 'grumble', text: String(e.data.text ?? 'Black, I guess.') });
+      bumpVibe(mem, -1);
+    } else if (e.kind === 'steep') {
+      bursts.push({ kind: 'steep', cups: Number(e.data.cups) || 0, paid: Number(e.data.paid) || 0 });
+    } else if (e.kind === 'call.answer') {
+      bursts.push({ kind: 'call', by: String(e.data.by ?? 'Someone'), take: e.data.take === true, call: e.data.kind === 'machine' ? 'machine' : 'order' });
     } else if (e.kind === 'rogue.stormed') {
       bursts.push({ kind: 'storm', count: 1 });
       resetCombo(mem);

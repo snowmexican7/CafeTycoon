@@ -195,3 +195,28 @@ describe('espresso sounds', () => {
     expect(h.tick(2150, 300)).toBe(true);
   });
 });
+
+describe('Gear batch/pickup sounds (3.3.1)', () => {
+  it('plays the serve sound when a customer takes their cup, and voices the till, the bar and the box', () => {
+    const a = run();
+    const b = withLog(
+      a,
+      { kind: 'till.rung', data: { customer: 3, drink: 'latte', by: 'p1' } },
+      { kind: 'drop', data: { item: 'latte', station: 'pickup', by: 'p1' } },
+      { kind: 'pickup.take', data: { drink: 'latte', customer: 3, by: 'p1' } },
+      { kind: 'condiment.use', data: { customer: 3 } },
+      { kind: 'condiment.black', data: { customer: 4, text: 'Black it is, I guess.' } },
+      { kind: 'condiment.refill', data: { by: 'p2' } },
+      { kind: 'drop', data: { item: 'box', x: 1, y: 7 } },
+    );
+    const r = diffCues(a, b, 'p1', logCursor(a));
+    expect(ids(r)).toEqual(['ringUp', 'cupDown', 'serve', 'grumble', 'refill', 'boxDown']);
+    expect(r.cues.filter((c) => c.mine).map((c) => c.id)).toEqual(['ringUp', 'cupDown', 'serve']);
+  });
+
+  it('a box going back to the corner is not a splash', () => {
+    const a = run();
+    const b = withLog(a, { kind: 'drop', data: { item: 'box', x: 1, y: 7 } }, { kind: 'drop', data: { item: 'latte', x: 2, y: 3 } });
+    expect(ids(diffCues(a, b, 'p1', logCursor(a)))).toEqual(['boxDown', 'splash']);
+  });
+});

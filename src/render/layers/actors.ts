@@ -8,6 +8,8 @@ import { dashedEllipse, drawHeart, drawItem, drawMop, drawStar, halfDome, label 
 import { flashOn } from '../eventsModel';
 import { botLook, botTag, emotePhase, type BotLook } from '../crewModel';
 import { jitterPx, type CollapsePose } from '../espressoPose';
+import { customerSpots, type SpotsLayout } from '../pickupModel';
+import { drawBox } from './pickup';
 
 /** Feet sit a little below the sim centre so a barista reads as standing on its tile. */
 export const FEET_OFFSET = 0.3;
@@ -196,6 +198,8 @@ interface CustomerSprite {
   /** Per-kind tells drawn each frame (the influencer's ring light; B3 kinds). */
   extra: Graphics;
   x: number;
+  /** Feet y, eased like x (3.3.1: a rung-up customer steps over to the pickup area). */
+  y: number;
   /** Group companions (one per extra drink, hidden as they are served) and the regular's name tag. */
   companions: Graphics[];
   count: Text | null;
@@ -209,6 +213,8 @@ interface CustomerSprite {
 export class Actors {
   /** P3 B13: where the line stands (it shortens and shifts with the shop's size). */
   queueSlots: { x: number; y: number }[] = LAYOUT.queueSlots;
+  /** 3.3.1 Gear batch/pickup: where the order line and the pickup crowd stand (set by the scene each frame). */
+  spots: (SpotsLayout & { gear: boolean }) | null = null;
   private readonly players = new Map<PlayerId, PlayerSprite>();
   private readonly customers = new Map<number, CustomerSprite>();
 
@@ -239,9 +245,11 @@ export class Actors {
         sprite.body.clear();
         drawPerson(sprite.body, {
           shirt: look.cap, cap: bl?.headphones || bl?.headband ? undefined : look.cap, skin: look.skin, hair: look.hair, apron: true, facing: sprite.facing,
-          holding: p.tool === 'mop' ? null : p.holding, ring: me ? look.cap : null, dizzy: stunned,
+          holding: p.tool !== null ? null : p.holding, ring: me ? look.cap : null, dizzy: stunned,
           shades: bl?.shades, headphones: bl?.headphones, badge: bl?.badge, headband: bl?.headband,
         });
+        // 3.3.1: a condiment stock box carried in both hands, in front of the apron
+        if (p.tool === 'box') drawBox(sprite.body, 0, -24, 1.15);
         sprite.key = key;
       }
       const pos = positions[p.id] ?? p.pos;
@@ -273,9 +281,10 @@ export class Actors {
       sprite.tag.visible = !out;
 
       // on mop duty: the tag says so, so the crew knows who to shout for
-      const name = p.tool === 'mop' ? `${p.name} · mop` : p.name;
+      const toolTag = p.tool === 'mop' ? ' · mop' : p.tool === 'box' ? ' · box' : '';
+      const name = `${p.name}${toolTag}`;
       // bots: a white tag in their colour ("Bo · bot"); away humans: a grey "· away" tag and z z z
-      const text = p.bot ? (p.tool === 'mop' ? `${botTag(p.name)} · mop` : botTag(p.name)) : p.connected ? name : `${p.name} · away`;
+      const text = p.bot ? `${botTag(p.name)}${toolTag}` : p.connected ? name : `${p.name} · away`;
       const tagKey = `${text}|${index}|${!!p.bot}|${p.connected}`;
       if (tagKey !== sprite.tagKey) {
         sprite.tagText.text = text;
@@ -312,16 +321,19 @@ export class Actors {
     }
 
     const seenC = new Set<number>();
+    const spots = this.spots;
+    const where = customerSpots(customers, spots?.gear === true, spots ?? { width: LAYOUT.width, queueSlots: this.queueSlots, till: this.queueSlots[0], pickup: this.queueSlots[0] });
     customers.forEach((c, i) => {
       seenC.add(c.id);
-      const slots = this.queueSlots;
-      const slot = slots[Math.min(i, slots.length - 1)];
+      const slot = where[i];
       const targetX = sx(slot.x);
+      const targetY = sy(slot.y) + CUSTOMER_FEET_PX;
       let sprite = this.customers.get(c.id);
-      if (!sprite) sprite = this.addCustomer(c, targetX + TILE * 0.8);
+      if (!sprite) sprite = this.addCustomer(c, targetX + TILE * 0.8, targetY);
       sprite.x += (targetX - sprite.x) * 0.15;
-      const feet = sy(slot.y) + CUSTOMER_FEET_PX;
-      const shuffling = Math.abs(targetX - sprite.x) > 1;
+      sprite.y += (targetY - sprite.y) * 0.15;
+      const feet = sprite.y;
+      const shuffling = Math.abs(targetX - sprite.x) > 1 || Math.abs(targetY - sprite.y) > 1;
       sprite.root.position.set(sprite.x, feet + (shuffling ? -Math.abs(Math.sin(timeSec * 12)) * 2 : 0));
       sprite.root.zIndex = feet;
       sprite.bubble.clear();
@@ -500,7 +512,7 @@ export class Actors {
     return sprite;
   }
 
-  private addCustomer(c: Customer, startX: number): CustomerSprite {
+  private addCustomer(c: Customer, startX: number, startY: number): CustomerSprite {
     const root = new Container();
     const body = new Graphics();
     const look = customerLook(c.id);
@@ -541,7 +553,7 @@ export class Actors {
       root.addChild(nameTag);
     }
     this.depthLayer.addChild(root);
-    const sprite: CustomerSprite = { root, body, bubble, extra, x: startX, companions, count, nameTag };
+    const sprite: CustomerSprite = { root, body, bubble, extra, x: startX, y: startY, companions, count, nameTag };
     this.customers.set(c.id, sprite);
     return sprite;
   }
