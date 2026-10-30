@@ -213,6 +213,8 @@ export interface Customer {
   wrongName?: string;
   /** P3 B7: asked for the signature drink by name. */
   sig?: true;
+  /** Gear G4g: the tick the till rang them up (absent = not rung). */
+  rungAt?: number;
 }
 
 /** P3 B7: the crew's signature drink. `premium` is in $0.50 steps; `since` is the day the recipe was set. */

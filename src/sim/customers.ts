@@ -8,6 +8,7 @@ import { ECONOMY } from '../data/economy';
 import { TICK_RATE, secondsToTicks } from './constants';
 import { computeModifiers, type Modifiers } from './effects';
 import { emitLog } from './log';
+import { tillSpeedTip } from './till';
 import { rngInt, rngNext } from './rng';
 import { rogueActive, startRogue } from './rogue';
 import { tally } from './tally';
@@ -248,7 +249,10 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
   noteCup(state.today, stars);
   const combo = serveCombo(state, drink, state.today, sig?.twist);
   const sigBonus = sig && combo ? signatureServed(state.today, combo.stars) : 0;
-  const tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) * areaTipMul(state, drink) + roleCraft(state, by));
+  let tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) * areaTipMul(state, drink) + roleCraft(state, by));
+  // Gear G4g: rung up at the till and handed off fast.
+  const speedTip = tillSpeedTip(state, customer);
+  if (speedTip) tip = round2(tip + speedTip);
   // P3 B12: the card terminal's cut of the sale.
   const fee = checkoutFee(state, price + tip);
   if (fee > 0) state.today.checkoutFees = round2((state.today.checkoutFees ?? 0) + fee);
@@ -269,6 +273,7 @@ export function serveCustomer(state: GameState, customer: Customer, drink: Drink
     perfect,
     left: customer.extra?.length ?? 0,
     stars,
+    ...(speedTip ? { till: speedTip } : {}),
   };
   if (combo) {
     served.twist = combo.twist;

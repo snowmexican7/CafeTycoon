@@ -1,4 +1,6 @@
 import { recipeFor } from '../sim/stations';
+import { TILL, tillNext } from '../sim/till';
+import { DRINK_INFO } from '../data/drinks';
 import { GEAR } from '../data/gear';
 import { ACCURACY } from '../sim/accuracy';
 import { ROLES } from '../sim/roles';
@@ -141,7 +143,14 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
   const where = STATION_NAME[station.kind];
   const held = player.holding;
   if (station.kind === 'trash') return held ? go(`Bin the ${ITEM_LABEL[held].toLowerCase()}`, where) : idle('Hands are empty', where);
-  if (station.kind === 'counter') return held && held !== 'grounds' ? go(`Hand off ${ITEM_LABEL[held].toLowerCase()}`, where) : idle('Bring a drink here', where);
+  if (station.kind === 'counter') {
+    if (held && held !== 'grounds') return go(`Hand off ${ITEM_LABEL[held].toLowerCase()}`, where);
+    // Gear G4g: the till job. Empty hands ring up the next order (patience up; fast hand-off = tip).
+    const next = tillNext(state);
+    const waiting = state.customers.filter((c) => c.rungAt !== undefined).length;
+    if (next && !state.pass.some((i) => state.customers.some((c) => c.drink === i.item))) return go(`Ring up: ${DRINK_INFO[next.drink].short.toLowerCase()}`, `Till · hand it off in ${TILL.fast.seconds}s for +$${TILL.fast.tip.toFixed(2)} tip${waiting ? ` · ${waiting} rung` : ''}`);
+    return idle('Bring a drink here', where);
+  }
   const kind = station.kind;
   // Gear G4d: a drip pot pours a cup per press.
   if (station.output !== null && held === null && station.potLeft !== undefined) {
