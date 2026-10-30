@@ -6,7 +6,7 @@
  *
  *   type NightFix = DistributiveOmit<PlayerInput, 'playerId'>
  *   interface NightAlert {
- *     id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | rival:promo | rival:loyalty | signature
+ *     id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | rival:promo | rival:loyalty | signature | steep | condiments
  *     kind: 'cash' | 'stock' | 'soldOut' | 'spoil' | 'grow' | 'checkout' | 'rival' | 'signature';
  *     severity: 'info' | 'warn' | 'danger';
  *     text: string;
@@ -16,6 +16,7 @@
  *     profit = profitOf(days.at(-1)) or null on the first night; alerts sorted danger, warn, info,
  *     then in the order cash, stock (pantry order), soldOut, spoil, grow, checkout, rival, signature.
  *   dayClock(fraction: number): string                    // 0..1 -> "8:00 AM".."6:00 PM", ten-minute steps
+ *   expectedOrders(state): Record<DrinkId, number>        // unrounded expected orders per menu drink (0 off the menu)
  *   expectedUse(state): Record<SupplyId, number>          // supplies a normal day should use
  *   runOutFraction(state, supply): number | null          // have / expectedUse clamped 0..1, null when unused
  *
@@ -23,8 +24,9 @@
  * when cash is for stock and rent). Spoilage counts what is left after a normal day's use.
  */
 import { ECONOMY } from '../data/economy';
-import { DRINK_INFO } from '../data/drinks';
+import { DRINK_IDS, DRINK_INFO } from '../data/drinks';
 import { CHECKOUT, nextCheckout } from './checkout';
+import { CONDIMENTS } from './condiments';
 import { computeModifiers } from './effects';
 import { billsForDay, wagesForDay } from './staff';
 import { nextTier, TIERS } from './growth';
@@ -32,6 +34,7 @@ import { restockCost } from './night';
 import { profitOf } from './profit';
 import { copyIsLive, countered, isPromoDay, loyaltyLive, RIVAL, sigPrice } from './rival';
 import { FRESH, spoilCount } from './spoilage';
+import { steepPlan } from './steep';
 import { menuDrinks, neededSupplies, SUPPLY_IDS } from './unlocks';
 import type { CheckoutId, DrinkId, GameState, PlayerInput, SupplyId } from './types';
 
@@ -87,17 +90,28 @@ export function dayClock(fraction: number): string {
 }
 
 /**
- * Roughly how many of each supply a day will use: expected arrivals over the day, split across the
- * drinks on the menu by order bias. Each drink uses one unit of each supply it needs.
+ * Expected orders over a normal day for each drink: expected arrivals split across the drinks on the menu
+ * by order bias, unrounded. A drink off the menu is 0.
  */
-export function expectedUse(state: GameState): Record<SupplyId, number> {
+export function expectedOrders(state: GameState): Record<DrinkId, number> {
   const m = computeModifiers(state);
   const arrivals = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
   const menu = menuDrinks(state);
   const w = (d: DrinkId) => m.orderBias[d] * DRINK_INFO[d].bias;
   const total = menu.reduce((s, d) => s + w(d), 0) || 1;
+  const out = Object.fromEntries(DRINK_IDS.map((d) => [d, 0])) as Record<DrinkId, number>;
+  for (const d of menu) out[d] = (arrivals * w(d)) / total;
+  return out;
+}
+
+/**
+ * Roughly how many of each supply a day will use: the expected orders per drink, each drink using one unit
+ * of each supply it needs.
+ */
+export function expectedUse(state: GameState): Record<SupplyId, number> {
+  const orders = expectedOrders(state);
   const use: Record<SupplyId, number> = { beans: 0, milk: 0, concentrate: 0, flavour: 0, pastry: 0 };
-  for (const d of menu) for (const s of ECONOMY.drinkSupplies[d]) use[s] += (arrivals * w(d)) / total;
+  for (const d of menuDrinks(state)) for (const s of ECONOMY.drinkSupplies[d]) use[s] += orders[d];
   for (const s of SUPPLY_IDS) use[s] = Math.ceil(use[s]);
   return use;
 }
@@ -144,6 +158,7 @@ export function nightBrief(state: GameState): NightBrief {
 
   // 2. stock
   for (const s of needed) {
+    if (state.gear === true && s === 'concentrate') continue; // Gear: cold brew is steeped at night (the steep alert below)
     const have = state.supplies[s] ?? 0;
     if (have <= 0) {
       const alert: NightAlert = { id: `stock:${s}:out`, kind: 'stock', severity: 'danger', text: `${STOCK_NAME[s]} stock is out` };
@@ -156,6 +171,39 @@ export function nightBrief(state: GameState): NightBrief {
       const fix = restockFix(state, s, packsToCover(use[s], have, s));
       if (fix) alert.fix = fix;
       alerts.push(alert);
+    }
+  }
+
+  // 2b. Gear: tomorrow's steep (cold brew) and the condiment bar
+  if (state.gear === true) {
+    const plan = steepPlan(state);
+    if (plan.cap > 0 && plan.short > 0) {
+      const have = plan.leftover + plan.paid;
+      const alert: NightAlert = {
+        id: 'steep',
+        kind: 'stock',
+        severity: have === 0 ? 'danger' : 'warn',
+        text: `Only ${have} of ${plan.target} cold brews will be ready tomorrow: concentrate is short`,
+      };
+      const fix = restockFix(state, 'concentrate', Math.ceil(plan.short / ECONOMY.packs.concentrate.size));
+      if (fix) alert.fix = fix;
+      alerts.push(alert);
+    }
+    if (state.condiments) {
+      const orders = expectedOrders(state);
+      const need = Math.ceil(CONDIMENTS.share * (orders.drip + orders.coldBrew));
+      const have = state.condiments.servings + (state.condimentBoxes ?? 0) * CONDIMENTS.servings;
+      if (need > have) {
+        const boxes = Math.ceil((need - have) / CONDIMENTS.servings);
+        const alert: NightAlert = {
+          id: 'condiments',
+          kind: 'stock',
+          severity: 'warn',
+          text: `Cream and sugar run out tomorrow: ${have} servings for about ${need} drip and cold brew drinkers`,
+        };
+        if (state.cash >= boxes * CONDIMENTS.boxCost) alert.fix = { kind: 'condimentBox', boxes };
+        alerts.push(alert);
+      }
     }
   }
 
