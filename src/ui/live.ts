@@ -25,7 +25,7 @@ import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
-import type { CatalogueItem, DrinkId, GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from '../sim/types';
+import type { CatalogueItem, DrinkId, GameState, ItemKind, Player, PlayerId, Station, StationKind, SupplyId } from '../sim/types';
 
 export const PLAYER_HEX = ['#e0564a', '#4c8fd6', '#4fae7b', '#8a6bbf'] as const;
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -182,7 +182,9 @@ export function counterName(station: { id: string }): string {
 }
 
 /** 3.3.3: what the hand slot shows for a tool. */
-export const TOOL_LABEL: Record<'mop' | 'box' | 'pot', { label: string; icon: string }> = {
+export const TOOL_LABEL: Record<NonNullable<Player['tool']>, { label: string; icon: string }> = {
+  milk: { label: 'Milk carton', icon: '🥛' },
+  bar: { label: 'Condiment bar box', icon: '📦' },
   pot: { label: 'Old drip pot', icon: '🫖' },
   box: { label: 'Condiment box', icon: '📦' },
   mop: { label: 'Mop', icon: '🧹' },
