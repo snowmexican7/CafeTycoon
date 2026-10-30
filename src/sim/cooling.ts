@@ -78,27 +78,35 @@ export function stationCool(state: GameState, st: Station): number {
 }
 
 /**
- * The pickup counter cup that has been around longest, or -1: the smallest `madeAt` (unknown = fresh); ties go to
- * the stalest pass timer (today's rule for cups with no clock), then slot order.
+ * The pickup counter cup that empty hands take back, or -1 (fix round 1, review M1): cups that cool first, the coldest
+ * first; then the smallest `madeAt` (unknown = fresh); then the stalest pass timer; then slot order. So an older iced
+ * cup never hides a cold one.
  */
-export function oldestCupIndex(state: GameState): number {
+export function takeBackIndex(state: GameState): number {
+  const key = (item: PassItem): [number, number, number, number] => {
+    const cools = coolsOnCounter(state, item);
+    return [cools ? 0 : 1, cools ? -slotCool(state, item) : 0, item.madeAt ?? Infinity, item.ticksLeft];
+  };
   let best = -1;
+  let bestKey: [number, number, number, number] | null = null;
   state.pass.forEach((item, i) => {
-    if (best === -1) {
+    const k = key(item);
+    if (bestKey === null || before(k, bestKey)) {
       best = i;
-      return;
+      bestKey = k;
     }
-    const b = state.pass[best];
-    const a0 = item.madeAt ?? Infinity;
-    const b0 = b.madeAt ?? Infinity;
-    if (a0 < b0 || (a0 === b0 && item.ticksLeft < b.ticksLeft)) best = i;
   });
   return best;
 }
 
-/** True when the oldest cup on the pickup counter is cold. */
-export function oldestCupCold(state: GameState): boolean {
-  const i = oldestCupIndex(state);
+function before(a: readonly number[], b: readonly number[]): boolean {
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return a[i] < b[i];
+  return false;
+}
+
+/** True when the cup a take-back would grab is cold, i.e. some cup on the pickup counter is cold. */
+export function takeBackCold(state: GameState): boolean {
+  const i = takeBackIndex(state);
   return i >= 0 && slotCool(state, state.pass[i]) >= 1;
 }
 

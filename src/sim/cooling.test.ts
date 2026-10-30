@@ -4,7 +4,8 @@ import { step } from './step';
 import { stationsFromSlots } from './slots';
 import { stepPass } from './pass';
 import { stepPickup } from './pickup';
-import { COOLING_SECONDS, LUKEWARM, coolFraction, oldestCupIndex, stationCool, stepCooling } from './cooling';
+import { COOLING_SECONDS, LUKEWARM, coolFraction, stationCool, stepCooling, takeBackCold, takeBackIndex } from './cooling';
+import { finishDay } from './closing';
 import { TICK_RATE } from './constants';
 import { GEAR, type GearId } from '../data/gear';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
@@ -153,15 +154,15 @@ describe('cold and lukewarm cups at pickup', () => {
 });
 
 describe('the counter: take-back, staleness and the clock following the cup', () => {
-  it('empty hands at pickup take back the oldest cup, carrying its clock', () => {
+  it('empty hands at pickup take back the coldest cup (an older iced one waits), carrying its clock', () => {
     let s = quiet(gearDay());
     const t = s.tick;
-    s.pass = [cup('drip', t - secs(10)), cup('latte', t - secs(70)), cup('espresso'), cup('mocha', t - secs(70))];
+    s.pass = [cup('icedLatte', t - secs(150)), cup('drip', t - secs(10)), cup('latte', t - secs(70)), cup('mocha', t - secs(70))];
     stand(s, 'pickup');
     s = step(s, use);
     expect(s.players[0].holding).toBe('latte');
     expect(s.players[0].heldSince).toBe(t - secs(70));
-    expect(s.pass.map((i) => i.item)).toEqual(['drip', 'espresso', 'mocha']);
+    expect(s.pass.map((i) => i.item)).toEqual(['icedLatte', 'drip', 'mocha']);
     expect(logOf(s, 'pickup.takeBack')).toEqual([{ drink: 'latte', by: 'p1', cold: true }]);
     // Set it back down: same clock.
     s = step(s, use);
@@ -224,14 +225,71 @@ describe('the counter: take-back, staleness and the clock following the cup', ()
     expect(s.players[0].heldSince).toBeUndefined();
   });
 
-  it('oldestCupIndex: smallest madeAt, unknown counts as fresh, ties by slot', () => {
+  it('takeBackIndex: cooling cups first, coldest first, then smallest madeAt, then the stalest timer, then slot', () => {
     const s = quiet(gearDay());
-    s.pass = [cup('drip'), cup('latte', 50), cup('mocha', 50), cup('drip', 80)];
-    expect(oldestCupIndex(s)).toBe(1);
+    const t = s.tick;
+    // An older iced cup never hides a cold one (review M1).
+    s.pass = [cup('icedLatte', t - secs(200)), cup('drip', t - secs(40)), cup('latte', t - secs(70)), cup('mocha', t - secs(70))];
+    expect([takeBackIndex(s), takeBackCold(s)]).toEqual([2, true]);
+    // Two cold cups: the one made first.
+    s.pass = [cup('latte', t - secs(70)), cup('espresso', t - secs(100))];
+    expect(takeBackIndex(s)).toBe(1);
+    // Warm cups: the coolest, ahead of an older iced cup; nothing cold yet.
+    s.pass = [cup('icedLatte', t - secs(200)), cup('drip', t - secs(10)), cup('latte', t - secs(40))];
+    expect([takeBackIndex(s), takeBackCold(s)]).toEqual([2, false]);
+    // No cooling cups: smallest madeAt, unknown = fresh, then the stalest timer, then slot.
+    s.pass = [cup('drip'), cup('coldBrew', 50), cup('icedLatte', 50), cup('coldBrew', 80)];
+    expect(takeBackIndex(s)).toBe(1);
+    s.pass = [cup('drip'), cup('latte', undefined, { ticksLeft: 10 })];
+    expect(takeBackIndex(s)).toBe(1);
     s.pass = [cup('drip'), cup('latte')];
-    expect(oldestCupIndex(s)).toBe(0);
+    expect(takeBackIndex(s)).toBe(0);
     s.pass = [];
-    expect(oldestCupIndex(s)).toBe(-1);
+    expect([takeBackIndex(s), takeBackCold(s)]).toEqual([-1, false]);
+  });
+
+  it('the clock starts now on a pot pour, a tap pour and an early pull', () => {
+    let s = quiet(gearDay(['c1', 'e1', 'd2'], { beans: 9, milk: 9 }));
+    const pot = s.stations.find((x) => x.kind === 'drip')!;
+    pot.output = 'drip';
+    pot.outputSince = s.tick - secs(30);
+    pot.potLeft = 4;
+    stand(s, pot.id);
+    s = step(s, use);
+    expect([s.players[0].holding, s.players[0].heldSince]).toEqual(['drip', s.tick]);
+    s.players[0].holding = null;
+    const tap = s.stations.find((x) => x.kind === 'coldBrewTap')!;
+    tap.batchLeft = 5;
+    stand(s, tap.id);
+    s = step(s, use);
+    expect([s.players[0].holding, s.players[0].heldSince]).toEqual(['coldBrew', s.tick]);
+    s.players[0].holding = null;
+    const shot = s.stations.find((x) => x.kind === 'espresso')!;
+    Object.assign(shot, { making: 'espresso', busyTicksLeft: 5, busyTotal: 300 });
+    stand(s, shot.id);
+    s.players[0].heldSince = 1; // a leftover clock must not carry over
+    s = step(s, use);
+    expect([s.players[0].holding, s.players[0].heldSince]).toEqual(['espresso', s.tick]);
+  });
+
+  it('an R-drop onto an idle machine carries the cup clock', () => {
+    let s = quiet(gearDay(['c1', 'e1', 's1'], { beans: 9, milk: 9 }));
+    const steamer = s.stations.find((x) => x.kind === 'steamer')!;
+    stand(s, steamer.id);
+    s.players[0].holding = 'latte';
+    s.players[0].heldSince = s.tick - secs(25);
+    const t = s.players[0].heldSince;
+    s = step(s, drop);
+    const after = s.stations.find((x) => x.id === steamer.id)!;
+    expect([after.output, after.outputSince]).toEqual(['latte', t]);
+  });
+
+  it('closing clears the held clock with the hands', () => {
+    const s = quiet(gearDay());
+    s.players[0].holding = 'latte';
+    s.players[0].heldSince = s.tick - 5;
+    finishDay(s);
+    expect([s.players[0].holding, s.players[0].heldSince]).toEqual([null, undefined]);
   });
 });
 
@@ -249,6 +307,19 @@ describe('cup.cold', () => {
     }
     expect(seen).toEqual([{ slot: 0, drink: 'latte' }, { station: machine.id, drink: 'espresso' }]);
     expect(stationCool(s, s.stations.find((x) => x.id === machine.id)!)).toBe(1);
+  });
+
+  it('fires once for a drip pot when it goes cold on the hot plate', () => {
+    let s = quiet(gearDay(['c1', 'e1', 'd2']));
+    const pot = s.stations.find((x) => x.kind === 'drip')!;
+    Object.assign(pot, { output: 'drip', outputSince: s.tick - secs(50), potLeft: 6, potColdAt: s.tick + 5 });
+    const seen: Record<string, string | number | boolean>[] = [];
+    for (let i = 0; i < 20; i++) {
+      s = step(s, idle);
+      for (const e of s.log) if (e.kind === 'cup.cold' && e.tick === s.tick) seen.push(e.data);
+    }
+    expect(seen).toEqual([{ station: pot.id, drink: 'drip' }]);
+    expect(stationCool(s, s.stations.find((x) => x.id === pot.id)!)).toBe(1);
   });
 
   it('stepCooling does nothing in a classic run', () => {

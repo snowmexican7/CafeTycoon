@@ -6,7 +6,7 @@ import { serveCustomer, serveTarget } from './customers';
 import { tryCorrectName, tryKickCamper } from './eggs';
 import { tally } from './tally';
 import { passSlots, spotOf } from './pickup';
-import { coolsOnCounter, madeAtFromHand, oldestCupIndex, slotCool } from './cooling';
+import { coolsOnCounter, madeAtFromHand, takeBackIndex, slotCool } from './cooling';
 import type { GameState, Player, PlayerId, Station } from './types';
 
 /**
@@ -90,10 +90,10 @@ function gearCounter(state: GameState, player: Player, at?: Station): GameState 
   return state;
 }
 
-/** Empty hands take a cup back off the pass: classic, the stalest; Gear (A2), the oldest, carrying its clock. */
+/** Empty hands take a cup back off the pass: classic, the stalest; Gear (A2), the coldest cooling cup first (`takeBackIndex`), carrying its clock. */
 function takeBack(state: GameState, player: Player): void {
   const gear = state.gear === true;
-  const [item] = state.pass.splice(gear ? oldestCupIndex(state) : stalestIndex(state), 1);
+  const [item] = state.pass.splice(gear ? takeBackIndex(state) : stalestIndex(state), 1);
   player.holding = item.item;
   if (item.slips) player.cupSlips = item.slips;
   else delete player.cupSlips;
