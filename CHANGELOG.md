@@ -25,7 +25,7 @@ Every new run now starts from almost nothing: a folding table, a cardboard bin a
 - **Every area has a hidden taste.** Customers say what they wish you sold and tip for what they love; the notebook keeps track.
 - **Co-op big buys are a vote** ($50 and up), with a banner everyone sees.
 - **Nights in order:** Restock → Gear shop → Menu → Extras. The wall chalkboard follows your live menu, and a fast hand-off at the till earns a little extra.
-- **Pod machines and grinders.** With only a Pod-o-Matic, bots no longer grind beans it can't use, the order ticket shows one "Pod" step, and the Gear tab says the grinder pays off with a real espresso machine.
+- **Pod machines and grinders.** With only a Pod-o-Matic, bots no longer grind beans it can't use, the order ticket shows one "Pod" step, the hand hint says the machine takes pods, and the Gear tab says the grinder pays off with a real espresso machine.
 - **Records split.** Your best week, busiest day, best day and longest run now count Gear runs only; your old bests are kept on one line as "Classic (retired)". Lifetime totals and the hall of fame carry on.
 - Runs you already started (classic saves) load and finish exactly as before.
 - Friends on an old tab are asked to refresh before they can join (protocol 32).

@@ -1,6 +1,6 @@
 # Gear Tree: design plan (v3 "Gear Tree")
 
-*Status: design only, 2026-10-29 (updated 9 PM with Kennedy's answers). Nothing here is built yet. Written from Kennedy's playtest notes and
+*Status: shipped as v3.0.0 on 2026-10-30 (G0–G11 built; see the Gear entries at the end of BACKLOG.md). Originally design only, 2026-10-29 (updated 9 PM with Kennedy's answers). Written from Kennedy's playtest notes and
 the Gear Tree interview (same day), checked against `main` at `ca2c2ff` (v2.2.0). Numbers are a first
 guess for the balance pass, not final.*
 
