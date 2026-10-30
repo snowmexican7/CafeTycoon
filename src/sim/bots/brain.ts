@@ -352,16 +352,19 @@ function coveragePool(state: GameState): Coverage {
 
 /**
  * Every order, in queue order, that no other bot claimed, is on the menu, and no drink in flight covers. FB2 B6: each
- * item still to come on a multi-drink ticket is an order of its own (a copy of the customer with that `drink`), and
- * each other bot's claim on the ticket covers one item of its drink.
+ * item still to come on a multi-drink ticket is an order of its own (a copy of the customer with that `drink`), each
+ * other bot's claim on the ticket covers one item of its drink, and an office run's items come after everyone else's.
  */
 export function uncoveredOrders(state: GameState, self: Player): Customer[] {
   const { drinks, pending } = coveragePool(state);
   let shots = pending;
   const menu = availableDrinks(state);
   const out: Customer[] = [];
+  const later: Customer[] = [];
   for (const c of state.customers) {
     if (c.egg === 'camper') continue; // the Wi-Fi camper never orders (pickup review M3)
+    // FB2 B6: an office run's drinks go after everyone else's (losing it costs nothing; walk-ins would walk out).
+    const list = c.order === 'office' ? later : out;
     const wants = c.items ? undoneDrinks(c) : [c.drink];
     const claims = c.items ? ticketClaims(state, self, c.id) : null;
     if (!claims && claimedByOther(state, self, c.id)) continue;
@@ -379,10 +382,10 @@ export function uncoveredOrders(state: GameState, self: Player): Customer[] {
         shots -= 1;
         continue;
       }
-      out.push(c.items ? { ...c, drink: d } : c);
+      list.push(c.items ? { ...c, drink: d } : c);
     }
   }
-  return out;
+  return later.length > 0 ? [...out, ...later] : out;
 }
 
 /** FB2 B6: other bots' claims on ticket `id`, counted by drink. */
@@ -426,6 +429,13 @@ function coldBrewsAhead(state: GameState): number {
 const strayGrounds = (st: Station): boolean => st.kind !== 'grinder' && st.output === 'grounds';
 
 /**
+ * FB2 B6 (Gear): grounds left in a grinder whose chain was dropped (its customer was served by someone else's cup).
+ * They count as a shot on its way (`coveragePool`), so once they have sat as long as any orphan they are collected
+ * (and binned, or pulled), or the order they seem to cover would never be claimed.
+ */
+const leftGrounds = (state: GameState, st: Station): boolean => state.gear === true && st.kind === 'grinder' && st.output === 'grounds';
+
+/**
  * A drink left sitting in a machine, or stray grounds, that no other bot is already on its way to take;
  * nearest first.
  */
@@ -453,7 +463,7 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
   const candidates = state.stations
     // G4d: a pot's cups wait in the pot for the orders that claim them (pouring it out would only fill the pass).
     // G9: a drink on an out-of-reach twin is for people only (a bot would pick it, find no node, and loop).
-    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st)) && !(hasPot(st) && st.output === 'drip') && reachable(state, st) && !takenBy(st) && !personAt(st) && sat(st))
+    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st) || leftGrounds(state, st)) && !(hasPot(st) && st.output === 'drip') && reachable(state, st) && !takenBy(st) && !personAt(st) && sat(st))
     .map((st) => ({ st, d: dist(st.pos, self.pos) }))
     .sort((a, b) => a.d - b.d || a.st.pos.y - b.st.pos.y || a.st.pos.x - b.st.pos.x);
   return candidates[0]?.st ?? null;
@@ -774,6 +784,20 @@ const brewSlack = (st: Station): number => (hasPot(st) && st.busyTicksLeft > 0 ?
 function execute(p: Player): void {
   p.interactQueued = true;
   pop(p.bot!);
+}
+
+/**
+ * FB2 B6 (Gear): the claim went (another cup reached that customer first, or they left), but someone else still needs
+ * the same drink and nobody covers it: the bot carries on for them instead of dropping its chain mid-way (a shot left
+ * in the machine blocks it for everyone). Keeps the plan; true when it found one.
+ */
+function reclaim(state: GameState, p: Player): boolean {
+  const b = p.bot!;
+  if (state.gear !== true || b.claimDrink === null) return false;
+  const next = uncoveredOrders(state, p).find((o) => o.drink === b.claimDrink);
+  if (!next) return false;
+  b.claim = next.id;
+  return true;
 }
 
 function claimLost(state: GameState, b: BotState): boolean {
@@ -1124,7 +1148,7 @@ function walkToward(state: GameState, p: Player, node: Vec2, maxRank: number): v
 function stepBot(state: GameState, p: Player): void {
   const b = p.bot!;
   p.moveDir = { x: 0, y: 0 };
-  if (b.claim !== null && claimLost(state, b)) {
+  if (b.claim !== null && claimLost(state, b) && !reclaim(state, p)) {
     b.claim = null;
     b.claimDrink = null;
     setPlan(b, dropPlan(state, p)); // Review Focus 1

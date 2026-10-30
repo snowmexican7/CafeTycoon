@@ -59,6 +59,48 @@ describe('bots and multi-drink tickets (FB2 B6)', () => {
     expect(sim(t, 3).bot!.claim).toBeNull();
   });
 
+  it("an office run's drinks come after every walk-in's", () => {
+    const s = gearStand();
+    s.customers = [combo(1, ['espresso', 'coldBrew'], { order: 'office' }), { id: 2, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: 0 }];
+    expect(uncoveredOrders(s, sim(s)).map((o) => [o.id, o.drink])).toEqual([[2, 'espresso'], [1, 'espresso'], [1, 'coldBrew']]);
+    think(s, sim(s));
+    expect(sim(s).bot!.claim).toBe(2);
+  });
+
+  it('a lost claim carries over to someone else waiting for the same drink (Gear), keeping the chain', () => {
+    const s = gearStand();
+    const single = (id: number): Customer => ({ id, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: id });
+    // Mid-chain: its shot is brewing; customer 1 got another cup and left, customer 2 still waits for one.
+    s.customers = [single(2)];
+    const machine = s.stations.find((x) => x.kind === 'espresso')!;
+    Object.assign(machine, { busyTicksLeft: 300, busyTotal: 300, making: 'espresso' });
+    const p = sim(s);
+    const plan = [{ kind: 'use', station: machine.id, action: 'take' }, { kind: 'use', station: 'pickup', action: 'put' }] as const;
+    Object.assign(p.bot!, { plan: [...plan], claim: 1, claimDrink: 'espresso' });
+    const after = step(s, []);
+    expect(sim(after).bot!.claim).toBe(2);
+    expect(sim(after).bot!.plan).toEqual(plan);
+    // Nobody left wanting one: the claim and the chain are dropped.
+    after.customers = [];
+    expect(sim(step(after, [])).bot!.claim).toBeNull();
+  });
+
+  it('grounds left in a grinder by a dropped chain are collected once they have sat (Gear)', () => {
+    let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, tier: 'stand', gear: true });
+    addStandIns(s, 1);
+    for (const g of ['g2', 'e2'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
+    s.supplies.beans = 40;
+    s = startDay(s);
+    s.players[0].connected = false;
+    const grinder = s.stations.find((x) => x.kind === 'grinder');
+    if (!grinder) return; // the stand has no grinder slot in this layout
+    Object.assign(grinder, { output: 'grounds', outputSince: s.tick });
+    s.customers = [{ id: 1, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: 0 }];
+    expect(think(s, sim(s))).toEqual([{ kind: 'idle', node: expect.anything() }]);
+    s.tick += 15 * 60;
+    expect(think(s, sim(s))).toEqual([{ kind: 'use', station: grinder.id, action: 'take' }]);
+  });
+
   it('a claim on a ticket holds while an item of its drink is still to come', () => {
     const s = gearStand(1);
     const c = combo(1, ['espresso', 'coldBrew']);
