@@ -70,6 +70,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **Round 3 items 6 + 7 (2026-10-31, `r3-grow`, protocol 50).** Cart is $70. Optional switch: `grow.affordable {
+  tier }` (once per night) for the "You can afford a cart!" chip, `growDiff(from, to)` / `grow.done { from, to, diff }`
+  for the "What you gained" card (your `gainedDiff` duplicates it; both agree today). I updated your
+  `src/ui/uiTiers.test.ts` for the $70 price.
 - [ ] **b. Pastries (2026-10-31, `r4-pastry`).** Add a pastry row to the Restock tab using the existing restock input
   (`supply: 'pastry'`). Brief alert id `stock:pastry:low`, planner advice id `restock:pastry`. I set
   `pastry: 500` in your `src/ui/tipsVM.test.ts` fixture so a pastry chip doesn't crowd the tips under test.

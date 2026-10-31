@@ -147,6 +147,7 @@ export function startNight(state: GameState): GameState {
   delete state.closeVotes;
   delete state.emptySince;
   state.boughtTonight = [];
+  delete state.growNudged; // R3 6
   state.forecast = forecastFor(state.seed, state.day);
   state.freshDrinks = unlockForDay(state).filter((d) => canMake(state, d));
   state.rerolls = 0;

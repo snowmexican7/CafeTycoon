@@ -1,4 +1,5 @@
-import { canMake, hasStation } from './growth';
+import { canMake, hasStation, nextTierAffordable } from './growth';
+import { emitLog } from './log';
 import { roleSupplyCost } from './roles';
 import { CATALOGUE, catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
@@ -163,7 +164,20 @@ export function applyNightInput(state: GameState, input: PlayerInput): GameState
  * ready, or when the last call runs out. The last call (30 s) starts once more than half the connected
  * humans are ready, or at once when no human is connected; once started it runs even if the share drops.
  */
+/**
+ * R3 6: once a night, the tick the cash first covers the next shop size: `grow.affordable { tier }`. Cash moves at night
+ * (selling gear, restocking), so this watches every tick. Not on a Gear run's first night (that night is for the first gear).
+ */
+function nudgeGrow(state: GameState): void {
+  if (state.growNudged || (state.gear === true && state.day <= 1)) return;
+  const tier = nextTierAffordable(state);
+  if (!tier) return;
+  state.growNudged = true;
+  emitLog(state, 'grow.affordable', { tier });
+}
+
 export function stepNight(state: GameState): GameState {
+  nudgeGrow(state);
   const connected = state.players.filter((p) => p.connected && !p.bot);
   const readyConnected = connected.filter((p) => state.ready.includes(p.id)).length;
   const everyoneReady = connected.length > 0 && readyConnected === connected.length;

@@ -9,7 +9,7 @@ import { finishDay } from './closing';
 import { TICK_RATE } from './constants';
 import { GEAR, type GearId } from '../data/gear';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
-import type { Customer, DrinkId, GameState, PassItem, PlayerInput, SupplyId } from './types';
+import type { Customer, DrinkId, GameState, PassItem, PlayerInput, SimEvent, SupplyId } from './types';
 
 /** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
 type Kit = GearId | 'steamer';
@@ -303,7 +303,7 @@ describe('cup.cold', () => {
     machine.output = 'espresso';
     machine.outputSince = s.tick - secs(45) + 5;
     s.pass = [cup('latte', s.tick - secs(60) + 3), cup('icedLatte', s.tick - secs(600)), cup('drip', s.tick - secs(600))];
-    const seen: Record<string, string | number | boolean>[] = [];
+    const seen: SimEvent["data"][] = [];
     for (let i = 0; i < 40; i++) {
       s = step(s, idle);
       for (const e of s.log) if (e.kind === 'cup.cold' && e.tick === s.tick) seen.push(e.data);
@@ -316,7 +316,7 @@ describe('cup.cold', () => {
     let s = quiet(gearDay(['c1', 'e1', 'd2']));
     const pot = s.stations.find((x) => x.kind === 'drip')!;
     Object.assign(pot, { output: 'drip', outputSince: s.tick - secs(50), potLeft: 6, potColdAt: s.tick + 5 });
-    const seen: Record<string, string | number | boolean>[] = [];
+    const seen: SimEvent["data"][] = [];
     for (let i = 0; i < 20; i++) {
       s = step(s, idle);
       for (const e of s.log) if (e.kind === 'cup.cold' && e.tick === s.tick) seen.push(e.data);

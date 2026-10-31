@@ -28,6 +28,7 @@ when a build goes out, the line moves under its version with the date.
   earlier versions can't be loaded.
 - Pastries on the Restock tab (a pack of six for $7): they sell for $3 on the side with about a third of drinks, half
   the leftovers go stale overnight, and the night brief tells you when the case will run out.
+- The coffee cart now costs $70, and you get a nudge the moment you can afford the next shop size.
 
 ## 3.5.0 — 2026-10-30 · Open, close and clean up
 

@@ -15,9 +15,11 @@ import { podsCoverGrinder, podsOnly } from './gear';
 import { ECONOMY } from '../data/economy';
 import { layoutFor } from '../data/layout';
 import type { Modifiers } from './effects';
-import { defaultSlots, ensureCounterSpots, growSlots, stationsFromSlots } from './slots';
+import { defaultSlots, ensureCounterSpots, growSlots, slotCount, stationsFromSlots } from './slots';
 import { growGearSlots, isGearRun } from './gear';
-import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
+import { DRINK_IDS, DRINK_INFO, GEAR_ONLY_DRINKS } from '../data/drinks';
+import { emitLog } from './log';
+import type { DrinkId, GameState, GrowDiff, PlayerInput, Station, StationKind, TierId } from './types';
 
 export interface TierInfo {
   name: string;
@@ -60,7 +62,7 @@ export const TIERS: Record<TierId, TierInfo> = {
     name: 'Coffee cart',
     short: 'cart',
     icon: '🛺',
-    cost: 80,
+    cost: 70,
     queue: 5,
     rentPerDay: 17,
     mix: { impatient: 1.15, group: 0.5, regular: 0.85 },
@@ -123,6 +125,53 @@ export function nextTier(state: GameState): TierId | null {
   return TIER_IDS[TIER_IDS.indexOf(tierOf(state)) + 1] ?? null;
 }
 
+/**
+ * R3 6: the next tier up when the cash in hand covers it, else null (at the café, or too poor). Pure: the UI chip and the
+ * `grow.affordable` event both read it. Ignores the phase and the Gear first night (stepNight's nudge handles those).
+ */
+export function nextTierAffordable(state: GameState): TierId | null {
+  const next = nextTier(state);
+  return next && state.cash >= TIERS[next].cost ? next : null;
+}
+
+/** Drinks whose recipe the tier's default floor can make (classic runs; Gear-only drinks left out unless `gear`). */
+function drinksAt(tier: TierId, gear: boolean): DrinkId[] {
+  const kinds = layoutFor(tier).stations.map((s) => s.kind);
+  return DRINK_IDS.filter((d) => (gear || !GEAR_ONLY_DRINKS.includes(d)) && DRINK_STATIONS[d].every((k) => kinds.includes(k)));
+}
+
+/**
+ * R3 7: what growing from `from` to `to` changes, before → after: the line, the price factor, foot traffic, the rent, who
+ * comes in, and what is newly possible (floor tiles, back-bar slots or, in a classic run, stations and drinks; pairs and
+ * groups walking in). Pure arithmetic on the tier table and layout: the UI previews it before buying, and `grow.done` carries it.
+ */
+export function growDiff(from: TierId, to: TierId, gear = true): GrowDiff {
+  const a = TIERS[from];
+  const b = TIERS[to];
+  const unlocks: string[] = [];
+  const tiles = layoutFor(to).width - layoutFor(from).width;
+  if (tiles > 0) unlocks.push(`${tiles} more tiles of floor`);
+  const slots = slotCount(to) - slotCount(from);
+  if (gear && slots > 0) unlocks.push(`${slots} more back-bar slot${slots > 1 ? 's' : ''} for gear`);
+  if (!gear) {
+    const had = new Set(layoutFor(from).stations.map((s) => s.kind));
+    const fresh = [...new Set(layoutFor(to).stations.map((s) => s.kind))].filter((k) => !had.has(k) && k !== 'counter' && k !== 'trash');
+    if (fresh.length) unlocks.push(`New station${fresh.length > 1 ? 's' : ''}: ${fresh.join(', ')}`);
+    const before = new Set(drinksAt(from, gear));
+    const now = drinksAt(to, gear).filter((d) => !before.has(d)).map((d) => DRINK_INFO[d].name);
+    if (now.length) unlocks.push(`New drinks: ${now.join(', ')}`);
+  }
+  if (b.mix.group > a.mix.group) unlocks.push(to === 'cafe' ? 'Groups come in' : 'Pairs of friends start coming');
+  return {
+    queue: { from: a.queue, to: b.queue },
+    price: { from: a.price, to: b.price },
+    traffic: { from: a.traffic, to: b.traffic },
+    rent: { from: a.rentPerDay, to: b.rentPerDay },
+    crowd: { from: a.crowd, to: b.crowd },
+    unlocks,
+  };
+}
+
 /** Floor width in tiles. */
 export function floorWidth(state: GameState): number {
   return layoutFor(state.tier).width;
@@ -168,10 +217,12 @@ export function applyGrowInput(state: GameState, input: Extract<PlayerInput, { k
   state.cash = Math.round((state.cash - cost) * 100) / 100;
   if (isGearRun(state)) growGearSlots(state, input.tier);
   else growSlots(state, input.tier);
+  const from = tierOf(state);
   state.tier = input.tier;
   ensureCounterSpots(state); // FB2 A4: the bigger shop's fridge (Gear runs; no-op in classic)
   state.tierLog = [...(state.tierLog ?? []), { tier: input.tier, day: state.day, by: p.name }];
   if (state.mop.heldBy === null) state.mop = { pos: { ...layoutFor(input.tier).mopHome }, heldBy: null };
+  emitLog(state, 'grow.done', { from, to: input.tier, diff: growDiff(from, input.tier, state.gear === true) }); // R3 7
   return state;
 }
 

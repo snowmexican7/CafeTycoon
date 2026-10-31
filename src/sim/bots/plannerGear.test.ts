@@ -176,7 +176,7 @@ describe('item 3: Gear buying hints', () => {
     expect(gearAd(base()).map((a) => a.id)).toEqual(['gear:e3']); // no day on the books
     expect(gearAd(withYesterday(base(), 0, 0)).map((a) => a.id)).toEqual(['gear:e3']); // no cup scored
     // too dear: falls back to the normal path rather than waiting for it (an E3 that has its wand: the grinder is next)
-    const poor = withYesterday(equipped(['c4', 'g1', 'e3'], {}, 85), 20, 40);
+    const poor = withYesterday(equipped(['c4', 'g1', 'e3'], {}, 65), 20, 40);
     poor.slotWand = [null, null, 'weak', null];
     poor.stations = stationsFromSlots(poor.tier, poor.slots!, poor.slotGear, poor.slotWand);
     poor.checkout = { owned: ['register', 'kiosk', 'squarely'], active: 'squarely', since: 1, by: 'K' }; // nothing else asks for the till
