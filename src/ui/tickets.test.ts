@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { OrderTicket } from './live';
 import { recipeHintsField } from './pause';
 import {
-  loadRecipeHints, MAX_TICKETS, nextStepIndex, pruneOpen, saveRecipeHints, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, type TicketOpts,
+  loadRecipeHints, MAX_TICKETS, nextStepIndex, stackCount, pruneOpen, saveRecipeHints, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, type TicketOpts,
 } from './tickets';
 
 const orders = (n: number): OrderTicket[] =>
@@ -84,5 +84,24 @@ describe('FB1 WP2 order tickets', () => {
     expect(loadRecipeHints(store)).toBe('click');
     expect(loadRecipeHints(undefined)).toBe('click');
     expect(recipeHintsField('off')).toMatch(/value="off" selected/);
+  });
+});
+
+describe('ui-3.5.1: stacked multi-drink tickets', () => {
+  const opts = { mode: 'off' as const, open: new Set<number>(), day: 3, holding: null, prices: {} };
+  const combo = { id: 7, drink: 'latte', patience: 0.9, order: 'office', items: [{ drink: 'espresso', done: true }, { drink: 'latte', done: false }, { drink: 'drip', done: false }] } as OrderTicket;
+  it('one ticket fans out with a ×N badge for the drinks still to make, and ticks the done ones', () => {
+    const h = ticketsHtml([combo], opts);
+    expect(stackCount(combo)).toBe(2);
+    expect(h).toContain('stack stack-2');
+    expect(h).toContain('>×2<');
+    expect(h).toContain('Office run · 1/3');
+    expect(h.match(/class="stk-it/g)?.length).toBe(3);
+    expect(h.match(/stk-it done/g)?.length).toBe(1);
+  });
+  it('a one-drink order has no badge or strip', () => {
+    const h = ticketsHtml(orders(1), opts);
+    expect(h).not.toContain('stk-');
+    expect(stackCount(orders(1)[0]!)).toBe(0);
   });
 });

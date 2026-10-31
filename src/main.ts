@@ -39,6 +39,7 @@ import { createHud } from './ui/hud';
 import { loadRecipeHints, saveRecipeHints } from './ui/tickets';
 import { hudLive, nightExtras } from './ui/live';
 import { createLobby } from './ui/lobby';
+import { createDevPanel, isDevMode } from './ui/dev';
 import { createNight } from './ui/night';
 import { nightInputHandlers } from './ui/nightInputs';
 import { createPause } from './ui/pause';
@@ -202,6 +203,8 @@ async function main(): Promise<void> {
   let recipeHints = loadRecipeHints(hintStore);
   const hud = createHud($('#hud'), { onMute: () => audio.toggleMute(), onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }), onCall: (take) => send({ kind: 'call', playerId: me(), take }) }, { recipeHints });
   const night = createNight($('#night'), nightInputHandlers(send, me));
+  // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).
+  const dev = isDevMode(location.search) ? createDevPanel(document, send, me) : null;
   const closing = createClosing($('#closing'));
   const weekEnd = createWeekEnd($('#weekEnd'), {
     onContinue: () => send({ kind: 'weekEnd', playerId: me(), choice: 'continue' }),
@@ -295,6 +298,8 @@ async function main(): Promise<void> {
       tier: 'stand',
       // G11 (v3.0.0): every new run is a Gear run; ?gear=0 is a hidden classic escape hatch.
       ...(gearFlag() ? { gear: true } : {}),
+      // R4 a: a dev run (?dev=1): cash topped up, a pausable night, never saved to records.
+      ...(isDevMode(location.search) ? { dev: true } : {}),
       // P3 B16: the host's head start (the sim ignores it in classic runs).
       ...(gearFlag() && choice.perk ? { perk: choice.perk } : {}),
     };
@@ -547,6 +552,7 @@ async function main(): Promise<void> {
     if (grew) growFx.play(gainedDiff(grew.from, grew.to, !!state.gear));
     hints.update(state, s.me, growFx.isOpen() || !pauseEl.hidden || !closingEl.hidden || !weekEndEl.hidden || state.phase === 'weekEnd' || state.phase === 'ended');
     if (state.phase === 'night') night.render(nightViewModel(state, s.me), nightExtras(state, s.me), s.code);
+    dev?.update({ phase: state.phase, isHost: s.me === state.hostId, devRun: !!state.dev, paused: !!state.devPaused });
 
     const canSave = s.role !== 'peer';
     if (state.phase !== s.lastPhase) {

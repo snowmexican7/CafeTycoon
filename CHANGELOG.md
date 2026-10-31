@@ -16,12 +16,30 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- Your barista has a look you pick (hair, skin, outfit, shirt colour), your crewmates see it, and you can change it
+  between days.
+
+## 3.5.1 — 2026-10-30 · Bigger orders, a tidier night
+
+Customers order for friends and offices, the night opens on Restock and is less crowded, cream and sugar can be
+restocked, and espresso machines get steam wands.
+
+- The night always opens on the Restock tab, every night (the first night too: a banner points you to ② Pick gear).
+- Cream and sugar can be restocked: a "Condiment box · $6" card sits next to the jars on the Restock tab, and the
+  night brief's condiment warning has its own "Buy a box" button.
+- A tidier night screen: stock warnings now sit on their own jar instead of in a list, crew roles and the street
+  notebook open from a "More" row, and the "In the till" card is folded into the day card. Nothing was removed.
+- One customer's drinks now share one stacked ticket with a "×2" or "×3" badge, a row of cups that tick off as you
+  hand them over, and "Combo" or "Office run" on top.
+- A customer you walk into says so ("Hey, watch it!"), and one who storms off after too many bumps says that too.
+- Steam wands in the Gear shop: add a little wand to your Sylvia (or a proper one to La Marzipana Due), or buy the
+  machine with one fitted. Each slot shows its wand, the shop says plainly when no machine can steam milk yet, and a
+  clogged wand shows on the day screen until you give it a whack.
+- Dev mode (`?dev=1`) shows a DEV badge in the corner with a "Pause night timer" button for the host.
 - Bigger orders: some customers now order two drinks (one for the spouse in the car), and on the cart and at the café an office run sometimes phones ahead and walks in for 4–6 drinks. A multi-drink order pays when the last drink is collected; finish an office run for a 25% bonus tip, and losing one costs you nothing (they leave when you lock up). Groups now pay for their round at the end too.
 - Walking into a customer annoys them; bump the same person three times in a few seconds and they storm out.
 - Dev mode (open the game with `?dev=1`): unlimited cash to try anything, and the night can be paused as long as you
   like; dev runs never count toward records or head starts.
-- Your barista has a look you pick (hair, skin, outfit, shirt colour), your crewmates see it, and you can change it
-  between days.
 - The steamer is gone: steamed milk comes from a wand on the espresso machine. Add a little wand to the Sylvia, or a
   proper one to La Marzipana Due; The Annihilator and the new top machine, Double Trouble, have theirs built in.
   Lattes wait until you have a Sylvia with a wand. The little wand clogs now and then: give it a whack. Saves from
@@ -30,7 +48,7 @@ when a build goes out, the line moves under its version with the date.
   the leftovers go stale overnight, and the night brief tells you when the case will run out.
 - The coffee cart now costs $70, and you get a nudge the moment you can afford the next shop size.
 - Ringing up an order takes a moment at the till (1.5 s on the old register, 1 s on the kiosk): stay at the till
-  until the bar fills; walk off and it cancels. The Squarely terminal is self-order, so customers move to pickup by
+  until the bar fills (the hint reads "Ringing up… 50%"); walk off and it cancels. The Squarely terminal is self-order, so customers move to pickup by
   themselves.
 - Prices ease a little: the kerbside stand can charge 80% of café prices (was 75%), supplies cost 10% less, pricey
   menus scare off fewer people, and the night forecast only promises as many cups as your crew and machines can pour.

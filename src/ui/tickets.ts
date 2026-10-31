@@ -82,6 +82,23 @@ export interface TicketOpts {
   gear?: boolean;
 }
 
+/** ui-3.5.1: a multi-drink ticket's undone count (the ×N badge), or 0 for a one-drink order. */
+export function stackCount(t: OrderTicket): number {
+  return t.items && t.items.length > 1 ? t.items.filter((it) => !it.done).length : 0;
+}
+
+const STACK_NAME = { combo: 'Combo', office: 'Office run' } as const;
+
+/** ui-3.5.1: the stacked ticket's strip: one small cup per drink, ticked once it's been taken. */
+function stackStrip(t: OrderTicket): string {
+  const items = t.items ?? [];
+  const done = items.filter((it) => it.done).length;
+  const name = t.order ? STACK_NAME[t.order] : 'Group order';
+  return `<div class="stk-list" aria-label="${esc(name)}: ${done} of ${items.length} drinks done">${items
+    .map((it) => `<span class="stk-it${it.done ? ' done' : ''}" title="${DRINK_LABEL[it.drink]}${it.done ? ' · done' : ''}">${itemIcon(it.drink, 24)}${it.done ? '<b>✓</b>' : ''}</span>`)
+    .join('')}<span class="stk-nm">${esc(name)} · ${done}/${items.length}</span></div>`;
+}
+
 const tilt = (id: number) => (((id * 37) % 7) - 3) * 0.3;
 
 /** The order rail's markup (pure, so it's testable without a DOM). Patience bars are patched per tick. */
@@ -97,13 +114,14 @@ export function ticketsHtml(orders: readonly OrderTicket[], o: TicketOpts): stri
         const steps = open
           ? `<div class="steps">${ticketSteps(t.drink, o.pods, o.gear).map((s, k) => `<span class="${k === next ? 'next' : ''}">${s}</span>`).join('')}</div>`
           : clickable ? '<div class="peek">Click for steps</div>' : '';
-        const cls = ['ticket', t.pickup ? 'rung' : '', t.patience < URGENT ? 'urgent' : '', t.tag ? `kind-${t.tag.tone}` : '', open ? 'open' : '', clickable ? 'tap' : ''].filter(Boolean).join(' ');
+        const n = stackCount(t);
+        const cls = ['ticket', n > 1 ? `stack stack-${Math.min(n, 3)}` : '', t.pickup ? 'rung' : '', t.patience < URGENT ? 'urgent' : '', t.tag ? `kind-${t.tag.tone}` : '', open ? 'open' : '', clickable ? 'tap' : ''].filter(Boolean).join(' ');
         const aria = clickable ? ` role="button" aria-expanded="${open}" aria-label="${DRINK_LABEL[t.drink]}: ${open ? 'hide' : 'show'} steps"` : '';
         return `<div class="${cls}" data-id="${t.id}"${aria} style="--r:${tilt(t.id)}deg">
           ${t.tag ? `<div class="ktag">${esc(t.tag.text)}</div>` : ''}${t.pickup ? '<div class="rungtag">🧾 At pickup</div>' : ''}
-          <div class="ic">${itemIcon(t.drink, 38)}</div><div class="nm">${DRINK_LABEL[t.drink]}</div>
+          ${n > 1 ? `<div class="stk-badge" aria-label="${n} drinks still to make">×${n}</div>` : ''}<div class="ic">${itemIcon(t.drink, 38)}</div><div class="nm">${DRINK_LABEL[t.drink]}</div>
           <div class="pr">${esc(o.prices[t.drink] ?? '')}</div>
-          ${steps}
+          ${t.items && t.items.length > 1 ? stackStrip(t) : ''}${steps}
           <div class="pat"><i></i></div></div>`;
       })
       .join('') + (orders.length > MAX_TICKETS ? `<div class="more">+${orders.length - MAX_TICKETS} more</div>` : '')

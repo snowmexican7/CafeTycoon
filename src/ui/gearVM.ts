@@ -1,6 +1,6 @@
 import { stationLeft } from '../sim/counts';
 import { AREAS, DRINK_FAMILY, type DrinkFamily } from '../data/areas';
-import { GEAR_VOTE_MIN, gearArea, gearRequiresMet } from '../sim/gear';
+import { GEAR_VOTE_MIN, gearArea, gearRequiresMet, wandCards } from '../sim/gear';
 import { DRINK_INFO } from '../data/drinks';
 import { LEVEL_UPS, levelUpGearOk } from '../sim/levelUp';
 /**
@@ -8,7 +8,8 @@ import { LEVEL_UPS, levelUpGearOk } from '../sim/levelUp';
  * sim/gear.ts: the back-bar slots with the gear in each, then one row per tree with every tier and what
  * pressing it would do (buy, upgrade with a trade-in, owned, passed, too dear, no free slot).
  */
-import { GEAR, GEAR_TREES, treeTiers, type GearId, type GearTree } from '../data/gear';
+import { GEAR, GEAR_TREES, WANDS, treeTiers, type AddOnWand, type GearId, type GearTree } from '../data/gear';
+import { wandOn } from '../sim/slots';
 import { slotCount } from '../sim/slots';
 import { FRIDGES, type FridgeId } from '../data/fridges';
 import { fridgeCards, fridgeGear } from '../sim/fridge';
@@ -32,8 +33,13 @@ export interface GearTierVM {
   state: GearTierState;
   /** What the button costs after the trade-in. */
   net: number;
+  /** ui-3.5.1 (FB2 C9): "buy it with a steam wand" buttons (E3/E4, when it can be bought now). */
+  wandBuys?: { wand: AddOnWand; name: string; price: number; ok: boolean }[];
 }
-export interface GearSlotVM { index: number; id: GearId | null; name: string; icon: string; sell: number }
+/** ui-3.5.1 (FB2 C9): `wand` names the steam wand on that machine ("Little steam wand", "Built-in steam wand"). */
+export interface GearSlotVM { index: number; id: GearId | null; name: string; icon: string; sell: number; wand?: string }
+/** ui-3.5.1 (FB2 C9, from sim/gear.ts wandCards): add a wand to a machine you already have. */
+export interface WandCardVM { station: string; index: number; machine: string; wand: AddOnWand; name: string; blurb: string; price: number; upgrade: boolean; ok: boolean }
 /** G8: the open co-op vote, from one player's view. */
 export interface GearVoteVM { text: string; yes: number; no: number; of: number; need: number; mine: 'yes' | 'no' | null; proposer: boolean }
 
@@ -78,6 +84,10 @@ export interface GearVM {
   crowd?: string;
   /** G6: drinks that level up with use: progress toward each (learned ones show done). */
   levelUps: LevelUpVM[];
+  /** ui-3.5.1 (FB2 C9): steam wands on offer for machines already in a slot. */
+  wands: WandCardVM[];
+  /** ui-3.5.1 (FB2 C9): one plain line when no machine can steam milk yet (null otherwise). */
+  wandNote: string | null;
   /** G4g: co-op pick-night hint (absent solo or after day 1). */
   coopHint?: string;
 }
@@ -149,7 +159,9 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
   const gear = state.slotGear ?? [];
   const slots: GearSlotVM[] = Array.from({ length: n }, (_, i) => {
     const id = gear[i] ?? null;
-    return id ? { index: i, id, name: GEAR[id].name, icon: ICON[GEAR[id].tree], sell: GEAR[id].sell } : { index: i, id: null, name: 'Empty', icon: '＋', sell: 0 };
+    if (!id) return { index: i, id: null, name: 'Empty', icon: '＋', sell: 0 };
+    const w = wandOn(id, state.slotWand?.[i] ?? null);
+    return { index: i, id, name: GEAR[id].name, icon: ICON[GEAR[id].tree], sell: GEAR[id].sell, ...(w ? { wand: WAND_NAME[w] } : {}) };
   });
   const freeSlots = slots.filter((s) => !s.id).length;
   const trees = GEAR_TREES.filter((t) => t.id !== 'bin').map((t) => {
@@ -167,7 +179,11 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
       else if (!top && freeSlots === 0) st = 'noSlot';
       else st = top ? 'upgrade' : 'buy';
       const copies = owned.filter((o) => o.id === g.id).length;
-      return { ...(st === 'needs' && g.requires ? { needs: g.requires.label } : {}), copies, id: g.id, name: g.name, price: g.price, sell: g.sell, sticker: g.sticker, blurb: g.blurb, stats: gearStats(g.id), state: st, net };
+      const base = st === 'another' ? g.price : net;
+      const wandBuys = (st === 'buy' || st === 'upgrade' || st === 'another') && g.wand?.addOns
+        ? g.wand.addOns.map((w) => ({ wand: w, name: WANDS[w].name, price: base + WANDS[w].withMachine, ok: state.cash + (st === 'another' ? 0 : tradeIn) >= g.price + WANDS[w].withMachine }))
+        : undefined;
+      return { ...(wandBuys ? { wandBuys } : {}), ...(st === 'needs' && g.requires ? { needs: g.requires.label } : {}), copies, id: g.id, name: g.name, price: g.price, sell: g.sell, sticker: g.sticker, blurb: g.blurb, stats: gearStats(g.id), state: st, net };
     });
     return { id: t.id, name: t.name, icon: t.icon, tiers };
   });
@@ -201,7 +217,14 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
   const notebook = notebookVM(state);
   const areaId = gearArea(state);
   const crowd = areaId && notebook.some((r) => r.stars !== null) ? AREAS[areaId].crowd : undefined;
-  return { ...(fridge ? { fridge } : {}), pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook, ...(crowd ? { crowd } : {}), levelUps: levelUpVM(state), ...(coopHint ? { coopHint } : {}),
+  const wands = wandCards(state).map((c): WandCardVM => ({ station: c.station, index: c.index, machine: GEAR[c.gear].name, wand: c.wand, name: WANDS[c.wand].name, blurb: WANDS[c.wand].blurb, price: c.price, upgrade: c.upgrade, ok: state.cash >= c.price }));
+  const espresso = slots.filter((x) => x.id && GEAR[x.id].tree === 'espresso');
+  const wandNote = espresso.length && !espresso.some((x) => x.wand)
+    ? GEAR[espresso[0]!.id!].wand?.addOns
+      ? 'No steam wand yet: lattes and other milk drinks need one. Add one below.'
+      : 'This machine has no steam wand, so no lattes yet. Sylvia the Prosumer or better takes one.'
+    : null;
+  return { ...(fridge ? { fridge } : {}), wands, wandNote, pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook, ...(crowd ? { crowd } : {}), levelUps: levelUpVM(state), ...(coopHint ? { coopHint } : {}),
     ...(vote ? { vote } : {}), ...(state.gearVoteLast ? { voteLast: state.gearVoteLast } : {}), ...(voteRule ? { voteRule } : {}) };
 }
 
@@ -223,9 +246,12 @@ export function fridgeVM(state: GameState, voters = 1): FridgeVM {
         ? 'Growing into a cart brings a bigger fridge for free.'
         : tier === 'cart'
           ? 'Growing into a café brings a chrome reach-in for free.'
-          : 'Grab milk from the fridge, put a carton out by the steamer, and put it all back before closing.';
+          : 'Grab milk from the fridge, put a carton out by the steam wand, and put it all back before closing.';
   return { have, cards, note };
 }
+
+/** ui-3.5.1 (FB2 C9): the plain name of each wand. */
+export const WAND_NAME: Record<'weak' | 'strong' | 'built', string> = { weak: WANDS.weak.name, strong: WANDS.strong.name, built: 'Built-in steam wand' };
 
 /** Polish: what the sell button says. Worthless gear gets tossed, not sold. */
 export function sellLabel(id: GearId, sell: number): { text: string; title: string } {
@@ -271,5 +297,7 @@ export function hudGearVM(state: GameState): HudGearVM[] {
       seen.set(g.tree, k);
       const label = (total.get(g.tree) ?? 1) > 1 ? `${HUD_MACHINE[g.tree]} ${k}` : HUD_MACHINE[g.tree];
       return { icon: ICON[g.tree], name: g.name, status, warn, label };
-    });
+    })
+    // ui-3.5.1 (FB2 C9): a clogged steam wand gets its own line until someone whacks it (empty hands, E).
+    .concat(state.stations.filter((s) => s.twin && s.wand && s.jammed).map((s) => ({ icon: '🥛', name: WAND_NAME[s.wand!], status: 'clogged! (E)', warn: true, label: 'Steam wand' })));
 }

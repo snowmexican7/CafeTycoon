@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRun } from '../sim/run';
 import type { GameState, SimEvent } from '../sim/types';
-import { botLook, botTag, crewBursts, tillText, emotePhase, newCrewMemory, toastText, vibeLabel, VIBE_START } from './crewModel';
+import { botLook, botTag, BUMP_LINES, bumpLine, crewBursts, tillText, emotePhase, newCrewMemory, toastText, vibeLabel, VIBE_START } from './crewModel';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }, { id: 'p2', name: 'Dev' }] });
 const clone = (s: GameState): GameState => structuredClone(s);
@@ -191,5 +191,22 @@ describe('batch/pickup feedback (3.3.1)', () => {
       { kind: 'call', by: 'Ana', take: true, call: 'machine' },
       { kind: 'call', by: 'Bo', take: false, call: 'order' },
     ]);
+  });
+});
+
+describe('ui-3.5.1: bump bubble (pre-wired for customer.bump)', () => {
+  it('a customer.bump log entry becomes a speech bubble at the spot, once', () => {
+    const a = run();
+    const b = withLog(a, { kind: 'customer.bump' as SimEvent['kind'], data: { x: 4, y: 6, customer: 3, by: 'p1' } });
+    const { bursts, lastSeq } = crewBursts(a, b, a.nextLogSeq - 1);
+    const say = bursts.find((x) => x.kind === 'bumpSay');
+    expect(say).toMatchObject({ kind: 'bumpSay', x: 4, y: 6 });
+    expect(BUMP_LINES).toContain((say as { text: string }).text);
+    expect(crewBursts(b, b, lastSeq).bursts.filter((x) => x.kind === 'bumpSay')).toHaveLength(0);
+  });
+  it('uses the sim\'s own line when it sends one, and "Hey, watch it!" first', () => {
+    expect(bumpLine(0)).toBe('Hey, watch it!');
+    expect(bumpLine(5, 'My latte!')).toBe('My latte!');
+    expect(bumpLine(1, '  ')).toBe(BUMP_LINES[1]);
   });
 });
