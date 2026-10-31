@@ -18,10 +18,11 @@ import { DRINK_INFO, recipeChain, type RecipeStation } from '../data/drinks';
 import { GEAR } from '../data/gear';
 import type { Modifiers } from './effects';
 import { gearPullMul, gearSpeed } from './gear';
-import { queueCapacity } from './customers';
+import { availableDrinks, queueCapacity } from './customers';
 import { tierInfo, tierOf } from './growth';
 import { demandFactor } from './pricing';
-import { ORDERS } from './orders';
+import { latteAddonChance, ORDERS } from './orders';
+import { isMilkDrink, milkPush } from './lattes';
 import type { DrinkId, GameState } from './types';
 
 export const CAPACITY = {
@@ -44,14 +45,15 @@ export function dripPotCups(state?: GameState): number {
 
 /** Each menu drink's weight in the order draw: forecast and drink bias, the price's pull and the gear's pull. */
 export function shareWeights(state: GameState, menu: DrinkId[], m: Modifiers): number[] {
-  return menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d) * gearPullMul(state, d));
+  const push = milkPush(state, menu, m); // Round 3 item 1
+  return menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d) * gearPullMul(state, d) * (isMilkDrink(d) ? push : 1));
 }
 
 /**
  * Cups a walk-in orders on average: the kind mix as `rollKind` weighs it (a group is 2-3 cups), plus the combo's
- * second drink for the normal and impatient walk-ins who roll one (Gear runs, from day 2).
+ * second drink for the normal and impatient walk-ins who roll one or ask for a latte for a friend (Gear runs, from day 2).
  */
-export function cupsPerArrival(state: GameState, m: Modifiers): number {
+export function cupsPerArrival(state: GameState, m: Modifiers, menu: DrinkId[] = availableDrinks(state)): number {
   const base: Record<string, number> = state.day === 1 ? ECONOMY.customers.mixDay1 : ECONOMY.customers.mix;
   const t = tierInfo(state).mix;
   const kinds = ['normal', 'impatient', 'group', 'regular'] as const;
@@ -59,7 +61,8 @@ export function cupsPerArrival(state: GameState, m: Modifiers): number {
   const total = weights.reduce((a, b) => a + b, 0) || 1;
   const g = ECONOMY.customers.group;
   const groupCups = (g.min + g.max) / 2;
-  const combo = state.gear === true && state.day >= ORDERS.combo.fromDay ? ORDERS.combo.chance : 0;
+  const pair = state.gear === true && state.day >= ORDERS.combo.fromDay ? ORDERS.combo.chance : 0;
+  const combo = pair + (1 - pair) * latteAddonChance(state, menu); // Round 3 item 1: the add-on is a second cup too
   let cups = 0;
   kinds.forEach((k, i) => {
     const each = k === 'group' ? groupCups : 1 + (k === 'normal' || k === 'impatient' ? combo : 0);
@@ -121,6 +124,6 @@ export function serveCapacity(state: GameState, menu: DrinkId[], m: Modifiers): 
 
 /** Walk-ins (already scaled by price) to cups ordered: groups and combos add cups, an office run adds its drinks, and the day's capacity caps the lot. */
 export function expectedCups(state: GameState, menu: DrinkId[], m: Modifiers, walkIns: number): number {
-  const raw = walkIns * cupsPerArrival(state, m) + officeCups(state);
+  const raw = walkIns * cupsPerArrival(state, m, menu) + officeCups(state);
   return Math.min(raw, serveCapacity(state, menu, m).day);
 }

@@ -176,6 +176,8 @@ export type SimEventKind =
   | 'closing.soon'
   /** FB2 B6: multi-drink orders (src/sim/orders.ts). */
   | 'order.combo'
+  /** Round 3 item 1 (src/sim/lattes.ts): "and a latte for my friend", `{ customer, drink }`. */
+  | 'order.addon'
   | 'order.office'
   | 'order.done'
   | 'order.lost'
