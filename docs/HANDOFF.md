@@ -70,6 +70,19 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **C10 station rearranging (2026-10-31, `fb2-c10`, protocol 59, snapshot 30).** Full names in BACKLOG "Round 4 + wrap-up", C10.
+  - **Needs a fix:** `src/render/slotModel.ts` draws empty-slot markers from `SLOT_POSITIONS`. It should use
+    `slotSpots(state.tier, state.slotPos)`, or an empty marker can sit under a moved machine.
+  - Pre-open timer: `preOpenUntil - tick` (ticks at 60/s). The day clock is frozen meanwhile.
+  - A Ready button in the pre-open (sends `ready`; `GameState.ready` holds who is ready) and a host "Open doors" button
+    (`openDoors`).
+  - Pick up with Z/E: local only (no sim event). Show the ghost outline from `validStationSpots(state, id)`; call it on
+    pick-up, not every frame. Set-down sends `moveStation { station, to }`.
+  - Feedback events:
+    - `station.place.to` is the machine's new spot.
+    - `station.refuse`: a buzz.
+    - `station.reset`: a note that the layout went back to default after a grow or gear change.
+  - During the pre-open, hide or grey out the E, jug, steam and syrup prompts: those presses do nothing then.
 - [ ] **B8 hand-made lattes (2026-10-31, `fb2-b8`, protocol 58).** Full names in BACKLOG "Round 4 + wrap-up", B8. To draw:
     - jug meter with the three marks (`Player.jug`) and the steam meter (`steamPos`);
     - recipe icons over the cup (`heldRecipe`);

@@ -37,6 +37,9 @@ the café feed, Strategist and Marketer hires).
   go so other customers can't grab those cups (careful: a bumped tray spills).
 - Lattes and cappuccinos are hand-made: fill the milk jug to the ticket's line, stop the steam meter in the middle
   for perfect foam, and add vanilla or caramel at the new syrup rack. Some regulars want a double shot.
+- Each morning you get 15 seconds before the doors open to rearrange the bar: pick up a machine and set it down on
+  another to swap them, or on an empty spot to move it. The till, counters, sink, fridge, tray table and syrup rack stay
+  put. Your layout stays for the rest of the run.
 
 ## 3.5.1 — 2026-10-30 · Bigger orders, a tidier night
 

@@ -2580,3 +2580,15 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
     - double, syrup and asks on tickets (`Customer.shots/syrup`, `items[].shots/syrup`);
     - popups and sounds for `milk.fill` / `steam.result` / `syrup.add` / `syrup.miss`;
     - `counterName` / `pickupModel.counterSpotOf` must not draw `'syrups'` as a till.
+- **C10 station rearranging (`fb2-c10`, protocol 59, snapshot 30).** Each Gear morning opens with a 15 s
+  pre-open (`ECONOMY.preOpenSeconds`, `GameState.preOpenUntil`): doors shut, the clock and the day's events stand
+  still, people walk but can't use anything (no E, drop, jug, steam or `syrup`), bots wait. It ends on time, when every
+  connected person sends `ready` (reuses `GameState.ready`), or on the host's `openDoors`. In it, `moveStation
+  { station, to }` (people only) sets a back-bar machine (a twin moves its machine) down on a bar-area tile (x
+  1..width-1, y 1..5): on another slot's spot the two swap, on a free tile it moves. Fixtures never move (till, pickup,
+  condiments, sink, fridge, trayTable, syrups). A tile that covers or cuts off a spawn point, the door, the mop or the
+  box corner, leaves any station (fixtures included) without a working tile, takes the idle tiles or overlaps is
+  refused. Moves live in `GameState.slotPos` for the run; a night rebuild or a grow keeps them if they still fit, else
+  all go back to the default layout (`station.reset`). Helpers `validStationSpots(state, station)`, `slotSpots(tier,
+  slotPos)`, `rebuildBar`. Events `preopen.start { until }`, `preopen.end`, `station.place { by, station, to, swapped }`,
+  `station.refuse { by, station }`, `station.reset`. UI to do: see "UI notes".
