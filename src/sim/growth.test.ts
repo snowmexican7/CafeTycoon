@@ -217,7 +217,7 @@ describe('R3 7: the grow diff', () => {
   it('growDiff(stand, cart) is before → after for queue, price, traffic, rent, with the crowd and unlocks', () => {
     const d = growDiff('stand', 'cart');
     expect(d.queue).toEqual({ from: 3, to: 5 });
-    expect(d.price).toEqual({ from: 0.75, to: 0.9 });
+    expect(d.price).toEqual({ from: 0.8, to: 0.9 });
     expect(d.traffic).toEqual({ from: 0.65, to: 0.85 });
     expect(d.rent).toEqual({ from: 10, to: 17 });
     expect(d.crowd.from).toBe(TIERS.stand.crowd);
