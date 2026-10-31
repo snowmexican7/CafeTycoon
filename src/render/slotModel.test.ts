@@ -20,6 +20,23 @@ describe('emptySlotPositions (FB1 WP5)', () => {
     expect(empty).toContainEqual(SLOT_POSITIONS.cafe[bin]);
     if (free >= 0) expect(empty).not.toContainEqual(SLOT_POSITIONS.cafe[free]);
   });
+  it('FB2 C10: follows rearranged slotPos (markers track empty slots, not abandoned defaults)', () => {
+    const slots = defaultSlots('cafe');
+    const machineI = slots.findIndex((k) => k !== null);
+    const emptyI = slots.findIndex((k) => k === null);
+    expect(machineI).toBeGreaterThanOrEqual(0);
+    expect(emptyI).toBeGreaterThanOrEqual(0);
+    // Move a machine onto a free bar tile (not another slot). Empty slots stay at defaults.
+    const free = { x: 2, y: 3 };
+    const moved = SLOT_POSITIONS.cafe.map((_, i) => (i === machineI ? { ...free } : null));
+    const stations = stationsFromSlots('cafe', slots, undefined, undefined, moved);
+    const empty = emptySlotPositions('cafe', stations, moved);
+    expect(empty).toContainEqual(SLOT_POSITIONS.cafe[emptyI]!);
+    expect(empty).not.toContainEqual(free);
+    // Without slotPos the vacated default home still gets a plinth even though that slot still owns a machine.
+    expect(emptySlotPositions('cafe', stations)).toContainEqual(SLOT_POSITIONS.cafe[machineI]!);
+    expect(empty).not.toContainEqual(SLOT_POSITIONS.cafe[machineI]!);
+  });
 });
 
 describe('stationBadges', () => {

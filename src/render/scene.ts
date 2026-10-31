@@ -4,7 +4,7 @@ import { LAYOUT } from '../data/layout';
 import { TICK_RATE } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
-import type { CheckoutId, GameState, PlayerId, Station, TierId } from '../sim/types';
+import type { CheckoutId, GameState, PlayerId, Station, TierId, Vec2 } from '../sim/types';
 import type { RenderView } from './interpolate';
 import { Actors } from './layers/actors';
 import { Chaos } from './layers/chaos';
@@ -103,12 +103,18 @@ export class Scene {
   private stationKey = '';
   /** P3 B13: the hoarding and awning, rebuilt (with the stations and the line) when the shop grows. */
   private readonly lot = new Container();
-  private buildStations(checkout: CheckoutId, tier: TierId | undefined, stations?: readonly Station[], fridge: FridgeId | null = null): void {
+  private buildStations(
+    checkout: CheckoutId,
+    tier: TierId | undefined,
+    stations?: readonly Station[],
+    fridge: FridgeId | null = null,
+    slotPos?: readonly (Vec2 | null)[],
+  ): void {
     // FB1 WP5: the art follows state.stations (bought duplicates, swapped slots), with a plinth in every empty slot.
     const lay = layoutFor(tier);
     const list = stations ?? lay.stations;
     const gearOf = (s: (typeof list)[number]) => ('gear' in s ? s.gear : undefined);
-    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}:${fridge ?? ''}`;
+    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}:${fridge ?? ''}:${JSON.stringify(slotPos ?? null)}`;
     if (key === this.stationKey) return;
     this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
@@ -122,7 +128,7 @@ export class Scene {
       const g = gearOf(s);
       return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge);
     });
-    for (const pos of emptySlotPositions(tier, list)) this.stationArt.push(buildEmptySlot(pos));
+    for (const pos of emptySlotPositions(tier, list, slotPos)) this.stationArt.push(buildEmptySlot(pos));
     setBarSkin('cabinet');
     for (const c of this.stationArt) this.depth.addChild(c);
     const lotKey = tier ?? 'cafe';
@@ -179,7 +185,7 @@ export class Scene {
 
   update(view: RenderView): void {
     const { state } = view;
-    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations, fridgeGear(state));
+    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations, fridgeGear(state), state.slotPos);
     this.maybeCelebrate(state);
     const now = performance.now() / 1000;
     const dt = Math.min(0.1, Math.max(0, now - this.lastTime));
