@@ -13,9 +13,8 @@ wrote this doc. Read `docs/HANDOFF.md` first; the big-picture list is in `docs/R
 ## Rules
 - Worktree off fresh `origin/main`, a revertible dash-named branch per item (e.g. `r4-dev`, `r4-pastry`,
   `r4-bump`, `r4-look`), merge `--no-ff`, tag, never force-push. Tests green (`npm test`, `npm run build`).
-- **Versions:** your releases use **3.5.x** (3.5.0 is out; Round 4 sim work can ship as 3.5.1 / 3.6.0 as you see
-  fit, just tell Grok). Grok's UI releases use **3.4.x**-style UI tags (`ui-3.4.2`, …). Add CHANGELOG lines under
-  Unreleased.
+- **Versions:** Grok's UI shipped **3.5.1** (`ui-3.5.1` / `v3.5.1`) and the character creator takes **3.5.2**
+  (`ui-3.5.2` / `v3.5.2`). **Your next release is 3.6.x** (`v3.6.0`, …). Add CHANGELOG lines under Unreleased.
 - Bump `PROTOCOL_VERSION` (now 45) and `SNAPSHOT_VERSION` whenever shapes change. No save compatibility needed
   (Decisions).
 - **When each item merges, post the exact names as built** (fields, inputs, events, helpers, file paths) in

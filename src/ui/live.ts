@@ -3,7 +3,7 @@ import { money } from './viewModels';
 import { emptyHandsWanted, recipeAt, recipeFor, stocked } from '../sim/stations';
 import { autoMilk, closingChecklist, closingSoon, fridgeGear, isFridge, isMilkStation } from '../sim/fridge';
 import { FRIDGES } from '../data/fridges';
-import { TILL, tillNext } from '../sim/till';
+import { TILL, ringProgress, selfOrder, tillNext } from '../sim/till';
 import { passSlots, pickupTarget, spotOf } from '../sim/pickup';
 import { CONDIMENTS, canTakeBox } from '../sim/condiments';
 import { CONDIMENTS_ID } from '../data/layout';
@@ -254,6 +254,13 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
     return { go: true, title: 'Set on the pickup counter', detail: taker ? `${where} · a customer is waiting for it` : `${where} · nobody rung up for it yet` };
   }
   if (spot === 'till') {
+    // ui-3.5.1 (R3 item 5): a ring-up takes a moment; the Squarely screen lets customers order by themselves
+    const ring = ringProgress(state);
+    if (ring !== null && state.ringUp?.by !== '') {
+      const mine = state.ringUp?.by === player.id;
+      return { go: false, title: `Ringing up… ${Math.round(ring * 100)}%`, detail: mine ? `${where} · stay here until it's done` : `${where} · someone is ringing up` };
+    }
+    if (selfOrder(state)) return { go: false, title: 'Customers order on the screen', detail: `${where} · nothing to do here` };
     const next = tillNext(state);
     if (!next) return { go: false, title: 'Nobody to ring up', detail: where };
     const ready = state.pass.some((i) => i.item === next.drink);

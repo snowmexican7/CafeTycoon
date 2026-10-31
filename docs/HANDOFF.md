@@ -74,6 +74,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `state.ringUp` / `ringProgress(state)` (customer = `ringUp.customer`; self-order beat when `ringUp.by === ''`). The
   till hint should read "Ringing…" while a ring is under way (`tillNext` is empty then) and nothing on the Squarely
   (self-order) tier. Optional cues for `till.start` / `till.cancel`.
+  - 2026-10-30, Grok: the till hint part is done in `ui-3.5.1` ("Ringing up… 50%", "Customers order on the
+    screen" on Squarely). The bar over the till and the cues are still to do, so this stays open.
 - [ ] **Round 3 items 6 + 7 (2026-10-31, `r3-grow`, protocol 50).** Cart is $70. Optional switch: `grow.affordable {
   tier }` (once per night) for the "You can afford a cart!" chip, `growDiff(from, to)` / `grow.done { from, to, diff }`
   for the "What you gained" card (your `gainedDiff` duplicates it; both agree today). I updated your

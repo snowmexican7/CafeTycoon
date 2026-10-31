@@ -3,7 +3,7 @@
 > Agreed order with Kennedy (2026-10-28): **phases go from easiest and lowest risk to hardest and riskiest.** AI is the hardest, so it comes late (Phase 5), and a polish phase closes it out. The machine-readable copy the game reads is `public/roadmap.json`.
 > The design spec (`superpowers/specs/2026-10-28-cafetycoon-design.md`, §17) uses older numbering (P3 = AI, P4 = bigger games). This roadmap supersedes it.
 
-## Where we are now (updated 2026-10-30, ~10:30 PM Toronto)
+## Where we are now (updated 2026-10-30, ~11 PM Toronto)
 
 > **Start here.** This section is the single, current picture for anyone new to the repo (including code
 > reviewers). The phase plan below is the long-range history. Details live in
@@ -12,10 +12,10 @@
 
 ### State
 - **Live:** https://snowmexican7.github.io/CafeTycoon/ deploys from `main` on every push.
-- **Versions:** sim release **v3.5.0** (Feedback 2 part A + balance fixes); UI release **v3.4.1** (fridge UI).
-  On `main` but unreleased: B6 multi-drink orders (protocol 45).
-- **Rule of thumb:** sim releases use 3.5.x, UI releases use 3.4.x-style UI tags (`ui-3.4.x`) until the next
-  minor bump is agreed.
+- **Versions:** newest release **v3.5.1** (`ui-3.5.1`, 2026-10-30): Round 4 UI plus everything Claude had on
+  `main` (B6 orders, bumps, dev mode, steam wands, pastries, cart $70, ring-up time; protocol 51). Unreleased on
+  `main`: the barista look (sim side), shipping with the character creator as `ui-3.5.2` / `v3.5.2`.
+- **Rule of thumb:** one shared version line. Grok's UI took 3.5.1 and 3.5.2; **Claude's next release is 3.6.x.**
 - **Gear is the game** (no classic runs), no save compatibility for now, runs start at the stand, solo starts
   with 1 bot. All rulings: HANDOFF "Decisions".
 
@@ -27,6 +27,10 @@
   tagged; nobody force-pushes.
 
 ### Shipped recently
+- **v3.5.1 (UI + sim on main):** night opens on Restock, condiment box card, tidier night (nothing removed),
+  stacked multi-drink tickets, dev mode (`?dev=1`), bump bubbles and walkouts, steam wands in the Gear shop,
+  "Ringing up…" till hint; sim side: combo and office orders, bumps, dev runs, steam wands, pastries, cart $70,
+  ring-up time.
 - **v3.4.1 (UI):** fridges for each shop size, milk cartons in hand, "Grab milk" / "Put the milk away" hints,
   "Closing soon" checklist, fridges in the night shop.
 - **v3.4.0 (UI):** stand and cart each have their own look; "Grand re-opening" transition with a "What you
@@ -39,14 +43,14 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
 
 | # | Item | Grok (UI) | Claude (sim) |
 |---|------|-----------|--------------|
-| 1 | **Cream and sugar restock** (missing button) | "Condiment box, $6" card on the Restock tab (input exists) | nothing |
-| 2 | **Create your own barista** | Creator before the first day + "Edit my barista" at night: 5–6 hairstyles each male/female, skin tones, shirt colours, outfit styles incl. dresses, click-through arrows, saved on the device | `Player.look` through lobby/join + protocol, `{kind:'look'}` input |
-| 3 | **Pastries** (half-wired, can't be bought) | Card / row once named | Make them buyable (restock or pastry case) and/or tie to combos |
-| 4 | **Bumping into customers** (fun quirk) | "Hey!" / "Watch it!" bubbles, angry exit | `customer.bump {customer, by}`, patience hit, repeat bumps → angry leave |
-| 5 | **Stacked multi-drink orders** | One customer's cards fan out, slightly overlapping, with a "×N" badge | Confirm `Customer.items` is enough |
-| 6 | **Night opens on the Restock tab** | Always open on Restock; keep "runs out around…" and spoilage | nothing |
-| 7 | **Dev mode** (`?dev=1`) | Toggle UI, pause the night timer, money display | Unlimited money + paused-night support |
-| 8 | **Night screen declutter** | Reorganise / trim the night tabs | Proposal: what could move to a mid-day moment or be cut |
+| 1 | **Cream and sugar restock** (missing button) | ✅ v3.5.1: card on Restock + "Buy a box" on the brief | nothing |
+| 2 | **Create your own barista** | ⏳ next: creator as `ui-3.5.2` (before day 1, "Edit my barista" at night, Skip) | ✅ `Player.look`, join + `{kind:'look'}` (protocol 48) |
+| 3 | **Pastries** (half-wired, can't be bought) | ✅ v3.5.1: pastry jar on Restock | ✅ buyable on Restock |
+| 4 | **Bumping into customers** (fun quirk) | ✅ v3.5.1: bubbles, angry exit line | ✅ `customer.bump`, 3 bumps → storms out |
+| 5 | **Stacked multi-drink orders** | ✅ v3.5.1: stacked ticket, "×N" badge | ✅ `Customer.items` |
+| 6 | **Night opens on the Restock tab** | ✅ v3.5.1 | nothing |
+| 7 | **Dev mode** (`?dev=1`) | ✅ v3.5.1: DEV badge, pause button; "Fill every jar" / "Skip to tonight" wait on sim inputs | ✅ dev run, cash topped up, `devPause` |
+| 8 | **Night screen declutter** | ✅ v3.5.1 (list in BACKLOG "ui-3.5.1") | ✅ proposal; mid-day moment needs Kennedy's call |
 
 ### Next: still open from Round 3 and Feedback 2
 - **Round 3** (BACKLOG "Round 3 (Kennedy approved 2026-10-30)"), sim then UI:
@@ -55,8 +59,8 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
   register ring-up time with a progress bar; small early-growth nudge; grow diff for the "What you gained" card.
   UI parts of items 6–7 shipped in v3.4.0.
 - **Feedback 2** ([`CLAUDE_PROMPT_FEEDBACK_2.md`](CLAUDE_PROMPT_FEEDBACK_2.md)): B6 multi-drink orders (sim
-  merged; UI tall ticket, office phone card, receipt line to do) · C9 espresso rework, wand on the machine
-  (built, waits on Kennedy's milk-timeline call; then the UI "Add a wand" button) · B7 tray table · B8 hand-made
+  merged; UI stacked ticket shipped in v3.5.1; office phone card, receipt line to do) · C9 espresso rework, wand on the machine
+  (sim built; wand cards in the Gear shop shipped in v3.5.1; wand art and sounds to do) · B7 tray table · B8 hand-made
   lattes and cappuccinos · C10 station rearranging · C11 daily social feed and reviews.
 - **Design review ideas** (Kennedy's Muse review, not yet approved): bigger in-world text, a slimmer or
   collapsible sidebar, one clear state per order card, a smaller FOR LEASE teaser while playing, each shop size
