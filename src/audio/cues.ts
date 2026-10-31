@@ -73,7 +73,12 @@ export type CueId =
   | 'liftUp'
   | 'spoil'
   | 'closingSoon'
-  | 'moo';
+  | 'moo'
+  /** FB2 B8: the milk jug stopped, the steam meter stopped, a syrup went in, a ticket's syrup was wrong. */
+  | 'milkFill'
+  | 'steamResult'
+  | 'syrupAdd'
+  | 'syrupMiss';
 
 export interface Cue {
   id: CueId;
@@ -165,6 +170,11 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'supply.spoil': cues.push({ id: 'spoil' }); break;
       case 'closing.soon': cues.push({ id: 'closingSoon' }); break;
       case 'fridge.auto': cues.push({ id: 'moo' }); break;
+      // FB2 B8: jug fill, steam stop, syrup pump / miss
+      case 'milk.fill': cues.push({ id: 'milkFill', mine }); break;
+      case 'steam.result': cues.push({ id: 'steamResult', mine }); break;
+      case 'syrup.add': cues.push({ id: 'syrupAdd', mine }); break;
+      case 'syrup.miss': cues.push({ id: 'syrupMiss' }); break;
       case 'mess.spawn':
         // spills already splash on their own drop/bump event, and a leak sounds once on bin.leak
         if (e.data.kind === 'milk') cues.push({ id: 'splash' });

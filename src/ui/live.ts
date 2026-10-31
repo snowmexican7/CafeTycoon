@@ -27,7 +27,9 @@ import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
-import type { CatalogueItem, DrinkId, GameState, ItemKind, Player, PlayerId, Station, StationKind, SupplyId } from '../sim/types';
+import { canAddSyrup, syrupRackBlock } from '../render/handmadeModel';
+import { jugFill, steamPos } from '../sim/handmade';
+import type { CatalogueItem, DrinkId, Flavour, GameState, ItemKind, Player, PlayerId, Station, StationKind, SupplyId } from '../sim/types';
 
 export const PLAYER_HEX = ['#e0564a', '#4c8fd6', '#4fae7b', '#8a6bbf'] as const;
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -86,9 +88,24 @@ export interface OrderTicket {
   /** Batch/pickup (Gear): rung up at the till, now waiting at the pickup area. */
   pickup?: true;
   /** ui-3.5.1 (from B6 `Customer.items`): every drink on a multi-drink ticket, in order, with the ones already taken ticked. */
-  items?: { drink: DrinkId; done: boolean }[];
+  items?: { drink: DrinkId; done: boolean; shots?: 2; syrup?: Flavour }[];
   /** ui-3.5.1 (from B6 `Customer.order`): a combo or an office run (absent for a group or a one-drink order). */
   order?: 'combo' | 'office';
+  /** FB2 B8: this latte or cappuccino wants a double shot. */
+  shots?: 2;
+  /** FB2 B8: this latte wants vanilla or caramel syrup. */
+  syrup?: Flavour;
+}
+
+export interface HandHint {
+  /** True when pressing the hinted key really does something right now. */
+  go: boolean;
+  /** "Grind beans", "Needs grounds", "Walk up to a station"... */
+  title: string;
+  /** Where, and how long it takes. */
+  detail: string;
+  /** Keycap shown on the hint (default E). Syrup rack uses 1·2. */
+  key?: string;
 }
 
 /** The little tag on an order ticket for the customer kinds worth planning around. */
@@ -108,15 +125,6 @@ export function ticketTag(c: GameState['customers'][number], snobs?: ReadonlySet
     default:
       return undefined;
   }
-}
-
-export interface HandHint {
-  /** True when pressing E would do something right now. */
-  go: boolean;
-  /** "Grind beans", "Needs grounds", "Walk up to a station"... */
-  title: string;
-  /** Where, and how long it takes. */
-  detail: string;
 }
 
 export interface HudLive {
@@ -145,6 +153,8 @@ export interface HudLive {
   call?: CallVM;
   /** ui-3.4.1 (FB2 A4): the closing-soon checklist (last 30 s of the day, then the closing phase). */
   checklist?: ClosingListVM;
+  /** FB2 B8: vanilla / caramel picker at the syrup rack (only when add would succeed). */
+  syrupPicker?: { flavours: readonly Flavour[] };
 }
 
 export interface ClosingListVM {
@@ -280,10 +290,13 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
     }
     return { go: false, title: 'Tray table', detail: `${where} · set a big order's drinks here` };
   }
-  // FB2 B8: syrup rack — not a till; full jug/steam UI is a follow-up.
+  // FB2 B8: syrup rack — not a till; green only when 1/2 would add a syrup right now.
   if (spot === 'syrups') {
-    // 3.7.2: E here does nothing yet (the sim's 'syrup' input needs the picker), so never show a green "go".
-    return { go: false, title: 'Syrup rack', detail: `${where} · vanilla and caramel · the syrup picker is coming soon` };
+    if (canAddSyrup(state, player)) {
+      return { go: true, key: '1·2', title: 'Add a syrup', detail: `${where} · 1 vanilla · 2 caramel` };
+    }
+    const why = syrupRackBlock(state, player) ?? 'Not ready';
+    return { go: false, key: '1·2', title: 'Syrup rack', detail: `${where} · ${why}` };
   }
   if (player.tool === 'tray' && (spot === 'pickup' || spot === 'till')) {
     if (state.pass.length >= passSlots(state)) return { go: false, title: 'Pickup counter is full', detail: `${where} · ${state.pass.length}/${passSlots(state)} slots` };
@@ -410,9 +423,21 @@ export function handHint(state: GameState, me: PlayerId): HandHint {
 
 function baseHandHint(state: GameState, me: PlayerId): HandHint {
   const player = state.players.find((p) => p.id === me);
-  const idle = (title: string, detail: string): HandHint => ({ go: false, title, detail });
-  const go = (title: string, detail: string): HandHint => ({ go: true, title, detail });
+  const idle = (title: string, detail: string, key?: string): HandHint => ({ go: false, title, detail, ...(key ? { key } : {}) });
+  const go = (title: string, detail: string, key?: string): HandHint => ({ go: true, title, detail, ...(key ? { key } : {}) });
   if (!player || (state.phase !== 'day' && state.phase !== 'closing')) return idle('', '');
+  // FB2 B8: a filling jug stops on E anywhere; a running steam meter stops on E at its wand.
+  if (player.jug && !player.jug.done) {
+    const fill = Math.round(jugFill(state, player) * 100);
+    return go('Stop the jug', `Milk filling · ${fill}% · E stops it`);
+  }
+  if (player.steam) {
+    const wand = state.stations.find((s) => s.id === player.steam!.station);
+    const pos = steamPos(state, player);
+    const near = wand && Math.hypot(player.pos.x - wand.pos.x, player.pos.y - wand.pos.y) <= ECONOMY.interactRangeTiles;
+    if (near) return go('Stop the steam', `Foam meter · E for the middle${pos !== null ? ` · ${Math.round(pos * 100)}%` : ''}`);
+    return idle('Steam meter running', 'Get to the wand and press E');
+  }
   const station = nearestStation(state, player.pos);
   // ui-3.4.1 (FB2 A4): a carton or the packed-up bar in hand.
   if (state.gear === true && (player.tool === 'milk' || player.tool === 'bar')) return carryHint(state, player, station);
@@ -499,6 +524,13 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
       if (miss) return idle(`Out of ${SUPPLY_NAME[miss].toLowerCase()}`, where);
     }
   } else if (supply && state.supplies[supply] < 1) return idle(`Out of ${SUPPLY_NAME[supply].toLowerCase()}`, where);
+  // FB2 B8: at a wand with a shot, fill the jug first (then E puts it on and starts the steam meter).
+  if (state.gear === true && !player.bot && kind === 'steamer' && held === 'espresso') {
+    const r = recipeAt(state, station, held);
+    if (r?.takes === 'espresso' && r.gives === 'latte' && !player.jug?.done) {
+      return go('Fill the milk jug', `${where} · E starts it · E again stops on the ticket's line`);
+    }
+  }
   const secs = ECONOMY.stationSeconds[kind] / computeModifiers(state).stationSpeed[kind];
   return go(VERB[kind], `${where} · ${secs.toFixed(1)} s`);
 }
@@ -516,8 +548,10 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     orders: state.customers.map((c) => {
       const tag = ticketTag(c, snobs);
       return { id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0, ...(tag ? { tag } : {}), ...(c.stage === 'pickup' ? { pickup: true as const } : {}),
-        ...(c.items && c.items.length > 1 ? { items: c.items.map((it) => ({ drink: it.drink, done: it.done })) } : {}),
-        ...(c.order ? { order: c.order } : {}) };
+        ...(c.items && c.items.length > 1 ? { items: c.items.map((it) => ({ drink: it.drink, done: it.done, ...(it.shots === 2 ? { shots: 2 as const } : {}), ...(it.syrup ? { syrup: it.syrup } : {}) })) } : {}),
+        ...(c.order ? { order: c.order } : {}),
+        ...(c.shots === 2 ? { shots: 2 as const } : {}),
+        ...(c.syrup ? { syrup: c.syrup } : {}) };
     }),
     crew: crewOf(state, me),
     holding: player?.holding ?? null,
@@ -530,13 +564,14 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     closeEarly: closeEarlyVM(state, me),
     ...(state.branch ? { call: callVM(state, me) } : {}),
     ...(closingSoon(state) ? { checklist: closingListVM(state) } : {}),
+    ...(player && canAddSyrup(state, player) ? { syrupPicker: { flavours: ['vanilla', 'caramel'] as const } } : {}),
   };
 }
 
 /** Keys for the HUD's independently rebuilt blocks (everything except per-tick values). */
-export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}${o.pickup ? '^' : ''}${o.items ? `[${o.items.map((it) => (it.done ? '+' : '-')).join('')}${o.order ?? ''}]` : ''}`).join(',');
+export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}${o.pickup ? '^' : ''}${o.items ? `[${o.items.map((it) => `${it.done ? '+' : '-'}${it.shots === 2 ? '2' : ''}${it.syrup ? it.syrup[0] : ''}`).join('')}${o.order ?? ''}]` : ''}${o.shots === 2 ? '×2' : ''}${o.syrup ? `~${o.syrup[0]}` : ''}`).join(',');
 export const crewKey = (l: HudLive) => l.crew.map((c) => `${c.id}:${c.name}:${c.connected ? 1 : 0}:${c.me ? 1 : 0}:${c.bot ?? ''}`).join(',');
-export const handKey = (l: HudLive) => `${l.holding}|${l.tool?.label ?? ''}|${l.heldCold ? 'c' : ''}|${l.meName}|${l.hint.go}|${l.hint.title}|${l.hint.detail}`;
+export const handKey = (l: HudLive) => `${l.holding}|${l.tool?.label ?? ''}|${l.heldCold ? 'c' : ''}|${l.meName}|${l.hint.go}|${l.hint.key ?? 'E'}|${l.hint.title}|${l.hint.detail}`;
 
 export interface NightExtras {
   day: number;

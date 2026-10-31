@@ -30,7 +30,7 @@ const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a
  * The in-day HUD: a top bar of pills, order tickets on the left, pantry/menu/note on the right and
  * what you hold along the bottom. Every block renders once, then only per-tick values are patched.
  */
-export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void; onRestock?(id: SupplyId | 'condiments'): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
+export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void; onRestock?(id: SupplyId | 'condiments'): void; onSyrup?(flavour: 'vanilla' | 'caramel'): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
   render(vm: HudVM, live?: HudLive): void;
   /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
   setRecipeHints(mode: RecipeHints): void;
@@ -39,6 +39,8 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   setRestock(vm: DayRestockVM | null): void;
   /** ui-3.7.1: B toggles the panel; while it is open 1-9 buy and B / Esc close. True when the key was used. */
   restockKey(ev: Pick<KeyboardEvent, 'code' | 'key'>): boolean;
+  /** FB2 B8: 1 vanilla / 2 caramel at the syrup rack. True when the key was used. */
+  syrupKey(ev: Pick<KeyboardEvent, 'code' | 'key'>): boolean;
   setRoom(code: string | null): void;
   setMuted(muted: boolean): void;
   setJuice(j: { vibe: number; combo: number; label: string; tone: 'high' | 'mid' | 'low' } | null): void;
@@ -86,6 +88,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
     <div class="hud-checklist" role="status" hidden></div>
     <section class="hud-restock-panel" id="hud-restock-panel" aria-label="Rush delivery" hidden></section>
+    <div class="hud-syrup" role="group" aria-label="Syrup picker" hidden></div>
     <div class="toast" role="status" hidden></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(sel: string) => container.querySelector<T>(sel)!;
   const el = {
@@ -120,7 +123,15 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     cleanWord: $('.hud-clean .cword'),
     events: $('.hud-events'),
     eventCard: $('.hud-eventcard'),
+    syrup: $('.hud-syrup'),
   };
+  let syrupOpen = false;
+  el.syrup.addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-syrup]');
+    if (!b) return;
+    b.blur();
+    handlers.onSyrup?.(b.dataset.syrup as 'vanilla' | 'caramel');
+  });
   $('[data-action=pause]').addEventListener('click', (ev) => {
     (ev.currentTarget as HTMLElement).blur();
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' }));
@@ -316,10 +327,19 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     const t = live.tool;
     const name = h ? `${ITEM_LABEL[h]}${live.heldCold ? ' <b class="cold">· cold</b>' : ''}` : t ? esc(t.label) : 'Empty hands';
     el.hand.innerHTML = `<div class="slot ${h || t ? 'full' : ''}">${h ? itemIcon(h, 36) : t ? `<span class="tool">${t.icon}</span>` : '∅'}</div><div class="t">${name}<small>${esc(live.meName)} · you</small></div>`;
-    const { go, title, detail } = live.hint;
+    const { go, title, detail, key: hintKey } = live.hint;
     el.hint.classList.toggle('idle', !go);
     el.hint.hidden = !title;
-    el.hint.innerHTML = `<span class="key ${go ? 'go' : ''}">E</span><div class="t">${esc(title)}<small>${esc(detail)}</small></div>`;
+    el.hint.innerHTML = `<span class="key ${go ? 'go' : ''}">${esc(hintKey ?? 'E')}</span><div class="t">${esc(title)}<small>${esc(detail)}</small></div>`;
+    // FB2 B8: syrup picker at the rack (1 vanilla · 2 caramel) when add would succeed.
+    const pick = live.syrupPicker;
+    syrupOpen = !!pick;
+    el.syrup.hidden = !pick;
+    if (pick) {
+      el.syrup.innerHTML = `<b>Syrup</b>${pick.flavours
+        .map((f, i) => `<button type="button" tabindex="-1" data-syrup="${f}"><span class="k">${i + 1}</span>${f === 'vanilla' ? 'Vanilla' : 'Caramel'}</button>`)
+        .join('')}`;
+    }
   }
 
   function patchCash(vm: HudVM): void {
@@ -490,6 +510,9 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
         renderOrders(live);
         renderCrew(live);
         renderHand(live);
+      } else {
+        syrupOpen = false;
+        el.syrup.hidden = true;
       }
       closeEarly.render(live?.closeEarly);
       renderCall(live?.call);
@@ -511,6 +534,13 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     },
     setRestock(vm) {
       restock.render(vm);
+    },
+    syrupKey(ev) {
+      if (!syrupOpen || container.hidden) return false;
+      const m = /^(?:Digit|Numpad)([12])$/.exec(ev.code);
+      if (!m) return false;
+      handlers.onSyrup?.(m[1] === '1' ? 'vanilla' : 'caramel');
+      return true;
     },
     restockKey(ev) {
       if (restock.handleKey(ev)) return true;

@@ -85,12 +85,19 @@ describe('Gear counter hints (3.3.1)', () => {
     expect(counterName({ id: 'trayTable' })).not.toBe('Till');
   });
 
-  it('3.7.2: the syrup rack never shows a green go until the picker lands', () => {
+  it('FB2 B8: syrup rack is green only when 1/2 would add a syrup', () => {
     const s = gearDay();
     if (!s.stations.some((x) => x.id === 'syrups')) s.stations.push({ id: 'syrups', kind: 'counter', pos: { x: 9, y: 9 }, busyTicksLeft: 0, output: null, occupiedBy: null });
-    s.players[0].holding = 'latte';
+    s.supplies = { ...s.supplies, flavour: 4 };
+    s.players[0].holding = null;
     at(s, 'syrups');
     expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Syrup rack' });
+    s.players[0].holding = 'latte';
+    expect(handHint(s, 'p1')).toMatchObject({ go: true, key: '1·2', title: 'Add a syrup' });
+    expect(hudLive(s, 'p1').syrupPicker?.flavours).toEqual(['vanilla', 'caramel']);
+    s.players[0].made = { syrup: 'vanilla' };
+    expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Syrup rack' });
+    expect(hudLive(s, 'p1').syrupPicker).toBeUndefined();
   });
 
   it('empty hands at the pickup counter take a cup back', () => {

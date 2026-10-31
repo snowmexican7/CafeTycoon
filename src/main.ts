@@ -231,6 +231,8 @@ async function main(): Promise<void> {
     onMute: () => audio.toggleMute(),
     // ui-3.7.1: day-HUD Restock (rush delivery, 25% more). Cream & sugar comes by the box.
     onRestock: (id) => send(id === 'condiments' ? { kind: 'condimentBox', playerId: me(), boxes: 1 } : { kind: 'restock', playerId: me(), supply: id, packs: 1 }),
+    // FB2 B8: syrup rack picker (1 vanilla · 2 caramel).
+    onSyrup: (flavour) => send({ kind: 'syrup', playerId: me(), flavour }),
     onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }), onCall: (take) => send({ kind: 'call', playerId: me(), take }) }, { recipeHints });
   const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook() });
   // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).
@@ -656,9 +658,14 @@ async function main(): Promise<void> {
     const prevKey = lastKey;
     lastKey = { code: e.code, at: e.timeStamp };
     // ui-3.7.1: B opens the day Restock panel; 1-9 buy, B/Esc close (only by day, nothing on top, not while typing).
+    // FB2 B8: 1/2 pick a syrup at the rack when the picker is up (restock, when open, still takes 1-9 first).
     if (!e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && session?.next && !typingText() && pauseEl.hidden && closingEl.hidden && weekEndEl.hidden) {
       const afterArrow = e.code === 'KeyB' && prevKey.code === 'ArrowRight' && e.timeStamp - prevKey.at < 1500;
       if (!afterArrow && hud.restockKey(e)) {
+        e.preventDefault();
+        return;
+      }
+      if (hud.syrupKey(e)) {
         e.preventDefault();
         return;
       }

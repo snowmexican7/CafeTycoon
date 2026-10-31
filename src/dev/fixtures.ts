@@ -336,6 +336,54 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** FB2 B8: hand-made lattes — jug filling, steam meter, syrup rack, double/syrup tickets. */
+  handmade: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 3);
+      // A café with a built-in wand so the syrup rack is on the floor.
+      const slots = [...(s.slots ?? [])];
+      const slotGear = [...(s.slotGear ?? [])];
+      const e5 = slots.findIndex((k) => k === 'espresso');
+      if (e5 >= 0) { slots[e5] = 'espresso'; slotGear[e5] = 'e5'; }
+      else { slots[0] = 'espresso'; slotGear[0] = 'e5'; }
+      s.slots = slots;
+      s.slotGear = slotGear;
+      s.stations = stationsFromSlots(s.tier, slots, slotGear);
+      s.supplies = { ...s.supplies, beans: 20, milk: 16, flavour: 8, concentrate: 10 };
+      s.milkOut = 8;
+      s.customers = [
+        { id: 21, drink: 'latte', patienceLeft: 1100, patienceMax: 1400, shots: 2, syrup: 'vanilla', kind: 'regular', name: 'Ada' },
+        { id: 22, drink: 'cappuccino', patienceLeft: 900, patienceMax: 1400, shots: 2 },
+        { id: 23, drink: 'latte', patienceLeft: 1000, patienceMax: 1400, syrup: 'caramel' },
+      ];
+      const ana = s.players[0]!;
+      const wand = s.stations.find((st) => st.kind === 'steamer') ?? s.stations.find((st) => st.kind === 'espresso')!;
+      const rack = s.stations.find((st) => st.id === 'syrups');
+      ana.pos = { ...wand.pos };
+      ana.holding = 'espresso';
+      ana.made = { shots: 2 };
+      ana.jug = { fill: 0.55, startedAt: s.tick - 60, line: 0.6, done: true };
+      const ben = s.players[1];
+      if (ben && rack) {
+        ben.pos = { ...rack.pos };
+        ben.holding = 'latte';
+      }
+    },
+    timeline: [
+      [0.4, (s) => emit(s, 'milk.fill', { by: 'ana', level: 0.58, line: 0.6, grade: 'right' })],
+      [1.0, (s) => {
+        const ana = s.players[0]!;
+        const wand = s.stations.find((st) => st.kind === 'steamer');
+        if (wand) ana.steam = { startedAt: s.tick, speed: 1, station: wand.id };
+        delete ana.jug;
+      }],
+      [1.4, (s) => emit(s, 'steam.result', { by: 'ana', grade: 'perfect' })],
+      [2.0, (s) => emit(s, 'syrup.add', { by: 'ben', flavour: 'caramel' })],
+      [2.6, (s) => emit(s, 'syrup.miss', { customer: 23 })],
+    ],
+  },
   /** P3 B2: the night menu board with prices moved (latte up $1, espresso down $0.50). */
   pricing: {
     night: true,
