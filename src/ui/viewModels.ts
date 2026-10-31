@@ -6,7 +6,7 @@ import { SIG, sigShare } from '../sim/signature';
 import { gearVM, hudGearVM, type GearVM, type HudGearVM } from './gearVM';
 import { AD_IDS, ADS } from '../sim/ads';
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../sim/checkout';
-import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
+import { canMake, DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
 import { layoutFor } from '../data/layout';
 import { stationMenuNote } from './stationsVM';
 import { tipsVM, type TipVM } from './tipsVM';
@@ -23,6 +23,7 @@ import { catalogueById } from '../data/catalogue';
 import { GEAR } from '../data/gear';
 import { reportViewModel, type ReportVM } from './report';
 import { branchViewModel, type BranchVM } from './branchView';
+import { dayFeedVM, weekRatingVM, type DayFeedVM, type WeekRatingVM } from './feed';
 import { SEASON, seasonMedal, seasonTarget, targetsHit, type Medal } from '../sim/season';
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
@@ -284,7 +285,7 @@ export interface NightVM {
   branch?: BranchVM;
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; wages?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; wages?: string; hireWages?: string; priceWalkouts?: number; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -299,6 +300,11 @@ export interface NightVM {
   grow?: GrowOffer | null;
   /** ui-3.7.1: a Strategist is hired, so it sets the menu (the Menu tab steps back, with a note). */
   strategist?: boolean;
+  /**
+   * Review Block 6 (soft open gate): false when nothing on the menu can be made tomorrow
+   * (`availableDrinks` empty / no `canMake`). UI warns before Ready; never hard-blocks.
+   */
+  makeable: boolean;
   ready: { id: PlayerId; name: string; ready: boolean }[];
   /** P3 B15 (Gear runs): the hired bot baristas, each one's daily wage, and whether a spot is free. */
   staff?: StaffVM;
@@ -326,6 +332,8 @@ export interface NightVM {
   fresh?: FreshDrinkVM[];
   /** Card sets switched on, for the hand's header. */
   sets: string[];
+  /** FB2 C11: last day's social feed phone (posts, fans, fansDelta from `dayReviews`). */
+  feed?: DayFeedVM;
   /** FB1 WP1: the Tonight tab's at-a-glance brief (UI adapter until the sim's nightBrief lands). */
   brief: NightBriefVM;
   /** FB1 WP6: the bot crew's tap-to-apply tips (the ones the brief does not already cover). */
@@ -419,6 +427,10 @@ export interface MenuLineVM {
   demandPct?: number;
   orders?: number;
   profit?: number;
+  /** Round 3 / review: numbers are a rough guess (`PriceLine.rough` / `forecastIsRough`). */
+  rough?: true;
+  /** Round 3 / review: a Strategist set tonight's price (`strategist.set`). */
+  setByStrategist?: true;
   /** Regulars whose favourite this is (P3 B3). */
   fans?: string[];
   /** P3 B6: tonight's twist and the taste notebook for this drink (stars, or null if not yet tried). */
@@ -658,6 +670,7 @@ export function menuLines(state: GameState): MenuLineVM[] {
   const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
   const fc = new Map(priceForecast(state, on, m, walkIns).map((l) => [l.drink, l]));
   const lowSupplies = new Set(nightWarnings(state).filter((w) => w.supply && w.level === 'low').map((w) => w.supply!));
+  const byStrategist = !!state.staff?.strategist;
   return unlockedDrinks(state).map((drink) => {
     const step = state.priceSteps?.[drink] ?? 0;
     const l = fc.get(drink);
@@ -670,7 +683,8 @@ export function menuLines(state: GameState): MenuLineVM[] {
       step,
       canUp: step < PRICING.maxStep,
       canDown: step > PRICING.minStep,
-      ...(l ? { demandPct: l.demandPct, orders: l.orders, profit: l.profit } : {}),
+      ...(l ? { demandPct: l.demandPct, orders: l.orders, profit: l.profit, ...(l.rough ? { rough: true as const } : {}) } : {}),
+      ...(byStrategist && state.menu[drink] ? { setByStrategist: true as const } : {}),
       ...(fans.length ? { fans } : {}),
       ...(state.twists?.[drink] ? { twist: state.twists[drink] } : {}),
       book: bookOf(state, drink),
@@ -712,6 +726,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           ...(last.twistCost ? { twists: money(last.twistCost) } : {}),
           ...(last.checkoutFees ? { checkoutFees: money(last.checkoutFees) } : {}),
           ...(last.wages ? { wages: money(last.wages) } : {}),
+          ...(last.hireWages ? { hireWages: money(last.hireWages) } : {}),
+          ...(last.priceWalkouts ? { priceWalkouts: last.priceWalkouts } : {}),
           ...(last.ad ? { ad: `${ADS[last.ad.id].icon} ${ADS[last.ad.id].name} ad ${last.ad.outcome === 'viral' ? 'went viral' : last.ad.outcome === 'ok' ? 'did fine' : 'flopped'}` } : {}),
           ...(last.sigServed ? { sigSold: last.sigServed, sigBonus: money(last.sigBonus ?? 0) } : {}),
           ...(last.combosFound?.length ? {
@@ -746,6 +762,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     ...(state.gear && state.condiments ? { condiments: condimentsVM(state) } : {}),
     grow: growOffer(state),
     ...(state.staff?.strategist ? { strategist: true } : {}),
+    // Soft open: warn when nothing makeable (no stock / no machine for anything on the menu).
+    makeable: availableDrinks(state).some((d) => canMake(state, d)),
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
     ...(state.gear ? { staff: staffViewModel(state) } : {}),
     ...(state.regulars.length ? { regulars: regularsViewModel(state) } : {}),
@@ -766,7 +784,15 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   const brief = nightBriefVM(vm, state);
   const report = reportViewModel(state);
   const branch = branchViewModel(state);
-  return { ...vm, brief, tips: tipsVM(state, brief.alerts.map((a) => a.id)), ...(report ? { report } : {}), ...(branch ? { branch } : {}) };
+  const feed = dayFeedVM(state);
+  return {
+    ...vm,
+    brief,
+    tips: tipsVM(state, brief.alerts.map((a) => a.id)),
+    ...(report ? { report } : {}),
+    ...(branch ? { branch } : {}),
+    ...(!feed.empty ? { feed } : {}),
+  };
 }
 
 /** P3 B15: the night board's staff row. Round 3 item 3: Strategist / Marketer hire cards. */
@@ -819,6 +845,10 @@ export interface ClosingVM {
   rent: string;
   /** P3 B15: wages paid to the hired crew today (Gear runs). */
   wages?: string;
+  /** Round 3 / review: specialists' share of wages (`DayStats.hireWages`). */
+  hireWages?: string;
+  /** Round 3 / review: walk-outs that left over price (`DayStats.priceWalkouts`). */
+  priceWalkouts?: number;
   profit: string;
   reputationBefore: string;
   reputationAfter: string;
@@ -835,6 +865,8 @@ export interface ClosingVM {
   rogues?: number;
   wasted?: number;
   slips?: number;
+  /** Round 3 item 4: arrivals who left quietly after a "Line's too long!" complaint (`DayStats.lineLeft`). */
+  lineLeft?: number;
   /** Block 2 receipt lines, present only when they happened. */
   events?: string[];
   inspection?: 'pass' | 'fail';
@@ -844,6 +876,9 @@ export interface ClosingVM {
   challenges?: { label: string; reward: string }[];
   /** ui-3.7.1: the next tier to grow into (only when the receipt opens the night, where growing works). */
   grow?: GrowOffer;
+  /** FB2 C11: fans after closing, and today's change (`DayStats.fansDelta` / `GameState.fans`). */
+  fans?: number;
+  fansDelta?: number;
 }
 
 /** `before` is the last snapshot of the closing phase; `after` is the first of the next phase. */
@@ -859,6 +894,8 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     tips: money(d.tips),
     rent: money(d.rent),
     ...(d.wages ? { wages: money(d.wages) } : {}),
+    ...(d.hireWages ? { hireWages: money(d.hireWages) } : {}),
+    ...(d.priceWalkouts ? { priceWalkouts: d.priceWalkouts } : {}),
     profit: money(profitOf(d)),
     reputationBefore: stars(before.reputation),
     reputationAfter: stars(after.reputation),
@@ -866,6 +903,7 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     ...(d.rogues ? { rogues: d.rogues } : {}),
     ...(d.wasted ? { wasted: d.wasted } : {}),
     ...(d.slips ? { slips: d.slips } : {}),
+    ...(d.lineLeft ? { lineLeft: d.lineLeft } : {}),
     ...(d.events?.length ? { events: d.events.map((k) => EVENT_LABELS[k]) } : {}),
     ...(d.inspection ? { inspection: d.inspection } : {}),
     ...(d.fines ? { fines: money(d.fines) } : {}),
@@ -880,6 +918,10 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     profitVsStart: money(scoreRun(after)),
     startingCash: money(after.startingCash),
     ...((g) => (g ? { grow: g } : {}))(after.phase === 'night' ? growOffer(after) : null),
+    // FB2 C11: fans after closeDayFeed (on `after`); delta lives on the filed day.
+    ...((after.fans ?? 0) > 0 || (d.fansDelta ?? 0) !== 0
+      ? { fans: after.fans ?? 0, fansDelta: d.fansDelta ?? 0 }
+      : {}),
   };
 }
 
@@ -912,6 +954,8 @@ export interface WeekEndVM {
   season?: SeasonVM;
   /** P6-3: the week at a glance: one profit bar per day for the last (up to) seven days. */
   week?: WeekStripVM;
+  /** FB2 C11: three silly reviewers from `weekRating(state)` (not `week.rating` JSON). */
+  rating?: WeekRatingVM;
 }
 
 export interface WeekStripVM {
@@ -974,6 +1018,7 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
   const walkIns = lost + state.days.reduce((n, d) => n + d.served, 0);
   const season = seasonViewModel(state);
   const week = weekStripViewModel(state);
+  const rating = state.days.length ? weekRatingVM(state) : undefined;
   return {
     score: money(scoreRun(state)),
     cash: money(state.cash),
@@ -996,6 +1041,7 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
     lostPct: `${walkIns ? Math.round((100 * lost) / walkIns) : 0}%`,
     ...(season ? { season } : {}),
     ...(week ? { week } : {}),
+    ...(rating ? { rating } : {}),
   };
 }
 

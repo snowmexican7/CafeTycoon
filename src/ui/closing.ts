@@ -2,6 +2,7 @@ import { esc, hide, onAction, show } from './dom';
 import { coin, moon, stars } from './icons';
 import type { TierId } from '../sim/types';
 import { growOfferHtml } from './growOffer';
+import { closingFansHtml } from './feed';
 import type { ClosingVM } from './viewModels';
 
 const rep = (s: string) => Number.parseFloat(s) || 0;
@@ -36,6 +37,8 @@ export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: 
             <div class="line"><span>Tips</span><span>${esc(vm.tips)}</span></div>
             <div class="line"><span>Rent</span><span class="neg">−${esc(vm.rent)}</span></div>
             ${vm.wages ? `<div class="line wages"><span>Crew wages</span><span class="neg">−${esc(vm.wages)}</span></div>` : ''}
+            ${vm.hireWages ? `<div class="line wages sub"><span>&nbsp;&nbsp;incl. specialists</span><span>${esc(vm.hireWages)}</span></div>` : ''}
+            ${vm.priceWalkouts ? `<div class="line chaos"><span>Left over the price</span><span>${vm.priceWalkouts}</span></div>` : ''}
             ${vm.events ? `<div class="line chaos"><span>Today: ${esc(vm.events.join(', '))}</span><span></span></div>` : ''}
             ${vm.inspection ? `<div class="line inspection ${vm.inspection}"><span>Health inspection</span><span>${vm.inspection === 'pass' ? 'PASSED' : `FAILED${vm.fines ? ` −${esc(vm.fines)}` : ''}`}</span></div>` : ''}
             ${vm.challenges ? vm.challenges.map((c) => `<div class="line challenge"><span>✓ ${esc(c.label)}</span><span class="pos">+${esc(c.reward)}</span></div>`).join('') : ''}
@@ -43,9 +46,11 @@ export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: 
             ${vm.wasted ? `<div class="line chaos"><span>Drinks wasted (spilled or stale)</span><span>${vm.wasted}</span></div>` : ''}
             ${vm.slips ? `<div class="line chaos"><span>Pratfalls on the floor</span><span>${vm.slips}</span></div>` : ''}
             ${vm.rogues ? `<div class="line chaos rogue"><span>${vm.rogues === 1 ? 'A customer went rogue (DIY)' : `${vm.rogues} customers went rogue (DIY)`}</span><span title="Their review">★★☆☆☆</span></div>` : ''}
+            ${vm.lineLeft ? `<div class="line chaos"><span>${vm.lineLeft === 1 ? 'One person left when the line looked too long' : `${vm.lineLeft} people left when the line looked too long`}</span><span>${vm.lineLeft}</span></div>` : ''}
             ${vm.tabPaid ? `<div class="line"><span>Hospital tab paid</span><span class="neg">−${esc(vm.tabPaid)}</span></div>` : ''}
             ${vm.ambulance ? `<div class="line ambulance"><span>Ambulance ride: −${esc(vm.ambulance)}. Worth it?</span><span class="neg">on the tab</span></div>` : ''}
             ${vm.tab ? `<div class="line tab"><span>Hospital tab left</span><span>${esc(vm.tab)}</span></div>` : ''}
+            ${vm.fans !== undefined ? closingFansHtml(vm.fans, vm.fansDelta) : ''}
             <div class="line total ${loss ? 'loss' : ''}"><span>Net profit (after ${vm.wages ? 'rent, wages' : 'rent'}, fines and bonuses)</span><span>${loss ? esc(vm.profit) : `+${esc(vm.profit)}`}</span></div>
           </div>
           <div class="money-split">

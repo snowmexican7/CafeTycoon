@@ -22,6 +22,7 @@ describe('Round 3 hire cards (Strategist / Marketer)', () => {
   it('night HTML shows hire buttons with data-role, and Let go when hired', () => {
     const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true });
     const html = nightHtml(nightViewModel(s, 'p1'), undefined, null, ui());
+    expect(html).toContain('hire-row');
     expect(html).toContain('data-role="strategist"');
     expect(html).toContain('data-role="marketer"');
     expect(html).toMatch(/Hire · \$/);

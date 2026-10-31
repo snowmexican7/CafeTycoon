@@ -379,6 +379,22 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .drawer .nb-body { display: flex; flex-direction: column; gap: 12px; }
 #night .tn-more .staff { flex: 1 1 auto; width: auto; padding: 6px 10px; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; background: #fff; }
 #night .tn-more .staff .sf-h { flex-direction: column; gap: 0; }
+/* Review Block 6: specialist hire cards first on Tonight (visible without scrolling). */
+#night .tn-grid .hire-row { grid-column: 1 / -1; order: -1; }
+#night .tn-grid .st { order: 0; }
+#night .tn-grid .al-card { order: 2; }
+#night .tn-grid .dy { order: 3; }
+#night .hire-row .hires { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+#night .hire-row .hire { flex: 1 1 220px; min-height: 64px; }
+#night .dc-strat { display: block; font: 700 12px var(--font-display); color: #5a3f96; margin: 2px 0 4px; }
+#night .mn-honest { font-style: normal; font-weight: 700; color: #5a3f96; background: #f1ecfb; border-radius: 8px; padding: 1px 8px; }
+/* Soft open gate (Kennedy): warn, never block. */
+#night .soft-open { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(28, 18, 12, .45); padding: 24px; }
+#night .soft-open-card { max-width: 420px; width: 100%; background: #fffaf2; border-radius: 20px; padding: 22px 24px; box-shadow: 0 0 0 3px #e6d3b6, 0 18px 40px rgba(40, 20, 10, .3); }
+#night .soft-open-card h3 { margin: 0 0 8px; font: 700 22px var(--font-display); color: var(--ink); }
+#night .soft-open-card p { margin: 0 0 16px; font: 600 16px/1.35 var(--font-body); color: var(--ink-soft); }
+#night .soft-open-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+#night .soft-open-btns .btn { min-height: 48px; padding: 10px 18px; font: 700 16px var(--font-display); }
 #night .gr-more { align-items: center; flex-wrap: wrap; } #night .gr-crowd-line { font: 600 var(--fs-m) var(--font-display); color: var(--ink-soft); }
 
 /* ui-3.5.1 (FB2 C9): steam wands */
@@ -396,3 +412,44 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
   font: 600 17px var(--font-display); display: flex; flex-direction: column; gap: 3px; }
 .night-bubble.in { animation: nb-drop .3s ease-out; }
 @keyframes nb-drop { from { transform: translate(-50%, -14px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+
+/* FB2 C11: night phone feed (dayReviews → posts, fans, fansDelta). Lives inside the day card. */
+#night .tn-card.dy .feed-phone { width: 100%; margin-top: 4px; }
+#night .feed-phone {
+  display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 0;
+  max-width: 100%; background: #2a2438; border-radius: 18px; padding: 8px 8px 10px 0;
+  box-shadow: 0 8px 18px rgba(30, 18, 40, .22), inset 0 0 0 2px #4a3f62;
+  align-self: stretch;
+}
+#night .feed-phone .ff-bezel { display: flex; justify-content: center; padding-top: 14px; }
+#night .feed-phone .ff-bezel i { width: 3px; height: 28px; border-radius: 99px; background: #4a3f62; }
+#night .feed-phone .ff-screen {
+  background: #fffaf2; border-radius: 14px; padding: 8px 10px 10px; min-width: 0;
+  display: flex; flex-direction: column; gap: 6px; max-height: min(200px, 26vh);
+}
+#night .feed-phone .ff-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+#night .feed-phone .ff-bar b { font: 700 var(--fs-m) var(--font-display); color: var(--ink); }
+#night .feed-phone .ff-bar small { font: 700 var(--fs-xs) var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+#night .ff-fans { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 12px; background: #f3e8d8; font: 700 var(--fs-s) var(--font-display); }
+#night .ff-fans .ff-count { color: var(--ink); }
+#night .ff-fans .ff-delta { color: var(--ink-soft); }
+#night .ff-fans .ff-delta.up { color: var(--good); }
+#night .ff-fans .ff-delta.down { color: var(--bad); }
+#night .ff-list { overflow: auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; padding-right: 2px; }
+#night .fp { padding: 8px 10px; border-radius: 12px; background: #fff; box-shadow: 0 2px 0 #ead9c0; animation: fp-in .35s ease-out both; animation-delay: calc(var(--i, 0) * .05s); }
+#night .fp.good { box-shadow: 0 0 0 2px #9fd3b0, 0 2px 0 #ead9c0; }
+#night .fp.bad { box-shadow: 0 0 0 2px #f0b48f, 0 2px 0 #ead9c0; }
+#night .fp header { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+#night .fp header b { font: 700 var(--fs-s) var(--font-display); }
+#night .fp-stars { font: 700 13px var(--font-body); letter-spacing: .04em; }
+#night .fp-star.on { color: #c9972a; }
+#night .fp-star.off { color: #d2c0a6; }
+#night .fp p { margin: 4px 0 0; font: 600 14px/1.3 var(--font-body); color: var(--ink); }
+#night .fp-empty { margin: 0; font: 600 var(--fs-s) var(--font-display); color: var(--ink-soft); }
+@keyframes fp-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (max-height: 820px) {
+  #night .feed-phone .ff-screen { max-height: min(150px, 20vh); }
+  #night .fp p { font-size: 13px; }
+  #night .fp { padding: 6px 8px; }
+}
+@media (prefers-reduced-motion: reduce) { #night .fp { animation: none; } }

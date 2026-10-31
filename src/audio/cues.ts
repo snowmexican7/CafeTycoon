@@ -73,7 +73,12 @@ export type CueId =
   | 'liftUp'
   | 'spoil'
   | 'closingSoon'
-  | 'moo';
+  | 'moo'
+  /** FB2 B8: the milk jug stopped, the steam meter stopped, a syrup went in, a ticket's syrup was wrong. */
+  | 'milkFill'
+  | 'steamResult'
+  | 'syrupAdd'
+  | 'syrupMiss';
 
 export interface Cue {
   id: CueId;
@@ -148,6 +153,9 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       // Gear batch/pickup: the customer takes their own cup off the pickup counter (the serve sound)
       case 'pickup.take': cues.push({ id: 'serve', mine }); break;
       case 'till.rung': cues.push({ id: 'ringUp', mine }); break;
+      // FB2 C10: a refused set-down buzzes; a successful place is a soft cup-down.
+      case 'station.refuse': cues.push({ id: 'buzz', mine }); break;
+      case 'station.place': cues.push({ id: 'cupDown', mine }); break;
       case 'condiment.refill': cues.push({ id: 'refill', mine }); break;
       case 'condiment.black': cues.push({ id: 'grumble' }); break;
       case 'trash': cues.push({ id: 'trash', mine }); break;
@@ -165,6 +173,11 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'supply.spoil': cues.push({ id: 'spoil' }); break;
       case 'closing.soon': cues.push({ id: 'closingSoon' }); break;
       case 'fridge.auto': cues.push({ id: 'moo' }); break;
+      // FB2 B8: jug fill, steam stop, syrup pump / miss
+      case 'milk.fill': cues.push({ id: 'milkFill', mine }); break;
+      case 'steam.result': cues.push({ id: 'steamResult', mine }); break;
+      case 'syrup.add': cues.push({ id: 'syrupAdd', mine }); break;
+      case 'syrup.miss': cues.push({ id: 'syrupMiss' }); break;
       case 'mess.spawn':
         // spills already splash on their own drop/bump event, and a leak sounds once on bin.leak
         if (e.data.kind === 'milk') cues.push({ id: 'splash' });
@@ -173,6 +186,8 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       // FB2 A2: a cold cup handed over (no pay) or a cold review
       case 'pickup.cold':
       case 'review.bad': cues.push({ id: 'coldCup' }); break;
+      // FB2 C11: a live social post — soft ding when good, cold cup when bad
+      case 'review.post': cues.push({ id: e.data.sentiment === 'good' ? 'serve' : 'coldCup' }); break;
       case 'bot.mistake': cues.push({ id: 'botOops' }); break;
       case 'event.start': {
         const cue = EVENT_CUE[e.data.kind as EventKind];
@@ -211,6 +226,15 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'egg.nameMix':
         if (e.data.wrong || e.data.refuse) cues.push({ id: 'eggNameMix' });
         break;
+      // FB2 B7: tray table — reuse familiar cup / spill / refuse sounds (no new CueIds)
+      case 'tray.claim':
+      case 'tray.add':
+      case 'tray.put': cues.push({ id: 'cupDown', mine }); break;
+      case 'tray.pick': cues.push({ id: 'liftUp', mine }); break;
+      case 'tray.take': cues.push({ id: 'serve', mine }); break;
+      case 'tray.refuse': cues.push({ id: 'buzz', mine }); break;
+      case 'tray.spill': cues.push({ id: 'splash', mine }); break;
+      case 'tray.void': cues.push({ id: 'trash', mine }); break;
       default: break;
     }
   }

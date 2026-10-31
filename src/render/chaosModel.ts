@@ -1,5 +1,7 @@
 import { LAYOUT, layoutFor, SINK_ID } from '../data/layout';
 import type { GameState, MessKind, RogueStage, Vec2 } from '../sim/types';
+import { tillPos } from './ringUpModel';
+import { complainSpot, tumbleweedSpawn } from './waitingModel';
 
 /**
  * Pure helpers for the chaos-pack visuals (messes, slips, the mop, the rogue customer).
@@ -71,11 +73,18 @@ export type Burst =
   | { kind: 'smoke'; at: Vec2 }
   | { kind: 'review'; at: Vec2; text: string }
   | { kind: 'secret'; at: Vec2; text: string }
-  | { kind: 'walkout'; at: Vec2; text: string }
+  /** `door` true: spawn a short walker heading out the front door (price walk-outs). */
+  | { kind: 'walkout'; at: Vec2; text: string; door?: true }
   /** 3.3.3 (FB2 A3): a drink or the old pot glugging down the back sink. */
   | { kind: 'drain'; at: Vec2; pot: boolean }
   /** 3.3.3 (FB2 A3): the bin bag leaked a puddle onto the floor. */
-  | { kind: 'leak'; at: Vec2 };
+  | { kind: 'leak'; at: Vec2 }
+  /** Round 3 item 4: last in line says the wait is too much. */
+  | { kind: 'complain'; at: Vec2; text: string }
+  /** Round 3 item 4: a quiet leave rolls a tumbleweed past the door. */
+  | { kind: 'tumbleweed'; at: Vec2 }
+  /** Round 3 item 5: optional till start / cancel cue over the register. */
+  | { kind: 'tillCue'; at: Vec2; text: string; tone: 'start' | 'cancel' };
 
 /** FB1 WP4: what someone says as they read a sold-out board and walk away (picked by log seq). */
 /** ui-3.5.1: what a customer says leaving after being bumped (walkout reason 'bumped'). */
@@ -83,6 +92,8 @@ export const BUMPED_LINES = ['That\'s it, I\'m off!', 'Forget it!', 'Rude!'] as 
 /** Round 3 money: walkout reason 'price' — never reuse sold-out copy. */
 export const PRICE_LINES = ['Too pricey!', 'Not at that price.', 'I\'ll pass.', 'Oof, maybe later.'] as const;
 export const WALKOUT_LINES = ['Sold out?!', 'Nothing left?', 'Aw, sold out.', 'Maybe tomorrow.'] as const;
+/** Round 3 item 4: the complaint line (one fixed phrase; HANDOFF). */
+export const COMPLAIN_LINE = "Line's too long!" as const;
 
 /**
  * One-shot comic effects that happened between two snapshots, read from the sim log (by seq) and from
@@ -106,10 +117,12 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
         bursts.push({ kind: 'walkout', at, text: BUMPED_LINES[e.seq % BUMPED_LINES.length]! });
         continue;
       }
-      // Round 3 money: price walk-outs must not say "Sold out?!" (HANDOFF).
+      // Round 3 money: price walk-outs must not say "Sold out?!" (HANDOFF). Review leftovers: door walker.
       if (e.data.reason === 'price') {
-        if (!walked) bursts.push({ kind: 'walkout', at: queueFrontFor(next), text: PRICE_LINES[e.seq % PRICE_LINES.length]! });
-        walked = true;
+        if (!walked) {
+          bursts.push({ kind: 'walkout', at: { ...LAYOUT.door }, text: PRICE_LINES[e.seq % PRICE_LINES.length]!, door: true });
+          walked = true;
+        }
         continue;
       }
       if (!walked) bursts.push({ kind: 'walkout', at: queueFrontFor(next), text: WALKOUT_LINES[e.seq % WALKOUT_LINES.length]! });
@@ -152,6 +165,16 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
       bursts.push({ kind: 'hmph', at: queueFront(), text: `Cup says "${d.wrong}"` });
     } else if (e.kind === 'egg.camper' && !d.left && !d.kicked) {
       bursts.push({ kind: 'hmph', at: queueFront(), text: 'Just the Wi-Fi, thanks' });
+    } else if (e.kind === 'line.complain') {
+      const cid = typeof d.customer === 'number' ? d.customer : -1;
+      bursts.push({ kind: 'complain', at: complainSpot(next, cid), text: COMPLAIN_LINE });
+    } else if (e.kind === 'line.leave' && d.quiet === true) {
+      bursts.push({ kind: 'tumbleweed', at: tumbleweedSpawn(next) });
+    } else if (e.kind === 'till.start') {
+      const self = d.by === '';
+      bursts.push({ kind: 'tillCue', at: tillPos(next), text: self ? 'Beep!' : 'Ka-ching!', tone: 'start' });
+    } else if (e.kind === 'till.cancel') {
+      bursts.push({ kind: 'tillCue', at: tillPos(next), text: 'Cancelled', tone: 'cancel' });
     }
   }
   // The rogue walked out the door (made it, or gave up): the door slams behind them.

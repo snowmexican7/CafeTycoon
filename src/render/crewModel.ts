@@ -1,5 +1,6 @@
 import { sinkToast, SINK_ID } from './sinkModel';
 import { fridgeLabel, fridgeToast, isFridgeEvent } from './fridgeModel';
+import { handmadeToast, isHandmadeEvent } from './handmadeModel';
 import { TWIST_INFO, type TwistId } from '../sim/taste';
 import type { DrinkId, GameState, Personality } from '../sim/types';
 
@@ -227,6 +228,18 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       const t = fridgeToast(e, (id) => next.players.find((p) => p.id === id)?.name ?? 'Someone', fridgeLabel(next));
       if (t) bursts.push({ kind: 'note', text: t.text, tone: t.tone, ...(t.at ? { at: t.at } : {}) });
       if (e.kind === 'supply.spoil') bumpVibe(mem, -2);
+    } else if (isHandmadeEvent(e.kind)) {
+      // FB2 B8: jug fill, steam result, syrup add / miss
+      const t = handmadeToast(e, (id) => next.players.find((p) => p.id === id)?.name ?? 'Someone');
+      if (t) bursts.push({ kind: 'note', text: t.text, tone: t.tone, ...(t.at ? { at: t.at } : {}) });
+      if (e.kind === 'syrup.miss') {
+        resetCombo(mem);
+        bumpVibe(mem, -2);
+      } else if (e.kind === 'steam.result' && e.data.grade === 'perfect') {
+        bumpVibe(mem, 2);
+      } else if (e.kind === 'steam.result' && e.data.grade === 'miss') {
+        bumpVibe(mem, -1);
+      }
     } else if (e.kind === 'steep') {
       bursts.push({ kind: 'steep', cups: Number(e.data.cups) || 0, paid: Number(e.data.paid) || 0 });
     } else if (e.kind === 'call.answer') {
@@ -239,6 +252,17 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       bursts.push({ kind: 'storm', count: 1 });
       resetCombo(mem);
       bumpVibe(mem, -8);
+    } else if (e.kind === 'station.reset') {
+      // FB2 C10: layout snapped back after a grow or gear change.
+      bursts.push({ kind: 'note', text: 'Bar layout went back to the default', tone: 'warn' });
+    } else if (e.kind === 'station.place') {
+      const at = typeof e.data.station === 'string' ? String(e.data.station) : undefined;
+      bursts.push({
+        kind: 'note',
+        text: e.data.swapped === true ? 'Swapped!' : 'Placed!',
+        tone: 'good',
+        ...(at ? { at } : {}),
+      });
     }
   }
 
@@ -294,7 +318,8 @@ export function emotePhase(t: number, index: number, every: number, length = 1.3
 }
 
 /** Bot name tag text. */
-export const botTag = (name: string) => `${name} \u00b7 bot`;
+/** Review Block 6: friendly name tag (no "· bot" debug chrome). */
+export const botTag = (name: string) => name;
 
 /** Label + tone for the HUD vibe chip. */
 export function vibeLabel(vibe: number): { text: string; tone: 'high' | 'mid' | 'low' } {

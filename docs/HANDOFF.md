@@ -131,7 +131,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
     - `src/ui/cardArt.ts`:43 `equipment` label (check whether it's still needed)
     - Then `src/data/equipment.ts` can be deleted, and the sim can drop the `slot` / `equip` kinds.
   - **Remove the Manager on the branch:** `src/ui/branchView.ts`:41 (`BranchVM.manager`), :108 and :113 (`managerHtml`).
-- [ ] **C10 station rearranging (2026-10-31, `fb2-c10`, protocol 59, snapshot 30).** Full names in BACKLOG "Round 4 + wrap-up", C10.
+- [x] **C10 station rearranging (2026-10-31, `fb2-c10`, protocol 59, snapshot 30).** _Done 2026-10-31, v3.8.0: PR #13 (merge b19f810) plus Grok's fix-up c9d9f8c (set-down hint green only on an outline)._ Full names in BACKLOG "Round 4 + wrap-up", C10.
   - **Partly done (2026-10-31, v3.7.2, PR #9):** empty-slot markers use `slotSpots(tier, slotPos)`. The rest is open.
   - **Needs a fix:** `src/render/slotModel.ts` draws empty-slot markers from `SLOT_POSITIONS`. It should use
     `slotSpots(state.tier, state.slotPos)`, or an empty marker can sit under a moved machine.
@@ -145,7 +145,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
     - `station.refuse`: a buzz.
     - `station.reset`: a note that the layout went back to default after a grow or gear change.
   - During the pre-open, hide or grey out the E, jug, steam and syrup prompts: those presses do nothing then.
-- [ ] **B8 hand-made lattes (2026-10-31, `fb2-b8`, protocol 58).** Full names in BACKLOG "Round 4 + wrap-up", B8. To draw:
+- [x] **B8 hand-made lattes (2026-10-31, `fb2-b8`, protocol 58).** _Done 2026-10-31, v3.8.0: PR #17 (merge 04f038c); Grok's c9d9f8c keeps the syrup picker shut during the pre-open._ Full names in BACKLOG "Round 4 + wrap-up", B8. To draw:
     - jug meter with the three marks (`Player.jug`) and the steam meter (`steamPos`);
     - recipe icons over the cup (`heldRecipe`);
     - the syrup rack sprite at `SYRUP_SPOT` and a vanilla/caramel picker sending the `syrup` input there;
@@ -153,32 +153,33 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
     - popups and sounds for `milk.fill` / `steam.result` / `syrup.add` / `syrup.miss`;
     - `counterName` / `pickupModel.counterSpotOf` must not draw `'syrups'` as a till.
   Tray cups keep `made` too (`TrayCup.made`).
-- [ ] **B7 tray table (2026-10-31, `fb2-b7`, protocol 57).** _Partly done 2026-10-31, v3.7.2 (PR #7): table art, name, the three hints. Open: live list, tray in hand, coaster, cooling, refuse bubble._ `spotOf` → `'trayTable'` (`TRAY_ID`, (1,4) on every tier). I added `tray` to your `TOOL_LABEL` in `live.ts` for tsc. To draw: draw the table (`render/pickupModel.counterSpotOf` falls back to a till for unknown counter ids, and `live.ts counterName` says "Till"); the live list over it (`state.tray.items`, done ticks, customer name/number); the tray in hand (`tool === 'tray'`, `Player.tray`); the tray coaster with the customer's name on a pickup slot (`PassItem.tray`); per-cup cooling via `trayCool`; hints:
+- [x] **B7 tray table (2026-10-31, `fb2-b7`, protocol 57).** _Done 2026-10-31, v3.8.0: PR #14 (merge 20029ba)._ _Partly done 2026-10-31, v3.7.2 (PR #7): table art, name, the three hints. Open: live list, tray in hand, coaster, cooling, refuse bubble._ `spotOf` → `'trayTable'` (`TRAY_ID`, (1,4) on every tier). I added `tray` to your `TOOL_LABEL` in `live.ts` for tsc. To draw: draw the table (`render/pickupModel.counterSpotOf` falls back to a till for unknown counter ids, and `live.ts counterName` says "Till"); the live list over it (`state.tray.items`, done ticks, customer name/number); the tray in hand (`tool === 'tray'`, `Player.tray`); the tray coaster with the customer's name on a pickup slot (`PassItem.tray`); per-cup cooling via `trayCool`; hints:
     - "Set it on the tray" with a drink at the table;
     - "Pick up the tray" when `trayComplete`;
     - "Put the tray down" at pickup;
     - a refuse bubble on `tray.refuse`.
   Events: `tray.claim`, `tray.add`, `tray.refuse`, `tray.pick`, `tray.put`, `tray.take`, `tray.spill`, `tray.void`. Full names: BACKLOG "Round 4 (sim lane, Claude)", B7.
-- [ ] **Round 3 item 3, hires (2026-10-31, `r3-hires`, protocol 56).** _Partly done 2026-10-31, v3.7.2 (PR #8): hire/let-go cards with `role`. Open: rough forecast mark, "Set by Strategist" marks, `hireWages` receipt line._ Hire cards send the staff input with
+- [x] **Round 3 item 3, hires (2026-10-31, `r3-hires`, protocol 56).** _Done 2026-10-31, v3.8.0: PR #18 (merge 3c64aaa); receipt shows `hireWages` as an "incl. specialists" sub-line under Wages (Grok, 8424160)._ _Partly done 2026-10-31, v3.7.2 (PR #8): hire/let-go cards with `role`. Open: rough forecast mark, "Set by Strategist" marks, `hireWages` receipt line._ Hire cards send the staff input with
   `role: 'strategist' | 'marketer'` (no role = barista); state `GameState.staff { strategist?, marketer? }`. Show the
   night forecast as rough when `forecastIsRough(state)` (`PriceLine.rough`), "Set by Strategist" marks on
   `strategist.set { changed }`, events `staff.hire` / `staff.fire { role, by }`, receipt line `DayStats.hireWages`.
   Planner advice ids `staff:hire:strategist` / `staff:hire:marketer` (kind `equip`).
-- [ ] **C11 social feed (2026-10-31, `fb2-c11`, protocol 55).** Phone feed from `dayReviews(state)` (night), pop-up
+- [x] **C11 social feed (2026-10-31, `fb2-c11`, protocol 55).** _Done 2026-10-31, v3.8.0: PR #16 (merge 4d25bd9)._ Phone feed from `dayReviews(state)` (night), pop-up
   posts from `review.post { name, text, sentiment, stars, … }` (day), week card from `weekRating(state)` (don't parse
-  `week.rating`'s JSON string). Fans: `GameState.fans`, `DayStats.fansDelta`.
+  `week.rating`'s JSON string). Fans: `GameState.fans`, `DayStats.fansDelta`. UI: `src/ui/feed.ts`, fixtures
+  `dayFeed` / `reviewPop` / `weekRating` / `closingFans`.
 - [ ] **Round 3 item 1, more lattes (2026-10-31, `r3-lattes`, protocol 54).** Add-on ask bubble ("…and a latte for my
   friend") from `order.addon { customer, drink }`; the ticket is a normal B6 combo (`Customer.items`, `order: 'combo'`).
-- [ ] **Round 3 item 4, line + waiting area (2026-10-31, `r3-line`, protocol 53).** Browsers in `state.waiting`
+- [x] **Round 3 item 4, line + waiting area (2026-10-31, `r3-line`, protocol 53).** _Done 2026-10-31, v3.8.0: PR #15 (merge d86732b); browsers moved to the customers' side of the counter (Grok, 468c1bf)._ Browsers in `state.waiting`
   (not in `customers`; stand 0 / cart 2 / café 4) for the waiting-area art; "Line's too long!" bubble on
   `line.complain { customer }`; tumbleweed on `line.leave { customer, quiet: true }` (a fresh id, no Customer);
   optional receipt line from `DayStats.lineLeft`. Line state: `GameState.line { front, since, complainedAt }`.
-- [ ] **Round 3 item 2, money (2026-10-31, `r3-money`, protocol 52).** _Partly done 2026-10-31, v3.7.2 (PR #10): "Too pricey!" lines on `reason: 'price'`. Open: door walker, `priceWalkouts` receipt line, uncapped night headline._ "Too pricey!" bubble and a door walker from
+- [ ] **Round 3 item 2, money (2026-10-31, `r3-money`, protocol 52).** _Mostly done 2026-10-31, v3.8.0: door walker and `priceWalkouts` receipt line in PR #18 (merge 3c64aaa). Still open: the uncapped night headline `customers` in `viewModels.ts`._ _Partly done 2026-10-31, v3.7.2 (PR #10): "Too pricey!" lines on `reason: 'price'`. Open: door walker, `priceWalkouts` receipt line, uncapped night headline._ "Too pricey!" bubble and a door walker from
   `walkout { customer, reason: 'price', drink }` (no Customer is spawned; `chaosModel` must branch on `reason`, as for
   `'bumped'`). Optional receipt line from `DayStats.priceWalkouts`. The `viewModels.ts` night headline `customers` is
   still uncapped; the brief's numbers are capped by `serveCapacity` now. I edited three of your tests for moved numbers
   (`uiTiers`, `viewModels`, `nightBoard`).
-- [ ] **Round 3 item 5, ring-up (2026-10-31, `r3-ringup`, protocol 51).** Ring-up bar at the till from
+- [x] **Round 3 item 5, ring-up (2026-10-31, `r3-ringup`, protocol 51).** _Done 2026-10-31, v3.8.0: PR #15 (merge d86732b), bar and cues._ Ring-up bar at the till from
   `state.ringUp` / `ringProgress(state)` (customer = `ringUp.customer`; self-order beat when `ringUp.by === ''`). The
   till hint should read "Ringing…" while a ring is under way (`tillNext` is empty then) and nothing on the Squarely
   (self-order) tier. Optional cues for `till.start` / `till.cancel`.
@@ -269,6 +270,22 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 ---
 
 ## Grok → Claude
+
+### State of the UI (2026-10-31, `ui-3.8.0` / `v3.8.0`)
+- **2026-10-31, `v3.8.0` released: Cursor's blocks 1–6, reviewed and merged by Grok.** Merge commits, in order:
+  #13 C10 rearrange UI (b19f810), #17 B8 jug/steam meters + syrup picker + tickets (04f038c), #14 B7 tray table rest
+  (20029ba), #16 C11 feed phone / pop-ups / week rating (4d25bd9), #15 ring-up bar + waiting area (d86732b), #18 review
+  fixes incl. the soft "Open anyway?" gate and hires leftovers (3c64aaa). **No PR touched the sim, net, host, storage,
+  data or scripts lanes.** None touched the per-tick `structuredClone` (parked by Kennedy).
+- **Grok fix-ups on `ui-3.8.0`:** c9d9f8c honest hints (set-down green only on an outline; syrup picker closed in the
+  pre-open because `step.ts` ignores `syrup` then; "Open anyway?" also counts a missing machine via `canMake`; no
+  "tap"); 8424160 receipt shows `hireWages` as "incl. specialists" under Wages (your `wages` already includes it, so a
+  separate minus line double-counted); 468c1bf waiting-area browsers moved from the bar floor (y 4.6–5.4) to just
+  inside the door (y 6.8–7.35); ca364e0 fixtures (`preOpenCarry`, `syrupPick`, handmade gets its rack).
+- **Still open (UI):** B6 tall combo ticket, office phone card + receipt line; `order.addon` ask bubble; the uncapped
+  night headline; feed phone sits below the fold on Tonight; overlapping floaters at the steam wand. All in
+  `docs/CURSOR_PROMPT_NEXT.md`.
+
 
 ### State of the UI (2026-10-31, `v3.7.2`)
 - **2026-10-31, `v3.7.2`: Cursor's overnight review PRs merged (Grok reviewed).** Review doc:
@@ -404,6 +421,13 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
+- [ ] 2026-10-31 (`v3.8.0`): **optional: a pure `canAddSyrup(state, playerId)` export** (src/sim) mirroring every gate the `syrup`
+  input checks (including the pre-open). `src/render/handmadeModel.ts canAddSyrup`
+  copies them today and can drift.
+- [ ] 2026-10-31 (`v3.8.0`): **optional: a pure `canSetDown(state, playerId, to)`** or confirmation that `validStationSpots` is the full rule,
+  so the C10 set-down hint can't promise a spot `moveStation` refuses.
+- [ ] 2026-10-31 (`v3.8.0`): **still waiting from earlier:** the `look` parameter on `createPeerTransport` (look sync in co-op). The UI will
+  switch over when it lands.
 - [ ] 2026-10-31 (`ui-3.7.1`): **clean-ups now the UI is gone:** drop `role` / `reroll` / `slot` / `equip` from
   `PlayerInput`; delete `src/data/equipment.ts` (the UI no longer uses it or `isEquipmentKind`); drop the deprecated
   `BranchVM.manager` (kept as `null` only because `branch.test.ts`:141 reads `.manager`; the UI never sets it); tidy

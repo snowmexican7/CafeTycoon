@@ -88,6 +88,15 @@ describe('view models', () => {
       isHost: false,
       bankrupt: false,
       week: { n: 2, days: [{ day: 1, profit: '$10.00', h: 0.43, neg: false }, { day: 2, profit: '$23.00', h: 1, neg: false }], profit: '$33.00', served: 16 },
+      // FB2 C11: weekRating(state) — three silly reviewers + fans
+      rating: {
+        fans: 0,
+        reviewers: [
+          { name: 'The Queue Inspector', score: 3 },
+          { name: 'Chef Foamington', score: 3 },
+          { name: 'Lady Latte', score: 2 },
+        ],
+      },
     });
   });
 
@@ -264,6 +273,16 @@ describe('chaos pack view models (Block 1)', () => {
     const vm = closingViewModel(before, quiet);
     expect('rogues' in vm).toBe(false);
     expect('wasted' in vm).toBe(false);
+  });
+
+  it('adds the line-left receipt line only when someone left quietly', () => {
+    const before = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
+    const after = structuredClone(before);
+    after.days.push({ ...before.today, lineLeft: 3 });
+    expect(closingViewModel(before, after)).toMatchObject({ lineLeft: 3 });
+    const quiet = structuredClone(before);
+    quiet.days.push({ ...before.today });
+    expect('lineLeft' in closingViewModel(before, quiet)).toBe(false);
   });
 });
 

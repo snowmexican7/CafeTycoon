@@ -7,6 +7,8 @@ import { loadRecipeHints, MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticket
 import { DRINK_LABEL } from './tickets';
 import { mountCloseEarly } from './closeEarly';
 import { mountDayRestock, type DayRestockVM } from './dayRestock';
+import { mountPreOpen } from './preOpen';
+import { reviewPopHtml, type FeedPostVM } from './feed';
 import { cleanMeter, EVENT_INTRO, hudStructureKey, SOLD_OUT_RUSH, type HudVM } from './viewModels';
 import type { EventKind } from '../sim/types';
 
@@ -30,15 +32,24 @@ const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a
  * The in-day HUD: a top bar of pills, order tickets on the left, pantry/menu/note on the right and
  * what you hold along the bottom. Every block renders once, then only per-tick values are patched.
  */
-export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void; onRestock?(id: SupplyId | 'condiments'): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
+/** Review Block 6: morning note fades after this many ms, or sooner on the first move. */
+export const NOTE_DISMISS_MS = 8000;
+
+export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void; onRestock?(id: SupplyId | 'condiments'): void; onReady?(): void; onOpenDoors?(): void; onSyrup?(flavour: 'vanilla' | 'caramel'): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
   render(vm: HudVM, live?: HudLive): void;
   /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
   setRecipeHints(mode: RecipeHints): void;
   toast(lines: string[]): void;
+  /** FB2 C11: a live review.post as a phone pop-up (queued; each shows ~5 s). */
+  feedPop(posts: FeedPostVM[]): void;
+  /** Review Block 6: first WASD / stick move fades the morning note (no click needed). */
+  onFirstMove(): void;
   /** ui-3.7.1: the day Restock button and panel (null outside the day and the closing phase). */
   setRestock(vm: DayRestockVM | null): void;
   /** ui-3.7.1: B toggles the panel; while it is open 1-9 buy and B / Esc close. True when the key was used. */
   restockKey(ev: Pick<KeyboardEvent, 'code' | 'key'>): boolean;
+  /** FB2 B8: 1 vanilla / 2 caramel at the syrup rack. True when the key was used. */
+  syrupKey(ev: Pick<KeyboardEvent, 'code' | 'key'>): boolean;
   setRoom(code: string | null): void;
   setMuted(muted: boolean): void;
   setJuice(j: { vibe: number; combo: number; label: string; tone: 'high' | 'mid' | 'low' } | null): void;
@@ -77,16 +88,19 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       <div class="hold hand"></div>
       <div class="hold hint"></div>
       <div class="spacer"></div>
-      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">R</span> drop <span class="key">Q</span> drink espresso <span class="key">C</span> hold to close early <span class="key">B</span> restock <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
+      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">Z</span> move machine <span class="key">R</span> drop <span class="key">Q</span> drink espresso <span class="key">C</span> hold to close early <span class="key">B</span> restock <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
     </div>
     <div class="hud-challenges" aria-live="polite" hidden></div>
     <div class="hud-events" aria-live="polite"></div>
     <div class="hud-eventcard" role="status" hidden></div>
     <div class="hud-call" role="alert" hidden></div>
+    <div class="hud-preopen" role="region" aria-label="Morning rearrange" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
     <div class="hud-checklist" role="status" hidden></div>
     <section class="hud-restock-panel" id="hud-restock-panel" aria-label="Rush delivery" hidden></section>
-    <div class="toast" role="status" hidden></div>`;
+    <div class="hud-syrup" role="group" aria-label="Syrup picker" hidden></div>
+    <div class="toast" role="status" hidden></div>
+    <div class="hud-feed-pop" aria-live="polite" hidden></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(sel: string) => container.querySelector<T>(sel)!;
   const el = {
     day: $('.hud-day'),
@@ -111,6 +125,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     hint: $('.hold.hint'),
     seed: $('.keys .seed'),
     toast: $('.toast'),
+    feedPop: $('.hud-feed-pop'),
     closing: $('.hud-closing'),
     closingN: $('.hud-closing .n'),
     challenges: $('.hud-challenges'),
@@ -120,6 +135,34 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     cleanWord: $('.hud-clean .cword'),
     events: $('.hud-events'),
     eventCard: $('.hud-eventcard'),
+    syrup: $('.hud-syrup'),
+  };
+  let syrupOpen = false;
+  el.syrup.addEventListener('click', (ev) => {
+    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-syrup]');
+    if (!b) return;
+    b.blur();
+    handlers.onSyrup?.(b.dataset.syrup as 'vanilla' | 'caramel');
+  });
+  let feedPopTimer: ReturnType<typeof setTimeout> | null = null;
+  const feedQueue: FeedPostVM[] = [];
+  const showNextFeedPop = () => {
+    if (!feedQueue.length) {
+      hide(el.feedPop);
+      el.feedPop.innerHTML = '';
+      return;
+    }
+    const next = feedQueue.shift()!;
+    el.feedPop.innerHTML = reviewPopHtml(next);
+    show(el.feedPop);
+    el.feedPop.classList.remove('in');
+    void el.feedPop.offsetWidth;
+    el.feedPop.classList.add('in');
+    if (feedPopTimer) clearTimeout(feedPopTimer);
+    feedPopTimer = setTimeout(() => {
+      feedPopTimer = null;
+      showNextFeedPop();
+    }, 5200);
   };
   $('[data-action=pause]').addEventListener('click', (ev) => {
     (ev.currentTarget as HTMLElement).blur();
@@ -134,6 +177,11 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   const restock = mountDayRestock($<HTMLButtonElement>('.hud-restock'), $('.hud-restock-panel'), (id) => handlers.onRestock?.(id));
   const closeBtn = $<HTMLButtonElement>('.hud-close');
   const closeEarly = mountCloseEarly(closeBtn, (on) => handlers.onCloseEarly?.(on));
+  // FB2 C10: morning pre-open rearrange banner (Ready + host Open doors).
+  const preOpen = mountPreOpen($('.hud-preopen'), {
+    onReady: () => handlers.onReady?.(),
+    onOpenDoors: () => handlers.onOpenDoors?.(),
+  });
   // P4 B6: the second shop's phone call.
   const callEl = $<HTMLElement>('.hud-call');
   let lastCall = '';
@@ -167,6 +215,39 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   }
 
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
+  // Review Block 6: morning note auto-dismiss (fade after a few seconds, or on first move).
+  let noteTimer: ReturnType<typeof setTimeout> | null = null;
+  let noteKey = '';
+  let noteGone = false;
+  function clearNoteTimer(): void {
+    if (noteTimer) {
+      clearTimeout(noteTimer);
+      noteTimer = null;
+    }
+  }
+  function hideNote(fade: boolean): void {
+    if (el.note.hidden || noteGone) return;
+    noteGone = true;
+    clearNoteTimer();
+    if (!fade) {
+      el.note.hidden = true;
+      el.note.classList.remove('fade-out', 'fresh');
+      return;
+    }
+    el.note.classList.add('fade-out');
+    window.setTimeout(() => {
+      if (!noteGone) return;
+      el.note.hidden = true;
+      el.note.classList.remove('fade-out', 'fresh');
+    }, 450);
+  }
+  function armNote(): void {
+    clearNoteTimer();
+    noteGone = false;
+    el.note.classList.remove('fade-out');
+    el.note.hidden = false;
+    noteTimer = setTimeout(() => hideNote(true), NOTE_DISMISS_MS);
+  }
   // Gear Tree G5: a small card of the crew's machines and how each is doing (Gear runs only).
   let gearHtml = '';
   function renderGear(vm: HudVM): void {
@@ -223,8 +304,24 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     notes = vm.notes;
     prices = Object.fromEntries(vm.menu.map((m) => [m.id, m.price]));
     lastOrders = '';
-    el.note.innerHTML = vm.notes.length ? `<b>MORNING NOTE</b>${vm.notes.map((n) => `<p>${esc(n)}</p>`).join('')}` : '';
-    el.note.hidden = vm.notes.length === 0;
+    const nextNote = vm.notes.length ? `${vm.dayLabel}|${vm.notes.join('\n')}` : '';
+    if (nextNote !== noteKey) {
+      noteKey = nextNote;
+      if (vm.notes.length) {
+        el.note.innerHTML = `<b>MORNING NOTE</b>${vm.notes.map((n) => `<p>${esc(n)}</p>`).join('')}`;
+        armNote();
+      } else {
+        clearNoteTimer();
+        noteGone = false;
+        el.note.innerHTML = '';
+        el.note.hidden = true;
+        el.note.classList.remove('fade-out', 'fresh');
+      }
+    } else if (!vm.notes.length) {
+      el.note.hidden = true;
+    } else if (noteGone) {
+      el.note.hidden = true;
+    }
     el.seed.textContent = `· seed ${vm.seed}`;
     el.events.innerHTML = (vm.events ?? [])
       .map((e) => {
@@ -316,10 +413,19 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     const t = live.tool;
     const name = h ? `${ITEM_LABEL[h]}${live.heldCold ? ' <b class="cold">· cold</b>' : ''}` : t ? esc(t.label) : 'Empty hands';
     el.hand.innerHTML = `<div class="slot ${h || t ? 'full' : ''}">${h ? itemIcon(h, 36) : t ? `<span class="tool">${t.icon}</span>` : '∅'}</div><div class="t">${name}<small>${esc(live.meName)} · you</small></div>`;
-    const { go, title, detail } = live.hint;
+    const { go, title, detail, key: hintKey } = live.hint;
     el.hint.classList.toggle('idle', !go);
     el.hint.hidden = !title;
-    el.hint.innerHTML = `<span class="key ${go ? 'go' : ''}">E</span><div class="t">${esc(title)}<small>${esc(detail)}</small></div>`;
+    el.hint.innerHTML = `<span class="key ${go ? 'go' : ''}">${esc(hintKey ?? 'E')}</span><div class="t">${esc(title)}<small>${esc(detail)}</small></div>`;
+    // FB2 B8: syrup picker at the rack (1 vanilla · 2 caramel) when add would succeed.
+    const pick = live.syrupPicker;
+    syrupOpen = !!pick;
+    el.syrup.hidden = !pick;
+    if (pick) {
+      el.syrup.innerHTML = `<b>Syrup</b>${pick.flavours
+        .map((f, i) => `<button type="button" tabindex="-1" data-syrup="${f}"><span class="k">${i + 1}</span>${f === 'vanilla' ? 'Vanilla' : 'Caramel'}</button>`)
+        .join('')}`;
+    }
   }
 
   function patchCash(vm: HudVM): void {
@@ -490,15 +596,19 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
         renderOrders(live);
         renderCrew(live);
         renderHand(live);
+      } else {
+        syrupOpen = false;
+        el.syrup.hidden = true;
       }
       closeEarly.render(live?.closeEarly);
+      preOpen.render(live?.preOpen);
       renderCall(live?.call);
       renderChecklist(live?.checklist);
     },
     toast(lines) {
       if (lines.length === 0) return;
       // Morning notes already sit on the note card: give it a wiggle instead of repeating them.
-      if (lines.every((l) => notes.includes(l)) && !el.note.hidden) {
+      if (lines.every((l) => notes.includes(l)) && !el.note.hidden && !noteGone) {
         el.note.classList.remove('fresh');
         void el.note.offsetWidth;
         el.note.classList.add('fresh');
@@ -509,8 +619,24 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(() => hide(el.toast), 6000);
     },
+    feedPop(posts) {
+      if (!posts.length) return;
+      const wasEmpty = feedQueue.length === 0 && !feedPopTimer;
+      feedQueue.push(...posts);
+      if (wasEmpty) showNextFeedPop();
+    },
+    onFirstMove() {
+      hideNote(true);
+    },
     setRestock(vm) {
       restock.render(vm);
+    },
+    syrupKey(ev) {
+      if (!syrupOpen || container.hidden) return false;
+      const m = /^(?:Digit|Numpad)([12])$/.exec(ev.code);
+      if (!m) return false;
+      handlers.onSyrup?.(m[1] === '1' ? 'vanilla' : 'caramel');
+      return true;
     },
     restockKey(ev) {
       if (restock.handleKey(ev)) return true;
@@ -552,7 +678,15 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       }
     },
     show: () => show(container),
-    hide: () => hide(container),
+    hide: () => {
+      hide(container);
+      hide(el.feedPop);
+      feedQueue.length = 0;
+      if (feedPopTimer) {
+        clearTimeout(feedPopTimer);
+        feedPopTimer = null;
+      }
+    },
   };
 }
 

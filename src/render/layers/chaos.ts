@@ -156,11 +156,15 @@ export class Chaos {
   private prevState: GameState | null = null;
   private lastSeq = -1;
   private slam: { age: number } | null = null;
+  /** Review Block 6: short door walkers for price walk-outs. */
+  private readonly walkers: { root: Container; body: Graphics; age: number; life: number; x0: number; y0: number }[] = [];
   /** Spill drink kinds by mess id, from the drop/slip log, so a cold-brew puddle looks dark. */
   private readonly spillItem = new Map<number, DrinkId>();
   private fxDrawn = false;
   /** Seconds of screen jolt left (door slam / thud). */
   jolt = 0;
+  /** Round 3 item 4: a tumbleweed rolling past the door after a quiet leave. */
+  private tumble: { age: number; x: number; y: number; dir: number } | null = null;
 
   constructor(private readonly depth: Container) {
     this.floor.addChild(this.ripples);
@@ -199,6 +203,7 @@ export class Chaos {
     this.updateTape(state, now);
     this.updateMop(state, dt);
     this.updateRogue(state.rogue, now, dt);
+    this.stepWalkers(dt);
     this.stepFx(dt);
     this.jolt = Math.max(0, this.jolt - dt);
   }
@@ -479,11 +484,59 @@ export class Chaos {
       case 'walkout':
         this.comic(b.text, x, y - 96, PALETTE.cherry, false);
         this.puffs(x, y + 10, 0xf3e6d3, 8, 'puff');
+        // Review leftovers: a person ducks out the front door on a price walk-out.
+        if (b.door) this.spawnDoorWalker(x, y);
         break;
       case 'secret':
         this.comic(b.text, x, y - 90, PALETTE.mint, true);
         this.puffs(x, y - 20, 0xfff6c9, 10, 'star');
         break;
+      case 'complain':
+        this.comic(b.text, x, y - 100, PALETTE.cherry, false);
+        break;
+      case 'tumbleweed':
+        this.tumble = { age: 0, x, y: y + 18, dir: 1 };
+        this.puffs(x, y + 10, 0xc4a574, 6, 'puff');
+        break;
+      case 'tillCue':
+        this.comic(b.text, x, y - 88, b.tone === 'start' ? PALETTE.mint : 0xf0a63a, false);
+        if (b.tone === 'start') this.puffs(x, y - 20, 0xfff6c9, 6, 'star');
+        else this.puffs(x, y - 10, 0xf3e6d3, 5, 'puff');
+        break;
+    }
+  }
+
+  /** Review Block 6: a short silhouette walks from the door toward the street, then fades. */
+  private spawnDoorWalker(x: number, y: number): void {
+    if (this.walkers.length >= 4) {
+      const old = this.walkers.shift()!;
+      old.root.destroy({ children: true });
+    }
+    const root = new Container();
+    const body = new Graphics();
+    const look = customerLook(this.walkers.length + 3);
+    drawPerson(body, { ...look, facing: 'down', holding: null });
+    root.addChild(body);
+    root.position.set(x, y + 18);
+    root.zIndex = y + 18;
+    this.depth.addChild(root);
+    this.walkers.push({ root, body, age: 0, life: 1.15, x0: x, y0: y + 18 });
+  }
+
+  private stepWalkers(dt: number): void {
+    for (let i = this.walkers.length - 1; i >= 0; i--) {
+      const w = this.walkers[i]!;
+      w.age += dt;
+      const t = Math.min(1, w.age / w.life);
+      // Head out the door and a little left, fading as they leave.
+      w.root.x = w.x0 - 18 * t;
+      w.root.y = w.y0 + 56 * t;
+      w.root.zIndex = w.root.y;
+      w.root.alpha = t < 0.7 ? 1 : Math.max(0, 1 - (t - 0.7) / 0.3);
+      if (t >= 1) {
+        w.root.destroy({ children: true });
+        this.walkers.splice(i, 1);
+      }
     }
   }
 
@@ -522,12 +575,32 @@ export class Chaos {
 
   private stepFx(dt: number): void {
     const g = this.particlesG;
-    if (this.particles.length === 0 && !this.slam) {
+    if (this.particles.length === 0 && !this.slam && !this.tumble) {
       if (this.fxDrawn) g.clear();
       this.fxDrawn = false;
     } else {
       g.clear();
       this.fxDrawn = true;
+    }
+    if (this.tumble) {
+      this.tumble.age += dt;
+      const t = this.tumble.age;
+      const life = 1.6;
+      const a = t < life - 0.3 ? 1 : Math.max(0, (life - t) / 0.3);
+      this.tumble.x += this.tumble.dir * 110 * dt;
+      const bob = Math.sin(t * 10) * 3;
+      const rot = t * 8;
+      const cx = this.tumble.x;
+      const cy = this.tumble.y + bob;
+      // a dusty rolling ball of weeds
+      g.circle(cx, cy, 11).fill({ color: 0xc4a574, alpha: 0.95 * a }).stroke({ width: 2, color: 0x8a6a3a, alpha: a });
+      for (const [dx, dy, r] of [[-5, -3, 4], [4, -5, 3.5], [3, 4, 4], [-4, 3, 3]] as const) {
+        const rx = cx + dx * Math.cos(rot) - dy * Math.sin(rot);
+        const ry = cy + dx * Math.sin(rot) + dy * Math.cos(rot);
+        g.circle(rx, ry, r).fill({ color: 0xa8884a, alpha: 0.9 * a });
+      }
+      g.ellipse(cx, cy + 12, 10, 3).fill({ color: 0x000000, alpha: 0.12 * a });
+      if (t > life) this.tumble = null;
     }
     if (this.slam) {
       // the front door swings shut on its hinge, then fades

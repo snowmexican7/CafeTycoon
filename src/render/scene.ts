@@ -10,6 +10,7 @@ import { Actors } from './layers/actors';
 import { Chaos } from './layers/chaos';
 import { EventVisuals } from './layers/events';
 import { crewBursts, newCrewMemory, vibeLabel, type CrewBurst } from './crewModel';
+import { trayBursts, type TrayBurst } from './trayModel';
 import { buildDecor } from './layers/decor';
 import { EspressoGags, fellAtScreen, shakePx } from './layers/espresso';
 import { Effects } from './layers/fx';
@@ -25,6 +26,7 @@ import { fridgeGear } from '../sim/fridge';
 import type { FridgeId } from '../data/fridges';
 import { counterSpotOf } from './pickupModel';
 import { emptySlotPositions, stationBadges, wallMenuRows } from './slotModel';
+import { GhostSpots } from './ghostSpots';
 import { GEAR } from '../data/gear';
 import { buildWall } from './layers/wall';
 import { buildLot } from './layers/lot';
@@ -35,6 +37,8 @@ import { availableDrinks } from '../sim/customers';
 import { menuDrinks } from '../sim/unlocks';
 import { label } from './layers/draw';
 import { FRONT, MAT, PLAYER_COLORS, TILE as THEME_TILE, WALL, isNightLook, sx, sy } from './theme';
+import { ringBar, ringBarLabel } from './ringUpModel';
+import { waitingToDraw } from './waitingModel';
 
 export const TILE = THEME_TILE;
 export const SCENE_BACKGROUND = MAT.backdrop;
@@ -65,6 +69,8 @@ export class Scene {
   private readonly counts = new CountsLayer();
   private readonly sink: SinkVisuals;
   private readonly fridge: FridgeVisuals;
+  /** FB2 C10: valid set-down outlines while carrying a machine in the pre-open. */
+  private readonly ghosts = new GhostSpots();
   /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
   private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
@@ -72,6 +78,8 @@ export class Scene {
   private crewState: GameState | null = null;
   private crewSeq = -1;
   private readonly crewMem = newCrewMemory();
+  /** FB2 B7: tray refuse / cue cursor (same idea as crewSeq; shared log, separate so a miss never eats the other). */
+  private traySeq = -1;
 
   constructor() {
     const floor = buildFloor(SCENE_WIDTH, SCENE_HEIGHT, LAYOUT.door);
@@ -90,7 +98,7 @@ export class Scene {
     this.pickup = new PickupVisuals(this.depth);
     this.sink = new SinkVisuals(this.depth);
     this.fridge = new FridgeVisuals(this.depth);
-    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.sink.overlay, this.fridge.overlay, this.counts.root, this.tags, this.chaos.overlay);
+    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.sink.overlay, this.fridge.overlay, this.counts.root, this.tags, this.chaos.overlay, this.ghosts.root);
     // ui-3.4.0: the outdoor backdrop (stand, cart) covers the café wallpaper and floor; the menu board stays on top.
     this.root.addChild(this.wall.root, buildLamps(), floor, this.outdoorBack, this.wall.menuBoard, this.soldOutSign, this.chaos.floor, this.pickup.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
@@ -183,6 +191,11 @@ export class Scene {
     this.localId = id;
   }
 
+  /** FB2 C10: ghost outlines for valid set-down tiles (null clears). */
+  setGhostSpots(spots: readonly Vec2[] | null): void {
+    this.ghosts.setSpots(spots);
+  }
+
   update(view: RenderView): void {
     const { state } = view;
     this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations, fridgeGear(state), state.slotPos);
@@ -198,12 +211,14 @@ export class Scene {
 
     const mods = computeModifiers(state);
     this.wall.setMenu(wallMenuRows(state, mods.price));
+    const ring = ringBar(state);
     const stations: StationOverlayState[] = state.stations.map((s) => {
       let progress: number | null = null;
       if (s.busyTicksLeft > 0 && s.kind !== 'counter' && s.kind !== 'trash') {
         const total = Math.round((ECONOMY.stationSeconds[s.kind] / mods.stationSpeed[s.kind]) * TICK_RATE);
         progress = Math.max(0, Math.min(1, 1 - s.busyTicksLeft / total));
       }
+      const isTill = s.id === 'counter' || (s.kind === 'counter' && !state.stations.some((x) => x.id === 'pickup'));
       return {
         kind: s.kind,
         pos: s.pos,
@@ -211,6 +226,7 @@ export class Scene {
         output: s.output,
         cat: state.eggs?.cat?.stationId === s.id,
         smoke: state.eggs?.smoke?.stationId === s.id,
+        ...(ring && isTill ? { ring: { progress: ring.progress, self: ring.self, label: ringBarLabel(ring.self) } } : {}),
       };
     });
 
@@ -230,7 +246,7 @@ export class Scene {
     const poses = this.gags.update(state.players, simAge, now, (p) => fellAtScreen(p.espresso?.fellAt ?? p.pos));
     const lay = layoutFor(state.tier);
     this.actors.spots = { gear: state.gear === true, width: lay.width, queueSlots: lay.queueSlots, till: LAYOUT.stations.find((s) => s.kind === 'counter')!.pos, pickup: lay.pickup };
-    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses);
+    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses, waitingToDraw(state), state.tier ?? 'cafe');
     this.pickup.update(state, now);
     this.sink.update(state, localId, now);
     this.fridge.update(state, localId, now);
@@ -255,10 +271,24 @@ export class Scene {
     if (state !== this.crewState) {
       const { bursts, lastSeq } = crewBursts(this.crewState, state, this.crewSeq, this.crewMem);
       this.crewSeq = lastSeq;
+      const tray = trayBursts(this.crewState, state, this.traySeq);
+      this.traySeq = tray.lastSeq;
       this.crewState = state;
       for (const b of bursts) this.crewBurst(b, state, view.baristaPositions);
+      for (const b of tray.bursts) this.trayBurst(b);
     }
     this.fx.step(dt);
+  }
+
+  /** FB2 B7: refuse speech bubble at the barista; small floating cues for the other tray events. */
+  private trayBurst(b: TrayBurst): void {
+    const x = Math.max(80, Math.min(SCENE_WIDTH - 80, sx(b.at.x)));
+    const y = sy(b.at.y) - 100;
+    if (b.kind === 'refuse') this.fx.say(b.text, x, y);
+    else {
+      const color = b.tone === 'good' ? 0xa8f0d2 : b.tone === 'warn' ? 0xffd36b : 0xff8a7a;
+      this.fx.spawn(b.text, x, y - 10, color, 15, 2.4);
+    }
   }
 
   /** Serve toasts, combo cheers, fail feedback, and juice punches. */

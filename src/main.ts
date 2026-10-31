@@ -1,11 +1,14 @@
 import { dayRestockVM } from './ui/dayRestock';
 import { freshEvents, logToastLines, TOAST_KINDS } from './ui/logToasts';
+import { reviewPopVM } from './ui/feed';
 import './style.css';
 import { gearFlag } from './ui/gearFlag';
 /** Gear Tree G5: the last gear quirk already toasted (log seq). */
 let gearSeenSeq = -1;
 /** ui-3.7.1: last log seq turned into a toast (rush restocks, Strategist menu changes); null until a session's first snapshot. */
 let toastSeenSeq: number | null = null;
+/** FB2 C11: last log seq shown as a live review.post phone pop-up. */
+let reviewSeenSeq: number | null = null;
 /** ui-3.7.1: the Konami code ends …→ B A, so a B straight after → isn't the Restock key. */
 let lastKey = { code: '', at: 0 };
 import { ambienceFor, createHeartbeat, diffCues, heartbeatGapMs } from './audio/cues';
@@ -44,6 +47,8 @@ import { createClosing } from './ui/closing';
 import { createHud } from './ui/hud';
 import { loadRecipeHints, saveRecipeHints } from './ui/tickets';
 import { hudLive, nightExtras } from './ui/live';
+import { atCarrySpot, carryTarget, nearestCarrySpot, type StationCarry } from './ui/rearrangeCarry';
+import { inPreOpen } from './sim/rearrange';
 import { createLobby } from './ui/lobby';
 import { createDevPanel, isDevMode } from './ui/dev';
 import { createCreator } from './ui/creator';
@@ -227,11 +232,23 @@ async function main(): Promise<void> {
     if (look) send({ kind: 'look', playerId: me(), look });
   }
   let recipeHints = loadRecipeHints(hintStore);
+  /** FB2 C10: local-only station carry during the pre-open (ghost spots computed once on pickup). */
+  let stationCarry: StationCarry | null = null;
+  const clearCarry = () => {
+    stationCarry = null;
+    renderer.setGhostSpots(null);
+  };
   const hud = createHud($('#hud'), {
     onMute: () => audio.toggleMute(),
     // ui-3.7.1: day-HUD Restock (rush delivery, 25% more). Cream & sugar comes by the box.
     onRestock: (id) => send(id === 'condiments' ? { kind: 'condimentBox', playerId: me(), boxes: 1 } : { kind: 'restock', playerId: me(), supply: id, packs: 1 }),
-    onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }), onCall: (take) => send({ kind: 'call', playerId: me(), take }) }, { recipeHints });
+    // FB2 B8: syrup rack picker (1 vanilla · 2 caramel).
+    onSyrup: (flavour) => send({ kind: 'syrup', playerId: me(), flavour }),
+    onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }),
+    onCall: (take) => send({ kind: 'call', playerId: me(), take }),
+    onReady: () => send({ kind: 'ready', playerId: me() }),
+    onOpenDoors: () => send({ kind: 'openDoors', playerId: me() }),
+  }, { recipeHints });
   const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook() });
   // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).
   const dev = isDevMode(location.search) ? createDevPanel(document, send, me) : null;
@@ -372,6 +389,7 @@ async function main(): Promise<void> {
     );
     session = s;
     toastSeenSeq = null; // ui-3.7.1: no toasts for events from before this session joined
+    reviewSeenSeq = null; // FB2 C11: no review pop-ups for events from before this session joined
     title.hide();
     hud.setRoom(code);
     hud.show();
@@ -574,15 +592,27 @@ async function main(): Promise<void> {
       renderLobby(s);
     }
     if (s.peerStatus !== 'hostAway') lobby.hide();
-    hud.render(hudViewModel(state), hudLive(state, s.me));
+    // FB2 C10: drop a local carry when the pre-open ends (or the run leaves the day).
+    if (stationCarry && !inPreOpen(state)) clearCarry();
+    hud.render(hudViewModel(state), hudLive(state, s.me, stationCarry));
     hud.setRestock(dayRestockVM(state));
     // ui-3.7.1: rush restocks and the Strategist's menu changes pop up (HUD by day, a bubble at night).
+    // FB2 C10: station.reset (and a short place note) also toast.
     {
       const fresh = freshEvents(state, toastSeenSeq ?? state.nextLogSeq - 1, TOAST_KINDS);
       toastSeenSeq = fresh.seen;
       const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? 'Someone';
       const lines = logToastLines(fresh.events, nameOf, s.me);
       if (lines.length) (state.phase === 'night' ? night.toast(lines) : hud.toast(lines));
+    }
+    // FB2 C11: live review.post → phone pop-up during the day (name, text, sentiment, stars).
+    {
+      const fresh = freshEvents(state, reviewSeenSeq ?? state.nextLogSeq - 1, ['review.post']);
+      reviewSeenSeq = fresh.seen;
+      if (state.phase === 'day') {
+        const posts = fresh.events.map(reviewPopVM).filter((p): p is NonNullable<typeof p> => !!p);
+        if (posts.length) hud.feedPop(posts);
+      }
     }
     // Gear Tree G5: jams, dead batteries and goose noises pop up as a toast.
     if (state.gear) {
@@ -656,9 +686,14 @@ async function main(): Promise<void> {
     const prevKey = lastKey;
     lastKey = { code: e.code, at: e.timeStamp };
     // ui-3.7.1: B opens the day Restock panel; 1-9 buy, B/Esc close (only by day, nothing on top, not while typing).
+    // FB2 B8: 1/2 pick a syrup at the rack when the picker is up (restock, when open, still takes 1-9 first).
     if (!e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && session?.next && !typingText() && pauseEl.hidden && closingEl.hidden && weekEndEl.hidden) {
       const afterArrow = e.code === 'KeyB' && prevKey.code === 'ArrowRight' && e.timeStamp - prevKey.at < 1500;
       if (!afterArrow && hud.restockKey(e)) {
+        e.preventDefault();
+        return;
+      }
+      if (hud.syrupKey(e)) {
         e.preventDefault();
         return;
       }
@@ -675,9 +710,37 @@ async function main(): Promise<void> {
     const field = document.activeElement?.tagName ?? '';
     if (e.code === 'KeyR' && !e.repeat && session?.next && !['INPUT', 'TEXTAREA', 'SELECT'].includes(field)) {
       e.preventDefault();
+      // FB2 C10: R during a local carry just puts the ghost away (no drop input — hands aren't holding a cup).
+      if (stationCarry && session.next && inPreOpen(session.next)) {
+        clearCarry();
+        return;
+      }
       session.transport.sendInput({ kind: 'drop', playerId: session.me });
     }
+    // FB2 C10: Z picks up / sets down a machine during the pre-open (local only until set-down).
+    if (e.code === 'KeyZ' && !e.repeat && session?.next && !['INPUT', 'TEXTAREA', 'SELECT'].includes(field) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (tryRearrangeKey(session.next, session.me)) e.preventDefault();
+    }
   });
+
+  /** FB2 C10: Z or E during pre-open — pick up a machine locally, or send moveStation on set-down. */
+  function tryRearrangeKey(state: GameState, playerId: PlayerId): boolean {
+    if (!inPreOpen(state)) return false;
+    const mePlayer = state.players.find((p) => p.id === playerId);
+    if (!mePlayer) return false;
+    if (stationCarry) {
+      const to = nearestCarrySpot(stationCarry.spots, mePlayer.pos);
+      if (!to || !atCarrySpot(mePlayer.pos, to)) return true; // carrying, but not on a spot yet
+      send({ kind: 'moveStation', playerId, station: stationCarry.stationId, to });
+      clearCarry();
+      return true;
+    }
+    const t = carryTarget(state, playerId);
+    if (!t) return true; // swallowed: E/Z do nothing else during pre-open
+    stationCarry = t;
+    renderer.setGhostSpots(t.spots);
+    return true;
+  }
 
   function frame(): void {
     requestAnimationFrame(frame); // re-arm first so a bad frame can never stop rendering for good
@@ -705,7 +768,14 @@ async function main(): Promise<void> {
       hud.setJuice(renderer.getJuice());
       const vec = keyboard.read();
       interactPending = keyboard.takeInteract() || interactPending;
+      // FB2 C10: during pre-open, E is rearrange (local), never a sim interact.
+      if (interactPending && inPreOpen(s.next)) {
+        tryRearrangeKey(s.next, s.me);
+        interactPending = false;
+      }
       const changed = vec.x !== lastSent.x || vec.y !== lastSent.y;
+      // Review Block 6: first move fades the morning note (no click needed).
+      if (vec.x !== 0 || vec.y !== 0) hud.onFirstMove();
       if ((changed || interactPending) && gate.allow()) {
         s.transport.sendInput({ kind: 'move', playerId: s.me, x: vec.x, y: vec.y, interact: interactPending });
         lastSent = vec;

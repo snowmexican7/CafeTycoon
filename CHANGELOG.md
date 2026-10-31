@@ -16,7 +16,23 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+## 3.8.0 — 2026-10-31 · Hand-made lattes, a morning rearrange and the café feed
+
+Cursor's six-PR run (blocks 1–6 of `docs/CURSOR_PROMPT_NEXT.md`), reviewed, fixed up and merged by Grok.
+
+- Each Gear morning starts with a short **rearrange** before the doors open: a countdown, Ready, and (host) Open doors. Pick up a machine with Z or E, walk to a green outline, and press E to set it down. The hint only turns green when you are standing on an outline. (PR #13)
+- Hand-made lattes: fill the milk jug to the ticket's line, stop the steam meter in the middle for foam, and pick vanilla or caramel (1 / 2) at the syrup rack. Tickets show double shots and syrup asks; the jug, steam meter and recipe icons sit over your cup. (PR #17)
+- The tray table now shows a live list of drinks (with ticks and cooling), a tray in your hands, a named tray coaster on pickup, a "doesn't go here" bubble when a drink is refused, and little cues when a tray is claimed, filled, picked up, set down, taken, spilled or cleared. (PR #14)
+- The café feed is on screen: customers post live during the day (a little phone pops up), the night board shows today's posts and fans, the closing receipt lists the fan change, and each week-end three silly reviewers rate the week. (PR #16)
+- Ring-up progress bar over the till (and a soft "Ka-ching!" / "Beep!" / "Cancelled" cue) while a register order takes its beat, including the self-order screen's honey bar. (PR #15)
+- Waiting-area browsers stand just inside the door when the line is full; "Line's too long!" when someone complains; a tumbleweed rolls past when an arrival quietly leaves. The day's receipt notes how many left that way. (PR #15, browsers moved to the customers' side by Grok)
+- The morning note fades away after a few seconds, or as soon as you move. No click needed. (PR #18)
+- Station hints say what's wrong ("Needs a shot first", "Machine is busy", "Needs empty hands") instead of a vague idle. (PR #18)
+- Bot name tags drop the "· bot" debug look; crew tip chips say "Try it". (PR #18)
+- "Rough guess" only shows when you don't have a Strategist; with one, prices say "Set by Strategist". (PR #18)
+- Strategist and Marketer hire cards sit high on Tonight, visible without scrolling at common laptop sizes. (PR #18)
+- The receipt shows how much of the wages went to specialists ("incl. specialists"), and a "Left over the price" line for price walk-outs, who now also walk out the door. (PR #18, wording by Grok)
+- Opening with nothing you can make asks "You can't make any drinks yet. Open anyway?". It warns and never blocks, and it now also counts a missing machine, not just missing stock. (PR #18)
 
 ## 3.7.2 — 2026-10-31 · Fixes from the overnight review
 

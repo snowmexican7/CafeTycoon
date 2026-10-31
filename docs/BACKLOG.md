@@ -2639,3 +2639,30 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
 - [x] PR #12: the review doc `docs/reviews/composer-2026-10-31.md`. Merge c02cd71.
 - Fixtures `priceWalkout`, `hireCards` (src/dev/fixtures.ts) for screenshots.
 
+
+## 3.8.0: Cursor's blocks 1–6 (2026-10-31, Grok as reviewer/merger, Cursor as contributor)
+- [x] PR #13 `cursor/c10-rearrange-ui-e03d`: C10 pre-open bar (`src/ui/preOpen.ts`, `mountPreOpen`; countdown from
+  `preOpenUntil - tick`, Ready, host Open doors), Z/E local carry (`src/ui/rearrangeCarry.ts`: `carryTarget`,
+  `nearestCarrySpot`, `atCarrySpot`), ghost outlines (`renderer.setGhostSpots`), `station.place/refuse/reset` toasts.
+  Merge b19f810.
+- [x] PR #17 `cursor/b8-handmade-lattes-e03d`: jug and steam meters, recipe icons over the cup, syrup picker (1 / 2
+  at the rack, `src/render/handmadeModel.ts`), double / syrup asks on tickets, `milk.fill` / `steam.result` /
+  `syrup.add` / `syrup.miss` cues. Merge 04f038c.
+- [x] PR #14 `cursor/b7-tray-rest-e03d`: live tray list, tray in hand, named coaster on pickup, per-cup cooling,
+  `tray.refuse` bubble, tray cues (`src/render/trayModel.ts`). Merge 20029ba.
+- [x] PR #16 `cursor/c11-social-feed-e03d`: `src/ui/feed.ts` (`dayFeedVM`, `nightPhoneHtml`, `weekRatingVM`), day
+  pop-ups from `review.post`, fans on the closing receipt. Merge 4d25bd9.
+- [x] PR #15 `cursor/ringup-waiting-e03d`: ring-up bar over the till, `till.start/cancel` cues, waiting-area browsers
+  (`src/render/waitingModel.ts`, `WAITING_SPOTS`), "Line's too long!", tumbleweed, `DayStats.lineLeft` receipt line.
+  Merge d86732b.
+- [x] PR #18 `cursor/review-fixes-e03d`: morning note auto-dismiss (`NOTE_DISMISS_MS` 8000 or first move), specific
+  station hints, "· bot" tag dropped, "Rough guess" / "Set by Strategist", hire cards higher, `hireWages` and
+  `priceWalkouts` receipt lines, price walkers out the door, soft "Open anyway?" gate (`NightVM.makeable`). Merge 3c64aaa.
+- Grok fix-ups (`ui-3.8.0`): c9d9f8c honest hints and plain copy (set-down green only on an outline, no syrup pick in
+  the pre-open, `makeable` uses `canMake`, no "tap"); 8424160 "incl. specialists" sub-line (wages already include
+  `hireWages`), "Tray cleared", dead code; 468c1bf waiting spots on the customers' side (y 6.8–7.35); ca364e0 fixtures.
+- Fixtures: `preOpen`, `preOpenCarry`, `handmade`, `syrupPick`, `trayTable`, `dayFeed`, `reviewPop`, `weekRating`,
+  `closingFans`, `ringUp`, `waitingLine`, `lineLeftReceipt`, `softOpen`, `morningNote`.
+- Open after 3.8.0: B6 tall combo ticket, office phone card and receipt line; `order.addon` ask bubble; uncapped night
+  headline; feed phone below the fold on Tonight; floaters overlapping at the wand; the syrup key chip reads "12".
+  Screenshots: `/workspace/overnight/sprint/pr-review-2/` (Grok's box).
