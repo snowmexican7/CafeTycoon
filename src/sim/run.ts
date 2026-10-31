@@ -30,7 +30,7 @@ import { settle } from './spawn';
 import { applyPerk } from './perks';
 import { officeMorning } from './orders';
 import { topUpDevCash } from './dev';
-import { setPeakPrices } from './strategist';
+import { strategistNight } from './strategist';
 import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
@@ -158,8 +158,9 @@ export function startNight(state: GameState): GameState {
   if (computeModifiers(state).reveal) tuneRadio(state);
   // B7: tonight's paper shows tomorrow's optional goals (state.day is the coming day).
   state.challenges = dealChallenges(state);
-  // Round 3 item 3: a hired Strategist sets the peak prices for the coming crowd (the crew may override by hand tonight).
-  setPeakPrices(state);
+  // Round 3 item 3 / Round 4 f: a hired Strategist sets the menu and the peak prices for the coming crowd (the crew may
+  // override by hand tonight).
+  strategistNight(state);
   return state;
 }
 

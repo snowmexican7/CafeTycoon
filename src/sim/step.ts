@@ -55,6 +55,9 @@ import { applyDevPause, topUpDevCash } from './dev';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
 import { setLook } from './look';
+import { hasStrategist } from './hires';
+import { strategistNewDrinks } from './strategist';
+import { unlockedDrinks } from './unlocks';
 import { applyMoveStation, applyOpenDoors, inPreOpen, preOpenReady, stepPreOpen } from './rearrange';
 
 function applyInput(s: GameState, input: PlayerInput): void {
@@ -340,10 +343,13 @@ function stepClosing(s: GameState): void {
 export function step(state: GameState, inputs: PlayerInput[]): GameState {
   const s = structuredClone(state);
   s.tick += 1;
+  // Round 4 f: what the bar could make before tonight's inputs, so a hired Strategist puts a newly makeable drink on.
+  const couldMake = s.phase === 'night' && hasStrategist(s) ? unlockedDrinks(s) : null;
   for (const raw of inputs) {
     const input = validateInput(raw);
     if (input) applyInput(s, input);
   }
+  if (couldMake) strategistNewDrinks(s, couldMake);
   switch (s.phase) {
     case 'night':
       stepNight(s);

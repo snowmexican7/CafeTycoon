@@ -11,7 +11,7 @@ import { BOT_IDS, botsFor, humanCount, syncBots, wantedBots } from './bots/roste
 import { rentForDay } from './effects';
 import { emitLog } from './log';
 import { hireWagesForDay, isHired, type HireRole } from './hires';
-import { setPeakPrices } from './strategist';
+import { strategistNight } from './strategist';
 import type { GameState, PlayerInput, TierId } from './types';
 
 export const WAGE_BY_TIER: Record<TierId, number> = { stand: 1, cart: 3, cafe: 5 };
@@ -106,7 +106,7 @@ function applyHireRole(state: GameState, role: HireRole, action: 'hire' | 'fire'
     if (on) return state;
     state.staff = { ...(state.staff ?? {}), [role]: true };
     emitLog(state, 'staff.hire', { role, by });
-    if (role === 'strategist') setPeakPrices(state);
+    if (role === 'strategist') strategistNight(state);
     return state;
   }
   if (!on) return state;

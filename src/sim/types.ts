@@ -267,6 +267,8 @@ export type SimEventKind =
   | 'staff.hire'
   | 'staff.fire'
   | 'strategist.set'
+  /** Round 4 f follow-up (src/sim/strategist.ts): the hired Strategist switched a drink on or off the menu ({ drink, on }). */
+  | 'strategist.menu'
   /**
    * Round 4 f follow-up (src/sim/night.ts, condiments.ts): a person bought stock in the day or the closing phase at the
    * rush price ({ by, supply, packs, cost }); a condiment box has `supply: 'condiments'` and `packs` = boxes.

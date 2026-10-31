@@ -1,14 +1,16 @@
 /**
- * Round 3 item 3: the Strategist's job and the price calculator behind it. Pure reads plus one writer
- * (`setPeakPrices`, no rng). The planner's price advice uses the same search (`bestStep`), so a hired Strategist and
- * a bot's advice agree.
+ * Round 3 item 3: the Strategist's job and the price calculator behind it. Pure reads plus the writers
+ * (`setPeakPrices`, and Round 4 f's `setStrategistMenu` / `strategistNight` / `strategistNewDrinks`; no rng). The planner's
+ * price advice uses the same search (`bestStep`), so a hired Strategist and a bot's advice agree.
  */
 import { ECONOMY } from '../data/economy';
 import { computeModifiers } from './effects';
 import { emitLog } from './log';
 import { priceForecast, priceStep } from './pricing';
 import { copyIsLive } from './rival';
-import { menuDrinks } from './unlocks';
+import { menuDrinks, unlockedDrinks } from './unlocks';
+import { canMake } from './growth';
+import { BASE_DRINKS } from '../data/drinks';
 import { hasStrategist } from './hires';
 import type { DrinkId, GameState } from './types';
 
@@ -89,4 +91,42 @@ export function setPeakPrices(state: GameState): void {
   if (steps) state.priceSteps = steps;
   else delete state.priceSteps;
   if (changed > 0) emitLog(state, 'strategist.set', { changed });
+}
+
+/**
+ * Round 4 f follow-up: the Strategist's menu. Every drink the café knows goes on when the bar can make it and off when
+ * it can't (the same test as the planner's menu advice: `canMake`). Logs `strategist.menu { drink, on }` for each drink
+ * switched. A bar that can make nothing yet (a Gear run's first night) leaves the menu alone.
+ */
+export function setStrategistMenu(state: GameState): void {
+  if (!state.gear || !hasStrategist(state)) return;
+  const known = state.unlocked ?? BASE_DRINKS;
+  if (unlockedDrinks(state).length === 0) return;
+  for (const d of known) {
+    const on = canMake(state, d);
+    if (state.menu[d] === on) continue;
+    state.menu[d] = on;
+    emitLog(state, 'strategist.menu', { drink: d, on });
+  }
+}
+
+/** The Strategist's night (at every night start and the moment they are hired): the menu, then the peak prices for it. */
+export function strategistNight(state: GameState): void {
+  setStrategistMenu(state);
+  setPeakPrices(state);
+}
+
+/**
+ * Round 4 f follow-up: after a night input changed the bar (a machine bought, the shop grown), a drink the bar could
+ * not make before (`before`, from `unlockedDrinks`) and can now goes on the menu while a Strategist is hired
+ * (`strategist.menu { drink, on: true }`). Nothing else is touched, so hand-set changes still stand; its price stays
+ * as it is until the next night start.
+ */
+export function strategistNewDrinks(state: GameState, before: readonly DrinkId[]): void {
+  if (!state.gear || !hasStrategist(state) || state.phase !== 'night') return;
+  for (const d of unlockedDrinks(state)) {
+    if (before.includes(d) || state.menu[d]) continue;
+    state.menu[d] = true;
+    emitLog(state, 'strategist.menu', { drink: d, on: true });
+  }
 }
