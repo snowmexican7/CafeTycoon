@@ -170,7 +170,7 @@ describe('trayModel (FB2 B7 rest)', () => {
       'Tray ready · Ada',
       'Ada took the tray',
       'Tray spill! 2 cups',
-      'Tray voided · 2 wasted',
+      'Tray cleared · 2 cups wasted',
     ]);
     expect(trayBursts(b, clone(b), lastSeq).bursts).toEqual([]);
     expect(trayBursts(null, b, -1).bursts).toEqual([]);

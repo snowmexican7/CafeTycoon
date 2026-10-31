@@ -357,7 +357,7 @@ function alertRow(a: BriefAlert): string {
 
 /** FB1 WP6: a bot's tip as one big tap-to-apply chip ("💬 Bo · hurried: Raise the latte to $5.50 ✓"). */
 function tipChip(t: TipVM): string {
-  return `<button class="tip p-${t.personality}" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.by}: ${t.full}. Tap to try it.`)}">
+  return `<button class="tip p-${t.personality}" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.by}: ${t.full}. Click to try it.`)}">
     <span class="tip-by"><span aria-hidden="true">💬</span> ${esc(t.by)}</span><span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Try it</span></button>`;
 }
 
@@ -478,7 +478,7 @@ function receiptBody(vm: NightVM, day: number): string {
   const line = (a: string, b: string, cls = '') => `<div class="line ${cls}"><span>${a}</span><span>${b}</span></div>`;
   return `<div class="rc-paper"><h3>DAY ${day - 1}</h3>
     ${line('Sales', esc(t.sales))}${line('Tips', esc(t.tips))}${t.familyTips ? t.familyTips.map((f) => line(`&nbsp;&nbsp;${esc(f.label)}`, esc(f.amount), 'sub fam-tip')).join('') : ''}${line('Rent', `<span class="neg">−${esc(t.rent)}</span>`)}${t.wages ? line('Crew wages', `<span class="neg">−${esc(t.wages)}</span>`) : ''}
-    ${t.hireWages ? line('Specialist wages', `<span class="neg">−${esc(t.hireWages)}</span>`) : ''}
+    ${t.hireWages ? line('&nbsp;&nbsp;incl. specialists', esc(t.hireWages), 'sub') : ''}
     ${t.priceWalkouts ? line('Left over the price', String(t.priceWalkouts)) : ''}
     ${t.bonus ? line('Bonuses', `+${esc(t.bonus)}`) : ''}
     ${t.combos ? t.combos.map((c) => line(`New combo: ${TWIST_INFO[c.twist].icon} ${esc(TWIST_INFO[c.twist].name)} ${esc(DRINK_INFO[c.drink].short.toLowerCase())}`, `<span class="stars">${starRow(c.stars)}</span>`, 'combo')).join('') : ''}

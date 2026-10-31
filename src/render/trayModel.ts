@@ -194,7 +194,7 @@ export function trayBursts(prev: GameState | null, next: GameState, lastSeq: num
       case 'tray.void':
         bursts.push({
           kind: 'cue',
-          text: Number(d.cups) > 0 ? `Tray voided · ${d.cups} wasted` : 'Tray voided',
+          text: Number(d.cups) > 0 ? `Tray cleared · ${d.cups} ${Number(d.cups) === 1 ? 'cup' : 'cups'} wasted` : 'Tray cleared',
           tone: 'warn',
           at: table,
         });
