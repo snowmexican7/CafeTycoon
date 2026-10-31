@@ -1,6 +1,6 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import { LAYOUT } from '../../data/layout';
-import type { Customer, DrinkId, ItemKind, Player, PlayerId, Vec2 } from '../../sim/types';
+import type { Customer, DrinkId, ItemKind, Player, PlayerId, TierId, Vec2 } from '../../sim/types';
 import { ECONOMY } from '../../data/economy';
 import { TICK_RATE } from '../../sim/constants';
 import { type Facing, PALETTE, TILE, baristaLook, customerLook, nextFacing, patienceColor, sx, sy } from '../theme';
@@ -14,6 +14,7 @@ import { drawCarafe } from './sink';
 import { CARRIED_FILL } from '../sinkModel';
 import { drawBarCaddy, drawCarton } from './fridgeArt';
 import { lookArt, type BodyStyle, type HairStyle, type OutfitStyle } from '../lookModel';
+import { waitingSpots } from '../waitingModel';
 
 /** Feet sit a little below the sim centre so a barista reads as standing on its tile. */
 export const FEET_OFFSET = 0.3;
@@ -309,6 +310,8 @@ export class Actors {
   spots: (SpotsLayout & { gear: boolean }) | null = null;
   private readonly players = new Map<PlayerId, PlayerSprite>();
   private readonly customers = new Map<number, CustomerSprite>();
+  /** Round 3 item 4: browsers in the inside waiting area (`state.waiting`). */
+  private readonly browsers = new Map<number, CustomerSprite>();
 
   constructor(
     private readonly depthLayer: Container,
@@ -322,6 +325,8 @@ export class Actors {
     localId: PlayerId | null,
     timeSec: number,
     collapsed: Record<PlayerId, CollapsePose> = {},
+    waiting: Customer[] = [],
+    tier: TierId = 'cafe',
   ): void {
     const seen = new Set<PlayerId>();
     players.forEach((p, index) => {
@@ -491,6 +496,62 @@ export class Actors {
         this.customers.delete(id);
       }
     }
+
+    // Round 3 item 4: browsers in the inside waiting area (no order bubble — they're not in line yet).
+    const seenW = new Set<number>();
+    const browseWhere = waitingSpots(tier, waiting.length);
+    waiting.forEach((c, i) => {
+      seenW.add(c.id);
+      const slot = browseWhere[i];
+      if (!slot) return;
+      const targetX = sx(slot.x);
+      const targetY = sy(slot.y) + CUSTOMER_FEET_PX;
+      let sprite = this.browsers.get(c.id);
+      if (!sprite) sprite = this.addBrowser(c, targetX + TILE * 0.4, targetY);
+      sprite.x += (targetX - sprite.x) * 0.12;
+      sprite.y += (targetY - sprite.y) * 0.12;
+      const feet = sprite.y;
+      const bob = Math.sin(timeSec * 2.4 + c.id) * 1.5;
+      sprite.root.position.set(sprite.x, feet + bob);
+      sprite.root.zIndex = feet;
+      sprite.body.y = Math.sin(timeSec * 5 + c.id * 0.7) * 0.8;
+      // a soft "browsing" thought: three dots, no order ticket
+      sprite.bubble.clear();
+      const bx = 0;
+      const by = -88;
+      sprite.bubble.roundRect(bx - 16, by - 12, 32, 20, 8).fill(0xffffff).stroke({ width: 2, color: PALETTE.espresso });
+      sprite.bubble.poly([bx - 4, by + 8, bx + 4, by + 8, bx, by + 14]).fill(0xffffff);
+      for (const [dx, ph] of [[-8, 0], [0, 0.33], [8, 0.66]] as const) {
+        const k = 0.55 + 0.45 * Math.sin(timeSec * 4 + ph * Math.PI * 2 + c.id);
+        sprite.bubble.circle(bx + dx, by - 2, 2.2 * k).fill(PALETTE.espresso);
+      }
+      const frac = c.patienceLeft / Math.max(1, c.patienceMax);
+      sprite.extra.clear();
+      // patience pip under the feet so a long browse still reads
+      sprite.extra.roundRect(-14, 4, 28, 5, 2.5).fill(0xffffff).stroke({ width: 1.5, color: PALETTE.espresso });
+      sprite.extra.roundRect(-12, 5.5, Math.max(2, 24 * frac), 2, 1).fill(patienceColor(frac));
+    });
+    for (const [id, sprite] of this.browsers) {
+      if (!seenW.has(id)) {
+        sprite.root.destroy({ children: true });
+        this.browsers.delete(id);
+      }
+    }
+  }
+
+  /** A waiting-area browser: same body as a queue customer, no companions / name tag. */
+  private addBrowser(c: Customer, startX: number, startY: number): CustomerSprite {
+    const root = new Container();
+    const body = new Graphics();
+    drawPerson(body, { ...customerLook(c.id), facing: 'down' });
+    body.scale.set(0.9);
+    const bubble = new Graphics();
+    const extra = new Graphics();
+    root.addChild(body, extra, bubble);
+    this.depthLayer.addChild(root);
+    const sprite: CustomerSprite = { root, body, bubble, extra, x: startX, y: startY, companions: [], count: null, nameTag: null };
+    this.browsers.set(c.id, sprite);
+    return sprite;
   }
 
   /** The mop in hand: held upright at the side, scrubbing back and forth while cleaning. */

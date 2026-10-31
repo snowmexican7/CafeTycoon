@@ -531,6 +531,11 @@ export interface StationOverlayState {
   cat?: boolean;
   /** B8: soft smoke alarm puffing. */
   smoke?: boolean;
+  /**
+   * Round 3 item 5: ring-up bar over the till (`ringProgress`). `self` is the Squarely beat
+   * (`ringUp.by === ''`); fill colour and the optional label differ from a barista ringing.
+   */
+  ring?: { progress: number; self: boolean; label: string };
 }
 
 /**
@@ -541,15 +546,19 @@ export class StationOverlay {
   readonly root = new Container();
   private readonly g = new Graphics();
   private readonly keycap: Text;
+  private readonly ringLabel: Text;
 
   constructor() {
     this.keycap = label('E', 13, PALETTE.espresso, '700');
-    this.root.addChild(this.g, this.keycap);
+    this.ringLabel = label('Ringing…', 11, PALETTE.espresso, '700');
+    this.ringLabel.visible = false;
+    this.root.addChild(this.g, this.keycap, this.ringLabel);
   }
 
   update(stations: StationOverlayState[], focus: Vec2 | null, timeSec: number): void {
     const g = this.g;
     g.clear();
+    let ringDrawn: { cx: number; by: number; label: string } | null = null;
     for (const s of stations) {
       const cx = sx(s.pos.x);
       const cy = sy(s.pos.y);
@@ -573,6 +582,15 @@ export class StationOverlay {
         g.roundRect(cx - 24, by, 48, 11, 5.5).fill(0xffffff).stroke({ width: 2, color: PALETTE.espresso });
         g.roundRect(cx - 21, by + 2.5, Math.max(6, 42 * s.progress), 6, 3).fill(PALETTE.mint);
       }
+      // Round 3 item 5: ring-up bar floating over the till (self-order uses honey fill).
+      if (s.ring) {
+        const by = cy - PROGRESS_BAR_RISE.counter - 18;
+        const fill = s.ring.self ? PALETTE.honey : PALETTE.mint;
+        const pulse = 1 + Math.sin(timeSec * 6) * 0.03;
+        g.roundRect(cx - 28 * pulse, by, 56 * pulse, 14, 7).fill(0xffffff).stroke({ width: 2, color: PALETTE.espresso });
+        g.roundRect(cx - 24, by + 3, Math.max(5, 48 * s.ring.progress), 8, 4).fill(fill);
+        ringDrawn = { cx, by, label: s.ring.label };
+      }
       if (s.output) {
         drawItem(g, s.output, cx + 22, cy - 20, 0.9);
         const pulse = 1 + Math.sin(timeSec * 5) * 0.06;
@@ -594,6 +612,13 @@ export class StationOverlay {
         g.circle(cx - 5, cy - 30 + bob, 1.6).fill(0x2a1a10);
         g.circle(cx + 5, cy - 30 + bob, 1.6).fill(0x2a1a10);
       }
+    }
+    if (ringDrawn) {
+      if (this.ringLabel.text !== ringDrawn.label) this.ringLabel.text = ringDrawn.label;
+      this.ringLabel.position.set(ringDrawn.cx, ringDrawn.by - 10);
+      this.ringLabel.visible = true;
+    } else {
+      this.ringLabel.visible = false;
     }
     if (focus) {
       const cx = sx(focus.x);
