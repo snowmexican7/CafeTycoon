@@ -169,6 +169,7 @@ export function createRecordsStore(storage: StorageLike): { get(): Records; reco
   return {
     get,
     record(state, awards, date, score) {
+      if (state.dev) return get(); // R4 a: dev runs never reach the records
       const next = foldRecords(get(), state, awards, date, score);
       try {
         storage.setItem(KEY, JSON.stringify(next));

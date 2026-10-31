@@ -10,6 +10,7 @@ export function createHistoryStore(storage: StorageLike): { append(record: RunRe
   return {
     list,
     append(record) {
+      if (record.dev) return; // R4 a: dev runs are never kept
       storage.setItem(KEY, JSON.stringify([record, ...list()].slice(0, MAX)));
     },
   };

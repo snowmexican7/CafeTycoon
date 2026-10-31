@@ -35,5 +35,6 @@ export function summarizeRun(state: GameState, date: string): RunRecord {
     daysCompleted: state.days.length,
     score: scoreRun(state),
     itemsBought: state.owned.map((o) => o.itemId),
+    ...(state.dev ? { dev: true as const } : {}),
   };
 }
