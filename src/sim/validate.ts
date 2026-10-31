@@ -128,6 +128,18 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return typeof input.station === 'string' && input.station.length > 0 && input.station.length <= MAX_STATION_ID && isAddOnWand(input.wand)
         ? { kind: 'wand', playerId: input.playerId, station: input.station, wand: input.wand }
         : null;
+    case 'moveStation': {
+      // FB2 C10: a station id and a tile (whole numbers on the floor; the bar area and the layout are the sim's call).
+      const to = input.to as unknown;
+      if (typeof input.station !== 'string' || input.station.length < 1 || input.station.length > MAX_STATION_ID) return null;
+      if (!to || typeof to !== 'object') return null;
+      const { x, y } = to as { x: unknown; y: unknown };
+      if (!Number.isInteger(x) || !Number.isInteger(y)) return null;
+      if ((x as number) < 0 || (x as number) > LAYOUT.width || (y as number) < 0 || (y as number) > LAYOUT.height) return null;
+      return { kind: 'moveStation', playerId: input.playerId, station: input.station, to: { x: x as number, y: y as number } };
+    }
+    case 'openDoors':
+      return { kind: 'openDoors', playerId: input.playerId };
     case 'fridge':
       return isFridgeId(input.fridge) ? { kind: 'fridge', playerId: input.playerId, fridge: input.fridge } : null;
     case 'condimentBox':

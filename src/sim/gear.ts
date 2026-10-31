@@ -25,7 +25,7 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SN
  */
 import { GEAR, GEAR_START, WANDS, WAND_SECONDS, WAND_UPGRADE, type AddOnWand, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
-import { ensureCounterSpots, stationsFromSlots, slotCount, wandOn } from './slots';
+import { ensureCounterSpots, slotSpots, stationsFromSlots, slotCount, wandOn } from './slots';
 import { buyFridgeCard, fridgeCards } from './fridge';
 import { FRIDGES } from '../data/fridges';
 import { CONDIMENTS } from './condiments';
@@ -38,6 +38,7 @@ import type { Modifiers } from './effects';
 import { ACCURACY } from './accuracy';
 import { ownTile, placeMess } from './floor';
 import { emitLog } from './log';
+import { keepMovesOrReset } from './rearrange';
 import { rngInt, rngNext } from './rng';
 import type { DrinkId, GameState, GearVote, ItemKind, Player, PlayerInput, Station, StationKind, SupplyId, TierId } from './types';
 
@@ -71,12 +72,21 @@ export function gearStart(state: GameState): void {
   state.condimentBoxes = 0;
 }
 
-function rebuild(state: GameState): void {
+/** The bar from the slots, on each slot's kept spot (FB2 C10 `slotPos`; none = the defaults), and the fixed spots. */
+function build(state: GameState): void {
   const old = state.stations;
-  state.stations = stationsFromSlots(state.tier, state.slots ?? [], state.slotGear ?? [], state.slotWand ?? []);
+  state.stations = stationsFromSlots(state.tier, state.slots ?? [], state.slotGear ?? [], state.slotWand ?? [], state.slotPos);
   keepStale(old, state.stations); // FB2 A3: a stale pot stays stale on the same machine
   ensureCounterSpots(state);
 }
+
+/** Rebuild the bar from the slots. FB2 C10: moved machines keep their spots unless that blocks the floor (then all go back). */
+export function rebuildBar(state: GameState): void {
+  build(state);
+  keepMovesOrReset(state, () => build(state));
+}
+
+const rebuild = rebuildBar;
 
 export function applyGearInput(state: GameState, input: Extract<PlayerInput, { kind: 'gear' }>): GameState {
   if (!isGearRun(state) || state.phase !== 'night') return state;
@@ -306,9 +316,9 @@ function wandSell(state: GameState, i: number): number {
   return id && w && wandOn(id, w) === w ? WANDS[w].sell : 0;
 }
 
-/** The slot a (non-twin) station stands in, by position; -1 when none. */
+/** The slot a (non-twin) station stands in, by position (FB2 C10: on its kept spot); -1 when none. */
 function slotOf(state: GameState, st: Station): number {
-  return SLOT_POSITIONS[state.tier ?? 'cafe'].findIndex((p) => p.x === st.pos.x && p.y === st.pos.y);
+  return slotSpots(state.tier, state.slotPos).findIndex((p) => p.x === st.pos.x && p.y === st.pos.y);
 }
 
 /** A wand on offer for one espresso machine tonight: add one (`later` price) or upgrade a little one to a proper one. */
@@ -560,8 +570,8 @@ export function growGearSlots(state: GameState, to: TierId): void {
   state.slotGear = gear.slice(0, n);
   state.slotWand = wands.slice(0, n);
   const old = state.stations;
-  state.stations = stationsFromSlots(to, state.slots, state.slotGear, state.slotWand);
-  keepStale(old, state.stations); // FB2 A3
+  state.stations = stationsFromSlots(to, state.slots, state.slotGear, state.slotWand, state.slotPos);
+  keepStale(old, state.stations); // FB2 A3 (FB2 C10: growth.ts checks the kept spots once the tier is set)
 }
 
 // ---------------------------------------------------------------------------------------------- G4: pods and price multipliers

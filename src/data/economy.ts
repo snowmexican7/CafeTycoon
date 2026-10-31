@@ -42,6 +42,8 @@ export const ECONOMY = {
     freshSeconds: 8,
     quietLeaveChance: 0.5,
   },
+  /** FB2 C10 (Gear runs): each morning the doors stay shut this long first, so the crew can move stations (src/sim/rearrange.ts). */
+  preOpenSeconds: 15,
   /** Doors lock at 0:00; whoever is inside can still be served for up to this long. */
   closingGraceSeconds: 30,
   /** FB2 A4 (Gear runs): the last seconds of the day are "closing soon" (put the milk and the bar away). */
