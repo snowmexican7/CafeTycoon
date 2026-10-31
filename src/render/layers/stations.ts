@@ -1,6 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { CheckoutId, ItemKind, StationKind, Vec2 } from '../../sim/types';
 import { MAT, PALETTE, PROGRESS_BAR_RISE, STATION_LABELS, sx, sy } from '../theme';
+import type { BarSkin } from '../tierLook';
 import { CHROME, dashedEllipse, drawItem, halfDome, label, shadow, sheen, vertical } from './draw';
 
 const RED = vertical(0xf07466, 0xc8443a);
@@ -12,7 +13,59 @@ export function stationDepth(pos: Vec2): number {
   return sy(pos.y) + 30;
 }
 
+/** ui-3.4.0: the back bar's skin for the shop size (set by the scene before it rebuilds the station art). */
+let skin: BarSkin = 'cabinet';
+export function setBarSkin(next: BarSkin): void {
+  skin = next;
+}
+
+/** A folding table with a gingham cloth (the stand): pale top, cloth skirt with a scalloped hem, thin steel legs. */
+function foldingTable(g: Graphics, cx: number, cy: number, w: number, topY: number, topH: number): void {
+  const x = cx - w / 2;
+  shadow(g, cx, cy + 30, w / 2 + 6, 7, 0.18);
+  // splayed legs under the cloth
+  for (const side of [-1, 1]) {
+    const lx = cx + side * (w / 2 - 6);
+    g.moveTo(lx, cy + 14).lineTo(lx + side * 3, cy + 30).stroke({ width: 3, color: 0x8d989f, cap: 'round' });
+  }
+  g.moveTo(cx - w / 2 + 8, cy + 24).lineTo(cx + w / 2 - 8, cy + 24).stroke({ width: 2, color: 0x9aa7ae });
+  // the cloth: red and cream gingham, hanging over the front
+  const top = topY + topH - 4;
+  const bottom = cy + 18;
+  g.rect(x - 2, top, w + 4, bottom - top).fill(0xfbefe0);
+  for (let i = 0; x - 2 + i * 8 < x + w + 2; i += 2) g.rect(x - 2 + i * 8, top, 8, bottom - top).fill({ color: 0xe0564a, alpha: 0.55 });
+  for (let yy = top + 4; yy < bottom; yy += 12) g.rect(x - 2, yy, w + 4, 6).fill({ color: 0xe0564a, alpha: 0.35 });
+  for (let sx0 = x - 2; sx0 < x + w + 2; sx0 += 10) g.moveTo(sx0, bottom).arc(sx0 + 5, bottom, 5, Math.PI, 0, true).lineTo(sx0, bottom).fill(0xfbefe0);
+  g.rect(x - 2, top, w + 4, 3).fill({ color: 0x000000, alpha: 0.08 });
+  // the table top
+  g.roundRect(x - 3, topY, w + 6, topH, 6).fill(0xfaf6ee);
+  g.roundRect(x - 3, topY + topH - 6, w + 6, 5, 2.5).fill(0xe6ddd0);
+}
+
+/** A painted coffee-cart panel (the cart): teal with a cream inset, gold trim, butcher-block top, little wheels. */
+function cartPanel(g: Graphics, cx: number, cy: number, w: number, topY: number, topH: number, wheels: boolean): void {
+  const x = cx - w / 2;
+  shadow(g, cx, cy + 32, w / 2 + 6, 7);
+  g.roundRect(x, cy - 6, w, 32, 6).fill(0x2f8c70);
+  g.roundRect(x + 5, cy, w - 10, 20, 4).fill(0x46a888).stroke({ width: 2, color: 0xfff4e2, alpha: 0.85 });
+  g.rect(x, cy - 6, w, 3).fill(PALETTE.honey);
+  g.circle(cx, cy + 10, 2.4).fill(PALETTE.honey);
+  if (wheels) {
+    for (const side of [-1, 1]) {
+      const wx = cx + side * (w / 2 - 10);
+      g.circle(wx, cy + 28, 7).fill(0x3a2418);
+      g.circle(wx, cy + 28, 3.4).fill(0xd6b25c);
+      g.circle(wx, cy + 28, 1.2).fill(0x3a2418);
+    }
+  }
+  g.roundRect(x - 3, topY, w + 6, topH, 6).fill(0xdcb07d);
+  for (let i = 1; i < 5; i++) g.rect(x - 3 + ((w + 6) * i) / 5, topY + 2, 1.5, topH - 6).fill({ color: 0xb98654, alpha: 0.45 });
+  g.roundRect(x - 3, topY + topH - 6, w + 6, 5, 2.5).fill(0xb98654);
+}
+
 function cabinet(g: Graphics, cx: number, cy: number, w = 60): void {
+  if (skin === 'table') return foldingTable(g, cx, cy, w, cy - 30, 28);
+  if (skin === 'cart') return cartPanel(g, cx, cy, w, cy - 30, 28, true);
   const x = cx - w / 2;
   shadow(g, cx, cy + 30, w / 2 + 8, 8);
   g.roundRect(x, cy - 6, w, 36, 6).fill(MAT.cab);
@@ -253,6 +306,8 @@ function buildSink(pos: Vec2): Container {
 /** The shared counter cabinet (wood front, pale top) every counter spot stands on. */
 function counterBody(g: Graphics, cx: number, cy: number, top = 0xf3efe9): void {
   const w = 58;
+  if (skin === 'table') return foldingTable(g, cx, cy + 2, w, cy - 34, 30);
+  if (skin === 'cart') return cartPanel(g, cx, cy + 2, w, cy - 34, 30, false);
   const x = cx - w / 2;
   shadow(g, cx, cy + 32, 38, 9);
   g.roundRect(x, cy - 8, w, 40, 7).fill(0xa7653c);

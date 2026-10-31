@@ -1,0 +1,82 @@
+/* ui-3.4.0: grow transition, "What you gained" card, night nudge chip, new-player tip bubble, price "rough guess". */
+
+#grow-fx { position: fixed; inset: 0; z-index: 35; pointer-events: auto; display: grid; place-items: center; font-family: var(--font-body); }
+#grow-fx[hidden] { display: none; }
+#grow-fx .gf-wipe { position: absolute; inset: 0; background: repeating-linear-gradient(115deg, var(--a) 0 56px, var(--b) 56px 112px);
+  animation: gf-wipe 1600ms cubic-bezier(.7, 0, .3, 1) forwards; }
+@keyframes gf-wipe {
+  0% { clip-path: inset(0 100% 0 0); }
+  35%, 65% { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(0 0 0 100%); }
+}
+#grow-fx .gf-banner { position: relative; z-index: 2; background: var(--espresso); color: var(--crema); padding: 18px 44px 22px; border-radius: 22px;
+  box-shadow: 0 6px 0 #2a1a10, 0 24px 60px rgba(0, 0, 0, .4); text-align: center; animation: gf-pop 1600ms ease-out forwards; }
+#grow-fx .gf-banner small { display: block; font: 700 18px var(--font-display); letter-spacing: .16em; text-transform: uppercase; color: var(--honey); }
+#grow-fx .gf-banner b { display: block; font: 700 clamp(36px, 4vw, 54px)/1.1 var(--font-display); }
+@keyframes gf-pop { 0% { transform: scale(.4); opacity: 0; } 25% { transform: scale(1.06); opacity: 1; } 35%, 80% { transform: scale(1); opacity: 1; } 100% { transform: scale(.96); opacity: 0; } }
+#grow-fx .gf-confetti { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 3; }
+#grow-fx .gf-confetti i { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; transform: rotate(var(--r));
+  animation: gf-fall var(--t) var(--d) ease-in forwards; opacity: 0; }
+@keyframes gf-fall { 0% { opacity: 1; transform: translateY(0) rotate(var(--r)); } 100% { opacity: .9; transform: translateY(105vh) rotate(calc(var(--r) + 540deg)); } }
+#grow-fx .gc-shade { position: absolute; inset: 0; background: rgba(28, 18, 12, .55); animation: gc-fade .25s ease-out; }
+@keyframes gc-fade { from { opacity: 0; } }
+
+#grow-fx .gc-card { position: relative; z-index: 2; width: min(560px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto;
+  background: var(--crema); color: var(--ink); border-radius: 24px; box-shadow: var(--sh-2); padding: 22px 30px 24px; animation: gc-in .35s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes gc-in { from { transform: translateY(24px) scale(.94); opacity: 0; } }
+#grow-fx .gc-x { all: unset; cursor: pointer; position: absolute; top: 12px; right: 14px; width: 40px; height: 40px; display: grid; place-items: center;
+  font: 700 28px/1 var(--font-display); color: var(--ink-soft); border-radius: 50%; }
+#grow-fx .gc-x:hover, #grow-fx .gc-x:focus-visible { background: #0000000f; }
+#grow-fx .gc-hd { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: 40px; }
+#grow-fx .gc-ic.from { opacity: .55; font-size: 32px; } #grow-fx .gc-arrow { font-size: 24px; color: var(--caramel); } #grow-fx .gc-ic.to { font-size: 52px; }
+#grow-fx h2 { margin: 4px 0 0; text-align: center; font: 700 30px var(--font-display); }
+#grow-fx .gc-sub { margin: 2px 0 14px; text-align: center; font: 600 17px var(--font-display); color: var(--ink-soft); }
+#grow-fx .gc-rows { width: 100%; border-collapse: separate; border-spacing: 0 6px; font: 600 18px var(--font-display); }
+#grow-fx .gc-rows th { text-align: left; font-weight: 600; color: var(--ink-soft); padding: 8px 12px; background: #fff; border-radius: 12px 0 0 12px; }
+#grow-fx .gc-rows td { padding: 8px 6px; background: #fff; white-space: nowrap; }
+#grow-fx .gc-rows td.now { border-radius: 0 12px 12px 0; padding-right: 14px; font-weight: 700; }
+#grow-fx .gc-rows td.was { color: #9a7d5c; } #grow-fx .gc-rows td.arr { color: #b89c7c; }
+#grow-fx .gc-rows tr.good td.now { color: var(--good); } #grow-fx .gc-rows tr.bad td.now { color: var(--bad); }
+#grow-fx .gc-rows .up, #grow-fx .gc-rows .dn { font-size: 12px; vertical-align: 2px; }
+#grow-fx .gc-sec { margin: 14px 0 4px; font: 700 13px var(--font-display); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+#grow-fx .gc-crowd { margin: 0; display: grid; gap: 4px; font: 600 16px/1.3 var(--font-body); }
+#grow-fx .gc-crowd .was { color: #9a7d5c; text-decoration: line-through; text-decoration-color: #9a7d5c80; }
+#grow-fx .gc-crowd .now { color: var(--ink); font-weight: 700; }
+#grow-fx .gc-unlocks { margin: 0 0 16px; padding: 0; list-style: none; display: grid; gap: 4px; font: 600 17px/1.3 var(--font-body); }
+#grow-fx .gc-card > .btn { margin-top: 16px; }
+
+/* Night nudge chip, beside the cash pill. */
+#night .nudge-chip { all: unset; box-sizing: border-box; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px 0 10px;
+  border-radius: 14px; background: var(--honey); color: #4a2a0c; font: 600 var(--fs-m) var(--font-display); white-space: nowrap;
+  box-shadow: 0 3px 0 #b8862a, 0 8px 18px rgba(246, 195, 91, .35); animation: nudge-glow 2.4s ease-in-out infinite; }
+#night .nudge-chip b { background: #fff8e8; border-radius: 10px; padding: 3px 10px; font-weight: 700; }
+#night .nudge-chip .nc-ic { font-size: 24px; }
+#night .nudge-chip:hover, #night .nudge-chip:focus-visible { filter: brightness(1.05); transform: translateY(-1px); }
+@keyframes nudge-glow { 50% { box-shadow: 0 3px 0 #b8862a, 0 0 0 6px rgba(246, 195, 91, .35); } }
+@media (prefers-reduced-motion: reduce) { #night .nudge-chip { animation: none; } #grow-fx .gf-wipe, #grow-fx .gf-banner { animation-duration: 1ms; } #grow-fx .gf-confetti { display: none; } }
+
+/* New-player tip bubble. Day: bottom of the right-hand column, over the morning note (never the floor, the
+   tickets or the pantry). Night: bottom-left of the night panel, above the crew chip. */
+.hint-bubble { position: fixed; z-index: 25; width: 250px; padding: 10px 14px 10px; background: #fffaf0; color: var(--ink);
+  border-radius: 16px; box-shadow: var(--sh-2); font-family: var(--font-body); animation: hb-in .3s cubic-bezier(.2, 1.4, .4, 1); border: 2px solid var(--honey); }
+.hint-bubble[hidden] { display: none; }
+.hint-bubble.day { right: 12px; bottom: 52px; }
+.hint-bubble.night { left: 18px; bottom: 92px; width: 280px; }
+@keyframes hb-in { from { transform: translateY(10px); opacity: 0; } }
+.hint-bubble .hb-ic { float: left; font-size: 22px; line-height: 1; margin: 0 8px 0 0; }
+.hint-bubble b { display: block; font: 700 16px/1.25 var(--font-display); }
+.hint-bubble p { clear: left; margin: 4px 0 8px; font: 600 14px/1.3 var(--font-body); color: var(--ink-soft); }
+.hint-bubble .hb-btns { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.hint-bubble .btn.mini { font-size: 14px; padding: 3px 12px; min-height: 30px; }
+.hint-bubble .hb-link { all: unset; cursor: pointer; font: 700 12px var(--font-body); color: #8a6a4a; text-decoration: underline; text-underline-offset: 2px; }
+.hint-bubble .hb-link:hover, .hint-bubble .hb-link:focus-visible { color: var(--ink); }
+
+/* Pause: tips row. */
+.tips-fld .lbl output { margin-left: 8px; font-weight: 600; color: var(--ink-soft); }
+.tips-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.tips-btns .btn.mini { font-size: 14px; padding: 6px 12px; min-height: 34px; }
+
+/* Price forecast: a rough guess, not a promise. */
+#night .mn-guess { font-style: normal; font-weight: 700; color: #9a5b10; background: #fff3d6; border-radius: 8px; padding: 1px 8px; }
+#night .mn-more { display: block; font: 600 var(--fs-xs) var(--font-body); color: #9a7d5c; font-style: italic; }
+@media (max-width: 1360px) { .hint-bubble.day { width: 216px; right: 10px; padding: 9px 11px; } .hint-bubble .hb-btns { gap: 8px; } }

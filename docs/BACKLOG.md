@@ -2053,6 +2053,23 @@ Open (sim lane):
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
 
+## ui-3.4.0 (UI lane): tier looks, grow transition, nudge, tips
+
+- [x] **Tier looks:** `render/tierLook.ts` (`tierLook`, `isOutdoor`, `barSkin`, `leaseLines`) and
+  `render/layers/outdoor.ts` (`buildOutdoor(look)` → back / props / over). Stand = sidewalk (umbrella, lamppost,
+  pots, A-frame, kerb + road); cart = park plaza (awning, string lights, bench, trees, cobbles). Café unchanged.
+  `layers/stations.ts` `setBarSkin` draws the counters as a folding table (stand) or cart panels (cart). Layout and
+  station positions untouched; the menu board moved into its own container (`wall.menuBoard`).
+- [x] **Grow transition:** `ui/growModel.ts` `detectGrow(prev, state)` (same seed, tier index up) +
+  `gainedDiff(from, to, gear)`; `ui/growFx.ts` wipe + banner + confetti (1.6 s), then the "What you gained" card.
+- [x] **Night nudge:** `growNudge(state)` (night, next tier affordable, not a Gear run's day 1) →
+  `GrowthVM.nudge` → chip `[data-nudge]` jumping to Extras ▸ Shopfront (Spend view `grow` renamed "🏪 Shopfront").
+- [x] **Tips:** `ui/hintsModel.ts` (pure: once each, snooze 15 min, off, reset; triggers) + `ui/hints.ts` bubble.
+  Stored per browser under localStorage `cafetycoon.tips` (UI-owned). Pause menu: Snooze / Turn off / on / Show again.
+- [x] **Price forecast** labelled "Rough guess … A strategist can tell you more" (no strategist hire built).
+- Tests: `src/ui/uiTiers.test.ts`.
+- [ ] Later: a strategist hire that gives a better forecast (Kennedy's idea; not built).
+
 ## ui-3.3.5 (UI lane): no "tap" in cold brew wording
 
 - [x] UI strings: `live.ts` `DRINK_STEPS` ('Tap' → 'Pour cold brew'; iced latte 'Ice + milk') and

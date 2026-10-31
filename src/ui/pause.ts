@@ -15,6 +15,16 @@ export interface PauseInfo {
   audio: AudioSettings;
   /** FB1 WP2: recipe steps on order tickets (this browser only). */
   recipeHints?: RecipeHints;
+  /** ui-3.4.0: new-player tips (this browser only). */
+  tips?: { status: string; off: boolean; snoozed: boolean };
+}
+
+export type TipsAction = 'snooze' | 'off' | 'on' | 'reset';
+
+/** ui-3.4.0: the tips row: snooze them, switch them off (or back on), or show them all again. */
+export function tipsField(t: NonNullable<PauseInfo['tips']>): string {
+  return `<div class="fld tips-fld"><span class="lbl">New-player tips <em>(just you)</em><output>${esc(t.status)}</output></span>
+    <div class="tips-btns">${t.off ? '<button class="btn mini" data-action="tips-on">Turn tips on</button>' : `<button class="btn mini" data-action="tips-snooze" ${t.snoozed ? 'disabled' : ''}>Snooze tips</button><button class="btn mini ghost" data-action="tips-off">Turn tips off</button>`}<button class="btn mini ghost" data-action="tips-reset">Show them again</button></div></div>`;
 }
 
 type Level = 'master' | 'music' | 'sfx';
@@ -49,6 +59,7 @@ export function createPause(
     onQuit(): void;
     onAudio?(patch: Partial<AudioSettings>): void;
     onRecipeHints?(mode: RecipeHints): void;
+    onTips?(action: TipsAction): void;
   },
   roadmap?: RoadmapDrawer,
 ): { render(current: PauseInfo): void; setAudio(a: AudioSettings): void; toggle(): void; show(): void; hide(): void } {
@@ -56,6 +67,7 @@ export function createPause(
     if (action === 'resume') hide(container);
     else if (action === 'quit') handlers.onQuit();
     else if (action === 'roadmap') roadmap?.open({ readOnly: true });
+    else if (action.startsWith('tips-')) handlers.onTips?.(action.slice(5) as TipsAction);
   });
   container.addEventListener('change', (ev) => {
     const el = ev.target as HTMLInputElement | HTMLSelectElement;
@@ -104,6 +116,7 @@ export function createPause(
           <div class="fld"><span class="lbl">Pace</span>${paceSeg(current.pace, !current.isHost)}</div>
           <label class="fld"><span class="lbl">Day length <em>(from tomorrow)</em></span><select class="inp" name="dayLength" ${dis}>${dayOptions(current.dayLengthSec)}</select></label>
           ${recipeHintsField(current.recipeHints ?? 'click')}
+          ${current.tips ? tipsField(current.tips) : ''}
           ${soundSection(current.audio)}
           <div class="menu-btns">
             <button class="btn primary big block" data-action="resume">Back to the café</button>

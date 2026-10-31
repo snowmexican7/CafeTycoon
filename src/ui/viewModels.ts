@@ -7,6 +7,7 @@ import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '.
 import { layoutFor } from '../data/layout';
 import { stationMenuNote, stationsVM, type StationsVM } from './stationsVM';
 import { tipsVM, type TipVM } from './tipsVM';
+import { growNudge, type GrowNudge } from './growModel';
 import { nightBrief, type NightAlert, type NightFix } from '../sim/brief';
 import { JUDGES, PITCH } from '../sim/pitch';
 import { copyIsLive, daysToCopy, RIVAL, rivalAskFactor, rivalMenu, sigPrice } from '../sim/rival';
@@ -501,6 +502,8 @@ export interface GrowthVM {
   milestone?: { name: string; icon: string; by: string; line: string; width: number; queue: number };
   /** Known drinks this shop has no station for yet (the menu tab's note). */
   waiting?: string;
+  /** ui-3.4.0: the night chip "You can afford a cart!" (growNudge). */
+  nudge?: GrowNudge;
 }
 
 const STATION_ICON: Record<string, string> = { grinder: '⚙️ grinder', espresso: '☕ espresso', steamer: '🥛 steamer', coldBrewTap: '🧊 cold brew' };
@@ -532,6 +535,7 @@ export function growthVM(state: GameState): GrowthVM {
     }),
     current: { id: now, name: TIERS[now].name, icon: TIERS[now].icon },
     ...waitingNote(state),
+    ...((n) => (n ? { nudge: n } : {}))(growNudge(state)),
     ...(g ? { milestone: { name: TIERS[g.tier].name, icon: TIERS[g.tier].icon, by: g.by, line: TIERS[g.tier].milestone, width: layoutFor(g.tier).width, queue: TIERS[g.tier].queue } } : {}),
   };
 }
