@@ -404,6 +404,13 @@ function coldBrewsAhead(state: GameState): number {
 const strayGrounds = (st: Station): boolean => st.kind !== 'grinder' && st.output === 'grounds';
 
 /**
+ * FB2 balance (from B6, Gear): grounds left in a grinder whose chain was dropped (its customer was served by someone
+ * else's cup). They count as a shot on its way (`coveragePool`), so once they have sat as long as any orphan they are
+ * collected (and binned, or pulled), or the order they seem to cover would never be claimed.
+ */
+const leftGrounds = (state: GameState, st: Station): boolean => state.gear === true && st.kind === 'grinder' && st.output === 'grounds';
+
+/**
  * A drink left sitting in a machine, or stray grounds, that no other bot is already on its way to take;
  * nearest first.
  */
@@ -431,7 +438,7 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
   const candidates = state.stations
     // G4d: a pot's cups wait in the pot for the orders that claim them (pouring it out would only fill the pass).
     // G9: a drink on an out-of-reach twin is for people only (a bot would pick it, find no node, and loop).
-    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st)) && !(hasPot(st) && st.output === 'drip') && reachable(state, st) && !takenBy(st) && !personAt(st) && sat(st))
+    .filter((st) => isRecipeKind(st.kind) && (isDrink(st.output) || strayGrounds(st) || leftGrounds(state, st)) && !(hasPot(st) && st.output === 'drip') && reachable(state, st) && !takenBy(st) && !personAt(st) && sat(st))
     .map((st) => ({ st, d: dist(st.pos, self.pos) }))
     .sort((a, b) => a.d - b.d || a.st.pos.y - b.st.pos.y || a.st.pos.x - b.st.pos.x);
   return candidates[0]?.st ?? null;
@@ -902,6 +909,20 @@ function execute(p: Player): void {
   pop(p.bot!);
 }
 
+/**
+ * FB2 balance (from B6, Gear): the claim went (another cup reached that customer first, or they left), but someone else
+ * still needs the same drink and nobody covers it: the bot carries on for them instead of dropping its chain mid-way (a
+ * shot left in the machine blocks it for everyone). Keeps the plan; true when it found one.
+ */
+function reclaim(state: GameState, p: Player): boolean {
+  const b = p.bot!;
+  if (state.gear !== true || b.claimDrink === null) return false;
+  const next = uncoveredOrders(state, p).find((o) => o.drink === b.claimDrink);
+  if (!next) return false;
+  b.claim = next.id;
+  return true;
+}
+
 function claimLost(state: GameState, b: BotState): boolean {
   const c = state.customers.find((x) => x.id === b.claim);
   return c === undefined || c.drink !== b.claimDrink;
@@ -1195,11 +1216,15 @@ function yieldWay(state: GameState, b: BotState, maxRank: number): void {
 /**
  * A path to `node`, around spills when possible; after a yield, also around the nodes other players
  * (and the rogue) stand on. Falls back to fewer avoided tiles, then the plain path.
+ * FB2 balance (Gear): not around a bot that is walking. Two bots meeting head-on each re-planned around the other's
+ * tile, chose the same spare row, and swapped rows in step for the rest of the day; a walking bot's tile is about to
+ * change anyway, and the yield (random length) breaks the tie.
  */
 function planPath(state: GameState, p: Player, node: Vec2): Vec2[] | null {
   const spills = spillTiles(state);
+  const walking = (o: Player): boolean => state.gear === true && !!o.bot && (o.moveDir.x !== 0 || o.moveDir.y !== 0);
   const people = hasYielded(p.bot!)
-    ? [...state.players.filter((o) => o !== p && o.connected).map((o) => nodeOf(state, o.pos)), ...rogueTiles(state)]
+    ? [...state.players.filter((o) => o !== p && o.connected && !walking(o)).map((o) => nodeOf(state, o.pos)), ...rogueTiles(state)]
     : [];
   for (const avoid of [[...spills, ...people], spills]) {
     if (avoid.length === 0) continue;
@@ -1275,7 +1300,7 @@ function walkToward(state: GameState, p: Player, node: Vec2, maxRank: number): v
 function stepBot(state: GameState, p: Player): void {
   const b = p.bot!;
   p.moveDir = { x: 0, y: 0 };
-  if (b.claim !== null && claimLost(state, b)) {
+  if (b.claim !== null && claimLost(state, b) && !reclaim(state, p)) {
     b.claim = null;
     b.claimDrink = null;
     setPlan(b, dropPlan(state, p)); // Review Focus 1
