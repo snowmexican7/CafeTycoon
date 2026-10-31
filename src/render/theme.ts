@@ -72,7 +72,7 @@ export const PLAYER_COLORS = [0xe0564a, 0x4c8fd6, 0x4fae7b, 0x8a6bbf] as const;
 export const STATION_LABELS: Record<StationKind, string> = {
   grinder: 'GRINDER',
   espresso: 'ESPRESSO',
-  steamer: 'STEAMER',
+  steamer: 'STEAM WAND',
   coldBrewTap: 'COLD BREW',
   drip: 'DRIP',
   trash: 'TRASH',

@@ -302,6 +302,12 @@ export class Scene {
       // said walking away from the empty condiment bar
       const bar = layoutFor(state.tier).condiments;
       this.fx.spawn(`“${b.text}”`, sx(bar.x), sy(bar.y) - 130, 0xf0a63a, 16);
+    } else if (b.kind === 'bumpSay') {
+      // ui-3.5.1: a bumped customer's speech bubble, over their head (or over the front of the queue)
+      const q = layoutFor(state.tier).queueSlots[0];
+      const x = sx(b.x ?? q.x);
+      const y = sy(b.y ?? q.y) - 96;
+      this.fx.say(b.text, Math.max(110, Math.min(SCENE_WIDTH - 110, x)), y);
     } else if (b.kind === 'note') {
       // 3.3.3 (FB2 A3): sink, pot and leak lines rise over the fixture they're about
       const st = b.at ? state.stations.find((s) => s.id === b.at) : undefined;

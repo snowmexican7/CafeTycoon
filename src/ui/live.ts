@@ -1,9 +1,9 @@
 import { seasonNow } from '../sim/season';
 import { money } from './viewModels';
-import { recipeAt, recipeFor, stocked } from '../sim/stations';
+import { emptyHandsWanted, recipeAt, recipeFor, stocked } from '../sim/stations';
 import { autoMilk, closingChecklist, closingSoon, fridgeGear, isFridge, isMilkStation } from '../sim/fridge';
 import { FRIDGES } from '../data/fridges';
-import { TILL, tillNext } from '../sim/till';
+import { TILL, ringProgress, selfOrder, tillNext } from '../sim/till';
 import { passSlots, pickupTarget, spotOf } from '../sim/pickup';
 import { CONDIMENTS, canTakeBox } from '../sim/condiments';
 import { CONDIMENTS_ID } from '../data/layout';
@@ -39,7 +39,7 @@ export const ITEM_LABEL: Record<ItemKind, string> = {
 export const STATION_NAME: Record<StationKind, string> = {
   grinder: 'Grinder',
   espresso: 'Espresso machine',
-  steamer: 'Steamer',
+  steamer: 'Steam wand',
   coldBrewTap: 'Cold brew',
   drip: 'Drip machine',
   counter: 'Pick-up counter',
@@ -85,6 +85,10 @@ export interface OrderTicket {
   tag?: { text: string; tone: 'regular' | 'impatient' | 'group' | 'influencer' | 'upset' };
   /** Batch/pickup (Gear): rung up at the till, now waiting at the pickup area. */
   pickup?: true;
+  /** ui-3.5.1 (from B6 `Customer.items`): every drink on a multi-drink ticket, in order, with the ones already taken ticked. */
+  items?: { drink: DrinkId; done: boolean }[];
+  /** ui-3.5.1 (from B6 `Customer.order`): a combo or an office run (absent for a group or a one-drink order). */
+  order?: 'combo' | 'office';
 }
 
 /** The little tag on an order ticket for the customer kinds worth planning around. */
@@ -250,6 +254,13 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
     return { go: true, title: 'Set on the pickup counter', detail: taker ? `${where} · a customer is waiting for it` : `${where} · nobody rung up for it yet` };
   }
   if (spot === 'till') {
+    // ui-3.5.1 (R3 item 5): a ring-up takes a moment; the Squarely screen lets customers order by themselves
+    const ring = ringProgress(state);
+    if (ring !== null && state.ringUp?.by !== '') {
+      const mine = state.ringUp?.by === player.id;
+      return { go: false, title: `Ringing up… ${Math.round(ring * 100)}%`, detail: mine ? `${where} · stay here until it's done` : `${where} · someone is ringing up` };
+    }
+    if (selfOrder(state)) return { go: false, title: 'Customers order on the screen', detail: `${where} · nothing to do here` };
     const next = tillNext(state);
     if (!next) return { go: false, title: 'Nobody to ring up', detail: where };
     const ready = state.pass.some((i) => i.item === next.drink);
@@ -288,14 +299,7 @@ function fridgeHint(state: GameState, player: GameState['players'][number]): Han
 /** A carton holds this many (sim/fridge.ts FRIDGE.carton; display only). */
 const FRIDGE_CARTON = 8;
 
-/** ui-3.4.1 (mirrors sim/stations.ts emptyHandsWanted): an empty-hands press here would make a drink someone wants. */
-function emptyHandsWanted(state: GameState, st: Station): boolean {
-  const r = recipeAt(state, st, null);
-  if (!r || !stocked(state, r) || (tapCupRecipe(r) && st.batchLeft !== undefined && st.batchLeft <= 0)) return false;
-  return state.customers.some((c) => c.drink === r.gives || (c.extra?.includes(r.gives as never) ?? false));
-}
-
-/** ui-3.4.1 (FB2 A4): the milk or the condiment bar in hand goes back in the fridge (or the milk out by the steamer). */
+/** ui-3.4.1 (FB2 A4): the milk or the condiment bar in hand goes back in the fridge (or the milk out by the steam wand). */
 function carryHint(state: GameState, player: GameState['players'][number], station: Station | null): HandHint {
   const n = player.carry ?? 0;
   const soon = closingSoon(state);
@@ -308,7 +312,7 @@ function carryHint(state: GameState, player: GameState['players'][number], stati
     }
     return soon
       ? { go: false, title: 'Put the milk in the fridge', detail: 'Closing soon: walk it over, or R puts it back' }
-      : { go: false, title: 'Carry the milk to the steamer', detail: 'R puts it back in the fridge' };
+      : { go: false, title: 'Carry the milk to the steam wand', detail: 'R puts it back in the fridge' };
   }
   if (isFridge(station)) return { go: true, title: 'Put the condiment bar away', detail: `Fridge · ${n} servings kept for tomorrow` };
   if (station?.id === CONDIMENTS_ID) return { go: true, title: 'Set the bar back out', detail: `Condiment bar · ${n} servings` };
@@ -470,7 +474,9 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     open: state.phase === 'day',
     orders: state.customers.map((c) => {
       const tag = ticketTag(c, snobs);
-      return { id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0, ...(tag ? { tag } : {}), ...(c.stage === 'pickup' ? { pickup: true as const } : {}) };
+      return { id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0, ...(tag ? { tag } : {}), ...(c.stage === 'pickup' ? { pickup: true as const } : {}),
+        ...(c.items && c.items.length > 1 ? { items: c.items.map((it) => ({ drink: it.drink, done: it.done })) } : {}),
+        ...(c.order ? { order: c.order } : {}) };
     }),
     crew: crewOf(state, me),
     holding: player?.holding ?? null,
@@ -487,7 +493,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
 }
 
 /** Keys for the HUD's independently rebuilt blocks (everything except per-tick values). */
-export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}${o.pickup ? '^' : ''}`).join(',');
+export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}${o.pickup ? '^' : ''}${o.items ? `[${o.items.map((it) => (it.done ? '+' : '-')).join('')}${o.order ?? ''}]` : ''}`).join(',');
 export const crewKey = (l: HudLive) => l.crew.map((c) => `${c.id}:${c.name}:${c.connected ? 1 : 0}:${c.me ? 1 : 0}:${c.bot ?? ''}`).join(',');
 export const handKey = (l: HudLive) => `${l.holding}|${l.tool?.label ?? ''}|${l.heldCold ? 'c' : ''}|${l.meName}|${l.hint.go}|${l.hint.title}|${l.hint.detail}`;
 

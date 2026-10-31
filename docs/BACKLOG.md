@@ -2053,6 +2053,52 @@ Open (sim lane):
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
 
+## ui-3.5.1 (UI lane): Round 4 night, tickets, dev mode, bumps, steam wands
+
+Released as `ui-3.5.1` / `v3.5.1` (2026-10-30). UI files only; no sim, net, host, storage or data edits (and no
+edits to the sim's tests). The character creator follows separately as `ui-3.5.2`.
+
+**Built (names as built)**
+- Night opens on Restock every night: `src/ui/night.ts` resets `ui.tab = 'tonight'` (and closes any drawer) when
+  the day changes. Tab order: ① Restock, ② Menu, ③ Gear shop, ④ Extras; the first night is ① Restock, ② Pick gear,
+  ③ Menu, ④ Extras, with a banner on Restock pointing to ② Pick gear.
+- Condiment box card on the Restock tab (`onStockCard`), sending the existing `{ kind: 'condimentBox' }`; off with
+  "The corner is full" or "Need $N". The brief's condiments alert button reads "Buy a box · $6" /
+  "Buy N boxes · $M". Not shown in classic runs.
+- Stacked tickets: `OrderTicket.items` / `OrderTicket.order` (`src/ui/live.ts`, from `Customer.items` /
+  `Customer.order`), `stackCount`, `STACK_NAME`, `.stack`, `.stk-badge` (`src/ui/tickets.ts`, `styles/hud.css`).
+- Dev mode: `src/ui/dev.ts` (`isDevMode`, `devHtml`, `pauseInput`, `createDevPanel`, `DEV_STUBS`),
+  `styles/dev.css`; `src/main.ts` passes `dev: true` into `CreateRunOptions` with `?dev=1` and feeds the panel
+  `state.dev` / `state.devPaused`. Pause sends `{ kind: 'devPause', playerId, paused }`.
+- Bumps: `src/render/crewModel.ts` turns `customer.bump` into a `bumpSay` burst (`BUMP_LINES`, `bumpLine`), drawn
+  by `Effects.say` (`render/layers/fx.ts`). `chaosModel` gives `walkout { reason: 'bumped' }` its own lines
+  (`BUMPED_LINES`) at the customer's spot instead of "Sold out?!".
+- Steam wands (FB2 C9): `GearVM.wands` (from `wandCards`), `GearVM.wandNote`, `GearSlotVM.wand`,
+  `GearTierVM.wandBuys`, `WAND_NAME` (`src/ui/gearVM.ts`); `wandPanel` and the "+ little wand · $N" buy buttons in
+  `night.ts`; `onWand` sends `{ kind: 'wand', playerId, station, wand }` and `onGear` passes `wand`
+  (`nightInputs.ts`). A clogged wand (twin `jammed`) adds a "Steam wand: clogged! (E)" line to `hudGearVM`. Station
+  labels say "Steam wand" / "STEAM WAND" where they said "Steamer".
+
+**Declutter (nothing removed)**
+- Stock and condiment warnings sit on their own jar (`jarLine`) instead of in "Heads up"; the "Heads up" heading
+  is left out when there are no alerts.
+- Crew roles open from a "🎭 Crew roles ▸" chip in the More row (drawer `crew`); hired staff, Scout and regulars
+  sit in the same row.
+- The street notebook and drinks to learn open from one "📓 Street notebook ▸" chip on the Gear shop
+  (`notebookBody`); the 👥 crowd line stays next to it.
+- "In the till" is folded into the day card.
+
+**Candidates to move to a mid-day moment** (needs Kennedy's call; see Claude's "f. Night clutter proposal" in
+"Round 4 (sim lane, Claude)")
+- Restock (Claude's easiest win: the `restock` input during the day, with a day-screen Restock button).
+- Crew roles, hiring and letting staff go, Scout, ads, the pitch, the street notebook.
+
+**Not done yet (UI)**
+- Office run phone card and countdown (`office.call`), receipt line from `DayStats.office` / `officeExtra`.
+- `pickupModel.customerSpots` still has its own copy (a sim test keeps them in step); switch to the sim's
+  `customerSpots(state)` next.
+- Optional switches to `grow.affordable` / `growDiff` (both agree with the UI's numbers today).
+
 ## ui-3.4.1 (UI lane): FB2 A4 fridge
 
 UI side of A4 (sim `fb2-a4`, protocol 44). No sim, net, host, storage or data changes; protocol unchanged.

@@ -9,6 +9,13 @@ interface Pop {
   life?: number;
 }
 
+/** ui-3.5.1: a speech bubble ("Hey, watch it!") that holds, then fades. */
+interface Say {
+  root: Container;
+  age: number;
+}
+const SAY_LIFE = 2.2;
+
 interface Toast {
   root: Container;
   age: number;
@@ -44,6 +51,7 @@ export class Effects {
   readonly root = new Container();
   private readonly pops: Pop[] = [];
   private readonly toasts: Toast[] = [];
+  private readonly says: Say[] = [];
   private readonly bitsG = new Graphics();
   private readonly bits: Bit[] = [];
   private bitsDrawn = false;
@@ -72,6 +80,24 @@ export class Effects {
     t.position.set(x, y);
     this.root.addChild(t);
     this.pops.push({ text: t, age: 0, ...(life ? { life } : {}) });
+  }
+
+  /** ui-3.5.1: a white speech bubble with a tail pointing down at (x, y), for a customer's line. */
+  say(text: string, x: number, y: number): void {
+    if (this.says.length >= MAX_TOASTS) this.says.shift()!.root.destroy({ children: true });
+    const root = new Container();
+    const txt = label(text, 15, PALETTE.espresso, '800');
+    const w = txt.width + 26;
+    const h = 32;
+    const bg = new Graphics();
+    bg.roundRect(-w / 2, -h - 10, w, h, 14).fill(0xffffff).stroke({ width: 3, color: PALETTE.espresso });
+    bg.poly([-8, -11.5, 8, -11.5, 0, 0]).fill(0xffffff).stroke({ width: 3, color: PALETTE.espresso });
+    bg.rect(-6.5, -14, 13, 4).fill(0xffffff);
+    txt.y = -10 - h / 2;
+    root.addChild(bg, txt);
+    root.position.set(x, y);
+    this.root.addChild(root);
+    this.says.push({ root, age: 0 });
   }
 
   /** A pill toast in the server's colour, stacked above (x, y). */
@@ -128,6 +154,16 @@ export class Effects {
       if (p.age >= life) {
         p.text.destroy();
         this.pops.splice(i, 1);
+      }
+    }
+    for (let i = this.says.length - 1; i >= 0; i--) {
+      const b = this.says[i];
+      b.age += dt;
+      b.root.scale.set(b.age < 0.12 ? 0.5 + (b.age / 0.12) * 0.6 : b.age < 0.2 ? 1.1 - ((b.age - 0.12) / 0.08) * 0.1 : 1);
+      b.root.alpha = b.age > SAY_LIFE - 0.4 ? Math.max(0, (SAY_LIFE - b.age) / 0.4) : 1;
+      if (b.age >= SAY_LIFE) {
+        b.root.destroy({ children: true });
+        this.says.splice(i, 1);
       }
     }
     for (let i = this.toasts.length - 1; i >= 0; i--) {

@@ -48,6 +48,15 @@ describe('Gear counter hints (3.3.1)', () => {
     expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Nobody to ring up' });
   });
 
+  it('ui-3.5.1: while a ring-up is under way the till says so', () => {
+    const s = gearDay();
+    s.customers = [cust(1, 'coldBrew')];
+    at(s, 'counter');
+    s.ringUp = { customer: 1, by: 'p1', startedAt: s.tick - 5, ticks: 10 };
+    expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Ringing up… 50%' });
+    expect(handHint(s, 'p1').detail).toMatch(/stay here/);
+  });
+
   it('a drink in hand at any counter spot is set on the pickup counter, never handed off', () => {
     const s = gearDay();
     s.customers = [cust(1, 'coldBrew', { stage: 'pickup', rungAt: 0 })];

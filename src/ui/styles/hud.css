@@ -312,3 +312,17 @@
 #hud .hud-checklist li.warn { color: var(--cherry); }
 #hud .hud-checklist small { display: block; margin-top: 6px; font: 700 13px var(--font-body); color: var(--mint-dk); }
 @media (max-width: 1440px) { #hud .hud-checklist { width: 220px; padding: 8px 12px 8px 10px; } #hud .hud-checklist li { font-size: 13px; } }
+
+/* ui-3.5.1 (Round 4): stacked multi-drink tickets (B6 combos, office runs, groups): back sheets fan out behind, a ×N badge, a cup strip. */
+#hud .ticket.stack-2 { box-shadow: 5px 5px 0 -1px #efe2cc, 5px 5px 0 1px #00000014, var(--sh-1); margin: 0 8px 6px 0; }
+#hud .ticket.stack-3 { box-shadow: 5px 5px 0 -1px #efe2cc, 5px 5px 0 1px #00000014, 10px 10px 0 -2px #e4d1b2, 10px 10px 0 0 #00000014, var(--sh-1); margin: 0 12px 10px 0; }
+#hud .ticket.stack.urgent { box-shadow: 0 0 0 3px var(--cherry), 6px 6px 0 1px #efe2cc, var(--sh-1); }
+#hud .ticket .stk-badge { position: absolute; top: -10px; right: -10px; min-width: 36px; height: 36px; padding: 0 8px; border-radius: 99px; background: var(--espresso, #3b2418); color: #fff;
+  font: 800 19px/36px var(--font-display); text-align: center; box-shadow: 0 0 0 3px var(--foam), var(--sh-1); z-index: 2; }
+#hud .ticket .stk-list { grid-column: 1 / span 3; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+#hud .ticket .stk-it { position: relative; width: 28px; height: 28px; border-radius: 8px; background: #f6ead7; display: grid; place-items: center; }
+#hud .ticket .stk-it.done { opacity: .45; }
+#hud .ticket .stk-it b { position: absolute; right: -4px; bottom: -4px; width: 16px; height: 16px; border-radius: 99px; background: var(--mint-dk, #2f8a5b); color: #fff; font: 800 11px/16px var(--font-body); text-align: center; }
+#hud .ticket .stk-nm { margin-left: 4px; font: 700 14px var(--font-body); color: var(--ink-soft); }
+#hud .ticket.stack { padding-right: 34px; }
+#hud .ticket .stk-it { width: 32px; height: 32px; }
