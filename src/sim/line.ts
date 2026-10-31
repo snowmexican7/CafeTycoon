@@ -4,7 +4,7 @@
  *  - Waiting area: when the line is full, an arrival browses inside instead of being turned away, while the tier's
  *    area has room (stand 0, cart 2, café 4). Browsers live in `GameState.waiting` (not `customers`: the till,
  *    pickup and bots never see them), drain patience at half speed, join the end of the line in arrival order as it
- *    frees, and at zero patience leave like any walk-out (lost).
+ *    frees, and at zero patience leave as a turn-away (never reached the line: not lost, no reputation hit).
  *  - Complaints: when the front of the order line hasn't changed for `stallSeconds` with at least `complainMin`
  *    people in it, the last one in line says so (`line.complain { customer }`), at most once per `cooldownSeconds`.
  *    For `freshSeconds` after, each arrival leaves with `quietLeaveChance` (`line.leave { customer, quiet: true }`):
@@ -14,7 +14,7 @@
  */
 import { ECONOMY } from '../data/economy';
 import { secondsToTicks } from './constants';
-import { loseCustomer, queueCapacity } from './customers';
+import { queueCapacity } from './customers';
 import { computeModifiers } from './effects';
 import { tierInfo, tierOf } from './growth';
 import { emitLog } from './log';
@@ -49,7 +49,7 @@ export function promoteWaiting(state: GameState): void {
   if (w.length === 0) delete state.waiting;
 }
 
-/** Once a tick (day and closing): browsers lose patience at `browsePatience` speed, the ones out of it leave, the rest move up. */
+/** Once a tick (day and closing): browsers lose patience at `browsePatience` speed, the ones out of it leave (turned away), the rest move up. */
 export function stepWaiting(state: GameState): void {
   const w = state.waiting;
   if (w && w.length > 0) {
@@ -58,7 +58,7 @@ export function stepWaiting(state: GameState): void {
     const stay: Customer[] = [];
     for (const c of w) {
       c.patienceLeft -= drain;
-      if (c.patienceLeft <= 0) loseCustomer(state, c);
+      if (c.patienceLeft <= 0) state.today.turnedAway += 1; // never reached the line: a turn-away, not lost
       else stay.push(c);
     }
     state.waiting = stay;

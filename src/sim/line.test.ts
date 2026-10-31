@@ -87,7 +87,7 @@ describe('Round 3 item 4: the waiting area', () => {
     expect(s.customers[s.customers.length - 1]).toBe(a);
   });
 
-  it('browsing patience drains at half speed; at zero the browser leaves, lost', () => {
+  it('browsing patience drains at half speed; at zero the browser leaves as a turn-away, not lost', () => {
     const s = shop('cart');
     fill(s);
     const c: Customer = { id: s.nextCustomerId++, drink: 'drip', patienceLeft: 100, patienceMax: 100, stage: 'order' };
@@ -102,7 +102,8 @@ describe('Round 3 item 4: the waiting area', () => {
       stepWaiting(s);
     }
     expect(s.waiting ?? []).toEqual([]);
-    expect(s.today.lost).toBe(1);
+    expect(s.today.lost).toBe(0);
+    expect(s.today.turnedAway).toBe(1);
   });
 
   it('browsers keep the shop open through closing, and are lost when the day ends; the next day starts empty', () => {
