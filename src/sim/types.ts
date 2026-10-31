@@ -103,6 +103,8 @@ export interface BotState {
   noticeTicksLeft: number;
   /** Gear G4d: the claim (customer id) this bot already re-poured once after a too-hot/too-cold cup. */
   retried?: number;
+  /** Round 3 item 5: this bot pressed E at the till and is standing there until the ring-up finishes. */
+  ringing?: true;
 }
 
 export type SimEventKind =
@@ -143,6 +145,8 @@ export type SimEventKind =
   | 'walkout'
   /** Batch/pickup (docs/superpowers/specs/2026-10-30-batch-pickup-design.md). */
   | 'till.rung'
+  | 'till.start'
+  | 'till.cancel'
   | 'pickup.take'
   | 'condiment.use'
   | 'condiment.black'
@@ -642,6 +646,11 @@ export interface GameState {
    * opening (the phone rings `ORDERS.office.callSeconds` before); `called` once it rang, `came` its customer id.
    */
   office?: { day: number; at: number; called?: true; came?: number };
+  /**
+   * Round 3 item 5: the ring-up in progress at the till (Gear runs; absent = nobody is ringing). `by` is the person
+   * ringing, or '' for a self-order screen. Done when `tick - startedAt >= ticks`; `ringProgress(state)` (src/sim/till.ts) is 0..1.
+   */
+  ringUp?: { customer: number; by: PlayerId | ''; startedAt: number; ticks: number };
   /** FB1 WP3: tick stamp of when the queue last emptied (absent while someone is queued). */
   emptySince?: number;
   pass: PassItem[];

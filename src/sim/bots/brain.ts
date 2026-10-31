@@ -917,6 +917,7 @@ export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKi
 
 function setPlan(b: BotState, plan: BotStep[]): void {
   b.plan = plan;
+  delete b.ringing;
   b.path = [];
   b.yields = 0;
   b.nodeRank = 0;
@@ -1226,8 +1227,19 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       if ((p.tool === 'milk' || p.tool === 'bar') && st.id === FRIDGE_ID) return execute(p);
       return setPlan(b, []);
     case 'ring':
+      // Round 3 item 5: a ring-up takes time and the ringer has to stay. Press once (the step stays), wait at the
+      // till while the ring is mine, and finish the step when it ends (done, or cancelled: the next think decides).
+      if (b.ringing) {
+        if (state.ringUp?.by === p.id) return wait(state, p);
+        delete b.ringing;
+        return pop(b);
+      }
       // Batch/pickup: ring up the next order, if there still is one and the hands are free.
-      if (p.holding === null && !p.tool && tillNext(state)) return execute(p);
+      if (p.holding === null && !p.tool && tillNext(state)) {
+        b.ringing = true;
+        p.interactQueued = true;
+        return;
+      }
       return setPlan(b, []);
     case 'trash':
       return execute(p);

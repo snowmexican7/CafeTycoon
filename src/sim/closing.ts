@@ -34,6 +34,7 @@ export function finishDay(state: GameState): GameState {
   steepClosing(state); // after the inspector: the pour-out at closing is never seen by them
   for (const c of state.customers) loseCustomer(state, c);
   state.customers = [];
+  delete state.ringUp; // Round 3 item 5
   state.messes = [];
   state.rogue = null;
   state.mop = { pos: { ...layoutFor(state.tier).mopHome }, heldBy: null };
