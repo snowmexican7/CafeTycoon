@@ -40,10 +40,10 @@ export class CountsLayer {
       const b = this.badges[i] ?? this.makeBadge();
       const kind = kinds.get(c.id) ?? 'espresso';
       const cx = sx(c.pos.x);
-      const top = sy(c.pos.y) - PROGRESS_BAR_RISE[kind] + 24;
-      const key = `${c.n}|${c.tone}|${c.cool === null ? '-' : Math.round(c.cool * 40)}`;
+      const top = c.rise !== undefined ? sy(c.pos.y) - c.rise : sy(c.pos.y) - PROGRESS_BAR_RISE[kind] + 24;
+      const key = `${c.n}|${c.tone}|${c.cool === null ? '-' : Math.round(c.cool * 40)}|${c.unit ?? ''}`;
       if (key !== b.key) {
-        b.text.text = String(c.n);
+        b.text.text = c.unit ? `${c.n} ${c.unit}` : String(c.n);
         const w = Math.max(28, b.text.width + 14);
         const ring = c.cool !== null;
         b.bg.clear();
@@ -52,7 +52,8 @@ export class CountsLayer {
         if (ring) drawCoolRing(b.bg, w / 2 + 11, 0, 8, c.cool!);
         b.key = key;
       }
-      b.root.position.set(cx + 38, top);
+      // a worded count (the fridge's "24 milk left") sits centred over its art, and on screen at the left wall
+      b.root.position.set(c.unit ? Math.max(b.bg.width / 2 + 6, cx) : cx + 38, top);
       b.root.visible = true;
     });
     for (let i = counts.length; i < this.badges.length; i++) this.badges[i].root.visible = false;

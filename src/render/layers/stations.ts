@@ -3,6 +3,8 @@ import type { CheckoutId, ItemKind, StationKind, Vec2 } from '../../sim/types';
 import { MAT, PALETTE, PROGRESS_BAR_RISE, STATION_LABELS, sx, sy } from '../theme';
 import type { BarSkin } from '../tierLook';
 import { CHROME, dashedEllipse, drawItem, halfDome, label, shadow, sheen, vertical } from './draw';
+import type { FridgeId } from '../../data/fridges';
+import { buildFridgeArt } from './fridgeArt';
 
 const RED = vertical(0xf07466, 0xc8443a);
 const KEG = sheen([0x3f86b8, 0x8fcaf0, 0x2f6f9e]);
@@ -186,7 +188,7 @@ const TWIN_SCALE = 0.7;
  * 3.3.1 Gear batch/pickup: which of the three counter spots a counter station is. `till` in Gear is the
  * register only; `pickup` has the four cup coasters; `condiments` is the cream & sugar bar. Classic = undefined.
  */
-export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink';
+export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge';
 
 /** Where pickup coaster `i` (0..3) sits on the pickup counter, in screen px. Shared with the per-frame cups. */
 export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: number } {
@@ -199,7 +201,9 @@ export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: n
  * `variant`: 'pour' draws the pour-over bar; 'pot' (FB2 A3, a Gear drip machine with a carafe) leaves the carafe
  * off the static art so the per-frame sink layer can draw it full, cold, stale or gone to the sink.
  */
-export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour' | 'pot', spot?: CounterSpot): Container {
+export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour' | 'pot', spot?: CounterSpot, fridge?: FridgeId | null): Container {
+  // ui-3.4.1 (FB2 A4): the fridge stands on its own (no counter under it), one look per fridge
+  if (kind === 'counter' && spot === 'fridge') return buildFridge(pos, fridge ?? 'f1');
   plainArt = twin;
   let root: Container;
   try {
@@ -300,6 +304,13 @@ function buildSink(pos: Vec2): Container {
   g.roundRect(cx + 19, cy - 28, 10, 6, 2).fill(0xf2d34a).stroke({ width: 1, color: 0x6aa84f });
   g.rect(cx + 19, cy - 24, 10, 2).fill(0x6aa84f);
   plate(root, g, cx, cy + 4, 'SINK', 0x3d79b0, 1);
+  return root;
+}
+
+/** ui-3.4.1: the fridge at its spot against the left wall (art in fridgeArt.ts). */
+function buildFridge(pos: Vec2, id: FridgeId): Container {
+  const { root } = buildFridgeArt(pos, id);
+  root.zIndex = stationDepth(pos);
   return root;
 }
 

@@ -10,6 +10,8 @@ import { LEVEL_UPS, levelUpGearOk } from '../sim/levelUp';
  */
 import { GEAR, GEAR_TREES, treeTiers, type GearId, type GearTree } from '../data/gear';
 import { slotCount } from '../sim/slots';
+import { FRIDGES, type FridgeId } from '../data/fridges';
+import { fridgeCards, fridgeGear } from '../sim/fridge';
 import type { DrinkId, GameState, PlayerId } from '../sim/types';
 
 export type GearTierState = 'owned' | 'another' | 'passed' | 'buy' | 'upgrade' | 'poor' | 'noSlot' | 'needs';
@@ -35,7 +37,30 @@ export interface GearSlotVM { index: number; id: GearId | null; name: string; ic
 /** G8: the open co-op vote, from one player's view. */
 export interface GearVoteVM { text: string; yes: number; no: number; of: number; need: number; mine: 'yes' | 'no' | null; proposer: boolean }
 
+/** ui-3.4.1 (FB2 A4): the night shop's fridge panel (one card at a time, never a gear line). */
+export interface FridgeCardVM {
+  id: FridgeId;
+  name: string;
+  price: number;
+  sticker: string;
+  holds: number;
+  blurb: string;
+  /** buy = the button works; poor = not enough cash; voting = the crew is voting on it right now. */
+  state: 'buy' | 'poor' | 'voting';
+  /** Co-op: pressing it starts a crew vote instead of buying. */
+  vote: boolean;
+}
+export interface FridgeVM {
+  /** The shop's fridge now, or null at a stand without one. */
+  have: { id: FridgeId; name: string; holds: number; blurb: string } | null;
+  cards: FridgeCardVM[];
+  /** One plain line about the fridge (what it does, or what comes next). */
+  note: string;
+}
+
 export interface GearVM {
+  /** ui-3.4.1 (FB2 A4): the fridge panel (Gear runs). */
+  fridge?: FridgeVM;
   /** G8: open co-op vote, its last result, and the rule note (co-op only). */
   vote?: GearVoteVM;
   voteLast?: { text: string; passed: boolean };
@@ -159,17 +184,46 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
     : null;
   const voters = state.players.filter((p) => p.connected && !p.bot);
   const v = state.gearVote;
+  const fv = state.fridgeVote;
   const vote: GearVoteVM | undefined = v ? {
     text: `${v.byName} wants to ${v.action === 'buy' ? 'buy' : 'sell'} ${GEAR[v.gear].name} ($${v.amount}).`,
     yes: v.yes.length, no: v.no.length, of: voters.length, need: Math.floor(voters.length / 2) + 1,
     mine: me && v.yes.includes(me) ? 'yes' : me && v.no.includes(me) ? 'no' : null, proposer: me === v.by,
+  } : fv ? {
+    // ui-3.4.1 (FB2 A4): the Udder-Matic vote rides the same yes/no buttons (the gear vote input)
+    text: `${fv.byName} wants to buy the ${FRIDGES[fv.fridge].name} ($${fv.amount}).`,
+    yes: fv.yes.length, no: fv.no.length, of: voters.length, need: Math.floor(voters.length / 2) + 1,
+    mine: me && fv.yes.includes(me) ? 'yes' : me && fv.no.includes(me) ? 'no' : null, proposer: me === fv.by,
   } : undefined;
+  const fridge = state.gear === true ? fridgeVM(state, voters.length) : undefined;
   const voteRule = voters.length > 1 ? `Co-op: buys or sales of $${GEAR_VOTE_MIN}+ need a yes from most of the crew.` : undefined;
   const notebook = notebookVM(state);
   const areaId = gearArea(state);
   const crowd = areaId && notebook.some((r) => r.stars !== null) ? AREAS[areaId].crowd : undefined;
-  return { pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook, ...(crowd ? { crowd } : {}), levelUps: levelUpVM(state), ...(coopHint ? { coopHint } : {}),
+  return { ...(fridge ? { fridge } : {}), pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook, ...(crowd ? { crowd } : {}), levelUps: levelUpVM(state), ...(coopHint ? { coopHint } : {}),
     ...(vote ? { vote } : {}), ...(state.gearVoteLast ? { voteLast: state.gearVoteLast } : {}), ...(voteRule ? { voteRule } : {}) };
+}
+
+/** ui-3.4.1 (FB2 A4, from sim/fridge.ts fridgeCards): the fridge the shop has, and the one card on offer tonight. */
+export function fridgeVM(state: GameState, voters = 1): FridgeVM {
+  const now = fridgeGear(state);
+  const have = now ? { id: now, name: FRIDGES[now].name, holds: FRIDGES[now].holds, blurb: FRIDGES[now].blurb } : null;
+  const cards = fridgeCards(state).map(({ id, price }): FridgeCardVM => {
+    const f = FRIDGES[id];
+    const st: FridgeCardVM['state'] = state.fridgeVote?.fridge === id ? 'voting' : state.cash < price ? 'poor' : 'buy';
+    return { id, name: f.name, price, sticker: f.sticker, holds: f.holds, blurb: f.blurb, state: st, vote: price >= GEAR_VOTE_MIN && voters > 1 };
+  });
+  const tier = state.tier ?? 'cafe';
+  const note = !now
+    ? 'No fridge yet: milk drinks need one, and the condiment bar goes bad overnight without it.'
+    : FRIDGES[now].auto
+      ? 'Pours milk to the bar by itself, and puts it back at closing.'
+      : tier === 'stand'
+        ? 'Growing into a cart brings a bigger fridge for free.'
+        : tier === 'cart'
+          ? 'Growing into a café brings a chrome reach-in for free.'
+          : 'Grab milk from the fridge, put a carton out by the steamer, and put it all back before closing.';
+  return { have, cards, note };
 }
 
 /** Polish: what the sell button says. Worthless gear gets tossed, not sold. */

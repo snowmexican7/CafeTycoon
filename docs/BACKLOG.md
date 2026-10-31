@@ -2053,6 +2053,31 @@ Open (sim lane):
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
 
+## ui-3.4.1 (UI lane): FB2 A4 fridge
+
+UI side of A4 (sim `fb2-a4`, protocol 44). No sim, net, host, storage or data changes; protocol unchanged.
+
+- [x] **Fridge art:** `render/layers/fridgeArt.ts` (`buildFridgeArt(id)` f1 Dorm Room Cube, f2 Garage Beer Fridge,
+  f3 Chrome Reach-In, f4 Udder-Matic 3000; `drawCarton`, `drawBarCaddy`), `fridgeArtRise.ts` (`FRIDGE_RISE`, no Pixi).
+  `layers/stations.ts` `buildFridge`; `pickupModel.counterSpotOf` → `'fridge'`; `scene.buildStations` keys on
+  `fridgeGear(state)`.
+- [x] **Milk out + glow:** `render/fridgeModel.ts` (pure: `fridgeToast`, `fridgeLabel`, `milkSpot`, `cartonsFor`,
+  `fridgeGlow`) and `render/layers/fridge.ts` (`FridgeVisuals`: cartons by the steamer, "N milk out" tag, floor glow).
+- [x] **Counts:** `countsModel` gives the fridge `unit: 'milk left'` and `rise` (`FRIDGE_RISE`); `counts.ts` draws it.
+- [x] **Carry art:** `actors.ts` draws the carton (`tool 'milk'`) and the bar box (`tool 'bar'`).
+- [x] **Hints (`ui/live.ts`):** `fridgeHint` (Grab milk / No milk in the fridge / Hands full), `carryHint` (Put a
+  carton out / Put the milk away / Put the condiment bar away / Set the bar back out), `liftHint` at closing (Pick
+  up the milk / Pack up the condiment bar). `emptyHandsWanted` is mirrored with `tapCupRecipe` (not exported by sim).
+  `toolLabel(player)` adds "· N milk" / "· N servings"; `TOOL_LABEL.bar` is "Condiment bar, packed up" 🧺.
+- [x] **Closing checklist:** `closingListVM(state)` → `HudLive.checklist` while `closingSoon`; `hud.ts` `.hud-checklist`.
+- [x] **Night:** `gearVM.fridgeVM(state, voters)` → `GearVM.fridge`; `night.ts` `fridgePanel` (`data-action="fridge-buy"`),
+  `onFridge` → `{ kind: 'fridge', fridge }`; the Udder-Matic vote shows in the existing gear-vote bar. Brief row
+  `fix.kind === 'fridge'` gets "Buy it · $N" / "🗳️ Ask the crew · $N".
+- [x] **Bubbles and sounds:** `crewModel` (all eight events; `supply.spoil` also dips the vibe), `audio/cues.ts` cues
+  `fridgeOpen`, `fridgeShut`, `milkOut`, `liftUp`, `spoil`, `closingSoon`, `moo`.
+- Tests: `src/ui/fridgeUi.test.ts`. Screenshots: `/workspace/overnight/sprint/ui-fridge/`.
+- [ ] Later: C9 wand (steamer → espresso wand) will need `milkSpot` to point at the espresso machine.
+
 ## ui-3.4.0 (UI lane): tier looks, grow transition, nudge, tips
 
 - [x] **Tier looks:** `render/tierLook.ts` (`tierLook`, `isOutdoor`, `barSkin`, `leaseLines`) and

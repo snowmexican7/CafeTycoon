@@ -20,6 +20,9 @@ import { StationOverlay, buildEmptySlot, buildStation, setBarSkin, type StationO
 import { PickupVisuals } from './layers/pickup';
 import { CountsLayer } from './layers/counts';
 import { SinkVisuals } from './layers/sink';
+import { FridgeVisuals } from './layers/fridge';
+import { fridgeGear } from '../sim/fridge';
+import type { FridgeId } from '../data/fridges';
 import { counterSpotOf } from './pickupModel';
 import { emptySlotPositions, stationBadges, wallMenuRows } from './slotModel';
 import { GEAR } from '../data/gear';
@@ -61,6 +64,7 @@ export class Scene {
   private readonly pickup: PickupVisuals;
   private readonly counts = new CountsLayer();
   private readonly sink: SinkVisuals;
+  private readonly fridge: FridgeVisuals;
   /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
   private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
@@ -85,7 +89,8 @@ export class Scene {
     this.eventFx = new EventVisuals(this.depth, this.chaos.overlay, SCENE_WIDTH, SCENE_HEIGHT);
     this.pickup = new PickupVisuals(this.depth);
     this.sink = new SinkVisuals(this.depth);
-    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.sink.overlay, this.counts.root, this.tags, this.chaos.overlay);
+    this.fridge = new FridgeVisuals(this.depth);
+    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.sink.overlay, this.fridge.overlay, this.counts.root, this.tags, this.chaos.overlay);
     // ui-3.4.0: the outdoor backdrop (stand, cart) covers the café wallpaper and floor; the menu board stays on top.
     this.root.addChild(this.wall.root, buildLamps(), floor, this.outdoorBack, this.wall.menuBoard, this.soldOutSign, this.chaos.floor, this.pickup.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
@@ -98,12 +103,12 @@ export class Scene {
   private stationKey = '';
   /** P3 B13: the hoarding and awning, rebuilt (with the stations and the line) when the shop grows. */
   private readonly lot = new Container();
-  private buildStations(checkout: CheckoutId, tier: TierId | undefined, stations?: readonly Station[]): void {
+  private buildStations(checkout: CheckoutId, tier: TierId | undefined, stations?: readonly Station[], fridge: FridgeId | null = null): void {
     // FB1 WP5: the art follows state.stations (bought duplicates, swapped slots), with a plinth in every empty slot.
     const lay = layoutFor(tier);
     const list = stations ?? lay.stations;
     const gearOf = (s: (typeof list)[number]) => ('gear' in s ? s.gear : undefined);
-    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}`;
+    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}:${fridge ?? ''}`;
     if (key === this.stationKey) return;
     this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
@@ -111,11 +116,11 @@ export class Scene {
     setBarSkin(barSkin(look));
     // 3.3.1: the pickup counter and the condiment bar are named counters, not a second and third till, so no number badge
     // (3.3.3: nor the back sink)
-    const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: ('twin' in s && s.twin === true) || ['pickup', 'condiments', 'sink'].includes(counterSpotOf(s, list) ?? '') })));
+    const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: ('twin' in s && s.twin === true) || ['pickup', 'condiments', 'sink', 'fridge'].includes(counterSpotOf(s, list) ?? '') })));
     this.stationArt = list.map((s, i) => {
       const twin = 'twin' in s && s.twin === true;
       const g = gearOf(s);
-      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list));
+      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge);
     });
     for (const pos of emptySlotPositions(tier, list)) this.stationArt.push(buildEmptySlot(pos));
     setBarSkin('cabinet');
@@ -174,7 +179,7 @@ export class Scene {
 
   update(view: RenderView): void {
     const { state } = view;
-    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations);
+    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations, fridgeGear(state));
     this.maybeCelebrate(state);
     const now = performance.now() / 1000;
     const dt = Math.min(0.1, Math.max(0, now - this.lastTime));
@@ -222,6 +227,7 @@ export class Scene {
     this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses);
     this.pickup.update(state, now);
     this.sink.update(state, localId, now);
+    this.fridge.update(state, localId, now);
     // 3.3.2: floating counts over stations + recipe steps over carried cups (day only)
     const live = state.phase === 'day' || state.phase === 'closing';
     this.counts.root.visible = live;

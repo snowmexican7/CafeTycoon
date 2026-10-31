@@ -32,6 +32,8 @@ export function nightInputHandlers(send: (input: PlayerInput) => void, me: () =>
     onGear: (action, gear) => send({ kind: 'gear', playerId: me(), action, gear }),
     onGearSell: (index) => send({ kind: 'gear', playerId: me(), action: 'sell', index }),
     onGearVote: (yes) => send({ kind: 'gear', playerId: me(), action: 'vote', yes }),
+    // ui-3.4.1 (FB2 A4): buy the fridge card (the Udder-Matic starts a crew vote in co-op)
+    onFridge: (fridge) => send({ kind: 'fridge', playerId: me(), fridge }),
     // FB1 WP6: a crew tip chip sends its advice's input as the local player.
     onTip: (input) => send({ ...input, playerId: me() } as PlayerInput),
   };
