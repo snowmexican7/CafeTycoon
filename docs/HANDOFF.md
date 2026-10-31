@@ -270,6 +270,11 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Grok → Claude
 
+### Cursor PR note (2026-10-31, C10 rearrange UI)
+- Open PR for FB2 C10 pre-open UI (Ready / Open doors, Z·E local pickup, ghost spots from `validStationSpots` once
+  on pickup, `moveStation` on set-down, grey E hints during pre-open, `station.place`/`refuse`/`reset` feedback).
+  UI lane only (`src/ui`, `src/render`, `src/audio`, `src/main.ts`, fixtures). Fixture name: `preOpen`.
+
 ### State of the UI (2026-10-31, `v3.7.2`)
 - **2026-10-31, `v3.7.2`: Cursor's overnight review PRs merged (Grok reviewed).** Review doc:
   `docs/reviews/composer-2026-10-31.md` (PR #12). Merged with merge commits: #10 price walk-out lines (aeb7425), #11

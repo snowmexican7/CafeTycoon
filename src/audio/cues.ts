@@ -148,6 +148,9 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       // Gear batch/pickup: the customer takes their own cup off the pickup counter (the serve sound)
       case 'pickup.take': cues.push({ id: 'serve', mine }); break;
       case 'till.rung': cues.push({ id: 'ringUp', mine }); break;
+      // FB2 C10: a refused set-down buzzes; a successful place is a soft cup-down.
+      case 'station.refuse': cues.push({ id: 'buzz', mine }); break;
+      case 'station.place': cues.push({ id: 'cupDown', mine }); break;
       case 'condiment.refill': cues.push({ id: 'refill', mine }); break;
       case 'condiment.black': cues.push({ id: 'grumble' }); break;
       case 'trash': cues.push({ id: 'trash', mine }); break;

@@ -277,6 +277,31 @@
 .hud-gear .hg-l { font-weight: 800; }
 .hud-gear .hg-l::after { content: ':'; }
 .hud-gear .hg-s { font-weight: 600; margin-left: auto; padding-left: 6px; }
+/* FB2 C10: morning pre-open rearrange banner (countdown, Ready, host Open doors). */
+#hud .hud-preopen { position: absolute; top: calc(var(--topbar) + 10px); left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: auto; max-width: min(720px, 70vw); }
+#hud .hud-preopen[hidden] { display: none; }
+#hud .po-card { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 16px; background: #fffaf0; color: var(--ink);
+  box-shadow: 0 0 0 3px #7fcfb4, 0 10px 24px rgba(40,20,0,0.28); animation: hud-drop .25s ease-out; }
+#hud .po-clock { flex: 0 0 auto; text-align: center; min-width: 56px; }
+#hud .po-clock b { display: block; font: 800 26px/1 var(--font-display); font-variant-numeric: tabular-nums; color: #2f7a4c; }
+#hud .po-clock small { font: 700 11px var(--font-body); letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); }
+#hud .po-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#hud .po-copy b { font: 700 18px var(--font-display); }
+#hud .po-copy small { font: 600 13px/1.25 var(--font-body); color: var(--ink-soft); }
+#hud .po-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+#hud .po-ready, #hud .po-open { border: 0; border-radius: 12px; padding: 10px 14px; font: 700 15px var(--font-display); cursor: pointer; box-shadow: var(--sh-1); }
+#hud .po-ready { background: var(--mint, #7fcfb4); color: #1f4d3a; }
+#hud .po-ready:hover { background: #6fbfa4; }
+#hud .po-ready.mine, #hud .po-ready:disabled { background: #dff3e4; color: #2f7a4c; cursor: default; }
+#hud .po-open { background: var(--caramel, #e08a3c); color: #fff; }
+#hud .po-open:hover { background: #c9782f; }
+@media (max-width: 1280px) {
+  #hud .po-card { gap: 10px; padding: 8px 12px; }
+  #hud .po-copy b { font-size: 16px; }
+  #hud .po-copy small { font-size: 12px; }
+  #hud .po-ready, #hud .po-open { padding: 8px 12px; font-size: 14px; }
+}
+
 /* P4 B6: the second shop's phone call. */
 #hud .hud-call { position: absolute; top: calc(var(--topbar) + 150px); left: 50%; transform: translateX(-50%); z-index: 4; pointer-events: auto; display: flex; gap: 14px; align-items: center;
   max-width: min(760px, 62vw); padding: 14px 18px; border-radius: 18px; background: #fffaf0; color: var(--ink); box-shadow: 0 0 0 3px #e8a33a, 0 12px 30px rgba(40,20,0,0.35); animation: hc-pop 0.3s ease-out; }

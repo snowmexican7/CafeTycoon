@@ -44,6 +44,8 @@ import { createClosing } from './ui/closing';
 import { createHud } from './ui/hud';
 import { loadRecipeHints, saveRecipeHints } from './ui/tickets';
 import { hudLive, nightExtras } from './ui/live';
+import { atCarrySpot, carryTarget, nearestCarrySpot, type StationCarry } from './ui/rearrangeCarry';
+import { inPreOpen } from './sim/rearrange';
 import { createLobby } from './ui/lobby';
 import { createDevPanel, isDevMode } from './ui/dev';
 import { createCreator } from './ui/creator';
@@ -227,11 +229,21 @@ async function main(): Promise<void> {
     if (look) send({ kind: 'look', playerId: me(), look });
   }
   let recipeHints = loadRecipeHints(hintStore);
+  /** FB2 C10: local-only station carry during the pre-open (ghost spots computed once on pickup). */
+  let stationCarry: StationCarry | null = null;
+  const clearCarry = () => {
+    stationCarry = null;
+    renderer.setGhostSpots(null);
+  };
   const hud = createHud($('#hud'), {
     onMute: () => audio.toggleMute(),
     // ui-3.7.1: day-HUD Restock (rush delivery, 25% more). Cream & sugar comes by the box.
     onRestock: (id) => send(id === 'condiments' ? { kind: 'condimentBox', playerId: me(), boxes: 1 } : { kind: 'restock', playerId: me(), supply: id, packs: 1 }),
-    onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }), onCall: (take) => send({ kind: 'call', playerId: me(), take }) }, { recipeHints });
+    onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }),
+    onCall: (take) => send({ kind: 'call', playerId: me(), take }),
+    onReady: () => send({ kind: 'ready', playerId: me() }),
+    onOpenDoors: () => send({ kind: 'openDoors', playerId: me() }),
+  }, { recipeHints });
   const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook() });
   // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).
   const dev = isDevMode(location.search) ? createDevPanel(document, send, me) : null;
@@ -574,9 +586,12 @@ async function main(): Promise<void> {
       renderLobby(s);
     }
     if (s.peerStatus !== 'hostAway') lobby.hide();
-    hud.render(hudViewModel(state), hudLive(state, s.me));
+    // FB2 C10: drop a local carry when the pre-open ends (or the run leaves the day).
+    if (stationCarry && !inPreOpen(state)) clearCarry();
+    hud.render(hudViewModel(state), hudLive(state, s.me, stationCarry));
     hud.setRestock(dayRestockVM(state));
     // ui-3.7.1: rush restocks and the Strategist's menu changes pop up (HUD by day, a bubble at night).
+    // FB2 C10: station.reset (and a short place note) also toast.
     {
       const fresh = freshEvents(state, toastSeenSeq ?? state.nextLogSeq - 1, TOAST_KINDS);
       toastSeenSeq = fresh.seen;
@@ -675,9 +690,37 @@ async function main(): Promise<void> {
     const field = document.activeElement?.tagName ?? '';
     if (e.code === 'KeyR' && !e.repeat && session?.next && !['INPUT', 'TEXTAREA', 'SELECT'].includes(field)) {
       e.preventDefault();
+      // FB2 C10: R during a local carry just puts the ghost away (no drop input — hands aren't holding a cup).
+      if (stationCarry && session.next && inPreOpen(session.next)) {
+        clearCarry();
+        return;
+      }
       session.transport.sendInput({ kind: 'drop', playerId: session.me });
     }
+    // FB2 C10: Z picks up / sets down a machine during the pre-open (local only until set-down).
+    if (e.code === 'KeyZ' && !e.repeat && session?.next && !['INPUT', 'TEXTAREA', 'SELECT'].includes(field) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (tryRearrangeKey(session.next, session.me)) e.preventDefault();
+    }
   });
+
+  /** FB2 C10: Z or E during pre-open — pick up a machine locally, or send moveStation on set-down. */
+  function tryRearrangeKey(state: GameState, playerId: PlayerId): boolean {
+    if (!inPreOpen(state)) return false;
+    const mePlayer = state.players.find((p) => p.id === playerId);
+    if (!mePlayer) return false;
+    if (stationCarry) {
+      const to = nearestCarrySpot(stationCarry.spots, mePlayer.pos);
+      if (!to || !atCarrySpot(mePlayer.pos, to)) return true; // carrying, but not on a spot yet
+      send({ kind: 'moveStation', playerId, station: stationCarry.stationId, to });
+      clearCarry();
+      return true;
+    }
+    const t = carryTarget(state, playerId);
+    if (!t) return true; // swallowed: E/Z do nothing else during pre-open
+    stationCarry = t;
+    renderer.setGhostSpots(t.spots);
+    return true;
+  }
 
   function frame(): void {
     requestAnimationFrame(frame); // re-arm first so a bad frame can never stop rendering for good
@@ -705,6 +748,11 @@ async function main(): Promise<void> {
       hud.setJuice(renderer.getJuice());
       const vec = keyboard.read();
       interactPending = keyboard.takeInteract() || interactPending;
+      // FB2 C10: during pre-open, E is rearrange (local), never a sim interact.
+      if (interactPending && inPreOpen(s.next)) {
+        tryRearrangeKey(s.next, s.me);
+        interactPending = false;
+      }
       const changed = vec.x !== lastSent.x || vec.y !== lastSent.y;
       if ((changed || interactPending) && gate.allow()) {
         s.transport.sendInput({ kind: 'move', playerId: s.me, x: vec.x, y: vec.y, interact: interactPending });

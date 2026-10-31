@@ -16,7 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- Each Gear morning starts with a short **rearrange** before the doors open: a countdown, Ready, and (host) Open doors. Pick up a machine with Z or E, walk to a green outline, and press E to set it down. (C10)
 
 ## 3.7.2 — 2026-10-31 · Fixes from the overnight review
 
