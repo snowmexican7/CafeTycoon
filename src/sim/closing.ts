@@ -23,6 +23,7 @@ import { stalePotsAtClose } from './sink';
 import type { GameState } from './types';
 import { settleEspresso } from './espresso';
 import { settleChallenges } from './challenges';
+import { closeDayFeed, logWeekRating } from './feed';
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -90,6 +91,7 @@ export function finishDay(state: GameState): GameState {
 
   noteMissedFavourites(state);
   spoilOvernight(state);
+  closeDayFeed(state); // FB2 C11
   state.days.push(state.today);
   state.activeTomorrow = [];
 
@@ -102,6 +104,7 @@ export function finishDay(state: GameState): GameState {
   if ((!state.unlimited && state.day === ECONOMY.scoredWeekDays) || seasonWeekEnd(state)) {
     state.phase = 'weekEnd';
     state.phaseTicksLeft = 0;
+    logWeekRating(state); // FB2 C11
     return state;
   }
   state.day += 1;
