@@ -32,6 +32,7 @@ import { tierInfo, tierOf } from './growth';
 import { emitLog } from './log';
 import { pricePatience } from './pricing';
 import { rngInt, rngNext } from './rng';
+import { LATTES } from './lattes';
 import { tally } from './tally';
 import type { Customer, DrinkId, GameState, OrderItem, PassItem } from './types';
 
@@ -113,6 +114,27 @@ export function comboDrinks(state: GameState, menu: DrinkId[], drinks: DrinkId[]
     else if (first === 'drip' && bar.length > 0) second = bar[rngInt(state, bar.length)];
   }
   drinks.push(second);
+  return true;
+}
+
+/**
+ * Round 3 item 1: the chance a single walk-in adds a latte ("and a latte for my friend"): `LATTES.addon` in a Gear
+ * run from the combo's first day when `latte` is on the board (so the bar has a wand and milk), else 0.
+ */
+export function latteAddonChance(state: GameState, menu: DrinkId[]): number {
+  return state.gear === true && state.day >= ORDERS.combo.fromDay && menu.includes('latte') ? LATTES.addon : 0;
+}
+
+/**
+ * The add-on roll for a single walk-in who did not roll a combo: one rngNext when the bar can make lattes; on a hit
+ * a latte joins `drinks` (it is the same two-item `combo` ticket, ×1.3 patience, paid at the last cup). The caller
+ * logs `order.addon { customer, drink: 'latte' }` once it has the customer's id.
+ */
+export function latteAddon(state: GameState, menu: DrinkId[], drinks: DrinkId[]): boolean {
+  const chance = latteAddonChance(state, menu);
+  if (chance <= 0 || drinks.length !== 1) return false;
+  if (rngNext(state) >= chance) return false;
+  drinks.push('latte');
   return true;
 }
 

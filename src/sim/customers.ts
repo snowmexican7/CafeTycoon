@@ -25,7 +25,8 @@ import { comboTip, serveCombo, TASTE } from './taste';
 import { checkoutFee } from './checkout';
 import { tierInfo } from './growth';
 import { menuDrinks, unlockedDrinks } from './unlocks';
-import { comboDrinks, loseTicket, makeTicket, ORDERS } from './orders';
+import { comboDrinks, latteAddon, loseTicket, makeTicket, ORDERS } from './orders';
+import { isMilkDrink, milkPush } from './lattes';
 import { promoteWaiting, quietLeave, sendToBrowse, waitingFree } from './line';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
@@ -127,7 +128,8 @@ export function spawnCustomers(state: GameState): GameState {
 
 /** Weighted drink draw over the menu, biased by the café's order modifiers (one rngNext). */
 export function drawDrink(state: GameState, menu: DrinkId[], m: Modifiers): DrinkId {
-  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d) * gearPullMul(state, d));
+  const push = milkPush(state, menu, m); // Round 3 item 1: lean toward lattes when the bar can make them
+  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d) * gearPullMul(state, d) * (isMilkDrink(d) ? push : 1));
   let roll = rngNext(state) * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < menu.length; i++) {
     roll -= weights[i];
@@ -208,7 +210,11 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const asksSig = !regular && count === 1 && sig !== undefined && menu.includes(sig.drink) && rngNext(state) < sigShare(sig) * rivalAskFactor(state);
   if (asksSig) drinks[0] = sig.drink;
   // FB2 B6: a Gear walk-in may order a second drink (a combo, from day 2): the ticket waits longer.
-  const combo = !regular && !asksSig && (kind === 'normal' || kind === 'impatient') && comboDrinks(state, menu, drinks);
+  const single = !regular && !asksSig && (kind === 'normal' || kind === 'impatient');
+  const pair = single && comboDrinks(state, menu, drinks);
+  // Round 3 item 1: "and a latte for my friend": a single walk-in who did not roll a combo may add a latte to the ticket.
+  const addon = single && !pair && latteAddon(state, menu, drinks);
+  const combo = pair || addon;
   const mul = (kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1) * (combo ? ORDERS.combo.patience : 1);
   // Gear runs: poured drinks wait less, made-to-order ones more (GEAR_WAIT); a group waits as long as its slowest order
   const wait = Math.max(...drinks.map((d) => drinkWait(state, d) * pricePatience(state, d)));
@@ -233,7 +239,8 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
     maybeNameMix(state, customer);
   }
   state.customers.push(customer);
-  if (combo) emitLog(state, 'order.combo', { customer: customer.id, items: drinks.join(',') });
+  if (pair) emitLog(state, 'order.combo', { customer: customer.id, items: drinks.join(',') });
+  if (addon) emitLog(state, 'order.addon', { customer: customer.id, drink: 'latte' });
   return customer;
 }
 
