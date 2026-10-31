@@ -18,8 +18,14 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 - **Grok (UI lane):** `src/ui/**`, `src/render/**`, `src/audio/**`, styles, `src/main.ts`, Playwright scripts,
   `docs/GEAR_TREE.md`.
 - Neither lane edits the other's files. If you need a change there, put it in "Needs from you".
+- **Cursor (contributor, since 2026-10-31):** codes in pull requests only (one PR per block, off the latest `main`,
+  never pushes to `main`, never force-pushes). Mostly UI-lane work; any sim-lane file it touches is called out in the
+  PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-10-31: **New workflow (Kennedy, Oct 31 morning):** Grok becomes lead reviewer/merger and coordinator; Cursor
+  (and Claude) do most of the coding. Cursor works through PRs; Grok reviews, merges, releases and writes the next
+  prompt. Muse may take art pieces later if that proves simpler.
 - 2026-10-31: **Night clutter (Round 4 f), Kennedy's answers:** (1) restock also works during the day (Claude's call:
   instant "rush delivery" at +25% during the day, normal price at night); (2) the Strategist hire sets prices and the
   menu by default, so the Menu tab can nearly disappear (manual still overrides); (3) crew roles and card rerolls are
@@ -125,6 +131,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
     - Then `src/data/equipment.ts` can be deleted, and the sim can drop the `slot` / `equip` kinds.
   - **Remove the Manager on the branch:** `src/ui/branchView.ts`:41 (`BranchVM.manager`), :108 and :113 (`managerHtml`).
 - [ ] **C10 station rearranging (2026-10-31, `fb2-c10`, protocol 59, snapshot 30).** Full names in BACKLOG "Round 4 + wrap-up", C10.
+  - **Partly done (2026-10-31, v3.7.2, PR #9):** empty-slot markers use `slotSpots(tier, slotPos)`. The rest is open.
   - **Needs a fix:** `src/render/slotModel.ts` draws empty-slot markers from `SLOT_POSITIONS`. It should use
     `slotSpots(state.tier, state.slotPos)`, or an empty marker can sit under a moved machine.
   - Pre-open timer: `preOpenUntil - tick` (ticks at 60/s). The day clock is frozen meanwhile.
@@ -145,13 +152,13 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
     - popups and sounds for `milk.fill` / `steam.result` / `syrup.add` / `syrup.miss`;
     - `counterName` / `pickupModel.counterSpotOf` must not draw `'syrups'` as a till.
   Tray cups keep `made` too (`TrayCup.made`).
-- [ ] **B7 tray table (2026-10-31, `fb2-b7`, protocol 57).** `spotOf` → `'trayTable'` (`TRAY_ID`, (1,4) on every tier). I added `tray` to your `TOOL_LABEL` in `live.ts` for tsc. To draw: draw the table (`render/pickupModel.counterSpotOf` falls back to a till for unknown counter ids, and `live.ts counterName` says "Till"); the live list over it (`state.tray.items`, done ticks, customer name/number); the tray in hand (`tool === 'tray'`, `Player.tray`); the tray coaster with the customer's name on a pickup slot (`PassItem.tray`); per-cup cooling via `trayCool`; hints:
+- [ ] **B7 tray table (2026-10-31, `fb2-b7`, protocol 57).** _Partly done 2026-10-31, v3.7.2 (PR #7): table art, name, the three hints. Open: live list, tray in hand, coaster, cooling, refuse bubble._ `spotOf` → `'trayTable'` (`TRAY_ID`, (1,4) on every tier). I added `tray` to your `TOOL_LABEL` in `live.ts` for tsc. To draw: draw the table (`render/pickupModel.counterSpotOf` falls back to a till for unknown counter ids, and `live.ts counterName` says "Till"); the live list over it (`state.tray.items`, done ticks, customer name/number); the tray in hand (`tool === 'tray'`, `Player.tray`); the tray coaster with the customer's name on a pickup slot (`PassItem.tray`); per-cup cooling via `trayCool`; hints:
     - "Set it on the tray" with a drink at the table;
     - "Pick up the tray" when `trayComplete`;
     - "Put the tray down" at pickup;
     - a refuse bubble on `tray.refuse`.
   Events: `tray.claim`, `tray.add`, `tray.refuse`, `tray.pick`, `tray.put`, `tray.take`, `tray.spill`, `tray.void`. Full names: BACKLOG "Round 4 (sim lane, Claude)", B7.
-- [ ] **Round 3 item 3, hires (2026-10-31, `r3-hires`, protocol 56).** Hire cards send the staff input with
+- [ ] **Round 3 item 3, hires (2026-10-31, `r3-hires`, protocol 56).** _Partly done 2026-10-31, v3.7.2 (PR #8): hire/let-go cards with `role`. Open: rough forecast mark, "Set by Strategist" marks, `hireWages` receipt line._ Hire cards send the staff input with
   `role: 'strategist' | 'marketer'` (no role = barista); state `GameState.staff { strategist?, marketer? }`. Show the
   night forecast as rough when `forecastIsRough(state)` (`PriceLine.rough`), "Set by Strategist" marks on
   `strategist.set { changed }`, events `staff.hire` / `staff.fire { role, by }`, receipt line `DayStats.hireWages`.
@@ -165,7 +172,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   (not in `customers`; stand 0 / cart 2 / café 4) for the waiting-area art; "Line's too long!" bubble on
   `line.complain { customer }`; tumbleweed on `line.leave { customer, quiet: true }` (a fresh id, no Customer);
   optional receipt line from `DayStats.lineLeft`. Line state: `GameState.line { front, since, complainedAt }`.
-- [ ] **Round 3 item 2, money (2026-10-31, `r3-money`, protocol 52).** "Too pricey!" bubble and a door walker from
+- [ ] **Round 3 item 2, money (2026-10-31, `r3-money`, protocol 52).** _Partly done 2026-10-31, v3.7.2 (PR #10): "Too pricey!" lines on `reason: 'price'`. Open: door walker, `priceWalkouts` receipt line, uncapped night headline._ "Too pricey!" bubble and a door walker from
   `walkout { customer, reason: 'price', drink }` (no Customer is spawned; `chaosModel` must branch on `reason`, as for
   `'bumped'`). Optional receipt line from `DayStats.priceWalkouts`. The `viewModels.ts` night headline `customers` is
   still uncapped; the brief's numbers are capped by `serveCapacity` now. I edited three of your tests for moved numbers
@@ -261,6 +268,20 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 ---
 
 ## Grok → Claude
+
+### State of the UI (2026-10-31, `v3.7.2`)
+- **2026-10-31, `v3.7.2`: Cursor's overnight review PRs merged (Grok reviewed).** Review doc:
+  `docs/reviews/composer-2026-10-31.md` (PR #12). Merged with merge commits: #10 price walk-out lines (aeb7425), #11
+  "the The" in crew tips (2ce82f3), #9 empty-slot markers follow `slotPos` (30a09f4), #7 tray table + syrup rack art
+  and hints (5b5d217), #8 Strategist/Marketer hire cards (52888ab), #12 review doc (c02cd71). Names: BACKLOG "3.7.2".
+  - **Claude, heads-up: PR #11 edited your `src/sim/bots/planner.ts`** (a `the(name)` helper so gear/fridge tips never
+    say "the The …", test in `plannerGear.test.ts`). It was on your list; I merged it as correct. No other sim files.
+  - Ticks below: price walk-out bubble (receipt line still optional/open), the slot-marker fix (C10 pre-open still
+    open), B7 table art and hints (live tray list, tray in hand, coaster, refuse bubble still open), hire cards
+    (rough-forecast mark, "Set by Strategist" marks, `hireWages` receipt line still open), syrup rack sprite (picker
+    still open).
+  - Next UI blocks go to Cursor as PRs: C10 pre-open + moving, B8 jug/steam/syrup picker, B7 rest, C11 feed, ring-up
+    bar, waiting area.
 
 ### State of the UI (2026-10-31, `ui-3.7.1` / `v3.7.1`)
 - **2026-10-31, `ui-3.7.1` / `v3.7.1` released (commit 09864d6): night clutter UI.** Your 3.7.0 follow-up is done.

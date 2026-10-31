@@ -5,7 +5,7 @@ import { autoMilk, closingChecklist, closingSoon, fridgeGear, isFridge, isMilkSt
 import { FRIDGES } from '../data/fridges';
 import { TILL, ringProgress, selfOrder, tillNext } from '../sim/till';
 import { passSlots, pickupTarget, spotOf } from '../sim/pickup';
-import { trayComplete } from '../sim/tray';
+import { ticketOpen, trayComplete } from '../sim/tray';
 import { CONDIMENTS, canTakeBox } from '../sim/condiments';
 import { CONDIMENTS_ID } from '../data/layout';
 import { DRINK_INFO } from '../data/drinks';
@@ -264,7 +264,15 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   // FB2 B7: the tray table — never "Set on the pickup counter" / Till copy (HANDOFF).
   if (spot === 'trayTable') {
     if (player.tool === 'tray') return { go: false, title: 'Carry the tray to pickup', detail: `${where} · E at pickup puts it down` };
-    if (held && held !== 'grounds') return { go: true, title: 'Set it on the tray', detail: where };
+    if (held && held !== 'grounds') {
+      // 3.7.2: only promise a set-down the sim will take (an open tray line, or a big order still needing this drink).
+      const fits = state.tray
+        ? state.tray.items.some((x) => !x.done && x.drink === held)
+        : state.customers.some((c) => c.items && c.egg !== 'camper' && ticketOpen(state, c).includes(held));
+      return fits
+        ? { go: true, title: 'Set it on the tray', detail: where }
+        : { go: false, title: 'No big order needs this', detail: `${where} · take it to the pickup counter` };
+    }
     if (state.tray && trayComplete(state.tray)) return { go: true, title: 'Pick up the tray', detail: `${where} · every drink is on it` };
     if (state.tray) {
       const done = state.tray.items.filter((x) => x.done).length;
@@ -274,11 +282,11 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   }
   // FB2 B8: syrup rack — not a till; full jug/steam UI is a follow-up.
   if (spot === 'syrups') {
-    if (player.tool) return { go: false, title: 'Hands full', detail: where };
-    if (!held || held === 'grounds') return { go: false, title: 'Bring a drink', detail: `${where} · vanilla or caramel` };
-    return { go: true, title: 'Add a syrup', detail: `${where} · E for vanilla or caramel` };
+    // 3.7.2: E here does nothing yet (the sim's 'syrup' input needs the picker), so never show a green "go".
+    return { go: false, title: 'Syrup rack', detail: `${where} · vanilla and caramel · the syrup picker is coming soon` };
   }
   if (player.tool === 'tray' && (spot === 'pickup' || spot === 'till')) {
+    if (state.pass.length >= passSlots(state)) return { go: false, title: 'Pickup counter is full', detail: `${where} · ${state.pass.length}/${passSlots(state)} slots` };
     return { go: true, title: 'Put the tray down', detail: `${where} · that customer's cups stay together` };
   }
   if (held && held !== 'grounds') {

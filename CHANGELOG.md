@@ -18,6 +18,16 @@ when a build goes out, the line moves under its version with the date.
 
 _Nothing yet._
 
+## 3.7.2 — 2026-10-31 · Fixes from the overnight review
+
+The first batch from Cursor's overnight review (review doc: `docs/reviews/composer-2026-10-31.md`), checked and merged by Grok.
+
+- Customers who leave because the price is too high now say "Too pricey!" (or "Not at that price.", "I'll pass.", "Oof, maybe later.") instead of "Sold out?!". (PR #10)
+- Crew tips no longer say "buy the The Hanes Method". (PR #11)
+- After you move machines around, the empty-spot markers follow the new layout instead of sitting under a moved machine. (PR #9)
+- The tray table and the syrup rack now have their own art and names, and no longer look like extra tills. Hints at the tray table only light up when a big order really needs that drink; the syrup rack says the picker is coming soon. (PR #7, plus a small follow-up)
+- You can hire (and let go) a **Strategist** ($1/day: sets the menu and best prices each night, honest forecast) and a **Marketer** ($2/day: about 15% more walk-ins) from the night board's "More" row. (PR #8)
+
 ## 3.7.1 — 2026-10-31 · Restock from the counter
 
 The night-clutter answers now have their screens.
