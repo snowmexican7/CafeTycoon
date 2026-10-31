@@ -27,7 +27,8 @@ import { FRIDGE, autoMilk, closingSoon, isMilkStation, readyStock } from '../fri
 import { CONDIMENTS, canTakeBox, returnBox } from '../condiments';
 import { isSink, needsDump } from '../sink';
 import { answerPhone } from './phone';
-import { undoneDrinks, wantsItem } from '../orders';
+import { wantsItem } from '../orders';
+import { ticketOpen, trayCups } from '../tray';
 import { heldByPerson, heldForPeople, isPerson, ringsAtOnce } from './helper';
 import { addSyrup, askedSyrup } from '../handmade';
 import { SYRUP_ID } from '../../data/layout';
@@ -350,7 +351,7 @@ function coveragePool(state: GameState): Coverage {
       else if (isDrink(item)) drinks[item] += 1;
     }
   }
-  for (const item of state.pass) if (slotCool(state, item) < 1) drinks[item.item] += 1;
+  for (const item of state.pass) if (!item.tray && slotCool(state, item) < 1) drinks[item.item] += 1; // FB2 B7: a tray covers its own ticket (uncoveredOrders)
   return { drinks, pending };
 }
 
@@ -370,7 +371,7 @@ export function uncoveredOrders(state: GameState, self: Player): Customer[] {
     // FB2 B6 (fix round 1, I1): an office run keeps one drink in the queue (its first uncovered one, in its queue
     // place) and the rest go after everyone else's: it gets made steadily without starving the walk-ins.
     const office = c.order === 'office';
-    const wants = c.items ? undoneDrinks(c) : [c.drink];
+    const wants = c.items ? ticketOpen(state, c) : [c.drink]; // FB2 B7: cups on a tray cover their ticket
     const claims = c.items ? ticketClaims(state, self, c.id) : null;
     // A bot already on one of its drinks fills the office run's queue place (fix round 1: else each bot took the next).
     let queued = office && claims !== null && [...claims.values()].some((n) => n > 0);
@@ -425,7 +426,7 @@ export function uncoveredOrder(state: GameState, self: Player): Customer | null 
 }
 
 function coldBrewsAhead(state: GameState): number {
-  const onPass = state.pass.filter((i) => i.item === 'coldBrew').length;
+  const onPass = state.pass.filter((i) => i.item === 'coldBrew' && !i.tray).length;
   const held = state.players.filter((p) => p.holding === 'coldBrew').length;
   const inTap = state.stations.filter(
     (st) => st.kind === 'coldBrewTap' && ((st.busyTicksLeft > 0 && (st.making ?? 'coldBrew') === 'coldBrew') || st.output === 'coldBrew'),
@@ -991,7 +992,8 @@ function claimLost(state: GameState, p: Player): boolean {
     // FB2 B6: an item of its drink is still to come, and (fix round 1, M1) not every one of them is claimed by a bot
     // earlier in the crew: two bots on one item left would make an extra cup, so the later one lets go.
     if (b.claimDrink === null) return true;
-    const left = c.items.filter((x) => !x.done && x.drink === b.claimDrink).length;
+    const drink = b.claimDrink;
+    const left = c.items.filter((x) => !x.done && x.drink === drink).length - trayCups(state, c.id).filter((d) => d === drink).length; // FB2 B7
     let ahead = 0;
     for (const o of state.players) {
       if (o === p) break;

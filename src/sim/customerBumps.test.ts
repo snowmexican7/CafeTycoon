@@ -131,6 +131,7 @@ describe('bumping into customers', () => {
     expect(out[0].data).toMatchObject({ customer: c.id, reason: 'bumped' });
     expect(s.customers).toHaveLength(0);
     expect(s.today.lost).toBe(1);
+    expect(s.today.feedMoments?.bump).toBe(1); // FB2 C11: a bump walk-out is a feed moment
     expect(s.reputation).toBeDefined();
   });
 

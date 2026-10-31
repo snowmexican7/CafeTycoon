@@ -2053,6 +2053,38 @@ Open (sim lane):
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
 
+## ui-3.5.2 (UI lane): character creator
+
+Released as `ui-3.5.2` / `v3.5.2` (2026-10-30), on Claude's `Player.look` (R4 e, protocol 48). UI files only; no
+sim, net, host, storage or data edits.
+
+**Built (names as built):**
+- `src/render/lookModel.ts`: the catalogue. `BODIES` (slim, broad), `HAIR_STYLES` (short, buzz, spiky, curly, bob,
+  long, ponytail, bun), `HAIR_COLOURS` (8), `SKIN_TONES` (`s1`–`s6`), `SHIRT_COLOURS` (8), `OUTFITS` (apron, dress,
+  skirt, overalls, hoodie, vest). The body style rides inside the outfit id as `<body>-<outfit>` (`slim-dress`,
+  `broad-overalls`; `splitOutfit` / `joinOutfit`), so the sim's four ids are enough. `DEFAULT_LOOK`, `LOOK_PARTS`,
+  `partId`, `stepLook` (arrows, wrap around), `randomLook`, `lookArt` (unknown ids draw the first option, so a look
+  from a newer build never breaks the floor).
+- `src/render/layers/actors.ts`: `drawPerson` takes an optional `style` (body width, back and front hair per style,
+  dress / skirt with legs and shoes, overalls bib, vest panels, hoodie hood). Players with a look lose the cap; bots
+  and look-less players draw exactly as before. Name tag and ring keep the player colour.
+- `src/render/lookPreview.ts`: the creator's preview canvas (front and back view). One Pixi app, made once and reused:
+  destroying a second Pixi 8 Application broke the game renderer's shared batcher ("reading 'clear'").
+- `src/ui/creator.ts` + `styles/creator.css`: `#creator` overlay, "Make your barista" / "Edit my barista", one row
+  per part with ◀ ▶ (52×48), swatches and "N of M", "🎲 Surprise me", Skip (Cancel when editing, Esc does the same),
+  "Looks good, start!" / "Save my look". 860 px card, fits 1280×800 and 1512×982.
+- `src/ui/lookStore.ts`: `cafetycoon.look` in localStorage, checked with the sim's `cleanLook`.
+- `src/main.ts`: the creator opens before solo start, before hosting (before the lobby) and before joining, filled
+  with the saved look, so it is one click; Resume and Rejoin skip it (Rejoin sends the saved look). Night: the
+  "👕 Edit my barista" chip in the More row sends `{ kind: 'look', playerId, look }` and saves it.
+- Tests: `src/ui/creator.test.ts` (every combination passes `cleanLook`, arrows wrap, fallback art, store, screen
+  text, night chip). Screenshots: `/workspace/overnight/sprint/ui-round4/creator/`.
+
+**Not done / next:**
+- Joiners: `createPeerTransport` has no look parameter, so main.ts builds `createPeerSession` itself (HANDOFF Needs).
+- No look change inside the lobby (needs a sim/net message; HANDOFF Needs, optional).
+- Back view hair for `bun` and `ponytail` is simple; face details (glasses, beards) are ideas for later.
+
 ## ui-3.5.1 (UI lane): Round 4 night, tickets, dev mode, bumps, steam wands
 
 Released as `ui-3.5.1` / `v3.5.1` (2026-10-30). UI files only; no sim, net, host, storage or data edits (and no
@@ -2309,6 +2341,22 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   'Pour cold brew' / 'Ice + milk' / 'Cold brew again (sweet cream)'; equipment 'Cold-brew keg', catalogue 'Second
   cold brew keg', gear c4 'The Kegerator', describe 'cold brew', steep's morning note "…had no room left…". Code ids
   (`coldBrewTap`, `batchLeft`) unchanged; card-payment "tap terminal" unchanged.
+- **Balance pass (`fb2-balance`, stopped early by Kennedy's call: playtests drive balance now).** Fixes kept:
+  the balance harness steeps cold brew on night 1; bots `reclaim` a lost claim onto another order for the same
+  drink and collect grounds left in a grinder after 15 s (`leftGrounds`, ported from B6); during closing soon, E
+  at the cold brew for a sweet cream pours instead of lifting the milk; bots meeting head-on behind the bar no
+  longer block each other all day (also in v3.3.1). No constants changed; the cube stays $20.
+- **3.5.0 released** (Feedback 2 part A + balance fixes). UI lane already shipped 3.4.0/3.4.1, hence 3.5.0.
+- **B6 multi-drink orders (`fb2-b6`, protocol 45; UI lane to draw).** Gear only.
+  - **Tickets:** a group, a combo or an office run is one ticket: `Customer.items: { drink, done, by?, slips?, temp?, black?, cold? }[]`, with `Customer.order: 'combo' | 'office'` (absent for groups). `drink`/`extra` mirror the undone items. Rung once; each cup taken off the pickup counter ticks one item; the ticket pays when the last item is taken (`order.done { customer, paid, tip }`, and every cup's `served` event lands then, with `left: 0`). Walk out part done: nothing paid, the cups taken are wasted (not an office run's).
+  - **Cold cups:** a cold cup ticks its item unpaid (`pickup.cold`, plus `review.bad` except office) and the rest carries on.
+  - **Gear groups** now pay once, at the end.
+  - **Combos:** from day 2, about 1 in 12 walk-ins order 2 drinks (`ORDERS.combo.chance` 0.08; a pair, or espresso drink + drip), ×1.3 patience. `order.combo { customer, items: "latte,drip" }`.
+  - **Office runs:** on the cart and at the café from day 3, about every other day (`GameState.office { day, at, called?, came? }`). The phone rings 10 s ahead (`office.call { at }`, `at` = the tick they're due; with the queue over capacity they wait outside and come later). 4–6 drinks (`ORDERS.office.size` by tier), ×4 patience, arriving 5–15% into the day (`order.office { customer, count }`). Finished: +25% bonus tip, counts as one customer for reputation (`DayStats.officeExtra`). Lost (patience out, or still in when the doors lock): `order.lost { customer }`, no lost customers, no waste, no bad review, no reputation hit. `DayStats.office: 'served' | 'lost'`. They take a cup only when nobody else wants it; bots keep one office drink in the queue at a time and make the rest after the walk-ins'. Kennedy to tune size, patience and combo rate in play.
+  - **Bots:** cover each undone item as its own order (one claim per item, never two on one item left). In Gear, a claim lost mid-chain moves to another order for the same drink (never onto a ticket held for a free person), and grounds left in a grinder are collected after 15 s (30 s while someone else on the floor counts as a person by A1's rule).
+  - **UI to do:** a tall ticket with a tick per item (`items[].done`, maybe the cold one crossed out), the office-run phone card (`office.call`, a countdown to `at`), and a receipt line for `DayStats.office`.
+  - Open: two bots crossing a corridor mirrored each other all day on p4 seed 205 day 9 before the balance
+    branch's head-on fix (748100f); recheck in play.
 
 
 ## Round 3 (Kennedy approved 2026-10-30)
@@ -2348,26 +2396,11 @@ Approved Oct 30, 2026 7:46 PM (Toronto). Sim lane builds; UI lane (Grok) wires. 
 - A split money pool for co-op.
 - Upgrade paths: speed, reliability, taste, quality.
 - A smart café path (top registers pair with smart machines), ending in a self-running shop with conveyor belts.
-- **Balance pass (`fb2-balance`, stopped early by Kennedy's call: playtests drive balance now).** Fixes kept:
-  the balance harness steeps cold brew on night 1; bots `reclaim` a lost claim onto another order for the same
-  drink and collect grounds left in a grinder after 15 s (`leftGrounds`, ported from B6); during closing soon, E
-  at the cold brew for a sweet cream pours instead of lifting the milk; bots meeting head-on behind the bar no
-  longer block each other all day (also in v3.3.1). No constants changed; the cube stays $20.
-- **3.5.0 released** (Feedback 2 part A + balance fixes). UI lane already shipped 3.4.0/3.4.1, hence 3.5.0.
-- **B6 multi-drink orders (`fb2-b6`, protocol 45; UI lane to draw).** Gear only.
-  - **Tickets:** a group, a combo or an office run is one ticket: `Customer.items: { drink, done, by?, slips?, temp?, black?, cold? }[]`, with `Customer.order: 'combo' | 'office'` (absent for groups). `drink`/`extra` mirror the undone items. Rung once; each cup taken off the pickup counter ticks one item; the ticket pays when the last item is taken (`order.done { customer, paid, tip }`, and every cup's `served` event lands then, with `left: 0`). Walk out part done: nothing paid, the cups taken are wasted (not an office run's).
-  - **Cold cups:** a cold cup ticks its item unpaid (`pickup.cold`, plus `review.bad` except office) and the rest carries on.
-  - **Gear groups** now pay once, at the end.
-  - **Combos:** from day 2, about 1 in 12 walk-ins order 2 drinks (`ORDERS.combo.chance` 0.08; a pair, or espresso drink + drip), ×1.3 patience. `order.combo { customer, items: "latte,drip" }`.
-  - **Office runs:** on the cart and at the café from day 3, about every other day (`GameState.office { day, at, called?, came? }`). The phone rings 10 s ahead (`office.call { at }`, `at` = the tick they're due; with the queue over capacity they wait outside and come later). 4–6 drinks (`ORDERS.office.size` by tier), ×4 patience, arriving 5–15% into the day (`order.office { customer, count }`). Finished: +25% bonus tip, counts as one customer for reputation (`DayStats.officeExtra`). Lost (patience out, or still in when the doors lock): `order.lost { customer }`, no lost customers, no waste, no bad review, no reputation hit. `DayStats.office: 'served' | 'lost'`. They take a cup only when nobody else wants it; bots keep one office drink in the queue at a time and make the rest after the walk-ins'. Kennedy to tune size, patience and combo rate in play.
-  - **Bots:** cover each undone item as its own order (one claim per item, never two on one item left). In Gear, a claim lost mid-chain moves to another order for the same drink (never onto a ticket held for a free person), and grounds left in a grinder are collected after 15 s (30 s while someone else on the floor counts as a person by A1's rule).
-  - **UI to do:** a tall ticket with a tick per item (`items[].done`, maybe the cold one crossed out), the office-run phone card (`office.call`, a countdown to `at`), and a receipt line for `DayStats.office`.
-  - Open: two bots crossing a corridor mirrored each other all day on p4 seed 205 day 9 before the balance
-    branch's head-on fix (748100f); recheck in play.
 
-## Round 4 (sim lane, Claude)
+## Round 4 + wrap-up (sim lane, Claude, 2026-10-31)
 
-Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. One branch and tag per item; names as built.
+Spec: `docs/CLAUDE_PROMPT_ROUND_4.md` (a–f), BACKLOG "Round 3" (items 1–7) and `docs/CLAUDE_PROMPT_FEEDBACK_2.md`
+(C9, B7, B8, C10, C11). One branch and tag per item; names as built; protocol bumps in merge order.
 
 - **c. Bumping into customers (`r4-bump`, protocol 46).** `stepCustomerBumps` (src/sim/bumps.ts): a person (not a bot,
   `ECONOMY.bump.botsBumpCustomers: false`) walking into a customer within `customerTiles` (0.6) costs them
@@ -2440,13 +2473,13 @@ Key fact: `startDay()` reads the night's choices once (menu, prices, twists, ad 
 | Branch (second shop) (drawer) | night, Gear only | KEEP | Too rare to matter. |
 | Classic `slot`/`equip` (Spend > Stations) | night, classic only | CUT | Memory says no classic runs any more; deleting the input, UI and tests removes a whole spend view. |
 
-## Mid-day design, if wanted (a "lull")
+#### Mid-day design, if wanted (a "lull")
 A fixed pause point at e.g. 50% of the day (like `ringFrom` in call.ts: derive the time from a hash of seed+day, no RNG draw). Phase stays `day` with a `lull` flag. Only restock and one "quick buy" accepted. Host authority: timer is the host's (as the close vote is). Co-op: one shared pause, any human can act, no votes unless a big spend. Customers keep queuing (no freeze) so it is a cost, not a free break. Needs a new protocol bump and a UI card.
 
-## Recommended first step (trivial)
+#### Recommended first step (trivial)
 Allow the existing `restock` input during `day` and `closing` (extend the one phase check in `applyNightInput`/step.ts `restock` case) and surface a small "Restock" button on the day HUD. No new phase, no new input kind, no new state. Optionally cut the classic `slot`/`equip` UI at the same time. Then Grok can drop the Restock tab to a one-line "stock is low" chip on the night screen.
 
-## Needs Kennedy's call
+#### Needs Kennedy's call
 1. Should restocking mid-day be free of consequence, or cost more (rush delivery +25%) or take time (delivery arrives in 30 s)?
 2. Should Menu/price/twist be handed to the Strategist hire by default (Round 3 item 3) so the Menu tab nearly disappears?
 3. Are roles and reroll worth keeping at all?
@@ -2491,3 +2524,33 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   Add-on: `latteAddon` / `latteAddonChance` (src/sim/orders.ts), `LATTES.addon` 0.05 of single walk-ins, Gear, from
   day 2, only with `latte` on the board; reuses B6 (`order: 'combo'`, ×1.3 patience, pays at the last cup) and logs
   `order.addon { customer, drink: 'latte' }` instead of `order.combo`. `cupsPerArrival` counts the add-on cup.
+- **C11 daily feed and reviews (`fb2-c11`, protocol 55).** `GameState.fans`; `DayStats.feed` (3–5 end-of-day posts),
+  `posts` (live), `feedMoments`, `fansDelta`, `fansAfter`. Events `review.post { customer, drink, sentiment, reason,
+  stars, at, name, text }` (`at` = tick) and `week.rating { reviewers (JSON string), fans }`. Night views
+  `dayReviews(state) → { posts, fans, fansDelta }`, `weekRating(state) → { reviewers: { name, score }[], fans }`
+  (src/sim/feed.ts; text and numbers in src/data/feed.ts). Rolls use a hash of seed/day/customer/reason, not
+  `state.rng`, so no other roll moves.
+- **Round 3 item 3, hires (`r3-hires`, protocol 56).** Strategist ($1/day) and Marketer ($2/day), Gear runs, night, people only, no cost up front, wages at closing with the crew's (by the hour like theirs; `HIRE_WAGE`, `hireWage`, `hireWagesForDay`, `DayStats.hireWages` is the part of `wages` they took). `GameState.staff { strategist?, marketer? }`; input is the staff input with `role: 'strategist' | 'marketer'` (no role = barista). Without a Strategist the night's price table is a rough guess (`forecastIsRough(state)`: orders and profit skewed up to +-25% by a hash of seed + day, rounded to 5, `PriceLine.rough`; stock warnings stay honest). With one the forecast is honest and `setPeakPrices` (src/sim/strategist.ts, `bestStep`) sets the calculator's best prices at every night start and on hire (`strategist.set { changed }`); hand-set prices stand until the next night start. Marketer: `MARKETER_TRAFFIC` 1.15 on walk-ins at current prices; both stack; firing stops both. Events `staff.hire { role, by }`, `staff.fire { role, by }`. Planner advice `staff:hire:strategist` / `staff:hire:marketer` (kind `equip`, priority 54) when the forecast gain beats the wage. **UI to do:** hire cards, rough-vs-honest forecast display, "Set by Strategist" marks, receipt line for `hireWages`.
+- **B7 tray table (`fb2-b7`, protocol 57; UI lane to draw).** Gear only.
+  - **The table:** fixed counter-kind spot `trayTable` (`TRAY_ID`, `layoutFor(tier).trayTable` = (1,4) on every tier, below the fridge, worked from (2,4)); `spotOf` → `'trayTable'`. Never bought, sold or moved.
+  - **Claim and fill:** E or R with a drink on the empty table claims the oldest multi-drink ticket (combo, office, group; any stage) that still needs it.
+    - `GameState.tray { customer, items: { drink, done, by?, slips?, temp?, madeAt? }[] }` lists what the ticket still needed.
+    - `tray.claim { customer, by }`, then `tray.add { drink, by, customer }`.
+    - Later drinks join only while the ticket needs them; else `tray.refuse { drink, by, customer? }` and the drink stays in hand. A single's drink is never taken.
+    - The ticket never takes a counter cup a tray covers. A counter cup it does take drops that line from the tray.
+  - **Carry:** empty hands lift only a complete tray: `Player.tool = 'tray'`, `Player.tray`, `tray.pick { by, customer }`, and the table is free. One per pair of hands.
+  - **Deliver:** E or R at the pickup counter (or till) puts it down as one slot: `PassItem.tray { customer, drinks }` (`item` = first cup), `tray.put { by, customer }`.
+    - Only that customer takes it, all at once, once at pickup: `tray.take { customer }`, then the usual `pickup.take` and `order.done`.
+    - It never goes stale, take-backs skip it, and singles never take from it.
+  - **Spill:** a carried tray spills on a barista bump at 3× (`TRAY.spillMul`): `tray.spill { by, customer, cups }`, every cup wasted, a puddle; the ticket waits on.
+  - **Cooling:** cups keep their own `madeAt`; `trayCool(state, cup)`.
+  - **A ticket that leaves** voids its trays wherever they are: `tray.void { customer, cups }`, wasted except an office run's.
+  - **Bots** never use the table; they count tray cups as covering the ticket (`ticketOpen`, `trayCups`).
+  - **UI to do:** draw the table (`render/pickupModel.counterSpotOf` falls back to a till for unknown counter ids, and `live.ts counterName` says "Till"); the live list over it (`state.tray.items`, done ticks, customer name/number); the tray in hand (`tool === 'tray'`, `Player.tray`); the tray coaster with the customer's name on a pickup slot (`PassItem.tray`); per-cup cooling via `trayCool`; hints:
+    - "Set it on the tray" with a drink at the table;
+    - "Pick up the tray" when `trayComplete`;
+    - "Put the tray down" at pickup;
+    - a refuse bubble on `tray.refuse`.
+  - **Open:**
+    - Bots never carry a tray. If a person leaves a complete tray on the table, that ticket waits (and may be lost) until a person delivers it.
+    - There is no way to put a lifted tray back on the table.

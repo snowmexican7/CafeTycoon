@@ -117,7 +117,9 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return out;
     }
     case 'staff':
-      return input.action === 'hire' || input.action === 'fire' ? { kind: 'staff', playerId: input.playerId, action: input.action } : null;
+      if (input.action !== 'hire' && input.action !== 'fire') return null;
+      if (input.role === undefined) return { kind: 'staff', playerId: input.playerId, action: input.action };
+      return input.role === 'strategist' || input.role === 'marketer' ? { kind: 'staff', playerId: input.playerId, action: input.action, role: input.role } : null;
     case 'steep':
       return Number.isInteger(input.cups) && input.cups >= 0 && input.cups <= STEEP.maxInput
         ? { kind: 'steep', playerId: input.playerId, cups: input.cups }

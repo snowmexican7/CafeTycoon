@@ -4,11 +4,13 @@ import { secondsToTicks } from './constants';
 import { isOut } from './espresso';
 import { ownTile, placeMess, spillHeld } from './floor';
 import { emitLog } from './log';
+import { noteFeedMoment } from './feed';
 import { blocked } from './movement';
 import { rngNext } from './rng';
 import { tally } from './tally';
 import { loseCustomer } from './customers';
 import { customerSpots } from './customerSpots';
+import { spillTray } from './tray';
 import type { GameState, Player, Vec2 } from './types';
 
 const B = ECONOMY.bump;
@@ -39,6 +41,7 @@ function nudge(state: GameState, p: Player, d: Vec2): void {
 
 /** A bump may knock what `p` carries to the floor. Rolls only for a carrier, so a bump between empty hands draws no RNG. */
 function maybeSpill(state: GameState, p: Player): void {
+  if (p.tool === 'tray') return spillTray(state, p); // FB2 B7: a tray spills at TRAY.spillMul × the chance
   const item = p.holding;
   if (item === null) return;
   if (rngNext(state) >= B.spillChance) return;
@@ -126,6 +129,7 @@ export function stepCustomerBumps(state: GameState): void {
     if (c.bumpedAt.length >= B.customerAngryAt) {
       gone.add(c.id);
       emitLog(state, 'walkout', { customer: c.id, reason: 'bumped', x: round2(at.x), y: round2(at.y) });
+      noteFeedMoment(state, 'bump', c, c.drink); // FB2 C11
       loseCustomer(state, c);
     }
   });

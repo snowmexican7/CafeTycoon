@@ -14,6 +14,7 @@ import { applyCheckout } from './checkout';
 import { applyGrowth, tierInfo } from './growth';
 import { DRINK_IDS, DRINK_TEMP } from '../data/drinks';
 import { dayProgress, forecastOf, shapeAt } from './forecast';
+import { MARKETER_TRAFFIC, hasMarketer } from './hires';
 import type { CardSetId, DrinkId, Effect, EventKind, GameState, StationKind, SupplyId } from './types';
 
 /** Every multiplier the simulation reads, already combined. */
@@ -188,6 +189,7 @@ export function computeModifiers(state: GameState): Modifiers {
     m.patience *= ECONOMY.events.rushHour.patience;
   }
   if (state.today.influencer === 'served') m.traffic *= ECONOMY.events.influencer.trafficAfter;
+  if (state.gear && hasMarketer(state)) m.traffic *= MARKETER_TRAFFIC; // Round 3 item 3
   // A dirty floor wears on patience; read once when a customer arrives, so waiting ones keep theirs.
   m.patience *= floorPatience(state); // FB2 A3: Gear runs only start to mind below 80%
   applyAd(state, m);

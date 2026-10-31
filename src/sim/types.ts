@@ -93,6 +93,36 @@ export interface PassItem {
   madeAt?: number;
   /** FB2 B8: how the cup was hand-made (absent = nothing special). */
   made?: HandMade;
+  /**
+   * FB2 B7: this slot is a whole tray for one multi-drink ticket (`item` mirrors its first cup). Only that customer takes
+   * it, all at once; singles never do, take-backs skip it, and it never goes stale (each cup still cools by its `madeAt`).
+   */
+  tray?: { customer: number; drinks: TrayCup[] };
+}
+
+/** FB2 B7: one cup sitting on a tray: the drink, who set it down, its marks and its made tick (it cools like any cup). */
+export interface TrayCup {
+  drink: DrinkId;
+  by?: PlayerId;
+  slips?: number;
+  temp?: true;
+  madeAt?: number;
+  /** FB2 B8: how the cup was hand-made (shots, syrup, milk, foam). */
+  made?: HandMade;
+}
+
+/** FB2 B7: a line of a tray's list: a drink the ticket still needs, `done` once its cup is on the tray. */
+export interface TrayItem extends TrayCup {
+  done: boolean;
+}
+
+/**
+ * FB2 B7: a tray for one multi-drink ticket. `items` are the drinks the ticket still needed when the tray was claimed
+ * (kept in step: a cup the customer takes off the pickup counter instead drops its line), `done` = on the tray.
+ */
+export interface Tray {
+  customer: number;
+  items: TrayItem[];
 }
 
 /** Absolute state.tick at which the event starts. */
@@ -198,6 +228,9 @@ export type SimEventKind =
   | 'pickup.cold'
   | 'pickup.takeBack'
   | 'review.bad'
+  /** FB2 C11: the social feed (src/sim/feed.ts): a live post after a bad or great moment; the week's reviewer rating. */
+  | 'review.post'
+  | 'week.rating'
   /** FB2 A4 (src/sim/fridge.ts): the fridge, milk out at the bar, putting away, spoiling at close, closing soon. */
   | 'fridge.take'
   | 'fridge.put'
@@ -229,7 +262,20 @@ export type SimEventKind =
   | 'milk.fill'
   | 'steam.result'
   | 'syrup.add'
-  | 'syrup.miss';
+  | 'syrup.miss'
+  /** Round 3 item 3 (src/sim/strategist.ts, staff.ts): a hire or a firing ({ role, by }); the strategist set the prices ({ changed }). */
+  | 'staff.hire'
+  | 'staff.fire'
+  | 'strategist.set'
+  /** FB2 B7 (src/sim/tray.ts): the tray table and carried trays. */
+  | 'tray.claim'
+  | 'tray.add'
+  | 'tray.refuse'
+  | 'tray.pick'
+  | 'tray.put'
+  | 'tray.take'
+  | 'tray.spill'
+  | 'tray.void';
 
 /** R3 7: what a grow changes, before → after (src/sim/growth.ts growDiff). */
 export interface GrowDiff {
@@ -296,7 +342,9 @@ export interface Player {
   /** What the barista carries instead of a cup: the mop, a condiment stock box, or (FB2 A3) a drip pot on its way to the sink (Gear runs).
    *  FB2 A4: `milk`, a milk carton (from the fridge, or lifted off the bar at closing); `bar`, what was left on the
    *  condiment bar, lifted to put away in the fridge. Both hold `carry` servings. Neither is a cup: they don't cool. */
-  tool: 'mop' | 'box' | 'pot' | 'milk' | 'bar' | null;
+  tool: 'mop' | 'box' | 'pot' | 'milk' | 'bar' | 'tray' | null;
+  /** FB2 B7: the tray in hand (with `tool === 'tray'`); every line is done. Absent otherwise. */
+  tray?: Tray;
   /** FB2 A4: servings in the carried milk carton or bar box (absent with any other tool). */
   carry?: number;
   cleaningTicksLeft: number;
@@ -638,6 +686,8 @@ export interface DayStats {
   checkoutFees?: number;
   /** P3 B15: wages paid to the hired bot baristas at closing (Gear runs; absent = none). */
   wages?: number;
+  /** Round 3 item 3: the part of `wages` that went to the Strategist and Marketer (absent = none). */
+  hireWages?: number;
   /** Challenge tip paid at closing (folded into bonus too). */
   challengeBonus?: number;
   /** Challenge ids won today. */
@@ -668,6 +718,28 @@ export interface DayStats {
   officeExtra?: number;
   /** Round 3 item 4: would-be customers who left quietly during a line complaint (stats only: not lost, no reputation). */
   lineLeft?: number;
+  /** FB2 C11: every bad or great moment today by reason (posted or not), the live posts they made, and the day's feed. */
+  feedMoments?: Partial<Record<FeedReason, number>>;
+  posts?: FeedPost[];
+  feed?: FeedPost[];
+  /** FB2 C11: fans gained (or lost) at closing, and the fan count after it. */
+  fansDelta?: number;
+  fansAfter?: number;
+}
+
+/** FB2 C11: why a post was made. Live: cold, lukewarm, black, wait, bump, great. Day summaries add the rest. */
+export type FeedReason = 'cold' | 'lukewarm' | 'black' | 'wait' | 'bump' | 'great' | 'service' | 'crowd' | 'quiet' | 'speed' | 'quality' | 'tips';
+export type FeedSentiment = 'good' | 'bad';
+/** FB2 C11: one post on the fake social app. `customer`, `drink` and `at` (the sim tick) are set on live posts. */
+export interface FeedPost {
+  name: string;
+  text: string;
+  sentiment: FeedSentiment;
+  reason: FeedReason;
+  stars: number;
+  drink?: DrinkId;
+  customer?: number;
+  at?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -687,6 +759,8 @@ export interface GameState {
   devPaused?: true;
   /** P4 B2: the four-week season started by Keep going after week 1 (Gear runs). */
   season?: Season;
+  /** FB2 C11: fans of the café (absent = 0), moved by each day's net sentiment at closing. */
+  fans?: number;
   /** P4 B4: the second shop, once opened. */
   branch?: Branch;
   bankrupt: boolean;
@@ -722,6 +796,8 @@ export interface GameState {
    * opening (the phone rings `ORDERS.office.callSeconds` before); `called` once it rang, `came` its customer id.
    */
   office?: { day: number; at: number; called?: true; came?: number };
+  /** FB2 B7: the tray on the tray table (Gear runs; absent = the table is empty). */
+  tray?: Tray;
   /**
    * Round 3 item 5: the ring-up in progress at the till (Gear runs; absent = nobody is ringing). `by` is the person
    * ringing, or '' for a self-order screen. Done when `tick - startedAt >= ticks`; `ringProgress(state)` (src/sim/till.ts) is 0..1.
@@ -762,6 +838,8 @@ export interface GameState {
   tierLog?: { tier: TierId; day: number; by: string }[];
   /** R3 6: tonight's `grow.affordable` has fired (reset each night). */
   growNudged?: true;
+  /** Round 3 item 3: the Strategist and Marketer on the books (absent = neither; src/sim/hires.ts). */
+  staff?: { strategist?: true; marketer?: true };
   /** FB1 WP5: what stands in each back-bar slot, left to right (absent = the tier's defaults; see sim/slots.ts). */
   slots?: (StationKind | null)[];
   /** FB1 WP5: stations the crew owns but has not placed (absent = none). */
@@ -855,7 +933,7 @@ export type PlayerInput =
   | { kind: 'rivalCounter'; playerId: PlayerId; on?: boolean }
   | { kind: 'stampCard'; playerId: PlayerId }
   /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
-  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire' }
+  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire'; /** Round 3 item 3: absent = a barista. */ role?: 'strategist' | 'marketer' }
   | { kind: 'branch'; playerId: PlayerId; action: 'open' | 'staff' | 'send' | 'close'; area?: AreaId; staff?: number; supply?: SupplyId }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }

@@ -95,7 +95,7 @@ describe('Round 3 money: unitCost', () => {
     const s = gearRun(['e3', 'g1']);
     onlyMenu(s, ['doppio']);
     const m = computeModifiers(s);
-    const line = priceForecast(s, ['doppio'], m, 12).find((l) => l.drink === 'doppio')!;
+    const line = priceForecast(s, ['doppio'], m, 12, true).find((l) => l.drink === 'doppio')!;
     expect(line.orders).toBeGreaterThan(0);
     expect(line.profit).toBeCloseTo(line.orders * (line.price - 2 * beanUnit), 1);
   });
@@ -170,7 +170,7 @@ describe('Round 3 money: forecast capped by real capacity', () => {
     const total = Object.values(expectedOrders(s)).reduce((a, b) => a + b, 0);
     expect(total).toBeLessThanOrEqual(cap + 1e-9);
     expect(total).toBeGreaterThan(0);
-    const lines = priceForecast(s, menuDrinks(s), m, ECONOMY.baseArrivalsPerSecond * 3000 * m.traffic);
+    const lines = priceForecast(s, menuDrinks(s), m, ECONOMY.baseArrivalsPerSecond * 3000 * m.traffic, true);
     expect(lines.reduce((a, l) => a + l.orders, 0)).toBeLessThanOrEqual(cap + lines.length);
   });
 

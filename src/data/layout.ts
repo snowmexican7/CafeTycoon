@@ -49,6 +49,8 @@ export const CONDIMENTS_ID = 'condiments';
 export const FRIDGE_ID = 'fridge';
 /** FB2 A3: the back sink (Gear runs), a fixed counter-kind spot like the condiment bar. */
 export const SINK_ID = 'sink';
+/** FB2 B7: the tray table (Gear runs), a fixed counter-kind spot like the sink, where multi-drink tickets are batched. */
+export const TRAY_ID = 'trayTable';
 /**
  * FB2 B8: the syrup rack (Gear runs with a steam wand), a fixed counter-kind spot like the sink: at the left end of the
  * front counter on every tier (a stop on the way to setting a cup down), worked from the tile behind it (2,5), which no
@@ -80,10 +82,16 @@ export interface TierLayout {
    * (fix round 1: at y = 3 it shared the last slot's only tile, and the bar lost ~9% of its serves to the detours).
    */
   sink: Vec2;
+  /**
+   * FB2 B7 (Gear runs): the tray table, against the left wall just below the fridge (1,4), the same on every tier. It is
+   * worked from the tile to its right (2,4) (or from below); no tile in its reach is in reach of any other station, and
+   * it keeps clear of the spawn points, the door, the mop's home, the box corner and the bots' idle tiles by the till.
+   */
+  trayTable: Vec2;
 }
 
 /** Batch/pickup: the same spots on every tier (the till, door and front of the queue never move either). */
-const SPOTS = { pickup: { x: 5, y: 6 }, condiments: { x: 4, y: 6 }, fridge: { x: 1, y: 3 } };
+const SPOTS = { pickup: { x: 5, y: 6 }, condiments: { x: 4, y: 6 }, fridge: { x: 1, y: 3 }, trayTable: { x: 1, y: 4 } };
 
 const COUNTER = { id: 'counter', kind: 'counter' as const, pos: { x: 6, y: 6 } };
 

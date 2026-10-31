@@ -16,6 +16,7 @@ import { BASE_DRINKS, RECIPES, recipeChain, type Recipe, type RecipeStation } fr
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
 import { fridgeInteract, readyStock, useStock } from './fridge';
 import { afterInsert, handmadePress, jugFirst } from './handmade';
+import { trayInteract } from './tray';
 import type { DrinkId, GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from './types';
 
 /** Each working station's first (classic) recipe: what it takes, gives back and uses up. See RECIPES for all of them. */
@@ -101,6 +102,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   // FB2 B8: a press first stops a filling milk jug, or the steam meter at its wand.
   if (handmadePress(state, player)) return state;
   if (player.holding === null) { delete player.cupSlips; delete player.cupTemp; delete player.made; } // P3 B5: empty hands, no cup, no marks
+  if (trayInteract(state, player)) return state; // FB2 B7: a carried tray, or a press at the tray table
   if (player.tool === 'pot') {
     dumpPot(state, player); // FB2 A3: only the sink takes the pot
     return state;

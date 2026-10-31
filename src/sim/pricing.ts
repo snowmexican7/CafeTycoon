@@ -10,6 +10,7 @@ import { ECONOMY } from '../data/economy';
 import { DRINK_INFO, DRINK_IDS, drinkSupplyUnits } from '../data/drinks';
 import { dripPotCups, expectedCups, shareWeights } from './capacity';
 import type { Modifiers } from './effects';
+import { forecastIsRough, roughGuess, roughPct } from './forecast';
 import type { DrinkId, GameState, PlayerInput } from './types';
 
 export const PRICING = {
@@ -110,13 +111,17 @@ export interface PriceLine {
   /** Expected orders tomorrow (rounded) and the profit on them before tips. */
   orders: number;
   profit: number;
+  /** Round 3 item 3: the numbers are a rough guess (no Strategist): orders and profit rounded to 5 and skewed, demandPct rounded to 5. */
+  rough?: true;
 }
 
 /**
  * The night's pricing forecast: for each drink on the menu, expected orders and margin.
  * `walkIns` is the forecast's walk-ins at list prices; `orders` are cups (capped by what the shop can pour).
+ * Round 3 item 3: without a Strategist the figures shown are a rough guess (`forecastIsRough`); pass `exact` true for
+ * the honest ones (the planner, the strategist's own search) or false to force the guess.
  */
-export function priceForecast(state: GameState, menu: DrinkId[], m: Modifiers, walkIns: number): PriceLine[] {
+export function priceForecast(state: GameState, menu: DrinkId[], m: Modifiers, walkIns: number, exact: boolean = !forecastIsRough(state)): PriceLine[] {
   const traffic = priceTraffic(state, menu, m);
   const weights = shareWeights(state, menu, m);
   const total = weights.reduce((a, b) => a + b, 0) || 1;
@@ -125,14 +130,10 @@ export function priceForecast(state: GameState, menu: DrinkId[], m: Modifiers, w
   return menu.map((d, i) => {
     const price = round2(menuPrice(state, d) * m.price[d]);
     const orders = Math.round(cups * (weights[i] / total));
-    return {
-      drink: d,
-      price,
-      list: ECONOMY.prices[d],
-      step: priceStep(state, d),
-      demandPct: Math.round((demandFactor(state, d) * traffic - 1) * 100),
-      orders,
-      profit: round2(orders * (price - unitCost(d, state))),
-    };
+    const demandPct = Math.round((demandFactor(state, d) * traffic - 1) * 100);
+    const profit = round2(orders * (price - unitCost(d, state)));
+    const line: PriceLine = { drink: d, price, list: ECONOMY.prices[d], step: priceStep(state, d), demandPct, orders, profit };
+    if (exact) return line;
+    return { ...line, demandPct: roughPct(demandPct), orders: Math.max(0, roughGuess(state, orders, i)), profit: roughGuess(state, profit, i), rough: true };
   });
 }

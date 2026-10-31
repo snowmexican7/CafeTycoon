@@ -202,6 +202,7 @@ export const TOOL_LABEL: Record<NonNullable<Player['tool']>, { label: string; ic
   pot: { label: 'Old drip pot', icon: '🫖' },
   box: { label: 'Condiment box', icon: '📦' },
   mop: { label: 'Mop', icon: '🧹' },
+  tray: { label: 'Tray', icon: '🍽️' }, // FB2 B7 (sim lane: the smallest fix to keep tsc green; restyle freely)
 };
 
 /** ui-3.4.1 (FB2 A4): the hand slot's label, with how much milk or how many servings are in hand. */

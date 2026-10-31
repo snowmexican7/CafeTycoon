@@ -490,6 +490,7 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
   const r = vm.rival;
   const mine = vm.roles?.find((x) => x.mine);
   const moreRow = `<div class="tn-more" aria-label="More"><span class="tn-h">More</span>
+    <button class="chip" data-action="edit-look">👕 Edit my barista ▸</button>
     ${vm.roles?.length ? `<button class="chip" data-action="drawer" data-d="crew">🎭 Crew roles${mine ? ` · you: ${mine.icon} ${esc(mine.name)}` : ''} ▸</button>` : ''}
     ${regs.length ? `<button class="chip ${regWarn ? 'warn' : ''}" data-action="drawer" data-d="regulars">♥ ${regs.length} regulars${regWarn ? ` · ${regWarn} !` : ''} ▸</button>` : ''}
     ${r.scouted ? `<button class="chip" data-action="drawer" data-d="paper">🔭 Scouted ▸</button>` : `<button class="chip" data-action="scout" ${r.affordable ? '' : 'disabled'} title="See ${esc(r.name)}'s menu and prices for tomorrow">🔭 Scout ${esc(r.name)} · ${esc(short$(r.cost))}</button>`}${staffRow(vm.staff)}</div>`;
@@ -743,7 +744,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
   let lastVm: NightVM | null = null;
@@ -799,6 +800,7 @@ export function createNight(
       ui.slotSel = null;
     } else if (action === 'equip' && isEquipmentKind(el.dataset.station)) handlers.onEquip?.(el.dataset.station);
     else if (action === 'gear-buy' && isGearId(el.dataset.gear)) handlers.onGear?.('buy', el.dataset.gear, isAddOnWand(el.dataset.wand) ? el.dataset.wand : undefined);
+    else if (action === 'edit-look') handlers.onEditLook?.();
     else if (action === 'wand-buy' && el.dataset.station && isAddOnWand(el.dataset.wand)) handlers.onWand?.(el.dataset.station, el.dataset.wand);
     else if (action === 'gear-sell') handlers.onGearSell?.(Number(el.dataset.index));
     else if (action === 'gear-vote') handlers.onGearVote?.(el.dataset.yes === '1');

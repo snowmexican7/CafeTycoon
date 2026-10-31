@@ -12,6 +12,7 @@ import { STATION_RECIPES } from './stations';
 import { madeAtFromHand } from './cooling';
 import { tally } from './tally';
 import { madeOnPass } from './handmade';
+import { trayDrop } from './tray';
 import type { GameState, Player } from './types';
 
 /** Resolve every queued drop, in players order: a station in range first, else the floor. */
@@ -22,6 +23,7 @@ export function resolveDrops(state: GameState): void {
 }
 
 function resolveDrop(state: GameState, p: Player): void {
+  if (trayDrop(state, p)) return; // FB2 B7: R puts a carried tray down at pickup, or sets a drink down on the tray table
   // FB2 A3: R with the pot at the sink dumps it; anywhere else a carried tool goes home.
   if (p.tool !== null) {
     if (!dumpPot(state, p)) returnTool(state, p);

@@ -9,6 +9,7 @@ import { ECONOMY } from '../data/economy';
 import { TICK_RATE, isReservedId, secondsToTicks } from './constants';
 import { computeModifiers, type Modifiers } from './effects';
 import { emitLog } from './log';
+import { isGreatServe, noteFeedMoment } from './feed';
 import { tillSpeedTip } from './till';
 import { levelUpOnServe } from './levelUp';
 import { rngInt, rngNext } from './rng';
@@ -295,6 +296,7 @@ export function stepCustomers(state: GameState): GameState {
         // Quiet exit — not a storm-out, just packed up the laptop.
         emitLog(state, 'egg.camper', { id: c.id, left: 1 });
       } else {
+        noteFeedMoment(state, 'wait', c, c.drink); // FB2 C11: a walk-out after a long wait
         loseCustomer(state, c);
       }
     } else remaining.push(c);
@@ -389,6 +391,7 @@ export function payCup(state: GameState, customer: Customer, drink: DrinkId, by?
   // For the "Dev served a latte +$6" toast: who, what, how much, and whether it was a perfect serve.
   const perfect = customer.patienceLeft / customer.patienceMax >= PERFECT_PATIENCE;
   if (perfect) state.today.perfect = (state.today.perfect ?? 0) + 1;
+  if (isGreatServe(perfect, tempMiss, tipMul, tip, price)) noteFeedMoment(state, 'great', customer, drink); // FB2 C11
   const served: SimEvent['data'] = {
     by: by ?? '',
     item: drink,

@@ -14,6 +14,7 @@ import { ECONOMY } from '../data/economy';
 import { CONDIMENTS_ID, layoutFor } from '../data/layout';
 import { emitLog } from './log';
 import { nearestStation } from './movement';
+import { noteFeedMoment } from './feed';
 import { tally } from './tally';
 import type { Customer, DrinkId, GameState, Player, PlayerInput } from './types';
 
@@ -88,9 +89,10 @@ export function wantsCondiments(state: GameState, c: Customer, drink: DrinkId): 
 }
 
 /** After a wanting customer is served: one serving off the bar, or (`black`, the bar was empty) a black coffee and a grumble. */
-export function noteCondiments(state: GameState, c: Customer, black: boolean): void {
+export function noteCondiments(state: GameState, c: Customer, black: boolean, drink: DrinkId = c.drink): void {
   if (black) {
     tally(state.today, 'blackCoffees');
+    noteFeedMoment(state, 'black', c, drink); // FB2 C11
     emitLog(state, 'condiment.black', { customer: c.id, text: BLACK_LINES[c.id % BLACK_LINES.length] });
     return;
   }

@@ -20,9 +20,11 @@ import { returnBox } from './condiments';
 import { fridgeClose } from './fridge';
 import { steepClosing } from './steep';
 import { stalePotsAtClose } from './sink';
+import { clearTrays } from './tray';
 import type { GameState } from './types';
 import { settleEspresso } from './espresso';
 import { settleChallenges } from './challenges';
+import { closeDayFeed, logWeekRating } from './feed';
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -41,6 +43,7 @@ export function finishDay(state: GameState): GameState {
   state.rogue = null;
   state.mop = { pos: { ...layoutFor(state.tier).mopHome }, heldBy: null };
   state.pass = [];
+  clearTrays(state); // FB2 B7 (every ticket has left, voiding its trays; this only tidies)
   for (const e of state.events) emitLog(state, 'event.end', { kind: e.kind });
   state.events = [];
   state.eventSchedule = [];
@@ -94,6 +97,7 @@ export function finishDay(state: GameState): GameState {
 
   noteMissedFavourites(state);
   spoilOvernight(state);
+  closeDayFeed(state); // FB2 C11
   state.days.push(state.today);
   state.activeTomorrow = [];
 
@@ -106,6 +110,7 @@ export function finishDay(state: GameState): GameState {
   if ((!state.unlimited && state.day === ECONOMY.scoredWeekDays) || seasonWeekEnd(state)) {
     state.phase = 'weekEnd';
     state.phaseTicksLeft = 0;
+    logWeekRating(state); // FB2 C11
     return state;
   }
   state.day += 1;

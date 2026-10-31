@@ -10,7 +10,7 @@ import { stationsFromSlots, type SlotContent } from './slots';
 import { addStandIns } from './bots/roster';
 import { TICK_RATE } from './constants';
 import { BASE_DRINKS } from '../data/drinks';
-import { SYRUP_ID, SYRUP_SPOT } from '../data/layout';
+import { SYRUP_ID, SYRUP_SPOT, layoutFor } from '../data/layout';
 import type { AddOnWand, GearId } from '../data/gear';
 import {
   HANDMADE,
@@ -548,5 +548,52 @@ describe('FB2 B8: determinism and milk', () => {
     const s = play();
     expect(s.milkOut).toBe(98);
     expect(wandOf(s).output === 'latte' || p1(s).holding === 'latte').toBe(true);
+  });
+});
+
+describe('FB2 B8 with B7: a hand-made cup on a tray', () => {
+  /** A combo ticket at pickup wanting a vanilla double latte and an espresso; p1 trays `latte` (made so) and an espresso. */
+  function viaTray(made: HandMade): { s: GameState; c: Customer; seen: SimEvent[] } {
+    const s = open();
+    const c: Customer = {
+      id: 9, drink: 'latte', patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', order: 'combo',
+      items: [{ drink: 'latte', done: false, shots: 2, syrup: 'vanilla' }, { drink: 'espresso', done: false }],
+    };
+    s.customers = [c];
+    const table = layoutFor(s.tier).trayTable;
+    const p = p1(s);
+    p.pos = { x: table.x + 1, y: table.y };
+    p.holding = 'latte';
+    p.made = made;
+    p.heldSince = s.tick;
+    interact(s, 'p1');
+    expect(s.tray?.items.find((x) => x.drink === 'latte')).toMatchObject({ done: true, made });
+    expect(p.made).toBeUndefined();
+    p.holding = 'espresso';
+    p.heldSince = s.tick;
+    interact(s, 'p1');
+    interact(s, 'p1'); // empty hands lift the full tray
+    expect(p.tool).toBe('tray');
+    expect(p.tray!.items.find((x) => x.drink === 'latte')!.made).toEqual(made);
+    const pk = layoutFor(s.tier).pickup;
+    p.pos = { x: pk.x, y: pk.y - 1 };
+    interact(s, 'p1');
+    expect(s.pass[0]!.tray!.drinks.find((x) => x.drink === 'latte')!.made).toEqual(made);
+    stepPickup(s);
+    return { s, c, seen: s.log };
+  }
+
+  it('a vanilla double latte rides the tray (table, hands, pickup slot) and pays by how it was made', () => {
+    const good = viaTray({ shots: 2, syrup: 'vanilla', milk: 'right', foam: 'perfect' });
+    expect(good.s.customers).toEqual([]);
+    expect(logs(good.s, 'tray.take')).toEqual([{ customer: 9 }]);
+    expect(logs(good.s, 'syrup.miss')).toEqual([]);
+    expect(logs(good.s, 'served').map((d) => [d.item, d.stars])).toEqual([['latte', 3], ['espresso', 3]]);
+    expect(good.c.items![0]).toMatchObject({ done: true, tipMul: 1.2 });
+    // The same tray with a plain latte: the ticket grumbles about its vanilla and that cup's tip is halved.
+    const plain = viaTray({ shots: 2, milk: 'right', foam: 'ok' });
+    expect(logs(plain.s, 'syrup.miss')).toEqual([{ customer: 9 }]);
+    expect(plain.c.items![0]).toMatchObject({ done: true, tipMul: 0.5 });
+    expect(plain.s.today.tips).toBeLessThan(good.s.today.tips);
   });
 });
