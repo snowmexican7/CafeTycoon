@@ -354,3 +354,34 @@
 @media (max-width: 1180px) { #hud .hud-restock { padding: 0 10px; } #hud .hud-restock > span:nth-child(2) { display: none; } }
 /* ui-3.7.1: with the Restock panel open, the toast centres in the space left of it so both stay readable. */
 #hud .hud-restock-panel:not([hidden]) ~ .toast { left: calc((100% - min(460px, 44vw) - var(--gutter)) / 2); max-width: min(440px, 38vw); z-index: 7; }
+
+/* FB2 C11: live review.post phone pop-up (day). */
+#hud .hud-feed-pop {
+  position: absolute; right: calc(var(--gutter) + 12px); bottom: calc(var(--bottombar, 72px) + 18px);
+  z-index: 8; width: min(320px, 34vw); pointer-events: none;
+}
+#hud .hud-feed-pop[hidden] { display: none; }
+#hud .hud-feed-pop.in { animation: feed-pop-in .35s ease-out; }
+#hud .feed-pop {
+  display: grid; grid-template-columns: 14px 1fr; gap: 0; background: #2a2438; border-radius: 18px;
+  padding: 8px 8px 10px 0; box-shadow: 0 14px 32px rgba(30, 18, 40, .35), inset 0 0 0 2px #4a3f62;
+}
+#hud .feed-pop .fp-bezel { display: flex; justify-content: center; padding-top: 14px; }
+#hud .feed-pop .fp-bezel i { width: 3px; height: 28px; border-radius: 99px; background: #4a3f62; }
+#hud .feed-pop .fp-body {
+  background: #fffaf2; border-radius: 14px; padding: 10px 12px 12px; min-width: 0;
+}
+#hud .feed-pop .fp-body small {
+  display: block; font: 700 11px var(--font-body); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 4px;
+}
+#hud .feed-pop header { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+#hud .feed-pop header b { font: 700 16px var(--font-display); }
+#hud .feed-pop .fp-stars { font: 700 13px var(--font-body); letter-spacing: .04em; }
+#hud .feed-pop .fp-star.on { color: #c9972a; }
+#hud .feed-pop .fp-star.off { color: #cbbba3; }
+#hud .feed-pop p { margin: 6px 0 0; font: 600 14px/1.3 var(--font-body); color: var(--ink); }
+#hud .feed-pop.good .fp-body { box-shadow: inset 0 0 0 2px #9fd3b0; }
+#hud .feed-pop.bad .fp-body { box-shadow: inset 0 0 0 2px #f0b48f; }
+@keyframes feed-pop-in { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
+@media (max-width: 1180px) { #hud .hud-feed-pop { width: min(280px, 40vw); right: 10px; } }
+@media (prefers-reduced-motion: reduce) { #hud .hud-feed-pop.in { animation: none; } }

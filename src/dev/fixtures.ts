@@ -21,6 +21,7 @@ import { createClosing } from '../ui/closing';
 import { createHud } from '../ui/hud';
 import { dayRestockVM } from '../ui/dayRestock';
 import { freshEvents, logToastLines, TOAST_KINDS } from '../ui/logToasts';
+import { reviewPopVM } from '../ui/feed';
 import { hudLive } from '../ui/live';
 import { closingViewModel, hudViewModel, nightViewModel, weekEndViewModel } from '../ui/viewModels';
 import { createWeekEnd } from '../ui/weekEnd';
@@ -31,7 +32,7 @@ import { awardsFor } from '../sim/awards';
 import { blank } from '../sim/stats';
 import { emptyRecords, foldRecords } from '../storage/recordsStore';
 
-type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string };
+type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean };
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
@@ -719,6 +720,92 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** FB2 C11: night phone feed from dayReviews (posts + fans / fansDelta). */
+  dayFeed: {
+    night: true,
+    extras: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
+      s.customers = [];
+      s.fans = 18;
+      // Filed into days by the night fixture path below.
+      s.today = {
+        ...s.today,
+        day: 3,
+        served: 22,
+        lost: 3,
+        sales: 110,
+        tips: 18,
+        rent: 40,
+        perfect: 8,
+        cups: 22,
+        cupStars: 55,
+        feed: [
+          { name: '@crema_queen', text: 'Café ran like a clock today. Slightly smug clock.', sentiment: 'good', reason: 'service', stars: 5 },
+          { name: '@sippy_steve', text: 'My latte arrived at room temperature. The room was also cold. 1 star.', sentiment: 'bad', reason: 'cold', stars: 1 },
+          { name: '@foamfiend', text: 'Packed house at the café today. Worth the queue!', sentiment: 'good', reason: 'crowd', stars: 4 },
+          { name: '@oat_flat_white', text: 'Tipped the baristas twice today. Do not tell my accountant.', sentiment: 'good', reason: 'tips', stars: 5 },
+        ],
+        fansDelta: 7,
+        fansAfter: 18,
+      };
+    },
+    timeline: [],
+  },
+  /** FB2 C11: closing receipt with fans / fansDelta. */
+  closingFans: {
+    closing: true,
+    setup(s) {
+      s.fans = 12;
+      s.today = {
+        ...s.today,
+        served: 16,
+        lost: 2,
+        sales: 84,
+        tips: 12,
+        rent: 40,
+        fansDelta: 4,
+        fansAfter: 12,
+        feed: [
+          { name: '@beanbae', text: 'Fast service today. My espresso showed up while I was still looking at the menu.', sentiment: 'good', reason: 'speed', stars: 5 },
+        ],
+      };
+    },
+    timeline: [],
+  },
+  /** FB2 C11: live review.post phone pop-ups during the day. */
+  reviewPop: {
+    feedPop: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 3);
+    },
+    timeline: [
+      [0.4, (s) => emit(s, 'review.post', { customer: 11, drink: 'latte', sentiment: 'bad', reason: 'cold', stars: 1, at: s.tick, name: '@latte_larry', text: 'This latte had the warmth of a handshake from a ghost.' })],
+      [1.2, (s) => emit(s, 'review.post', { customer: 12, drink: 'espresso', sentiment: 'good', reason: 'great', stars: 5, at: s.tick, name: '@brewtus', text: 'Got my espresso before I finished my sentence. Wizardry.' })],
+    ],
+  },
+  /** FB2 C11: week-end rating card from weekRating(state). */
+  weekRating: {
+    weekEnd: true,
+    setup(s) {
+      weekPlayed(s);
+      s.gear = true;
+      s.fans = 42;
+      s.days = s.days.map((d, i) => ({
+        ...d,
+        cups: d.served,
+        cupStars: d.served * (i % 2 === 0 ? 3 : 2),
+        perfect: Math.round(d.served * 0.35),
+        feedMoments: i === 2 ? { cold: 2 } : undefined,
+        fansDelta: 3 - (i % 3),
+      }));
+    },
+    timeline: [],
+  },
 };
 
 async function main(): Promise<void> {
@@ -731,6 +818,8 @@ async function main(): Promise<void> {
     const after = structuredClone(state);
     after.days.push({ ...state.today });
     after.phase = 'night';
+    // FB2 C11: fans live on the after-state once closeDayFeed has run.
+    if (state.fans !== undefined) after.fans = state.fans;
     const closing = createClosing($('#closing'));
     closing.render(closingViewModel(state, after));
     closing.show();
@@ -784,6 +873,7 @@ async function main(): Promise<void> {
     const names = (id: string) => state.players.find((p) => p.id === id)?.name ?? id;
     hud.toast(logToastLines(freshEvents(state, -1, TOAST_KINDS).events, names, me));
   }
+  let feedSeen = -1;
   const t0 = performance.now();
   const pending = [...fx.timeline];
   const frame = () => {
@@ -795,6 +885,13 @@ async function main(): Promise<void> {
       pending.shift()![1](state);
     }
     if (changed) state.tick += 1;
+    // FB2 C11: fixture timeline review.post → phone pop-up (same path as main.ts).
+    if (fx.feedPop) {
+      const fresh = freshEvents(state, feedSeen, ['review.post']);
+      feedSeen = fresh.seen;
+      const posts = fresh.events.map(reviewPopVM).filter((p): p is NonNullable<typeof p> => !!p);
+      if (posts.length) hud.feedPop(posts);
+    }
     const positions = Object.fromEntries(state.players.map((p) => [p.id, p.pos]));
     const c0 = performance.now();
     renderer.update({ state, baristaPositions: positions });

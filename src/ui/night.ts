@@ -22,6 +22,7 @@ import {
 import type { RegularVM } from '../sim/regulars';
 import { GEAR_VOTE_MIN } from '../sim/gear';
 import { growOfferHtml } from './growOffer';
+import { nightPhoneHtml } from './feed';
 import type { TipVM } from './tipsVM';
 import type { GrowNudge } from './growModel';
 import type { NightFix } from '../sim/brief';
@@ -414,7 +415,9 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     ? `<div class="dy-part"><div class="tn-h">Tomorrow${extras ? ` · ${esc(extras.weekday)}` : ''}</div><div class="tm-row"><span class="tm-ic" aria-hidden="true">${h.icon}</span><b class="tm-head">${esc(h.text)}</b></div>
         <div class="tm-sub">${esc(h.sub)}</div><button class="btn mini ghost" data-action="drawer" data-d="paper">Read the paper ▸</button></div>`
     : '';
-  const dayCard = ydPart || tmPart ? `<div class="tn-card dy">${ydPart}${tmPart}</div>` : '';
+  // FB2 C11: phone feed from dayReviews sits in the day card so it stays above the fold at 1280×800.
+  const phone = vm.feed ? nightPhoneHtml(vm.feed) : '';
+  const dayCard = ydPart || tmPart || phone ? `<div class="tn-card dy">${ydPart}${tmPart}${phone}</div>` : '';
   const listed = b.alerts.filter((a) => !onStockCard(a));
   const tips = vm.tips.length ? `<div class="tips" aria-label="Crew tips"><div class="tips-h">Crew tips</div>${vm.tips.map(tipChip).join('')}</div>` : '';
   const alerts = `<div class="tn-card al-card">${listed.length || !tips ? '<div class="tn-h">Heads up</div>' : ''}${listed.length ? `<ul class="alerts">${listed.map(alertRow).join('')}</ul>` : tips ? '' : '<p class="al-none">✓ All set. Open when ready.</p>'}${tips}</div>`;

@@ -23,6 +23,7 @@ import { catalogueById } from '../data/catalogue';
 import { GEAR } from '../data/gear';
 import { reportViewModel, type ReportVM } from './report';
 import { branchViewModel, type BranchVM } from './branchView';
+import { dayFeedVM, weekRatingVM, type DayFeedVM, type WeekRatingVM } from './feed';
 import { SEASON, seasonMedal, seasonTarget, targetsHit, type Medal } from '../sim/season';
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
@@ -326,6 +327,8 @@ export interface NightVM {
   fresh?: FreshDrinkVM[];
   /** Card sets switched on, for the hand's header. */
   sets: string[];
+  /** FB2 C11: last day's social feed phone (posts, fans, fansDelta from `dayReviews`). */
+  feed?: DayFeedVM;
   /** FB1 WP1: the Tonight tab's at-a-glance brief (UI adapter until the sim's nightBrief lands). */
   brief: NightBriefVM;
   /** FB1 WP6: the bot crew's tap-to-apply tips (the ones the brief does not already cover). */
@@ -766,7 +769,15 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   const brief = nightBriefVM(vm, state);
   const report = reportViewModel(state);
   const branch = branchViewModel(state);
-  return { ...vm, brief, tips: tipsVM(state, brief.alerts.map((a) => a.id)), ...(report ? { report } : {}), ...(branch ? { branch } : {}) };
+  const feed = dayFeedVM(state);
+  return {
+    ...vm,
+    brief,
+    tips: tipsVM(state, brief.alerts.map((a) => a.id)),
+    ...(report ? { report } : {}),
+    ...(branch ? { branch } : {}),
+    ...(!feed.empty ? { feed } : {}),
+  };
 }
 
 /** P3 B15: the night board's staff row. Round 3 item 3: Strategist / Marketer hire cards. */
@@ -844,6 +855,9 @@ export interface ClosingVM {
   challenges?: { label: string; reward: string }[];
   /** ui-3.7.1: the next tier to grow into (only when the receipt opens the night, where growing works). */
   grow?: GrowOffer;
+  /** FB2 C11: fans after closing, and today's change (`DayStats.fansDelta` / `GameState.fans`). */
+  fans?: number;
+  fansDelta?: number;
 }
 
 /** `before` is the last snapshot of the closing phase; `after` is the first of the next phase. */
@@ -880,6 +894,10 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     profitVsStart: money(scoreRun(after)),
     startingCash: money(after.startingCash),
     ...((g) => (g ? { grow: g } : {}))(after.phase === 'night' ? growOffer(after) : null),
+    // FB2 C11: fans after closeDayFeed (on `after`); delta lives on the filed day.
+    ...((after.fans ?? 0) > 0 || (d.fansDelta ?? 0) !== 0
+      ? { fans: after.fans ?? 0, fansDelta: d.fansDelta ?? 0 }
+      : {}),
   };
 }
 
@@ -912,6 +930,8 @@ export interface WeekEndVM {
   season?: SeasonVM;
   /** P6-3: the week at a glance: one profit bar per day for the last (up to) seven days. */
   week?: WeekStripVM;
+  /** FB2 C11: three silly reviewers from `weekRating(state)` (not `week.rating` JSON). */
+  rating?: WeekRatingVM;
 }
 
 export interface WeekStripVM {
@@ -974,6 +994,7 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
   const walkIns = lost + state.days.reduce((n, d) => n + d.served, 0);
   const season = seasonViewModel(state);
   const week = weekStripViewModel(state);
+  const rating = state.days.length ? weekRatingVM(state) : undefined;
   return {
     score: money(scoreRun(state)),
     cash: money(state.cash),
@@ -996,6 +1017,7 @@ export function weekEndViewModel(state: GameState, me: PlayerId): WeekEndVM {
     lostPct: `${walkIns ? Math.round((100 * lost) / walkIns) : 0}%`,
     ...(season ? { season } : {}),
     ...(week ? { week } : {}),
+    ...(rating ? { rating } : {}),
   };
 }
 
