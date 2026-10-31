@@ -51,6 +51,7 @@ import { stepRogue } from './rogue';
 import { applyDevPause, topUpDevCash } from './dev';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
+import { setLook } from './look';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -58,12 +59,15 @@ function applyInput(s: GameState, input: PlayerInput): void {
   if (existing?.bot || (input.kind === 'join' && isBotId(input.playerId))) return;
   switch (input.kind) {
     case 'join': {
-      if (existing) existing.connected = true;
-      else if (s.players.filter((p) => !p.bot).length < ECONOMY.maxHumans) {
+      if (existing) {
+        existing.connected = true;
+        setLook(existing, input.look); // a returning tab brings its look along (cosmetic, any phase)
+      } else if (s.players.filter((p) => !p.bot).length < ECONOMY.maxHumans) {
         const firstBot = s.players.findIndex((p) => p.bot);
         s.players.splice(firstBot === -1 ? s.players.length : firstBot, 0, {
           id: input.playerId,
           name: input.name,
+          ...(input.look ? { look: { ...input.look } } : {}),
           pos: freeSpot(s, LAYOUT.door),
           moveDir: { x: 0, y: 0 },
           interactQueued: false,
@@ -73,6 +77,11 @@ function applyInput(s: GameState, input: PlayerInput): void {
           ...floorFields(freeSpot(s, LAYOUT.door)),
         });
       }
+      break;
+    }
+    case 'look': {
+      // R4 e: between days only (the validated look replaces the old one). Bots never get here (see the top of applyInput).
+      if (existing && (s.phase === 'night' || s.phase === 'weekEnd')) setLook(existing, input.look);
       break;
     }
     case 'leave': {

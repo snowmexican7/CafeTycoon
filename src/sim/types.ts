@@ -184,9 +184,21 @@ export interface SimEvent {
   data: Record<string, string | number | boolean>;
 }
 
+/** R4 e: how a barista looks. The UI defines the ids (hairstyle, outfit...); the sim only stores and forwards them
+ *  (src/sim/look.ts cleans them: 1-32 chars of A-Z a-z 0-9 _ # -, so a colour may be `#rrggbb`). Bots have none. */
+export interface PlayerLook {
+  hair: string;
+  hairColor?: string;
+  skin: string;
+  outfit: string;
+  shirtColor: string;
+}
+
 export interface Player {
   id: PlayerId;
   name: string;
+  /** R4 e: the character look chosen by this person (absent = the UI draws its default). Editable at night/weekEnd. */
+  look?: PlayerLook;
   pos: Vec2;
   moveDir: Vec2;
   interactQueued: boolean;
@@ -759,7 +771,9 @@ export type PlayerInput =
   /** R4 a: host only, dev runs only, night or week-end only: stop (or restart) the night timer. */
   | { kind: 'devPause'; playerId: PlayerId; paused: boolean }
   | { kind: 'call'; playerId: PlayerId; take: boolean }
-  | { kind: 'join'; playerId: PlayerId; name: string }
+  | { kind: 'join'; playerId: PlayerId; name: string; look?: PlayerLook }
+  /** R4 e: set my own look (night or week end only; a bad look is refused). */
+  | { kind: 'look'; playerId: PlayerId; look: PlayerLook }
   | { kind: 'leave'; playerId: PlayerId }
   | { kind: 'drop'; playerId: PlayerId }
   /** Secret menu code (B8): short word or Konami-style sequence. */
@@ -768,7 +782,7 @@ export type PlayerInput =
 export interface CreateRunOptions {
   seed: number;
   hostId: PlayerId;
-  players: { id: PlayerId; name: string }[];
+  players: { id: PlayerId; name: string; look?: PlayerLook }[];
   settings?: Partial<Settings>;
   /** P3 B13: the size the run opens at (absent = the café; new games from the title start at the stand). */
   tier?: TierId;

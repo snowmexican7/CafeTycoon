@@ -1,7 +1,8 @@
 import type { Patch } from './delta';
 import { RESERVED_TELE_KINDS, type TeleEvent } from '../host/telemetry';
 import { isReservedId } from '../sim/constants';
-import type { BotsChoice, GameState, PlayerInput } from '../sim/types';
+import { cleanLook } from '../sim/look';
+import type { BotsChoice, GameState, PlayerInput, PlayerLook } from '../sim/types';
 
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
 export const APP_ID = 'cafetycoon-v1';
@@ -13,6 +14,8 @@ export type ActionKind = (typeof ACTIONS)[number];
 export interface Member {
   token: string;
   name: string;
+  /** R4 e: the character look (UI-defined ids; absent = default). */
+  look?: PlayerLook;
 }
 export interface HelloMsg {
   t: 'hello';
@@ -26,6 +29,8 @@ export interface JoinMsg {
   protocol: number;
   token: string;
   name: string;
+  /** R4 e: the character look this player made (cleaned; a bad one is dropped, the join still stands). */
+  look?: PlayerLook;
   /** The seat this browser held in this room before (a closed tab coming back). */
   prev?: string;
 }
@@ -101,6 +106,8 @@ export function parseHello(data: unknown): HelloMsg | null {
 export function parseJoin(data: unknown): JoinMsg | null {
   if (!isObj(data) || data.t !== 'join' || !finite(data.protocol) || !okToken(data.token)) return null;
   const msg: JoinMsg = { t: 'join', protocol: data.protocol, token: data.token, name: cleanName(data.name) };
+  const look = cleanLook(data.look);
+  if (look) msg.look = look;
   if (okToken(data.prev) && data.prev !== data.token) msg.prev = data.prev;
   return msg;
 }
@@ -144,7 +151,8 @@ export function parseLobby(data: unknown): LobbyMsg | null {
   const members: Member[] = [];
   for (const m of data.members) {
     if (!isObj(m) || !str(m.token) || !str(m.name)) return null;
-    members.push({ token: m.token, name: m.name });
+    const look = cleanLook(m.look);
+    members.push({ token: m.token, name: m.name, ...(look ? { look } : {}) });
   }
   const msg: LobbyMsg = { t: 'lobby', members, started: data.started };
   const bots = parseBots(data.bots);

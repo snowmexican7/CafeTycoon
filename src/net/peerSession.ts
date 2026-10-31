@@ -1,5 +1,5 @@
 import type { TeleEvent } from '../host/telemetry';
-import type { GameState } from '../sim/types';
+import type { GameState, PlayerLook } from '../sim/types';
 import { applyPatch } from './delta';
 import { parseHello, parseLobby, parseSeat, parseSnap, parseSnapDelta, PROTOCOL_VERSION, type LobbyMsg } from './protocol';
 import type { RoomLink } from './roomLink';
@@ -23,6 +23,8 @@ export interface PeerTransport extends Transport {
 export interface PeerSessionOptions {
   token: string;
   name: string;
+  /** R4 e: this player's character look, sent with the join. */
+  look?: PlayerLook;
   /** The seat this browser held in this room before, offered to the host on join. */
   prev?: string;
   timeoutMs: number;
@@ -100,7 +102,7 @@ export function createPeerSession(link: RoomLink, opts: PeerSessionOptions): Pee
     hostToken = msg.hostToken;
     clearTimer();
     hostPeerId = peerId;
-    link.send('join', { t: 'join', protocol: PROTOCOL_VERSION, token, name: opts.name, ...(prev && prev !== token ? { prev } : {}) }, peerId);
+    link.send('join', { t: 'join', protocol: PROTOCOL_VERSION, token, name: opts.name, ...(opts.look ? { look: opts.look } : {}), ...(prev && prev !== token ? { prev } : {}) }, peerId);
     setStatus('connected');
   });
 
