@@ -179,13 +179,26 @@ export type SimEventKind =
   /** FB2 C9 (src/sim/gear.ts): a wand added at night; the little wand clogging and being whacked clear. */
   | 'wand.add'
   | 'wand.clog'
-  | 'wand.unclog';
+  | 'wand.unclog'
+  /** R3 6: tonight the cash first covers the next shop size ({ tier }). R3 7: the shop grew ({ from, to, diff }). */
+  | 'grow.affordable'
+  | 'grow.done';
+
+/** R3 7: what a grow changes, before → after (src/sim/growth.ts growDiff). */
+export interface GrowDiff {
+  queue: { from: number; to: number };
+  price: { from: number; to: number };
+  traffic: { from: number; to: number };
+  rent: { from: number; to: number };
+  crowd: { from: string; to: string };
+  unlocks: string[];
+}
 
 export interface SimEvent {
   seq: number;
   tick: number;
   kind: SimEventKind;
-  data: Record<string, string | number | boolean>;
+  data: Record<string, string | number | boolean | GrowDiff>;
 }
 
 /** R4 e: how a barista looks. The UI defines the ids (hairstyle, outfit...); the sim only stores and forwards them
@@ -665,6 +678,8 @@ export interface GameState {
   tier?: TierId;
   /** P3 B13: each time the crew grew the shop this run (the tier grown into, the coming day, who did it). */
   tierLog?: { tier: TierId; day: number; by: string }[];
+  /** R3 6: tonight's `grow.affordable` has fired (reset each night). */
+  growNudged?: true;
   /** FB1 WP5: what stands in each back-bar slot, left to right (absent = the tier's defaults; see sim/slots.ts). */
   slots?: (StationKind | null)[];
   /** FB1 WP5: stations the crew owns but has not placed (absent = none). */

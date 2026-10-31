@@ -27,7 +27,7 @@ describe('ui-3.4.0 tier looks', () => {
     expect(leaseLines(undefined)).toBeNull();
     const stand = leaseLines('stand')!;
     expect(stand.narrow).toBe(false);
-    expect(stand.lines.join(' ')).toMatch(/cart.*\$80/);
+    expect(stand.lines.join(' ')).toMatch(/cart.*\$70/);
     const cart = leaseLines('cart')!;
     expect(cart.narrow).toBe(true);
     expect(cart.lines.join(' ')).toMatch(/café.*\$150/);
@@ -74,10 +74,10 @@ describe('ui-3.4.0 night nudge', () => {
     const s = run('stand');
     s.phase = 'night';
     s.day = 2;
-    s.cash = 79;
+    s.cash = 69;
     expect(growNudge(s)).toBeNull();
-    s.cash = 80;
-    expect(growNudge(s)).toMatchObject({ tier: 'cart', cost: 80 });
+    s.cash = 70;
+    expect(growNudge(s)).toMatchObject({ tier: 'cart', cost: 70 });
     s.day = 1;
     expect(growNudge(s)).toBeNull();
     s.day = 3;
