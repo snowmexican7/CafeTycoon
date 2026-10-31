@@ -49,7 +49,14 @@ export const ECONOMY = {
    * into each other stagger for `staggerSeconds` at `staggerSpeed` x their pace, can't bump again for `cooldownSeconds`,
    * are shoved `push` tiles apart each, and whoever is carrying something drops it with `spillChance`.
    */
-  bump: { bodyTiles: 0.6, staggerSeconds: 0.6, staggerSpeed: 0.4, cooldownSeconds: 1.0, spillChance: 0.05, push: 0.15 },
+  bump: { bodyTiles: 0.6, staggerSeconds: 0.6, staggerSpeed: 0.4, cooldownSeconds: 1.0, spillChance: 0.05, push: 0.15,
+    /**
+     * Round 4 c: a person walking into a customer (src/sim/bumps.ts `stepCustomerBumps`). Within `customerTiles` and heading
+     * toward them: they lose `customerPatience` of their max patience, can't be bumped again for `customerCooldownSeconds`
+     * (one long push is one bump), and on the `customerAngryAt`-th bump within `customerWindowSeconds` they storm out
+     * (`walkout`, reason 'bumped', lost like any walk-out). Bots don't bump customers unless `botsBumpCustomers`.
+     */
+    customerTiles: 0.6, customerPatience: 0.08, customerCooldownSeconds: 1.0, customerAngryAt: 3, customerWindowSeconds: 10, botsBumpCustomers: false },
   dayLengthSec: 150,
   nightLengthSec: 120,
   handSize: 4,

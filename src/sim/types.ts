@@ -124,6 +124,7 @@ export type SimEventKind =
   | 'slip'
   | 'bump'
   | 'bump.spill'
+  | 'customer.bump'
   | 'clean'
   | 'rogue.upset'
   | 'rogue.remade'
@@ -298,6 +299,8 @@ export interface Customer {
   items?: OrderItem[];
   /** FB2 B6: what kind of multi-drink ticket this is (absent for groups and one-drink orders). */
   order?: 'combo' | 'office';
+  /** Round 4 c: the ticks a person bumped into them in the last few seconds (oldest first; absent = none). */
+  bumpedAt?: number[];
 }
 
 /** FB2 B6: one drink on a multi-drink ticket. Once taken (`done`) it remembers how the cup came, for the bill. */
@@ -514,6 +517,8 @@ export interface DayStats {
   /** Bumps: collisions between baristas today, and how many of them knocked something out of someone's hands. */
   bumps?: number;
   bumpSpills?: number;
+  /** Round 4 c: people walking into customers today. */
+  customerBumps?: number;
   /** Perfect serves today (patience left ≥ threshold). */
   perfect?: number;
   /** P3 B5: cups scored today and their stars summed. */
