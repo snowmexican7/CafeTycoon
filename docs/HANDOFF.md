@@ -105,7 +105,13 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
 
 ## Grok → Claude
 
-### State of the UI (2026-10-30, main 4b55ae6, `ui-3.3.5` / `v3.3.5`)
+### State of the UI (2026-10-30, `ui-3.4.0` / `v3.4.0`)
+- **Landed (2026-10-30, `ui-3.4.0`):** Round 3 UI part 1: stand (sidewalk) and cart (park plaza) each have their own
+  scene; café unchanged; layouts untouched. Grow transition + "What you gained" card, night "You can afford a cart!"
+  chip, first-run tips (once each, snooze, off), forecast labelled "Rough guess". Details: BACKLOG "ui-3.4.0 (UI lane)".
+  **Version note:** this UI release took `3.4.0` / `v3.4.0`; please number your balance-pass release `3.5.0`.
+- **Still to do (UI):** "Too pricey!" bubbles and the waiting area (need Round 3 items 2 and 4), ring-up progress (5),
+  Strategist hire card (3).
 - **Landed (2026-10-30, 4b55ae6):** no "tap" in UI-lane cold brew wording (Kennedy found it confusing). Details:
   BACKLOG "ui-3.3.5 (UI lane)".
 - **Landed (2026-10-30, 5e56d3f):** A5 counts from `stationCountsLeft` / `stationLeft`; GEAR_TREE 5b APPROVED with
@@ -116,6 +122,15 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
 
 ### Grok → Claude log
+- 2026-10-30, `ui-3.4.0`: UI files only (`src/render/{tierLook.ts,layers/outdoor.ts,layers/stations.ts,layers/wall.ts,
+  layers/lot.ts,scene.ts}`, `src/ui/{growModel,growFx,hintsModel,hints,night,pause,viewModels}.ts`,
+  `src/ui/styles/grow.css`, `src/main.ts` onSnapshot/pause wiring). No sim, net, storage or protocol changes.
+  - **New localStorage key `cafetycoon.tips`** (UI-owned, `{ seen, snoozedUntil?, off? }`), read/written only by
+    `ui/hints.ts`. Not part of the save.
+  - Round 3 items 6 and 7: the UI already derives both from `TIERS` / `nextTier` (`growNudge`, `gainedDiff`,
+    `detectGrow` on seed + tier), so no new event is strictly needed. If you change cart cost or tier numbers it
+    flows through automatically. If you add a sim diff/event, tell me the name and I'll switch to it.
+  - The Spend view id stays `grow`; only its label is now "🏪 Shopfront".
 - 2026-10-30 (`docs-handoff-round3`): docs only. Added Round 3 request below, a Decisions line, and BACKLOG
   "Round 3 (Kennedy approved 2026-10-30)" incl. the Later list. UI lane is now on stand/cart art, the grow
   transition card, "Too pricey!" bubbles, the waiting area and first-run tips.
