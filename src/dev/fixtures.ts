@@ -23,6 +23,7 @@ import { dayRestockVM } from '../ui/dayRestock';
 import { freshEvents, logToastLines, TOAST_KINDS } from '../ui/logToasts';
 import { reviewPopVM } from '../ui/feed';
 import { hudLive } from '../ui/live';
+import { carryTarget } from '../ui/rearrangeCarry';
 import { closingViewModel, hudViewModel, nightViewModel, weekEndViewModel } from '../ui/viewModels';
 import { createWeekEnd } from '../ui/weekEnd';
 import { nightExtras } from '../ui/live';
@@ -32,7 +33,7 @@ import { awardsFor } from '../sim/awards';
 import { blank } from '../sim/stats';
 import { emptyRecords, foldRecords } from '../storage/recordsStore';
 
-type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean };
+type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean; carry?: boolean };
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
@@ -570,6 +571,7 @@ const FIXTURES: Record<string, Fixture> = {
       s.slots = slots;
       s.slotGear = slotGear;
       s.stations = stationsFromSlots(s.tier, slots, slotGear);
+      ensureCounterSpots(s); // the syrup rack (and the other fixed spots) come back with the rebuild
       s.supplies = { ...s.supplies, beans: 20, milk: 16, flavour: 8, concentrate: 10 };
       s.milkOut = 8;
       s.customers = [
@@ -580,13 +582,13 @@ const FIXTURES: Record<string, Fixture> = {
       const ana = s.players[0]!;
       const wand = s.stations.find((st) => st.kind === 'steamer') ?? s.stations.find((st) => st.kind === 'espresso')!;
       const rack = s.stations.find((st) => st.id === 'syrups');
-      ana.pos = { ...wand.pos };
+      ana.pos = { x: wand.pos.x, y: wand.pos.y + 1 };
       ana.holding = 'espresso';
       ana.made = { shots: 2 };
       ana.jug = { fill: 0.55, startedAt: s.tick - 60, line: 0.6, done: true };
       const ben = s.players[1];
       if (ben && rack) {
-        ben.pos = { ...rack.pos };
+        ben.pos = { x: rack.pos.x, y: rack.pos.y + 1 };
         ben.holding = 'latte';
       }
     },
@@ -602,6 +604,28 @@ const FIXTURES: Record<string, Fixture> = {
       [2.0, (s) => emit(s, 'syrup.add', { by: 'ben', flavour: 'caramel' })],
       [2.6, (s) => emit(s, 'syrup.miss', { customer: 23 })],
     ],
+  },
+  /** ui-3.8.0 review: the pre-open with Ana mid-carry (ghost outlines on every valid tile). */
+  preOpenCarry: {
+    carry: true,
+    setup(s) {
+      FIXTURES.preOpen!.setup(s);
+    },
+    timeline: [],
+  },
+  /** ui-3.8.0 review: Ana at the syrup rack with a latte, so the 1 / 2 syrup picker is up. */
+  syrupPick: {
+    setup(s) {
+      FIXTURES.handmade!.setup(s);
+      const ana = s.players[0]!;
+      const rack = s.stations.find((st) => st.id === 'syrups');
+      if (rack) ana.pos = { x: rack.pos.x, y: rack.pos.y + 1 };
+      ana.holding = 'latte';
+      ana.made = { shots: 2 };
+      delete ana.jug;
+      delete ana.steam;
+    },
+    timeline: [],
   },
   /** P3 B2: the night menu board with prices moved (latte up $1, espresso down $0.50). */
   pricing: {
@@ -1143,6 +1167,9 @@ async function main(): Promise<void> {
     const names = (id: string) => state.players.find((p) => p.id === id)?.name ?? id;
     hud.toast(logToastLines(freshEvents(state, -1, TOAST_KINDS).events, names, me));
   }
+  // ui-3.8.0: a fixture can start mid-carry (the local pre-open pickup) to show the ghost outlines.
+  const carry = fx.carry ? carryTarget(state, me) : null;
+  if (carry) renderer.setGhostSpots(carry.spots);
   let feedSeen = -1;
   const t0 = performance.now();
   const pending = [...fx.timeline];
@@ -1165,7 +1192,7 @@ async function main(): Promise<void> {
     const positions = Object.fromEntries(state.players.map((p) => [p.id, p.pos]));
     const c0 = performance.now();
     renderer.update({ state, baristaPositions: positions });
-    hud.render(hudViewModel(state), hudLive(state, me));
+    hud.render(hudViewModel(state), hudLive(state, me, carry));
     hud.setRestock(dayRestockVM(state));
     const w = window as unknown as { fixtureCost: number[] };
     (w.fixtureCost ??= []).push(performance.now() - c0);
