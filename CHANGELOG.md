@@ -16,6 +16,13 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+_Nothing yet._
+
+## 3.5.0 — 2026-10-30 · Open, close and clean up
+
+Cups go cold, there's a sink to pour things away, milk lives in a fridge, and the last 30 seconds are a
+closing rush. Solo runs start with one helper bot.
+
 - Solo runs now start with one bot barista instead of a full crew (0 to 3 can be picked), and bots act as
   helpers: they leave the machine you're working and give you a few seconds to grab new orders.
 - Drinks go cold: hot cups cool on the pickup counter, in the machine and in your hands. A lukewarm cup earns half
@@ -28,6 +35,9 @@ when a build goes out, the line moves under its version with the date.
   the café can splurge on the self-pouring Udder-Matic 3000. Carry a carton to the steamer before you can steam.
   In the last 30 seconds the shop is "closing soon": put the milk and the condiment bar back in the fridge, or
   whatever's left out goes bad.
+- Fixed: during closing soon, pressing E at the cold brew for a sweet cream pours it instead of picking up the
+  milk carton; helper bots no longer get stuck behind a shot left in the machine or dancing with each other
+  behind the bar.
 
 ## 3.4.1 — 2026-10-30 · The fridge, on screen
 

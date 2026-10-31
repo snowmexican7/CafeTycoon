@@ -2302,3 +2302,9 @@ Approved Oct 30, 2026 7:46 PM (Toronto). Sim lane builds; UI lane (Grok) wires. 
 - A split money pool for co-op.
 - Upgrade paths: speed, reliability, taste, quality.
 - A smart café path (top registers pair with smart machines), ending in a self-running shop with conveyor belts.
+- **Balance pass (`fb2-balance`, stopped early by Kennedy's call: playtests drive balance now).** Fixes kept:
+  the balance harness steeps cold brew on night 1; bots `reclaim` a lost claim onto another order for the same
+  drink and collect grounds left in a grinder after 15 s (`leftGrounds`, ported from B6); during closing soon, E
+  at the cold brew for a sweet cream pours instead of lifting the milk; bots meeting head-on behind the bar no
+  longer block each other all day (also in v3.3.1). No constants changed; the cube stays $20.
+- **3.5.0 released** (Feedback 2 part A + balance fixes). UI lane already shipped 3.4.0/3.4.1, hence 3.5.0.
