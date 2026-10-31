@@ -161,6 +161,8 @@ export class Chaos {
   private fxDrawn = false;
   /** Seconds of screen jolt left (door slam / thud). */
   jolt = 0;
+  /** Round 3 item 4: a tumbleweed rolling past the door after a quiet leave. */
+  private tumble: { age: number; x: number; y: number; dir: number } | null = null;
 
   constructor(private readonly depth: Container) {
     this.floor.addChild(this.ripples);
@@ -484,6 +486,18 @@ export class Chaos {
         this.comic(b.text, x, y - 90, PALETTE.mint, true);
         this.puffs(x, y - 20, 0xfff6c9, 10, 'star');
         break;
+      case 'complain':
+        this.comic(b.text, x, y - 100, PALETTE.cherry, false);
+        break;
+      case 'tumbleweed':
+        this.tumble = { age: 0, x, y: y + 18, dir: 1 };
+        this.puffs(x, y + 10, 0xc4a574, 6, 'puff');
+        break;
+      case 'tillCue':
+        this.comic(b.text, x, y - 88, b.tone === 'start' ? PALETTE.mint : 0xf0a63a, false);
+        if (b.tone === 'start') this.puffs(x, y - 20, 0xfff6c9, 6, 'star');
+        else this.puffs(x, y - 10, 0xf3e6d3, 5, 'puff');
+        break;
     }
   }
 
@@ -522,12 +536,32 @@ export class Chaos {
 
   private stepFx(dt: number): void {
     const g = this.particlesG;
-    if (this.particles.length === 0 && !this.slam) {
+    if (this.particles.length === 0 && !this.slam && !this.tumble) {
       if (this.fxDrawn) g.clear();
       this.fxDrawn = false;
     } else {
       g.clear();
       this.fxDrawn = true;
+    }
+    if (this.tumble) {
+      this.tumble.age += dt;
+      const t = this.tumble.age;
+      const life = 1.6;
+      const a = t < life - 0.3 ? 1 : Math.max(0, (life - t) / 0.3);
+      this.tumble.x += this.tumble.dir * 110 * dt;
+      const bob = Math.sin(t * 10) * 3;
+      const rot = t * 8;
+      const cx = this.tumble.x;
+      const cy = this.tumble.y + bob;
+      // a dusty rolling ball of weeds
+      g.circle(cx, cy, 11).fill({ color: 0xc4a574, alpha: 0.95 * a }).stroke({ width: 2, color: 0x8a6a3a, alpha: a });
+      for (const [dx, dy, r] of [[-5, -3, 4], [4, -5, 3.5], [3, 4, 4], [-4, 3, 3]] as const) {
+        const rx = cx + dx * Math.cos(rot) - dy * Math.sin(rot);
+        const ry = cy + dx * Math.sin(rot) + dy * Math.cos(rot);
+        g.circle(rx, ry, r).fill({ color: 0xa8884a, alpha: 0.9 * a });
+      }
+      g.ellipse(cx, cy + 12, 10, 3).fill({ color: 0x000000, alpha: 0.12 * a });
+      if (t > life) this.tumble = null;
     }
     if (this.slam) {
       // the front door swings shut on its hinge, then fades

@@ -323,6 +323,75 @@ const FIXTURES: Record<string, Fixture> = {
       [1.1, (s) => emit(s, 'walkout', { customer: 91, reason: 'price', drink: 'mocha' })],
     ],
   },
+  /**
+   * Round 3 item 5: Gear café, Ana mid-ring at the till — the progress bar reads ~50% over the register
+   * (and the live hint still says "Ringing up…").
+   */
+  ringUp: {
+    me: 'ana',
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 3);
+      const till = s.stations.find((x) => x.id === 'counter')!;
+      s.players[0].pos = { x: till.pos.x, y: till.pos.y - 1 };
+      s.players[0].holding = null;
+      s.customers = [
+        { id: 901, drink: 'latte', patienceLeft: 1100, patienceMax: 1400 },
+        { id: 902, drink: 'espresso', patienceLeft: 900, patienceMax: 1400 },
+        { id: 903, drink: 'mocha', patienceLeft: 800, patienceMax: 1400 },
+      ];
+      s.ringUp = { customer: 901, by: 'ana', startedAt: s.tick - 45, ticks: 90 };
+      emit(s, 'till.start', { customer: 901, by: 'ana', seconds: 1.5 });
+    },
+    timeline: [
+      [0.8, (s) => { if (s.ringUp) s.tick = s.ringUp.startedAt + 60; }],
+      [1.6, (s) => { if (s.ringUp) s.tick = s.ringUp.startedAt + 75; }],
+    ],
+  },
+  /**
+   * Round 3 items 4 + 5: café waiting-area browsers, a "Line's too long!" bubble, then a tumbleweed
+   * on a quiet leave. Self-order Squarely beat shows the honey ring bar.
+   */
+  waitingLine: {
+    me: 'ana',
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 6);
+      s.checkout = { owned: ['register', 'kiosk', 'squarely'], active: 'squarely' };
+      s.customers = Array.from({ length: 6 }, (_, i) => ({
+        id: 70 + i,
+        drink: (['latte', 'espresso', 'mocha', 'drip', 'cappuccino', 'americano'] as const)[i],
+        patienceLeft: 1000 - i * 40,
+        patienceMax: 1400,
+      }));
+      s.waiting = [
+        { id: 80, drink: 'latte', patienceLeft: 900, patienceMax: 1200 },
+        { id: 81, drink: 'coldBrew', patienceLeft: 700, patienceMax: 1200 },
+        { id: 82, drink: 'mocha', patienceLeft: 500, patienceMax: 1200 },
+        { id: 83, drink: 'espresso', patienceLeft: 400, patienceMax: 1200 },
+      ];
+      s.line = { front: 70, since: s.tick - 800, complainedAt: s.tick - 10 };
+      s.ringUp = { customer: 70, by: '', startedAt: s.tick - 20, ticks: 60 };
+    },
+    timeline: [
+      [0.4, (s) => emit(s, 'line.complain', { customer: 75 })],
+      [1.2, (s) => emit(s, 'line.leave', { customer: 200, quiet: true })],
+      [2.0, (s) => emit(s, 'line.leave', { customer: 201, quiet: true })],
+    ],
+  },
+  /** Round 3 item 4: closing receipt with people who left when the line looked too long. */
+  lineLeftReceipt: {
+    closing: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
+      s.today = { ...s.today, served: 28, lost: 1, turnedAway: 2, sales: 132, tips: 16, rent: 25, lineLeft: 3, slips: 1 };
+    },
+    timeline: [],
+  },
   /** 3.7.2 (PR #8): the Strategist and Marketer hire cards in the night's "More" row; Strategist on, Marketer not. */
   hireCards: {
     night: true,

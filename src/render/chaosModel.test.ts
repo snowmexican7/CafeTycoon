@@ -122,3 +122,41 @@ describe('Round 3 money: price walkouts', () => {
     expect(WALKOUT_LINES as readonly string[]).not.toContain((w[0] as { text: string }).text);
   });
 });
+
+describe('Round 3 line + ring-up cues', () => {
+  it('says "Line\'s too long!" on line.complain', async () => {
+    const { COMPLAIN_LINE } = await import('./chaosModel');
+    const a = run();
+    a.customers = [
+      { id: 1, drink: 'latte', patienceLeft: 800, patienceMax: 1000 },
+      { id: 2, drink: 'espresso', patienceLeft: 700, patienceMax: 1000 },
+    ];
+    const b = withLog(a, { kind: 'line.complain', data: { customer: 2 } });
+    const c = chaosBursts(a, b, a.nextLogSeq - 1).bursts.filter((x) => x.kind === 'complain');
+    expect(c).toHaveLength(1);
+    expect((c[0] as { text: string }).text).toBe(COMPLAIN_LINE);
+  });
+
+  it('rolls a tumbleweed on a quiet line.leave', () => {
+    const a = run();
+    const b = withLog(a, { kind: 'line.leave', data: { customer: 99, quiet: true } });
+    const t = chaosBursts(a, b, a.nextLogSeq - 1).bursts.filter((x) => x.kind === 'tumbleweed');
+    expect(t).toHaveLength(1);
+    expect((t[0] as { at: { x: number } }).at.x).toBeGreaterThan(LAYOUT.door.x);
+  });
+
+  it('cues till.start and till.cancel over the register', () => {
+    const a = run();
+    const start = withLog(a, { kind: 'till.start', data: { customer: 1, by: 'p1', seconds: 1.5 } });
+    const s = chaosBursts(a, start, a.nextLogSeq - 1).bursts.filter((x) => x.kind === 'tillCue');
+    expect(s).toHaveLength(1);
+    expect(s[0]).toMatchObject({ tone: 'start', text: 'Ka-ching!' });
+    const mid = clone(start);
+    const cancel = withLog(mid, { kind: 'till.cancel', data: { customer: 1, by: 'p1' } });
+    const c = chaosBursts(mid, cancel, mid.nextLogSeq - 1).bursts.filter((x) => x.kind === 'tillCue');
+    expect(c).toEqual([expect.objectContaining({ tone: 'cancel', text: 'Cancelled' })]);
+    const self = withLog(a, { kind: 'till.start', data: { customer: 2, by: '', seconds: 1 } });
+    const beep = chaosBursts(a, self, a.nextLogSeq - 1).bursts.filter((x) => x.kind === 'tillCue');
+    expect(beep[0]).toMatchObject({ tone: 'start', text: 'Beep!' });
+  });
+});

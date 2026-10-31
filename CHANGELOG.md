@@ -16,7 +16,10 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- Ring-up progress bar over the till (and a soft "Ka-ching!" / "Beep!" / "Cancelled" cue) while a register order
+  takes its beat — including the self-order screen's honey bar. The "Ringing up…" hint is unchanged.
+- Waiting-area browsers inside the cart and café when the line is full; "Line's too long!" when someone complains;
+  a tumbleweed rolls past when an arrival quietly leaves. The day's receipt notes how many left that way.
 
 ## 3.7.2 — 2026-10-31 · Fixes from the overnight review
 

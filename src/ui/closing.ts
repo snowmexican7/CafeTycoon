@@ -43,6 +43,7 @@ export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: 
             ${vm.wasted ? `<div class="line chaos"><span>Drinks wasted (spilled or stale)</span><span>${vm.wasted}</span></div>` : ''}
             ${vm.slips ? `<div class="line chaos"><span>Pratfalls on the floor</span><span>${vm.slips}</span></div>` : ''}
             ${vm.rogues ? `<div class="line chaos rogue"><span>${vm.rogues === 1 ? 'A customer went rogue (DIY)' : `${vm.rogues} customers went rogue (DIY)`}</span><span title="Their review">★★☆☆☆</span></div>` : ''}
+            ${vm.lineLeft ? `<div class="line chaos"><span>${vm.lineLeft === 1 ? 'One person left when the line looked too long' : `${vm.lineLeft} people left when the line looked too long`}</span><span>${vm.lineLeft}</span></div>` : ''}
             ${vm.tabPaid ? `<div class="line"><span>Hospital tab paid</span><span class="neg">−${esc(vm.tabPaid)}</span></div>` : ''}
             ${vm.ambulance ? `<div class="line ambulance"><span>Ambulance ride: −${esc(vm.ambulance)}. Worth it?</span><span class="neg">on the tab</span></div>` : ''}
             ${vm.tab ? `<div class="line tab"><span>Hospital tab left</span><span>${esc(vm.tab)}</span></div>` : ''}
