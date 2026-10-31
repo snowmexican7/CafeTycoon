@@ -7,6 +7,8 @@ import { emitLog } from './log';
 import { blocked } from './movement';
 import { rngNext } from './rng';
 import { tally } from './tally';
+import { loseCustomer } from './customers';
+import { customerSpots } from './customerSpots';
 import type { GameState, Player, Vec2 } from './types';
 
 const B = ECONOMY.bump;
@@ -90,4 +92,42 @@ export function stepBumps(state: GameState): void {
       maybeSpill(state, b);
     }
   }
+}
+
+/**
+ * Round 4 c: a person walking into a customer. Each customer (queue order) who is within `customerTiles` of a connected
+ * person heading toward them, and is off their own cooldown, loses a slice of patience (never to zero: only the angry
+ * exit ends it) and logs `customer.bump`. The `customerAngryAt`-th bump inside `customerWindowSeconds` sends them out:
+ * `walkout` with reason 'bumped', counted lost like any walk-out and nothing more. Bots don't (unless the constant says).
+ * Customers stand where `customerSpots` puts them. No RNG.
+ */
+export function stepCustomerBumps(state: GameState): void {
+  if (state.customers.length === 0) return;
+  const walkers = state.players.filter((p) => isBody(p) && (B.botsBumpCustomers || !p.bot) && (p.moveDir.x !== 0 || p.moveDir.y !== 0));
+  if (walkers.length === 0) return;
+  const spots = customerSpots(state);
+  const cooldown = secondsToTicks(B.customerCooldownSeconds);
+  const window = secondsToTicks(B.customerWindowSeconds);
+  const gone = new Set<number>();
+  state.customers.forEach((c, i) => {
+    const at = spots[i];
+    const last = c.bumpedAt?.[c.bumpedAt.length - 1];
+    if (last !== undefined && state.tick - last < cooldown) return;
+    const by = walkers.find((p) => {
+      const dx = at.x - p.pos.x;
+      const dy = at.y - p.pos.y;
+      return Math.hypot(dx, dy) < B.customerTiles && p.moveDir.x * dx + p.moveDir.y * dy > 0;
+    });
+    if (!by) return;
+    c.bumpedAt = [...(c.bumpedAt ?? []).filter((t) => state.tick - t < window), state.tick];
+    c.patienceLeft = Math.max(1, c.patienceLeft - Math.round(B.customerPatience * c.patienceMax));
+    tally(state.today, 'customerBumps');
+    emitLog(state, 'customer.bump', { customer: c.id, by: by.id, x: round2(at.x), y: round2(at.y) });
+    if (c.bumpedAt.length >= B.customerAngryAt) {
+      gone.add(c.id);
+      emitLog(state, 'walkout', { customer: c.id, reason: 'bumped', x: round2(at.x), y: round2(at.y) });
+      loseCustomer(state, c);
+    }
+  });
+  if (gone.size > 0) state.customers = state.customers.filter((c) => !gone.has(c.id));
 }
