@@ -25,7 +25,37 @@ export type BotSkill = 1 | 2 | 3 | 4 | 5;
 /** FB2 A3: `lift` a cold or stale drip pot off its machine, `dump` what is in hand (or the pot) at the back sink.
  *  FB2 A4: `fetch` a milk carton at the fridge, `stock` it at a milk station (or the lifted bar back on the bar),
  *  `stow` (lift) the milk or the bar during closing soon, `store` what is carried in the fridge. */
-export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill' | 'lift' | 'dump' | 'fetch' | 'stock' | 'stow' | 'store' | 'whack';
+export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill' | 'lift' | 'dump' | 'fetch' | 'stock' | 'stow' | 'store' | 'whack' | 'syrup';
+
+/** FB2 B8 (src/sim/handmade.ts): the syrups on the rack. */
+export type Flavour = 'vanilla' | 'caramel';
+/** FB2 B8: how the milk jug was filled against the ticket's line (under = weaker drink, over = milk wasted). */
+export type FillGrade = 'right' | 'under' | 'over';
+/** FB2 B8: where the steam meter was stopped. */
+export type SteamGrade = 'perfect' | 'ok' | 'miss';
+/**
+ * FB2 B8: how a hand-made cup was made; it travels with the cup (hands, machine, pickup counter). Absent fields are
+ * neutral: a single shot, no syrup, and (bots, or no jug) milk and foam as good as 'right' and 'ok'.
+ */
+export interface HandMade {
+  shots?: 2;
+  syrup?: Flavour;
+  milk?: FillGrade;
+  foam?: SteamGrade;
+}
+/** FB2 B8: a person's milk jug, filling (0..1 over HANDMADE.fillSeconds) until stopped (`done`). `line` is the ticket's mark. */
+export interface Jug {
+  fill: number;
+  startedAt: number;
+  line: number;
+  done?: true;
+}
+/** FB2 B8: a person's running steam meter on the wand `station` (position: handmade.ts steamPos). */
+export interface SteamMeter {
+  startedAt: number;
+  speed: number;
+  station: string;
+}
 
 export interface Vec2 {
   x: number;
@@ -45,8 +75,9 @@ export interface Rogue {
  * what is in hand on the floor (no bin in the shop; a carried tool goes home).
  */
 export type FloorAction = 'takeMop' | 'clean' | 'returnMop' | 'takeBox' | 'drop';
-/** `makes`: on a bot's insert step, what the machine should make from what the bot will hold there (absent on old saves). */
-export type BotStep = { kind: 'use'; station: string; action: BotAction; makes?: ItemKind } | { kind: 'idle'; node: Vec2 }
+/** `makes`: on a bot's insert step, what the machine should make from what the bot will hold there (absent on old saves).
+ *  `flavour`: on a 'syrup' step (FB2 B8), the syrup the ticket asked for. */
+export type BotStep = { kind: 'use'; station: string; action: BotAction; makes?: ItemKind; flavour?: Flavour } | { kind: 'idle'; node: Vec2 }
   | { kind: 'floor'; node: Vec2; action: FloorAction };
 
 export interface PassItem {
@@ -60,6 +91,8 @@ export interface PassItem {
   by?: PlayerId;
   /** Feedback 2 A2 (Gear): the tick the drink was made; it cools from here (src/sim/cooling.ts). Absent = fresh. */
   madeAt?: number;
+  /** FB2 B8: how the cup was hand-made (absent = nothing special). */
+  made?: HandMade;
   /**
    * FB2 B7: this slot is a whole tray for one multi-drink ticket (`item` mirrors its first cup). Only that customer takes
    * it, all at once; singles never do, take-backs skip it, and it never goes stale (each cup still cools by its `madeAt`).
@@ -74,6 +107,8 @@ export interface TrayCup {
   slips?: number;
   temp?: true;
   madeAt?: number;
+  /** FB2 B8: how the cup was hand-made (shots, syrup, milk, foam). */
+  made?: HandMade;
 }
 
 /** FB2 B7: a line of a tray's list: a drink the ticket still needs, `done` once its cup is on the tray. */
@@ -223,6 +258,11 @@ export type SimEventKind =
   /** Round 3 item 4 (src/sim/line.ts): a stalled line complains; arrivals during a fresh complaint may leave quietly. */
   | 'line.complain'
   | 'line.leave'
+  /** FB2 B8 (src/sim/handmade.ts): the jug stopped filling, the steam meter stopped, a syrup went in, a ticket's syrup was wrong or missing. */
+  | 'milk.fill'
+  | 'steam.result'
+  | 'syrup.add'
+  | 'syrup.miss'
   /** Round 3 item 3 (src/sim/strategist.ts, staff.ts): a hire or a firing ({ role, by }); the strategist set the prices ({ changed }). */
   | 'staff.hire'
   | 'staff.fire'
@@ -279,6 +319,12 @@ export interface Player {
   cupTemp?: boolean;
   /** Feedback 2 A2 (Gear): the made tick of the cup in hand (its clock keeps running); cleared when the hands empty. */
   heldSince?: number;
+  /** FB2 B8: how the cup in hand was hand-made (shots, syrup, milk, foam); cleared when the hands empty. */
+  made?: HandMade;
+  /** FB2 B8: the milk jug being filled, or filled, for the shot in hand (people only; dropped with the shot). */
+  jug?: Jug;
+  /** FB2 B8: the steam meter running for the shot this person just put on a wand. */
+  steam?: SteamMeter;
   connected: boolean;
   bot?: BotState;
   idleTicks: number;
@@ -337,6 +383,8 @@ export interface Station {
   wand?: WandKind;
   /** FB2 C9: on a wand's 'steamer' twin, the espresso machine it is on (a built-in wand's speed follows the machine). */
   wandOf?: GearId;
+  /** FB2 B8: how the cup inside (making or done) was hand-made. */
+  made?: HandMade;
   /** Gear G10: a pour-over in "flow state" works at double speed until this tick. */
   flowUntil?: number;
   /** Gear Tree: cold brew batch cups left today (absent = no cap). */
@@ -392,6 +440,9 @@ export interface Customer {
   order?: 'combo' | 'office';
   /** Round 4 c: the ticks a person bumped into them in the last few seconds (oldest first; absent = none). */
   bumpedAt?: number[];
+  /** FB2 B8: a one-drink latte or cappuccino ticket asks for a double shot, or (lattes) a syrup. Tickets use `items`. */
+  shots?: 2;
+  syrup?: Flavour;
 }
 
 /** FB2 B6: one drink on a multi-drink ticket. Once taken (`done`) it remembers how the cup came, for the bill. */
@@ -405,6 +456,11 @@ export interface OrderItem {
   black?: true;
   /** The cup was cold: taken, never paid. */
   cold?: true;
+  /** FB2 B8: this latte or cappuccino asks for a double shot, or (lattes) a syrup. */
+  shots?: 2;
+  syrup?: Flavour;
+  /** FB2 B8: the taken cup's hand-made tip multiplier (foam, milk, syrup), paid with the ticket. Absent = 1. */
+  tipMul?: number;
 }
 
 /** P3 B7: the crew's signature drink. `premium` is in $0.50 steps; `since` is the day the recipe was set. */
@@ -911,6 +967,8 @@ export type PlayerInput =
   | { kind: 'look'; playerId: PlayerId; look: PlayerLook }
   | { kind: 'leave'; playerId: PlayerId }
   | { kind: 'drop'; playerId: PlayerId }
+  /** FB2 B8: add a syrup to the cup in hand at the syrup rack (day or closing, people only). */
+  | { kind: 'syrup'; playerId: PlayerId; flavour: Flavour }
   /** Secret menu code (B8): short word or Konami-style sequence. */
   | { kind: 'secret'; playerId: PlayerId; code: string };
 

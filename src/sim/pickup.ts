@@ -6,7 +6,7 @@
  * No RNG here: the order is the pass (stalest first) and the customers (upset, ring time, id).
  */
 import { ECONOMY } from '../data/economy';
-import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, TRAY_ID } from '../data/layout';
+import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, SYRUP_ID, TRAY_ID } from '../data/layout';
 import { CONDIMENTS, noteCondiments, wantsCondiments } from './condiments';
 import { loseCustomer, serveCustomer } from './customers';
 import { LUKEWARM, coolFraction, coolTicks, slotCool } from './cooling';
@@ -15,12 +15,16 @@ import { noteFeedMoment } from './feed';
 import { takeItem, wantsItem } from './orders';
 import { sweepTrays, trayCovers, trayTakenOffCounter } from './tray';
 import { tally } from './tally';
-import type { Customer, DrinkId, GameState, Station } from './types';
+import { customerFits, judgeCup, judgedSlips } from './handmade';
+import type { Customer, DrinkId, GameState, HandMade, Station } from './types';
 
 export const PICKUP = { slots: 4 } as const;
 
-/** The counter-kind spots of a Gear shop (FB2 A3: the back sink is one too; FB2 A4: so is the fridge; FB2 B7: and the tray table, so none reads as the till). */
-export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge' | 'trayTable';
+/**
+ * The counter-kind spots of a Gear shop (FB2 A3: the back sink is one too; FB2 A4: so is the fridge; FB2 B7: and the
+ * tray table; FB2 B8: and the syrup rack, so none reads as the till).
+ */
+export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge' | 'trayTable' | 'syrups';
 
 /** Which counter spot `at` is: absent, or the counter's own id, is the till. */
 export function spotOf(at?: Station): CounterSpot {
@@ -29,6 +33,7 @@ export function spotOf(at?: Station): CounterSpot {
   if (at?.id === SINK_ID) return 'sink';
   if (at?.id === FRIDGE_ID) return 'fridge';
   if (at?.id === TRAY_ID) return 'trayTable';
+  if (at?.id === SYRUP_ID) return 'syrups';
   return 'till';
 }
 
@@ -45,21 +50,24 @@ export function wantsDrink(c: Customer, d: DrinkId): boolean {
 
 /**
  * Who takes `drink` off the counter: rung up (stage pickup), not a camper, wants it (FB2 B7: and no tray covers it);
- * upset first, an office run last (FB2 B6), then the longest wait, then the lowest id.
+ * upset first, an office run last (FB2 B6), then (FB2 B8) one whose latte or cappuccino ask the cup fits exactly (its
+ * syrup and shots, as `made`), then the longest wait, then the lowest id.
  */
-export function pickupTarget(state: GameState, drink: DrinkId): Customer | null {
+export function pickupTarget(state: GameState, drink: DrinkId, made?: HandMade): Customer | null {
   let best: Customer | null = null;
   for (const c of state.customers) {
     if (c.stage !== 'pickup' || c.egg === 'camper' || !wantsDrink(c, drink) || trayCovers(state, c, drink)) continue;
-    if (best === null || better(c, best)) best = c;
+    if (best === null || better(c, best, drink, made)) best = c;
   }
   return best;
 }
 
-function better(a: Customer, b: Customer): boolean {
+function better(a: Customer, b: Customer, drink: DrinkId, made: HandMade | undefined): boolean {
   if (!!a.upset !== !!b.upset) return !!a.upset;
   // FB2 B6: an office run waits for the whole order anyway; it takes a cup only when nobody else wants it.
   if ((a.order === 'office') !== (b.order === 'office')) return b.order === 'office';
+  const fa = customerFits(a, drink, made);
+  if (fa !== customerFits(b, drink, made)) return fa;
   const ra = a.rungAt ?? Infinity;
   const rb = b.rungAt ?? Infinity;
   if (ra !== rb) return ra < rb;
@@ -101,9 +109,9 @@ export function stepPickup(state: GameState): void {
       .map((item, i) => ({ item, i }))
       .filter(({ item }) => !item.tray)
       .sort((a, b) => a.item.ticksLeft - b.item.ticksLeft || a.i - b.i);
-    const hit = order.find(({ item }) => pickupTarget(state, item.item) !== null);
+    const hit = order.find(({ item }) => pickupTarget(state, item.item, item.made) !== null);
     if (!hit) return;
-    const c = pickupTarget(state, hit.item.item)!;
+    const c = pickupTarget(state, hit.item.item, hit.item.made)!;
     const i = takeIndex(state, hit.item.item);
     const item = state.pass[i];
     state.pass.splice(i, 1);
@@ -130,8 +138,11 @@ export function stepPickup(state: GameState): void {
     const black = want && (state.condiments?.servings ?? 0) <= 0;
     const served = state.today.served;
     if (cool >= LUKEWARM) noteFeedMoment(state, 'lukewarm', c, item.item); // FB2 C11
+    // FB2 B8: how the cup was hand-made against what the ticket asked (foam, milk, syrup).
+    const judged = judgeCup(c, item.made);
+    if (judged.syrupMiss) emitLog(state, 'syrup.miss', { customer: c.id });
     // A2: lukewarm halves the tip, like an off pot; a cup that is both is still halved once.
-    serveCustomer(state, c, item.item, item.by, item.slips ?? 0, item.temp === true || cool >= LUKEWARM, black ? CONDIMENTS.blackTip : 1);
+    serveCustomer(state, c, item.item, item.by, judgedSlips(item.slips ?? 0, judged.stars), item.temp === true || cool >= LUKEWARM, (black ? CONDIMENTS.blackTip : 1) * judged.tip);
     if (want && state.today.served > served) noteCondiments(state, c, black, item.item);
   }
 }
@@ -155,7 +166,7 @@ function takeTrays(state: GameState): void {
         tally(state.today, 'wasted'); // never expected: a cup the ticket no longer needs
         continue;
       }
-      const passCup = { item: cup.drink, ticksLeft: 0, ...(cup.by ? { by: cup.by } : {}), ...(cup.slips ? { slips: cup.slips } : {}), ...(cup.temp ? { temp: true } : {}), ...(cup.madeAt !== undefined ? { madeAt: cup.madeAt } : {}) };
+      const passCup = { item: cup.drink, ticksLeft: 0, ...(cup.by ? { by: cup.by } : {}), ...(cup.slips ? { slips: cup.slips } : {}), ...(cup.temp ? { temp: true } : {}), ...(cup.madeAt !== undefined ? { madeAt: cup.madeAt } : {}), ...(cup.made ? { made: cup.made } : {}) }; // FB2 B8: paid and tipped by how it was made
       takeItem(state, c, passCup, coolFraction(state, cup.madeAt, cup.drink));
     }
   }

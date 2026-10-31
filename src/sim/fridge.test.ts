@@ -304,6 +304,7 @@ describe('FB2 A4: milk from the fridge to the bar', () => {
     expect(me(s).holding).toBe('espresso');
     expect(at(s, 'steamer').making ?? null).toBeNull();
     s.milkOut = 2;
+    me(s).jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
     interact(s, 'p1');
     expect(at(s, 'steamer').making).toBe('latte');
     expect([s.milkOut, s.supplies.milk]).toEqual([1, 20]);

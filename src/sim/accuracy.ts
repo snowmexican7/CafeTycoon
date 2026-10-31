@@ -39,6 +39,10 @@ export function cupIntoStation(p: Player, s: Station): void {
   else delete s.cupSlips;
   delete p.cupSlips;
   delete p.cupTemp;
+  // FB2 B8: how the cup was hand-made goes with it.
+  if (p.made) s.made = p.made;
+  else delete s.made;
+  delete p.made;
 }
 
 /** The cup comes out of a machine; marks it if it sat too long. `sitTicks` = sitSeconds in ticks. */
@@ -50,6 +54,9 @@ export function cupOutOfStation(state: GameState, p: Player, s: Station, sitTick
   if (slips > 0) p.cupSlips = Math.min(ACCURACY.maxStars, slips);
   else delete p.cupSlips;
   delete p.cupTemp;
+  if (s.made) p.made = s.made;
+  else delete p.made;
+  delete s.made;
 }
 
 /** Note a served cup on today's record. */

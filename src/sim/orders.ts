@@ -34,6 +34,7 @@ import { noteFeedMoment } from './feed';
 import { pricePatience } from './pricing';
 import { rngInt, rngNext } from './rng';
 import { LATTES } from './lattes';
+import { addCustomerAsks, itemFor, judgeCup, judgedSlips } from './handmade';
 import { tally } from './tally';
 import { voidTrays } from './tray';
 import type { Customer, DrinkId, GameState, OrderItem, PassItem } from './types';
@@ -146,10 +147,16 @@ export function latteAddon(state: GameState, menu: DrinkId[], drinks: DrinkId[])
  * cold brew drinkers stop at the condiment bar. A group relaxes a little with each cup. The last item pays the ticket.
  */
 export function takeItem(state: GameState, c: Customer, cup: PassItem, cool: number): void {
-  const item = c.items!.find((x) => !x.done && x.drink === cup.item)!;
+  // FB2 B8: the item the cup fits exactly (its syrup and shots) first.
+  const item = itemFor(c, cup.item, cup.made)!;
   item.done = true;
   if (cup.by) item.by = cup.by;
-  if (cup.slips) item.slips = cup.slips;
+  // FB2 B8: how the cup was hand-made against what this item asked (foam, milk, syrup): stars now, the tip with the ticket.
+  const judged = judgeCup(item, cup.made);
+  const slips = judgedSlips(cup.slips ?? 0, judged.stars);
+  if (slips) item.slips = slips;
+  if (judged.tip !== 1) item.tipMul = judged.tip;
+  if (judged.syrupMiss && cool < 1) emitLog(state, 'syrup.miss', { customer: c.id });
   if (cool >= 1) {
     item.cold = true;
     emitLog(state, 'pickup.cold', { customer: c.id, drink: cup.item });
@@ -183,7 +190,7 @@ function completeTicket(state: GameState, c: Customer): void {
       if (c.order !== 'office') state.today.lost += 1; // as a single cold cup: one lost drink
       continue;
     }
-    const cup = payCup(state, c, item.drink, item.by, item.slips ?? 0, item.temp === true, item.black ? CONDIMENTS.blackTip : 1);
+    const cup = payCup(state, c, item.drink, item.by, item.slips ?? 0, item.temp === true, (item.black ? CONDIMENTS.blackTip : 1) * (item.tipMul ?? 1));
     paid += cup.price + cup.tip;
     tip += cup.tip;
     price += cup.price;
@@ -277,6 +284,7 @@ function spawnOffice(state: GameState): Customer | null {
   const patienceMax = patienceFor(m, cfg.patience * wait * areaPatienceMul(state, drinks));
   const c: Customer = { id: state.nextCustomerId++, drink: drinks[0], patienceLeft: patienceMax, patienceMax, stage: 'order', order: 'office' };
   makeTicket(c, drinks);
+  addCustomerAsks(state, c); // FB2 B8: doubles and syrups
   state.customers.push(c);
   emitLog(state, 'order.office', { customer: c.id, count: n });
   return c;

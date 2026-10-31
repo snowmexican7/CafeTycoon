@@ -54,6 +54,7 @@ export function finishDay(state: GameState): GameState {
     delete s.outputSince;
     s.occupiedBy = null;
     s.making = null;
+    delete s.made; // FB2 B8
     // Review M9: a half-poured pot doesn't keep over the night.
     delete s.potLeft;
     delete s.potColdAt;
@@ -63,6 +64,9 @@ export function finishDay(state: GameState): GameState {
   for (const p of state.players) {
     p.holding = null;
     delete p.heldSince; // A2: no cup, no clock
+    delete p.made; // FB2 B8: nor a jug or a steam meter
+    delete p.jug;
+    delete p.steam;
     if (p.tool === 'box') returnBox(state, p);
     clearFloorFields(p);
   }
