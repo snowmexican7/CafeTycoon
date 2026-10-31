@@ -13,6 +13,7 @@ import { drawBox } from './pickup';
 import { drawCarafe } from './sink';
 import { CARRIED_FILL } from '../sinkModel';
 import { drawBarCaddy, drawCarton } from './fridgeArt';
+import { lookArt, type BodyStyle, type HairStyle, type OutfitStyle } from '../lookModel';
 
 /** Feet sit a little below the sim centre so a barista reads as standing on its tile. */
 export const FEET_OFFSET = 0.3;
@@ -36,29 +37,116 @@ interface PersonOpts {
   headphones?: boolean;
   badge?: boolean;
   headband?: boolean;
+  /** ui-3.5.2 (R4 e): a player-made look's body, hairstyle and outfit (absent = the classic capped barista). */
+  style?: { body: BodyStyle; hairStyle: HairStyle; outfit: OutfitStyle };
 }
 
 const darker = (c: number, k = 0.8) => (Math.round(((c >> 16) & 255) * k) << 16) | (Math.round(((c >> 8) & 255) * k) << 8) | Math.round((c & 255) * k);
 
+const DENIM = 0x4a6fa5;
+const SHOES = 0x3a2a22;
+const TROUSERS = 0x4a3a33;
+const SKIRT = 0x3d4a6b;
+const WHITE_SHIRT = 0xf4efe6;
+
+/** ui-3.5.2: hair that hangs behind the head and body (drawn first). */
+function backHair(g: Graphics, style: HairStyle, hair: number, facing: Facing): void {
+  if (facing !== 'down') return;
+  if (style === 'long') g.roundRect(-20, -70, 40, 46, 14).fill(hair);
+  else if (style === 'ponytail') g.ellipse(20, -52, 5.5, 12).fill(hair);
+}
+
+/** ui-3.5.2: hair on top of the head (after the face). */
+function frontHair(g: Graphics, style: HairStyle, hair: number, skin: number, facing: Facing): void {
+  const spikes = () => g.poly([-14, -63, -11, -79, -5, -68, 0, -81, 5, -68, 11, -79, 14, -63]).fill(hair);
+  const curls = () => { for (const [cx, cy] of [[-15, -61], [-10, -71], [0, -75], [10, -71], [15, -61]]) g.circle(cx, cy, 6.5).fill(hair); };
+  if (facing === 'down') {
+    if (style === 'buzz') halfDome(g, 0, -60, 16.5, 11).fill(hair);
+    else halfDome(g, 0, -57, 17, style === 'spiky' || style === 'curly' ? 13 : 15).fill(hair);
+    if (style === 'spiky') spikes();
+    if (style === 'curly') curls();
+    if (style === 'bob') {
+      g.roundRect(-20, -64, 8, 24, 4).fill(hair);
+      g.roundRect(12, -64, 8, 24, 4).fill(hair);
+    }
+    if (style === 'long') {
+      g.roundRect(-20, -64, 7, 34, 3.5).fill(hair);
+      g.roundRect(13, -64, 7, 34, 3.5).fill(hair);
+    }
+    if (style === 'ponytail') g.roundRect(14, -62, 5, 5, 2).fill(darker(hair, 0.7));
+  } else {
+    g.circle(0, -59, 17).fill(hair);
+    if (style === 'spiky') spikes();
+    if (style === 'curly') curls();
+    if (style === 'bob') g.roundRect(-19, -62, 38, 20, 8).fill(hair);
+    else if (style === 'long') g.roundRect(-18, -64, 36, 40, 12).fill(hair);
+    else if (style === 'ponytail') {
+      g.ellipse(0, -40, 5.5, 12).fill(hair);
+      g.roundRect(-3, -50, 6, 4, 2).fill(darker(hair, 0.7));
+    } else {
+      g.ellipse(-16, -56, 3, 4).fill(skin);
+      g.ellipse(16, -56, 3, 4).fill(skin);
+    }
+  }
+  if (style === 'bun') g.circle(0, -77, 8).fill(hair);
+}
+
 /** A chunky toy person with its feet at (0, 0). */
 export function drawPerson(g: Graphics, o: PersonOpts): void {
+  const st = o.style;
+  const half = st?.body === 'broad' ? 18 : st ? 14.5 : 16;
+  const outfit = st?.outfit;
+  const apron = !!o.apron && outfit !== 'overalls' && outfit !== 'vest';
+  const bare = outfit === 'dress' || outfit === 'skirt';
   g.ellipse(0, 1, 17, 6).fill({ color: 0x2a1608, alpha: 0.25 });
   if (o.ring != null) dashedEllipse(g, 0, 1, 24, 9, 6, 5, o.ring, 3);
-  g.roundRect(-11, -15, 9, 15, 4).fill(0x4a3a33);
-  g.roundRect(2, -15, 9, 15, 4).fill(0x4a3a33);
-  g.roundRect(-16, -42, 32, 34, 13).fill(o.shirt);
-  if (o.apron && o.facing === 'down') {
-    g.moveTo(-10, -36).lineTo(10, -36).lineTo(10, -14).quadraticCurveTo(0, -8, -10, -14).closePath().fill(0xfffaf2);
+  if (st) backHair(g, st.hairStyle, o.hair, o.facing);
+  if (bare) {
+    g.roundRect(-9.5, -15, 7, 15, 3.5).fill(o.skin);
+    g.roundRect(2.5, -15, 7, 15, 3.5).fill(o.skin);
+    g.roundRect(-11, -4, 9, 4.5, 2).fill(SHOES);
+    g.roundRect(2, -4, 9, 4.5, 2).fill(SHOES);
+  } else {
+    const legs = outfit === 'overalls' ? DENIM : TROUSERS;
+    g.roundRect(-11, -15, 9, 15, 4).fill(legs);
+    g.roundRect(2, -15, 9, 15, 4).fill(legs);
+  }
+  if (outfit === 'hoodie') g.ellipse(0, -44, 15, 7).fill(darker(o.shirt, 0.75));
+  const top = outfit === 'vest' ? WHITE_SHIRT : o.shirt;
+  g.roundRect(-half, -42, half * 2, 34, 13).fill(top);
+  if (outfit === 'dress') g.poly([-half, -26, half, -26, half + 6, -10, -half - 6, -10]).fill(o.shirt);
+  if (outfit === 'skirt') g.poly([-half, -22, half, -22, half + 5, -10, -half - 5, -10]).fill(SKIRT);
+  if (outfit === 'overalls') {
+    g.roundRect(-half, -24, half * 2, 14, 6).fill(DENIM);
+    if (o.facing === 'down') {
+      g.roundRect(-9, -36, 18, 16, 3).fill(DENIM);
+      g.moveTo(-8, -36).lineTo(-11, -42).moveTo(8, -36).lineTo(11, -42).stroke({ width: 3, color: DENIM });
+      g.circle(-6, -33, 1.6).fill(0xf6c35b);
+      g.circle(6, -33, 1.6).fill(0xf6c35b);
+    } else g.moveTo(-10, -42).lineTo(10, -24).moveTo(10, -42).lineTo(-10, -24).stroke({ width: 3, color: DENIM });
+  }
+  if (outfit === 'vest' && o.facing === 'down') {
+    g.poly([-half + 1, -40, -2, -30, -2, -12, -half + 2, -12]).fill(o.shirt);
+    g.poly([half - 1, -40, 2, -30, 2, -12, half - 2, -12]).fill(o.shirt);
+    for (const y of [-26, -20, -14]) g.circle(-4.5, y, 1.3).fill(0xfffaf2);
+  } else if (outfit === 'vest') g.roundRect(-half + 1, -40, half * 2 - 2, 28, 10).fill(o.shirt);
+  if (outfit === 'hoodie' && o.facing === 'down') {
+    g.moveTo(-3, -40).lineTo(-4, -32).moveTo(3, -40).lineTo(4, -32).stroke({ width: 1.5, color: 0xfffaf2 });
+  }
+  if (apron && o.facing === 'down') {
+    const w = st?.body === 'broad' ? 12 : 10;
+    g.moveTo(-w, -36).lineTo(w, -36).lineTo(w, -14).quadraticCurveTo(0, -8, -w, -14).closePath().fill(0xfffaf2);
     g.roundRect(-5, -25, 10, 6, 2).stroke({ width: 1.5, color: 0xe2cfb4 });
   }
-  if (o.apron && o.facing === 'up') g.moveTo(-14, -24).lineTo(14, -24).stroke({ width: 3, color: 0xfffaf2 });
-  g.circle(-17, -24, 6).fill(o.shirt);
-  g.circle(17, -24, 6).fill(o.shirt);
-  g.circle(-18, -19, 4.5).fill(o.skin);
-  g.circle(18, -19, 4.5).fill(o.skin);
+  if (apron && o.facing === 'up') g.moveTo(-half + 2, -24).lineTo(half - 2, -24).stroke({ width: 3, color: 0xfffaf2 });
+  g.circle(-half - 1, -24, 6).fill(top);
+  g.circle(half + 1, -24, 6).fill(top);
+  g.circle(-half - 2, -19, 4.5).fill(o.skin);
+  g.circle(half + 2, -19, 4.5).fill(o.skin);
   g.circle(0, -58, 17).fill(o.skin);
   if (o.facing === 'down') {
-    halfDome(g, 0, -56, 17, 15).fill(o.hair);
+    if (st) frontHair(g, st.hairStyle, o.hair, o.skin, o.facing);
+    else halfDome(g, 0, -56, 17, 15).fill(o.hair);
     if (o.dizzy) {
       // swirly @ eyes and a wobbly little "o" mouth
       for (const ex of [-6, 6]) {
@@ -80,7 +168,8 @@ export function drawPerson(g: Graphics, o: PersonOpts): void {
     g.ellipse(11, -47, 3.6, 2.2).fill({ color: o.angry ? 0xe0564a : 0xf08a7a, alpha: o.angry ? 0.8 : 0.55 });
     if (o.angry) g.moveTo(-3.5, -44.5).quadraticCurveTo(0, -47.5, 3.5, -44.5).stroke({ width: 1.6, color: 0x2b1a12, cap: 'round' });
     else if (!o.dizzy) g.moveTo(-3.5, -46.5).quadraticCurveTo(0, -43.5, 3.5, -46.5).stroke({ width: 1.6, color: 0x2b1a12, cap: 'round' });
-  } else {
+  } else if (st) frontHair(g, st.hairStyle, o.hair, o.skin, o.facing);
+  else {
     g.circle(0, -59, 17).fill(o.hair);
     g.ellipse(-16, -56, 3, 4).fill(o.skin);
     g.ellipse(16, -56, 3, 4).fill(o.skin);
@@ -243,11 +332,16 @@ export class Actors {
       const me = p.id === localId;
       const stunned = p.stunTicksLeft > 0;
       const bl = p.bot ? botLook(p.bot.personality) : null;
-      const key = `${sprite.facing}|${p.holding}|${me}|${index}|${stunned}|${p.bot?.personality ?? ''}|${p.tool}`;
+      // ui-3.5.2 (R4 e): a person's own look (bots keep theirs); the ring and tag keep the player colour
+      const art = p.look && !p.bot ? lookArt(p.look) : null;
+      const key = `${sprite.facing}|${p.holding}|${me}|${index}|${stunned}|${p.bot?.personality ?? ''}|${p.tool}|${art ? JSON.stringify(p.look) : ''}`;
       if (key !== sprite.key) {
         sprite.body.clear();
         drawPerson(sprite.body, {
-          shirt: look.cap, cap: bl?.headphones || bl?.headband ? undefined : look.cap, skin: look.skin, hair: look.hair, apron: true, facing: sprite.facing,
+          ...(art
+            ? { shirt: art.shirt, skin: art.skin, hair: art.hair, style: { body: art.body, hairStyle: art.hairStyle, outfit: art.outfit } }
+            : { shirt: look.cap, cap: bl?.headphones || bl?.headband ? undefined : look.cap, skin: look.skin, hair: look.hair }),
+          apron: true, facing: sprite.facing,
           holding: p.tool !== null ? null : p.holding, ring: me ? look.cap : null, dizzy: stunned,
           shades: bl?.shades, headphones: bl?.headphones, badge: bl?.badge, headband: bl?.headband,
         });
