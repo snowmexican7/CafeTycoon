@@ -2406,3 +2406,8 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
 3. Are roles and reroll worth keeping at all?
 4. Is growing the shop OK as a night-only choice, moved to the end-of-day receipt so it is not a tab?
 5. Do we delete classic Stations/slots code now (memory says yes), or only hide it?
+- **Round 3 items 6 + 7, growth (`r3-grow`, protocol 50).** Cart $80 → $70. `nextTierAffordable(state)`
+  (growth.ts) and `grow.affordable { tier }` once per night when cash first covers the next tier (not on a Gear run's
+  first night; flag `GameState.growNudged?`). `growDiff(from, to, gear = true)` (growth.ts, type `GrowDiff`) and
+  `grow.done { from, to, diff }` on every grow; diff = `{ queue, price, traffic, rent, crowd, unlocks }` before → after.
+  Bots grow a little earlier at the cheaper cart (no tuning).
