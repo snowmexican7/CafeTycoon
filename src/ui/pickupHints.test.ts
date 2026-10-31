@@ -24,10 +24,12 @@ const cust = (id: number, drink: Customer['drink'], more: Partial<Customer> = {}
 const put = (s: GameState, drink: Customer['drink']) => s.pass.push({ item: drink, ticksLeft: ECONOMY.pass.staleSeconds[drink] * TICK_RATE, by: 'p1' });
 
 describe('Gear counter hints (3.3.1)', () => {
-  it('names the three spots', () => {
+  it('names the counter spots (tray and syrups are never Till)', () => {
     expect(counterName({ id: 'counter' })).toBe('Till');
     expect(counterName({ id: 'pickup' })).toBe('Pickup counter');
     expect(counterName({ id: 'condiments' })).toBe('Condiment bar');
+    expect(counterName({ id: 'trayTable' })).toBe('Tray table');
+    expect(counterName({ id: 'syrups' })).toBe('Syrup rack');
   });
 
   it('the till rings up with empty hands, also when a cup on the counter matches (that is when it helps)', () => {
@@ -69,6 +71,15 @@ describe('Gear counter hints (3.3.1)', () => {
     }
     for (let i = 0; i < 4; i++) put(s, 'espresso');
     expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Pickup counter is full' });
+  });
+
+  it('FB2 B7: a drink at the tray table sets on the tray, not the pickup counter', () => {
+    const s = gearDay();
+    expect(s.stations.some((x) => x.id === 'trayTable')).toBe(true);
+    s.players[0].holding = 'coldBrew';
+    at(s, 'trayTable');
+    expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Set it on the tray' });
+    expect(counterName({ id: 'trayTable' })).not.toBe('Till');
   });
 
   it('empty hands at the pickup counter take a cup back', () => {
