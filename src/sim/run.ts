@@ -1,3 +1,4 @@
+import { cleanLook } from './look';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
 import { canMake, growthMorning } from './growth';
@@ -64,9 +65,11 @@ export function createRun(opts: CreateRunOptions): GameState {
   };
   const players: Player[] = opts.players.map((p, i) => {
     const pos = { ...(LAYOUT.spawnPoints[i] ?? LAYOUT.door) };
+    const look = cleanLook(p.look);
     return {
       id: p.id,
       name: p.name,
+      ...(look ? { look } : {}),
       pos,
       moveDir: { x: 0, y: 0 },
       interactQueued: false,

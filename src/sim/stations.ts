@@ -65,7 +65,7 @@ export function stocked(state: GameState, r: Recipe): boolean {
 }
 
 /** FB2 A4: an empty-hands press here would make a drink someone is waiting for (so closing soon doesn't lift the milk instead). */
-function emptyHandsWanted(state: GameState, st: Station): boolean {
+export function emptyHandsWanted(state: GameState, st: Station): boolean {
   const r = recipeAt(state, st, null);
   if (!r || !stocked(state, r) || (tapCupRecipe(r) && st.batchLeft !== undefined && st.batchLeft <= 0)) return false;
   // Balance pass: a step on the way counts too (a sweet cream's first pour is a cold brew).

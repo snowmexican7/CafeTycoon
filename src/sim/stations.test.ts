@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createRun } from './run';
-import { interact, stepStations } from './stations';
+import { emptyHandsWanted, interact, stepStations } from './stations';
 import type { GameState } from './types';
 
 const at = (s: GameState, pid: string, x: number, y: number) => {
@@ -95,5 +95,15 @@ describe('stations', () => {
     s = interact(s, 'p1');
     expect(s.stations.find((st) => st.id === 'grinder')!.busyTicksLeft).toBe(0);
     expect(s.supplies.beans).toBe(beans);
+  });
+
+  it('emptyHandsWanted (public, R4): an empty-hands press at the grinder is wanted only when a customer wants grounds', () => {
+    const s = run2();
+    const grinder = s.stations[0];
+    expect(emptyHandsWanted(s, grinder)).toBe(false); // nobody is waiting
+    s.customers.push({ id: 1, drink: 'espresso', extra: undefined } as unknown as GameState['customers'][number]);
+    expect(emptyHandsWanted(s, grinder)).toBe(true); // an espresso needs grounds on the way
+    s.supplies.beans = 0;
+    expect(emptyHandsWanted(s, grinder)).toBe(false); // nothing to grind
   });
 });

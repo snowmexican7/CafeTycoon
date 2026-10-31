@@ -1,6 +1,7 @@
 import { BRANCH_AREAS, BRANCH_SUPPLIES } from './branch';
 import type { AreaId } from '../data/areas';
 import { cleanDraft } from './signature';
+import { cleanLook } from './look';
 import { isGearId } from '../data/gear';
 import { isFridgeId } from '../data/fridges';
 import { cleanPitch, isPitchKind } from './pitch';
@@ -147,7 +148,12 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
     case 'join': {
       if (isReservedId(input.playerId)) return null;
       const name = typeof input.name === 'string' ? input.name.trim().slice(0, MAX_NAME) : '';
-      return { kind: 'join', playerId: input.playerId, name: name || 'Barista' };
+      const look = cleanLook(input.look);
+      return { kind: 'join', playerId: input.playerId, name: name || 'Barista', ...(look ? { look } : {}) };
+    }
+    case 'look': {
+      const look = cleanLook(input.look);
+      return look ? { kind: 'look', playerId: input.playerId, look } : null;
     }
     case 'call':
       return typeof input.take === 'boolean' ? { kind: 'call', playerId: input.playerId, take: input.take } : null;
