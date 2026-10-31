@@ -181,9 +181,9 @@ describe('nightBrief alerts', () => {
     s.tier = 'stand';
     s.cash = 200;
     expect(find(s, 'grow')).toMatchObject({
-      kind: 'grow', severity: 'info', text: 'You can grow to the cart ($80)', fix: { kind: 'grow', tier: 'cart' },
+      kind: 'grow', severity: 'info', text: 'You can grow to the cart ($70)', fix: { kind: 'grow', tier: 'cart' },
     });
-    s.cash = 79;
+    s.cash = 69;
     expect(find(s, 'grow')).toBeUndefined();
     const first = run();
     first.tier = 'stand';
