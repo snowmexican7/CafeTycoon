@@ -5,6 +5,7 @@ import { autoMilk, closingChecklist, closingSoon, fridgeGear, isFridge, isMilkSt
 import { FRIDGES } from '../data/fridges';
 import { TILL, ringProgress, selfOrder, tillNext } from '../sim/till';
 import { passSlots, pickupTarget, spotOf } from '../sim/pickup';
+import { trayComplete } from '../sim/tray';
 import { CONDIMENTS, canTakeBox } from '../sim/condiments';
 import { CONDIMENTS_ID } from '../data/layout';
 import { DRINK_INFO } from '../data/drinks';
@@ -188,10 +189,22 @@ const VERB: Record<'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'drip', 
 const TAKES: Record<keyof typeof VERB, ItemKind | null> = { grinder: null, espresso: 'grounds', steamer: 'espresso', coldBrewTap: null, drip: null };
 const USES: Record<keyof typeof VERB, SupplyId | null> = { grinder: 'beans', espresso: null, steamer: 'milk', coldBrewTap: 'concentrate', drip: 'beans' };
 
-/** Gear names for the three counter-kind spots (the till keeps the counter's id). */
+/** Gear names for the counter-kind spots (the till keeps the counter's id). */
 export function counterName(station: { id: string }): string {
   const spot = spotOf(station as Station);
-  return spot === 'pickup' ? 'Pickup counter' : spot === 'condiments' ? 'Condiment bar' : spot === 'sink' ? 'Back sink' : spot === 'fridge' ? 'Fridge' : 'Till';
+  return spot === 'pickup'
+    ? 'Pickup counter'
+    : spot === 'condiments'
+      ? 'Condiment bar'
+      : spot === 'sink'
+        ? 'Back sink'
+        : spot === 'fridge'
+          ? 'Fridge'
+          : spot === 'trayTable'
+            ? 'Tray table'
+            : spot === 'syrups'
+              ? 'Syrup rack'
+              : 'Till';
 }
 
 /** 3.3.3: what the hand slot shows for a tool. */
@@ -248,6 +261,26 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   const spot = spotOf(station);
   if (spot === 'sink') return sinkHint(state, player);
   if (spot === 'fridge') return fridgeHint(state, player);
+  // FB2 B7: the tray table — never "Set on the pickup counter" / Till copy (HANDOFF).
+  if (spot === 'trayTable') {
+    if (player.tool === 'tray') return { go: false, title: 'Carry the tray to pickup', detail: `${where} · E at pickup puts it down` };
+    if (held && held !== 'grounds') return { go: true, title: 'Set it on the tray', detail: where };
+    if (state.tray && trayComplete(state.tray)) return { go: true, title: 'Pick up the tray', detail: `${where} · every drink is on it` };
+    if (state.tray) {
+      const done = state.tray.items.filter((x) => x.done).length;
+      return { go: false, title: `Tray · ${done}/${state.tray.items.length}`, detail: `${where} · keep adding drinks` };
+    }
+    return { go: false, title: 'Tray table', detail: `${where} · set a big order's drinks here` };
+  }
+  // FB2 B8: syrup rack — not a till; full jug/steam UI is a follow-up.
+  if (spot === 'syrups') {
+    if (player.tool) return { go: false, title: 'Hands full', detail: where };
+    if (!held || held === 'grounds') return { go: false, title: 'Bring a drink', detail: `${where} · vanilla or caramel` };
+    return { go: true, title: 'Add a syrup', detail: `${where} · E for vanilla or caramel` };
+  }
+  if (player.tool === 'tray' && (spot === 'pickup' || spot === 'till')) {
+    return { go: true, title: 'Put the tray down', detail: `${where} · that customer's cups stay together` };
+  }
   if (held && held !== 'grounds') {
     if (state.pass.length >= passSlots(state)) return { go: false, title: 'Pickup counter is full', detail: `${where} · ${state.pass.length}/${passSlots(state)} slots` };
     const taker = pickupTarget(state, held);

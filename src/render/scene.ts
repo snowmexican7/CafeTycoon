@@ -122,7 +122,7 @@ export class Scene {
     setBarSkin(barSkin(look));
     // 3.3.1: the pickup counter and the condiment bar are named counters, not a second and third till, so no number badge
     // (3.3.3: nor the back sink)
-    const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: ('twin' in s && s.twin === true) || ['pickup', 'condiments', 'sink', 'fridge'].includes(counterSpotOf(s, list) ?? '') })));
+    const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: ('twin' in s && s.twin === true) || ['pickup', 'condiments', 'sink', 'fridge', 'trayTable', 'syrups'].includes(counterSpotOf(s, list) ?? '') })));
     this.stationArt = list.map((s, i) => {
       const twin = 'twin' in s && s.twin === true;
       const g = gearOf(s);

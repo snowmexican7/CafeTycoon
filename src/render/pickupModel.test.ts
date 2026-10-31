@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CONDIMENTS_ID, PICKUP_ID } from '../data/layout';
+import { CONDIMENTS_ID, PICKUP_ID, SYRUP_ID, TRAY_ID } from '../data/layout';
 import { TICK_RATE } from '../sim/constants';
 import { boxStackOffset, counterSpotOf, customerSpots, pickupCups, PICKUP_MIN_X, PICKUP_Y, servingsGauge, type SpotsLayout } from './pickupModel';
 import type { GameState } from '../sim/types';
@@ -13,10 +13,12 @@ const lay: SpotsLayout = {
 
 describe('pickupModel (3.3.1)', () => {
   it('counterSpotOf splits the Gear counter into till / pickup / bar, classic keeps one counter', () => {
-    const gear = [{ id: 'counter' }, { id: PICKUP_ID }, { id: CONDIMENTS_ID }];
+    const gear = [{ id: 'counter' }, { id: PICKUP_ID }, { id: CONDIMENTS_ID }, { id: TRAY_ID }, { id: SYRUP_ID }];
     expect(counterSpotOf({ id: 'counter', kind: 'counter' }, gear)).toBe('till');
     expect(counterSpotOf({ id: PICKUP_ID, kind: 'counter' }, gear)).toBe('pickup');
     expect(counterSpotOf({ id: CONDIMENTS_ID, kind: 'counter' }, gear)).toBe('condiments');
+    expect(counterSpotOf({ id: TRAY_ID, kind: 'counter' }, gear)).toBe('trayTable');
+    expect(counterSpotOf({ id: SYRUP_ID, kind: 'counter' }, gear)).toBe('syrups');
     expect(counterSpotOf({ id: 'counter', kind: 'counter' }, [{ id: 'counter' }])).toBeUndefined();
     expect(counterSpotOf({ id: 'espresso', kind: 'espresso' }, gear)).toBeUndefined();
   });

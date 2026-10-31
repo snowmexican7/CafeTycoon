@@ -187,8 +187,9 @@ const TWIN_SCALE = 0.7;
 /**
  * 3.3.1 Gear batch/pickup: which of the three counter spots a counter station is. `till` in Gear is the
  * register only; `pickup` has the four cup coasters; `condiments` is the cream & sugar bar. Classic = undefined.
+ * FB2 B7/B8: `trayTable` and `syrups` are fixed fixtures — never draw them as a till (HANDOFF).
  */
-export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge';
+export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge' | 'trayTable' | 'syrups';
 
 /** Where pickup coaster `i` (0..3) sits on the pickup counter, in screen px. Shared with the per-frame cups. */
 export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: number } {
@@ -216,7 +217,11 @@ export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId 
             ? buildCondimentBar(pos)
             : kind === 'counter' && spot === 'sink'
               ? buildSink(pos)
-              : buildStationArt(kind, pos, checkout, spot === 'till' ? 'TILL' : undefined, variant === 'pot');
+              : kind === 'counter' && spot === 'trayTable'
+                ? buildTrayTable(pos)
+                : kind === 'counter' && spot === 'syrups'
+                  ? buildSyrupRack(pos)
+                  : buildStationArt(kind, pos, checkout, spot === 'till' ? 'TILL' : undefined, variant === 'pot');
   } finally {
     plainArt = false;
   }
@@ -325,6 +330,47 @@ function counterBody(g: Graphics, cx: number, cy: number, top = 0xf3efe9): void 
   for (let i = 0; i < 4; i++) g.roundRect(x + 5 + i * 13, cy - 4, 9, 32, 3).fill(0x8f5532);
   g.roundRect(x - 3, cy - 34, w + 6, 30, 8).fill(top);
   g.roundRect(x - 3, cy - 10, w + 6, 6, 3).fill(0xd8cdbf);
+}
+
+/** FB2 B7: tray table — a wood board with room for a multi-drink tray. */
+function buildTrayTable(pos: Vec2): Container {
+  const root = new Container();
+  const g = new Graphics();
+  root.addChild(g);
+  const cx = sx(pos.x);
+  const cy = sy(pos.y);
+  root.zIndex = stationDepth(pos);
+  counterBody(g, cx, cy, 0xe8dcc8);
+  // board
+  g.roundRect(cx - 28, cy - 32, 56, 20, 4).fill(0xc49a6c).stroke({ width: 1.5, color: 0x8a6238 });
+  for (let i = 1; i < 4; i++) g.moveTo(cx - 28 + i * 14, cy - 32).lineTo(cx - 28 + i * 14, cy - 12).stroke({ width: 1, color: 0xa87848, alpha: 0.55 });
+  // empty tray silhouette
+  g.roundRect(cx - 18, cy - 28, 36, 12, 3).fill({ color: 0xf4ebe0, alpha: 0.85 }).stroke({ width: 1.5, color: 0x8a6238 });
+  g.ellipse(cx - 8, cy - 22, 4, 2.5).stroke({ width: 1.2, color: 0xb08960 });
+  g.ellipse(cx + 8, cy - 22, 4, 2.5).stroke({ width: 1.2, color: 0xb08960 });
+  plate(root, g, cx, cy + 4, 'TRAY', 0x8a6238, 1);
+  return root;
+}
+
+/** FB2 B8: syrup rack — two flavour bottles on a small shelf. */
+function buildSyrupRack(pos: Vec2): Container {
+  const root = new Container();
+  const g = new Graphics();
+  root.addChild(g);
+  const cx = sx(pos.x);
+  const cy = sy(pos.y);
+  root.zIndex = stationDepth(pos);
+  counterBody(g, cx, cy, 0xf0ebe3);
+  // shelf
+  g.roundRect(cx - 26, cy - 36, 52, 8, 2).fill(0x8f5532);
+  // vanilla (pale) and caramel (amber) bottles
+  for (const [dx, fill, cap] of [[-10, 0xf7f0d8, 0xd6b25c] as const, [10, 0xc4782a, 0x6b3a12] as const]) {
+    g.roundRect(cx + dx - 5, cy - 58, 10, 24, 3).fill(fill).stroke({ width: 1, color: 0x5a4030 });
+    g.roundRect(cx + dx - 4, cy - 62, 8, 6, 2).fill(cap);
+    g.circle(cx + dx, cy - 48, 2).fill({ color: 0xffffff, alpha: 0.45 });
+  }
+  plate(root, g, cx, cy + 4, 'SYRUPS', 0x6b3a12, 1);
+  return root;
 }
 
 /** 3.3.1: the Gear pickup counter: a green runner with four numbered coasters, one per waiting cup. */
