@@ -170,7 +170,7 @@ const GEAR_BTN: Record<GearTierState, (t: GearTierVM) => string> = {
 /** The back bar (sell from a slot) and one row of tiers per tree. Bigger = better, cheapest on the left. */
 export function gearBoard(g: GearVM): string {
   const head = g.pickNight
-    ? `<div class="gr-pick"><b>Pick your gear.</b> You start with $120 and an empty counter. Buy one machine to sell something tomorrow, then tap <b>Next</b> to stock up on the Restock tab.</div>${g.coopHint ? `<div class="gr-pick gr-coop" role="note"><b>👥 Co-op tip.</b> ${esc(g.coopHint)}</div>` : ''}`
+    ? `<div class="gr-pick"><b>Pick your gear.</b> You start with $120 and an empty counter. Buy one machine to sell something tomorrow, then press <b>Next</b> to stock up on the Restock tab.</div>${g.coopHint ? `<div class="gr-pick gr-coop" role="note"><b>👥 Co-op tip.</b> ${esc(g.coopHint)}</div>` : ''}`
     : '';
   const note = g.note ? `<div class="st-trade warn" role="status">⚖️ ${esc(g.note)}</div>` : '';
   // G8: co-op vote on big buys/sales.

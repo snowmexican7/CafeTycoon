@@ -96,7 +96,7 @@ export function ticketsHtml(orders: readonly OrderTicket[], o: TicketOpts): stri
         const clickable = o.mode === 'click';
         const steps = open
           ? `<div class="steps">${ticketSteps(t.drink, o.pods, o.gear).map((s, k) => `<span class="${k === next ? 'next' : ''}">${s}</span>`).join('')}</div>`
-          : clickable ? '<div class="peek">Tap for steps</div>' : '';
+          : clickable ? '<div class="peek">Click for steps</div>' : '';
         const cls = ['ticket', t.pickup ? 'rung' : '', t.patience < URGENT ? 'urgent' : '', t.tag ? `kind-${t.tag.tone}` : '', open ? 'open' : '', clickable ? 'tap' : ''].filter(Boolean).join(' ');
         const aria = clickable ? ` role="button" aria-expanded="${open}" aria-label="${DRINK_LABEL[t.drink]}: ${open ? 'hide' : 'show'} steps"` : '';
         return `<div class="${cls}" data-id="${t.id}"${aria} style="--r:${tilt(t.id)}deg">
