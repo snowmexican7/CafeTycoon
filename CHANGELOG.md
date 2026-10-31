@@ -33,6 +33,8 @@ the café feed, Strategist and Marketer hires).
   rate the week.
 - Hire a Strategist ($1 a day) to see the honest forecast and have your best prices set each night, and a Marketer
   ($2 a day) to bring in about 15% more customers; without a Strategist the night forecast is only a rough guess.
+- A tray table at the back: set a big order's drinks down on it, pick up the full tray, and drop it at pickup in one
+  go so other customers can't grab those cups (careful: a bumped tray spills).
 
 ## 3.5.1 — 2026-10-30 · Bigger orders, a tidier night
 

@@ -70,6 +70,12 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **B7 tray table (2026-10-31, `fb2-b7`, protocol 57).** `spotOf` → `'trayTable'` (`TRAY_ID`, (1,4) on every tier). I added `tray` to your `TOOL_LABEL` in `live.ts` for tsc. To draw: draw the table (`render/pickupModel.counterSpotOf` falls back to a till for unknown counter ids, and `live.ts counterName` says "Till"); the live list over it (`state.tray.items`, done ticks, customer name/number); the tray in hand (`tool === 'tray'`, `Player.tray`); the tray coaster with the customer's name on a pickup slot (`PassItem.tray`); per-cup cooling via `trayCool`; hints:
+    - "Set it on the tray" with a drink at the table;
+    - "Pick up the tray" when `trayComplete`;
+    - "Put the tray down" at pickup;
+    - a refuse bubble on `tray.refuse`.
+  Events: `tray.claim`, `tray.add`, `tray.refuse`, `tray.pick`, `tray.put`, `tray.take`, `tray.spill`, `tray.void`. Full names: BACKLOG "Round 4 (sim lane, Claude)", B7.
 - [ ] **Round 3 item 3, hires (2026-10-31, `r3-hires`, protocol 56).** Hire cards send the staff input with
   `role: 'strategist' | 'marketer'` (no role = barista); state `GameState.staff { strategist?, marketer? }`. Show the
   night forecast as rough when `forecastIsRough(state)` (`PriceLine.rough`), "Set by Strategist" marks on

@@ -2530,3 +2530,26 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   (src/sim/feed.ts; text and numbers in src/data/feed.ts). Rolls use a hash of seed/day/customer/reason, not
   `state.rng`, so no other roll moves.
 - **Round 3 item 3, hires (`r3-hires`, protocol 56).** Strategist ($1/day) and Marketer ($2/day), Gear runs, night, people only, no cost up front, wages at closing with the crew's (by the hour like theirs; `HIRE_WAGE`, `hireWage`, `hireWagesForDay`, `DayStats.hireWages` is the part of `wages` they took). `GameState.staff { strategist?, marketer? }`; input is the staff input with `role: 'strategist' | 'marketer'` (no role = barista). Without a Strategist the night's price table is a rough guess (`forecastIsRough(state)`: orders and profit skewed up to +-25% by a hash of seed + day, rounded to 5, `PriceLine.rough`; stock warnings stay honest). With one the forecast is honest and `setPeakPrices` (src/sim/strategist.ts, `bestStep`) sets the calculator's best prices at every night start and on hire (`strategist.set { changed }`); hand-set prices stand until the next night start. Marketer: `MARKETER_TRAFFIC` 1.15 on walk-ins at current prices; both stack; firing stops both. Events `staff.hire { role, by }`, `staff.fire { role, by }`. Planner advice `staff:hire:strategist` / `staff:hire:marketer` (kind `equip`, priority 54) when the forecast gain beats the wage. **UI to do:** hire cards, rough-vs-honest forecast display, "Set by Strategist" marks, receipt line for `hireWages`.
+- **B7 tray table (`fb2-b7`, protocol 57; UI lane to draw).** Gear only.
+  - **The table:** fixed counter-kind spot `trayTable` (`TRAY_ID`, `layoutFor(tier).trayTable` = (1,4) on every tier, below the fridge, worked from (2,4)); `spotOf` → `'trayTable'`. Never bought, sold or moved.
+  - **Claim and fill:** E or R with a drink on the empty table claims the oldest multi-drink ticket (combo, office, group; any stage) that still needs it.
+    - `GameState.tray { customer, items: { drink, done, by?, slips?, temp?, madeAt? }[] }` lists what the ticket still needed.
+    - `tray.claim { customer, by }`, then `tray.add { drink, by, customer }`.
+    - Later drinks join only while the ticket needs them; else `tray.refuse { drink, by, customer? }` and the drink stays in hand. A single's drink is never taken.
+    - The ticket never takes a counter cup a tray covers. A counter cup it does take drops that line from the tray.
+  - **Carry:** empty hands lift only a complete tray: `Player.tool = 'tray'`, `Player.tray`, `tray.pick { by, customer }`, and the table is free. One per pair of hands.
+  - **Deliver:** E or R at the pickup counter (or till) puts it down as one slot: `PassItem.tray { customer, drinks }` (`item` = first cup), `tray.put { by, customer }`.
+    - Only that customer takes it, all at once, once at pickup: `tray.take { customer }`, then the usual `pickup.take` and `order.done`.
+    - It never goes stale, take-backs skip it, and singles never take from it.
+  - **Spill:** a carried tray spills on a barista bump at 3× (`TRAY.spillMul`): `tray.spill { by, customer, cups }`, every cup wasted, a puddle; the ticket waits on.
+  - **Cooling:** cups keep their own `madeAt`; `trayCool(state, cup)`.
+  - **A ticket that leaves** voids its trays wherever they are: `tray.void { customer, cups }`, wasted except an office run's.
+  - **Bots** never use the table; they count tray cups as covering the ticket (`ticketOpen`, `trayCups`).
+  - **UI to do:** draw the table (`render/pickupModel.counterSpotOf` falls back to a till for unknown counter ids, and `live.ts counterName` says "Till"); the live list over it (`state.tray.items`, done ticks, customer name/number); the tray in hand (`tool === 'tray'`, `Player.tray`); the tray coaster with the customer's name on a pickup slot (`PassItem.tray`); per-cup cooling via `trayCool`; hints:
+    - "Set it on the tray" with a drink at the table;
+    - "Pick up the tray" when `trayComplete`;
+    - "Put the tray down" at pickup;
+    - a refuse bubble on `tray.refuse`.
+  - **Open:**
+    - Bots never carry a tray. If a person leaves a complete tray on the table, that ticket waits (and may be lost) until a person delivers it.
+    - There is no way to put a lifted tray back on the table.
