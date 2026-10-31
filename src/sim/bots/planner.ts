@@ -160,6 +160,8 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 const money = (n: number) => `$${n.toFixed(2)}`;
 const dollars = (n: number) => `$${n.toFixed(2).replace(/\.00$/, '')}`;
 const drinkName = (d: DrinkId) => DRINK_INFO[d].name;
+/** "the Hanes Method" stays "the Hanes Method"; "Dorm Room Cube" becomes "the Dorm Room Cube". */
+const the = (name: string) => (/^(the|a|an)\b/i.test(name.trim()) ? name : `the ${name}`);
 /** What a station is called in a tip (Round 4 f: was the classic shop's names). FB2 C9: in a Gear run the 'steamer' kind is the steam wand on the espresso machine. */
 const STATION_NAME: Record<StationKind, string> = {
   grinder: 'bean grinder', espresso: 'espresso machine', steamer: 'milk steamer', coldBrewTap: 'cold-brew keg', trash: 'bin', counter: 'counter', drip: 'drip machine',
@@ -567,11 +569,11 @@ function gearAdvice(state: GameState, budget: Budget): Advice[] {
     }
     budget.left = round2(budget.left - d.net);
     const g = GEAR[id];
-    const back = d.old ? `, ${dollars(GEAR[d.old].sell)} back on the ${GEAR[d.old].name}` : '';
+    const back = d.old ? `, ${dollars(GEAR[d.old].sell)} back on ${the(GEAR[d.old].name)}` : '';
     const price = g.price + (d.wand ? WANDS[d.wand].withMachine : 0);
     const vote = humans > 1 && price >= GEAR_VOTE_MIN ? ', the crew votes' : '';
     const withWand = d.wand ? ` with the ${WANDS[d.wand].name.toLowerCase()}` : '';
-    const buy = `buy the ${g.name}${withWand} (${dollars(price)}${back}${vote})`;
+    const buy = `buy ${the(g.name)}${withWand} (${dollars(price)}${back}${vote})`;
     return [
       {
         id: `gear:${id}`,
@@ -598,7 +600,7 @@ function fridgeAdvice(state: GameState, budget: Budget): Advice[] {
   const f = FRIDGES[want.id];
   const why = want.why === 'none' ? 'No fridge: milk drinks are off and the condiment bar goes bad every night' : `The fridge holds ${fridgeCapacity(state)} milk, a day needs about ${expectedUse(state).milk}`;
   return [
-    { id: `fridge:${want.id}`, kind: 'equip', text: `${why}: buy the ${f.name} (${dollars(want.price)})`, input: { kind: 'fridge', fridge: want.id }, priority: PLAN_PRIORITY.fridge },
+    { id: `fridge:${want.id}`, kind: 'equip', text: `${why}: buy ${the(f.name)} (${dollars(want.price)})`, input: { kind: 'fridge', fridge: want.id }, priority: PLAN_PRIORITY.fridge },
   ];
 }
 
