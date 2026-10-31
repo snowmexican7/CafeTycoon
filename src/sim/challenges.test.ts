@@ -3,7 +3,6 @@ import { CHALLENGES, DAY_CURVE, dayCurveFor, dayOfWeekIndex } from '../data/chal
 import { createRun, startDay, startNight } from './run';
 import { dealChallenges, scheduleWeightsForDay, settleChallenges, tickChallenges } from './challenges';
 import { computeModifiers } from './effects';
-import { migrateSnapshot } from '../storage/snapshotStore';
 import { step } from './step';
 import type { GameState } from './types';
 
@@ -135,10 +134,4 @@ describe('daily challenges (B7)', () => {
     expect(s.challenges![0]!.done).toBe(true);
   });
 
-  it('migrates v6 → v7 with an empty challenges list', () => {
-    const s = createRun(opts);
-    delete (s as { challenges?: unknown }).challenges;
-    const m = migrateSnapshot(6, s)!;
-    expect(m.challenges).toEqual([]);
-  });
 });

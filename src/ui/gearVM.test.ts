@@ -71,7 +71,7 @@ describe('Gear polish: tossing worthless gear', () => {
   it('$0 gear says toss, not "Sell · $0"', async () => {
     const { sellLabel } = await import('./gearVM');
     expect(sellLabel('c1', 0).text).toBe('Bin the sock');
-    expect(sellLabel('s1', 0).text).toBe('Toss it');
+    expect(sellLabel('b0', 0).text).toBe('Toss it'); // FB2 C9: the battery whisk retired
     expect(sellLabel('c2', 8).text).toBe('Sell · $8');
   });
 });
@@ -84,10 +84,10 @@ describe('Gear G5: the day HUD gear card', () => {
     const { startDay } = await import('../sim/run');
     const s = run();
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
-    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 's1' });
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'd1' }); // FB2 C9: was the battery whisk
     s.supplies.concentrate = 10; // steeped the night before: the morning fills the tap
     startDay(s);
-    s.stations.find((x) => x.kind === 'steamer')!.dead = true;
+    s.stations.find((x) => x.kind === 'drip')!.dead = true;
     expect(hudGearVM(s).map((g) => g.status)).toEqual(['8/8 left', 'dead']);
     expect(hudViewModel(s).gear?.length).toBe(2);
     const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
@@ -143,9 +143,9 @@ describe('3.3.2: the day HUD names each machine', () => {
     const s = run();
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'd1' });
-    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 's1' });
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'g1' }); // FB2 C9: was the battery whisk
     const rows = hudGearVM(s);
-    expect(rows.map((r) => r.label)).toEqual(['Cold brew', 'Drip', 'Steamer']);
+    expect(rows.map((r) => r.label)).toEqual(['Cold brew', 'Drip', 'Grinder']);
     // two of the same machine: numbered
     const tap = s.stations.find((x) => x.kind === 'coldBrewTap')!;
     s.stations.push({ ...tap, id: 'tap-2' });

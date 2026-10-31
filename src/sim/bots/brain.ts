@@ -746,9 +746,9 @@ function tillHeld(state: GameState, p: Player): boolean {
  * A take (the bot's own cup) goes ahead. True when the bot should not walk on this tick.
  */
 function yieldToPerson(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }>, st: Station): boolean {
-  if ((step.action !== 'insert' && step.action !== 'ring' && step.action !== 'lift') || !heldByPerson(state, p, st)) return false;
+  if ((step.action !== 'insert' && step.action !== 'ring' && step.action !== 'lift' && step.action !== 'whack') || !heldByPerson(state, p, st)) return false;
   const b = p.bot!;
-  if (step.action === 'ring') {
+  if (step.action === 'ring' || step.action === 'whack') {
     setPlan(b, []);
     return true;
   }
@@ -805,6 +805,9 @@ export function think(state: GameState, p: Player): BotStep[] {
     // 1c. FB2 A4: milk out at the bar runs low and a milk drink is wanted: fetch a carton from the fridge.
     const carton = cartonPlan(state, p);
     if (carton) return carton;
+    // 1d. FB2 C9: a clogged little wand blocks every milk drink: whack it clear (empty hands; one bot does it).
+    const clogged = cloggedWand(state, p);
+    if (clogged) return [{ kind: 'use', station: clogged.id, action: 'whack' }];
   } else {
     // 1. Classic: a drink on the pass that a customer (not another bot's) is waiting for.
     const onPass = new Set(state.pass.map((i) => i.item));
@@ -837,6 +840,15 @@ export function think(state: GameState, p: Player): BotStep[] {
   if (dump) return dump;
   // 4. Wait near the counter.
   return [{ kind: 'idle', node: idleNode(state, p) }];
+}
+
+/**
+ * FB2 C9: a clogged wand (a jammed 'steamer' twin) a bot can stand at, that no other bot is already heading for and no
+ * person is at (they can whack it themselves). Only empty hands whack, and only a thinking bot gets here.
+ */
+function cloggedWand(state: GameState, p: Player): Station | null {
+  if (p.holding !== null || p.tool !== null) return null;
+  return state.stations.find((st) => st.kind === 'steamer' && st.wand !== undefined && st.jammed && reachable(state, st) && !plannedByOther(state, p, st) && !heldByPerson(state, p, st)) ?? null;
 }
 
 /** A long queue or the rush hour: bots react faster and fumble more. */
@@ -1228,6 +1240,10 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
     case 'dump':
       // FB2 A3: pour the pot or the drink in hand down the sink; nothing to pour, move on.
       if (p.tool === 'pot' || isDrink(p.holding)) return execute(p);
+      return pop(b);
+    case 'whack':
+      // FB2 C9: still clogged and the hands are empty: whack it (gearBlocked clears it); else someone beat us to it.
+      if (st.jammed && p.holding === null && p.tool === null) return execute(p);
       return pop(b);
   }
 }

@@ -173,7 +173,7 @@ describe('A2 fix round 2: a cold or orphaned machine output never makes a bot wa
   function bar(n = 1): GameState {
     let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, gear: true });
     s.slots = ['grinder', 'espresso', 'steamer', 'trash', null, null];
-    s.slotGear = ['g2', 'e2', 's3', 'b0', null, null];
+    s.slotGear = ['g2', 'e2', null, 'b0', null, null];
     s.stations = stationsFromSlots('cafe', s.slots, s.slotGear);
     for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
     addStandIns(s, n);

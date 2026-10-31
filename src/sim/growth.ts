@@ -1,11 +1,11 @@
 /**
  * P3 B13: the growth path. A new run opens as a tiny kerbside stand and the crew grows it at night:
  * stand → coffee cart → the café. Each tier changes the floor (the rest of the lot is hoarding),
- * the stations (the stand has no steamer), the line's length, the rent and who walks in:
+ * the stations (classic: the stand has no steamer), the line's length, the rent and who walks in:
  *
  *  - Stand: 8 tiles wide, grinder + espresso + cold-brew tap, a line of 3, $10 rent. Commuters in a
  *    hurry: more impatient walk-ins, no groups, fewer regulars.
- *  - Cart: 10 wide, adds the steamer (lattes, mochas, matcha), a line of 5, $17 rent, some groups.
+ *  - Cart: 10 wide, a line of 5, $17 rent, some groups (classic: adds the steamer; FB2 C9 Gear: milk needs a wand, E3+).
  *  - Café: the full 12-wide floor, a line of 6, $25 rent, everyone (the game before B13).
  *
  * Runs without a tier (every save before B13) are the café. Pure arithmetic: no RNG of its own, and a
@@ -67,7 +67,7 @@ export const TIERS: Record<TierId, TierInfo> = {
     price: 0.9,
     traffic: 0.85,
     crowd: 'Some friends in pairs, more regulars. Busier, prices −10%',
-    blurb: 'A proper cart with a striped awning and a milk steamer. Lattes are back on the board.',
+    blurb: 'A proper cart with a striped awning, a beer fridge for the milk and room for one more machine. Put a wand on a Sylvia and lattes are back on the board.',
     milestone: 'Somebody asked if we do oat milk. We are a real business now.',
   },
   cafe: {
@@ -133,7 +133,7 @@ export function hasStation(state: GameState, kind: StationKind): boolean {
   return state.stations.some((s) => s.kind === kind);
 }
 
-/** True when the floor has every station the drink's recipe needs (a café with its steamer removed cannot make a latte). */
+/** True when the floor has every station the drink's recipe needs (no steam wand, no latte: FB2 C9's wand is the 'steamer' kind). */
 export function canMake(state: GameState, drink: DrinkId): boolean {
   // Review I3: a pod machine has no hot-water tap or real group head, so a pods-only bar can't make these.
   if ((drink === 'americano' || drink === 'doppio' || drink === 'redEye') && podsOnly(state)) return false;

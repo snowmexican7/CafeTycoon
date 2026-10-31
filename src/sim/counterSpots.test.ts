@@ -10,20 +10,23 @@ import { CONDIMENTS_ID, LAYOUT, PICKUP_ID, layoutFor } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
 import type { GameState, TierId } from './types';
 
+/** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
+type Kit = GearId | 'steamer';
+
 const gearRun = (tier: TierId): GameState =>
   createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
 
 /** Every slot of the tier filled with gear (the bin stays in the last slot). */
-const FULL: Record<TierId, GearId[]> = {
-  stand: ['c1', 'e1', 's1', 'b0'],
-  cart: ['g1', 'e1', 's1', 'c1', 'b0'],
-  cafe: ['g1', 'e1', 's1', 'd1', 'c1', 'b0'],
+const FULL: Record<TierId, Kit[]> = {
+  stand: ['c1', 'e1', 'steamer', 'b0'],
+  cart: ['g1', 'e1', 'steamer', 'c1', 'b0'],
+  cafe: ['g1', 'e1', 'steamer', 'd1', 'c1', 'b0'],
 };
 
 function fullShop(tier: TierId): GameState {
   const s = gearRun(tier);
-  s.slotGear = [...FULL[tier]];
-  s.slots = FULL[tier].map((id) => GEAR[id].station);
+  s.slotGear = FULL[tier].map((id) => (id === 'steamer' ? null : id));
+  s.slots = FULL[tier].map((id) => (id === 'steamer' ? 'steamer' : GEAR[id].station));
   s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
   s.fridge = 'f1'; // FB2 A4: the stand's cube (the cart and café come with theirs)
   ensureCounterSpots(s);

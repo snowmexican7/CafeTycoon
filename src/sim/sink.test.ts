@@ -17,14 +17,17 @@ import { ECONOMY } from '../data/economy';
 import { needsDump } from './sink';
 import type { GameState, Station, TierId } from './types';
 
+/** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
+type Kit = GearId | 'steamer';
+
 const gearRun = (tier: TierId = 'stand'): GameState =>
   createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'L' }], settings: { bots: 0 }, tier, gear: true });
 
 /** A stand with a drip machine, a steamer, a grinder and the bin, open for the day. */
-function stand(gear: GearId[] = ['d1', 's3', 'g2', 'b0']): GameState {
+function stand(gear: Kit[] = ['d1', 'steamer', 'g2', 'b0']): GameState {
   const s = gearRun('stand');
-  s.slotGear = [...gear];
-  s.slots = gear.map((id) => GEAR[id].station);
+  s.slotGear = gear.map((id) => (id === 'steamer' ? null : id));
+  s.slots = gear.map((id) => (id === 'steamer' ? 'steamer' : GEAR[id].station));
   s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
   s.supplies.beans = 10;
   s.supplies.milk = 10;
@@ -110,15 +113,15 @@ describe('FB2 A3: the back sink fixture', () => {
   });
 
   it('a bot can reach it, it blocks no path, and every back-bar machine keeps a barista tile', () => {
-    const FULL: Record<TierId, GearId[]> = {
-      stand: ['d1', 'e1', 's1', 'b0'],
-      cart: ['g1', 'e1', 's1', 'd1', 'b0'],
-      cafe: ['g1', 'e1', 's1', 'd1', 'c1', 'b0'],
+    const FULL: Record<TierId, Kit[]> = {
+      stand: ['d1', 'e1', 'steamer', 'b0'],
+      cart: ['g1', 'e1', 'steamer', 'd1', 'b0'],
+      cafe: ['g1', 'e1', 'steamer', 'd1', 'c1', 'b0'],
     };
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
       const s = gearRun(tier);
-      s.slotGear = [...FULL[tier]];
-      s.slots = FULL[tier].map((id) => GEAR[id].station);
+      s.slotGear = FULL[tier].map((id) => (id === 'steamer' ? null : id));
+      s.slots = FULL[tier].map((id) => (id === 'steamer' ? 'steamer' : GEAR[id].station));
       s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
       for (const x of s.stations) expect(targetNodes(s, x, LAYOUT.door).length, `${tier} ${x.id}`).toBeGreaterThan(0);
       expect(findPath(s, LAYOUT.rogueStart, LAYOUT.door)).not.toBeNull();
@@ -326,7 +329,7 @@ describe('FB2 A3: stale pots', () => {
   });
 
   it('cold brew leftovers are untouched (batchOld rule, never stale)', () => {
-    const s = stand(['c1', 'd1', 's3', 'b0']);
+    const s = stand(['c1', 'd1', 'steamer', 'b0']);
     const tap = st(s, 'coldBrewTap');
     tap.batchLeft = 3;
     finishDay(s);

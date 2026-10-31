@@ -32,7 +32,7 @@
 import { ECONOMY } from '../data/economy';
 import { EQUIPMENT, EQUIPMENT_KINDS } from '../data/equipment';
 import type { EquipmentKind } from '../data/equipment';
-import { GEAR, type GearId } from '../data/gear';
+import { GEAR, type AddOnWand, type GearId, type WandKind } from '../data/gear';
 import { batchOut, drinkSuppliesFor } from './gear';
 import { TAP_DRINKS } from '../data/drinks';
 import { CONDIMENTS_ID, PICKUP_ID, SINK_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
@@ -62,8 +62,12 @@ export function defaultSlots(tier: TierId | undefined): SlotContent[] {
   return SLOT_POSITIONS[tier ?? 'cafe'].map((pos) => stations.find((s) => s.kind !== 'counter' && s.pos.x === pos.x && s.pos.y === pos.y)?.kind ?? null);
 }
 
-/** Fresh, idle stations for the slots (in slot order), the counter last. */
-export function stationsFromSlots(tier: TierId | undefined, slots: readonly SlotContent[], gear?: readonly (GearId | null)[]): Station[] {
+/**
+ * Fresh, idle stations for the slots (in slot order), the counter last. FB2 C9: `wands` (parallel to the slots) is the
+ * add-on wand on each espresso machine; with one, or a wand built in (E5/E6), the machine gets `wand` and a 'steamer'
+ * twin (the wand itself, carrying `wand` and `wandOf`) on its first side.
+ */
+export function stationsFromSlots(tier: TierId | undefined, slots: readonly SlotContent[], gear?: readonly (GearId | null)[], wands?: readonly (AddOnWand | null)[]): Station[] {
   const positions = SLOT_POSITIONS[tier ?? 'cafe'];
   const seen = new Map<StationKind, number>();
   const out: Station[] = [];
@@ -75,11 +79,14 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
     const st: Station = { id: n === 1 ? kind : `${kind}-${n}`, kind, pos: { ...pos }, busyTicksLeft: 0, output: null, occupiedBy: null };
     const gid = gear?.[i];
     if (gid) st.gear = gid;
+    const wand = gid ? wandOn(gid, wands?.[i] ?? null) : null;
+    if (wand) st.wand = wand;
     out.push(st);
     // Gear G9: a machine with two sides is two (or three) stations in one slot, TWIN_OFFSET apart, so a barista
     // picks a side by standing nearer it. The first twin goes right (left on the floor's last column, where no
-    // one can stand to its right); a second twin takes the other side.
-    const twins = gid ? (GEAR[gid].twin ?? []) : [];
+    // one can stand to its right); a second twin takes the other side. FB2 C9: an add-on wand is the first twin.
+    const own = gid ? (GEAR[gid].twin ?? []) : [];
+    const twins = wand && !own.includes('steamer') ? ['steamer' as const, ...own] : own;
     const right = pos.x + 1 <= layoutFor(tier).width - 1;
     twins.forEach((tk, j) => {
       const side = (j === 0) === right ? 1 : -1;
@@ -87,6 +94,10 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
       seen.set(tk, tn);
       const tw: Station = { id: tn === 1 ? tk : `${tk}-${tn}`, kind: tk, pos: { x: pos.x + side * TWIN_OFFSET, y: pos.y }, busyTicksLeft: 0, output: null, occupiedBy: null, twin: true };
       if (tk === kind && gid) tw.gear = gid;
+      if (tk === 'steamer' && wand && gid) {
+        tw.wand = wand;
+        tw.wandOf = gid;
+      }
       out.push(tw);
     });
   });
@@ -95,6 +106,17 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
   // Batch/pickup: Gear shops get the pickup counter and the condiment bar after the till (the till stays first).
   if (gear) out.push(...counterSpots(tier));
   return out;
+}
+
+/**
+ * FB2 C9: the wand an espresso machine `gid` has with add-on `addOn` in its slot: its built-in wand (E5/E6), else the
+ * add-on if the machine takes that one (E3: weak; E4: weak or strong), else none.
+ */
+export function wandOn(gid: GearId, addOn: AddOnWand | null): WandKind | null {
+  const w = GEAR[gid].wand;
+  if (!w) return null;
+  if (w.built) return 'built';
+  return addOn && w.addOns?.includes(addOn) ? addOn : null;
 }
 
 /** The Gear-run fixed spots: the pickup counter, then the condiment bar beside the till, then the back sink (fresh and idle). */

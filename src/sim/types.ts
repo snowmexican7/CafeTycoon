@@ -1,6 +1,6 @@
 import type { PerkId } from '../data/perks';
 import type { AreaId, DrinkFamily } from '../data/areas';
-import type { GearId } from '../data/gear';
+import type { AddOnWand, GearId, WandKind } from '../data/gear';
 import type { FridgeId } from '../data/fridges';
 import type { TwistId } from './taste';
 import type { RoleId } from './roles';
@@ -25,7 +25,7 @@ export type BotSkill = 1 | 2 | 3 | 4 | 5;
 /** FB2 A3: `lift` a cold or stale drip pot off its machine, `dump` what is in hand (or the pot) at the back sink.
  *  FB2 A4: `fetch` a milk carton at the fridge, `stock` it at a milk station (or the lifted bar back on the bar),
  *  `stow` (lift) the milk or the bar during closing soon, `store` what is carried in the fridge. */
-export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill' | 'lift' | 'dump' | 'fetch' | 'stock' | 'stow' | 'store';
+export type BotAction = 'insert' | 'take' | 'serve' | 'put' | 'trash' | 'ring' | 'refill' | 'lift' | 'dump' | 'fetch' | 'stock' | 'stow' | 'store' | 'whack';
 
 export interface Vec2 {
   x: number;
@@ -175,7 +175,11 @@ export type SimEventKind =
   | 'order.office'
   | 'order.done'
   | 'order.lost'
-  | 'office.call';
+  | 'office.call'
+  /** FB2 C9 (src/sim/gear.ts): a wand added at night; the little wand clogging and being whacked clear. */
+  | 'wand.add'
+  | 'wand.clog'
+  | 'wand.unclog';
 
 export interface SimEvent {
   seq: number;
@@ -258,6 +262,13 @@ export interface Station {
   gear?: GearId;
   /** Gear G9: the second side of a machine that shares a slot (the dual boiler's steam wand, a second group). */
   twin?: true;
+  /**
+   * FB2 C9: the machine's steam wand (absent = none). On an espresso machine (not its second group) it is what the UI
+   * draws and offers "Add a wand" by; the wand itself is the 'steamer' twin beside it, which carries the same value.
+   */
+  wand?: WandKind;
+  /** FB2 C9: on a wand's 'steamer' twin, the espresso machine it is on (a built-in wand's speed follows the machine). */
+  wandOf?: GearId;
   /** Gear G10: a pour-over in "flow state" works at double speed until this tick. */
   flowUntil?: number;
   /** Gear Tree: cold brew batch cups left today (absent = no cap). */
@@ -274,9 +285,9 @@ export interface Station {
   potOut?: PlayerId;
   /** FB2 A3: the pot sat overnight with cups in it: no pour and no brew until it is dumped at the sink. */
   stale?: true;
-  /** Gear G5: the Pod-o-Matic jammed; empty hands at it whack it back to life. */
+  /** Gear G5: the Pod-o-Matic jammed (FB2 C9: or the little wand clogged); empty hands at it whack it back to life. */
   jammed?: true;
-  /** Gear G5: dead until tonight (the battery whisk's batteries). */
+  /** Gear G5: dead until tonight (no gear does this since the battery whisk retired in FB2 C9; kept for quirks). */
   dead?: true;
   /** Gear G5: uses left before the battery whisk dies today. */
   usesToDie?: number;
@@ -494,7 +505,7 @@ export interface ChallengeProgress {
 }
 
 /** Gear G8 (doc §8): a big buy or sell waiting on a majority of connected humans. */
-export interface GearVote { by: PlayerId; byName: string; action: 'buy' | 'sell'; gear: GearId; index?: number; amount: number; yes: PlayerId[]; no: PlayerId[] }
+export interface GearVote { by: PlayerId; byName: string; action: 'buy' | 'sell'; gear: GearId; index?: number; amount: number; yes: PlayerId[]; no: PlayerId[]; /** FB2 C9: a wand bought with the machine. */ wand?: AddOnWand }
 
 export interface DayStats {
   day: number;
@@ -690,12 +701,15 @@ export interface GameState {
   gearAsked?: Partial<Record<DrinkFamily, number>>;
   /** Gear Tree: the gear in each slot, parallel to `slots` (Gear runs only). */
   slotGear?: (GearId | null)[];
+  /** FB2 C9: the add-on wand on each slot's espresso machine, parallel to `slots` (absent or null = none; built-in wands aren't listed). */
+  slotWand?: (AddOnWand | null)[];
   /** Gear Tree: every buy, upgrade and sale (what, the coming day, who, the cash change). */
   /** Gear G8: an open co-op proposal for a big buy/sell (night only; lapses at opening). */
   gearVote?: GearVote;
   /** Gear G8: how the last proposal ended (shown on the board until the next one). */
   gearVoteLast?: { text: string; passed: boolean };
-  gearLog?: { gear: GearId; action: 'buy' | 'sell'; day: number; by: string; cash: number }[];
+  /** FB2 C9: `wand` = a wand bought or sold with the machine (its price is in `cash`); action 'wand' = one added later. */
+  gearLog?: { gear: GearId; action: 'buy' | 'sell' | 'wand'; day: number; by: string; cash: number; wand?: AddOnWand }[];
   /** P3 B11: the latest pitch to the panel (it applies on its `day` when green-lit). */
   pitch?: PitchResult;
   eventSchedule: ScheduledEvent[];
@@ -758,7 +772,9 @@ export type PlayerInput =
   /** FB2 A4: buy a fridge card on offer (the Dorm Room Cube at a shop with no fridge, the Udder-Matic at the café). Gear, night, people only. */
   | { kind: 'fridge'; playerId: PlayerId; fridge: FridgeId }
   /** Gear Tree: buy a tier (an upgrade trades in the lower tier of its tree) or sell the gear in slot `index`. Night only. */
-  | { kind: 'gear'; playerId: PlayerId; action: 'buy'; gear: GearId }
+  | { kind: 'gear'; playerId: PlayerId; action: 'buy'; gear: GearId; /** FB2 C9: an add-on wand bought with it (E3: weak; E4: weak or strong). */ wand?: AddOnWand }
+  /** FB2 C9: add a wand to (or upgrade the wand on) the espresso machine `station` (its station id). Night only, people only. */
+  | { kind: 'wand'; playerId: PlayerId; station: string; wand: AddOnWand }
   | { kind: 'gear'; playerId: PlayerId; action: 'sell'; index: number }
   | { kind: 'gear'; playerId: PlayerId; action: 'vote'; yes: boolean }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }

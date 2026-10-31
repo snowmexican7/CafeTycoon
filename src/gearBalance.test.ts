@@ -11,7 +11,8 @@ describe('gearBalance crew', () => {
     let end: GameState | null = null;
     const r = playGear(2, 100, null, 1, 0, undefined, (s) => (end = s));
     const s = end as unknown as GameState;
-    expect(s.slotGear).toContain('c1');
+    // FB2 C9: with no steamer to buy, the first night affords the C2 straight after the C1 (a trade-in); either is a tap.
+    expect(s.slotGear?.some((g) => g === 'c1' || g === 'c2')).toBe(true);
     expect(r.drinks.coldBrew ?? 0).toBeGreaterThan(0);
   }, 60_000);
 });

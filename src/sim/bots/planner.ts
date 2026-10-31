@@ -42,7 +42,10 @@
  * Gear runs: there is no `slot` or `equip` advice (the Gear board replaces the stations shop). The gear
  * hint walks the gearBalance upgrade path: it never trades the E1 pods for E2+ before a grinder is in a
  * slot, puts the polished C5 / E6 first when yesterday's cups averaged under 3 stars and they are affordable
- * tonight, says nothing while a crew vote is open, and leaves a flowing D4b alone (a daytime thing). A $50+
+ * tonight, says nothing while a crew vote is open, and leaves a flowing D4b alone (a daytime thing). FB2 C9: milk
+ * needs a wand, so E3 is bought with the little wand and E4 with the proper one (`PATH_WAND`), and an E3/E4 that has
+ * none (or E4's little one) gets the add-on first (`wand` input, `gear:wand:<station>` advice), and at the cart there
+ * is no `grow:cafe` advice until a wand is on the floor (`wandFirst`: milk drinks used to come with the cart). A $50+
  * buy in a co-op crew becomes a proposal; the input is the same. `staff:fire` appears when yesterday's wages
  * beat the bots' takings in `DayStats.byPlayer`. Phase 4: match the rival's happy hour on a promo night,
  * print the stamp card once the rival's loyalty card is live (cash after bills >= $30 + a day's restock),
@@ -74,8 +77,8 @@ import { AREAS } from '../../data/areas';
 import type { AreaId } from '../../data/areas';
 import { BASE_DRINKS, DRINK_INFO, TAP_DRINKS } from '../../data/drinks';
 import { ECONOMY } from '../../data/economy';
-import { GEAR } from '../../data/gear';
-import type { GearId } from '../../data/gear';
+import { GEAR, WANDS } from '../../data/gear';
+import type { AddOnWand, GearId } from '../../data/gear';
 import { EQUIPMENT } from '../../data/equipment';
 import type { EquipmentKind } from '../../data/equipment';
 import { expectedUse } from '../brief';
@@ -87,7 +90,7 @@ import { FRIDGES } from '../../data/fridges';
 import { computeModifiers } from '../effects';
 import { billsForDay, crewCount, crewNames, wageEach } from '../staff';
 import { averageStars } from '../accuracy';
-import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun } from '../gear';
+import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun, wandCards, type WandCard } from '../gear';
 import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
 import { restockCost } from '../night';
 import { steepPlan } from '../steep';
@@ -101,7 +104,7 @@ import { knownStars, TWIST_INFO, TWISTS, twistFor } from '../taste';
 import type { TwistId } from '../taste';
 import { menuDrinks, SUPPLY_IDS, unlockedDrinks } from '../unlocks';
 import { BOT_IDS, botsFor, humanCount } from './roster';
-import type { CheckoutId, DrinkId, GameState, PlayerId, StationKind, SupplyId } from '../types';
+import type { CheckoutId, DrinkId, GameState, PlayerId, StationKind, SupplyId, TierId } from '../types';
 
 export type AdviceKind = 'restock' | 'price' | 'twist' | 'signature' | 'scout' | 'rival' | 'grow' | 'checkout' | 'slot' | 'equip' | 'menu';
 
@@ -158,7 +161,8 @@ const money = (n: number) => `$${n.toFixed(2)}`;
 const dollars = (n: number) => `$${n.toFixed(2).replace(/\.00$/, '')}`;
 const drinkName = (d: DrinkId) => DRINK_INFO[d].name;
 // G10a fix: the Gear-only drip machine has no EQUIPMENT entry.
-const stationName = (k: StationKind) => (k === 'counter' ? 'counter' : k === 'drip' ? 'drip machine' : EQUIPMENT[k as EquipmentKind].name.toLowerCase());
+/** FB2 C9: in a Gear run the 'steamer' kind is the steam wand on the espresso machine. */
+const stationName = (k: StationKind, gear = false) => (k === 'counter' ? 'counter' : k === 'drip' ? 'drip machine' : gear && k === 'steamer' ? 'steam wand' : EQUIPMENT[k as EquipmentKind].name.toLowerCase());
 const byId = (a: Advice, b: Advice) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 /** Review M4: what closing will take before any spending: rent and wages (`billsForDay`) plus a losing branch's expected loss. */
@@ -433,10 +437,36 @@ function rivalAdvice(state: GameState): Advice[] {
 function growAdvice(state: GameState, budget: Budget): Advice[] {
   const tier = nextTier(state);
   if (!tier || state.days.length === 0) return [];
+  if (wandFirst(state, tier)) return [];
   const cost = TIERS[tier].cost;
   if (budget.left < cost) return [];
   budget.left = round2(budget.left - cost);
   return [{ id: `grow:${tier}`, kind: 'grow', text: `Grow to the ${TIERS[tier].short} (${dollars(cost)})`, input: { kind: 'grow', tier }, priority: PLAN_PRIORITY.grow }];
+}
+
+/**
+ * FB2 C9: milk drinks wait for a wand (E3 and up), and they used to arrive with the cart. So at the cart (the café next)
+ * a Gear crew with no wand on the floor puts the Sylvia and its little wand before growing again, but only while that
+ * can happen (review M3): a grinder on the floor and an espresso machine to trade up or put a wand on. A crew going the
+ * cold brew and drip way, or with no room for a grinder, grows as before.
+ */
+export function wandFirst(state: GameState, next: TierId | null): boolean {
+  if (!isGearRun(state) || next !== 'cafe' || state.stations.some((s) => s.kind === 'steamer')) return false;
+  return state.stations.some((s) => s.kind === 'grinder') && state.stations.some((s) => s.kind === 'espresso' && !s.twin);
+}
+
+/**
+ * FB2 C9: the wand worth adding tonight (planner and gearBalance). With no wand on the floor: the path's wand for that
+ * machine if it is on offer (E4: the proper one, review M2), else the first offer. Once a wand is on the floor, only the
+ * path's upgrade (E4's little wand to a proper one); a second wandless machine waits (review M4). Null: none.
+ */
+export function pathWandCard(state: GameState): WandCard | null {
+  const cards = wandCards(state);
+  if (!state.stations.some((s) => s.kind === 'steamer' && s.wand !== undefined)) {
+    const fresh = cards.filter((c) => !c.upgrade);
+    return fresh.find((c) => c.wand === PATH_WAND[c.gear]) ?? fresh[0] ?? null;
+  }
+  return cards.find((c) => c.upgrade && c.wand === PATH_WAND[c.gear]) ?? null;
 }
 
 function checkoutAdvice(state: GameState, budget: Budget): Advice[] {
@@ -509,8 +539,13 @@ function equipAdvice(state: GameState, budget: Budget, slotTaken: boolean): Advi
   ];
 }
 
-/** The upgrade path a sensible Gear crew follows (the same order scripts/gearBalance.ts plays). */
-const GEAR_PATH: GearId[] = ['c1', 'e1', 's1', 'c2', 's2', 'g1', 'e2', 'c3', 'g2', 'e3', 's3', 'd1', 'c4', 'e4', 'd2', 'd3', 'g3', 'e5', 'd4b', 'c5', 'd5b', 'e6'];
+/**
+ * The upgrade path a sensible Gear crew follows (scripts/gearBalance.ts plays the same one). FB2 C9: no steamer tree;
+ * milk drinks wait for E3 and its wand (`PATH_WAND`), so the path heads for E3 early and skips the wand-less E2.
+ */
+export const GEAR_PATH: GearId[] = ['c1', 'e1', 'c2', 'g1', 'e3', 'c3', 'g2', 'd1', 'c4', 'e4', 'd2', 'd3', 'g3', 'e5', 'd4b', 'c5', 'd5b', 'e6'];
+/** FB2 C9: the add-on wand bought with a machine on the path. */
+export const PATH_WAND: Partial<Record<GearId, AddOnWand>> = { e3: 'weak', e4: 'strong' };
 /** Under this many stars on average, the polished machines (C5, E6) jump the path when they are affordable. */
 const POLISH_BELOW = 3;
 
@@ -534,17 +569,47 @@ function gearAdvice(state: GameState, budget: Budget): Advice[] {
   const avg = last ? averageStars(last) : null;
   const polishFirst = avg !== null && avg < POLISH_BELOW;
 
-  /** What buying `id` would cost net of the trade-in, or null when it cannot be bought tonight. */
-  const deal = (id: GearId): { net: number; old: GearId | null } | null => {
+  // FB2 C9: an espresso machine that takes a wand and has none (or E4's little one) gets it first: milk drinks need it.
+  const card = pathWandCard(state);
+  if (card) {
+    if (card.price > budget.left) return [];
+    budget.left = round2(budget.left - card.price);
+    const w = WANDS[card.wand];
+    const on = GEAR[card.gear].name;
+    return [
+      {
+        id: `gear:wand:${card.station}`,
+        kind: 'equip',
+        text: card.upgrade ? `Swap the little wand on the ${on} for a ${w.name.toLowerCase()} (${dollars(card.price)})` : `No steam wand, no milk drinks: add a ${w.name.toLowerCase()} to the ${on} (${dollars(card.price)})`,
+        input: { kind: 'wand', station: card.station, wand: card.wand },
+        priority: PLAN_PRIORITY.gear,
+      },
+    ];
+  }
+  const slotWand = (i: number): AddOnWand | null => state.slotWand?.[i] ?? null;
+
+  /** What buying `id` would cost net of the trade-in (FB2 C9: with its path wand, less the old one's), or null when it cannot be bought tonight. */
+  const deal = (id: GearId): { net: number; old: GearId | null; wand: AddOnWand | null } | null => {
     const want = GEAR[id];
     if (placed.includes(id)) return null;
     let old: GearId | null = null;
-    for (const o of placed) if (GEAR[o].tree === want.tree && (!old || GEAR[o].tier > GEAR[old].tier)) old = o;
+    let oldAt = -1;
+    const all = state.slotGear ?? [];
+    for (let i = 0; i < all.length; i++) {
+      const o = all[i];
+      if (o && GEAR[o].tree === want.tree && (!old || GEAR[o].tier > GEAR[old].tier)) {
+        old = o;
+        oldAt = i;
+      }
+    }
     if (old && GEAR[old].tier >= want.tier) return null;
     if (want.tree === 'espresso' && want.tier >= 2 && !grinder) return null;
     if (!gearRequiresMet(state, id)) return null;
     if (!old && !room) return null;
-    return { net: round2(want.price - (old ? GEAR[old].sell : 0)), old };
+    const wand = PATH_WAND[id] ?? null;
+    const oldWand = oldAt >= 0 ? slotWand(oldAt) : null;
+    const back = old ? GEAR[old].sell + (oldWand ? WANDS[oldWand].sell : 0) : 0;
+    return { net: round2(want.price + (wand ? WANDS[wand].withMachine : 0) - back), old, wand };
   };
 
   const order = polishFirst ? [...GEAR_PATH.filter((id) => GEAR[id].polish), ...GEAR_PATH.filter((id) => !GEAR[id].polish)] : GEAR_PATH;
@@ -559,14 +624,16 @@ function gearAdvice(state: GameState, budget: Budget): Advice[] {
     budget.left = round2(budget.left - d.net);
     const g = GEAR[id];
     const back = d.old ? `, ${dollars(GEAR[d.old].sell)} back on the ${GEAR[d.old].name}` : '';
-    const vote = humans > 1 && g.price >= GEAR_VOTE_MIN ? ', the crew votes' : '';
-    const buy = `buy the ${g.name} (${dollars(g.price)}${back}${vote})`;
+    const price = g.price + (d.wand ? WANDS[d.wand].withMachine : 0);
+    const vote = humans > 1 && price >= GEAR_VOTE_MIN ? ', the crew votes' : '';
+    const withWand = d.wand ? ` with the ${WANDS[d.wand].name.toLowerCase()}` : '';
+    const buy = `buy the ${g.name}${withWand} (${dollars(price)}${back}${vote})`;
     return [
       {
         id: `gear:${id}`,
         kind: 'equip',
         text: polished ? `Cups averaged ${avg!.toFixed(1)}★: ${buy}, it forgives a slip` : `${buy[0]!.toUpperCase()}${buy.slice(1)}`,
-        input: { kind: 'gear', action: 'buy', gear: id },
+        input: { kind: 'gear', action: 'buy', gear: id, ...(d.wand ? { wand: d.wand } : {}) },
         priority: PLAN_PRIORITY.gear,
       },
     ];
@@ -764,7 +831,7 @@ function menuAdvice(state: GameState, growing: boolean): Advice[] {
     advice.push({
       id: `menu:${d}`,
       kind: 'menu',
-      text: `Take the ${drinkName(d)} off the board${missing ? `: there's no ${stationName(missing)}` : ''}`,
+      text: `Take the ${drinkName(d)} off the board${missing ? `: there's no ${stationName(missing, isGearRun(state))}` : ''}`,
       input: { kind: 'menu', drink: d, on: false },
       priority: PLAN_PRIORITY.menu,
     });

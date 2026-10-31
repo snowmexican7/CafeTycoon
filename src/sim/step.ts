@@ -1,6 +1,6 @@
 import { applyBranchInput } from './branch';
 import { applySignatureInput } from './signature';
-import { applyFridgeInput, applyGearInput, settleVote } from './gear';
+import { applyFridgeInput, applyGearInput, applyWandInput, settleVote } from './gear';
 import { applyPitchInput } from './pitch';
 import { applyAdInput } from './ads';
 import { applyCheckoutInput } from './checkout';
@@ -176,6 +176,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'fridge':
       applyFridgeInput(s, input);
+      break;
+    case 'wand':
+      applyWandInput(s, input);
       break;
     case 'ad':
       applyAdInput(s, input);

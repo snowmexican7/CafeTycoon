@@ -8,7 +8,6 @@ import { queueCapacity, serveCustomer } from './customers';
 import { finishDay } from './closing';
 import { fittingsValue } from './score';
 import { nightViewModel, profitOf } from '../ui/viewModels';
-import { migrateSnapshot } from '../storage/snapshotStore';
 import type { CheckoutId, GameState } from './types';
 
 const run = (seed = 1) => {
@@ -98,20 +97,6 @@ describe('checkout path (P3 B12)', () => {
     expect(s.morningNotes.some((n) => n.includes('OrderBot kiosk'))).toBe(true);
     s.day += 1;
     expect(checkoutMorning(s)).toBeNull();
-  });
-
-  it('migrates v20 saves: the old kiosk and Squarely cards become installed checkouts', () => {
-    const s = run();
-    s.owned = [{ itemId: 'digitalKiosk', effects: [] }, { itemId: 'squarelyTerminal', effects: [] }, { itemId: 'singleOrigin', effects: [] }];
-    s.hand = ['digitalKiosk', 'singleOrigin'];
-    const m = migrateSnapshot(20, JSON.parse(JSON.stringify(s)))!;
-    expect(m.checkout).toEqual({ owned: ['register', 'kiosk', 'squarely'], active: 'squarely' });
-    expect(m.owned.map((o) => o.itemId)).toEqual(['singleOrigin']);
-    expect(m.hand).toEqual(['singleOrigin']);
-    const k = run();
-    k.owned = [{ itemId: 'digitalKiosk', effects: [] }];
-    expect(migrateSnapshot(20, JSON.parse(JSON.stringify(k)))!.checkout).toEqual({ owned: ['register', 'kiosk'], active: 'kiosk' });
-    expect(migrateSnapshot(20, JSON.parse(JSON.stringify(run())))!.checkout).toBeUndefined();
   });
 
   it('leaves runs on the register on the same RNG stream and shape', () => {

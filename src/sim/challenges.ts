@@ -1,5 +1,6 @@
 import { CHALLENGES, challengeById, dayCurveFor, dayOfWeekIndex, type ChallengeDef, type ChallengeKind } from '../data/challenges';
 import { ECONOMY } from '../data/economy';
+import { canMake } from './growth';
 import { emitLog } from './log';
 import { rngInt, rngNext, seedRng } from './rng';
 import type { ChallengeProgress, GameState } from './types';
@@ -33,6 +34,8 @@ export function eligibleChallenges(state: GameState): ChallengeDef[] {
   return CHALLENGES.filter((c) => {
     if (c.fromDay > dow) return false;
     if (c.needsDrink && !state.unlocked.includes(c.needsDrink)) return false;
+    // FB2 C9: a Gear bar with no wand (or no other station the drink needs) gets no challenge for it.
+    if (c.needsDrink && state.gear === true && !canMake(state, c.needsDrink)) return false;
     if (c.needsInfluencer && !hasInfluencer) return false;
     return true;
   });

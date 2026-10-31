@@ -7,14 +7,17 @@ import { applyGearInput } from './gear';
 import { GEAR, type GearId } from '../data/gear';
 import type { GameState, SupplyId } from './types';
 
+/** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
+type Kit = GearId | 'steamer';
+
 /** A Gear stand at night with `gear` in the first slots (the free bin stays in the last). */
-function gearNight(gear: GearId[], supplies: Partial<Record<SupplyId, number>> = {}): GameState {
+function gearNight(gear: Kit[], supplies: Partial<Record<SupplyId, number>> = {}): GameState {
   const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
-    slots[i] = GEAR[id].station;
-    slotGear[i] = id;
+    slots[i] = (id === 'steamer' ? 'steamer' : GEAR[id].station);
+    slotGear[i] = id === 'steamer' ? null : id;
   });
   s.slots = slots;
   s.slotGear = slotGear;
@@ -22,7 +25,7 @@ function gearNight(gear: GearId[], supplies: Partial<Record<SupplyId, number>> =
   Object.assign(s.supplies, supplies);
   return s;
 }
-const gearDay = (gear: GearId[], supplies: Partial<Record<SupplyId, number>> = {}) => {
+const gearDay = (gear: Kit[], supplies: Partial<Record<SupplyId, number>> = {}) => {
   const s = startDay(gearNight(gear, supplies));
   if (supplies.milk) s.milkOut = supplies.milk; // FB2 A4: the milk is out at the bar, not in the fridge
   return s;
@@ -65,7 +68,7 @@ describe('instant cold brew from the steeped tap (Task 3)', () => {
   });
 
   it('an empty tap pours nothing and sells out every tap drink', () => {
-    const s = gearDay(['c1', 'e1', 's1'], { concentrate: 50, beans: 50, milk: 50, flavour: 50 });
+    const s = gearDay(['c1', 'e1', 'steamer'], { concentrate: 50, beans: 50, milk: 50, flavour: 50 });
     s.unlocked = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'sweetCream', 'special'];
     for (const d of s.unlocked) s.menu[d] = true;
     const tap = tapOf(s);
@@ -82,7 +85,7 @@ describe('instant cold brew from the steeped tap (Task 3)', () => {
   });
 
   it('the iced latte step takes a steeped cup; the sweet-cream step does not', () => {
-    const s = gearDay(['c1', 'e1', 's1'], { concentrate: 50, beans: 50, milk: 5, flavour: 5 });
+    const s = gearDay(['c1', 'e1', 'steamer'], { concentrate: 50, beans: 50, milk: 5, flavour: 5 });
     s.unlocked = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'sweetCream', 'special'];
     for (const d of s.unlocked) s.menu[d] = true;
     const tap = tapOf(s);
@@ -92,7 +95,7 @@ describe('instant cold brew from the steeped tap (Task 3)', () => {
     interact(s, 'p1');
     expect([tap.batchLeft, tap.busyTicksLeft > 0, tap.making, s.players[0].holding]).toEqual([0, true, 'icedLatte', null]);
     // sweet cream: a cup already in hand, none left in the tap
-    const t2 = gearDay(['c1', 'e1', 's1'], { concentrate: 50, beans: 50, milk: 5, flavour: 5 });
+    const t2 = gearDay(['c1', 'e1', 'steamer'], { concentrate: 50, beans: 50, milk: 5, flavour: 5 });
     t2.unlocked = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'sweetCream', 'special'];
     for (const d of t2.unlocked) t2.menu[d] = true;
     const tap2 = tapOf(t2);
@@ -102,7 +105,7 @@ describe('instant cold brew from the steeped tap (Task 3)', () => {
     interact(t2, 'p1');
     expect([tap2.batchLeft, tap2.busyTicksLeft > 0, tap2.making, t2.players[0].holding]).toEqual([0, true, 'sweetCream', null]);
     // an espresso with no cup left to pour over: refused
-    const t3 = gearDay(['c1', 'e1', 's1'], { concentrate: 50, beans: 50, milk: 5, flavour: 5 });
+    const t3 = gearDay(['c1', 'e1', 'steamer'], { concentrate: 50, beans: 50, milk: 5, flavour: 5 });
     t3.unlocked = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'sweetCream', 'special'];
     for (const d of t3.unlocked) t3.menu[d] = true;
     const tap3 = tapOf(t3);

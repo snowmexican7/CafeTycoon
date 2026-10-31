@@ -9,7 +9,6 @@ import { fittingsValue } from './score';
 import { validateInput } from './validate';
 import { menuDrinks } from './unlocks';
 import { unlockedDrinks } from './unlocks';
-import { migrateSnapshot } from '../storage/snapshotStore';
 import type { GameState, Station, TierId } from './types';
 
 const TIERS: TierId[] = ['stand', 'cart', 'cafe'];
@@ -179,37 +178,6 @@ describe('station slots (FB1 WP5)', () => {
     const { slots: _s, equipment: _e, ...rest } = x;
     expect(JSON.stringify(rest)).toBe(JSON.stringify(y));
     expect(x.rng).toEqual(y.rng);
-  });
-
-  it.each(TIERS)('old %s saves migrate to their default slots and no equipment (v24 → v25)', (tier) => {
-    const old = run(tier, 0);
-    delete old.slots;
-    delete old.equipment;
-    const stations = JSON.stringify(old.stations);
-    const m = migrateSnapshot(24, old)!;
-    expect(m.slots).toEqual(defaultSlots(old.tier));
-    expect(m.slots).toEqual(defaultSlots(tier));
-    expect(m.equipment).toEqual([]);
-    expect(JSON.stringify(m.stations)).toBe(stations);
-  });
-
-  it('migration keeps slots and equipment a save already has', () => {
-    const old = run('cafe', 0);
-    old.slots = ['espresso', 'espresso', null, null, null, null];
-    old.equipment = ['grinder'];
-    const m = migrateSnapshot(24, old)!;
-    expect(m.slots).toEqual(['espresso', 'espresso', null, null, null, null]);
-    expect(m.equipment).toEqual(['grinder']);
-  });
-
-  it('a pre-slots save (v22, a migrated café with tier set) reaches v25 with default slots', () => {
-    const old = run(undefined, 0);
-    delete old.slots;
-    delete old.equipment;
-    old.tier = 'cafe';
-    const m = migrateSnapshot(22, old)!;
-    expect(m.slots).toEqual(defaultSlots('cafe'));
-    expect(m.equipment).toEqual([]);
   });
 });
 

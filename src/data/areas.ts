@@ -61,7 +61,7 @@ export const AREA_TIP = { loved: 1.2, meh: 0.85 };
 export const QUALITY_TIP_PER_STAR = 0.1;
 
 /** G10b "top tiers add snob regulars": owning one of these draws a snob regular who orders from its family. */
-export const SNOB_GEAR: Record<string, DrinkFamily> = { e5: 'espresso', e6: 'espresso', s3: 'milky', c5: 'iced', d5b: 'filter' };
+export const SNOB_GEAR: Record<string, DrinkFamily> = { e5: 'espresso', e6: 'espresso', c5: 'iced', d5b: 'filter' }; // FB2 C9: the milk snob follows a proper wand (sim/gear.ts snobFamilies)
 export const SNOB = { max: 2, names: ['Margaux', 'Sebastian'], hiTip: 1.3, loTip: 0.5 };
 
 /** G7c: chance an arriving walk-in wants a loved family you don't serve, and leaves (no rating hit). */

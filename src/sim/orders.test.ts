@@ -12,14 +12,17 @@ import { GEAR, type GearId } from '../data/gear';
 import { COOLING_SECONDS } from './cooling';
 import type { Customer, DrinkId, GameState, SupplyId, TierId } from './types';
 
-function gearDay(day = 2, tier: TierId = 'stand', gear: GearId[] = ['c1', 'e1', 's1', 'd1'], seed = 7): GameState {
+/** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
+type Kit = GearId | 'steamer';
+
+function gearDay(day = 2, tier: TierId = 'stand', gear: Kit[] = ['c1', 'e1', 'steamer', 'd1'], seed = 7): GameState {
   const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
   {
     const slots = [...s.slots!];
     const slotGear = [...s.slotGear!];
     gear.forEach((id, i) => {
-      slots[i] = GEAR[id].station;
-      slotGear[i] = id;
+      slots[i] = (id === 'steamer' ? 'steamer' : GEAR[id].station);
+      slotGear[i] = id === 'steamer' ? null : id;
     });
     s.slots = slots;
     s.slotGear = slotGear;
