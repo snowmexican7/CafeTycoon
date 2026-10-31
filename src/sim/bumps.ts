@@ -10,6 +10,7 @@ import { rngNext } from './rng';
 import { tally } from './tally';
 import { loseCustomer } from './customers';
 import { customerSpots } from './customerSpots';
+import { spillTray } from './tray';
 import type { GameState, Player, Vec2 } from './types';
 
 const B = ECONOMY.bump;
@@ -40,6 +41,7 @@ function nudge(state: GameState, p: Player, d: Vec2): void {
 
 /** A bump may knock what `p` carries to the floor. Rolls only for a carrier, so a bump between empty hands draws no RNG. */
 function maybeSpill(state: GameState, p: Player): void {
+  if (p.tool === 'tray') return spillTray(state, p); // FB2 B7: a tray spills at TRAY.spillMul × the chance
   const item = p.holding;
   if (item === null) return;
   if (rngNext(state) >= B.spillChance) return;

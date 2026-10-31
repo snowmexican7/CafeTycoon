@@ -35,6 +35,7 @@ import { pricePatience } from './pricing';
 import { rngInt, rngNext } from './rng';
 import { LATTES } from './lattes';
 import { tally } from './tally';
+import { voidTrays } from './tray';
 import type { Customer, DrinkId, GameState, OrderItem, PassItem } from './types';
 
 export const ORDERS = {
@@ -210,6 +211,7 @@ function completeTicket(state: GameState, c: Customer): void {
  * The caller removes the customer.
  */
 export function loseTicket(state: GameState, c: Customer): void {
+  voidTrays(state, c); // FB2 B7: its trays go too (wasted, except an office run's)
   const items: OrderItem[] = c.items ?? [];
   if (c.order === 'office') {
     // Fix round 1 (I3): losing an office run costs nothing, so the cups it took aren't waste (nor an inspector's fail).

@@ -60,6 +60,34 @@ export interface PassItem {
   by?: PlayerId;
   /** Feedback 2 A2 (Gear): the tick the drink was made; it cools from here (src/sim/cooling.ts). Absent = fresh. */
   madeAt?: number;
+  /**
+   * FB2 B7: this slot is a whole tray for one multi-drink ticket (`item` mirrors its first cup). Only that customer takes
+   * it, all at once; singles never do, take-backs skip it, and it never goes stale (each cup still cools by its `madeAt`).
+   */
+  tray?: { customer: number; drinks: TrayCup[] };
+}
+
+/** FB2 B7: one cup sitting on a tray: the drink, who set it down, its marks and its made tick (it cools like any cup). */
+export interface TrayCup {
+  drink: DrinkId;
+  by?: PlayerId;
+  slips?: number;
+  temp?: true;
+  madeAt?: number;
+}
+
+/** FB2 B7: a line of a tray's list: a drink the ticket still needs, `done` once its cup is on the tray. */
+export interface TrayItem extends TrayCup {
+  done: boolean;
+}
+
+/**
+ * FB2 B7: a tray for one multi-drink ticket. `items` are the drinks the ticket still needed when the tray was claimed
+ * (kept in step: a cup the customer takes off the pickup counter instead drops its line), `done` = on the tray.
+ */
+export interface Tray {
+  customer: number;
+  items: TrayItem[];
 }
 
 /** Absolute state.tick at which the event starts. */
@@ -198,7 +226,16 @@ export type SimEventKind =
   /** Round 3 item 3 (src/sim/strategist.ts, staff.ts): a hire or a firing ({ role, by }); the strategist set the prices ({ changed }). */
   | 'staff.hire'
   | 'staff.fire'
-  | 'strategist.set';
+  | 'strategist.set'
+  /** FB2 B7 (src/sim/tray.ts): the tray table and carried trays. */
+  | 'tray.claim'
+  | 'tray.add'
+  | 'tray.refuse'
+  | 'tray.pick'
+  | 'tray.put'
+  | 'tray.take'
+  | 'tray.spill'
+  | 'tray.void';
 
 /** R3 7: what a grow changes, before → after (src/sim/growth.ts growDiff). */
 export interface GrowDiff {
@@ -259,7 +296,9 @@ export interface Player {
   /** What the barista carries instead of a cup: the mop, a condiment stock box, or (FB2 A3) a drip pot on its way to the sink (Gear runs).
    *  FB2 A4: `milk`, a milk carton (from the fridge, or lifted off the bar at closing); `bar`, what was left on the
    *  condiment bar, lifted to put away in the fridge. Both hold `carry` servings. Neither is a cup: they don't cool. */
-  tool: 'mop' | 'box' | 'pot' | 'milk' | 'bar' | null;
+  tool: 'mop' | 'box' | 'pot' | 'milk' | 'bar' | 'tray' | null;
+  /** FB2 B7: the tray in hand (with `tool === 'tray'`); every line is done. Absent otherwise. */
+  tray?: Tray;
   /** FB2 A4: servings in the carried milk carton or bar box (absent with any other tool). */
   carry?: number;
   cleaningTicksLeft: number;
@@ -701,6 +740,8 @@ export interface GameState {
    * opening (the phone rings `ORDERS.office.callSeconds` before); `called` once it rang, `came` its customer id.
    */
   office?: { day: number; at: number; called?: true; came?: number };
+  /** FB2 B7: the tray on the tray table (Gear runs; absent = the table is empty). */
+  tray?: Tray;
   /**
    * Round 3 item 5: the ring-up in progress at the till (Gear runs; absent = nobody is ringing). `by` is the person
    * ringing, or '' for a self-order screen. Done when `tick - startedAt >= ticks`; `ringProgress(state)` (src/sim/till.ts) is 0..1.

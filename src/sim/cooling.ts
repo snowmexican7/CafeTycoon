@@ -78,7 +78,7 @@ export function stationCool(state: GameState, st: Station): number {
 }
 
 /**
- * The pickup counter cup that empty hands take back, or -1 (fix round 1, review M1): cups that cool first, the coldest
+ * The pickup counter cup that empty hands take back, or -1 (fix round 1, review M1; FB2 B7: never a tray slot): cups that cool first, the coldest
  * first; then the smallest `madeAt` (unknown = fresh); then the stalest pass timer; then slot order. So an older iced
  * cup never hides a cold one.
  */
@@ -90,6 +90,7 @@ export function takeBackIndex(state: GameState): number {
   let best = -1;
   let bestKey: [number, number, number, number] | null = null;
   state.pass.forEach((item, i) => {
+    if (item.tray) return; // FB2 B7: a tray is never taken back
     const k = key(item);
     if (bestKey === null || before(k, bestKey)) {
       best = i;
