@@ -274,6 +274,16 @@ describe('chaos pack view models (Block 1)', () => {
     expect('rogues' in vm).toBe(false);
     expect('wasted' in vm).toBe(false);
   });
+
+  it('adds the line-left receipt line only when someone left quietly', () => {
+    const before = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
+    const after = structuredClone(before);
+    after.days.push({ ...before.today, lineLeft: 3 });
+    expect(closingViewModel(before, after)).toMatchObject({ lineLeft: 3 });
+    const quiet = structuredClone(before);
+    quiet.days.push({ ...before.today });
+    expect('lineLeft' in closingViewModel(before, quiet)).toBe(false);
+  });
 });
 
 describe('event view models (Block 2)', () => {

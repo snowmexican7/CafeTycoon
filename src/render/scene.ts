@@ -37,6 +37,8 @@ import { availableDrinks } from '../sim/customers';
 import { menuDrinks } from '../sim/unlocks';
 import { label } from './layers/draw';
 import { FRONT, MAT, PLAYER_COLORS, TILE as THEME_TILE, WALL, isNightLook, sx, sy } from './theme';
+import { ringBar, ringBarLabel } from './ringUpModel';
+import { waitingToDraw } from './waitingModel';
 
 export const TILE = THEME_TILE;
 export const SCENE_BACKGROUND = MAT.backdrop;
@@ -209,12 +211,14 @@ export class Scene {
 
     const mods = computeModifiers(state);
     this.wall.setMenu(wallMenuRows(state, mods.price));
+    const ring = ringBar(state);
     const stations: StationOverlayState[] = state.stations.map((s) => {
       let progress: number | null = null;
       if (s.busyTicksLeft > 0 && s.kind !== 'counter' && s.kind !== 'trash') {
         const total = Math.round((ECONOMY.stationSeconds[s.kind] / mods.stationSpeed[s.kind]) * TICK_RATE);
         progress = Math.max(0, Math.min(1, 1 - s.busyTicksLeft / total));
       }
+      const isTill = s.id === 'counter' || (s.kind === 'counter' && !state.stations.some((x) => x.id === 'pickup'));
       return {
         kind: s.kind,
         pos: s.pos,
@@ -222,6 +226,7 @@ export class Scene {
         output: s.output,
         cat: state.eggs?.cat?.stationId === s.id,
         smoke: state.eggs?.smoke?.stationId === s.id,
+        ...(ring && isTill ? { ring: { progress: ring.progress, self: ring.self, label: ringBarLabel(ring.self) } } : {}),
       };
     });
 
@@ -241,7 +246,7 @@ export class Scene {
     const poses = this.gags.update(state.players, simAge, now, (p) => fellAtScreen(p.espresso?.fellAt ?? p.pos));
     const lay = layoutFor(state.tier);
     this.actors.spots = { gear: state.gear === true, width: lay.width, queueSlots: lay.queueSlots, till: LAYOUT.stations.find((s) => s.kind === 'counter')!.pos, pickup: lay.pickup };
-    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses);
+    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses, waitingToDraw(state), state.tier ?? 'cafe');
     this.pickup.update(state, now);
     this.sink.update(state, localId, now);
     this.fridge.update(state, localId, now);

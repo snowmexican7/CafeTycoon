@@ -846,6 +846,8 @@ export interface ClosingVM {
   rogues?: number;
   wasted?: number;
   slips?: number;
+  /** Round 3 item 4: arrivals who left quietly after a "Line's too long!" complaint (`DayStats.lineLeft`). */
+  lineLeft?: number;
   /** Block 2 receipt lines, present only when they happened. */
   events?: string[];
   inspection?: 'pass' | 'fail';
@@ -880,6 +882,7 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     ...(d.rogues ? { rogues: d.rogues } : {}),
     ...(d.wasted ? { wasted: d.wasted } : {}),
     ...(d.slips ? { slips: d.slips } : {}),
+    ...(d.lineLeft ? { lineLeft: d.lineLeft } : {}),
     ...(d.events?.length ? { events: d.events.map((k) => EVENT_LABELS[k]) } : {}),
     ...(d.inspection ? { inspection: d.inspection } : {}),
     ...(d.fines ? { fines: money(d.fines) } : {}),
