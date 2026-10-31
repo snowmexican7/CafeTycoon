@@ -131,6 +131,9 @@ describe('item 3: Gear buying hints', () => {
     const ads = gearAd(s);
     expect(ads).toHaveLength(1);
     expect(ads[0]).toMatchObject({ id: 'gear:c1', kind: 'equip', priority: PLAN_PRIORITY.gear, input: { kind: 'gear', action: 'buy', gear: 'c1' } });
+    // Names that already start with "The" must not become "the The …".
+    expect(ads[0]!.text).toMatch(/buy the Hanes Method/i);
+    expect(ads[0]!.text).not.toMatch(/the The /);
     expect(PLAN_PRIORITY.gear).toBeGreaterThan(PLAN_PRIORITY.staff);
     expect(PLAN_PRIORITY.gear).toBeLessThan(PLAN_PRIORITY.checkout);
   });
