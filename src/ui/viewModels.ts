@@ -48,6 +48,7 @@ import { menuDrinks, neededSupplies, unlockedDrinks } from '../sim/unlocks';
 import { forecastById } from '../data/forecasts';
 import { BOT_PERSONALITIES } from '../sim/bots/roster';
 import { canHire, crewNames, wageEach } from '../sim/staff';
+import { hireWage } from '../sim/hires';
 import { CONDIMENTS } from '../sim/condiments';
 import { WEEKDAY_NAMES, forecastFor, forecastName, forecastOf, weekdayOf } from '../sim/forecast';
 
@@ -768,12 +769,17 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   return { ...vm, brief, tips: tipsVM(state, brief.alerts.map((a) => a.id)), ...(report ? { report } : {}), ...(branch ? { branch } : {}) };
 }
 
-/** P3 B15: the night board's staff row. */
+/** P3 B15: the night board's staff row. Round 3 item 3: Strategist / Marketer hire cards. */
 export interface StaffVM {
   crew: { name: string; trait: string }[];
   wage: string;
   total: string;
   canHire: boolean;
+  /** Round 3 hires (Gear only). */
+  hires: {
+    strategist: { hired: boolean; wage: string; blurb: string };
+    marketer: { hired: boolean; wage: string; blurb: string };
+  };
 }
 
 const TRAIT: Record<string, string> = { steady: 'steady', hurried: 'quick, sloppy', veteran: 'careful', rookie: 'new', human: 'stand-in' };
@@ -783,7 +789,24 @@ export function staffViewModel(state: GameState): StaffVM | undefined {
   const names = crewNames(state);
   const w = wageEach(state);
   const trait = (name: string, i: number) => TRAIT[state.players.find((p) => p.name === name && p.bot)?.bot!.personality ?? BOT_PERSONALITIES[i]] ?? '';
-  return { crew: names.map((name, i) => ({ name, trait: trait(name, i) })), wage: money(w), total: money(w * names.length), canHire: canHire(state) };
+  return {
+    crew: names.map((name, i) => ({ name, trait: trait(name, i) })),
+    wage: money(w),
+    total: money(w * names.length),
+    canHire: canHire(state),
+    hires: {
+      strategist: {
+        hired: !!state.staff?.strategist,
+        wage: money(hireWage(state, 'strategist')),
+        blurb: 'Honest forecast and best prices each night',
+      },
+      marketer: {
+        hired: !!state.staff?.marketer,
+        wage: money(hireWage(state, 'marketer')),
+        blurb: 'About 15% more walk-ins at your prices',
+      },
+    },
+  };
 }
 
 export interface ClosingVM {

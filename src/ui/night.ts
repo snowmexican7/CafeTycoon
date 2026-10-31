@@ -350,14 +350,26 @@ function tipChip(t: TipVM): string {
     <span class="tip-by"><span aria-hidden="true">💬</span> ${esc(t.by)}</span><span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Do it</span></button>`;
 }
 
-/** P3 B15: the hired bot baristas, their wage, and hire / let go. */
+/** Round 3 item 3: a Strategist or Marketer hire / fire card. */
+function hireCard(role: 'strategist' | 'marketer', h: { hired: boolean; wage: string; blurb: string }): string {
+  const title = role === 'strategist' ? '🧠 Strategist' : '📣 Marketer';
+  if (h.hired) {
+    return `<div class="hire on" data-hire="${role}"><div class="hire-lab"><b>${title}</b><span>${esc(h.blurb)}</span><em>On · ${esc(h.wage)}/day</em></div>
+      <button class="btn mini ghost" data-action="staff" data-staff="fire" data-role="${role}">Let go</button></div>`;
+  }
+  return `<div class="hire" data-hire="${role}"><div class="hire-lab"><b>${title}</b><span>${esc(h.blurb)}</span></div>
+    <button class="btn mini" data-action="staff" data-staff="hire" data-role="${role}">Hire · ${esc(h.wage)}/day</button></div>`;
+}
+
+/** P3 B15: the hired bot baristas, their wage, and hire / let go. Round 3: Strategist + Marketer cards. */
 function staffRow(s: StaffVM | undefined): string {
   if (!s) return '';
   const who = s.crew.length ? s.crew.map((c) => `<span class="sf-who" title="${esc(c.trait)}">🤖 ${esc(c.name)}</span>`).join('') : '<span class="sf-none">No hired help. You run the bar.</span>';
   return `<div class="staff" aria-label="Hired staff"><div class="sf-h"><b>Hired staff</b><span>${esc(s.wage)}/day each${s.crew.length ? ` · ${esc(s.total)} at closing` : ''}</span></div>
     <div class="sf-row">${who}</div>
     <div class="sf-btns"><button class="btn mini" data-action="staff" data-staff="hire" ${s.canHire ? '' : 'disabled'} title="${s.canHire ? 'A bot barista clocks in tomorrow' : 'All four spots behind the bar are taken'}">＋ Hire · ${esc(s.wage)}/day</button>
-    <button class="btn mini ghost" data-action="staff" data-staff="fire" ${s.crew.length ? '' : 'disabled'}>Let ${s.crew.length ? esc(s.crew[s.crew.length - 1].name) : 'one'} go</button></div></div>`;
+    <button class="btn mini ghost" data-action="staff" data-staff="fire" ${s.crew.length ? '' : 'disabled'}>Let ${s.crew.length ? esc(s.crew[s.crew.length - 1].name) : 'one'} go</button></div>
+    <div class="hires" aria-label="Specialists">${hireCard('strategist', s.hires.strategist)}${hireCard('marketer', s.hires.marketer)}</div></div>`;
 }
 
 /** Brief alerts shown on their own Stock card instead of in Heads up (ui-3.5.1 declutter: one warning, one place). */
@@ -674,7 +686,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire', role?: 'strategist' | 'marketer'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; toast(lines: string[]): void; show(): void; hide(): void } {
   // ui-3.7.1: a bubble for news like the Strategist's menu changes; it sits outside the board, which rebuilds.
   const bubble = document.createElement('div');
@@ -720,7 +732,10 @@ export function createNight(
       else if (op === 'staff') handlers.onBranch?.('staff', { staff: Number(el.dataset.staff) });
       else if (op === 'send' && el.dataset.supply) handlers.onBranch?.('send', { supply: el.dataset.supply as SupplyId });
       else if (op === 'close') handlers.onBranch?.('close', {});
-    } else if (action === 'staff') handlers.onStaff?.(el.dataset.staff === 'fire' ? 'fire' : 'hire');
+    } else if (action === 'staff') {
+      const role = el.dataset.role === 'strategist' || el.dataset.role === 'marketer' ? el.dataset.role : undefined;
+      handlers.onStaff?.(el.dataset.staff === 'fire' ? 'fire' : 'hire', role);
+    }
     else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);
     else if (action === 'checkout' && el.dataset.checkout) handlers.onCheckout?.(el.dataset.checkout as CheckoutId);
     else if (action === 'grow' && el.dataset.tier) handlers.onGrow?.(el.dataset.tier as TierId);
