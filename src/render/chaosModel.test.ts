@@ -110,3 +110,15 @@ describe('ui-3.5.1: bumped walkouts (R4 c)', () => {
     expect((w[0] as { at: unknown }).at).toEqual({ x: 5, y: 6 });
   });
 });
+
+describe('Round 3 money: price walkouts', () => {
+  it('says "Too pricey!" (or kin), never sold-out copy', async () => {
+    const { PRICE_LINES, WALKOUT_LINES } = await import('./chaosModel');
+    const a = run();
+    const b = withLog(a, { kind: 'walkout', data: { reason: 'price', drink: 'latte' } });
+    const w = chaosBursts(a, b, a.nextLogSeq - 1).bursts.filter((x) => x.kind === 'walkout');
+    expect(w).toHaveLength(1);
+    expect(PRICE_LINES as readonly string[]).toContain((w[0] as { text: string }).text);
+    expect(WALKOUT_LINES as readonly string[]).not.toContain((w[0] as { text: string }).text);
+  });
+});

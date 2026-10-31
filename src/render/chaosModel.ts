@@ -80,6 +80,8 @@ export type Burst =
 /** FB1 WP4: what someone says as they read a sold-out board and walk away (picked by log seq). */
 /** ui-3.5.1: what a customer says leaving after being bumped (walkout reason 'bumped'). */
 export const BUMPED_LINES = ['That\'s it, I\'m off!', 'Forget it!', 'Rude!'] as const;
+/** Round 3 money: walkout reason 'price' — never reuse sold-out copy. */
+export const PRICE_LINES = ['Too pricey!', 'Not at that price.', 'I\'ll pass.', 'Oof, maybe later.'] as const;
 export const WALKOUT_LINES = ['Sold out?!', 'Nothing left?', 'Aw, sold out.', 'Maybe tomorrow.'] as const;
 
 /**
@@ -102,6 +104,12 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
         const by = Number(e.data.y);
         const at = Number.isFinite(bx) && Number.isFinite(by) ? { x: bx, y: by } : queueFrontFor(next);
         bursts.push({ kind: 'walkout', at, text: BUMPED_LINES[e.seq % BUMPED_LINES.length]! });
+        continue;
+      }
+      // Round 3 money: price walk-outs must not say "Sold out?!" (HANDOFF).
+      if (e.data.reason === 'price') {
+        if (!walked) bursts.push({ kind: 'walkout', at: queueFrontFor(next), text: PRICE_LINES[e.seq % PRICE_LINES.length]! });
+        walked = true;
         continue;
       }
       if (!walked) bursts.push({ kind: 'walkout', at: queueFrontFor(next), text: WALKOUT_LINES[e.seq % WALKOUT_LINES.length]! });
