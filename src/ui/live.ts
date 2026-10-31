@@ -85,6 +85,10 @@ export interface OrderTicket {
   tag?: { text: string; tone: 'regular' | 'impatient' | 'group' | 'influencer' | 'upset' };
   /** Batch/pickup (Gear): rung up at the till, now waiting at the pickup area. */
   pickup?: true;
+  /** ui-3.5.1 (from B6 `Customer.items`): every drink on a multi-drink ticket, in order, with the ones already taken ticked. */
+  items?: { drink: DrinkId; done: boolean }[];
+  /** ui-3.5.1 (from B6 `Customer.order`): a combo or an office run (absent for a group or a one-drink order). */
+  order?: 'combo' | 'office';
 }
 
 /** The little tag on an order ticket for the customer kinds worth planning around. */
@@ -470,7 +474,9 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     open: state.phase === 'day',
     orders: state.customers.map((c) => {
       const tag = ticketTag(c, snobs);
-      return { id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0, ...(tag ? { tag } : {}), ...(c.stage === 'pickup' ? { pickup: true as const } : {}) };
+      return { id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0, ...(tag ? { tag } : {}), ...(c.stage === 'pickup' ? { pickup: true as const } : {}),
+        ...(c.items && c.items.length > 1 ? { items: c.items.map((it) => ({ drink: it.drink, done: it.done })) } : {}),
+        ...(c.order ? { order: c.order } : {}) };
     }),
     crew: crewOf(state, me),
     holding: player?.holding ?? null,
@@ -487,7 +493,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
 }
 
 /** Keys for the HUD's independently rebuilt blocks (everything except per-tick values). */
-export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}${o.pickup ? '^' : ''}`).join(',');
+export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}${o.pickup ? '^' : ''}${o.items ? `[${o.items.map((it) => (it.done ? '+' : '-')).join('')}${o.order ?? ''}]` : ''}`).join(',');
 export const crewKey = (l: HudLive) => l.crew.map((c) => `${c.id}:${c.name}:${c.connected ? 1 : 0}:${c.me ? 1 : 0}:${c.bot ?? ''}`).join(',');
 export const handKey = (l: HudLive) => `${l.holding}|${l.tool?.label ?? ''}|${l.heldCold ? 'c' : ''}|${l.meName}|${l.hint.go}|${l.hint.title}|${l.hint.detail}`;
 
