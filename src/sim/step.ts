@@ -48,6 +48,7 @@ import { putAwayPending, startClosingSoon, stepClosingSoon, stepFridge, storeInF
 import { returnPot } from './sink';
 import { freeSpot } from './spawn';
 import { stepRogue } from './rogue';
+import { applyDevPause, topUpDevCash } from './dev';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
 
@@ -200,6 +201,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'closeEarly':
       applyCloseEarly(s, input);
       break;
+    case 'devPause':
+      applyDevPause(s, input);
+      break;
     case 'weekEnd':
       if (isHost && s.phase === 'weekEnd') {
         if (input.choice === 'stop') s.phase = 'ended';
@@ -321,6 +325,7 @@ export function step(state: GameState, inputs: PlayerInput[]): GameState {
     case 'ended':
       break;
   }
+  topUpDevCash(s); // R4 a: after every spend this tick (no-op unless a dev run)
   tallyStats(s);
   pruneLog(s);
   return s;

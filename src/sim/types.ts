@@ -573,6 +573,10 @@ export interface GameState {
   phaseTicksLeft: number;
   day: number;
   unlimited: boolean;
+  /** R4 a: a dev run (`?dev=1`): cash is kept topped up, nothing is saved to meta, records or history. Set only when true. */
+  dev?: true;
+  /** R4 a: the host paused the night (dev runs only): the night timer stops; cleared when the shop opens. */
+  devPaused?: true;
   /** P4 B2: the four-week season started by Keep going after week 1 (Gear runs). */
   season?: Season;
   /** P4 B4: the second shop, once opened. */
@@ -747,6 +751,8 @@ export type PlayerInput =
   | { kind: 'espresso'; playerId: PlayerId }
   /** FB1 WP3: vote (on) or withdraw (off) to close the shop early; every connected human must agree. */
   | { kind: 'closeEarly'; playerId: PlayerId; on: boolean }
+  /** R4 a: host only, dev runs only, night or week-end only: stop (or restart) the night timer. */
+  | { kind: 'devPause'; playerId: PlayerId; paused: boolean }
   | { kind: 'call'; playerId: PlayerId; take: boolean }
   | { kind: 'join'; playerId: PlayerId; name: string }
   | { kind: 'leave'; playerId: PlayerId }
@@ -765,6 +771,8 @@ export interface CreateRunOptions {
   gear?: boolean;
   /** P3 B16: a head start earned in earlier runs (Gear runs only; applied once at createRun). */
   perk?: PerkId;
+  /** R4 a: a dev run (`?dev=1`): unlimited cash, a pausable night, never saved to meta, records or history. */
+  dev?: boolean;
 }
 
 export interface RunRecord {
@@ -775,4 +783,6 @@ export interface RunRecord {
   daysCompleted: number;
   score: number;
   itemsBought: string[];
+  /** R4 a: set on a dev run's line; the history store drops these. */
+  dev?: true;
 }
