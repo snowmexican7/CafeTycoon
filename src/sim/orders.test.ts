@@ -45,7 +45,7 @@ function ticket(s: GameState, drinks: DrinkId[], more: Partial<Customer> = {}): 
 const events = (s: GameState, kind: string) => s.log.filter((e) => e.kind === kind).map((e) => e.data);
 
 describe('combos (FB2 B6)', () => {
-  it('about one walk-in in eight from day 2 orders two drinks: a pair, or an espresso drink and a drip, with ×1.3 patience', () => {
+  it('about one walk-in in twelve from day 2 orders two drinks: a pair, or an espresso drink and a drip, with ×1.3 patience', () => {
     const s = gearDay(2);
     let combos = 0;
     let singles = 0;
@@ -65,8 +65,8 @@ describe('combos (FB2 B6)', () => {
       expect(events(s, 'order.combo')).toEqual([{ customer: c.id, items: `${a},${b}` }]);
     }
     expect(combos + singles).toBe(400);
-    expect(combos / 400).toBeGreaterThan(0.07);
-    expect(combos / 400).toBeLessThan(0.18);
+    expect(combos / 400).toBeGreaterThan(0.04);
+    expect(combos / 400).toBeLessThan(0.12);
   });
 
   it('the combo ticket waits 1.3× as long as the same drinks would alone', () => {
@@ -219,9 +219,9 @@ describe('office runs (FB2 B6)', () => {
     expect(s!.customers.filter((x) => x.order === 'office')).toHaveLength(1);
   });
 
-  it('a smaller order on the cart than at the café', () => {
+  it('the order size by tier: 4-6 drinks on the cart and at the café (fix round 1 tuning)', () => {
     expect(ORDERS.office.size.cart).toEqual([4, 6]);
-    expect(ORDERS.office.size.cafe).toEqual([5, 8]);
+    expect(ORDERS.office.size.cafe).toEqual([4, 6]);
     const sizes = { cart: new Set<number>(), cafe: new Set<number>() };
     for (let seed = 1; seed <= 120; seed++) {
       for (const tier of ['cart', 'cafe'] as const) {
@@ -234,7 +234,7 @@ describe('office runs (FB2 B6)', () => {
       }
     }
     expect([...sizes.cart].sort()).toEqual([4, 5, 6]);
-    expect([...sizes.cafe].sort()).toEqual([5, 6, 7, 8]);
+    expect([...sizes.cafe].sort()).toEqual([4, 5, 6]);
   });
 
   it('about every other day from day 3, on the cart and at the café; never on the stand, never before day 3', () => {

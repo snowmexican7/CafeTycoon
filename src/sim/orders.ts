@@ -3,19 +3,20 @@
  * once at the till, takes its cups off the pickup counter one by one (each marks an item done), and pays for the whole
  * ticket when the last item is taken: every cup's price and tip by the usual per-cup rules (stars, a lukewarm or
  * off-temperature cup halves its tip, black coffee ×0.8), the wait judged when the ticket is complete. A cold cup is
- * taken but never paid. Walk out with the ticket part done and nothing is paid; the cups taken count as wasted.
+ * taken but never paid. Walk out with the ticket part done and nothing is paid; the cups taken count as wasted
+ * (except an office run's).
  *
- * - Combos: from day 2, about one walk-in in eight orders two drinks: a pair (one for the spouse in the car), or an
+ * - Combos: from day 2, about one walk-in in twelve orders two drinks: a pair (one for the spouse in the car), or an
  *   espresso-bar drink and a drip. The ticket waits 1.3× as long. `order.combo { customer, items }`.
  * - Groups (Gear): one ticket too (was: pay per drink); each cup taken still tops their patience up.
  * - Office runs: on the cart and at the café from day 3, about every other day (drawn at day start), 4-6 drinks off
- *   the menu on the cart and 5-8 at the café, 4× the patience, a 25% bonus tip on the order's price when complete. The phone rings 10 s before they
- *   walk in (`office.call { at }`, `at` the tick they are due: with the queue over capacity they wait outside, so it can
- *   be later). Lost (patience out, or still in when the doors lock): `order.lost { customer }`, no lost customers, no
- *   wasted cups, no bad review, no reputation hit. Served: one customer for reputation (`DayStats.officeExtra`). Since losing one costs
- *   nothing, it never takes a walk-in's place: it takes a cup off the pickup counter only when no one else wants it
- *   (`pickup.ts`), and bots keep one of its drinks in the queue at its place, the rest after the walk-ins'
- *   (`bots/brain.ts`, fix round 1 I1).
+ *   the menu (`size`, by tier), 4× the patience, a 25% bonus tip on the order's price when complete. The phone rings
+ *   10 s before they walk in (`office.call { at }`, `at` the tick they are due: with the queue over capacity they
+ *   wait outside, so it can be later). Lost (patience out, or still in when the doors lock): `order.lost { customer }`,
+ *   no lost customers, no wasted cups, no bad review, no reputation hit. Served: one customer for reputation
+ *   (`DayStats.officeExtra`). Since losing one costs nothing, it never takes a walk-in's place: it takes a cup off the
+ *   pickup counter only when no one else wants it (`pickup.ts`), and bots keep one of its drinks in the queue at its
+ *   place and make the rest after the walk-ins' (`bots/brain.ts`, fix round 1 I1).
  * Events: `order.combo`, `order.office { customer, count }`, `office.call`, `order.done { customer, paid, tip }`,
  * `order.lost`. Randomness from `state.rng` only, drawn only in Gear runs inside each window.
  */
@@ -37,8 +38,11 @@ import type { Customer, DrinkId, GameState, OrderItem, PassItem } from './types'
 export const ORDERS = {
   combo: {
     fromDay: 2,
-    /** Share of normal and impatient walk-ins who order two drinks. */
-    chance: 0.12,
+    /**
+     * Share of normal and impatient walk-ins who order two drinks (fix round 1: 8%, about 6-7% of all arrivals; at 12%
+     * combos and office runs together overran a two-person cart crew: 7 of 24 smoke runs bankrupt against main's 3).
+     */
+    chance: 0.08,
     /** Of those, the share who ask for an espresso-bar drink and a drip (when the first drink allows it); else a pair. */
     mix: 0.5,
     patience: 1.3,
@@ -47,8 +51,8 @@ export const ORDERS = {
     fromDay: 3,
     /** Chance a day has one. */
     chance: 0.5,
-    /** Drinks on the order, from..to, by tier (fix round 1: smaller on the cart, which has less room to make them). */
-    size: { cart: [4, 6], cafe: [5, 8] },
+    /** Drinks on the order, from..to, by tier (fix round 1 tuning: 4-6 everywhere; never above 6 on the cart). */
+    size: { cart: [4, 6], cafe: [4, 6] },
     patience: 4,
     /** Bonus tip on completion, as a share of the order's price. */
     bonus: 0.25,
