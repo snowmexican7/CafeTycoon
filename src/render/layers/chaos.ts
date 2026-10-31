@@ -156,6 +156,8 @@ export class Chaos {
   private prevState: GameState | null = null;
   private lastSeq = -1;
   private slam: { age: number } | null = null;
+  /** Review Block 6: short door walkers for price walk-outs. */
+  private readonly walkers: { root: Container; body: Graphics; age: number; life: number; x0: number; y0: number }[] = [];
   /** Spill drink kinds by mess id, from the drop/slip log, so a cold-brew puddle looks dark. */
   private readonly spillItem = new Map<number, DrinkId>();
   private fxDrawn = false;
@@ -199,6 +201,7 @@ export class Chaos {
     this.updateTape(state, now);
     this.updateMop(state, dt);
     this.updateRogue(state.rogue, now, dt);
+    this.stepWalkers(dt);
     this.stepFx(dt);
     this.jolt = Math.max(0, this.jolt - dt);
   }
@@ -479,11 +482,47 @@ export class Chaos {
       case 'walkout':
         this.comic(b.text, x, y - 96, PALETTE.cherry, false);
         this.puffs(x, y + 10, 0xf3e6d3, 8, 'puff');
+        // Review leftovers: a person ducks out the front door on a price walk-out.
+        if (b.door) this.spawnDoorWalker(x, y);
         break;
       case 'secret':
         this.comic(b.text, x, y - 90, PALETTE.mint, true);
         this.puffs(x, y - 20, 0xfff6c9, 10, 'star');
         break;
+    }
+  }
+
+  /** Review Block 6: a short silhouette walks from the door toward the street, then fades. */
+  private spawnDoorWalker(x: number, y: number): void {
+    if (this.walkers.length >= 4) {
+      const old = this.walkers.shift()!;
+      old.root.destroy({ children: true });
+    }
+    const root = new Container();
+    const body = new Graphics();
+    const look = customerLook(this.walkers.length + 3);
+    drawPerson(body, { ...look, facing: 'down', holding: null });
+    root.addChild(body);
+    root.position.set(x, y + 18);
+    root.zIndex = y + 18;
+    this.depth.addChild(root);
+    this.walkers.push({ root, body, age: 0, life: 1.15, x0: x, y0: y + 18 });
+  }
+
+  private stepWalkers(dt: number): void {
+    for (let i = this.walkers.length - 1; i >= 0; i--) {
+      const w = this.walkers[i]!;
+      w.age += dt;
+      const t = Math.min(1, w.age / w.life);
+      // Head out the door and a little left, fading as they leave.
+      w.root.x = w.x0 - 18 * t;
+      w.root.y = w.y0 + 56 * t;
+      w.root.zIndex = w.root.y;
+      w.root.alpha = t < 0.7 ? 1 : Math.max(0, 1 - (t - 0.7) / 0.3);
+      if (t >= 1) {
+        w.root.destroy({ children: true });
+        this.walkers.splice(i, 1);
+      }
     }
   }
 

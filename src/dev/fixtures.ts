@@ -323,7 +323,7 @@ const FIXTURES: Record<string, Fixture> = {
       [1.1, (s) => emit(s, 'walkout', { customer: 91, reason: 'price', drink: 'mocha' })],
     ],
   },
-  /** 3.7.2 (PR #8): the Strategist and Marketer hire cards in the night's "More" row; Strategist on, Marketer not. */
+  /** 3.7.2 (PR #8) + review Block 6: Strategist/Marketer hire cards high on Tonight; Strategist on, Marketer not. */
   hireCards: {
     night: true,
     setup(s) {
@@ -333,6 +333,30 @@ const FIXTURES: Record<string, Fixture> = {
       s.cash = 240;
       s.day = 4;
       s.staff = { strategist: true };
+    },
+    timeline: [],
+  },
+  /** Review Block 6: soft open gate — Gear night with no machines, so nothing is makeable. Clicks Open to show the warn dialog. */
+  softOpen: {
+    night: true,
+    setup(s) {
+      s.gear = true;
+      s.cash = 120;
+      s.day = 1;
+      s.slots = defaultSlots('stand').map(() => null);
+      s.stations = stationsFromSlots('stand', s.slots);
+      s.slotGear = (s.slotGear ?? []).map(() => null);
+      for (const d of Object.keys(s.menu) as (keyof typeof s.menu)[]) s.menu[d] = false;
+    },
+    timeline: [],
+  },
+  /** Review Block 6: morning note on the day HUD (auto-dismisses). */
+  morningNote: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 2);
+      s.morningNotes = ['Flyers are up (+10% walk-ins today).', 'A Strategist would tighten tomorrow\'s prices.'];
     },
     timeline: [],
   },
@@ -754,6 +778,10 @@ async function main(): Promise<void> {
       }
       const names = (id: string) => state.players.find((p) => p.id === id)?.name ?? id;
       n.toast(logToastLines(freshEvents(state, -1, TOAST_KINDS).events, names, 'ana'));
+    }
+    // Review Block 6: soft-open fixture clicks Open so the warn dialog is on screen for screenshots.
+    if (name === 'softOpen') {
+      requestAnimationFrame(() => document.querySelector<HTMLElement>('#night [data-action="ready"]')?.click());
     }
   }
   if (fx.records) {

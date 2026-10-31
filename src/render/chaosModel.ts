@@ -71,7 +71,8 @@ export type Burst =
   | { kind: 'smoke'; at: Vec2 }
   | { kind: 'review'; at: Vec2; text: string }
   | { kind: 'secret'; at: Vec2; text: string }
-  | { kind: 'walkout'; at: Vec2; text: string }
+  /** `door` true: spawn a short walker heading out the front door (price walk-outs). */
+  | { kind: 'walkout'; at: Vec2; text: string; door?: true }
   /** 3.3.3 (FB2 A3): a drink or the old pot glugging down the back sink. */
   | { kind: 'drain'; at: Vec2; pot: boolean }
   /** 3.3.3 (FB2 A3): the bin bag leaked a puddle onto the floor. */
@@ -106,10 +107,12 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
         bursts.push({ kind: 'walkout', at, text: BUMPED_LINES[e.seq % BUMPED_LINES.length]! });
         continue;
       }
-      // Round 3 money: price walk-outs must not say "Sold out?!" (HANDOFF).
+      // Round 3 money: price walk-outs must not say "Sold out?!" (HANDOFF). Review leftovers: door walker.
       if (e.data.reason === 'price') {
-        if (!walked) bursts.push({ kind: 'walkout', at: queueFrontFor(next), text: PRICE_LINES[e.seq % PRICE_LINES.length]! });
-        walked = true;
+        if (!walked) {
+          bursts.push({ kind: 'walkout', at: { ...LAYOUT.door }, text: PRICE_LINES[e.seq % PRICE_LINES.length]!, door: true });
+          walked = true;
+        }
         continue;
       }
       if (!walked) bursts.push({ kind: 'walkout', at: queueFrontFor(next), text: WALKOUT_LINES[e.seq % WALKOUT_LINES.length]! });

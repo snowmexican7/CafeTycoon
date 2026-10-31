@@ -284,7 +284,7 @@ export interface NightVM {
   branch?: BranchVM;
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; wages?: string; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; wages?: string; hireWages?: string; priceWalkouts?: number; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -299,6 +299,11 @@ export interface NightVM {
   grow?: GrowOffer | null;
   /** ui-3.7.1: a Strategist is hired, so it sets the menu (the Menu tab steps back, with a note). */
   strategist?: boolean;
+  /**
+   * Review Block 6 (soft open gate): false when nothing on the menu can be made tomorrow
+   * (`availableDrinks` empty / no `canMake`). UI warns before Ready; never hard-blocks.
+   */
+  makeable: boolean;
   ready: { id: PlayerId; name: string; ready: boolean }[];
   /** P3 B15 (Gear runs): the hired bot baristas, each one's daily wage, and whether a spot is free. */
   staff?: StaffVM;
@@ -419,6 +424,10 @@ export interface MenuLineVM {
   demandPct?: number;
   orders?: number;
   profit?: number;
+  /** Round 3 / review: numbers are a rough guess (`PriceLine.rough` / `forecastIsRough`). */
+  rough?: true;
+  /** Round 3 / review: a Strategist set tonight's price (`strategist.set`). */
+  setByStrategist?: true;
   /** Regulars whose favourite this is (P3 B3). */
   fans?: string[];
   /** P3 B6: tonight's twist and the taste notebook for this drink (stars, or null if not yet tried). */
@@ -658,6 +667,7 @@ export function menuLines(state: GameState): MenuLineVM[] {
   const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
   const fc = new Map(priceForecast(state, on, m, walkIns).map((l) => [l.drink, l]));
   const lowSupplies = new Set(nightWarnings(state).filter((w) => w.supply && w.level === 'low').map((w) => w.supply!));
+  const byStrategist = !!state.staff?.strategist;
   return unlockedDrinks(state).map((drink) => {
     const step = state.priceSteps?.[drink] ?? 0;
     const l = fc.get(drink);
@@ -670,7 +680,8 @@ export function menuLines(state: GameState): MenuLineVM[] {
       step,
       canUp: step < PRICING.maxStep,
       canDown: step > PRICING.minStep,
-      ...(l ? { demandPct: l.demandPct, orders: l.orders, profit: l.profit } : {}),
+      ...(l ? { demandPct: l.demandPct, orders: l.orders, profit: l.profit, ...(l.rough ? { rough: true as const } : {}) } : {}),
+      ...(byStrategist && state.menu[drink] ? { setByStrategist: true as const } : {}),
       ...(fans.length ? { fans } : {}),
       ...(state.twists?.[drink] ? { twist: state.twists[drink] } : {}),
       book: bookOf(state, drink),
@@ -712,6 +723,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           ...(last.twistCost ? { twists: money(last.twistCost) } : {}),
           ...(last.checkoutFees ? { checkoutFees: money(last.checkoutFees) } : {}),
           ...(last.wages ? { wages: money(last.wages) } : {}),
+          ...(last.hireWages ? { hireWages: money(last.hireWages) } : {}),
+          ...(last.priceWalkouts ? { priceWalkouts: last.priceWalkouts } : {}),
           ...(last.ad ? { ad: `${ADS[last.ad.id].icon} ${ADS[last.ad.id].name} ad ${last.ad.outcome === 'viral' ? 'went viral' : last.ad.outcome === 'ok' ? 'did fine' : 'flopped'}` } : {}),
           ...(last.sigServed ? { sigSold: last.sigServed, sigBonus: money(last.sigBonus ?? 0) } : {}),
           ...(last.combosFound?.length ? {
@@ -746,6 +759,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     ...(state.gear && state.condiments ? { condiments: condimentsVM(state) } : {}),
     grow: growOffer(state),
     ...(state.staff?.strategist ? { strategist: true } : {}),
+    // Soft open: warn when nothing makeable (no stock / no machine for anything on the menu).
+    makeable: availableDrinks(state).length > 0,
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
     ...(state.gear ? { staff: staffViewModel(state) } : {}),
     ...(state.regulars.length ? { regulars: regularsViewModel(state) } : {}),
@@ -819,6 +834,10 @@ export interface ClosingVM {
   rent: string;
   /** P3 B15: wages paid to the hired crew today (Gear runs). */
   wages?: string;
+  /** Round 3 / review: specialists' share of wages (`DayStats.hireWages`). */
+  hireWages?: string;
+  /** Round 3 / review: walk-outs that left over price (`DayStats.priceWalkouts`). */
+  priceWalkouts?: number;
   profit: string;
   reputationBefore: string;
   reputationAfter: string;
@@ -859,6 +878,8 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     tips: money(d.tips),
     rent: money(d.rent),
     ...(d.wages ? { wages: money(d.wages) } : {}),
+    ...(d.hireWages ? { hireWages: money(d.hireWages) } : {}),
+    ...(d.priceWalkouts ? { priceWalkouts: d.priceWalkouts } : {}),
     profit: money(profitOf(d)),
     reputationBefore: stars(before.reputation),
     reputationAfter: stars(after.reputation),

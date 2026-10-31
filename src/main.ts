@@ -706,6 +706,8 @@ async function main(): Promise<void> {
       const vec = keyboard.read();
       interactPending = keyboard.takeInteract() || interactPending;
       const changed = vec.x !== lastSent.x || vec.y !== lastSent.y;
+      // Review Block 6: first move fades the morning note (no click needed).
+      if (vec.x !== 0 || vec.y !== 0) hud.onFirstMove();
       if ((changed || interactPending) && gate.allow()) {
         s.transport.sendInput({ kind: 'move', playerId: s.me, x: vec.x, y: vec.y, interact: interactPending });
         lastSent = vec;

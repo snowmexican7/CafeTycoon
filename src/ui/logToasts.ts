@@ -21,13 +21,24 @@ export function strategistMenuLine(e: Pick<SimEvent, 'data'>): string {
   return d.on ? `🧠 Your Strategist added ${name} to the menu` : `🧠 Your Strategist took ${name} off the menu`;
 }
 
+/** Review Block 6: "🧠 Your Strategist set 3 prices" from `strategist.set { changed }`. */
+export function strategistSetLine(e: Pick<SimEvent, 'data'>): string {
+  const n = Number((e.data as { changed?: number }).changed) || 0;
+  if (n <= 0) return '🧠 Your Strategist checked the prices';
+  return n === 1 ? '🧠 Your Strategist set 1 price' : `🧠 Your Strategist set ${n} prices`;
+}
+
 const MAX_LINES = 4;
 
-/** The toast lines for the fresh `restock.rush` and `strategist.menu` events (at most four, then "and N more"). */
+/** The toast lines for the fresh restock / strategist events (at most four, then "and N more"). */
 export function logToastLines(events: readonly SimEvent[], nameOf: (id: PlayerId) => string, me?: PlayerId): string[] {
-  const lines = events.flatMap((e) => (e.kind === 'restock.rush' ? [rushToast(e, nameOf, me)] : e.kind === 'strategist.menu' ? [strategistMenuLine(e)] : []));
+  const lines = events.flatMap((e) =>
+    e.kind === 'restock.rush' ? [rushToast(e, nameOf, me)]
+      : e.kind === 'strategist.menu' ? [strategistMenuLine(e)]
+        : e.kind === 'strategist.set' ? [strategistSetLine(e)]
+          : []);
   if (lines.length <= MAX_LINES) return lines;
   return [...lines.slice(0, MAX_LINES - 1), `…and ${lines.length - (MAX_LINES - 1)} more changes`];
 }
 
-export const TOAST_KINDS = ['restock.rush', 'strategist.menu'] as const satisfies readonly SimEvent['kind'][];
+export const TOAST_KINDS = ['restock.rush', 'strategist.menu', 'strategist.set'] as const satisfies readonly SimEvent['kind'][];

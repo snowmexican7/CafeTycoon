@@ -379,6 +379,22 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .drawer .nb-body { display: flex; flex-direction: column; gap: 12px; }
 #night .tn-more .staff { flex: 1 1 auto; width: auto; padding: 6px 10px; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; background: #fff; }
 #night .tn-more .staff .sf-h { flex-direction: column; gap: 0; }
+/* Review Block 6: specialist hire cards first on Tonight (visible without scrolling). */
+#night .tn-grid .hire-row { grid-column: 1 / -1; order: -1; }
+#night .tn-grid .st { order: 0; }
+#night .tn-grid .al-card { order: 2; }
+#night .tn-grid .dy { order: 3; }
+#night .hire-row .hires { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
+#night .hire-row .hire { flex: 1 1 220px; min-height: 64px; }
+#night .dc-strat { display: block; font: 700 12px var(--font-display); color: #5a3f96; margin: 2px 0 4px; }
+#night .mn-honest { font-style: normal; font-weight: 700; color: #5a3f96; background: #f1ecfb; border-radius: 8px; padding: 1px 8px; }
+/* Soft open gate (Kennedy): warn, never block. */
+#night .soft-open { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: rgba(28, 18, 12, .45); padding: 24px; }
+#night .soft-open-card { max-width: 420px; width: 100%; background: #fffaf2; border-radius: 20px; padding: 22px 24px; box-shadow: 0 0 0 3px #e6d3b6, 0 18px 40px rgba(40, 20, 10, .3); }
+#night .soft-open-card h3 { margin: 0 0 8px; font: 700 22px var(--font-display); color: var(--ink); }
+#night .soft-open-card p { margin: 0 0 16px; font: 600 16px/1.35 var(--font-body); color: var(--ink-soft); }
+#night .soft-open-btns { display: flex; flex-wrap: wrap; gap: 10px; }
+#night .soft-open-btns .btn { min-height: 48px; padding: 10px 18px; font: 700 16px var(--font-display); }
 #night .gr-more { align-items: center; flex-wrap: wrap; } #night .gr-crowd-line { font: 600 var(--fs-m) var(--font-display); color: var(--ink-soft); }
 
 /* ui-3.5.1 (FB2 C9): steam wands */

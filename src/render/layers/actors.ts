@@ -385,7 +385,7 @@ export class Actors {
       // on mop duty: the tag says so, so the crew knows who to shout for
       const toolTag = p.tool === 'mop' ? ' · mop' : p.tool === 'box' ? ' · box' : p.tool === 'pot' ? ' · pot' : p.tool === 'milk' ? ' · milk' : p.tool === 'bar' ? ' · condiments' : '';
       const name = `${p.name}${toolTag}`;
-      // bots: a white tag in their colour ("Bo · bot"); away humans: a grey "· away" tag and z z z
+      // bots: name in their colour (Review Block 6: no "· bot" debug tag); away humans: grey "· away" and z z z
       const text = p.bot ? `${botTag(p.name)}${toolTag}` : p.connected ? name : `${p.name} · away`;
       const tagKey = `${text}|${index}|${!!p.bot}|${p.connected}`;
       if (tagKey !== sprite.tagKey) {

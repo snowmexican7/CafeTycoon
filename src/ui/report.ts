@@ -80,6 +80,7 @@ export function reportViewModel(state: GameState): ReportVM | null {
 function notesFor(vm: ReportVM, d: DayStats): string[] {
   const out: string[] = [];
   if (d.soldOutWalkouts) out.push(`${d.soldOutWalkouts} left at a sold-out board. Buy more stock tonight.`);
+  if (d.priceWalkouts) out.push(`${d.priceWalkouts} left over the price. A Strategist, or a small cut, wins them back.`);
   if (vm.walkedPct >= 25) out.push(`About ${vm.walkedPct}% of walk-ins left without a drink. Faster hand-offs, another barista, or quicker gear win them back.`);
   if (vm.wages > 0 && vm.wagePct >= 35) out.push(`Wages took ${vm.wagePct}% of takings. A busier day, or one fewer hire, fixes that.`);
   if (vm.waitDelta !== null && vm.waitDelta >= 5) out.push(`Waits were ${vm.waitDelta}s longer than the day before.`);
