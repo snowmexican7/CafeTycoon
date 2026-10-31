@@ -78,6 +78,51 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Night clutter follow-up (2026-10-31, `r4-night`, protocol 60, snapshot 31).** Day-HUD Restock button (the
+  restock and condimentBox inputs now work in the day at `RESTOCK.rushMul` 1.25; `rushCost(state, supply, packs)`;
+  event `restock.rush { by, supply, packs, cost }`, `supply: 'condiments'` for a box); `strategist.menu { drink, on }`
+  bubble; grow on the end-of-day receipt. `role` / `reroll` / `slot` / `equip` inputs are now refused (DEPRECATED in
+  `PlayerInput`); please remove their UI. I made small UI fixes to keep tsc green (BACKLOG has the list). Places to change:
+  - **Day HUD Restock button (new).**
+    - It sends `{ kind: 'restock', supply, packs }` during the day or closing.
+    - Show the price from `rushCost(state, supply, packs)` (src/sim/night.ts); a condiment box costs `CONDIMENTS.boxCost * RESTOCK.rushMul`.
+    - Feedback event: `restock.rush { by, supply, packs, cost }`, where `supply` may be `'condiments'`.
+    - The night Restock tab can shrink to a "stock is low" chip.
+  - **Strategist menu.** Bubble or toast on `strategist.menu { drink, on }`. With a Strategist hired, the Menu tab can nearly disappear; manual toggles still work until the next night start.
+  - **Grow on the end-of-day receipt.** Send `{ kind: 'grow', tier }` from the receipt at night start. It works on the first tick (tested).
+  - **Remove crew roles:**
+    - `src/ui/nightInputs.ts`:26 (`onRole`)
+    - `src/ui/night.ts`:
+      - :87 `'crew'` drawer
+      - :401 `rolesRow`
+      - :490-493 crew chip
+      - :502 `crewBody`
+      - :653 crew drawer title
+      - :707 `rl-badge`
+      - :746 `onRole` in the handler type
+      - :764 role click
+    - `src/ui/viewModels.ts`:296 (`ready[].role`), :298 (`NightVM.roles`), :683 (`RoleVM`)
+    - `src/dev/fixtures.ts`:265 (`roles` fixture)
+    - `src/ui/round4Night.test.ts`:85 (crew drawer test)
+    - Then remove the `role` kind from `PlayerInput` (src/sim/types.ts); I'll do that sim side on request.
+  - **Remove the re-roll:**
+    - `src/ui/nightInputs.ts`:27
+    - `src/ui/night.ts`:691 (button), :746 (`onReroll`), :758 (click)
+    - `src/ui/viewModels.ts`:326 (`NightVM.reroll`), :748
+  - **Remove the classic Stations board:**
+    - `src/ui/nightInputs.ts`:29-30 (`onSlot`, `onEquip`)
+    - `src/ui/night.ts`:
+      - :23 and :25 (`isEquipmentKind`, `EquipmentKind` imports)
+      - :133 `stationsBoard`
+      - :694 (non-gear stations pane)
+      - :746 `onSlot` / `onEquip` types
+      - :793-800 slot-pick, slot-set and equip clicks
+      - :845
+    - `src/ui/viewModels.ts`:316 (`NightVM.stations`) and :770
+    - `src/ui/stationsVM.ts` and `src/ui/stationsVM.test.ts` (whole files)
+    - `src/ui/cardArt.ts`:43 `equipment` label (check whether it's still needed)
+    - Then `src/data/equipment.ts` can be deleted, and the sim can drop the `slot` / `equip` kinds.
+  - **Remove the Manager on the branch:** `src/ui/branchView.ts`:41 (`BranchVM.manager`), :108 and :113 (`managerHtml`).
 - [ ] **C10 station rearranging (2026-10-31, `fb2-c10`, protocol 59, snapshot 30).** Full names in BACKLOG "Round 4 + wrap-up", C10.
   - **Needs a fix:** `src/render/slotModel.ts` draws empty-slot markers from `SLOT_POSITIONS`. It should use
     `slotSpots(state.tier, state.slotPos)`, or an empty marker can sit under a moved machine.

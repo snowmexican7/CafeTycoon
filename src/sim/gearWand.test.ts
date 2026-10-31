@@ -572,6 +572,6 @@ describe('FB2 C9: the planner and saves', () => {
     }
     createSnapshotStore(storage).save(s);
     expect(createSnapshotStore(storage).load()?.gear).toBe(true);
-    expect(SNAPSHOT_VERSION).toBe(30); // FB2 C10: slotPos, preOpenUntil
+    expect(SNAPSHOT_VERSION).toBe(31); // R4 night: roles/rerolls/equipment gone
   });
 });

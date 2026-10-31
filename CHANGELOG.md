@@ -16,7 +16,9 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- Ran out mid-shift? Restock any time during the day: a rush delivery costs 25% more but arrives straight away.
+- A hired Strategist now sets the menu as well as the prices (change either by hand and it holds until the next night).
+- Crew roles, card re-rolls and the old Stations shop are gone, for a tidier night.
 
 ## 3.6.0 — 2026-10-31 · Trays, hand-made lattes and a morning rearrange
 

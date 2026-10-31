@@ -73,7 +73,7 @@ describe('stores', () => {
 
 describe('snapshot versioning', () => {
   it('pins the snapshot version', () => {
-    expect(SNAPSHOT_VERSION).toBe(30);
+    expect(SNAPSHOT_VERSION).toBe(31);
   });
 
   it('FB2 C9 (no save compatibility): every older save is turned away, a current one loads with its fixed spots', () => {

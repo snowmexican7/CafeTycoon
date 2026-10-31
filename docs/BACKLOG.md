@@ -2594,3 +2594,25 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   `station.refuse { by, station }`, `station.reset`. UI to do: see "UI notes".
 - **3.6.0 released (2026-10-31).** Tray table, hand-made lattes, morning rearrange, plus everything above that
   Grok's 3.5.1/3.5.2 didn't already list. Protocol 59, snapshot 30.
+### f. Night clutter (Round 4 f follow-up, `r4-night`, protocol 60, snapshot 31)
+- [x] **Mid-day restock (rush delivery):** `restock` and `condimentBox` also work in `day` and `closing` (connected
+  people only) at `RESTOCK.rushMul` (1.25, src/data/economy.ts) times the night price: `rushCost(state, supply, packs)`
+  (src/sim/night.ts; a box $7.50). Stock arrives at once. Event `restock.rush { by, supply, packs, cost }` (a box:
+  `supply: 'condiments'`, `packs` = boxes). `applyRestockInput` routes the input; the brief and planner keep the night
+  price (`restockCost`); bots never rush-buy.
+- [x] **Strategist sets the menu:** `setStrategistMenu` (every known drink on if `canMake`, else off; left alone when
+  nothing can be made) runs before `setPeakPrices` in `strategistNight` (night start, and on hire);
+  `strategistNewDrinks` puts a drink made possible by a night input (gear, grow, wand) straight on. Manual menu/price
+  inputs override until the next night start. Event `strategist.menu { drink, on }`.
+- [x] **Crew roles and card re-rolls cut:** src/sim/roles.ts deleted; `Player.role`, `GameState.rerolls`,
+  `rerollCost`, `ECONOMY.reroll`, `SPOIL.managerMul`, `BRANCH.managerCups`, `hasManager`, the `rerolls` stat and award,
+  telemetry `cards[].rerolls` removed. `role` / `reroll` stay in `PlayerInput` (DEPRECATED), refused by
+  `validateInput`. The `branch:send:*` tip no longer needs a Manager.
+- [x] **Grow on the end-of-day receipt:** UI only; the `grow` input works on the first night tick (tested).
+- [x] **Classic Stations/slots deleted:** `applySlotInput`, `applyEquipInput`, `growSlots`, `equipmentSpent`,
+  `GameState.equipment` / `equipLog`, the planner's slot/equip advice, `PLAN_PRIORITY.slot` / `.equip` and
+  `AdviceKind 'slot'` removed; a classic (test-only) run grows with `classicGrowSlots`. `slot` / `equip` stay in
+  `PlayerInput` (DEPRECATED), refused. `src/data/equipment.ts` (with `isEquipmentKind`) stays, DEPRECATED, only for
+  the UI's classic Stations board. Gear's slots (`slotGear`, `slotWand`, `slotPos`) unchanged.
+- [ ] UI (Grok): day-HUD Restock button, `strategist.menu` bubble, grow on the receipt, and remove the crew roles,
+  re-roll, classic Stations board and branch Manager line (HANDOFF list).
