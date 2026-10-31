@@ -32,8 +32,10 @@ function round2(n: number): number {
 export function finishDay(state: GameState): GameState {
   if (eventActive(state, 'healthInspector')) judgeInspection(state);
   steepClosing(state); // after the inspector: the pour-out at closing is never seen by them
-  for (const c of state.customers) loseCustomer(state, c);
+  for (const c of [...state.customers, ...(state.waiting ?? [])]) loseCustomer(state, c);
   state.customers = [];
+  delete state.waiting; // Round 3 item 4
+  delete state.line;
   state.messes = [];
   state.rogue = null;
   state.mop = { pos: { ...layoutFor(state.tier).mopHome }, heldBy: null };

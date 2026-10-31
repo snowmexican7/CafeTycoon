@@ -179,7 +179,10 @@ export type SimEventKind =
   /** FB2 C9 (src/sim/gear.ts): a wand added at night; the little wand clogging and being whacked clear. */
   | 'wand.add'
   | 'wand.clog'
-  | 'wand.unclog';
+  | 'wand.unclog'
+  /** Round 3 item 4 (src/sim/line.ts): a stalled line complains; arrivals during a fresh complaint may leave quietly. */
+  | 'line.complain'
+  | 'line.leave';
 
 export interface SimEvent {
   seq: number;
@@ -588,6 +591,8 @@ export interface DayStats {
   office?: 'served' | 'lost';
   /** FB2 B6: cups served to office runs beyond the first (an office run counts as one customer for reputation). */
   officeExtra?: number;
+  /** Round 3 item 4: would-be customers who left quietly during a line complaint (stats only: not lost, no reputation). */
+  lineLeft?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -644,6 +649,16 @@ export interface GameState {
   office?: { day: number; at: number; called?: true; came?: number };
   /** FB1 WP3: tick stamp of when the queue last emptied (absent while someone is queued). */
   emptySince?: number;
+  /**
+   * Round 3 item 4: customers browsing in the inside waiting area while the line is full, in arrival order (absent =
+   * nobody). They are not in `customers` (the till, pickup and bots don't see them) and join its end as it frees.
+   */
+  waiting?: Customer[];
+  /**
+   * Round 3 item 4: the line's stall clock (absent until the day's first step). `front` is the id at the front of the
+   * order line (absent = empty), `since` the tick it got there, `complainedAt` the tick of the last `line.complain`.
+   */
+  line?: { front?: number; since: number; complainedAt?: number };
   pass: PassItem[];
   menu: Record<DrinkId, boolean>;
   /** Phase 3 B2: price steps per drink ($0.25 each); absent or 0 = list price. */

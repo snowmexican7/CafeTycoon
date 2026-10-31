@@ -6,7 +6,7 @@ export function zeroDrinks(): Record<DrinkId, number> {
   return Object.fromEntries(DRINK_IDS.map((d) => [d, 0])) as Record<DrinkId, number>;
 }
 
-export type TallyKey = 'wasted' | 'fines' | 'bonus' | 'botMistakes' | 'lostRegulars' | 'rogues' | 'slips' | 'bumps' | 'bumpSpills' | 'customerBumps' | 'soldOutWalkouts' | 'blackCoffees' | 'officeExtra';
+export type TallyKey = 'wasted' | 'fines' | 'bonus' | 'botMistakes' | 'lostRegulars' | 'rogues' | 'slips' | 'bumps' | 'bumpSpills' | 'customerBumps' | 'soldOutWalkouts' | 'blackCoffees' | 'officeExtra' | 'lineLeft';
 
 export function tally(today: DayStats, key: TallyKey, by = 1): void {
   today[key] = (today[key] ?? 0) + by;

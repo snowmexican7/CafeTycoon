@@ -1,4 +1,4 @@
-import type { DrinkId, StationKind, SupplyId } from '../sim/types';
+import type { DrinkId, StationKind, SupplyId, TierId } from '../sim/types';
 import { DRINK_IDS, suppliesFor } from './drinks';
 
 /** Every tunable number in one place. Balance lives here, rules live in src/sim. */
@@ -25,6 +25,22 @@ export const ECONOMY = {
   maxTipRate: 0.35,
   baseArrivalsPerSecond: 1 / 6,
   queueCapacity: 6,
+  /**
+   * Round 3 item 4 (src/sim/line.ts): when the line is full, arrivals browse in a small inside waiting area (`waiting`
+   * people per tier) and join the line in arrival order as it frees; browsing drains patience at `browsePatience` x.
+   * A line whose front hasn't moved for `stallSeconds` (with at least `complainMin` in it) makes its last customer
+   * complain (`line.complain`), at most once per `cooldownSeconds`; for `freshSeconds` after, each arrival leaves
+   * quietly with `quietLeaveChance` (`line.leave`, quiet: no reputation, not lost, `DayStats.lineLeft`).
+   */
+  line: {
+    waiting: { stand: 0, cart: 2, cafe: 4 } as Record<TierId, number>,
+    browsePatience: 0.5,
+    stallSeconds: 12,
+    complainMin: 2,
+    cooldownSeconds: 30,
+    freshSeconds: 8,
+    quietLeaveChance: 0.5,
+  },
   /** Doors lock at 0:00; whoever is inside can still be served for up to this long. */
   closingGraceSeconds: 30,
   /** FB2 A4 (Gear runs): the last seconds of the day are "closing soon" (put the milk and the bar away). */
