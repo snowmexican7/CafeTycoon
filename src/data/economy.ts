@@ -79,8 +79,6 @@ export const ECONOMY = {
   dayLengthSec: 150,
   nightLengthSec: 120,
   handSize: 4,
-  /** Re-rolling tonight's hand (B6): base price, plus step for each re-roll already made tonight. */
-  reroll: { base: 5, step: 5 },
   rarityWeights: { common: 60, uncommon: 30, rare: 10 },
   cheapThreshold: 30,
   /** Every supply a drink needs from scratch (derived from the station recipes in src/data/drinks.ts). */

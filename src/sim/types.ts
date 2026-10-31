@@ -3,7 +3,6 @@ import type { AreaId, DrinkFamily } from '../data/areas';
 import type { AddOnWand, GearId, WandKind } from '../data/gear';
 import type { FridgeId } from '../data/fridges';
 import type { TwistId } from './taste';
-import type { RoleId } from './roles';
 import type { EggsState } from './eggs';
 import type { EspressoState } from './espresso';
 import type { ForecastId } from '../data/forecasts';
@@ -369,8 +368,6 @@ export interface Player {
   dropQueued: boolean;
   /** tileOf(pos) as of the last tile-entry check. */
   tile: Vec2;
-  /** Phase 3 B1: this barista's role (src/sim/roles.ts). Absent = no role. */
-  role?: RoleId;
 }
 
 export interface Station {
@@ -934,8 +931,6 @@ export interface GameState {
   unlocked: DrinkId[];
   /** Drinks that joined the menu tonight (day unlocks and cards), for the night banner. */
   freshDrinks?: DrinkId[];
-  /** Re-rolls of the hand tonight (B6); each costs more. Absent = 0. */
-  rerolls?: number;
   /** Weather radio (B6): tomorrow's events, drawn at night. */
   radio?: RadioReport;
   /** Optional daily challenges for state.day (B7); dealt at startDay. */
@@ -951,6 +946,7 @@ export interface GameState {
 export type PlayerInput =
   | { kind: 'move'; playerId: PlayerId; x: number; y: number; interact: boolean }
   | { kind: 'buy'; playerId: PlayerId; itemId: string }
+  /** DEPRECATED (Round 4 f): card re-rolls are cut; validateInput refuses it. Kept until the UI stops sending it. */
   | { kind: 'reroll'; playerId: PlayerId }
   | { kind: 'restock'; playerId: PlayerId; supply: SupplyId; packs: number }
   | { kind: 'ready'; playerId: PlayerId }
@@ -967,6 +963,7 @@ export type PlayerInput =
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
   | { kind: 'grow'; playerId: PlayerId; tier: TierId }
+  /** DEPRECATED (Round 4 f): the classic Stations shop is cut; validateInput refuses both. Kept until the UI stops sending them. */
   | { kind: 'slot'; playerId: PlayerId; index: number; station: StationKind | null }
   | { kind: 'equip'; playerId: PlayerId; station: StationKind }
   /** Batch/pickup: tomorrow's cold brew steep target (sticky). Gear runs, night only, people only. */
@@ -987,7 +984,8 @@ export type PlayerInput =
   | { kind: 'gear'; playerId: PlayerId; action: 'vote'; yes: boolean }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
-  | { kind: 'role'; playerId: PlayerId; role: RoleId | null }
+  /** DEPRECATED (Round 4 f): crew roles are cut; validateInput refuses it. Kept until the UI stops sending it. */
+  | { kind: 'role'; playerId: PlayerId; role: string | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
   | { kind: 'espresso'; playerId: PlayerId }
   /** FB1 WP3: vote (on) or withdraw (off) to close the shop early; every connected human must agree. */

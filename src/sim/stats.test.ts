@@ -68,7 +68,7 @@ describe('awards', () => {
   });
 
   it('scores the MVP on serving first', () => {
-    const z = { id: 'x', name: 'x', bot: false, serves: 0, perfect: 0, earned: 0, handoffs: 0, slips: 0, messes: 0, mopped: 0, espressos: 0, collapses: 0, rescues: 0, catPets: 0, campersShooed: 0, alarmsStopped: 0, binned: 0, cardsBought: 0, rerolls: 0, idle: 0 };
+    const z = { id: 'x', name: 'x', bot: false, serves: 0, perfect: 0, earned: 0, handoffs: 0, slips: 0, messes: 0, mopped: 0, espressos: 0, collapses: 0, rescues: 0, catPets: 0, campersShooed: 0, alarmsStopped: 0, binned: 0, cardsBought: 0, idle: 0 };
     expect(mvpScore({ ...z, serves: 10 })).toBeGreaterThan(mvpScore({ ...z, mopped: 10 }));
   });
 });

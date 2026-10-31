@@ -5,7 +5,7 @@ import { ECONOMY } from '../data/economy';
 import { activeSets, computeModifiers, fullSets } from './effects';
 import { fittingsValue, scoreRun } from './score';
 import { drawEvents, scheduleEvents } from './events';
-import { applyNightInput, dealHand, rerollCost } from './night';
+import { applyNightInput, dealHand } from './night';
 import { createRun, startDay, startNight } from './run';
 import { finishDay } from './closing';
 import { isDownside, splitEffects } from './describe';
@@ -101,48 +101,13 @@ describe('upgrade cards: set bonuses', () => {
   });
 });
 
-describe('upgrade cards: the deal and re-roll', () => {
-  it('deals 3–4 cards, re-rolls for a rising price, never repeats the hand, and is deterministic', () => {
-    const play = () => {
-      const s = solo(9);
-      s.cash = 500;
-      const hands = [[...s.hand]];
-      const cash = [s.cash];
-      for (let i = 0; i < 3; i++) {
-        applyNightInput(s, { kind: 'reroll', playerId: 'p1' });
-        hands.push([...s.hand]);
-        cash.push(s.cash);
-      }
-      return { hands, cash, s };
-    };
-    const a = play();
-    expect(a.hands[0].length).toBe(ECONOMY.handSize);
+describe('upgrade cards: the deal (Round 4 f: the re-roll is cut)', () => {
+  it('deals 3–4 cards, deterministically', () => {
+    const a = solo(9);
+    expect(a.hand.length).toBe(ECONOMY.handSize);
     expect(ECONOMY.handSize).toBeGreaterThanOrEqual(3);
     expect(ECONOMY.handSize).toBeLessThanOrEqual(4);
-    expect(a.cash).toEqual([500, 495, 485, 470]);
-    for (let i = 1; i < a.hands.length; i++) for (const id of a.hands[i]) expect(a.hands[i - 1]).not.toContain(id);
-    expect(play().hands).toEqual(a.hands);
-    expect(rerollCost(a.s)).toBe(20);
-    startNight(a.s);
-    expect(rerollCost(a.s)).toBe(5); // the price resets each night
-  });
-
-  it('is refused when the till is short, and outside the night', () => {
-    const s = solo();
-    s.cash = 4;
-    const hand = [...s.hand];
-    applyNightInput(s, { kind: 'reroll', playerId: 'p1' });
-    expect(s.hand).toEqual(hand);
-    expect(s.cash).toBe(4);
-    const d = startDay(solo());
-    const cash = d.cash;
-    applyNightInput(d, { kind: 'reroll', playerId: 'p1' });
-    expect(d.cash).toBe(cash);
-  });
-
-  it('shows the re-roll price on the night board', () => {
-    const s = solo();
-    expect(nightViewModel(s, 'p1').reroll).toEqual({ cost: '$5.00', affordable: true, count: 0 });
+    expect(solo(9).hand).toEqual(a.hand);
   });
 });
 
@@ -272,14 +237,5 @@ describe('upgrade cards: B11 balance', () => {
 
   it('the hire-a-temp card costs $30 (B6 note)', () => {
     expect(CATALOGUE.find((c) => c.effects.some((e) => e.kind === 'temp'))!.cost).toBe(30);
-  });
-
-  it('lets the host re-roll even when it is not seated, but not a stranger', () => {
-    const s = startNight(createRun({ seed: 4, hostId: 'tester', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 } }));
-    s.cash = 500;
-    applyNightInput(s, { kind: 'reroll', playerId: 'stranger' });
-    expect(s.rerolls ?? 0).toBe(0);
-    applyNightInput(s, { kind: 'reroll', playerId: 'tester' });
-    expect(s.rerolls).toBe(1);
   });
 });

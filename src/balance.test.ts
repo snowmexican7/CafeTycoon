@@ -150,7 +150,7 @@ describe('balance tester', () => {
   });
   it('summarizes weeks per policy with loss by day', () => {
     const week = (policy: 'smart' | 'none', cash: number, lost: number): WeekResult => ({
-      seed: 1, menu: [], finalCash: cash, bankrupt: false, drinks: zeroDrinks(), policy, bought: policy === 'smart' ? ['streetSign'] : [], rerolls: 1, score: cash - 100,
+      seed: 1, menu: [], finalCash: cash, bankrupt: false, drinks: zeroDrinks(), policy, bought: policy === 'smart' ? ['streetSign'] : [], score: cash - 100,
       days: [1, 2, 3, 4, 5, 6, 7].map((day) => ({ day, cash, served: 10, lost, turnedAway: 0, wasted: 0, botMistakes: 0, events: [], challengesWon: 1 })),
     });
     const sum = summarize([week('smart', 300, 2), week('smart', 200, 4), week('none', 250, 5)]);

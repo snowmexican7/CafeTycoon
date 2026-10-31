@@ -24,7 +24,7 @@ import { ECONOMY } from '../src/data/economy';
 import { SCENARIOS } from '../src/data/scenarios';
 import { addStandIns } from '../src/sim/bots/roster';
 import { secondsToTicks } from '../src/sim/constants';
-import { rerollCost, restockCost } from '../src/sim/night';
+import { restockCost } from '../src/sim/night';
 import { CARD_SETS } from '../src/data/cardSets';
 import { setCounts } from '../src/sim/effects';
 import { forecastOf } from '../src/sim/forecast';
@@ -58,7 +58,7 @@ export interface DayRow {
 }
 export interface WeekResult {
   seed: number; menu: DrinkId[]; days: DayRow[]; finalCash: number; bankrupt: boolean; drinks: Record<DrinkId, number>;
-  policy?: Policy; bought?: string[]; rerolls?: number;
+  policy?: Policy; bought?: string[];
   /** B11: the week's score (cash profit plus fittings at resale). */
   score?: number;
   /** P3 B13: when the shop grew (the first day in each new tier). */
@@ -265,8 +265,6 @@ export function smartNightInputs(state: GameState, policy: Policy, stage: number
     .sort((a, b) => b.v - a.v || a.c.cost - b.c.cost || a.c.id.localeCompare(b.c.id));
   const top = scored[0];
   if (top && top.v >= 2) return [{ kind: 'buy', playerId: who, itemId: top.c.id }];
-  const roll = rerollCost(state);
-  if ((state.rerolls ?? 0) < 1 && hand.length > 0 && state.cash - keep - roll >= 60) return [{ kind: 'reroll', playerId: who }];
   if (top && top.v >= 1.4 && state.cash - top.c.cost >= keep + 30) return [{ kind: 'buy', playerId: who, itemId: top.c.id }];
   return [];
 }
@@ -505,7 +503,6 @@ export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[], pol
   let lastPhase: GameState['phase'] | null = null;
   let ticks = 0;
   let stage = 0;
-  let rerolls = 0;
   const bought: string[] = [];
   let forecast = String(state.forecast);
   let dealt = 0;
@@ -535,10 +532,8 @@ export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[], pol
     }
     lastPhase = state.phase;
     const before = state.boughtTonight.length;
-    const r0 = state.rerolls ?? 0;
     state = step(state, inputs);
     if (state.boughtTonight.length > before) bought.push(...state.boughtTonight.slice(before));
-    if ((state.rerolls ?? 0) > r0) rerolls += (state.rerolls ?? 0) - r0;
     for (const d of state.days.slice(days.length)) {
       days.push({
         day: d.day, cash: state.cash, served: d.served, lost: d.lost, turnedAway: d.turnedAway,
@@ -549,7 +544,7 @@ export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[], pol
   }
   const drinks: Record<DrinkId, number> = zeroDrinks();
   for (const d of state.days) for (const k of DRINKS) drinks[k] += d.drinks?.[k] ?? 0;
-  return { seed, menu: [...menu], days, finalCash: state.cash, bankrupt: state.bankrupt, drinks, policy, bought: [...new Set(bought)], rerolls, score: scoreRun(state), ...(state.tierLog ? { grew: state.tierLog.map((e) => ({ tier: e.tier, day: e.day })) } : {}) };
+  return { seed, menu: [...menu], days, finalCash: state.cash, bankrupt: state.bankrupt, drinks, policy, bought: [...new Set(bought)], score: scoreRun(state), ...(state.tierLog ? { grew: state.tierLog.map((e) => ({ tier: e.tier, day: e.day })) } : {}) };
 }
 
 /** Every week for every menu, on seeds seed .. seed+weeks-1. */
@@ -593,7 +588,7 @@ function formatWeek(w: WeekResult, index: number): string {
 export interface CardStat { id: string; weeks: number; meanCash: number; othersCash: number; meanScore: number; othersScore: number }
 export interface PolicySummary {
   policy: string; weeks: number; meanCash: number; meanScore: number; lossRate: number; profitable: number; bankrupt: number;
-  dayLoss: number[]; dayServed: number[]; rerolls: number; challengesWon: number;
+  dayLoss: number[]; dayServed: number[]; challengesWon: number;
 }
 export interface BalanceSummary { policies: PolicySummary[]; cards: CardStat[] }
 
@@ -623,7 +618,7 @@ export function summarize(weeks: WeekResult[]): BalanceSummary {
       policy, weeks: ws.length, meanCash: mean(ws.map((w) => w.finalCash)), meanScore: mean(ws.map(scoreOf)), lossRate: mean(ws.map(lossRate)),
       profitable: ws.filter((w) => w.finalCash > ECONOMY.startingCash).length / Math.max(1, ws.length),
       bankrupt: ws.filter((w) => w.bankrupt).length / Math.max(1, ws.length),
-      dayLoss: loss, dayServed: served, rerolls: mean(ws.map((w) => w.rerolls ?? 0)),
+      dayLoss: loss, dayServed: served,
       challengesWon: mean(ws.map((w) => w.days.reduce((n, d) => n + (d.challengesWon ?? 0), 0))),
     };
   });
@@ -645,10 +640,10 @@ export function summarize(weeks: WeekResult[]): BalanceSummary {
 export function formatSummary(sum: BalanceSummary, topCards = 12): string {
   const out: string[] = [];
   out.push(table(
-    ['policy', 'weeks', 'mean cash', 'score', 'loss', 'profit', 'bankrupt', 'rerolls', 'ch.won', 'loss by day 1..7'],
+    ['policy', 'weeks', 'mean cash', 'score', 'loss', 'profit', 'bankrupt', 'ch.won', 'loss by day 1..7'],
     sum.policies.map((p) => [
       p.policy, String(p.weeks), money(p.meanCash), money(p.meanScore), pct(p.lossRate), pct(p.profitable), pct(p.bankrupt),
-      p.rerolls.toFixed(1), p.challengesWon.toFixed(1), p.dayLoss.map((x) => (x * 100).toFixed(0)).join('/'),
+      p.challengesWon.toFixed(1), p.dayLoss.map((x) => (x * 100).toFixed(0)).join('/'),
     ]),
     [0, 9],
   ));

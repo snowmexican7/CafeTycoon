@@ -3,7 +3,7 @@ import { ECONOMY } from '../data/economy';
 import { createRun, startDay, startNight } from './run';
 import { finishDay } from './closing';
 import { step } from './step';
-import { areaFit, BRANCH, branchAreas, branchDay, canOpenBranch, hasManager } from './branch';
+import { areaFit, BRANCH, branchAreas, branchDay, canOpenBranch } from './branch';
 import { branchViewModel } from '../ui/branchView';
 import { gearArea } from './gear';
 import { restockCost } from './night';
@@ -112,12 +112,10 @@ describe('manager mode (P4 B5)', () => {
     expect(validateInput({ kind: 'branch', playerId: 'p1', action: 'send', supply: 'pastry' })).toBeNull();
   });
 
-  it('review M3: stock is valued at what the crew would pay to restock it (a Manager discount counts)', () => {
+  it('review M3: stock is valued at what the crew would pay to restock it tonight', () => {
     let s = open(night());
-    s.players[0]!.role = 'manager';
     s.supplies.beans = 7;
     const perUnit = restockCost(s, 'beans', 1) / 10;
-    expect(perUnit).toBeLessThan(ECONOMY.packs.beans.cost / 10);
     s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'send', supply: 'beans' }]);
     expect(s.branch?.stockCredit).toBeCloseTo(7 * perUnit, 2);
   });
@@ -134,31 +132,17 @@ describe('manager mode (P4 B5)', () => {
     expect(s.cash).toBeCloseTo(cash + BRANCH.cost / 2 + credit, 2);
   });
 
-  it('review M8: a Manager who has disconnected adds no cups', () => {
+  it('one barista serves up to BRANCH.perStaff cups (Round 4 f: no Manager bonus), and the drawer offers to send stock', () => {
     let s = open(night());
     s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'staff', staff: 1 }]);
-    const without = branchDay(s)!;
-    s.players[0]!.role = 'manager';
-    const withM = branchDay(s)!;
-    expect(withM.served).toBeGreaterThan(without.served);
-    s.players[0]!.connected = false;
-    expect(hasManager(s)).toBe(false);
-    expect(branchDay(s)!.served).toBe(without.served);
-  });
-
-  it('a Manager adds cups per barista and their supplier discount, and the drawer says so', () => {
-    let s = open(night());
-    s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'staff', staff: 1 }]);
-    const without = branchDay(s)!;
-    s.players[0]!.role = 'manager';
-    const withM = branchDay(s)!;
-    expect(without.walked).toBeGreaterThan(0);
-    expect(withM.served).toBe(Math.min(without.served + without.walked, BRANCH.perStaff + BRANCH.managerCups));
-    expect(branchViewModel(s)?.manager?.name).toBe('Kay');
+    const t = branchDay(s)!;
+    expect(t.walked).toBeGreaterThan(0);
+    expect(t.served).toBe(BRANCH.perStaff);
+    expect(branchViewModel(s)?.manager ?? null).toBeNull();
     const vm = nightViewModel(s, 'p1');
     const ui = { tab: 'tonight', spend: 'cards', drawer: 'branch', sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null } as Parameters<typeof nightHtml>[3];
     const html = nightHtml(vm, undefined, null, ui);
-    expect(html).toMatch(/is Manager/);
+    expect(html).not.toMatch(/Manager/);
     expect(html).toMatch(/Send stock over/);
   });
 });

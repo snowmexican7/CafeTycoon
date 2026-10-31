@@ -11,7 +11,6 @@ import { DRINK_INFO } from '../data/drinks';
 import { GEAR } from '../data/gear';
 import { podsOnly, tapCupRecipe } from '../sim/gear';
 import { ACCURACY } from '../sim/accuracy';
-import { ROLES } from '../sim/roles';
 import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
 import { CALL, callRinging } from '../sim/call';
 import { AREAS } from '../data/areas';
@@ -485,7 +484,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     ...(player && heldColdNow(state, player) ? { heldCold: true as const } : {}),
     ...(podsOnly(state) ? { pods: true } : {}),
     ...(state.gear === true ? { gear: true } : {}),
-    meName: player?.role ? `${ROLES[player.role].icon} ${player.name} the ${ROLES[player.role].name}` : (player?.name ?? ''),
+    meName: player?.name ?? '',
     hint: handHint(state, me),
     closeEarly: closeEarlyVM(state, me),
     ...(state.branch ? { call: callVM(state, me) } : {}),

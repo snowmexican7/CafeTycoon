@@ -10,7 +10,6 @@ import { isCheckoutId } from './checkout';
 import { isTierId } from './growth';
 import { isEquipmentKind } from './slots';
 import { TWISTS } from './taste';
-import { isRole } from './roles';
 import { LAYOUT } from '../data/layout';
 import { DRINK_IDS } from '../data/drinks';
 import { isReservedId } from './constants';
@@ -69,7 +68,6 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return input.on === false ? { kind: 'rivalCounter', playerId: input.playerId, on: false } : { kind: 'rivalCounter', playerId: input.playerId };
     case 'ready':
     case 'scout':
-    case 'reroll':
     case 'leave':
     case 'espresso':
       return { kind: input.kind, playerId: input.playerId };
@@ -164,8 +162,13 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return DRINK_IDS.includes(input.drink) && typeof input.on === 'boolean'
         ? { kind: 'menu', playerId: input.playerId, drink: input.drink, on: input.on }
         : null;
+    // Round 4 f (Kennedy 2026-10-31): crew roles, card re-rolls and the classic Stations shop are cut. The input kinds
+    // stay in PlayerInput (deprecated) only until the UI stops sending them; they are refused here and do nothing.
     case 'role':
-      return input.role === null || isRole(input.role) ? { kind: 'role', playerId: input.playerId, role: input.role } : null;
+    case 'reroll':
+    case 'slot':
+    case 'equip':
+      return null;
     case 'weekEnd':
       return input.choice === 'stop' || input.choice === 'continue' ? { kind: 'weekEnd', playerId: input.playerId, choice: input.choice } : null;
     case 'settings':

@@ -21,15 +21,14 @@ describe('supplies that spoil (P3 B4)', () => {
     expect(s.today.spoiledValue).toBeCloseTo((6 * ECONOMY.packs.milk.cost) / ECONOMY.packs.milk.size + (3 * ECONOMY.packs.pastry.cost) / ECONOMY.packs.pastry.size, 5);
   });
 
-  it('halves with a Manager on the crew, and a walk-in fridge cuts it again', () => {
-    let s = run();
+  it('a walk-in fridge card cuts it (Round 4 f: no Manager role any more)', () => {
+    const s = run();
     expect(spoilRate(s, 'milk')).toBe(SPOIL.rate.milk);
-    s = step(s, [{ kind: 'role', playerId: 'p2', role: 'manager' }]);
-    expect(spoilRate(s, 'milk')).toBeCloseTo(0.15, 6);
     s.owned.push({ itemId: 'walkInFridge', effects: [{ kind: 'spoil', mul: 0.4 }] });
     expect(computeModifiers(s).spoil).toBeCloseTo(0.4, 6);
-    expect(spoilRate(s, 'pastry')).toBeCloseTo(0.1, 6);
-    expect(spoilCount(s, 'milk', 20)).toBe(1);
+    expect(spoilRate(s, 'milk')).toBeCloseTo(0.12, 6);
+    expect(spoilRate(s, 'pastry')).toBeCloseTo(0.2, 6);
+    expect(spoilCount(s, 'milk', 20)).toBe(2);
     expect(spoilRate(s, 'beans')).toBe(0);
   });
 

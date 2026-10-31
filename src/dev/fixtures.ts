@@ -105,7 +105,7 @@ function weekPlayed(s: GameState): void {
       row('ana', 'Ana', { serves: 52, perfect: 31, earned: 296, handoffs: 9, mopped: 4, rescues: 2, espressos: 3 }),
       row('ben', 'Ben', { serves: 34, perfect: 11, earned: 171, handoffs: 21, slips: 9, messes: 7, catPets: 6, cardsBought: 4 }),
       row('cleo', 'Cleo', { serves: 28, perfect: 9, earned: 140, mopped: 17, alarmsStopped: 2, campersShooed: 3, binned: 5 }),
-      row('dev', 'Dev', { serves: 21, perfect: 8, earned: 104, espressos: 11, collapses: 2, rerolls: 5 }),
+      row('dev', 'Dev', { serves: 21, perfect: 8, earned: 104, espressos: 11, collapses: 2 }),
       row('bot1', 'Bo', { serves: 20, perfect: 6, earned: 93 }, true),
     ],
   };
@@ -254,7 +254,6 @@ const FIXTURES: Record<string, Fixture> = {
       s.tier = 'cafe';
       s.cash = 280;
       s.day = 12;
-      s.players[0]!.role = 'manager';
       s.supplies = { ...s.supplies, beans: 14, milk: 6, concentrate: 0, flavour: 3 };
       s.branch = { area: 'tourist', staff: 3, openedDay: 8, spent: 300, by: 'Ana', stockCredit: 6.4 };
       s.days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((day) => ({ day, served: 40, lost: 5, turnedAway: 0, sales: 170, tips: 26, rent: 25, waitTicks: 40 * 14 * 60 }));
@@ -262,13 +261,11 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
-  /** P3 B1: the night shop with roles picked (Ana is Chef, Cleo is Host; Ben and Dev free). */
+  /** P3 B1: the night shop (Round 4 f: crew roles are cut, so nobody holds one any more). */
   roles: {
     night: true,
     setup(s) {
       s.cash = 260;
-      s.players.find((p) => p.id === 'ana')!.role = 'chef';
-      s.players.find((p) => p.id === 'cleo')!.role = 'host';
       s.ready = ['cleo'];
     },
     timeline: [],
@@ -305,8 +302,6 @@ const FIXTURES: Record<string, Fixture> = {
       s.day = 2;
       s.today = { day: 1, served: 22, lost: 3, turnedAway: 0, sales: 118.5, tips: 19.2, rent: 25, pastries: 4, spoiled: { milk: 4, pastry: 3 }, spoiledValue: 7.5 };
       s.supplies = { ...s.supplies, milk: 9, pastry: 3 };
-      const p = s.players.find((x) => !x.bot);
-      if (p) p.role = 'manager';
     },
     timeline: [],
   },

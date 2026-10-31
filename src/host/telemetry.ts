@@ -18,7 +18,7 @@ export interface TelemetryRow { kind: string; at: number; tick?: number; data: u
 export interface TeleEvent { kind: string; data: unknown; at: number }
 export interface TelemetrySummary {
   days: DayStats[]; drinks: Record<DrinkId, number>;
-  cards: { day: number; offered: string[]; bought: string[]; rerolls: number }[];
+  cards: { day: number; offered: string[]; bought: string[] }[];
   /** B11: balance telemetry. Each played day's forecast and challenges (dealt / won). */
   forecasts: { day: number; forecast: ForecastId }[];
   challenges: { day: number; dealt: string[]; won: string[] }[];
@@ -112,7 +112,7 @@ function summaryDays(state: GameState): DayStats[] {
   return inProgress ? [...state.days, state.today] : [...state.days];
 }
 
-type NightCards = { offered: string[]; bought: string[]; rerolls: number };
+type NightCards = { offered: string[]; bought: string[] };
 type DayDeal = { forecast: ForecastId; dealt: string[] };
 
 function buildSummary(state: GameState, rows: TelemetryRow[], cards: Map<number, NightCards>, deals: Map<number, DayDeal>): TelemetrySummary {
@@ -135,7 +135,7 @@ function buildSummary(state: GameState, rows: TelemetryRow[], cards: Map<number,
   return {
     days,
     drinks,
-    cards: [...cards.entries()].sort((a, b) => a[0] - b[0]).map(([day, c]) => ({ day, offered: [...c.offered], bought: [...c.bought], rerolls: c.rerolls })),
+    cards: [...cards.entries()].sort((a, b) => a[0] - b[0]).map(([day, c]) => ({ day, offered: [...c.offered], bought: [...c.bought] })),
     forecasts: [...deals.entries()].sort((a, b) => a[0] - b[0]).map(([day, d]) => ({ day, forecast: d.forecast })),
     challenges: [...deals.entries()].sort((a, b) => a[0] - b[0]).map(([day, d]) => ({
       day,
@@ -211,7 +211,7 @@ export function createTelemetry(
       }
       if (state.phase === 'night') {
         const offered = [...new Set([...state.hand, ...state.boughtTonight])];
-        cards.set(state.day, { offered, bought: [...state.boughtTonight], rerolls: state.rerolls ?? 0 });
+        cards.set(state.day, { offered, bought: [...state.boughtTonight] });
       }
       if (state.phase === 'day' && !deals.has(state.day)) {
         deals.set(state.day, { forecast: state.forecast, dealt: (state.challenges ?? []).map((c) => c.id) });

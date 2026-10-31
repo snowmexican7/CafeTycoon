@@ -97,7 +97,7 @@ import { steepPlan } from '../steep';
 import { PRICING, priceStep } from '../pricing';
 import { bestStep, forecastProfit, peakSteps } from '../strategist';
 import { HIRE_ROLES, hireWage, isHired, type HireRole } from '../hires';
-import { BRANCH, branchAreas, branchDay, branchExpectedLoss, canOpenBranch, hasManager } from '../branch';
+import { BRANCH, branchAreas, branchDay, branchExpectedLoss, canOpenBranch } from '../branch';
 import { profitOf } from '../profit';
 import { copyIsLive, countered, hasStamps, isPromoDay, loyaltyLive, RIVAL, sigPrice } from '../rival';
 import { SIG } from '../signature';
@@ -816,10 +816,10 @@ function branchStaffAdvice(state: GameState): Advice[] {
   return [];
 }
 
-/** P4 B5: with a Manager on the crew and a branch open, send a pack of beans or milk when home has more than two packs beyond tomorrow's use. */
+/** P4 B5: with a branch open (Round 4 f: the Manager role is cut, so no longer Manager-only), send a pack of beans or milk when home has more than two packs beyond tomorrow's use. */
 function branchSendAdvice(state: GameState): Advice[] {
   const b = state.branch;
-  if (!isGearRun(state) || !b || !hasManager(state)) return [];
+  if (!isGearRun(state) || !b) return [];
   // credit beyond what the branch's next day will draw is already waiting there
   if ((b.stockCredit ?? 0) > (branchDay(state)?.fromStock ?? 0)) return [];
   const use = expectedUse(state);

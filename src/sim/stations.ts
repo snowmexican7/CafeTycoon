@@ -1,5 +1,4 @@
 import { ACCURACY, cupIntoStation, cupOutOfStation, markCup } from './accuracy';
-import { roleMachineTime } from './roles';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import { computeModifiers } from './effects';
@@ -190,7 +189,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     station.making = recipe.gives;
     const speed = computeModifiers(state).stationSpeed[station.kind];
     const seconds = recipe.seconds ?? ECONOMY.stationSeconds[station.kind as RecipeStation];
-    const ticks = Math.round(((seconds * roleMachineTime(state, playerId)) / (speed * gearSpeed(station, state.tick))) * TICK_RATE);
+    const ticks = Math.round((seconds / (speed * gearSpeed(station, state.tick))) * TICK_RATE);
     // FB2 B8: a double pull runs longer; a person's shot on a wand takes the jug's grade and starts the steam meter.
     station.busyTicksLeft = afterInsert(state, player, station, recipe, ticks);
     station.busyTotal = station.busyTicksLeft;

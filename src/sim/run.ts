@@ -152,7 +152,6 @@ export function startNight(state: GameState): GameState {
   delete state.growNudged; // R3 6
   state.forecast = forecastFor(state.seed, state.day);
   state.freshDrinks = unlockForDay(state).filter((d) => canMake(state, d));
-  state.rerolls = 0;
   dealHand(state);
   // Weather radio (B6): tomorrow's events are drawn now, so the paper can report them tonight.
   if (computeModifiers(state).reveal) tuneRadio(state);

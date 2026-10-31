@@ -7,7 +7,6 @@ import { applyCheckoutInput } from './checkout';
 import { applyRivalCounterInput, applyScoutInput, applyStampCardInput } from './rival';
 import { beginSeason } from './season';
 import { applyTwistInput } from './taste';
-import { applyRoleInput } from './roles';
 import { applyCall, noteCallRang } from './call';
 import { applyCloseEarly, closeVoteUnanimous, dropCloseVote } from './closeEarly';
 import { applyPriceInput } from './pricing';
@@ -139,12 +138,10 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'secret':
       if (s.phase === 'day' || s.phase === 'closing' || s.phase === 'night') unlockSecret(s, input.playerId, input.code);
       break;
-    case 'buy':
-    case 'reroll': {
-      const before = input.kind === 'buy' ? s.boughtTonight.length : (s.rerolls ?? 0);
+    case 'buy': {
+      const before = s.boughtTonight.length;
       applyNightInput(s, input);
-      const after = input.kind === 'buy' ? s.boughtTonight.length : (s.rerolls ?? 0);
-      if (after > before) noteNight(s, input.playerId, input.kind === 'buy' ? 'cardsBought' : 'rerolls');
+      if (s.boughtTonight.length > before) noteNight(s, input.playerId, 'cardsBought');
       break;
     }
     case 'restock':
@@ -219,9 +216,6 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'branch':
       applyBranchInput(s, input);
-      break;
-    case 'role':
-      applyRoleInput(s, input);
       break;
     case 'espresso':
       drinkEspresso(s, input.playerId);

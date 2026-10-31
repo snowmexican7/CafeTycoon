@@ -50,7 +50,6 @@ export const AWARD_DEFS: AwardDef[] = [
   { id: 'tips', title: 'Tip Magnet', icon: '💰', key: 'earned', min: 40, unit: ['brought in', 'brought in'], line: 'Charm is a currency.', tone: 'hero' },
   { id: 'bin', title: 'Bin Diver', icon: '🗑️', key: 'binned', min: 3, unit: ['thing binned', 'things binned'], line: 'Quality control, technically.', tone: 'chaos' },
   { id: 'shop', title: 'Shopaholic', icon: '🛍️', key: 'cardsBought', min: 3, unit: ['card bought', 'cards bought'], line: 'Treat yourself. With the café\'s money.', tone: 'chaos' },
-  { id: 'reroll', title: 'Professional Gambler', icon: '🎲', key: 'rerolls', min: 2, unit: ['re-roll', 're-rolls'], line: 'Just one more shuffle.', tone: 'chaos' },
 ];
 
 /** Fallbacks so nobody leaves empty-handed. Picked by a stable hash of the name, never random. */
