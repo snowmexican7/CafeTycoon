@@ -11,6 +11,7 @@ import { CONDIMENTS, noteCondiments, wantsCondiments } from './condiments';
 import { loseCustomer, serveCustomer } from './customers';
 import { LUKEWARM, coolTicks, slotCool } from './cooling';
 import { emitLog } from './log';
+import { takeItem, wantsItem } from './orders';
 import type { Customer, DrinkId, GameState, Station } from './types';
 
 export const PICKUP = { slots: 4 } as const;
@@ -32,12 +33,13 @@ export function passSlots(state: GameState): number {
   return state.gear === true ? PICKUP.slots : ECONOMY.pass.slots;
 }
 
-/** The customer still wants this drink: their current one, or one still owed to their group. */
+/** The customer still wants this drink: their current one, or one still owed to their group (FB2 B6: an item still to come on their ticket). */
 export function wantsDrink(c: Customer, d: DrinkId): boolean {
+  if (c.items) return wantsItem(c, d);
   return c.drink === d || (c.extra?.includes(d) ?? false);
 }
 
-/** Who takes `drink` off the counter: rung up (stage pickup), not a camper, wants it; upset first, then the longest wait, then the lowest id. */
+/** Who takes `drink` off the counter: rung up (stage pickup), not a camper, wants it; upset first, an office run last (FB2 B6), then the longest wait, then the lowest id. */
 export function pickupTarget(state: GameState, drink: DrinkId): Customer | null {
   let best: Customer | null = null;
   for (const c of state.customers) {
@@ -49,6 +51,8 @@ export function pickupTarget(state: GameState, drink: DrinkId): Customer | null 
 
 function better(a: Customer, b: Customer): boolean {
   if (!!a.upset !== !!b.upset) return !!a.upset;
+  // FB2 B6: an office run waits for the whole order anyway; it takes a cup only when nobody else wants it.
+  if ((a.order === 'office') !== (b.order === 'office')) return b.order === 'office';
   const ra = a.rungAt ?? Infinity;
   const rb = b.rungAt ?? Infinity;
   if (ra !== rb) return ra < rb;
@@ -91,6 +95,11 @@ export function stepPickup(state: GameState): void {
     const i = takeIndex(state, hit.item.item);
     const item = state.pass[i];
     state.pass.splice(i, 1);
+    if (c.items) {
+      // FB2 B6: a multi-drink ticket marks the item done; it pays when the last one is taken.
+      takeItem(state, c, item, slotCool(state, item));
+      continue;
+    }
     if (c.drink !== item.item && c.extra) {
       // A group's later drink landed first: they take it now and keep waiting for the rest.
       const k = c.extra.indexOf(item.item);

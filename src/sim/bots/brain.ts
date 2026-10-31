@@ -27,7 +27,8 @@ import { FRIDGE, autoMilk, closingSoon, isMilkStation, readyStock } from '../fri
 import { CONDIMENTS, canTakeBox, returnBox } from '../condiments';
 import { isSink, needsDump } from '../sink';
 import { answerPhone } from './phone';
-import { heldByPerson, heldForPeople, ringsAtOnce } from './helper';
+import { undoneDrinks, wantsItem } from '../orders';
+import { heldByPerson, heldForPeople, isPerson, ringsAtOnce } from './helper';
 
 const BOTS = ECONOMY.bots;
 const MESS = ECONOMY.mess;
@@ -351,27 +352,57 @@ function coveragePool(state: GameState): Coverage {
   return { drinks, pending };
 }
 
-/** Every customer, in queue order, that no other bot claimed, is on the menu, and no drink in flight covers. */
+/**
+ * Every order, in queue order, that no other bot claimed, is on the menu, and no drink in flight covers. FB2 B6: each
+ * item still to come on a multi-drink ticket is an order of its own (a copy of the customer with that `drink`), each
+ * other bot's claim on the ticket covers one item of its drink, and an office run's items come after everyone else's.
+ */
 export function uncoveredOrders(state: GameState, self: Player): Customer[] {
   const { drinks, pending } = coveragePool(state);
   let shots = pending;
   const menu = availableDrinks(state);
   const out: Customer[] = [];
+  const later: Customer[] = [];
   for (const c of state.customers) {
     if (c.egg === 'camper') continue; // the Wi-Fi camper never orders (pickup review M3)
-    if (claimedByOther(state, self, c.id)) continue;
-    if (!menu.includes(c.drink)) continue;
-    if (drinks[c.drink] > 0) {
-      drinks[c.drink] -= 1;
-      continue;
+    // FB2 B6 (fix round 1, I1): an office run keeps one drink in the queue (its first uncovered one, in its queue
+    // place) and the rest go after everyone else's: it gets made steadily without starving the walk-ins.
+    const office = c.order === 'office';
+    const wants = c.items ? undoneDrinks(c) : [c.drink];
+    const claims = c.items ? ticketClaims(state, self, c.id) : null;
+    // A bot already on one of its drinks fills the office run's queue place (fix round 1: else each bot took the next).
+    let queued = office && claims !== null && [...claims.values()].some((n) => n > 0);
+    if (!claims && claimedByOther(state, self, c.id)) continue;
+    for (const d of wants) {
+      if (claims && (claims.get(d) ?? 0) > 0) {
+        claims.set(d, claims.get(d)! - 1);
+        continue;
+      }
+      if (!menu.includes(d)) continue;
+      if (drinks[d] > 0) {
+        drinks[d] -= 1;
+        continue;
+      }
+      if (usesShot(d) && shots > 0) {
+        shots -= 1;
+        continue;
+      }
+      (office && queued ? later : out).push(c.items ? { ...c, drink: d } : c);
+      queued = true;
     }
-    if (usesShot(c.drink) && shots > 0) {
-      shots -= 1;
-      continue;
-    }
-    out.push(c);
   }
-  return out;
+  return later.length > 0 ? [...out, ...later] : out;
+}
+
+/** FB2 B6: other bots' claims on ticket `id`, counted by drink. */
+function ticketClaims(state: GameState, self: Player, id: number): Map<DrinkId, number> {
+  const claims = new Map<DrinkId, number>();
+  for (const p of state.players) {
+    const b = p.bot;
+    if (p === self || !b || b.claim !== id || !b.claimDrink) continue;
+    claims.set(b.claimDrink, (claims.get(b.claimDrink) ?? 0) + 1);
+  }
+  return claims;
 }
 
 /** The first uncovered order the shop can make now, with its chain (think's rule 2), or null. FB2 A1: a helper skips fresh tickets held for free people. */
@@ -404,9 +435,9 @@ function coldBrewsAhead(state: GameState): number {
 const strayGrounds = (st: Station): boolean => st.kind !== 'grinder' && st.output === 'grounds';
 
 /**
- * FB2 balance (from B6, Gear): grounds left in a grinder whose chain was dropped (its customer was served by someone
- * else's cup). They count as a shot on its way (`coveragePool`), so once they have sat as long as any orphan they are
- * collected (and binned, or pulled), or the order they seem to cover would never be claimed.
+ * FB2 B6 (Gear): grounds left in a grinder whose chain was dropped (its customer was served by someone else's cup).
+ * They count as a shot on its way (`coveragePool`), so once they have sat as long as any orphan they are collected
+ * (and binned, or pulled), or the order they seem to cover would never be claimed.
  */
 const leftGrounds = (state: GameState, st: Station): boolean => state.gear === true && st.kind === 'grinder' && st.output === 'grounds';
 
@@ -433,7 +464,10 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
     const since = st.outputSince ?? st.doneAt;
     if (since === undefined) return true;
     const secs = st.output === 'espresso' || st.output === 'grounds' ? BOTS.orphanPrepSeconds : BOTS.orphanDrinkSeconds;
-    return state.tick - since >= secondsToTicks(secs);
+    // FB2 B6 (fix round 1, M4): grounds left in a grinder may be a person's (gone to the till): twice as long then.
+    // Fix round 2: a person by A1's rule (`isPerson`: stand-ins count), never the bot itself.
+    const person = leftGrounds(state, st) && state.players.some((o) => o !== self && isPerson(o));
+    return state.tick - since >= secondsToTicks(person ? secs * 2 : secs);
   };
   const candidates = state.stations
     // G4d: a pot's cups wait in the pot for the orders that claim them (pouring it out would only fill the pass).
@@ -910,21 +944,36 @@ function execute(p: Player): void {
 }
 
 /**
- * FB2 balance (from B6, Gear): the claim went (another cup reached that customer first, or they left), but someone else
- * still needs the same drink and nobody covers it: the bot carries on for them instead of dropping its chain mid-way (a
- * shot left in the machine blocks it for everyone). Keeps the plan; true when it found one.
+ * FB2 B6 (Gear): the claim went (another cup reached that customer first, or they left), but someone else still needs
+ * the same drink and nobody covers it: the bot carries on for them instead of dropping its chain mid-way (a shot left
+ * in the machine blocks it for everyone). Keeps the plan; true when it found one.
  */
 function reclaim(state: GameState, p: Player): boolean {
   const b = p.bot!;
   if (state.gear !== true || b.claimDrink === null) return false;
-  const next = uncoveredOrders(state, p).find((o) => o.drink === b.claimDrink);
+  const orders = uncoveredOrders(state, p);
+  const held = heldForPeople(state, p, orders); // fix round 1 (M2): never onto a ticket a free person is about to make
+  const next = orders.find((o) => o.drink === b.claimDrink && !held.has(o.id));
   if (!next) return false;
   b.claim = next.id;
   return true;
 }
 
-function claimLost(state: GameState, b: BotState): boolean {
+function claimLost(state: GameState, p: Player): boolean {
+  const b = p.bot!;
   const c = state.customers.find((x) => x.id === b.claim);
+  if (c?.items) {
+    // FB2 B6: an item of its drink is still to come, and (fix round 1, M1) not every one of them is claimed by a bot
+    // earlier in the crew: two bots on one item left would make an extra cup, so the later one lets go.
+    if (b.claimDrink === null) return true;
+    const left = c.items.filter((x) => !x.done && x.drink === b.claimDrink).length;
+    let ahead = 0;
+    for (const o of state.players) {
+      if (o === p) break;
+      if (o.bot?.claim === c.id && o.bot.claimDrink === b.claimDrink) ahead += 1;
+    }
+    return ahead >= left;
+  }
   return c === undefined || c.drink !== b.claimDrink;
 }
 
@@ -1300,7 +1349,7 @@ function walkToward(state: GameState, p: Player, node: Vec2, maxRank: number): v
 function stepBot(state: GameState, p: Player): void {
   const b = p.bot!;
   p.moveDir = { x: 0, y: 0 };
-  if (b.claim !== null && claimLost(state, b) && !reclaim(state, p)) {
+  if (b.claim !== null && claimLost(state, p) && !reclaim(state, p)) {
     b.claim = null;
     b.claimDrink = null;
     setPlan(b, dropPlan(state, p)); // Review Focus 1

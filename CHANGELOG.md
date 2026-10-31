@@ -16,7 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- Bigger orders: some customers now order two drinks (one for the spouse in the car), and on the cart and at the café an office run sometimes phones ahead and walks in for 4–6 drinks. A multi-drink order pays when the last drink is collected; finish an office run for a 25% bonus tip, and losing one costs you nothing (they leave when you lock up). Groups now pay for their round at the end too.
 
 ## 3.5.0 — 2026-10-30 · Open, close and clean up
 

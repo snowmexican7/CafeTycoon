@@ -27,6 +27,7 @@ import { fridgeMorning } from './fridge';
 import { potMorning } from './sink';
 import { settle } from './spawn';
 import { applyPerk } from './perks';
+import { officeMorning } from './orders';
 import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
@@ -193,5 +194,6 @@ export function startDay(state: GameState): GameState {
   potMorning(state); // FB2 A3: yesterday's stale pots
   ensureCounterSpots(state); // FB2 review I1: every fixed Gear spot is on the floor each morning (no-op in classic)
   fridgeMorning(state);
+  officeMorning(state); // FB2 B6: does an office run come today (Gear, cart and café, from day 3)
   return state;
 }

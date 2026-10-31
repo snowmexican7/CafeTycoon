@@ -168,7 +168,13 @@ export type SimEventKind =
   | 'bar.lift'
   | 'fridge.auto'
   | 'supply.spoil'
-  | 'closing.soon';
+  | 'closing.soon'
+  /** FB2 B6: multi-drink orders (src/sim/orders.ts). */
+  | 'order.combo'
+  | 'order.office'
+  | 'order.done'
+  | 'order.lost'
+  | 'office.call';
 
 export interface SimEvent {
   seq: number;
@@ -284,6 +290,27 @@ export interface Customer {
   rungAt?: number;
   /** Batch/pickup: waiting to order at the till, or rung up and waiting at pickup (absent = 'order'). */
   stage?: 'order' | 'pickup';
+  /**
+   * FB2 B6 (Gear runs): a multi-drink ticket (a group, a combo, an office run). Each cup taken marks one item done;
+   * the whole ticket pays when the last item is taken. `drink` is the first item still to come and `extra` the rest
+   * (kept in step, so views that read drink/extra still work). Absent = a one-drink order (or a classic group).
+   */
+  items?: OrderItem[];
+  /** FB2 B6: what kind of multi-drink ticket this is (absent for groups and one-drink orders). */
+  order?: 'combo' | 'office';
+}
+
+/** FB2 B6: one drink on a multi-drink ticket. Once taken (`done`) it remembers how the cup came, for the bill. */
+export interface OrderItem {
+  drink: DrinkId;
+  done: boolean;
+  /** Who set the cup down, its sloppy marks, an off-temperature or lukewarm cup (half tip), black coffee (tip ×0.8). */
+  by?: PlayerId;
+  slips?: number;
+  temp?: true;
+  black?: true;
+  /** The cup was cold: taken, never paid. */
+  cold?: true;
 }
 
 /** P3 B7: the crew's signature drink. `premium` is in $0.50 steps; `since` is the day the recipe was set. */
@@ -529,6 +556,10 @@ export interface DayStats {
   blackCoffees?: number;
   /** FB2 A4: condiment servings left out on the bar at closing and thrown out (their cost is in `spoiledValue`). */
   spoiledBar?: number;
+  /** FB2 B6: how today's office run ended (absent = none came). */
+  office?: 'served' | 'lost';
+  /** FB2 B6: cups served to office runs beyond the first (an office run counts as one customer for reputation). */
+  officeExtra?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -574,6 +605,11 @@ export interface GameState {
   callAnswer?: { day: number; take: boolean; by: string };
   /** Review I2: the day today's branch call first rang (absent = it hasn't, so closing doesn't count it as missed). */
   callRang?: number;
+  /**
+   * FB2 B6: today's office run (Gear, cart and café, from day 3), drawn at day start: it walks in `at` ticks after
+   * opening (the phone rings `ORDERS.office.callSeconds` before); `called` once it rang, `came` its customer id.
+   */
+  office?: { day: number; at: number; called?: true; came?: number };
   /** FB1 WP3: tick stamp of when the queue last emptied (absent while someone is queued). */
   emptySince?: number;
   pass: PassItem[];
