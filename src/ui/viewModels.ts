@@ -17,7 +17,6 @@ import { knownStale, knownStars, risingTwist, seasonOf, seasonStarts, TWIST_INFO
 import { accuracyRating } from '../sim/accuracy';
 import { PRICING, menuPrice, priceForecast, priceTraffic } from '../sim/pricing';
 import { regularsViewModel, type RegularVM } from '../sim/regulars';
-import { ROLE_IDS, ROLES, roleHolders, type RoleId } from '../sim/roles';
 import { awardsFor, awardsText, type Award } from '../sim/awards';
 import { catalogueById } from '../data/catalogue';
 import { GEAR } from '../data/gear';
@@ -34,7 +33,7 @@ import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { EVENT_LABELS } from '../sim/events';
 import { challengeChipText } from '../sim/challenges';
 import { activeSets, fullSets, computeModifiers, setCounts, weekOf } from '../sim/effects';
-import { nightClock, rerollCost, restockCost } from '../sim/night';
+import { nightClock, restockCost } from '../sim/night';
 import { spoilRate } from '../sim/spoilage';
 import { profitOf } from '../sim/profit';
 import { fittingsValue, scoreRun } from '../sim/score';
@@ -680,8 +679,9 @@ export function menuLines(state: GameState): MenuLineVM[] {
   });
 }
 
+/** DEPRECATED (Round 4 f, sim): crew roles are cut; `NightVM.roles` is never set. TODO(Grok): drop with the crew drawer. */
 export interface RoleVM {
-  id: RoleId;
+  id: string;
   name: string;
   icon: string;
   perk: string;
@@ -689,15 +689,6 @@ export interface RoleVM {
   /** Holder's name, or null when free. */
   holder: string | null;
   mine: boolean;
-}
-
-export function rolesViewModel(state: GameState, me: PlayerId): RoleVM[] {
-  const holders = roleHolders(state);
-  return ROLE_IDS.map((id) => {
-    const r = ROLES[id];
-    const h = holders[id];
-    return { id, name: r.name, icon: r.icon, perk: r.perk, weakness: r.weakness, holder: h ? (state.players.find((p) => p.id === h)?.name ?? null) : null, mine: h === me };
-  });
 }
 
 function spoiledWhat(s: Partial<Record<SupplyId, number>> | undefined): string {
@@ -754,7 +745,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     takings,
     ...(state.debt ? { tab: money(state.debt) } : {}),
     hand: state.hand.map((id) => handCardViewModel(state, catalogueById[id])),
-    reroll: { cost: money(rerollCost(state)), affordable: state.cash >= rerollCost(state) && state.hand.length > 0, count: state.rerolls ?? 0 },
+    reroll: { cost: money(0), affordable: false, count: 0 }, // Round 4 f (sim): re-rolls are cut. TODO(Grok): drop the field and the button.
     sets: activeSets(state).map((id) => (fullSets(state).includes(id) ? `${CARD_SETS[id].name} (full)` : CARD_SETS[id].name)),
     restock: neededSupplies(state).map((supply) => {
       const cost = restockCost(state, supply, 1);
@@ -766,8 +757,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
       };
     }),
     ...(state.gear && state.condiments ? { condiments: condimentsVM(state) } : {}),
-    ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id), ...(p.role ? { role: ROLES[p.role].icon } : {}) })),
-    roles: rolesViewModel(state, me),
+    ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
     ...(state.gear ? { staff: staffViewModel(state) } : {}),
     ...(state.regulars.length ? { regulars: regularsViewModel(state) } : {}),
     meReady: state.ready.includes(me),

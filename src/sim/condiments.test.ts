@@ -49,7 +49,7 @@ describe('the condiment bar and its stock boxes (Task 1 shapes)', () => {
     expect(c.condimentBoxes).toBeUndefined();
   });
 
-  it('buying boxes costs $6 each, night and Gear only, never on credit', () => {
+  it('buying boxes costs $6 each at night, Gear only, never on credit (the day is a rush: rushRestock.test.ts)', () => {
     const s = gearNight([]);
     s.cash = 20;
     const t = step(s, [{ kind: 'condimentBox', playerId: 'p1', boxes: 2 }]);
@@ -57,7 +57,7 @@ describe('the condiment bar and its stock boxes (Task 1 shapes)', () => {
     expect(step(t, [{ kind: 'condimentBox', playerId: 'p1', boxes: 2 }]).condimentBoxes).toBe(2); // $8 < $12
     const day = gearDay([]);
     day.cash = 20;
-    expect(step(day, [{ kind: 'condimentBox', playerId: 'p1', boxes: 1 }]).condimentBoxes).toBe(0);
+    expect(step(day, [{ kind: 'condimentBox', playerId: 'p1', boxes: 1 }]).cash).toBe(12.5); // Round 4 f: $7.50 rush
     const c = classicRun();
     expect(step(c, [{ kind: 'condimentBox', playerId: 'p1', boxes: 1 }]).condimentBoxes).toBeUndefined();
   });

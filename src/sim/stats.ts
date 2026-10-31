@@ -31,7 +31,6 @@ export interface PlayerStats {
   alarmsStopped: number;
   binned: number;
   cardsBought: number;
-  rerolls: number;
   /** Ticks standing still (people only), copied from the player at each tally. */
   idle: number;
 }
@@ -46,7 +45,7 @@ export type CountKey = Exclude<keyof PlayerStats, 'id' | 'name' | 'bot'>;
 
 export const COUNT_KEYS: CountKey[] = [
   'serves', 'perfect', 'earned', 'handoffs', 'slips', 'messes', 'mopped', 'espressos', 'collapses',
-  'rescues', 'catPets', 'campersShooed', 'alarmsStopped', 'binned', 'cardsBought', 'rerolls', 'idle',
+  'rescues', 'catPets', 'campersShooed', 'alarmsStopped', 'binned', 'cardsBought', 'idle',
 ];
 
 export function blank(id: PlayerId, name: string, bot: boolean): PlayerStats {
@@ -144,8 +143,8 @@ export function tallyStats(state: GameState): void {
   }
 }
 
-/** A night purchase or re-roll, credited to whoever clicked it. */
-export function noteNight(state: GameState, id: PlayerId, key: 'cardsBought' | 'rerolls'): void {
+/** A night card purchase, credited to whoever clicked it. */
+export function noteNight(state: GameState, id: PlayerId, key: 'cardsBought'): void {
   bump(state, id, key);
 }
 

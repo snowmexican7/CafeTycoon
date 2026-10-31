@@ -8,9 +8,7 @@ import { cleanPitch, isPitchKind } from './pitch';
 import { isAdId } from './ads';
 import { isCheckoutId } from './checkout';
 import { isTierId } from './growth';
-import { isEquipmentKind } from './slots';
 import { TWISTS } from './taste';
-import { isRole } from './roles';
 import { LAYOUT } from '../data/layout';
 import { DRINK_IDS } from '../data/drinks';
 import { isReservedId } from './constants';
@@ -69,7 +67,6 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return input.on === false ? { kind: 'rivalCounter', playerId: input.playerId, on: false } : { kind: 'rivalCounter', playerId: input.playerId };
     case 'ready':
     case 'scout':
-    case 'reroll':
     case 'leave':
     case 'espresso':
       return { kind: input.kind, playerId: input.playerId };
@@ -85,10 +82,6 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return isCheckoutId(input.checkout) ? { kind: 'checkout', playerId: input.playerId, checkout: input.checkout } : null;
     case 'grow':
       return isTierId(input.tier) ? { kind: 'grow', playerId: input.playerId, tier: input.tier } : null;
-    case 'slot':
-      return Number.isInteger(input.index) && (input.station === null || isEquipmentKind(input.station))
-        ? { kind: 'slot', playerId: input.playerId, index: input.index, station: input.station }
-        : null;
     case 'gear':
       if (input.action === 'buy') {
         if (!isGearId(input.gear)) return null;
@@ -147,8 +140,6 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return Number.isInteger(input.boxes) && input.boxes >= 1 && input.boxes <= CONDIMENTS.maxBoxes
         ? { kind: 'condimentBox', playerId: input.playerId, boxes: input.boxes }
         : null;
-    case 'equip':
-      return isEquipmentKind(input.station) ? { kind: 'equip', playerId: input.playerId, station: input.station } : null;
     case 'ad':
       return input.ad === null || isAdId(input.ad) ? { kind: 'ad', playerId: input.playerId, ad: input.ad } : null;
     case 'pitch':
@@ -164,8 +155,13 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return DRINK_IDS.includes(input.drink) && typeof input.on === 'boolean'
         ? { kind: 'menu', playerId: input.playerId, drink: input.drink, on: input.on }
         : null;
+    // Round 4 f (Kennedy 2026-10-31): crew roles, card re-rolls and the classic Stations shop are cut. The input kinds
+    // stay in PlayerInput (deprecated) only until the UI stops sending them; they are refused here and do nothing.
     case 'role':
-      return input.role === null || isRole(input.role) ? { kind: 'role', playerId: input.playerId, role: input.role } : null;
+    case 'reroll':
+    case 'slot':
+    case 'equip':
+      return null;
     case 'weekEnd':
       return input.choice === 'stop' || input.choice === 'continue' ? { kind: 'weekEnd', playerId: input.playerId, choice: input.choice } : null;
     case 'settings':

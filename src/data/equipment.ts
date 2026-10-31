@@ -1,16 +1,8 @@
 /**
- * FB1 WP5: the stations shop. Every back-bar station can be bought at night for a fixed price and
- * placed in a slot (or kept in `state.equipment` until there is room). The counter is not for sale.
- *
- * Night inputs (humans only, connected, night phase only; see sim/slots.ts for what they do):
- *  - `{ kind: 'equip'; playerId; station: StationKind }`: buy one `station` (not 'counter') at its
- *    `EQUIPMENT` price. It goes into the first empty slot, else into `state.equipment`.
- *  - `{ kind: 'slot'; playerId; index: number; station: StationKind | null }`: put `station` (taken from
- *    `state.equipment`) into slot `index` (0 .. slotCount(tier) - 1), or empty the slot with `null`.
- *    Whatever the slot held goes back to equipment. Rearranging is free.
- *
- * Prices: espresso 45, grinder 30, steamer 40, coldBrewTap 35, trash 15. They count in
- * `fittingsValue` at half, like cards.
+ * DEPRECATED (Round 4 f, Kennedy 2026-10-31): the classic stations shop is deleted from the sim (Gear runs are the
+ * game): the `slot` / `equip` inputs are refused by validateInput and nothing in src/sim reads this file. It stays only
+ * because the UI's classic Stations board (src/ui/stationsVM.ts, night.ts `stationsBoard`) still imports it. Delete it
+ * with that board.
  */
 import type { StationKind } from '../sim/types';
 
@@ -23,6 +15,9 @@ export interface EquipmentInfo {
 }
 
 export const EQUIPMENT_KINDS: EquipmentKind[] = ['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash'];
+
+/** A station kind the classic shop sold (any StationKind but the counter and the drip machine). Was in sim/slots.ts. */
+export const isEquipmentKind = (k: unknown): k is EquipmentKind => typeof k === 'string' && (EQUIPMENT_KINDS as string[]).includes(k);
 
 export const EQUIPMENT: Record<EquipmentKind, EquipmentInfo> = {
   espresso: {

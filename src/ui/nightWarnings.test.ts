@@ -149,14 +149,11 @@ describe('3.3.1: branch stock sends are valued like the sim credits them', () =>
     const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true, tier: 'stand' });
     s.branch = { area: 'tourist', staff: 1, openedDay: 1, spent: 300, by: 'K' };
     s.supplies = { ...s.supplies, beans: 500, milk: 3 };
-    (s.players[0] as { role?: string }).role = 'manager'; // a Manager's discount makes tonight's price lower than list
     const vm = branchViewModel(s)!;
     for (const sup of vm.supplies ?? []) {
       const pack = ECONOMY.packs[sup.id];
       expect(sup.worth).toBeCloseTo((sup.send * restockCost(s, sup.id, 1)) / pack.size, 2);
     }
     expect(vm.supplies?.find((x) => x.id === 'milk')?.send).toBe(3);
-    const beans = vm.supplies!.find((x) => x.id === 'beans')!;
-    expect(beans.worth).toBeLessThan(ECONOMY.packs.beans.cost);
   });
 });

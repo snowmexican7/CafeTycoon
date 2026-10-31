@@ -12,7 +12,6 @@ import { computeModifiers } from './effects';
 import { gearArea } from './gear';
 import { menuPrice, unitCost } from './pricing';
 import { wageEach } from './staff';
-import { roleSupplyCost } from './roles';
 import { restockCost } from './night';
 import { ECONOMY } from '../data/economy';
 import type { DrinkId, GameState, PlayerInput, SupplyId } from './types';
@@ -30,15 +29,10 @@ export const BRANCH = {
   tipRate: 0.05,
   /** ±share of seeded day-to-day noise. */
   noise: 0.15,
-  /** P4 B5: extra cups per barista while someone holds the Manager role (they run both rotas). */
-  managerCups: 2,
 };
 
 /** P4 B5: supplies that can be driven over to the branch at night. */
 export const BRANCH_SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour'];
-
-/** Someone on the crew who is still here holds the Manager role (review M8: a disconnected one runs nothing). */
-export const hasManager = (state: GameState): boolean => state.players.some((p) => p.role === 'manager' && p.connected);
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -96,13 +90,12 @@ export function branchDay(state: GameState, day = state.day, withCall = false): 
   const demand = Math.round(BRANCH.walkIns * m.traffic * fit * noiseFor(state.seed, day));
   // P4 B6: today's phone call (closing only; the night estimate can't know it).
   const call = withCall ? callOutcome(state) : null;
-  let cap = b.staff * (BRANCH.perStaff + (hasManager(state) ? BRANCH.managerCups : 0));
+  let cap = b.staff * BRANCH.perStaff;
   if (call?.kind === 'machine' && !call.took) cap = Math.floor(cap / 2);
   if (call?.kind === 'order' && call.took) cap = Math.max(0, cap - CALL.orderCups);
   const served = Math.min(demand, cap);
   const ticket = drinks.length ? drinks.reduce((x, d) => x + menuPrice(state, d), 0) / drinks.length : 0;
-  // The Manager's supplier discount reaches the branch too.
-  const cupCost = (drinks.length ? drinks.reduce((x, d) => x + unitCost(d, state), 0) / drinks.length : 0) * roleSupplyCost(state);
+  const cupCost = drinks.length ? drinks.reduce((x, d) => x + unitCost(d, state), 0) / drinks.length : 0;
   const takings = r2(served * ticket * (1 + BRANCH.tipRate) + (call?.kind === 'order' && call.took ? CALL.orderProfit : 0));
   const supplies = r2(served * cupCost);
   // P4 B5: stock sent over from home pays for cups first.
@@ -166,7 +159,7 @@ export function sendStock(state: GameState, supply: SupplyId | undefined): void 
   const units = Math.min(state.supplies[supply] ?? 0, pack.size);
   if (units <= 0) return;
   state.supplies[supply] -= units;
-  // Review M3: valued at what a pack costs the crew tonight (a Manager or card discount counts), so a send can't be a money-maker.
+  // Review M3: valued at what a pack costs the crew tonight (a card discount counts), so a send can't be a money-maker.
   b.stockCredit = r2((b.stockCredit ?? 0) + (units * restockCost(state, supply, 1)) / pack.size);
 }
 

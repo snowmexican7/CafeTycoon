@@ -7,14 +7,12 @@ import { applyCheckoutInput } from './checkout';
 import { applyRivalCounterInput, applyScoutInput, applyStampCardInput } from './rival';
 import { beginSeason } from './season';
 import { applyTwistInput } from './taste';
-import { applyRoleInput } from './roles';
 import { applyCall, noteCallRang } from './call';
 import { applyCloseEarly, closeVoteUnanimous, dropCloseVote } from './closeEarly';
 import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
 import { applyGrowInput } from './growth';
-import { applyEquipInput, applySlotInput } from './slots';
 import { finishDay } from './closing';
 import { markBeforeGrace, tickChallenges } from './challenges';
 import { TICK_RATE, secondsToTicks } from './constants';
@@ -24,7 +22,7 @@ import { stepEvents } from './events';
 import { computeModifiers } from './effects';
 import { applyMenuInput } from './menu';
 import { applyMovement } from './movement';
-import { applyNightInput, stepNight } from './night';
+import { applyNightInput, applyRestockInput, stepNight } from './night';
 import { startNight } from './run';
 import { stepPass } from './pass';
 import { interact, stepStations } from './stations';
@@ -55,6 +53,9 @@ import { applyDevPause, topUpDevCash } from './dev';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
 import { setLook } from './look';
+import { hasStrategist } from './hires';
+import { strategistNewDrinks } from './strategist';
+import { unlockedDrinks } from './unlocks';
 import { applyMoveStation, applyOpenDoors, inPreOpen, preOpenReady, stepPreOpen } from './rearrange';
 
 function applyInput(s: GameState, input: PlayerInput): void {
@@ -136,16 +137,14 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'secret':
       if (s.phase === 'day' || s.phase === 'closing' || s.phase === 'night') unlockSecret(s, input.playerId, input.code);
       break;
-    case 'buy':
-    case 'reroll': {
-      const before = input.kind === 'buy' ? s.boughtTonight.length : (s.rerolls ?? 0);
+    case 'buy': {
+      const before = s.boughtTonight.length;
       applyNightInput(s, input);
-      const after = input.kind === 'buy' ? s.boughtTonight.length : (s.rerolls ?? 0);
-      if (after > before) noteNight(s, input.playerId, input.kind === 'buy' ? 'cardsBought' : 'rerolls');
+      if (s.boughtTonight.length > before) noteNight(s, input.playerId, 'cardsBought');
       break;
     }
     case 'restock':
-      applyNightInput(s, input);
+      applyRestockInput(s, input); // Round 4 f: night price at night, a rush delivery in the day and closing
       break;
     case 'ready':
       if (inPreOpen(s)) preOpenReady(s, input.playerId); // FB2 C10: Ready in the pre-open opens the doors once everyone is
@@ -174,12 +173,6 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'grow':
       applyGrowInput(s, input);
-      break;
-    case 'slot':
-      applySlotInput(s, input);
-      break;
-    case 'equip':
-      applyEquipInput(s, input);
       break;
     case 'gear':
       applyGearInput(s, input);
@@ -216,9 +209,6 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'branch':
       applyBranchInput(s, input);
-      break;
-    case 'role':
-      applyRoleInput(s, input);
       break;
     case 'espresso':
       drinkEspresso(s, input.playerId);
@@ -340,10 +330,13 @@ function stepClosing(s: GameState): void {
 export function step(state: GameState, inputs: PlayerInput[]): GameState {
   const s = structuredClone(state);
   s.tick += 1;
+  // Round 4 f: what the bar could make before tonight's inputs, so a hired Strategist puts a newly makeable drink on.
+  const couldMake = s.phase === 'night' && hasStrategist(s) ? unlockedDrinks(s) : null;
   for (const raw of inputs) {
     const input = validateInput(raw);
     if (input) applyInput(s, input);
   }
+  if (couldMake) strategistNewDrinks(s, couldMake);
   switch (s.phase) {
     case 'night':
       stepNight(s);

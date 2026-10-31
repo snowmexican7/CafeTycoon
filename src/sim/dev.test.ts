@@ -71,11 +71,9 @@ describe('R4 a: dev mode', () => {
     expect((poor.slotGear ?? []).includes('e6')).toBe(false);
   });
 
-  it('cash is topped up after every spend (restock, buy card, hire) and at each night start', () => {
+  it('cash is topped up after every spend (restock, hire) and at each night start', () => {
     let s = createRun(opts(true));
     s = step(s, [{ kind: 'restock', playerId: 'p1', supply: 'beans', packs: 5 }]);
-    expect(s.cash).toBe(DEV_CASH);
-    s = step(s, [{ kind: 'reroll', playerId: 'p1' }]);
     expect(s.cash).toBe(DEV_CASH);
     // run a whole day: the next night starts at the top-up again, whatever rent did
     for (let i = 0; i < 60 * 600 && s.day < 2; i++) s = step(s, []);

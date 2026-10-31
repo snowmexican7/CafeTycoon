@@ -32,13 +32,16 @@ describe('R4 b: pastries are a restock item', () => {
     expect(restockCost(s, 'pastry', 1)).toBe(ECONOMY.packs.pastry.cost);
   });
 
-  it('cannot buy what the till cannot pay for, and not in the daytime', () => {
+  it('cannot buy what the till cannot pay for; in the daytime only at the rush price (Round 4 f)', () => {
     const s = run();
     s.cash = 6;
     expect(buy(s, 1).supplies.pastry).toBe(0);
     const d = startDay(run());
+    d.cash = 7.87; // the rush price of a $6.30 pack is $7.88
     const t = step(d, [{ kind: 'restock', playerId: 'p1', supply: 'pastry', packs: 1 }]);
     expect(t.supplies.pastry).toBe(0);
+    d.cash = 7.88;
+    expect(step(d, [{ kind: 'restock', playerId: 'p1', supply: 'pastry', packs: 1 }]).supplies.pastry).toBe(ECONOMY.packs.pastry.size);
   });
 
   it('pastries do not need the fridge: a Gear run buys them with no fridge at all', () => {

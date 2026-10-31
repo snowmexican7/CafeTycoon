@@ -15,7 +15,7 @@ import { podsCoverGrinder, podsOnly } from './gear';
 import { ECONOMY } from '../data/economy';
 import { layoutFor } from '../data/layout';
 import type { Modifiers } from './effects';
-import { defaultSlots, ensureCounterSpots, growSlots, slotCount, stationsFromSlots } from './slots';
+import { defaultSlots, ensureCounterSpots, slotCount, stationsFromSlots } from './slots';
 import { growGearSlots, isGearRun, rebuildBar } from './gear';
 import { DRINK_IDS, DRINK_INFO, GEAR_ONLY_DRINKS } from '../data/drinks';
 import { emitLog } from './log';
@@ -206,7 +206,16 @@ export function grownToday(state: GameState): { tier: TierId; day: number; by: s
   return last && last.day === state.day ? last : null;
 }
 
-/** Night input: grow into the next tier (in order, humans only, cash in hand). The new floor is set up at once: its default slots, with any extra machines moved to equipment. */
+/**
+ * A classic run (tests and the balance script only; Round 4 f deleted the classic stations shop): the bigger shop opens
+ * with its default stations.
+ */
+export function classicGrowSlots(state: GameState, to: TierId): void {
+  state.slots = defaultSlots(to);
+  state.stations = stationsFromSlots(to, state.slots);
+}
+
+/** Night input: grow into the next tier (in order, humans only, cash in hand). The new floor is set up at once (Gear: the owned gear moves over). */
 export function applyGrowInput(state: GameState, input: Extract<PlayerInput, { kind: 'grow' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
@@ -216,7 +225,7 @@ export function applyGrowInput(state: GameState, input: Extract<PlayerInput, { k
   if (state.cash < cost) return state;
   state.cash = Math.round((state.cash - cost) * 100) / 100;
   if (isGearRun(state)) growGearSlots(state, input.tier);
-  else growSlots(state, input.tier);
+  else classicGrowSlots(state, input.tier);
   const from = tierOf(state);
   state.tier = input.tier;
   ensureCounterSpots(state); // FB2 A4: the bigger shop's fridge (Gear runs; no-op in classic)

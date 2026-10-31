@@ -2,7 +2,6 @@
 import { AREAS, type AreaId } from '../data/areas';
 import { areaFit, BRANCH, BRANCH_SUPPLIES, branchAreas, branchDay, canOpenBranch } from '../sim/branch';
 import { ECONOMY } from '../data/economy';
-import { roleSupplyCost } from '../sim/roles';
 import { restockCost } from '../sim/night';
 import { wageEach } from '../sim/staff';
 import type { GameState, SupplyId } from '../sim/types';
@@ -73,8 +72,7 @@ export function branchViewModel(state: GameState): BranchVM | undefined {
       // 3.3.1: the sim credits a send at tonight's restock price (Manager / card discounts count, review M3)
       return { id, name: SUPPLY[id], have, send, worth: Math.round(((send * restockCost(state, id, 1)) / pack.size) * 100) / 100 };
     });
-    const m = state.players.find((p) => p.role === 'manager');
-    vm.manager = m ? { name: m.name, cups: BRANCH.managerCups, discountPct: Math.round((1 - roleSupplyCost(state)) * 100) } : null;
+    vm.manager = null; // Round 4 f (sim): the Manager role is cut. TODO(Grok): drop BranchVM.manager and managerHtml.
   }
   const cl = callLine(last?.call);
   if (last) vm.yesterday = { served: last.served, walked: last.walked, profit: last.profit, ...(last.fromStock ? { fromStock: last.fromStock } : {}), ...(cl ? { call: cl } : {}) };
@@ -116,7 +114,7 @@ function managerHtml(v: BranchVM): string {
   const m = v.manager;
   return m
     ? `<p class="br-mgr">📋 <b>${esc(m.name)}</b> is Manager: +${m.cups} cups per barista here${m.discountPct ? `, cups ${m.discountPct}% cheaper` : ''}.</p>`
-    : '<p class="br-mgr off">📋 No Manager tonight. Whoever takes the Manager role runs this rota too (+2 cups per barista, cheaper supplies).</p>';
+    : '';
 }
 
 function stockHtml(v: BranchVM): string {

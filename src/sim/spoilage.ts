@@ -1,20 +1,17 @@
 import { ECONOMY } from '../data/economy';
 import { computeModifiers } from './effects';
 import { rngNext } from './rng';
-import { roleHolders } from './roles';
 import { fridgeSpoilMul } from './fridge';
 import type { GameState, PlayerId, SupplyId } from './types';
 
 /**
  * P3 B4: fresh stock goes off. Milk and pastries lose a share of what is left at each closing, so
- * the crew trades over-ordering (waste) against running out (lost sales). A Manager on the crew
- * halves it (stock rotation); a fridge card cuts it further. Shelf-stable supplies never spoil.
+ * the crew trades over-ordering (waste) against running out (lost sales). A fridge card cuts it. Shelf-stable supplies never spoil.
  * Deterministic: floors of fixed shares, no randomness.
  */
 export const SPOIL = {
   /** Share of each fresh supply left at closing that is thrown out. */
   rate: { milk: 0.3, pastry: 0.5 } as Partial<Record<SupplyId, number>>,
-  managerMul: 0.5,
   /** Pastries: sold on the side with a drink when there are any in the case. */
   pastry: { price: 3, attach: 0.35 },
 };
@@ -29,10 +26,9 @@ function round2(n: number): number {
 export function spoilRate(state: GameState, supply: SupplyId): number {
   const base = SPOIL.rate[supply] ?? 0;
   if (base === 0) return 0;
-  const manager = roleHolders(state).manager ? SPOIL.managerMul : 1;
   // FB2 A4: Gear milk keeps in the fridge; a better fridge keeps it better.
   const fridge = supply === 'milk' ? fridgeSpoilMul(state) : 1;
-  return Math.max(0, Math.min(1, base * manager * fridge * computeModifiers(state).spoil));
+  return Math.max(0, Math.min(1, base * fridge * computeModifiers(state).spoil));
 }
 
 /** How many of `count` would be thrown out tonight at the current rate. */

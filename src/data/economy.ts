@@ -79,8 +79,6 @@ export const ECONOMY = {
   dayLengthSec: 150,
   nightLengthSec: 120,
   handSize: 4,
-  /** Re-rolling tonight's hand (B6): base price, plus step for each re-roll already made tonight. */
-  reroll: { base: 5, step: 5 },
   rarityWeights: { common: 60, uncommon: 30, rare: 10 },
   cheapThreshold: 30,
   /** Every supply a drink needs from scratch (derived from the station recipes in src/data/drinks.ts). */
@@ -167,3 +165,9 @@ export const ECONOMY = {
   },
   rogue: { chance: 0.015, remakeSeconds: 15, waitSeconds: 5, makeSeconds: 10, speed: 0.8, repHit: 0.1, minDay: 2 },
 } as const;
+
+/**
+ * Round 4 f follow-up: restock (and condiment boxes) also work in the day and the closing phase, as a "rush delivery":
+ * the stock arrives at once, at `rushMul` times the night price (sim/night.ts `rushCost`). At night the price is normal.
+ */
+export const RESTOCK = { rushMul: 1.25 } as const;

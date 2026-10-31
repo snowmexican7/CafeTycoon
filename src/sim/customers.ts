@@ -2,7 +2,6 @@ import { signatureServed, sigPremium, sigShare } from './signature';
 import { areaPatienceMul, areaQualityTip, areaTipMul, batchOut, drinkSuppliesFor, gearAskedFor, gearPullMul, noteFamilyTip, snobFamilies, snobTip } from './gear';
 import { DRINK_FAMILY, SNOB } from '../data/areas';
 import { rivalAskFactor } from './rival';
-import { roleCraft, roleTip } from './roles';
 import { noteRegularLost, noteRegularServed, regularTipFactor } from './regulars';
 import { demandFactor, menuPrice, pricePatience, priceTraffic } from './pricing';
 import { ECONOMY } from '../data/economy';
@@ -366,7 +365,7 @@ export function payCup(state: GameState, customer: Customer, drink: DrinkId, by?
   noteCup(state.today, stars);
   const combo = serveCombo(state, drink, state.today, sig?.twist);
   const sigBonus = sig && combo ? signatureServed(state.today, combo.stars) : 0;
-  let tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * roleTip(state, by) * accuracyTip(stars) * comboTip(combo?.stars) * areaTipMul(state, drink) + roleCraft(state, by));
+  let tip = round2(price * ((ECONOMY.maxTipRate * customer.patienceLeft) / customer.patienceMax + m.tipRate) * kindTip * accuracyTip(stars) * comboTip(combo?.stars) * areaTipMul(state, drink));
   // Gear G10b: the arts crowd and snob regulars notice quality.
   const quality = areaQualityTip(state, stars) * (reg?.snob ? snobTip(stars) : 1);
   if (quality !== 1) tip = round2(tip * quality);

@@ -131,7 +131,7 @@ describe('item 3: Gear buying hints', () => {
     const ads = gearAd(s);
     expect(ads).toHaveLength(1);
     expect(ads[0]).toMatchObject({ id: 'gear:c1', kind: 'equip', priority: PLAN_PRIORITY.gear, input: { kind: 'gear', action: 'buy', gear: 'c1' } });
-    expect(PLAN_PRIORITY.gear).toBeGreaterThan(PLAN_PRIORITY.slot);
+    expect(PLAN_PRIORITY.gear).toBeGreaterThan(PLAN_PRIORITY.staff);
     expect(PLAN_PRIORITY.gear).toBeLessThan(PLAN_PRIORITY.checkout);
   });
 
@@ -397,12 +397,11 @@ describe('item 5d: send surplus stock to the branch', () => {
   const managed = (beans: number, milk: number): GameState => {
     const s = equipped(['c1', 'e1'], { tier: 'cafe' }, 1000);
     s.branch = { area: 'tourist', staff: 2, openedDay: 1, spent: BRANCH.cost, by: 'K' };
-    s.players[0]!.role = 'manager';
     s.supplies = { ...FULL, beans, milk };
     return s;
   };
 
-  it('beans or milk beyond tomorrow’s use plus two packs, Manager mode only; priority 48', () => {
+  it('beans or milk beyond tomorrow’s use plus two packs (Round 4 f: no Manager needed); priority 48', () => {
     const base = managed(0, 0);
     const use = expectedUse(base);
     const pack = (k: 'beans' | 'milk') => ECONOMY.packs[k].size;
@@ -416,11 +415,9 @@ describe('item 5d: send surplus stock to the branch', () => {
     expect(sendAd(managed(use.beans + 2 * pack('beans'), 0))).toEqual([]);
   });
 
-  it('quiet without a branch or a Manager, or when the credit already covers the branch’s cups', () => {
+  it('quiet without a branch, or when the credit already covers the branch’s cups', () => {
     const s = managed(900, 900);
     expect(sendAd(s)).toHaveLength(2);
-    delete s.players[0]!.role;
-    expect(sendAd(s)).toEqual([]);
     const n = managed(900, 900);
     delete n.branch;
     expect(sendAd(n)).toEqual([]);
@@ -449,7 +446,6 @@ describe('item 6: sorted and pure with every new kind in play', () => {
     s.supplies = { ...FULL, beans: 900, milk: 900 };
     if (withBranch) {
       s.branch = { area: 'tourist', staff: 1, openedDay: 1, spent: BRANCH.cost, by: 'K' };
-      s.players[0]!.role = 'manager';
     }
     return s;
   };

@@ -155,7 +155,7 @@ describe('telemetry', () => {
     expect(sum.idleTicks).toEqual({ Kay: 0, Lu: 30, Bo: 0 });
     expect(sum.days).toEqual([d1, d2]);
     expect(sum.drinks).toEqual({ ...zeroDrinks(), espresso: 1, latte: 3, coldBrew: 2 });
-    expect(sum.cards).toEqual([{ day: 1, offered: ['a', 'b', 'c'], bought: ['c'], rerolls: 0 }]);
+    expect(sum.cards).toEqual([{ day: 1, offered: ['a', 'b', 'c'], bought: ['c'] }]);
     expect(sum.events).toEqual([
       { day: 1, events: ['rushHour'] },
       { day: 2, events: [] },
@@ -166,10 +166,9 @@ describe('telemetry', () => {
     expect(parsed[0].kind).toBe('meta');
   });
 
-  it('keeps the log out of snapshots and summarizes forecasts, challenges, re-rolls, eggs and awards (B11)', () => {
+  it('keeps the log out of snapshots and summarizes forecasts, challenges, eggs and awards (B11)', () => {
     const { tele } = setup();
     const s = run();
-    s.rerolls = 2;
     tele.snapshot(s); // night
     startDay(s);
     s.log = [logEntry(1, 'egg.cat'), logEntry(2, 'egg.cat'), logEntry(3, 'egg.smoke')];
@@ -183,7 +182,6 @@ describe('telemetry', () => {
     s.phase = 'ended';
     tele.snapshot(s);
     const sum = tele.summary(s);
-    expect(sum.cards[0].rerolls).toBe(2);
     expect(sum.forecasts).toEqual([{ day, forecast: s.forecast }]);
     expect(sum.challenges).toEqual([{ day, dealt, won: dealt.slice(0, 1) }]);
     expect(sum.eggs).toEqual({ 'egg.cat': 2, 'egg.smoke': 1 });

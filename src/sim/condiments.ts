@@ -3,14 +3,14 @@
  * Gear runs only. The bar holds `CONDIMENTS.servings`; boxes are bought at night ($6 each, never on credit)
  * and wait in the corner (`state.condimentBoxes`) until someone carries one (`Player.tool === 'box'`) to the bar.
  *
- *  - `applyCondimentBoxInput(state, input)`: the night input (Gear, night, connected people only).
+ *  - `applyCondimentBoxInput(state, input)`: Gear, connected people only; night price, or a rush in the day (Round 4 f).
  *  - `takeBox(state, p)` / `refillBar(state, p)`: carry a box from the corner (empty hands, in range) and use it on the bar.
  *  - `returnBox(state, p)`: a carried box goes back to the corner (R, leaving, closing): never lost, never doubled.
  *  - `wantsCondiments` / `noteCondiments`: the stop at the bar after pickup (Task 10; called from `stepPickup`).
  *
  * Must not import ./gear. Pure, no RNG.
  */
-import { ECONOMY } from '../data/economy';
+import { ECONOMY, RESTOCK } from '../data/economy';
 import { CONDIMENTS_ID, layoutFor } from '../data/layout';
 import { emitLog } from './log';
 import { nearestStation } from './movement';
@@ -22,15 +22,20 @@ export const CONDIMENTS = { servings: 20, share: 0.6, blackTip: 0.8, boxCost: 6,
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** Night input: buy `boxes` condiment boxes at $6 each, only if the cash covers all of them. */
+/**
+ * Buy `boxes` condiment boxes, only if the cash covers all of them: $6 each at night; in the day or the closing phase a
+ * rush delivery at `RESTOCK.rushMul` times that ($7.50), logged as `restock.rush { by, supply: 'condiments', packs, cost }`.
+ */
 export function applyCondimentBoxInput(state: GameState, input: Extract<PlayerInput, { kind: 'condimentBox' }>): GameState {
-  if (state.gear !== true || state.phase !== 'night') return state;
+  const rush = state.phase === 'day' || state.phase === 'closing';
+  if (state.gear !== true || (state.phase !== 'night' && !rush)) return state;
   const p = state.players.find((x) => x.id === input.playerId);
   if (!p || !p.connected || p.bot) return state;
-  const cost = round2(input.boxes * CONDIMENTS.boxCost);
+  const cost = round2(input.boxes * CONDIMENTS.boxCost * (rush ? RESTOCK.rushMul : 1));
   if (state.cash < cost) return state;
   state.cash = round2(state.cash - cost);
   state.condimentBoxes = (state.condimentBoxes ?? 0) + input.boxes;
+  if (rush) emitLog(state, 'restock.rush', { by: p.id, supply: 'condiments', packs: input.boxes, cost });
   return state;
 }
 

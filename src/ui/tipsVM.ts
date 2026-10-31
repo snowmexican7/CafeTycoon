@@ -34,7 +34,7 @@ export interface TipVM {
 export const MAX_TIPS = 2;
 
 const TIP_ICON: Record<AdviceKind, string> = {
-  restock: '📦', price: '🏷️', twist: '✨', signature: '⭐', scout: '🔭', rival: '☕', grow: '🏗️', checkout: '🧾', slot: '🛠️', equip: '🛠️', menu: '📋',
+  restock: '📦', price: '🏷️', twist: '✨', signature: '⭐', scout: '🔭', rival: '☕', grow: '🏗️', checkout: '🧾', equip: '🛠️', menu: '📋',
 };
 /**
  * 3.3.1: Gear and Phase 4 rows reuse AdviceKind values (planner.ts), so the icon follows the input first:
