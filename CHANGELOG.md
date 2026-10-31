@@ -18,6 +18,15 @@ when a build goes out, the line moves under its version with the date.
 
 _Nothing yet._
 
+## 3.7.1 — 2026-10-31 · Restock from the counter
+
+The night-clutter answers now have their screens.
+
+- A **Restock** button on the day screen (or press B): buy a pack of beans, milk, cold brew, flavours or pastries, or a condiment box ($7.50), mid-shift at the rush price shown on each button. The game keeps going while it's open, a chip warns when something is running low, and everyone sees a note when someone rush-orders.
+- When your Strategist switches a drink on or off, a bubble tells you what changed. With a Strategist hired, the Menu tab steps back and says "Your Strategist sets the menu; you can still override until next night".
+- The end-of-day receipt now shows your next size up (cart, then café): what it costs, whether you can afford it, what you gain, and a Grow button. The duplicate grow screen at night is gone.
+- Crew roles, card re-rolls (no more "$0" button), the old Stations board and the branch Manager line are gone.
+
 ## 3.7.0 — 2026-10-31 · A tidier night
 
 Your night-screen answers: restock any time, let the Strategist run the menu, and fewer things to fiddle with.
