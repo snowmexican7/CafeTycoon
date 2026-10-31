@@ -2318,3 +2318,15 @@ Approved Oct 30, 2026 7:46 PM (Toronto). Sim lane builds; UI lane (Grok) wires. 
   - **UI to do:** a tall ticket with a tick per item (`items[].done`, maybe the cold one crossed out), the office-run phone card (`office.call`, a countdown to `at`), and a receipt line for `DayStats.office`.
   - Open: two bots crossing a corridor mirrored each other all day on p4 seed 205 day 9 before the balance
     branch's head-on fix (748100f); recheck in play.
+
+## Round 4 (sim lane, Claude)
+
+Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. One branch and tag per item; names as built.
+
+- **c. Bumping into customers (`r4-bump`, protocol 46).** `stepCustomerBumps` (src/sim/bumps.ts): a person (not a bot,
+  `ECONOMY.bump.botsBumpCustomers: false`) walking into a customer within `customerTiles` (0.6) costs them
+  `customerPatience` (8%) of max patience, logs `customer.bump { customer, by, x, y }`, with a per-customer cooldown of
+  `customerCooldownSeconds` (1 s); the 3rd bump (`customerAngryAt`) within `customerWindowSeconds` (10 s) logs
+  `walkout { customer, reason: 'bumped', x, y }` and loses them like any walk-out (no extra reputation hit). State:
+  `Customer.bumpedAt?: number[]`, `DayStats.customerBumps?`. Customer positions: `customerSpots(state)`
+  (src/sim/customerSpots.ts), a sim copy of the render's `pickupModel.customerSpots`, kept equal by a test.

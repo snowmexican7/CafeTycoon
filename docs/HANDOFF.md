@@ -63,6 +63,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **c. Customer bumps (2026-10-31, `r4-bump`, protocol 46).** Bubbles ("Hey!", "Watch it!") from
+  `customer.bump { customer, by, x, y }`; the angry exit is `walkout { customer, reason: 'bumped', x, y }`. Today
+  `chaosModel` draws every `walkout` as "Sold out?!", so branch on `data.reason`. Please make
+  `pickupModel.customerSpots` call the sim's `customerSpots(state)` (src/sim/customerSpots.ts) so they can't drift.
 - [ ] **B6 multi-drink orders (2026-10-30, `fb2-b6`).** Full names: BACKLOG "Feedback 2", B6.
   - Tickets: `Customer.items: { drink, done, by?, slips?, temp?, black?, cold? }[]` and `Customer.order: 'combo' |
     'office'` (absent for groups). Draw a tall ticket with a tick per item.
