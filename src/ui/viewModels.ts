@@ -48,6 +48,7 @@ import { menuDrinks, neededSupplies, unlockedDrinks } from '../sim/unlocks';
 import { forecastById } from '../data/forecasts';
 import { BOT_PERSONALITIES } from '../sim/bots/roster';
 import { canHire, crewNames, wageEach } from '../sim/staff';
+import { CONDIMENTS } from '../sim/condiments';
 import { WEEKDAY_NAMES, forecastFor, forecastName, forecastOf, weekdayOf } from '../sim/forecast';
 
 
@@ -288,6 +289,11 @@ export interface NightVM {
   hand: HandCardVM[];
   /** P3 B4: fresh rows carry the share that goes off at each closing, and what went off last night. */
   restock: { supply: SupplyId; count: number; packSize: number; packCost: string; affordable: boolean; spoilPct?: number; spoiled?: number }[];
+  /**
+   * ui-3.5.1: the Restock tab's condiment box card (Gear runs with a condiment bar): boxes waiting in the
+   * corner, servings in the bar (of 20), and the $6 box. `full` once the corner holds CONDIMENTS.maxBoxes.
+   */
+  condiments?: { boxes: number; servings: number; max: number; cost: number; affordable: boolean; full: boolean };
   ready: { id: PlayerId; name: string; ready: boolean; role?: string }[];
   /** Phase 3 B1: the four roles, who holds each, and whether this barista can take it. */
   roles?: RoleVM[];
@@ -759,6 +765,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
         ...(rate > 0 ? { spoilPct: Math.round(rate * 100) } : {}), ...(lastSpoiled ? { spoiled: lastSpoiled } : {}),
       };
     }),
+    ...(state.gear && state.condiments ? { condiments: condimentsVM(state) } : {}),
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id), ...(p.role ? { role: ROLES[p.role].icon } : {}) })),
     roles: rolesViewModel(state, me),
     ...(state.gear ? { staff: staffViewModel(state) } : {}),
@@ -1226,6 +1233,19 @@ function stockOf(state: GameState, drink: DrinkId, low: Set<SupplyId>): 'out' | 
   return needs.some((s) => low.has(s)) ? 'low' : null;
 }
 
+/** ui-3.5.1: the condiment box card on the Restock tab. */
+export function condimentsVM(state: GameState): NonNullable<NightVM['condiments']> {
+  const boxes = state.condimentBoxes ?? 0;
+  return {
+    boxes,
+    servings: state.condiments?.servings ?? 0,
+    max: CONDIMENTS.servings,
+    cost: CONDIMENTS.boxCost,
+    affordable: state.cash >= CONDIMENTS.boxCost,
+    full: boxes >= CONDIMENTS.maxBoxes,
+  };
+}
+
 /** A sim brief alert as a Tonight row: its icon, and a button for its fix (restock) or where to go. */
 function briefRow(state: GameState, a: NightAlert): BriefAlert {
   const row: BriefAlert = { id: a.id, severity: a.severity, icon: ALERT_ICON[a.kind], text: a.text };
@@ -1244,6 +1264,10 @@ function briefRow(state: GameState, a: NightAlert): BriefAlert {
     const vote = price >= GEAR_VOTE_MIN && state.players.filter((p) => p.connected && !p.bot).length > 1;
     row.icon = f.fridge === 'f4' ? '🐄' : '🧊';
     row.fix = { label: `${vote ? '🗳️ Ask the crew' : 'Buy it'} · $${price}`, action: 'fix', data: { fix: a.id }, input: f };
+  } else if (f?.kind === 'condimentBox') {
+    // ui-3.5.1: the brief's "cream and sugar run out" line buys the boxes it worked out
+    row.icon = '🥛';
+    row.fix = { label: `Buy ${f.boxes === 1 ? 'a box' : `${f.boxes} boxes`} · $${f.boxes * CONDIMENTS.boxCost}`, action: 'fix', data: { fix: a.id }, input: f };
   } else if (a.kind === 'grow') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'grow' } };
   else if (a.kind === 'checkout') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'checkout' } };
   else if ((a.kind === 'rival' && a.id !== 'rival:loyalty') || a.kind === 'signature') row.fix = { label: 'Menu', action: 'goto', data: { tab: 'menu' } };

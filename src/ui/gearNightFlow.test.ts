@@ -7,13 +7,13 @@ const run = (gear: boolean) => createRun({ seed: 5, hostId: 'p1', players: [{ id
 const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null, ...over });
 
 describe('G4f: one clear night order in Gear runs', () => {
-  it('classic keeps Tonight · Menu · Spend; Gear is Restock → Gear shop → Menu → Extras (pick night: gear first)', () => {
+  it('classic keeps Tonight · Menu · Spend; Gear is Restock → Menu → Gear shop → Extras (pick night: Restock, then Pick gear)', () => {
     expect(nightTabs(undefined).map((t) => t.id)).toEqual(['tonight', 'menu', 'spend']);
     const s = run(true);
     const pick = nightViewModel(s, 'p1').gear!;
-    expect(nightTabs(pick).map((t) => t.label)).toEqual(['Pick gear', 'Restock', 'Menu', 'Extras']);
+    expect(nightTabs(pick).map((t) => t.label)).toEqual(['Restock', 'Pick gear', 'Menu', 'Extras']);
     s.day = 2;
-    expect(nightTabs(nightViewModel(s, 'p1').gear).map((t) => t.label)).toEqual(['Restock', 'Gear shop', 'Menu', 'Extras']);
+    expect(nightTabs(nightViewModel(s, 'p1').gear).map((t) => t.label)).toEqual(['Restock', 'Menu', 'Gear shop', 'Extras']);
   });
   it('the Gear shop is its own tab (not under Spend), steps are numbered, and Next walks the order', () => {
     const s = run(true);
@@ -23,7 +23,7 @@ describe('G4f: one clear night order in Gear runs', () => {
     expect(h).toContain('data-pane="gear"');
     expect(h).not.toContain('data-sv="stations"');
     expect(h).toMatch(/class="step-n"[^>]*>1<\/span>📦 Restock/);
-    expect(h).toMatch(/next-step" data-action="tab" data-tab="gear"[^>]*>Next: 2 ⚙️ Gear shop ▸/);
+    expect(h).toMatch(/next-step" data-action="tab" data-tab="menu"[^>]*>Next: 2 ☕ Menu ▸/);
     expect(nightHtml(vm, undefined, null, ui({ tab: 'spend' }))).toMatch(/next-step"[^>]*hidden/);
     expect(h).toContain('tn-grid flow');
   });

@@ -55,17 +55,23 @@ export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
  * ads, pitch, grow, checkout). The pick-your-gear night puts the gear first (nothing to stock yet).
  * A "Next ▸" button in the footer walks the order. Classic runs keep their three tabs.
  */
+/*
+ * ui-3.5.1 (Kennedy, Round 4: "it should always start on the resupply screen"): every night opens on
+ * ① Restock, and the order is what a night needs most often first: Restock → Menu → Gear shop → Extras.
+ * The pick-your-gear night keeps Restock first (with a banner pointing at the gear) and puts
+ * ② Pick gear straight after it.
+ */
 export const GEAR_NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
   { id: 'tonight', label: 'Restock', icon: '📦' },
-  { id: 'gear', label: 'Gear shop', icon: '⚙️' },
   { id: 'menu', label: 'Menu', icon: '☕' },
+  { id: 'gear', label: 'Gear shop', icon: '⚙️' },
   { id: 'spend', label: 'Extras', icon: '🛒' },
 ];
 export function nightTabs(gear: GearVM | undefined | null): { id: NightTab; label: string; icon: string }[] {
   if (!gear) return NIGHT_TABS;
   if (!gear.pickNight) return GEAR_NIGHT_TABS;
-  const [restock, shop, ...rest] = GEAR_NIGHT_TABS;
-  return [{ ...shop, label: 'Pick gear' }, restock, ...rest];
+  const [restock, menu, shop, extras] = GEAR_NIGHT_TABS;
+  return [restock, { ...shop, label: 'Pick gear' }, menu, extras];
 }
 export type SpendView = 'cards' | 'stations' | 'ads' | 'pitch' | 'grow' | 'checkout';
 export const SPEND_VIEWS: { id: SpendView; label: string }[] = [
@@ -77,7 +83,7 @@ export const SPEND_VIEWS: { id: SpendView; label: string }[] = [
   { id: 'checkout', label: '🧾 Checkout' },
 ];
 /** What opens over the board. `twist:<drink>` is that drink's twist picker. */
-export type Drawer = 'receipt' | 'report' | 'branch' | 'paper' | 'regulars' | 'signature' | 'pricing' | `twist:${DrinkId}`;
+export type Drawer = 'receipt' | 'report' | 'branch' | 'paper' | 'regulars' | 'signature' | 'pricing' | 'crew' | 'notebook' | `twist:${DrinkId}`;
 
 function needText(cost: number, cash: number): string {
   const need = cost - cash;
@@ -170,7 +176,7 @@ const GEAR_BTN: Record<GearTierState, (t: GearTierVM) => string> = {
 /** The back bar (sell from a slot) and one row of tiers per tree. Bigger = better, cheapest on the left. */
 export function gearBoard(g: GearVM): string {
   const head = g.pickNight
-    ? `<div class="gr-pick"><b>Pick your gear.</b> You start with $120 and an empty counter. Buy one machine to sell something tomorrow, then press <b>Next</b> to stock up on the Restock tab.</div>${g.coopHint ? `<div class="gr-pick gr-coop" role="note"><b>👥 Co-op tip.</b> ${esc(g.coopHint)}</div>` : ''}`
+    ? `<div class="gr-pick"><b>Pick your gear.</b> You start with $120 and an empty counter. Buy one machine to sell something tomorrow, then go back to <b>① Restock</b> to stock up.</div>${g.coopHint ? `<div class="gr-pick gr-coop" role="note"><b>👥 Co-op tip.</b> ${esc(g.coopHint)}</div>` : ''}`
     : '';
   const note = g.note ? `<div class="st-trade warn" role="status">⚖️ ${esc(g.note)}</div>` : '';
   // G8: co-op vote on big buys/sales.
@@ -199,19 +205,29 @@ export function gearBoard(g: GearVM): string {
           <button class="btn ${x.state === 'buy' || x.state === 'upgrade' || x.state === 'another' ? '' : 'ghost'}" data-action="gear-buy" data-gear="${x.id}" ${x.state === 'buy' || x.state === 'upgrade' || x.state === 'another' ? '' : 'disabled'}>${g.voteRule && x.price >= GEAR_VOTE_MIN && x.state !== 'owned' && x.state !== 'passed' ? '🗳️ ' : ''}${esc(GEAR_BTN[x.state](x))}</button>
         </div>`).join('')}</div></div>`)
     .join('');
-  const book = g.notebook.length && !g.pickNight
+  // ui-3.5.1 declutter: the street notebook and drinks to learn open in a drawer (one button here).
+  const more = !g.pickNight && (g.notebook.length || g.levelUps.length)
+    ? `<div class="gr-more"><button class="chip" data-action="drawer" data-d="notebook">📓 Street notebook${g.levelUps.length ? ' &amp; drinks to learn' : ''} ▸</button>${g.crowd ? `<span class="gr-crowd-line">👥 ${esc(g.crowd)}</span>` : ''}</div>`
+    : '';
+  return `<div class="st-board gr-board">${head}${vote}${note}${more}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
+    ${g.fridge ? fridgePanel(g.fridge) : ''}<div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have. Got a free slot? Buy a second of the same machine.</small></div>${rule}${trees}</div>`;
+}
+
+/** ui-3.5.1: the Gear shop's "Street notebook" drawer: how the street rates each kind of drink, and drinks to learn. */
+export function notebookBody(g: GearVM | undefined): string {
+  if (!g) return '';
+  const book = g.notebook.length
     ? `<div class="gr-book" aria-label="Street notebook"><b>📓 Street notebook</b>${g.notebook
         .map((r) => `<span class="gr-bk" title="${esc(r.stars === null ? `Serve ${r.left} more ${r.label.toLowerCase()} drinks to learn how this street feels about them.` : `${r.label} on this street: ${r.stars} of 5.`)}">${r.icon} ${esc(r.label)}: ${r.stars === null ? `<small>${r.served}/${r.served + r.left} served</small>` : `<span class="gr-stars">${'★'.repeat(r.stars)}${'☆'.repeat(5 - r.stars)}</span>`}</span>`)
         .join('')}${g.crowd ? `<span class="gr-bk gr-crowd">👥 ${esc(g.crowd)}</span>` : ''}</div>`
     : '';
   // G6: drinks that level up with use.
-  const lvl = g.levelUps.length && !g.pickNight
+  const lvl = g.levelUps.length
     ? `<div class="gr-book gr-lvl" aria-label="Drinks to learn"><b>🎓 Drinks to learn</b>${g.levelUps
         .map((l) => `<span class="gr-bk${l.learned ? ' done' : ''}" title="${esc(l.learned ? `${l.name} learned: it's on your menu.` : `Serve ${l.count - l.served} more ${l.from}s to learn the ${l.name.toLowerCase()}.`)}">${l.icon} ${esc(l.name)}: ${l.learned ? '<b>learned ✓</b>' : `<small>${l.served}/${l.count} ${esc(l.from)}s${l.also ? ` + ${esc(l.also)}` : ''}${l.needs ? ` · <em class="gr-needs">${esc(l.needs)}</em>` : ''}</small>`}</span>`)
         .join('')}</div>`
     : '';
-  return `<div class="st-board gr-board">${head}${vote}${note}${book}${lvl}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
-    ${g.fridge ? fridgePanel(g.fridge) : ''}<div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have. Got a free slot? Buy a second of the same machine.</small></div>${rule}${trees}</div>`;
+  return `<div class="nb-body">${book}${lvl}</div>`;
 }
 
 /** ui-3.4.1 (FB2 A4): each fridge's little icon on its card. */
@@ -389,6 +405,24 @@ function staffRow(s: StaffVM | undefined): string {
     <button class="btn mini ghost" data-action="staff" data-staff="fire" ${s.crew.length ? '' : 'disabled'}>Let ${s.crew.length ? esc(s.crew[s.crew.length - 1].name) : 'one'} go</button></div></div>`;
 }
 
+/** Brief alerts shown on their own Stock card instead of in Heads up (ui-3.5.1 declutter: one warning, one place). */
+const onStockCard = (a: BriefAlert): boolean => a.id === 'condiments' || (/^stock:[a-z]+:(out|low)$/.test(a.id) && a.fix?.input?.kind === 'restock');
+/** "Beans stock runs out around 2 PM" → "Runs out around 2 PM" for the jar it sits under. */
+const jarLine = (text: string): string => {
+  const t = text.replace(/^.*? stock /, '');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+
+/** ui-3.5.1: the condiment box card: boxes in the corner, servings in the bar, the $6 box. */
+function condimentCard(c: NonNullable<NightVM['condiments']>, alert: BriefAlert | undefined): string {
+  const lvl = alert ? 'low' : '';
+  const why = c.full ? 'The corner is full' : alert ? 'Runs out tomorrow' : `${c.servings}/${c.max} in the bar`;
+  return `<div class="restock cond ${lvl}" data-supply="condiments" title="${esc(alert?.text ?? `Cream and sugar: each box fills the bar to ${c.max} servings.`)}">
+    <span class="cd-ic" aria-hidden="true">🥛</span>
+    <div class="rs-lab"><b>Condiment box · $${c.cost}</b><span>${c.boxes} in the corner</span><em class="rs-why" ${alert ? `data-wid="${esc(alert.id)}"` : ''}>${alert ? `<span class="al-t">${esc(why)}</span>` : esc(why)}</em></div>
+    <button class="btn" data-action="condiment-box" ${c.affordable && !c.full ? '' : 'disabled'} aria-label="Buy a condiment box for $${c.cost}">+1 box · $${c.cost}</button></div>`;
+}
+
 function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
   const b = vm.brief;
   const day = extras?.day ?? 1;
@@ -397,38 +431,61 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     ? `<div class="gr-milestone" role="status"><div class="gr-confetti" aria-hidden="true">${Array.from({ length: 18 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
         <span class="gr-big" aria-hidden="true">${g.icon}</span><b>We're ${g.name === 'The café' ? 'a café' : `a ${esc(g.name.replace(/^The /, '').toLowerCase())}`} now!</b><span>${esc(g.by)} signed the lease.</span></div>`
     : '';
+  // ui-3.5.1: every night opens here, so the first (pick-your-gear) night points at the gear tab.
+  const pick = vm.gear?.pickNight
+    ? `<div class="tn-pick" role="note"><span aria-hidden="true">⚙️</span><span><b>First night: pick your gear.</b> Buy a machine first, then stock up for it here.</span><button class="btn" data-action="tab" data-tab="gear">② Pick gear ▸</button></div>`
+    : '';
   const stats = extras ? `<div class="yd-stats">${extras.served} served · <span class="${extras.lost ? 'neg' : ''}">${extras.lost} walked</span> · ${extras.reputation.toFixed(1)}★${branchChip(vm.branch)}</div>` : '';
   const branchBtn = vm.branch && (vm.branch.open || vm.branch.canOpen) ? `<button class="btn mini ghost" data-action="drawer" data-d="branch">🏪 ${vm.branch.open ? 'Second shop' : 'Open a 2nd shop'} ▸</button>` : '';
-  const yday = b.profit
-    ? `<div class="tn-card yd"><div class="tn-h">Day ${day - 1}</div><div class="yd-hero ${b.loss ? 'loss' : ''}">${esc(b.profit)}</div>${stats}
-        <div class="yd-btns"><button class="btn mini ghost" data-action="drawer" data-d="receipt">Receipt ▸</button>${vm.report ? '<button class="btn mini ghost" data-action="drawer" data-d="report">📋 Report ▸</button>' : ''}${branchBtn}</div></div>`
-    : `<div class="tn-card yd"><div class="tn-h">In the till</div><div class="yd-hero">${esc(vm.cash)}</div><div class="yd-stats">Keep enough for stock.</div>${branchBtn}</div>`;
   const h = b.headline;
-  const tmrw = h
-    ? `<div class="tn-card tm"><div class="tn-h">Tomorrow${extras ? ` · ${esc(extras.weekday)}` : ''}</div><div class="tm-row"><span class="tm-ic" aria-hidden="true">${h.icon}</span><b class="tm-head">${esc(h.text)}</b></div>
+  // ui-3.5.1 declutter: yesterday and tomorrow share one card ("In the till" is gone: the cash is in the header).
+  const ydPart = b.profit
+    ? `<div class="dy-part"><div class="tn-h">Day ${day - 1}</div><div class="yd-hero ${b.loss ? 'loss' : ''}">${esc(b.profit)}</div>${stats}
+        <div class="yd-btns"><button class="btn mini ghost" data-action="drawer" data-d="receipt">Receipt ▸</button>${vm.report ? '<button class="btn mini ghost" data-action="drawer" data-d="report">📋 Report ▸</button>' : ''}${branchBtn}</div></div>`
+    : branchBtn ? `<div class="dy-part">${branchBtn}</div>` : '';
+  const tmPart = h
+    ? `<div class="dy-part"><div class="tn-h">Tomorrow${extras ? ` · ${esc(extras.weekday)}` : ''}</div><div class="tm-row"><span class="tm-ic" aria-hidden="true">${h.icon}</span><b class="tm-head">${esc(h.text)}</b></div>
         <div class="tm-sub">${esc(h.sub)}</div><button class="btn mini ghost" data-action="drawer" data-d="paper">Read the paper ▸</button></div>`
     : '';
+  const dayCard = ydPart || tmPart ? `<div class="tn-card dy">${ydPart}${tmPart}</div>` : '';
+  const listed = b.alerts.filter((a) => !onStockCard(a));
   const tips = vm.tips.length ? `<div class="tips" aria-label="Crew tips"><div class="tips-h">Crew tips</div>${vm.tips.map(tipChip).join('')}</div>` : '';
-  const alerts = `<div class="tn-card al-card"><div class="tn-h">Heads up</div>${b.alerts.length ? `<ul class="alerts">${b.alerts.map(alertRow).join('')}</ul>` : tips ? '' : '<p class="al-none">✓ All set. Open when ready.</p>'}${tips}</div>`;
+  const alerts = `<div class="tn-card al-card">${listed.length || !tips ? '<div class="tn-h">Heads up</div>' : ''}${listed.length ? `<ul class="alerts">${listed.map(alertRow).join('')}</ul>` : tips ? '' : '<p class="al-none">✓ All set. Open when ready.</p>'}${tips}</div>`;
   const warned = new Map(vm.warnings.filter((w) => w.supply).map((w) => [w.supply!, w.level]));
+  const jarAlert = new Map(b.alerts.filter(onStockCard).map((a) => [a.id.split(':')[1] ?? a.id, a]));
   const stock = vm.restock
     .map((r) => {
       // Gear runs only flag what tonight's menu needs (no machine, no alarm); pastries are an optional side.
       const lvl = vm.gear ? warned.get(r.supply) : r.count <= 0 && r.supply !== 'pastry' ? 'danger' : warned.get(r.supply);
       const tip = r.spoilPct ? `${r.spoilPct}% of what's left goes off at close${r.spoiled ? ` (${r.spoiled} went off last night)` : ''}` : '';
+      const a = jarAlert.get(r.supply);
+      // the brief's "runs out around 2 PM" now sits under its own jar; spoilage shows as a line too
+      const why = a && !a.id.endsWith(':out')
+        ? `<em class="rs-why" data-wid="${esc(a.id)}"><span class="al-t">${esc(jarLine(a.text))}</span></em>`
+        : r.spoilPct ? `<em class="rs-why spoil">${r.spoilPct}% goes off at close</em>` : '';
       return `<div class="restock ${lvl ?? ''}" data-supply="${r.supply}" ${tip ? `title="${esc(tip)}"` : ''}>${jar(Math.min(1, r.count / 30), SUPPLY_COLOR[r.supply], 30)}
-        <div class="rs-lab"><b>${SUPPLY_LABEL[r.supply]}</b><span>${r.count}${lvl === 'danger' ? ' · out' : lvl ? ' · low' : ''}</span></div>
+        <div class="rs-lab"><b>${SUPPLY_LABEL[r.supply]}</b><span>${r.count}${lvl === 'danger' ? ' · out' : lvl ? ' · low' : ''}</span>${why}</div>
         <button class="btn" data-action="restock" data-supply="${r.supply}" ${r.affordable ? '' : 'disabled'} aria-label="Buy ${r.packSize} ${SUPPLY_LABEL[r.supply]} for ${esc(r.packCost)}">+${r.packSize} · ${esc(short$(r.packCost))}</button></div>`;
     })
-    .join('');
+    .join('') + (vm.condiments ? condimentCard(vm.condiments, jarAlert.get('condiments')) : '');
+  const n = (vm.restock?.length || 1) + (vm.condiments ? 1 : 0);
+  // ui-3.5.1 declutter: crew roles, hired help, regulars and the scout sit in one "More" row (the roles and staff in a drawer).
   const regs = vm.regulars ?? [];
   const regWarn = regs.filter((r) => r.status !== 'ok').length;
   const r = vm.rival;
-  const extrasRow = `${regs.length ? `<button class="chip ${regWarn ? 'warn' : ''}" data-action="drawer" data-d="regulars">♥ ${regs.length} regulars${regWarn ? ` · ${regWarn} !` : ''} ▸</button>` : ''}
-    ${r.scouted ? `<button class="chip" data-action="drawer" data-d="paper">🔭 Scouted ▸</button>` : `<button class="chip" data-action="scout" ${r.affordable ? '' : 'disabled'} title="See ${esc(r.name)}'s menu and prices for tomorrow">🔭 Scout ${esc(r.name)} · ${esc(short$(r.cost))}</button>`}`;
-  return `${banner}<div class="tn-grid ${vm.gear ? 'flow' : ''}">${yday}${tmrw}${alerts}
-    <div class="tn-card st"><div class="tn-h">Stock</div><div class="restocks" style="--n:${vm.restock?.length || 1}">${stock}</div></div>
-    <div class="tn-card cr"><div class="tn-h">Crew roles</div><div class="roles">${rolesRow(vm.roles)}</div>${staffRow(vm.staff)}<div class="cr-x">${extrasRow}</div></div></div>`;
+  const mine = vm.roles?.find((x) => x.mine);
+  const moreRow = `<div class="tn-more" aria-label="More"><span class="tn-h">More</span>
+    ${vm.roles?.length ? `<button class="chip" data-action="drawer" data-d="crew">🎭 Crew roles${mine ? ` · you: ${mine.icon} ${esc(mine.name)}` : ''} ▸</button>` : ''}
+    ${regs.length ? `<button class="chip ${regWarn ? 'warn' : ''}" data-action="drawer" data-d="regulars">♥ ${regs.length} regulars${regWarn ? ` · ${regWarn} !` : ''} ▸</button>` : ''}
+    ${r.scouted ? `<button class="chip" data-action="drawer" data-d="paper">🔭 Scouted ▸</button>` : `<button class="chip" data-action="scout" ${r.affordable ? '' : 'disabled'} title="See ${esc(r.name)}'s menu and prices for tomorrow">🔭 Scout ${esc(r.name)} · ${esc(short$(r.cost))}</button>`}${staffRow(vm.staff)}</div>`;
+  return `${banner}${pick}<div class="tn-grid ${vm.gear ? 'flow' : ''}">
+    <div class="tn-card st"><div class="tn-h">Stock</div><div class="restocks" style="--n:${n}">${stock}</div></div>
+    ${alerts}${dayCard}</div>${moreRow}`;
+}
+
+/** ui-3.5.1: the crew roles drawer (moved off the Restock tab; hired staff stays on the tab's "More" row). */
+function crewBody(vm: NightVM): string {
+  return `<div class="roles">${rolesRow(vm.roles)}</div>`;
 }
 
 // ---------------------------------------------------------------------------------------------- Drawers
@@ -578,6 +635,8 @@ function drawerHtml(d: Drawer | null, vm: NightVM, extras: NightExtras | undefin
   else if (d === 'regulars') { title = 'Regulars'; body = regularsBody(vm.regulars ?? []); }
   else if (d === 'signature') { title = '⭐ Signature drink'; body = signatureCard(vm.signature, sig); }
   else if (d === 'pricing') { title = 'How pricing works'; body = PRICING_HELP; }
+  else if (d === 'crew') { title = '🎭 Crew roles'; body = crewBody(vm); }
+  else if (d === 'notebook') { title = '📓 Street notebook'; body = notebookBody(vm.gear); }
   else {
     const m = vm.menu?.find((x) => `twist:${x.drink}` === d);
     if (!m) return '';
@@ -669,14 +728,14 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
   let lastVm: NightVM | null = null;
   let lastExtras: NightExtras | undefined;
   let lastKey = '';
   let lastSig = '';
-  let pickedOnce = false;
+  let lastDay: number | null = null;
   let pendingSub: string | null = null;
 
   onAction(container, (action, el) => {
@@ -728,6 +787,7 @@ export function createNight(
     else if (action === 'gear-sell') handlers.onGearSell?.(Number(el.dataset.index));
     else if (action === 'gear-vote') handlers.onGearVote?.(el.dataset.yes === '1');
     else if (action === 'fridge-buy' && isFridgeId(el.dataset.fridge)) handlers.onFridge?.(el.dataset.fridge);
+    else if (action === 'condiment-box') handlers.onCondimentBox?.();
     else if (action === 'fix') {
       const fix = lastVm?.brief.alerts.find((a) => a.id === el.dataset.fix)?.fix?.input;
       if (fix) handlers.onTip?.(fix);
@@ -841,8 +901,10 @@ export function createNight(
     const ring = container.querySelector<SVGCircleElement>('.night-head .ring .arc');
     if (ring && extras) ring.setAttribute('stroke-dasharray', `${(extras.left * RING).toFixed(1)} ${RING.toFixed(1)}`);
     for (const a of vm.brief.alerts) {
-      const t = container.querySelector<HTMLElement>(`.alerts li[data-wid="${a.id}"] .al-t`);
-      if (t) t.textContent = a.text;
+      const li = container.querySelector<HTMLElement>(`.alerts li[data-wid="${a.id}"] .al-t`);
+      if (li) li.textContent = a.text;
+      const jarT = container.querySelector<HTMLElement>(`.restock [data-wid="${a.id}"] .al-t`);
+      if (jarT) jarT.textContent = a.id === 'condiments' ? 'Runs out tomorrow' : jarLine(a.text);
     }
     const fw = container.querySelector('.foot-warn .fw-t');
     if (fw && vm.warnings[0]) fw.textContent = vm.warnings[0].title;
@@ -861,10 +923,12 @@ export function createNight(
       const key = `${nightStructureKey(vm)}#${extras ? nightExtrasKey(extras) : ''}#${room ?? ''}`;
       if (key === lastKey) return patch(vm, extras);
       lastKey = key;
-      // Gear Tree: the first night of a Gear run opens on Spend › Gear ("Pick your gear"), once.
-      if (vm.gear?.pickNight && !pickedOnce) {
-        pickedOnce = true;
-        ui.tab = 'gear';
+      // ui-3.5.1: every night opens on ① Restock (Tonight in a classic run), whatever tab was open last night.
+      const day = extras?.day ?? null;
+      if (day !== lastDay) {
+        lastDay = day;
+        ui.tab = 'tonight';
+        ui.drawer = null;
       }
       // a Gear run has no Spend › Stations view (it is the Gear shop tab); a classic run has no Gear tab
       if (vm.gear && ui.spend === 'stations') ui.spend = 'cards';
