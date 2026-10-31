@@ -135,7 +135,7 @@ export const CATALOGUE: CatalogueItem[] = [
   },
   {
     id: 'secondColdBrewTap',
-    name: 'Second cold brew tap',
+    name: 'Second cold brew keg',
     category: 'equipment',
     cost: 55,
     rarity: 'common',
@@ -143,7 +143,7 @@ export const CATALOGUE: CatalogueItem[] = [
     set: 'coldBar',
     duration: 'permanent',
     effects: [{ kind: 'stationSpeed', station: 'coldBrewTap', mul: 2 }],
-    flavor: 'Two taps, one keg, twice the pours.',
+    flavor: 'Two kegs, one crowd, twice the pours.',
   },
   {
     id: 'bulkBeanDeal',

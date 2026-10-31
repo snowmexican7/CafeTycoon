@@ -6,7 +6,7 @@
  * No RNG here: the order is the pass (stalest first) and the customers (upset, ring time, id).
  */
 import { ECONOMY } from '../data/economy';
-import { CONDIMENTS_ID, PICKUP_ID, SINK_ID } from '../data/layout';
+import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID } from '../data/layout';
 import { CONDIMENTS, noteCondiments, wantsCondiments } from './condiments';
 import { loseCustomer, serveCustomer } from './customers';
 import { LUKEWARM, coolTicks, slotCool } from './cooling';
@@ -16,14 +16,15 @@ import type { Customer, DrinkId, GameState, Station } from './types';
 
 export const PICKUP = { slots: 4 } as const;
 
-/** The counter-kind spots of a Gear shop (FB2 A3: the back sink is one too). */
-export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink';
+/** The counter-kind spots of a Gear shop (FB2 A3: the back sink is one too; FB2 A4: so is the fridge, so neither reads as the till). */
+export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge';
 
 /** Which counter spot `at` is: absent, or the counter's own id, is the till. */
 export function spotOf(at?: Station): CounterSpot {
   if (at?.id === PICKUP_ID) return 'pickup';
   if (at?.id === CONDIMENTS_ID) return 'condiments';
   if (at?.id === SINK_ID) return 'sink';
+  if (at?.id === FRIDGE_ID) return 'fridge';
   return 'till';
 }
 

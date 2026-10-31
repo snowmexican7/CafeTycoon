@@ -10,6 +10,8 @@ import { botLook, botTag, emotePhase, type BotLook } from '../crewModel';
 import { jitterPx, type CollapsePose } from '../espressoPose';
 import { customerSpots, type SpotsLayout } from '../pickupModel';
 import { drawBox } from './pickup';
+import { drawCarafe } from './sink';
+import { CARRIED_FILL } from '../sinkModel';
 
 /** Feet sit a little below the sim centre so a barista reads as standing on its tile. */
 export const FEET_OFFSET = 0.3;
@@ -250,6 +252,8 @@ export class Actors {
         });
         // 3.3.1: a condiment stock box carried in both hands, in front of the apron
         if (p.tool === 'box') drawBox(sprite.body, 0, -24, 1.15);
+        // 3.3.3 (FB2 A3): the old drip pot, held out in front on the way to the sink
+        else if (p.tool === 'pot') drawCarafe(sprite.body, -2, -14, 0.85, CARRIED_FILL, 'cold');
         sprite.key = key;
       }
       const pos = positions[p.id] ?? p.pos;
@@ -281,7 +285,7 @@ export class Actors {
       sprite.tag.visible = !out;
 
       // on mop duty: the tag says so, so the crew knows who to shout for
-      const toolTag = p.tool === 'mop' ? ' · mop' : p.tool === 'box' ? ' · box' : '';
+      const toolTag = p.tool === 'mop' ? ' · mop' : p.tool === 'box' ? ' · box' : p.tool === 'pot' ? ' · pot' : '';
       const name = `${p.name}${toolTag}`;
       // bots: a white tag in their colour ("Bo · bot"); away humans: a grey "· away" tag and z z z
       const text = p.bot ? `${botTag(p.name)}${toolTag}` : p.connected ? name : `${p.name} · away`;

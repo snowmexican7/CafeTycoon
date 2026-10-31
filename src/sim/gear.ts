@@ -25,7 +25,9 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SN
  */
 import { GEAR, GEAR_START, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
-import { stationsFromSlots, slotCount } from './slots';
+import { ensureCounterSpots, stationsFromSlots, slotCount } from './slots';
+import { buyFridgeCard, fridgeCards } from './fridge';
+import { FRIDGES } from '../data/fridges';
 import { CONDIMENTS } from './condiments';
 import { steepMorning } from './steep';
 import { keepStale } from './sink';
@@ -62,6 +64,7 @@ export function gearStart(state: GameState): void {
   state.equipment = [];
   state.gearLog = [];
   state.stations = stationsFromSlots(state.tier, slots, gear);
+  ensureCounterSpots(state); // FB2 A4: the fridge, when the shop size comes with one
   // Batch/pickup: a full condiment bar and no stock boxes yet.
   state.condiments = { servings: CONDIMENTS.servings };
   state.condimentBoxes = 0;
@@ -71,12 +74,15 @@ function rebuild(state: GameState): void {
   const old = state.stations;
   state.stations = stationsFromSlots(state.tier, state.slots ?? [], state.slotGear ?? []);
   keepStale(old, state.stations); // FB2 A3: a stale pot stays stale on the same machine
+  ensureCounterSpots(state);
 }
 
 export function applyGearInput(state: GameState, input: Extract<PlayerInput, { kind: 'gear' }>): GameState {
   if (!isGearRun(state) || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
   if (!p || !p.connected || p.bot) return state;
+  // FB2 A4: an open fridge-card proposal takes the votes (one proposal at a time, gear or fridge).
+  if (input.action === 'vote' && state.fridgeVote) return fridgeCastVote(state, p, input.yes);
   // The proposer's Withdraw comes first, so a vote that only passes because the others left can't buy on the way out.
   if (input.action === 'vote' && !input.yes && state.gearVote?.by === p.id) return gearCastVote(state, p, false);
   settleVote(state); // someone may have left since the last vote
@@ -84,7 +90,7 @@ export function applyGearInput(state: GameState, input: Extract<PlayerInput, { k
   // G8: a big buy/sell with more than one human becomes a proposal (one open at a time).
   const big = bigDeal(state, input);
   if (big && voters(state).length > 1) {
-    if (state.gearVote) return state;
+    if (state.gearVote || state.fridgeVote) return state;
     state.gearVote = { by: p.id, byName: p.name, ...big, yes: [p.id], no: [] };
     delete state.gearVoteLast;
     return state;
@@ -123,8 +129,62 @@ function gearCastVote(state: GameState, p: Player, yes: boolean): GameState {
   return settleVote(state);
 }
 
+/**
+ * FB2 A4 night input: buy a fridge card (sim/fridge.ts `fridgeCards`). People only. Like gear, a $50+ card (the
+ * Udder-Matic) with more than one person in the room becomes a co-op proposal (`state.fridgeVote`), voted with the
+ * gear vote input; the $20 cube is bought at once.
+ */
+export function applyFridgeInput(state: GameState, input: Extract<PlayerInput, { kind: 'fridge' }>): GameState {
+  if (!isGearRun(state) || state.phase !== 'night') return state;
+  const p = state.players.find((x) => x.id === input.playerId);
+  if (!p || !p.connected || p.bot) return state;
+  settleVote(state);
+  const card = fridgeCards(state).find((c) => c.id === input.fridge);
+  if (!card) return state;
+  if (card.price >= GEAR_VOTE_MIN && voters(state).length > 1) {
+    if (state.gearVote || state.fridgeVote) return state;
+    state.fridgeVote = { by: p.id, byName: p.name, fridge: card.id, amount: card.price, yes: [p.id], no: [] };
+    delete state.gearVoteLast;
+    return state;
+  }
+  buyFridgeCard(state, card.id);
+  return state;
+}
+
+/** FB2 A4: a yes or no on the open fridge proposal (the proposer's no withdraws it). Same majority rule as gear. */
+function fridgeCastVote(state: GameState, p: Player, yes: boolean): GameState {
+  const v = state.fridgeVote!;
+  if (!yes && v.by === p.id) return endFridgeVote(state, false, `${v.byName} withdrew the ${FRIDGES[v.fridge].name} vote.`);
+  if (v.yes.includes(p.id) || v.no.includes(p.id)) return state;
+  (yes ? v.yes : v.no).push(p.id);
+  return settleFridgeVote(state);
+}
+
+function settleFridgeVote(state: GameState): GameState {
+  const v = state.fridgeVote;
+  if (!v) return state;
+  const ids = new Set(voters(state).map((x) => x.id));
+  const yes = v.yes.filter((id) => ids.has(id)).length;
+  const no = v.no.filter((id) => ids.has(id)).length;
+  const n = ids.size;
+  const name = FRIDGES[v.fridge].name;
+  if (yes * 2 > n) {
+    const done = buyFridgeCard(state, v.fridge);
+    return endFridgeVote(state, done, done ? `Vote passed: bought ${name}.` : `Vote passed, but there wasn't enough cash for ${name}.`);
+  }
+  if ((n - no) * 2 <= n) return endFridgeVote(state, false, `Vote failed: no ${name} tonight.`);
+  return state;
+}
+
+function endFridgeVote(state: GameState, passed: boolean, text: string): GameState {
+  delete state.fridgeVote;
+  state.gearVoteLast = { text, passed };
+  return state;
+}
+
 /** G8: resolve the open vote if a majority is reached either way (also after someone leaves). */
 export function settleVote(state: GameState): GameState {
+  settleFridgeVote(state); // FB2 A4
   const v = state.gearVote;
   if (!v) return state;
   const ids = new Set(voters(state).map((x) => x.id));

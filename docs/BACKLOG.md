@@ -2053,6 +2053,50 @@ Open (sim lane):
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
 
+## ui-3.3.5 (UI lane): no "tap" in cold brew wording
+
+- [x] UI strings: `live.ts` `DRINK_STEPS` ('Tap' → 'Pour cold brew'; iced latte 'Ice + milk') and
+  `STATION_NAME.coldBrewTap` → 'Cold brew'; `countsModel.STEP_ICON` keys follow; `viewModels` station list
+  '🧊 cold brew' and checkout fee '% per card sale'; `scene.ts` steep pop-up "N cups of cold brew ready".
+  Touch-gesture "tap" ("Tap for steps", "tap to undo", "Tap a slot") is left as is: it means tapping the screen.
+- [ ] Sim/data strings still saying tap: listed for Claude in `docs/HANDOFF.md` (Grok → Claude, 2026-10-30).
+
+## ui-3.3.4 (UI lane): A5 counts, GEAR_TREE 5b: notes for Claude
+
+- [x] **A5 counts:** `render/countsModel.stationCounts(state: GameState)` now loops `stationCountsLeft(state)` and only
+  adds the look (tone `low` for a batch tap at ≤ `COUNT_LOW`, `cold` for a cold/stale drip pot or a cold waiting
+  output, and the cooling ring). The old UI-side rules (skipping counters/trash, brewing, pot out) are gone. The
+  condiment bar is skipped on purpose: its servings gauge already shows the same number. `ui/gearVM.hudGearVM`
+  reads `stationLeft` for the tap's "n/8 left" and the pot's "n/8 cups" (null → "sold out" / "empty pot (E)").
+- [x] **GEAR_TREE 5b:** APPROVED; folds in the HANDOFF decisions; the fridge table is now the café-size plan.
+- A4 (fridge) and C9 (wand) not landed in the sim yet, so nothing wired; names stay as planned in HANDOFF.
+
+## ui-3.3.3 (UI lane): sink, pots, cold cups, solo helpers: notes for Claude
+
+Wires the UI side of Feedback 2 A1–A3. No sim, net, host, storage or data changes; protocol unchanged.
+
+- [x] **A3 sink:** `src/render/sinkModel.ts` (pure, tested) and `src/render/layers/sink.ts`; the sink fixture is
+  `buildSink` in `layers/stations.ts`. `pickupModel.counterSpotOf` and `countsModel` treat `'sink'` as its own spot
+  (no till, no count). `live.ts`: `counterName` → "Back sink"; `sinkHint` runs before the other counter hints:
+  drink → "Dump it" (cold: "Dump it: the … went cold"), `tool === 'pot'` → "Dump the pot", grounds → "Grounds go in
+  the bin", empty hands → nothing.
+- [x] **A3 pot carry:** `tool === 'pot'` draws the pot in hand (`layers/actors.ts`), hint "Carry it to the sink";
+  the hand slot shows `TOOL_LABEL` ("Old drip pot"). A drip machine with `needsDump` shows "Stale pot / Pot went
+  cold: lift the pot (E)" and the badge "STALE: dump at sink" / "COLD: dump at sink"; `Station.potOut` shows
+  "POT OUT · name" and "pot out (sink)" on the Gear card.
+- [x] **A3 events:** splashes on `mess.spawn` (milk, grounds) and `bin.leak` (`chaosModel`); sounds `sinkDump`,
+  `potLift`, `stalePot`, `binLeak`, `coldCup` (`audio/cues.ts`, `audio/recipes.ts`); pop-ups for `sink.dump`,
+  `pot.stale`, `bin.leak`, `pickup.cold` (`crewModel` notes, held ~3 s in `layers/fx.ts`).
+- [x] **A2 cooling ring:** `pickupModel` and `passCool` read `slotCool` when `coolsOnCounter` (hot cups) and
+  fall back to `PassItem.ticksLeft` for iced/old cups; drip rings keep `potColdAt`, and a waiting machine output
+  now rings by `outputSince`; a held cup reads `heldCool` (hand slot
+  "cold" tag, hint "cold: dump it at the sink"). Pickup take-back hint uses `takeBackIndex` / `takeBackCold`.
+- [x] **A1 solo toggle:** `title.ts` `SOLO_BOT_CHOICES` [0,1,2], `soloBotsSeg`, `readSoloBots`; `StartChoice.soloBots`
+  is saved by `startSolo` in `src/main.ts` via `settings.set({ soloBots })` (UI side; the `CreateRunOptions` line is
+  untouched).
+- [x] **A5 counts:** done in ui-3.3.4.
+- Crew tips with 0 solo bots: still silent (open question in HANDOFF).
+
 ## ui-3.3.2 (UI lane): counts, cooling rings, step icons: notes for Claude
 
 Built in `src/render/countsModel.ts` (pure, tested) and `src/render/layers/counts.ts` (Pixi). No sim changes.
@@ -2082,7 +2126,7 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   while they hold something it takes, or until an order needing it has waited `helperGuardSeconds` (8 s); the
   till stays theirs only while their hands are empty and the front customer is under 3 s; fresh tickets
   (`helperTicketSeconds`, 3 s after appearing or being rung) are left to free people. No new state, inputs or
-  events. **UI lane:** draw the Off/1/2 solo toggle writing `soloBots`. Open: tune both windows by playtest.
+  events. **UI lane:** draw the Off/1/2 solo toggle writing `soloBots` (done, ui-3.3.3). Open: tune both windows by playtest.
   Morning-prompt leftovers (optional, not built): bots favouring well-tipping families and drinks near a level-up;
   bots treating a flowing D4b as the fast station; planner leaning to cash late in a short season week; bot
   self-review from `report.crew`; G8 vote toast (UI lane).
@@ -2100,7 +2144,7 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   `review.bad { customer, drink, reason: 'cold' }`, `pickup.takeBack { drink, by, cold }` (`pass.take` still
   fires). **UI lane:** `pickupModel`'s stale blink and 3.3.2's `passCool` read `PassItem.ticksLeft`, which no
   longer runs down for hot Gear cups: read `slotCool` instead (note it runs 0 fresh → 1 cold, the opposite of
-  `countsModel.coolFraction`). Settles pickup M2. Open: no thermal gear yet; p4Smoke end cash is lower (served
+  `countsModel.coolFraction`) (done, ui-3.3.3). Settles pickup M2. Open: no thermal gear yet; p4Smoke end cash is lower (served
   within 2%), to revisit in the A balance pass.
 - **A3 back sink, stale pots, more messes (`fb2-a3`, protocol 43).** Spawns: `src/sim/spawn.ts` `freeSpot`/`settle` keep
   every barista placed off fixtures.
@@ -2118,10 +2162,62 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
     - skip a machine whose pot a person carries;
     - pour spare and cold drinks down the sink when it is as close as the bin;
     - mop any mess when they have nothing to make (orders still interrupt).
-  - **UI lane to wire:**
+  - **UI lane to wire (done, ui-3.3.3):**
     - sink art and a hint (`spotOf` → `'sink'`; today `counterName` says "Till", `gearCounterHint` falls into the condiment-bar branch, and `render/pickupModel.counterSpotOf` draws a till);
     - the pot in hand (`tool === 'pot'`, hint "carry it to the sink");
     - a cold or stale pot hint and a "STALE: dump at sink" badge (`Station.stale`);
     - a machine with its pot out (`Station.potOut`);
     - puddle splashes on `mess.spawn` / `bin.leak`;
     - sounds for `sink.dump` / `pot.lift`.
+- **A5 exact counts (`fb2-a5`).** `src/sim/counts.ts`: `stationLeft(state, stationId): number | null` and
+  `stationCountsLeft(state): { id, n }[]` (stations with a count, in station order). Null means draw nothing, never 0.
+  Counts: tap `batchLeft`; drip `potLeft` (null while brewing or while the pot is out; a stale pot still shows its
+  cups); a waiting machine output 1 (one slot per machine); condiment bar servings; pickup counter cups. Till, sink,
+  trash: null. Fridge milk joins with A4. No state, inputs or events. **UI lane:** have `countsModel.stationCounts`
+  call `stationCountsLeft` (widen its state type to `GameState`) instead of reading fields; cooling stays in
+  `src/sim/cooling.ts` (`stationCool`, `slotCool`). (done, ui-3.3.4)
+- **A4 Fridge, morning setup and closing (`fb2-a4`, protocol 44).**
+
+  **Ownership.** Gear runs keep milk in a fridge, a counter-kind station with id `fridge` (`FRIDGE_ID`) at `layoutFor(tier).fridge` = (1,3), and `spotOf` returns `'fridge'`. The fridge follows the shop size (`src/data/fridges.ts`):
+  - the stand has none until it buys the Dorm Room Cube (f1, a $20 card, holds 24);
+  - the cart comes with the Garage Beer Fridge (f2, 48);
+  - the café comes with the Chrome Reach-In (f3, 96, overnight milk spoil ×0.5);
+  - the café can buy the Udder-Matic 3000 (f4, a $320 card, 128, ×0.25, pours milk to the bar by itself).
+
+  Fridges are never sold or downgraded. `GameState.fridge?: FridgeId` is the one bought; `fridgeGear(state)` is the one the shop has (null = none). The shop shows `fridgeCards(state)` (`{ id, price }[]`) as single cards; a buy sends `{ kind: 'fridge', fridge }`.
+
+  **No fridge** means no milk restock, no cartons, and a bar that spoils every night. Milk restock buys only whole packs that fit.
+
+  **Milk out at the bar.** `supplies.milk` is the milk in the fridge; steamers, wands and the tap draw from `GameState.milkOut`. E with empty hands at the fridge takes a carton (`Player.tool = 'milk'`, `Player.carry` ≤ 8; `fridge.take { by, item: 'milk', n }`). E at a steamer, wand or tap puts it out (`milk.out { by, n, station }`).
+
+  **Closing soon** is the last 30 s of the day (`GameState.closingSoonAt`, `closing.soon { left }` once, also on close-early). During it:
+  - empty hands at a milk station lift the milk (`milk.lift { by, n, station }`);
+  - empty hands at the condiment bar lift what's left (`Player.tool = 'bar'`, `bar.lift { by, n }`);
+  - E at the fridge stores either (`fridge.put { by, item: 'milk' | 'bar', n }`). Bar servings go to `GameState.barAway` and come back on the bar next morning; any overflow waits in the fridge.
+
+  **At close**, anything left out spoils: `supply.spoil { item: 'milk' | 'bar', count }`, `DayStats.spoiled.milk` and `DayStats.spoiledBar`, costed in `spoiledValue`. The Udder-Matic emits `fridge.auto { n }`.
+
+  **Helpers** (sim/fridge.ts): `closingChecklist(state) → { milkAway, barAway, potsEmpty, floorClean, counterClear }`, `closingSoon`, `readyStock(state, 'milk')` (what the steamer can draw now), `fridgeGear`, `fridgeCards`, `fridgeCapacity`, `autoMilk`. A5's `stationLeft(state, 'fridge')` is the milk inside the fridge.
+
+  **Bots** put a carton out ahead of milk orders, count cartons on their way, and put the milk and the bar away once the doors lock and nothing is left to steam (or in the last 8 s); the closing waits for them.
+
+  **Planner and brief:** advice `fridge:f1` / `fridge:f4` and alert `fridge`.
+
+  **UI lane:**
+  - the fridge sprite, and its level from `fridgeGear`;
+  - the two fridge cards on the night shop;
+  - a "Put a carton out" hint from `readyStock`;
+  - the Closing soon banner with checklist ticks;
+  - carton and bar-box carry sprites;
+  - fridge hand hints: live.ts `counterName` and `gearCounterHint` currently treat `'fridge'` as the till or the bar, and render `pickupModel.counterSpotOf` draws it as a till;
+  - at the tap during closing soon, a hint that E lifts the milk.
+
+  **No fridge.** Pantry milk doesn't count until a fridge is owned.
+
+  **Co-op vote.** The Udder-Matic card ($320) goes to a co-op vote like $50+ gear: `state.fridgeVote { by, byName, fridge, amount, yes, no }`, voted with the gear vote input, one proposal at a time, lapsing at opening, with the result in `gearVoteLast`. The UI lane draws it like the gear vote.
+
+  **Known limit.** Last call doesn't interrupt a bot that is busy making a drink.
+- **Cold brew wording (`fb2-tap-wording`, Grok's request).** No "tap" in sim/data player text: tickets read
+  'Pour cold brew' / 'Ice + milk' / 'Cold brew again (sweet cream)'; equipment 'Cold-brew keg', catalogue 'Second
+  cold brew keg', gear c4 'The Kegerator', describe 'cold brew', steep's morning note "…had no room left…". Code ids
+  (`coldBrewTap`, `batchLeft`) unchanged; card-payment "tap terminal" unchanged.

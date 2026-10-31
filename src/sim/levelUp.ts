@@ -25,7 +25,7 @@ export const LEVEL_UPS: LevelUp[] = [
   { from: 'latte', count: 25, unlocks: 'mocha', text: '25 lattes! A kid points at the cocoa tin: Mocha unlocked! (Latte in hand at the steamer, needs flavours.)' },
   // G6c: the rest of doc §6.
   { from: 'espresso', count: 30, unlocks: 'doppio', needs: { tree: 'espresso', tier: 3, label: 'a Sylvia or better' }, text: '30 shots! A regular wants two in one cup: Doppio unlocked! (Espresso in hand at the espresso machine.)' },
-  { from: 'coldBrew', count: 15, unlocks: 'sweetCream', text: '15 cold brews. Someone asks for "the creamy one": Sweet-cream cold brew unlocked! (Cold brew in hand at the tap.)' },
+  { from: 'coldBrew', count: 15, unlocks: 'sweetCream', text: '15 cold brews. Someone asks for "the creamy one": Sweet-cream cold brew unlocked! (Pour a cold brew, then add the cream.)' },
   { from: 'drip', count: 12, unlocks: 'cafeAuLait', needs: { tree: 'steamer', tier: 1, label: 'a milk steamer' }, text: '12 drips poured. A visitor from Montréal asks for milk in it: Café au lait unlocked! (Drip in hand at the steamer.)' },
   { from: 'drip', count: 20, unlocks: 'redEye', needs: { tree: 'espresso', tier: 2, label: 'a real espresso machine' }, text: '20 drips! A tired nurse wants a shot in hers: Red-eye unlocked! (Drip in hand at the espresso machine.)' },
 ];

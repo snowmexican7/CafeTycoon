@@ -129,14 +129,14 @@ describe('steeping at night: morning top-up, leftovers, closing (Task 4)', () =>
     const s = startDay(n);
     const tap = tapsOf(s)[0];
     expect([tap.batchLeft, tap.batchOld, s.supplies.concentrate, s.coldBrewLeft]).toEqual([8, 8, 10, undefined]);
-    expect(s.morningNotes.some((x) => x === "12 cups of yesterday's cold brew had no tap to go in and were poured out.")).toBe(true);
+    expect(s.morningNotes.some((x) => x === "12 cups of yesterday's cold brew had no room left and were poured out.")).toBe(true);
     // the tap sold or downgraded away: no tap at all
     const none = withSupplies(gearNight([]), { concentrate: 10 });
     none.coldBrewLeft = 5;
     const d = startDay(none);
     expect(d.coldBrewLeft).toBeUndefined();
     expect(d.supplies.concentrate).toBe(10);
-    expect(d.morningNotes.some((x) => x === "5 cups of yesterday's cold brew had no tap to go in and were poured out.")).toBe(true);
+    expect(d.morningNotes.some((x) => x === "5 cups of yesterday's cold brew had no room left and were poured out.")).toBe(true);
     expect(d.stations.every((x) => (x.batchLeft ?? 0) >= 0)).toBe(true);
     // leftovers that fit go into the cheaper tap without a note
     const fit = withSupplies(gearNight(['c2']), { concentrate: 3 });
@@ -149,7 +149,7 @@ describe('steeping at night: morning top-up, leftovers, closing (Task 4)', () =>
   it('C4 and C5 steep up to 60', () => {
     expect(steepCap(gearNight(['c4']))).toBe(60);
     expect(steepCap(gearNight(['c5']))).toBe(60);
-    expect(GEAR.c4.blurb).toBe('A real tap. Steep up to 60 cups a night.');
+    expect(GEAR.c4.blurb).toBe('A real keg. Steep up to 60 cups a night.');
   });
 
   it('the jar crack takes cups after steeping and never leaves more old cups than cups', () => {

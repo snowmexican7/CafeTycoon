@@ -6,7 +6,7 @@
  *
  *   type NightFix = DistributiveOmit<PlayerInput, 'playerId'>
  *   interface NightAlert {
- *     id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | rival:promo | rival:loyalty | signature | steep | condiments
+ *     id: string;   // cash:short | cash:low | stock:<supply>:out | stock:<supply>:low | soldOut | spoil | grow | checkout | rival | rival:promo | rival:loyalty | signature | steep | condiments | fridge
  *     kind: 'cash' | 'stock' | 'soldOut' | 'spoil' | 'grow' | 'checkout' | 'rival' | 'signature';
  *     severity: 'info' | 'warn' | 'danger';
  *     text: string;
@@ -36,6 +36,8 @@ import { profitOf } from './profit';
 import { copyIsLive, countered, isPromoDay, loyaltyLive, RIVAL, sigPrice } from './rival';
 import { FRESH, spoilCount } from './spoilage';
 import { steepPlan } from './steep';
+import { fridgeCapacity, fridgeWanted, packsThatFit } from './fridge';
+import { FRIDGES } from '../data/fridges';
 import { menuDrinks, neededSupplies, SUPPLY_IDS } from './unlocks';
 import type { CheckoutId, DrinkId, GameState, PlayerInput, SupplyId } from './types';
 
@@ -125,8 +127,9 @@ export function runOutFraction(state: GameState, supply: SupplyId): number | nul
 }
 
 /** A restock fix, or nothing when the till cannot pay for it (applying it would be a silent no-op). */
-function restockFix(state: GameState, supply: SupplyId, packs: number): NightFix | undefined {
-  return state.cash < restockCost(state, supply, packs) ? undefined : { kind: 'restock', supply, packs };
+function restockFix(state: GameState, supply: SupplyId, want: number): NightFix | undefined {
+  const packs = packsThatFit(state, supply, want); // FB2 A4: Gear milk only as much as the fridge holds
+  return packs <= 0 || state.cash < restockCost(state, supply, packs) ? undefined : { kind: 'restock', supply, packs };
 }
 
 function packsToCover(use: number, have: number, supply: SupplyId): number {
@@ -195,7 +198,7 @@ export function nightBrief(state: GameState): NightBrief {
     if (state.condiments) {
       const orders = expectedOrders(state);
       const need = Math.ceil(CONDIMENTS.share * (orders.drip + orders.coldBrew));
-      const have = state.condiments.servings + (state.condimentBoxes ?? 0) * CONDIMENTS.servings;
+      const have = state.condiments.servings + (state.barAway ?? 0) + (state.condimentBoxes ?? 0) * CONDIMENTS.servings;
       if (need > have) {
         const boxes = Math.ceil((need - have) / CONDIMENTS.servings);
         const alert: NightAlert = {
@@ -208,6 +211,17 @@ export function nightBrief(state: GameState): NightBrief {
         alerts.push(alert);
       }
     }
+  }
+
+  // 2c. FB2 A4 (Gear): no fridge (milk drinks off, the bar goes bad each night), or a day's milk won't fit in the café's.
+  const fridge = fridgeWanted(state, use.milk);
+  if (fridge) {
+    const text = fridge.why === 'none'
+      ? `No fridge: milk drinks are off and the condiment bar goes bad every night (the ${FRIDGES.f1.name} is $${FRIDGES.f1.price})`
+      : `The fridge holds ${fridgeCapacity(state)} milk; a day needs about ${use.milk}`;
+    const alert: NightAlert = { id: 'fridge', kind: 'stock', severity: 'warn', text };
+    if (state.cash >= fridge.price) alert.fix = { kind: 'fridge', fridge: fridge.id };
+    alerts.push(alert);
   }
 
   // 3. sold out yesterday: restock whichever needed supply is thinnest against the day's use

@@ -25,6 +25,8 @@ function fullShop(tier: TierId): GameState {
   s.slotGear = [...FULL[tier]];
   s.slots = FULL[tier].map((id) => GEAR[id].station);
   s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
+  s.fridge = 'f1'; // FB2 A4: the stand's cube (the cart and café come with theirs)
+  ensureCounterSpots(s);
   return s;
 }
 
@@ -40,6 +42,8 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
         ['pickup', { x: 5, y: 6 }],
         ['condiments', { x: 4, y: 6 }],
         ['sink', layoutFor(tier).sink], // FB2 A3: the back sink is a counter-kind fixed spot too
+        // FB2 A4: the cart and the café come with a fridge (the stand buys its cube)
+        ...(tier === 'stand' ? [] : [['fridge', { x: 1, y: 3 }]]),
       ]);
       const spot = s.stations.find((x) => x.id === 'pickup')!;
       expect(spot).toEqual({ id: 'pickup', kind: 'counter', pos: { x: 5, y: 6 }, busyTicksLeft: 0, output: null, occupiedBy: null });
@@ -66,7 +70,7 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
   it('every spot has a barista tile; the door, rogue start and both corners stay clear', () => {
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
       const s = fullShop(tier);
-      for (const id of ['counter', 'pickup', 'condiments']) {
+      for (const id of ['counter', 'pickup', 'condiments', 'fridge']) {
         expect(targetNodes(s, s.stations.find((x) => x.id === id)!, LAYOUT.door).length, `${tier} ${id}`).toBeGreaterThan(0);
       }
       expect(findPath(s, LAYOUT.rogueStart, LAYOUT.door)).not.toBeNull();
@@ -83,15 +87,15 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
     expect(s.stations.some((x) => x.gear === 'c1')).toBe(true);
     const ids = () => s.stations.filter((x) => x.kind === 'counter').map((x) => x.id);
-    expect(ids()).toEqual(['counter', 'pickup', 'condiments', 'sink']);
+    expect(ids()).toEqual(['counter', 'pickup', 'condiments', 'sink', 'fridge']); // FB2 A4: the cart's fridge
 
-    s.stations = s.stations.filter((x) => x.id !== 'pickup' && x.id !== 'condiments' && x.id !== 'sink');
+    s.stations = s.stations.filter((x) => x.id !== 'pickup' && x.id !== 'condiments' && x.id !== 'sink' && x.id !== 'fridge');
     ensureCounterSpots(s);
     ensureCounterSpots(s);
-    expect(ids()).toEqual(['counter', 'pickup', 'condiments', 'sink']);
+    expect(ids()).toEqual(['counter', 'pickup', 'condiments', 'sink', 'fridge']);
     s.stations = s.stations.filter((x) => x.id !== 'condiments');
     ensureCounterSpots(s);
-    expect(ids()).toEqual(['counter', 'pickup', 'sink', 'condiments']);
+    expect(ids()).toEqual(['counter', 'pickup', 'sink', 'fridge', 'condiments']);
 
     const classic = createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 } });
     ensureCounterSpots(classic);

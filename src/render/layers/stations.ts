@@ -133,7 +133,7 @@ const TWIN_SCALE = 0.7;
  * 3.3.1 Gear batch/pickup: which of the three counter spots a counter station is. `till` in Gear is the
  * register only; `pickup` has the four cup coasters; `condiments` is the cream & sugar bar. Classic = undefined.
  */
-export type CounterSpot = 'till' | 'pickup' | 'condiments';
+export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink';
 
 /** Where pickup coaster `i` (0..3) sits on the pickup counter, in screen px. Shared with the per-frame cups. */
 export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: number } {
@@ -142,11 +142,24 @@ export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: n
   return { x: sx(pos.x) - span / 2 + i * step, y: sy(pos.y) - 18 };
 }
 
-export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour', spot?: CounterSpot): Container {
+/**
+ * `variant`: 'pour' draws the pour-over bar; 'pot' (FB2 A3, a Gear drip machine with a carafe) leaves the carafe
+ * off the static art so the per-frame sink layer can draw it full, cold, stale or gone to the sink.
+ */
+export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour' | 'pot', spot?: CounterSpot): Container {
   plainArt = twin;
   let root: Container;
   try {
-    root = variant === 'pour' ? buildPourOver(pos) : kind === 'counter' && spot === 'pickup' ? buildPickupCounter(pos) : kind === 'counter' && spot === 'condiments' ? buildCondimentBar(pos) : buildStationArt(kind, pos, checkout, spot === 'till' ? 'TILL' : undefined);
+    root =
+      variant === 'pour'
+        ? buildPourOver(pos)
+        : kind === 'counter' && spot === 'pickup'
+          ? buildPickupCounter(pos)
+          : kind === 'counter' && spot === 'condiments'
+            ? buildCondimentBar(pos)
+            : kind === 'counter' && spot === 'sink'
+              ? buildSink(pos)
+              : buildStationArt(kind, pos, checkout, spot === 'till' ? 'TILL' : undefined, variant === 'pot');
   } finally {
     plainArt = false;
   }
@@ -200,6 +213,40 @@ function buildPourOver(pos: Vec2): Container {
   g.moveTo(K - 6, top - 14).quadraticCurveTo(K - 15, top - 18, K - 13, top - 34).stroke({ width: 2.5, color: 0x2d2a30, cap: 'round' });
   g.moveTo(K - 15, top - 40).quadraticCurveTo(K - 12, top - 46, K - 9, top - 40).stroke({ width: 2, color: 0xffffff, alpha: 0.6 });
   plate(root, g, cx, cy, 'POUR-OVER');
+  return root;
+}
+
+/**
+ * 3.3.3 (FB2 A3): the back sink, a permanent Gear fixture against the right wall: a tiled splashback, a steel
+ * basin with a drain, an arched faucet with hot and cold taps, and a sponge. No number badge (it's one of a kind).
+ */
+function buildSink(pos: Vec2): Container {
+  const root = new Container();
+  const g = new Graphics();
+  root.addChild(g);
+  const cx = sx(pos.x);
+  const cy = sy(pos.y);
+  root.zIndex = stationDepth(pos);
+  // white tiles behind it, so it reads as plumbed into the wall
+  g.roundRect(cx - 32, cy - 78, 64, 46, 5).fill(0xf4f7f8).stroke({ width: 2, color: 0xb8c4cc });
+  for (let i = 1; i < 4; i++) g.moveTo(cx - 32 + i * 16, cy - 78).lineTo(cx - 32 + i * 16, cy - 32).stroke({ width: 1, color: 0xc9d4dc });
+  for (let j = 1; j < 3; j++) g.moveTo(cx - 32, cy - 78 + j * 15).lineTo(cx + 32, cy - 78 + j * 15).stroke({ width: 1, color: 0xc9d4dc });
+  counterBody(g, cx, cy, 0xd7dee3);
+  // the basin, sunk into the steel top
+  g.roundRect(cx - 24, cy - 31, 40, 22, 7).fill(0x9aa6ae).stroke({ width: 2, color: 0x6f7a82 });
+  g.roundRect(cx - 21, cy - 28, 34, 16, 5).fill(0x7b8790);
+  g.ellipse(cx - 4, cy - 19, 4, 2.2).fill(0x3c4349).stroke({ width: 1, color: 0xb8c4cc });
+  g.moveTo(cx - 17, cy - 26).lineTo(cx + 8, cy - 26).stroke({ width: 1.5, color: 0xffffff, alpha: 0.35 });
+  // the faucet: a goose-neck arching over the basin
+  g.roundRect(cx + 17, cy - 40, 7, 10, 2).fill(CHROME).stroke({ width: 1, color: MAT.chromeDk });
+  g.moveTo(cx + 20.5, cy - 38).lineTo(cx + 20.5, cy - 58).quadraticCurveTo(cx + 20, cy - 66, cx + 8, cy - 64).lineTo(cx + 2, cy - 60).stroke({ width: 4, color: 0x8d989f, cap: 'round', join: 'round' });
+  g.moveTo(cx + 20.5, cy - 40).lineTo(cx + 20.5, cy - 58).stroke({ width: 1.5, color: 0xffffff, alpha: 0.5 });
+  g.circle(cx + 14, cy - 36, 3).fill(PALETTE.cherry).stroke({ width: 1, color: 0xffffff });
+  g.circle(cx + 27, cy - 36, 3).fill(0x3d79b0).stroke({ width: 1, color: 0xffffff });
+  // a sponge on the drainboard
+  g.roundRect(cx + 19, cy - 28, 10, 6, 2).fill(0xf2d34a).stroke({ width: 1, color: 0x6aa84f });
+  g.rect(cx + 19, cy - 24, 10, 2).fill(0x6aa84f);
+  plate(root, g, cx, cy + 4, 'SINK', 0x3d79b0, 1);
   return root;
 }
 
@@ -264,7 +311,7 @@ function buildCondimentBar(pos: Vec2): Container {
   return root;
 }
 
-function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId, counterLabel?: string): Container {
+function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId, counterLabel?: string, noPot = false): Container {
   const root = new Container();
   const g = new Graphics();
   root.addChild(g);
@@ -337,10 +384,15 @@ function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId, cou
     g.roundRect(cx + 10, top - 50, 12, 48, 4).fill(0x2d2a30);
     g.roundRect(cx - 24, top - 6, 48, 6, 3).fill(0x56616a);
     g.circle(cx + 16, top - 40, 2.5).fill(PALETTE.cherry);
-    g.poly([cx - 18, top - 34, cx + 6, top - 34, cx + 8, top - 6, cx - 20, top - 6]).fill({ color: 0xdde8ee, alpha: 0.9 }).stroke({ width: 1.5, color: 0x8d989f });
-    g.poly([cx - 19, top - 22, cx + 7, top - 22, cx + 8, top - 6, cx - 20, top - 6]).fill(0x5a3320);
-    g.roundRect(cx - 14, top - 38, 16, 5, 2).fill(0x2d2a30);
-    g.moveTo(cx - 10, top - 46).quadraticCurveTo(cx - 7, top - 52, cx - 4, top - 46).stroke({ width: 2, color: 0xffffff, alpha: 0.6 });
+    if (noPot) {
+      // FB2 A3: the hot plate the carafe stands on; the carafe itself is drawn per frame (layers/sink.ts)
+      g.ellipse(cx - 6, top - 7, 15, 3).fill(0x3a3a40);
+    } else {
+      g.poly([cx - 18, top - 34, cx + 6, top - 34, cx + 8, top - 6, cx - 20, top - 6]).fill({ color: 0xdde8ee, alpha: 0.9 }).stroke({ width: 1.5, color: 0x8d989f });
+      g.poly([cx - 19, top - 22, cx + 7, top - 22, cx + 8, top - 6, cx - 20, top - 6]).fill(0x5a3320);
+      g.roundRect(cx - 14, top - 38, 16, 5, 2).fill(0x2d2a30);
+      g.moveTo(cx - 10, top - 46).quadraticCurveTo(cx - 7, top - 52, cx - 4, top - 46).stroke({ width: 2, color: 0xffffff, alpha: 0.6 });
+    }
   } else if (kind === 'coldBrewTap') {
     g.roundRect(cx - 20, top - 62, 40, 60, 11).fill(KEG);
     g.rect(cx - 20, top - 48, 40, 4).fill({ color: 0x2f6f9e, alpha: 0.6 });

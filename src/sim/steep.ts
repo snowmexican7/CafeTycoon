@@ -92,7 +92,7 @@ export function steepMorning(state: GameState): void {
   }
   delete state.coldBrewLeft;
   if (left > plan.cap) {
-    state.morningNotes.push(`${cupsWord(left - plan.cap)} of yesterday's cold brew had no tap to go in and were poured out.`);
+    state.morningNotes.push(`${cupsWord(left - plan.cap)} of yesterday's cold brew had no room left and were poured out.`);
   }
   if (plan.cap === 0) return;
   state.supplies.concentrate = Math.max(0, (state.supplies.concentrate ?? 0) - plan.paid);

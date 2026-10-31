@@ -24,6 +24,46 @@ when a build goes out, the line moves under its version with the date.
 - A back sink to pour away cold drinks and old pots. Drip pots left full overnight go stale and must be dumped
   before brewing. Steamers drip milk, grinders spill grounds and the bin sometimes leaks: each mess knocks 8% off
   the floor meter, and a quick mop wins it back within a minute.
+- Milk now lives in a fridge: the stand buys a $20 Dorm Room Cube, the cart and the café come with bigger ones, and
+  the café can splurge on the self-pouring Udder-Matic 3000. Carry a carton to the steamer before you can steam.
+  In the last 30 seconds the shop is "closing soon": put the milk and the condiment bar back in the fridge, or
+  whatever's left out goes bad.
+
+## 3.3.5 — 2026-10-30 · Cold brew, not "tap"
+
+- **Plainer cold brew words.** Order steps say "Pour cold brew" instead of "Tap" (an iced latte's step is
+  "Ice + milk"), hints name the "Cold brew" machine, and the morning pop-up says "8 cups of cold brew ready".
+  A card machine's fee reads "% per card sale". Some menu and gear text still says "tap" and will change in a
+  later build.
+
+## 3.3.4 — 2026-10-30 · Counts from one place
+
+- **Counts come straight from the game rules.** The numbers over the machines and on the Gear card now use the same
+  count the game itself uses, so they can't disagree. They look the same as before: nothing when it's empty, amber
+  when the cold brew tap is nearly out, blue when the pot has gone cold.
+- **A count over the pickup counter** shows how many cups are waiting. A stale drip pot still shows its cups, in
+  blue, under its "STALE" badge.
+- **Design doc:** the espresso rework is approved, and the fridge now comes with the café size instead of being a
+  gear line.
+
+## 3.3.3 — 2026-10-30 · The back sink on screen
+
+The screen catches up with the sink, cold cups and stale pots. This build also carries the sim changes listed under
+Unreleased above (solo helpers, cups going cold, the sink and new messes); they get their full write-up when they
+are released.
+
+- **The back sink.** A steel sink with a tap at the back of the bar. Walk up holding a drink and the hint says
+  "Dump it"; holding the old drip pot it says "Dump the pot". A blue ring pulses on the sink while you're carrying
+  something it takes, and the dump gurgles.
+- **Old and stale pots.** A drip pot that went cold or sat overnight gets a "STALE: dump at sink" (or "COLD") badge,
+  and the hint tells you to lift it with empty hands. While the pot is out the machine shows "POT OUT · name", the
+  pot rides in your hands, and your hand slot reads "Old drip pot".
+- **Cold cups.** The cooling rings on the pickup counter and drip pot now follow the new cooling clock. A cup in
+  your hands that has gone cold is tagged "cold", the hint points you to the sink, and empty hands at pickup say
+  "Take back the cold …". Cold pickups and bad reviews get a sound and a pop-up.
+- **Messes you can see.** Bin leaks, milk drips and spilled grounds splash where they land, with a short pop-up.
+- **Solo helpers.** The start screen has an Off / 1 / 2 picker for how many bots help in Play solo.
+- **Pop-ups stay longer.** Event pop-ups over the café are brighter and stay up about three seconds.
 
 ## 3.3.2 — 2026-10-30 · How many are left?
 

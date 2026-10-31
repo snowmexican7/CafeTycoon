@@ -3,6 +3,10 @@ import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from '../sim/constants';
 import { podsOnly } from '../sim/gear';
 import { passSlots } from '../sim/pickup';
+import { coolsOnCounter, slotCool } from '../sim/cooling';
+import { outputFreshness } from './sinkModel';
+import { stationCountsLeft } from '../sim/counts';
+import { CONDIMENTS_ID } from '../data/layout';
 import type { DrinkId, GameState, PlayerId, Station, Vec2 } from '../sim/types';
 import { nextStepIndex, ticketSteps } from '../ui/tickets';
 
@@ -29,25 +33,31 @@ export interface StationCount {
 export const COUNT_LOW = 2;
 
 /**
- * One count per station that has something waiting: cold brew cups left on a batch tap, cups left in a drip
- * pot, or a finished item sitting at the machine (a pulled shot = 1). Counters, the bin and empty or
- * still-brewing machines get nothing.
+ * One count per station that has something waiting. 3.3.4 (FB2 A5): the number itself comes from the sim's
+ * `stationCountsLeft` (`src/sim/counts.ts`): null/absent = draw nothing, never a "0". This only adds the look:
+ * amber when a batch tap is nearly out, blue when the drip pot (or a waiting shot) has gone cold or is stale, and
+ * a cooling ring where there is a clock. The condiment bar is left out: its servings gauge already shows the
+ * same number.
  */
-export function stationCounts(state: Pick<GameState, 'stations' | 'tick'>): StationCount[] {
+export function stationCounts(state: GameState): StationCount[] {
   const out: StationCount[] = [];
-  for (const s of state.stations) {
-    if (s.kind === 'counter' || s.kind === 'trash') continue;
-    let n = 0;
+  const byId = new Map(state.stations.map((s) => [s.id, s] as const));
+  for (const { id, n } of stationCountsLeft(state)) {
+    const s = byId.get(id);
+    if (!s || id === CONDIMENTS_ID) continue;
     let cool: number | null = null;
     let cold = false;
-    if (s.batchLeft !== undefined) n = s.batchLeft;
-    else if (s.potLeft !== undefined && s.busyTicksLeft <= 0) {
-      n = s.potLeft;
-      cool = potCool(s, state.tick);
-      cold = s.potOff === 'cold' || cool === 0;
-    } else if (s.output) n = 1;
-    if (n <= 0) continue;
-    out.push({ id: s.id, pos: s.pos, n, tone: cold ? 'cold' : n <= COUNT_LOW && s.batchLeft !== undefined ? 'low' : 'ok', cool });
+    if (s.kind === 'drip' && s.potLeft !== undefined && s.batchLeft === undefined) {
+      cool = s.stale === true ? 0 : potCool(s, state.tick);
+      cold = s.stale === true || s.potOff === 'cold' || cool === 0;
+    } else if (s.output && s.batchLeft === undefined && s.kind !== 'counter') {
+      // 3.3.3 (FB2 A2): a shot or steamed milk waiting at the machine cools by its own clock (`outputSince`)
+      if (state.gear === true) {
+        cool = outputFreshness(state, s);
+        cold = cool === 0;
+      }
+    }
+    out.push({ id, pos: s.pos, n, tone: cold ? 'cold' : n <= COUNT_LOW && s.batchLeft !== undefined ? 'low' : 'ok', cool });
   }
   return out;
 }
@@ -65,9 +75,13 @@ export function potCool(s: Pick<Station, 'gear' | 'potColdAt'>, tick: number): n
   return coolFraction(s.potColdAt - tick, Math.round(pot.coldAfter * TICK_RATE));
 }
 
-/** Each cup on the pickup coasters (left to right): 1 when set down, 0 when it goes stale and is binned. */
-export function passCool(state: Pick<GameState, 'pass' | 'gear' | 'stations'>): number[] {
-  return state.pass.slice(0, passSlots(state as GameState)).map((p) => coolFraction(p.ticksLeft, Math.round((ECONOMY.pass.staleSeconds[p.item] ?? 60) * TICK_RATE)));
+/** Each cup on the pickup coasters (left to right): 1 when made, 0 when cold (hot Gear cups) or stale (iced, old saves). */
+export function passCool(state: Pick<GameState, 'pass' | 'gear' | 'stations' | 'tick'>): number[] {
+  const st = state as GameState;
+  return state.pass.slice(0, passSlots(st)).map((p) =>
+    // 3.3.3 (FB2 A2): a hot Gear cup with a clock cools by `slotCool` (0 fresh → 1 cold), not the old pass timer
+    coolsOnCounter(st, p) ? 1 - slotCool(st, p) : coolFraction(p.ticksLeft, Math.round((ECONOMY.pass.staleSeconds[p.item] ?? 60) * TICK_RATE)),
+  );
 }
 
 /** Ring colours, hot to cold. */
@@ -88,7 +102,7 @@ export interface HeldRecipe { drink: DrinkId; steps: HeldStep[] }
 /** A small icon per ticket step word (src/ui/live.ts DRINK_STEPS + ticketSteps). */
 export const STEP_ICON: Record<string, string> = {
   Grind: '⚙️', Pull: '☕', 'Pull again': '☕', Pod: '☕', Shot: '☕', Steam: '♨️', Foam: '☁️', Milk: '🥛', Cream: '🥛',
-  Cocoa: '🍫', Tap: '🧊', Whisk: '🍵', Pour: '🫖', Drip: '🫖', Water: '💧', 'Hand off': '🛎️', Pickup: '🛎️',
+  Cocoa: '🍫', 'Pour cold brew': '🧊', 'Ice + milk': '🧊', Whisk: '🍵', Pour: '🫖', Drip: '🫖', Water: '💧', 'Hand off': '🛎️', Pickup: '🛎️',
 };
 
 /**

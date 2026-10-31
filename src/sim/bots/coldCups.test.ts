@@ -179,6 +179,7 @@ describe('A2 fix round 2: a cold or orphaned machine output never makes a bot wa
     addStandIns(s, n);
     s = quiet(startDay(s));
     s.players[0].pos = { x: 10, y: 5 };
+    s.milkOut = 99; // FB2 A4: plenty of milk out at the bar
     return s;
   }
   const sim = (s: GameState, n = 1) => s.players.find((p) => p.id === `sim-${n}`)!;

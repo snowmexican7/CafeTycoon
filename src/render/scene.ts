@@ -19,6 +19,7 @@ import { Lighting, buildLamps } from './layers/light';
 import { StationOverlay, buildEmptySlot, buildStation, type StationOverlayState } from './layers/stations';
 import { PickupVisuals } from './layers/pickup';
 import { CountsLayer } from './layers/counts';
+import { SinkVisuals } from './layers/sink';
 import { counterSpotOf } from './pickupModel';
 import { emptySlotPositions, stationBadges, wallMenuRows } from './slotModel';
 import { GEAR } from '../data/gear';
@@ -57,6 +58,7 @@ export class Scene {
   private readonly eventFx: EventVisuals;
   private readonly pickup: PickupVisuals;
   private readonly counts = new CountsLayer();
+  private readonly sink: SinkVisuals;
   /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
   private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
@@ -76,7 +78,8 @@ export class Scene {
     this.chaos = new Chaos(this.depth);
     this.eventFx = new EventVisuals(this.depth, this.chaos.overlay, SCENE_WIDTH, SCENE_HEIGHT);
     this.pickup = new PickupVisuals(this.depth);
-    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.counts.root, this.tags, this.chaos.overlay);
+    this.sink = new SinkVisuals(this.depth);
+    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.sink.overlay, this.counts.root, this.tags, this.chaos.overlay);
     this.root.addChild(this.wall.root, this.soldOutSign, buildLamps(), floor, this.chaos.floor, this.pickup.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
 
@@ -98,11 +101,12 @@ export class Scene {
     this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
     // 3.3.1: the pickup counter and the condiment bar are named counters, not a second and third till, so no number badge
-    const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: ('twin' in s && s.twin === true) || ['pickup', 'condiments'].includes(counterSpotOf(s, list) ?? '') })));
+    // (3.3.3: nor the back sink)
+    const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: ('twin' in s && s.twin === true) || ['pickup', 'condiments', 'sink'].includes(counterSpotOf(s, list) ?? '') })));
     this.stationArt = list.map((s, i) => {
       const twin = 'twin' in s && s.twin === true;
       const g = gearOf(s);
-      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : undefined, counterSpotOf(s, list));
+      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list));
     });
     for (const pos of emptySlotPositions(tier, list)) this.stationArt.push(buildEmptySlot(pos));
     for (const c of this.stationArt) this.depth.addChild(c);
@@ -189,6 +193,7 @@ export class Scene {
     this.actors.spots = { gear: state.gear === true, width: lay.width, queueSlots: lay.queueSlots, till: LAYOUT.stations.find((s) => s.kind === 'counter')!.pos, pickup: lay.pickup };
     this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses);
     this.pickup.update(state, now);
+    this.sink.update(state, localId, now);
     // 3.3.2: floating counts over stations + recipe steps over carried cups (day only)
     const live = state.phase === 'day' || state.phase === 'closing';
     this.counts.root.visible = live;
@@ -263,10 +268,16 @@ export class Scene {
       // said walking away from the empty condiment bar
       const bar = layoutFor(state.tier).condiments;
       this.fx.spawn(`“${b.text}”`, sx(bar.x), sy(bar.y) - 130, 0xf0a63a, 16);
+    } else if (b.kind === 'note') {
+      // 3.3.3 (FB2 A3): sink, pot and leak lines rise over the fixture they're about
+      const st = b.at ? state.stations.find((s) => s.id === b.at) : undefined;
+      const x = st ? sx(st.pos.x) : SCENE_WIDTH / 2;
+      const y = st ? sy(st.pos.y) - 120 : sy(2) + 10;
+      this.fx.spawn(b.text, Math.max(150, Math.min(SCENE_WIDTH - 150, x)), y, b.tone === 'good' ? 0xa8f0d2 : b.tone === 'warn' ? 0xffd36b : 0xff8a7a, 20, 3);
     } else if (b.kind === 'steep') {
       if (b.cups > 0) {
         const fresh = b.paid < b.cups ? ` (${b.paid} fresh)` : '';
-        this.fx.spawn(`🧊 ${b.cups} cold ${b.cups === 1 ? 'brew' : 'brews'} on tap${fresh}`, SCENE_WIDTH / 2, sy(2), 0x9fd3ff, 17);
+        this.fx.spawn(`🧊 ${b.cups} ${b.cups === 1 ? 'cup' : 'cups'} of cold brew ready${fresh}`, SCENE_WIDTH / 2, sy(2), 0x9fd3ff, 17);
       }
     } else if (b.kind === 'call') {
       const text = !b.take ? `${b.by} let the phone ring` : b.call === 'machine' ? `📞 ${b.by} talked the branch through the machine` : `📞 ${b.by} took the branch's order`;

@@ -1,3 +1,4 @@
+import { sinkToast, SINK_ID } from './sinkModel';
 import { TWIST_INFO, type TwistId } from '../sim/taste';
 import type { DrinkId, GameState, Personality } from '../sim/types';
 
@@ -55,7 +56,9 @@ export type CrewBurst =
   /** Gear morning: the taps were filled (`paid` of `cups` fresh tonight, the rest yesterday's). */
   | { kind: 'steep'; cups: number; paid: number }
   /** The branch phone was picked up (`by` is a name) or left to ring. */
-  | { kind: 'call'; by: string; take: boolean; call: 'order' | 'machine' };
+  | { kind: 'call'; by: string; take: boolean; call: 'order' | 'machine' }
+  /** 3.3.3 (FB2 A2/A3): a sink, pot, leak or cold-cup line, toasted over `at` (a station id; absent = mid-floor). */
+  | { kind: 'note'; text: string; tone: 'good' | 'warn' | 'bad'; at?: string };
 
 /** Visual-only memory between snapshots: pass putters, combo streak, and crew vibe. */
 export interface CrewMemory {
@@ -192,6 +195,18 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
     } else if (e.kind === 'condiment.black') {
       bursts.push({ kind: 'grumble', text: String(e.data.text ?? 'Black, I guess.') });
       bumpVibe(mem, -1);
+    } else if (e.kind === 'sink.dump' || e.kind === 'pot.stale' || e.kind === 'bin.leak' || e.kind === 'pickup.cold') {
+      const text = sinkToast(e, (id) => next.players.find((p) => p.id === id)?.name ?? 'Someone', null);
+      if (text) {
+        const tone = e.kind === 'sink.dump' ? 'good' : e.kind === 'pot.stale' ? 'warn' : 'bad';
+        const at = e.kind === 'sink.dump' ? SINK_ID : e.kind === 'pot.stale' ? String(e.data.station ?? '') : e.kind === 'bin.leak' ? String(e.data.at ?? '') : undefined;
+        bursts.push({ kind: 'note', text, tone, ...(at ? { at } : {}) });
+      }
+      if (e.kind === 'bin.leak') bumpVibe(mem, -2);
+      if (e.kind === 'pickup.cold') {
+        resetCombo(mem);
+        bumpVibe(mem, -3);
+      }
     } else if (e.kind === 'steep') {
       bursts.push({ kind: 'steep', cups: Number(e.data.cups) || 0, paid: Number(e.data.paid) || 0 });
     } else if (e.kind === 'call.answer') {

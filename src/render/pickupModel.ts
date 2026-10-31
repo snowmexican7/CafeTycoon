@@ -1,7 +1,8 @@
-import { CONDIMENTS_ID, PICKUP_ID } from '../data/layout';
+import { CONDIMENTS_ID, PICKUP_ID, SINK_ID } from '../data/layout';
 import { CONDIMENTS } from '../sim/condiments';
 import { TICK_RATE } from '../sim/constants';
 import { passSlots } from '../sim/pickup';
+import { coolsOnCounter, slotCool } from '../sim/cooling';
 import type { Customer, DrinkId, GameState, ItemKind, Vec2 } from '../sim/types';
 import type { CounterSpot } from './layers/stations';
 
@@ -16,6 +17,7 @@ export function counterSpotOf(s: { id: string; kind: string }, list: readonly { 
   if (s.kind !== 'counter') return undefined;
   if (s.id === PICKUP_ID) return 'pickup';
   if (s.id === CONDIMENTS_ID) return 'condiments';
+  if (s.id === SINK_ID) return 'sink';
   return list.some((x) => x.id === PICKUP_ID) ? 'till' : undefined;
 }
 
@@ -87,11 +89,22 @@ export interface CupOnCounter {
   stale: boolean;
   /** A rung-up customer is waiting for exactly this drink. */
   wanted: boolean;
+  /** FB2 A2: a hot cup that has gone cold (a customer who takes it won't pay). */
+  cold?: true;
 }
 
+/** A hot cup on the counter blinks from this much cold (0..1 by `slotCool`). */
+export const COLD_BLINK = 0.85;
+
 /** The cups on the pickup coasters, left to right (at most the counter's slots). */
-export function pickupCups(state: Pick<GameState, 'pass' | 'gear' | 'customers'>): CupOnCounter[] {
+export function pickupCups(state: Pick<GameState, 'pass' | 'gear' | 'customers' | 'tick'>): CupOnCounter[] {
   const want = new Set<DrinkId>();
   for (const c of state.customers) if (c.stage === 'pickup') want.add(c.drink), (c.extra ?? []).forEach((d) => want.add(d));
-  return state.pass.slice(0, passSlots(state as GameState)).map((i) => ({ item: i.item, stale: i.ticksLeft <= 5 * TICK_RATE, wanted: want.has(i.item as DrinkId) }));
+  const st = state as GameState;
+  return state.pass.slice(0, passSlots(st)).map((i) => {
+    // 3.3.3 (FB2 A2): hot Gear cups never go stale on the pass timer now; they blink once nearly cold, by `slotCool`
+    const cools = coolsOnCounter(st, i);
+    const c = cools ? slotCool(st, i) : 0;
+    return { item: i.item, stale: cools ? c >= COLD_BLINK : i.ticksLeft <= 5 * TICK_RATE, wanted: want.has(i.item as DrinkId), ...(cools && c >= 1 ? { cold: true as const } : {}) };
+  });
 }

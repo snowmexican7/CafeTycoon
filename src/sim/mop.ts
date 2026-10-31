@@ -3,6 +3,7 @@ import { layoutFor } from '../data/layout';
 import { isOut } from './espresso';
 import { emitLog } from './log';
 import { canTakeBox, refillBar, returnBox, takeBox } from './condiments';
+import { storeInFridge } from './fridge';
 import { returnPot } from './sink';
 import type { GameState, Mess, Player, Vec2 } from './types';
 
@@ -87,6 +88,7 @@ export function returnTool(state: GameState, p: Player): void {
   if (p.tool === 'mop') returnMop(state, p);
   else if (p.tool === 'box') returnBox(state, p);
   else if (p.tool === 'pot') returnPot(state, p);
+  else storeInFridge(state, p); // FB2 A4: a carton or the bar's box goes in the fridge
 }
 
 function sendHome(state: GameState): void {

@@ -21,6 +21,7 @@ describe('Gear Tree G5: downsides and funny events', () => {
     buy(s, 's1');
     s.supplies.milk = 50;
     startDay(s);
+    s.milkOut = 50; // FB2 A4: the steamer draws the milk out at the bar
     const st = at(s, 'steamer');
     const left = st.usesToDie!;
     expect(left).toBeGreaterThanOrEqual(GEAR.s1.quirks!.dieAfter!);
@@ -39,9 +40,9 @@ describe('Gear Tree G5: downsides and funny events', () => {
     expect(st.dead).toBe(true);
     expect(s.log.some((e) => e.kind === 'gear.quirk' && String(e.data.text).includes('batteries died'))).toBe(true);
     s.players[0].holding = 'espresso';
-    const milk = s.supplies.milk;
+    const milk = s.milkOut;
     interact(s, 'p1');
-    expect([st.making ?? null, s.supplies.milk, s.players[0].holding]).toEqual([null, milk, 'espresso']);
+    expect([st.making ?? null, s.milkOut, s.players[0].holding]).toEqual([null, milk, 'espresso']);
     gearMorning(s);
     expect(st.dead).toBeUndefined();
     expect(st.usesToDie).toBeGreaterThan(0);

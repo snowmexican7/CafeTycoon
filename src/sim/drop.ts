@@ -7,7 +7,7 @@ import { dumpDrink, dumpPot, isSink, needsDump } from './sink';
 import { rollBinLeak } from './messes';
 import { nearestStation } from './movement';
 import { passSlots, spotOf } from './pickup';
-import { PICKUP_ID } from '../data/layout';
+import { FRIDGE_ID, PICKUP_ID } from '../data/layout';
 import { STATION_RECIPES } from './stations';
 import { madeAtFromHand } from './cooling';
 import { tally } from './tally';
@@ -32,7 +32,9 @@ function resolveDrop(state: GameState, p: Player): void {
 
   if (station) {
     // Kennedy's rule: a station in range takes the item or nothing happens at all.
-    if (isSink(station) && state.gear === true) {
+    if (station.id === FRIDGE_ID) {
+      // FB2 A4: the fridge takes no cups (nothing happens).
+    } else if (isSink(station) && state.gear === true) {
       dumpDrink(state, p); // FB2 A3: the sink pours a drink away (grounds stay in hand)
     } else if (station.kind === 'trash') {
       p.holding = null;

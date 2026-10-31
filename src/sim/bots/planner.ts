@@ -12,7 +12,7 @@
  *     id: string;   // restock:<supply> | price:<drink> | twist:<drink> | signature | scout | rival |
  *                   // grow:<tier> | checkout:<id> | slot:<index> | equip:espresso | menu:<drink>
  *                   // Gear runs: gear:<gearId> | staff:fire | rival:promo | rival:loyalty |
- *                   // branch:open | branch:staff | branch:send:<supply> | steep | condimentBox
+ *                   // branch:open | branch:staff | branch:send:<supply> | steep | condimentBox | fridge:f1 | fridge:f4 (FB2 A4)
  *     kind: AdviceKind;  // restock | price | twist | signature | scout | rival | grow | checkout | slot | equip | menu
  *     text: string;
  *     input: NightFix;   // the input without its playerId
@@ -32,6 +32,7 @@
  *    70 grow
  *    65 branch:open (G, kind grow)
  *    60 checkout
+ *    59 fridge:<id> (G, kind equip)
  *    58 gear:<id> (G, kind equip)
  *
  * Gear rows reuse the existing AdviceKind values (the UI keeps a `Record<AdviceKind, ...>` of icons), so
@@ -81,6 +82,8 @@ import { expectedUse } from '../brief';
 import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
 import { CONDIMENTS } from '../condiments';
+import { fridgeCapacity, fridgeWanted, packsThatFit } from '../fridge';
+import { FRIDGES } from '../../data/fridges';
 import { computeModifiers } from '../effects';
 import { billsForDay, crewCount, crewNames, wageEach } from '../staff';
 import { averageStars } from '../accuracy';
@@ -120,6 +123,7 @@ export const PLAN_PRIORITY = {
   grow: 70,
   branchOpen: 65,
   checkout: 60,
+  fridge: 59,
   gear: 58,
   slot: 55,
   staff: 53,
@@ -183,7 +187,8 @@ export function restockAdvice(
   const low = wants.filter((w) => w.have >= 1);
   const advice: Advice[] = [];
   for (const { supply, have, target } of [...out, ...low]) {
-    let packs = Math.min(MAX_PACKS, Math.max(1, Math.ceil((target - have) / ECONOMY.packs[supply].size)));
+    // FB2 A4: Gear milk only as many packs as the fridge holds.
+    let packs = packsThatFit(state, supply, Math.min(MAX_PACKS, Math.max(1, Math.ceil((target - have) / ECONOMY.packs[supply].size))));
     while (packs > 0 && restockCost(state, supply, packs) > budget.left) packs -= 1;
     if (packs <= 0) continue;
     const cost = restockCost(state, supply, packs);
@@ -244,7 +249,8 @@ function condimentAdvice(state: GameState, budget: Budget): Advice[] {
   if (!isGearRun(state) || !state.condiments) return [];
   const orders = expectedOrdersFor(state);
   const use = Math.ceil(CONDIMENTS.share * ((orders.drip ?? 0) + (orders.coldBrew ?? 0)));
-  const have = state.condiments.servings + (state.condimentBoxes ?? 0) * CONDIMENTS.servings;
+  // FB2 A4: servings put away in the fridge go back on the bar in the morning.
+  const have = state.condiments.servings + (state.barAway ?? 0) + (state.condimentBoxes ?? 0) * CONDIMENTS.servings;
   if (use <= have) return [];
   let n = Math.min(CONDIMENTS.maxBoxes, Math.ceil((use - have) / CONDIMENTS.servings));
   while (n > 0 && round2(n * CONDIMENTS.boxCost) > budget.left) n -= 1;
@@ -569,6 +575,23 @@ function gearAdvice(state: GameState, budget: Budget): Advice[] {
 }
 
 /**
+ * FB2 A4, Gear runs: buy a fridge card (`fridgeWanted`): the Dorm Room Cube at a stand with a milk station (milk drinks
+ * need it) or whose bar went bad last night; the Udder-Matic when a day's expected milk won't fit in the café's fridge
+ * (no margin: the expected use already runs high). Only when the budget covers it.
+ */
+function fridgeAdvice(state: GameState, budget: Budget): Advice[] {
+  if (state.gearVote || state.fridgeVote) return [];
+  const want = fridgeWanted(state, expectedUse(state).milk);
+  if (!want || want.price > budget.left) return [];
+  budget.left = round2(budget.left - want.price);
+  const f = FRIDGES[want.id];
+  const why = want.why === 'none' ? 'No fridge: milk drinks are off and the condiment bar goes bad every night' : `The fridge holds ${fridgeCapacity(state)} milk, a day needs about ${expectedUse(state).milk}`;
+  return [
+    { id: `fridge:${want.id}`, kind: 'equip', text: `${why}: buy the ${f.name} (${dollars(want.price)})`, input: { kind: 'fridge', fridge: want.id }, priority: PLAN_PRIORITY.fridge },
+  ];
+}
+
+/**
  * Gear runs: when yesterday's wages beat what the hired baristas rang up (the bots' share of
  * `DayStats.byPlayer`), suggest letting the newest one go. Never hiring. Quiet once a firing tonight
  * has already taken the crew below the count that was paid yesterday.
@@ -759,6 +782,7 @@ export function planNight(state: GameState): Advice[] {
   const grow = growAdvice(state, budget);
   const branchOpen = branchOpenAdvice(state, budget);
   const checkout = grow.length ? [] : checkoutAdvice(state, budget);
+  const fridge = fridgeAdvice(state, budget);
   const gear = gearAdvice(state, budget);
   const slot = slotAdvice(state);
   const stamp = stampAdvice(state, budget);
@@ -773,6 +797,7 @@ export function planNight(state: GameState): Advice[] {
     ...grow,
     ...branchOpen,
     ...checkout,
+    ...fridge,
     ...gear,
     ...slot,
     ...staffAdvice(state),

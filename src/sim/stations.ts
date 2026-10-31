@@ -14,6 +14,7 @@ import { dumpDrink, dumpPot, isSink, potPress } from './sink';
 import { rollBinLeak, rollStationMess } from './messes';
 import { BASE_DRINKS, RECIPES, type Recipe, type RecipeStation } from '../data/drinks';
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
+import { fridgeInteract, readyStock, useStock } from './fridge';
 import type { GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from './types';
 
 /** Each working station's first (classic) recipe: what it takes, gives back and uses up. See RECIPES for all of them. */
@@ -58,9 +59,16 @@ export function recipeAt(state: GameState, station: Station, held: ItemKind | nu
   return own !== undefined ? (own && recipeAllowed(state, own.gives) ? own : null) : recipeFor(state, station.kind, held);
 }
 
-/** Every supply the recipe uses is in stock. */
+/** Every supply the recipe uses is in stock (FB2 A4: Gear milk is the milk out at the bar, not the fridge). */
 export function stocked(state: GameState, r: Recipe): boolean {
-  return r.consumes.every((s) => state.supplies[s] >= 1);
+  return r.consumes.every((s) => readyStock(state, s) >= 1);
+}
+
+/** FB2 A4: an empty-hands press here would make a drink someone is waiting for (so closing soon doesn't lift the milk instead). */
+function emptyHandsWanted(state: GameState, st: Station): boolean {
+  const r = recipeAt(state, st, null);
+  if (!r || !stocked(state, r) || (tapCupRecipe(r) && st.batchLeft !== undefined && st.batchLeft <= 0)) return false;
+  return state.customers.some((c) => c.drink === r.gives || (c.extra?.includes(r.gives as never) ?? false));
 }
 
 /** Stations keep working after you walk away; finished items wait on the station. */
@@ -91,6 +99,11 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   if (player.tool === 'pot') {
     dumpPot(state, player); // FB2 A3: only the sink takes the pot
     return state;
+  }
+  // FB2 A4 (Gear): the fridge, a carried carton or bar box, and closing soon's lifts come first.
+  if (state.gear === true) {
+    const near = nearestStation(state, player.pos);
+    if (fridgeInteract(state, player, near, () => !!near && emptyHandsWanted(state, near))) return state;
   }
   if (player.tool !== null) {
     mopInteract(state, player);
@@ -158,7 +171,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   if (idle && gearBlocked(state, station, player)) return state;
   const recipe = recipeAt(state, station, player.holding);
   if (idle && recipe && stocked(state, recipe) && (station.batchLeft !== 0 || !tapCupRecipe(recipe))) {
-    for (const s of recipe.consumes) state.supplies[s] -= 1;
+    for (const s of recipe.consumes) useStock(state, s);
     cupIntoStation(player, station);
     // Gear Tree: the iced latte step uses a steeped cup (the sweet-cream step does not); cheap gear marks the cup.
     if (tapCupRecipe(recipe)) takeTapCup(station);

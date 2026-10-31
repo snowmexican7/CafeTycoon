@@ -1,7 +1,7 @@
 import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
 import { canMake, growthMorning } from './growth';
-import { defaultSlots, stationsFromSlots } from './slots';
+import { defaultSlots, ensureCounterSpots, stationsFromSlots } from './slots';
 import { secondsToTicks } from './constants';
 import { rngInt, seedRng } from './rng';
 import { SCENARIOS } from '../data/scenarios';
@@ -23,6 +23,7 @@ import { unlockForDay } from './unlocks';
 import { dealChallenges, pruneChallenges } from './challenges';
 import { eggsMorning } from './eggs';
 import { gearMorning, gearStart } from './gear';
+import { fridgeMorning } from './fridge';
 import { potMorning } from './sink';
 import { settle } from './spawn';
 import { applyPerk } from './perks';
@@ -191,6 +192,8 @@ export function startDay(state: GameState): GameState {
   espressoMorning(state);
   gearMorning(state);
   potMorning(state); // FB2 A3: yesterday's stale pots
+  ensureCounterSpots(state); // FB2 review I1: every fixed Gear spot is on the floor each morning (no-op in classic)
+  fridgeMorning(state);
   officeMorning(state); // FB2 B6: does an office run come today (Gear, cart and café, from day 3)
   return state;
 }
