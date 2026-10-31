@@ -78,8 +78,19 @@ describe('Gear counter hints (3.3.1)', () => {
     expect(s.stations.some((x) => x.id === 'trayTable')).toBe(true);
     s.players[0].holding = 'coldBrew';
     at(s, 'trayTable');
+    // 3.7.2: no big order needs it, so the sim would refuse: no green "go".
+    expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'No big order needs this' });
+    s.customers = [cust(1, 'coldBrew', { stage: 'pickup', rungAt: 0, items: [{ drink: 'coldBrew', done: false }, { drink: 'drip', done: false }] })];
     expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Set it on the tray' });
     expect(counterName({ id: 'trayTable' })).not.toBe('Till');
+  });
+
+  it('3.7.2: the syrup rack never shows a green go until the picker lands', () => {
+    const s = gearDay();
+    if (!s.stations.some((x) => x.id === 'syrups')) s.stations.push({ id: 'syrups', kind: 'counter', pos: { x: 9, y: 9 }, busyTicksLeft: 0, output: null, occupiedBy: null });
+    s.players[0].holding = 'latte';
+    at(s, 'syrups');
+    expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Syrup rack' });
   });
 
   it('empty hands at the pickup counter take a cup back', () => {

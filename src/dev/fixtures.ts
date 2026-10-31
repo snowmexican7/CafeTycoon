@@ -310,6 +310,32 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** 3.7.2 (PR #10): two price walk-outs on a Gear café day say "Too pricey!" (or kin), never "Sold out?!". */
+  priceWalkout: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 4);
+      for (let i = 0; i < 3; i++) s.customers.push({ id: 40 + i, drink: i % 2 ? 'latte' : 'drip', patienceLeft: 800, patienceMax: 1000 });
+    },
+    timeline: [
+      [0.3, (s) => emit(s, 'walkout', { customer: 90, reason: 'price', drink: 'latte' })],
+      [1.1, (s) => emit(s, 'walkout', { customer: 91, reason: 'price', drink: 'mocha' })],
+    ],
+  },
+  /** 3.7.2 (PR #8): the Strategist and Marketer hire cards in the night's "More" row; Strategist on, Marketer not. */
+  hireCards: {
+    night: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
+      s.cash = 240;
+      s.day = 4;
+      s.staff = { strategist: true };
+    },
+    timeline: [],
+  },
   /** P3 B2: the night menu board with prices moved (latte up $1, espresso down $0.50). */
   pricing: {
     night: true,

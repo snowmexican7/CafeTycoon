@@ -798,7 +798,7 @@ export function staffViewModel(state: GameState): StaffVM | undefined {
       strategist: {
         hired: !!state.staff?.strategist,
         wage: money(hireWage(state, 'strategist')),
-        blurb: 'Honest forecast and best prices each night',
+        blurb: 'Sets the menu and best prices each night, honest forecast',
       },
       marketer: {
         hired: !!state.staff?.marketer,
