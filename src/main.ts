@@ -10,7 +10,7 @@ import { createHostRoom, type HostRoom } from './net/hostRoom';
 import { markPeersAway } from './net/hostResume';
 import { createLocalTransport } from './net/localTransport';
 import type { PeerStatus } from './net/peerSession';
-import { createPeerTransport } from './net/peerTransport';
+import { createPeerSession } from './net/peerSession';
 import { PROTOCOL_VERSION, type BotsChoice, type Member } from './net/protocol';
 import { makeRoomCode, normalizeRoomCode } from './net/roomCode';
 import { createTrysteroLink } from './net/roomLink';
@@ -26,7 +26,7 @@ import { createRecordsStore } from './storage/recordsStore';
 import { createMetaStore } from './storage/metaStore';
 import { PERKS, type PerkId } from './data/perks';
 import { createRecordsDialog } from './ui/records';
-import type { CreateRunOptions, GameState, Phase, PlayerId, PlayerInput } from './sim/types';
+import type { CreateRunOptions, GameState, Phase, PlayerId, PlayerInput, PlayerLook } from './sim/types';
 import { createHistoryStore } from './storage/historyStore';
 import { createRoomStore } from './storage/roomStore';
 import { createSeatStore } from './storage/seatStore';
@@ -40,6 +40,9 @@ import { loadRecipeHints, saveRecipeHints } from './ui/tickets';
 import { hudLive, nightExtras } from './ui/live';
 import { createLobby } from './ui/lobby';
 import { createDevPanel, isDevMode } from './ui/dev';
+import { createCreator } from './ui/creator';
+import { loadLook, saveLook } from './ui/lookStore';
+import { createLookPreview } from './render/lookPreview';
 import { createNight } from './ui/night';
 import { nightInputHandlers } from './ui/nightInputs';
 import { createPause } from './ui/pause';
@@ -192,17 +195,34 @@ async function main(): Promise<void> {
   const roadmap = createRoadmap();
   const records = createRecordsDialog(() => stores.records.get(), () => stores.meta.get());
   const title = createTitle($('#title'), {
-    onStart: (choice) => startSolo(choice),
-    onHost: (choice) => startHost(choice),
-    onJoin: (code, name) => startPeer(code, name),
+    // ui-3.5.2 (R4 e): "Make your barista" comes up before day 1 of every new game (Skip keeps the saved look).
+    onStart: (choice) => void pickLook().then((look) => startSolo(choice, look)),
+    onHost: (choice) => void pickLook().then((look) => startHost(choice, look)),
+    onJoin: (code, name) => void pickLook().then((look) => startPeer(code, name, look)),
     onResume: () => resume(),
-    onRejoin: (code) => startPeer(code, stores.settings.get().playerName),
+    onRejoin: (code) => startPeer(code, stores.settings.get().playerName, loadLook(hintStore)),
     onRecords: () => records.open(),
   }, roadmap);
   const hintStore = (() => { try { return window.localStorage; } catch { return undefined; } })();
+  const creator = createCreator(document, createLookPreview);
+  /** The creator before a new game: the chosen look is saved on this device; Skip keeps the last saved one. */
+  async function pickLook(): Promise<PlayerLook | null> {
+    const saved = loadLook(hintStore);
+    const picked = await creator.open('start', saved);
+    return picked ? (saveLook(hintStore, picked) ?? saved) : saved;
+  }
+  /** "Edit my barista" at night: save it and send the sim's night `look` input (R4 e). */
+  async function editLook(): Promise<void> {
+    const s = session;
+    const mine = s?.next?.players.find((p) => p.id === s.me)?.look ?? loadLook(hintStore);
+    const picked = await creator.open('edit', mine ?? null);
+    if (!picked || session !== s) return;
+    const look = saveLook(hintStore, picked);
+    if (look) send({ kind: 'look', playerId: me(), look });
+  }
   let recipeHints = loadRecipeHints(hintStore);
   const hud = createHud($('#hud'), { onMute: () => audio.toggleMute(), onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }), onCall: (take) => send({ kind: 'call', playerId: me(), take }) }, { recipeHints });
-  const night = createNight($('#night'), nightInputHandlers(send, me));
+  const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook() });
   // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).
   const dev = isDevMode(location.search) ? createDevPanel(document, send, me) : null;
   const closing = createClosing($('#closing'));
@@ -292,7 +312,7 @@ async function main(): Promise<void> {
     return {
       seed: choice.seed ?? Math.floor(Math.random() * 2 ** 31),
       hostId,
-      players: players.map((m) => ({ id: m.token, name: m.name })),
+      players: players.map((m) => ({ id: m.token, name: m.name, ...(m.look ? { look: m.look } : {}) })),
       settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec, bots },
       // P3 B13: every new run opens as a kerbside stand and grows from there.
       tier: 'stand',
@@ -361,7 +381,7 @@ async function main(): Promise<void> {
     );
   }
 
-  function startSolo(choice: StartChoice): void {
+  function startSolo(choice: StartChoice, look: PlayerLook | null = null): void {
     const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: nightLengthForSim(choice.nightLengthSec), ...(choice.soloBots !== undefined ? { soloBots: choice.soloBots } : {}) });
     stores.hostRoom.clear(); // a solo run never reopens an old room
     const tele = newTelemetry(settings.playerName);
@@ -371,7 +391,7 @@ async function main(): Promise<void> {
     attachTelemetry(s, tele);
     armWatchdog(s);
     rememberPerk(choice);
-    local.start(runOptions(choice, id, [{ token: id, name: settings.playerName }], settings.soloBots));
+    local.start(runOptions(choice, id, [{ token: id, name: settings.playerName, ...(look ? { look } : {}) }], settings.soloBots));
   }
 
   function openHostRoom(s: Session, local: Transport, code: string, hostMember: Member): void {
@@ -385,7 +405,7 @@ async function main(): Promise<void> {
     renderLobby(s);
   }
 
-  function startHost(choice: StartChoice): void {
+  function startHost(choice: StartChoice, look: PlayerLook | null = null): void {
     const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: nightLengthForSim(choice.nightLengthSec) });
     const code = makeRoomCode(Math.random);
     stores.hostRoom.save({ code, role: 'host' });
@@ -395,7 +415,7 @@ async function main(): Promise<void> {
     const s = createSession('host', code, local, id);
     attachTelemetry(s, tele);
     s.pendingStart = choice;
-    openHostRoom(s, local, code, { token: id, name: settings.playerName });
+    openHostRoom(s, local, code, { token: id, name: settings.playerName, ...(look ? { look } : {}) });
     lobby.show();
   }
 
@@ -408,7 +428,7 @@ async function main(): Promise<void> {
     s.pendingStart = null;
   }
 
-  function startPeer(rawCode: string, name: string): void {
+  function startPeer(rawCode: string, name: string, look: PlayerLook | null = null): void {
     const code = normalizeRoomCode(rawCode);
     if (!code) {
       showTitle('Room codes are five letters, like KQZTM.');
@@ -418,7 +438,16 @@ async function main(): Promise<void> {
     stores.peerRoom.save({ code, role: 'peer' });
     const id = tabIdentity();
     const prev = stores.seats.load(code);
-    const transport = createPeerTransport(code, id, settings.playerName, prev && prev !== id ? prev : undefined);
+    // ui-3.5.2: createPeerTransport (src/net/peerTransport.ts) has no look parameter yet, so the session is built here.
+    const transport = createPeerSession(roomLinkFor(code, createTrysteroLink), {
+      token: id,
+      name: settings.playerName,
+      prev: prev && prev !== id ? prev : undefined,
+      ...(look ? { look } : {}),
+      timeoutMs: 15_000,
+      setTimer: (fn, ms) => setTimeout(fn, ms),
+      clearTimer: (t) => clearTimeout(t as ReturnType<typeof setTimeout>),
+    });
     const s = createSession('peer', code, transport, id);
     stores.seats.save(code, id);
     // The host handed back an older seat (this browser's, or an away barista with our name): play as it.

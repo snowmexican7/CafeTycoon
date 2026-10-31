@@ -2053,6 +2053,38 @@ Open (sim lane):
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
 
+## ui-3.5.2 (UI lane): character creator
+
+Released as `ui-3.5.2` / `v3.5.2` (2026-10-30), on Claude's `Player.look` (R4 e, protocol 48). UI files only; no
+sim, net, host, storage or data edits.
+
+**Built (names as built):**
+- `src/render/lookModel.ts`: the catalogue. `BODIES` (slim, broad), `HAIR_STYLES` (short, buzz, spiky, curly, bob,
+  long, ponytail, bun), `HAIR_COLOURS` (8), `SKIN_TONES` (`s1`–`s6`), `SHIRT_COLOURS` (8), `OUTFITS` (apron, dress,
+  skirt, overalls, hoodie, vest). The body style rides inside the outfit id as `<body>-<outfit>` (`slim-dress`,
+  `broad-overalls`; `splitOutfit` / `joinOutfit`), so the sim's four ids are enough. `DEFAULT_LOOK`, `LOOK_PARTS`,
+  `partId`, `stepLook` (arrows, wrap around), `randomLook`, `lookArt` (unknown ids draw the first option, so a look
+  from a newer build never breaks the floor).
+- `src/render/layers/actors.ts`: `drawPerson` takes an optional `style` (body width, back and front hair per style,
+  dress / skirt with legs and shoes, overalls bib, vest panels, hoodie hood). Players with a look lose the cap; bots
+  and look-less players draw exactly as before. Name tag and ring keep the player colour.
+- `src/render/lookPreview.ts`: the creator's preview canvas (front and back view). One Pixi app, made once and reused:
+  destroying a second Pixi 8 Application broke the game renderer's shared batcher ("reading 'clear'").
+- `src/ui/creator.ts` + `styles/creator.css`: `#creator` overlay, "Make your barista" / "Edit my barista", one row
+  per part with ◀ ▶ (52×48), swatches and "N of M", "🎲 Surprise me", Skip (Cancel when editing, Esc does the same),
+  "Looks good, start!" / "Save my look". 860 px card, fits 1280×800 and 1512×982.
+- `src/ui/lookStore.ts`: `cafetycoon.look` in localStorage, checked with the sim's `cleanLook`.
+- `src/main.ts`: the creator opens before solo start, before hosting (before the lobby) and before joining, filled
+  with the saved look, so it is one click; Resume and Rejoin skip it (Rejoin sends the saved look). Night: the
+  "👕 Edit my barista" chip in the More row sends `{ kind: 'look', playerId, look }` and saves it.
+- Tests: `src/ui/creator.test.ts` (every combination passes `cleanLook`, arrows wrap, fallback art, store, screen
+  text, night chip). Screenshots: `/workspace/overnight/sprint/ui-round4/creator/`.
+
+**Not done / next:**
+- Joiners: `createPeerTransport` has no look parameter, so main.ts builds `createPeerSession` itself (HANDOFF Needs).
+- No look change inside the lobby (needs a sim/net message; HANDOFF Needs, optional).
+- Back view hair for `bun` and `ponytail` is simple; face details (glasses, beards) are ideas for later.
+
 ## ui-3.5.1 (UI lane): Round 4 night, tickets, dev mode, bumps, steam wands
 
 Released as `ui-3.5.1` / `v3.5.1` (2026-10-30). UI files only; no sim, net, host, storage or data edits (and no

@@ -12,9 +12,9 @@
 
 ### State
 - **Live:** https://snowmexican7.github.io/CafeTycoon/ deploys from `main` on every push.
-- **Versions:** newest release **v3.5.1** (`ui-3.5.1`, 2026-10-30): Round 4 UI plus everything Claude had on
-  `main` (B6 orders, bumps, dev mode, steam wands, pastries, cart $70, ring-up time; protocol 51). Unreleased on
-  `main`: the barista look (sim side), shipping with the character creator as `ui-3.5.2` / `v3.5.2`.
+- **Versions:** newest release **v3.5.2** (`ui-3.5.2`, 2026-10-30): the character creator plus everything Claude
+  had on `main` (lattes, café feed and fans, Strategist and Marketer hires; protocol 56). Before that **v3.5.1**:
+  Round 4 UI with B6 orders, bumps, dev mode, steam wands, pastries, cart $70 and ring-up time.
 - **Rule of thumb:** one shared version line. Grok's UI took 3.5.1 and 3.5.2; **Claude's next release is 3.6.x.**
 - **Gear is the game** (no classic runs), no save compatibility for now, runs start at the stand, solo starts
   with 1 bot. All rulings: HANDOFF "Decisions".
@@ -27,6 +27,9 @@
   tagged; nobody force-pushes.
 
 ### Shipped recently
+- **v3.5.2 (UI + sim on main):** "Make your barista" before day 1 (body, 8 hairstyles, hair colour, 6 skin tones,
+  6 outfits including a dress and a skirt, shirt colour, Surprise me, Skip), "Edit my barista" at night, look saved
+  on the device and drawn on the shop floor; sim side: more lattes, café feed and fans, Strategist and Marketer.
 - **v3.5.1 (UI + sim on main):** night opens on Restock, condiment box card, tidier night (nothing removed),
   stacked multi-drink tickets, dev mode (`?dev=1`), bump bubbles and walkouts, steam wands in the Gear shop,
   "Ringing up…" till hint; sim side: combo and office orders, bumps, dev runs, steam wands, pastries, cart $70,
@@ -36,7 +39,6 @@
 - **v3.4.0 (UI):** stand and cart each have their own look; "Grand re-opening" transition with a "What you
   gained" card; "You can afford a cart!" nudge; first-run tips (snooze / off); forecast labelled "Rough guess".
 - **v3.5.0 (sim):** cups go cold, back sink and pot dumping, milk in a fridge, closing rush, solo bot count.
-- **On main, unreleased (sim):** combo orders and office runs (B6): one ticket per customer, paid at the last cup.
 
 ### Now: Round 4 (Kennedy approved Oct 30, 2026, ~10:27 PM)
 Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
@@ -44,7 +46,7 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
 | # | Item | Grok (UI) | Claude (sim) |
 |---|------|-----------|--------------|
 | 1 | **Cream and sugar restock** (missing button) | ✅ v3.5.1: card on Restock + "Buy a box" on the brief | nothing |
-| 2 | **Create your own barista** | ⏳ next: creator as `ui-3.5.2` (before day 1, "Edit my barista" at night, Skip) | ✅ `Player.look`, join + `{kind:'look'}` (protocol 48) |
+| 2 | **Create your own barista** | ✅ v3.5.2: creator before day 1, "Edit my barista" at night, Skip | ✅ `Player.look`, join + `{kind:'look'}` (protocol 48) |
 | 3 | **Pastries** (half-wired, can't be bought) | ✅ v3.5.1: pastry jar on Restock | ✅ buyable on Restock |
 | 4 | **Bumping into customers** (fun quirk) | ✅ v3.5.1: bubbles, angry exit line | ✅ `customer.bump`, 3 bumps → storms out |
 | 5 | **Stacked multi-drink orders** | ✅ v3.5.1: stacked ticket, "×N" badge | ✅ `Customer.items` |

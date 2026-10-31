@@ -16,8 +16,16 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-- Your barista has a look you pick (hair, skin, outfit, shirt colour), your crewmates see it, and you can change it
-  between days.
+## 3.5.2 — 2026-10-30 · Make your barista
+
+A character creator before day 1, "Edit my barista" at night, plus everything else that was on main (more lattes,
+the café feed, Strategist and Marketer hires).
+
+- Make your barista before day 1 (solo and co-op): click the arrows to pick a body style, one of 8 hairstyles, hair
+  colour, one of 6 skin tones, an outfit (apron, dress, skirt, overalls, hoodie or vest) and a shirt colour, with a
+  big live preview from the front and back. "Surprise me" picks one at random; Skip keeps your last look (or the
+  classic capped barista). Your look is saved on this device for next time, and your crewmates see it.
+- Change it any night with "👕 Edit my barista" in the More row.
 - More lattes: once you can steam milk, about two in five customers want a latte or a cappuccino, and now and then
   someone adds "and a latte for my friend" to their order.
 - Customers post about your café: a cold cup or a long wait can earn a bad review mid-shift, a great serve a good
