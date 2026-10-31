@@ -1,6 +1,7 @@
 import { ECONOMY } from '../data/economy';
 import { FORECASTS, forecastById, type Forecast, type ForecastId, type TrafficShape } from '../data/forecasts';
 import { secondsToTicks } from './constants';
+import { hasStrategist } from './hires';
 import { rngNext, seedRng } from './rng';
 import type { GameState } from './types';
 
@@ -106,4 +107,37 @@ export function dayProgress(state: GameState): number {
   if (state.phase !== 'day') return 0;
   const total = secondsToTicks(state.settings.dayLengthSec);
   return total > 0 ? 1 - state.phaseTicksLeft / total : 0;
+}
+
+/** Round 3 item 3: the rough guess rounds to the nearest `step` and is skewed by up to ±`skew` (a hash of seed and day). */
+export const ROUGH = { step: 5, skew: 0.25 } as const;
+
+/**
+ * Round 3 item 3: is tonight's forecast only a rough guess? Gear runs without a Strategist on the books (classic runs
+ * keep the honest numbers). The strategist's wage is what buys the honest ones.
+ */
+export function forecastIsRough(state: GameState): boolean {
+  return state.gear === true && !hasStrategist(state);
+}
+
+/** A deterministic 0..1 from the run's seed, the coming day and a salt (no rng draw, so the guess never shifts the run). */
+function hash01(seed: number, day: number, salt: number): number {
+  let h = Math.imul(seed >>> 0, 0x9e3779b1) ^ Math.imul(day + 1, 0x85ebca6b) ^ Math.imul(salt + 1, 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 16), 0x7feb352d);
+  h = Math.imul(h ^ (h >>> 15), 0x846ca68b);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+/** One number as the rough guess shows it: skewed by up to ±25% for this seed, day and `salt`, then rounded to the nearest 5. */
+export function roughGuess(state: GameState, value: number, salt = 0): number {
+  const skew = 1 + (hash01(state.seed, state.day, salt) * 2 - 1) * ROUGH.skew;
+  const r = Math.round((value * skew) / ROUGH.step) * ROUGH.step;
+  return r === 0 ? 0 : r; // never -0
+}
+
+/** A percentage the rough guess shows: rounded to the nearest 5, no skew (price maths is not the guess). */
+export function roughPct(pct: number): number {
+  const r = Math.round(pct / ROUGH.step) * ROUGH.step;
+  return r === 0 ? 0 : r;
 }
