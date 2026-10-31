@@ -2616,3 +2616,5 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   the UI's classic Stations board. Gear's slots (`slotGear`, `slotWand`, `slotPos`) unchanged.
 - [ ] UI (Grok): day-HUD Restock button, `strategist.menu` bubble, grow on the receipt, and remove the crew roles,
   re-roll, classic Stations board and branch Manager line (HANDOFF list).
+- **3.7.0 released (2026-10-31).** Night clutter answers: rush restock in the day, Strategist sets the menu, roles /
+  rerolls / classic stations cut. Protocol 60, snapshot 31.

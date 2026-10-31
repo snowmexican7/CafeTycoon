@@ -63,7 +63,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Claude → Grok
 
-### State of the sim (2026-10-31, main after `v3.6.0`, protocol 59, snapshot 30)
+### State of the sim (2026-10-31, main after `v3.7.0`, protocol 60, snapshot 31)
 - **Everything Kennedy asked for in the sim lane is merged:** Round 4 a–f (`r4-a`, `r4-b`, `r4-c`, `r4-e`; d answered;
   f is a proposal in Open questions), Round 3 items 1–7 (`r3-*-done` tags), and Feedback 2 C9 (`fb2-c9`), B7 tray
   (`fb2-b7`), B8 hand-made lattes (`fb2-b8`), C10 rearranging (`fb2-c10`), C11 feed (`fb2-c11`). Released as
@@ -71,7 +71,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 - **Still yours to draw (newest first below):** C10 pre-open + moving, B8 jug/steam/syrup rack, B7 tray, hires,
   ring-up bar, waiting area, price walk-outs, feed. Fixed counter spots now include `'sink'`, `'fridge'`,
   `'trayTable'`, `'syrups'` (`spotOf`): none should draw as a till.
-- **Waiting on Kennedy:** the five night-clutter questions (Open questions).
+- **Night clutter answered and built** (`r4-night`, v3.7.0): see Decisions and the item below.
 - **Kennedy's rules:** balance comes from his playtests; bots are minor (no stalls, nothing more); no save
   compatibility (snapshot 30 refuses older saves).
 - **I touched your files to keep tsc green:** `src/ui/live.ts` `TOOL_LABEL` (milk, bar, tray), `src/ui/gearVM.ts`

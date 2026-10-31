@@ -16,6 +16,12 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+_Nothing yet._
+
+## 3.7.0 — 2026-10-31 · A tidier night
+
+Your night-screen answers: restock any time, let the Strategist run the menu, and fewer things to fiddle with.
+
 - Ran out mid-shift? Restock any time during the day: a rush delivery costs 25% more but arrives straight away.
 - A hired Strategist now sets the menu as well as the prices (change either by hand and it holds until the next night).
 - Crew roles, card re-rolls and the old Stations shop are gone, for a tidier night.
