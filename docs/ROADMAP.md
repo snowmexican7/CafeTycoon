@@ -3,7 +3,14 @@
 > Agreed order with Kennedy (2026-10-28): **phases go from easiest and lowest risk to hardest and riskiest.** AI is the hardest, so it comes late (Phase 5), and a polish phase closes it out. The machine-readable copy the game reads is `public/roadmap.json`.
 > The design spec (`superpowers/specs/2026-10-28-cafetycoon-design.md`, §17) uses older numbering (P3 = AI, P4 = bigger games). This roadmap supersedes it.
 
-## Where we are now (updated 2026-10-30, ~11 PM Toronto)
+## Where we are now (updated 2026-10-31, ~9 AM Toronto)
+
+> **Latest (2026-10-31):** main is **v3.7.2**. 3.7.0/3.7.1 shipped the night-clutter answers (rush restock in the
+> day, Strategist sets the menu, grow on the receipt, roles/re-roll/classic Stations cut). 3.7.2 merged Cursor's
+> overnight review fixes and the Strategist/Marketer hire cards (review: [`reviews/composer-2026-10-31.md`](reviews/composer-2026-10-31.md)).
+> **Workflow now:** Cursor codes in PRs, Grok reviews/merges/releases, Claude keeps the sim lane (HANDOFF "Lanes").
+> **Biggest gap:** the sim is ahead of the screen on C10 rearranging, B8 hand-made lattes, B7 trays, C11 feed,
+> the ring-up bar and the waiting area; those are the next PR blocks. The tables below are from 2026-10-30.
 
 > **Start here.** This section is the single, current picture for anyone new to the repo (including code
 > reviewers). The phase plan below is the long-range history. Details live in

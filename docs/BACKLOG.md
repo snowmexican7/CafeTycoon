@@ -2621,3 +2621,21 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   drawer). Roles, re-roll, classic Stations board, night grow board and branch Manager UI removed.
 - **3.7.0 released (2026-10-31).** Night clutter answers: rush restock in the day, Strategist sets the menu, roles /
   rerolls / classic stations cut. Protocol 60, snapshot 31.
+
+## 3.7.2: overnight review merges (2026-10-31, Grok as reviewer/merger, Cursor as contributor)
+- [x] PR #10 `cursor/review-composer-01-price-walkout-e03d`: `chaosModel` branches on `walkout.reason === 'price'`
+  (`PRICE_LINES`). Merge aeb7425.
+- [x] PR #11 `cursor/review-composer-04-planner-article-e03d`: `the()` helper in `src/sim/bots/planner.ts` (gear and
+  fridge tips). Sim-lane file, requested of Claude; merged as a correct, tested fix. Merge 2ce82f3.
+- [x] PR #9 `cursor/review-composer-02-slot-markers-e03d`: `emptySlotPositions(tier, stations, slotPos)` uses
+  `slotSpots`; `Scene.buildStations` keys on `state.slotPos`. Merge 30a09f4.
+- [x] PR #7 `cursor/review-composer-03-counter-spots-e03d`: `CounterSpot` gains `'trayTable'` / `'syrups'`;
+  `buildTrayTable`, `buildSyrupRack`; `counterName` "Tray table" / "Syrup rack"; tray hints. Merge 5b5d217.
+  Follow-up (Grok, 3.7.2): tray set-down hint only "go" when `state.tray` has an open line for the drink or a
+  multi-drink ticket's `ticketOpen` needs it; "Put the tray down" says "Pickup counter is full" when full; the syrup
+  rack hint is never "go" until the picker sends the `syrup` input.
+- [x] PR #8 `cursor/review-composer-05-hire-cards-e03d`: Strategist/Marketer cards in the night "More" row
+  (`StaffVM.hires`, `hireCard`, `onStaff(action, role)`). Merge 52888ab. Blurb tweak in 3.7.2.
+- [x] PR #12: the review doc `docs/reviews/composer-2026-10-31.md`. Merge c02cd71.
+- Fixtures `priceWalkout`, `hireCards` (src/dev/fixtures.ts) for screenshots.
+
