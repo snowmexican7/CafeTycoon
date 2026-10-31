@@ -21,6 +21,13 @@ export function strategistMenuLine(e: Pick<SimEvent, 'data'>): string {
   return d.on ? `🧠 Your Strategist added ${name} to the menu` : `🧠 Your Strategist took ${name} off the menu`;
 }
 
+/** Review Block 6: "🧠 Your Strategist set 3 prices" from `strategist.set { changed }`. */
+export function strategistSetLine(e: Pick<SimEvent, 'data'>): string {
+  const n = Number((e.data as { changed?: number }).changed) || 0;
+  if (n <= 0) return '🧠 Your Strategist checked the prices';
+  return n === 1 ? '🧠 Your Strategist set 1 price' : `🧠 Your Strategist set ${n} prices`;
+}
+
 const MAX_LINES = 4;
 
 /** FB2 C10: the layout went back to the default after a grow or a gear change. */
@@ -40,6 +47,7 @@ export function logToastLines(events: readonly SimEvent[], nameOf: (id: PlayerId
   const lines = events.flatMap((e) => {
     if (e.kind === 'restock.rush') return [rushToast(e, nameOf, me)];
     if (e.kind === 'strategist.menu') return [strategistMenuLine(e)];
+    if (e.kind === 'strategist.set') return [strategistSetLine(e)];
     if (e.kind === 'station.reset') return [stationResetLine()];
     if (e.kind === 'station.place') return [stationPlaceLine(e, nameOf)];
     return [];
@@ -48,4 +56,4 @@ export function logToastLines(events: readonly SimEvent[], nameOf: (id: PlayerId
   return [...lines.slice(0, MAX_LINES - 1), `…and ${lines.length - (MAX_LINES - 1)} more changes`];
 }
 
-export const TOAST_KINDS = ['restock.rush', 'strategist.menu', 'station.reset', 'station.place'] as const satisfies readonly SimEvent['kind'][];
+export const TOAST_KINDS = ['restock.rush', 'strategist.menu', 'strategist.set', 'station.reset', 'station.place'] as const satisfies readonly SimEvent['kind'][];

@@ -37,6 +37,8 @@ export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: 
             <div class="line"><span>Tips</span><span>${esc(vm.tips)}</span></div>
             <div class="line"><span>Rent</span><span class="neg">−${esc(vm.rent)}</span></div>
             ${vm.wages ? `<div class="line wages"><span>Crew wages</span><span class="neg">−${esc(vm.wages)}</span></div>` : ''}
+            ${vm.hireWages ? `<div class="line wages"><span>Specialist wages</span><span class="neg">−${esc(vm.hireWages)}</span></div>` : ''}
+            ${vm.priceWalkouts ? `<div class="line chaos"><span>Left over the price</span><span>${vm.priceWalkouts}</span></div>` : ''}
             ${vm.events ? `<div class="line chaos"><span>Today: ${esc(vm.events.join(', '))}</span><span></span></div>` : ''}
             ${vm.inspection ? `<div class="line inspection ${vm.inspection}"><span>Health inspection</span><span>${vm.inspection === 'pass' ? 'PASSED' : `FAILED${vm.fines ? ` −${esc(vm.fines)}` : ''}`}</span></div>` : ''}
             ${vm.challenges ? vm.challenges.map((c) => `<div class="line challenge"><span>✓ ${esc(c.label)}</span><span class="pos">+${esc(c.reward)}</span></div>`).join('') : ''}

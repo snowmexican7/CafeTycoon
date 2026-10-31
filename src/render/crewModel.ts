@@ -320,7 +320,8 @@ export function emotePhase(t: number, index: number, every: number, length = 1.3
 }
 
 /** Bot name tag text. */
-export const botTag = (name: string) => `${name} \u00b7 bot`;
+/** Review Block 6: friendly name tag (no "· bot" debug chrome). */
+export const botTag = (name: string) => name;
 
 /** Label + tone for the HUD vibe chip. */
 export function vibeLabel(vibe: number): { text: string; tone: 'high' | 'mid' | 'low' } {

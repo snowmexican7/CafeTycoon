@@ -284,10 +284,15 @@ function drinkCard(m: MenuLineVM, onlyOne: boolean): string {
   const info = DRINK_INFO[m.drink];
   const delta = m.step === 0 ? '' : `<span class="dc-step ${m.step > 0 ? 'up' : 'down'}">${m.step > 0 ? '+' : '−'}$${Math.abs(m.price - m.list).toFixed(2)}</span>`;
   const stock = m.stock === 'out' ? '<span class="dc-stock out">Sold out</span>' : m.stock === 'low' ? '<span class="dc-stock low">Low</span>' : '';
+  // Review Block 6: "Rough guess" only when `PriceLine.rough` / forecastIsRough — not with a Strategist.
+  const fcTip = m.rough
+    ? `${m.demandPct ? `${m.demandPct > 0 ? '+' : ''}${m.demandPct}% orders vs list price. ` : ''}Rough guess at tomorrow: profit before tips and rent`
+    : `${m.demandPct ? `${m.demandPct > 0 ? '+' : ''}${m.demandPct}% orders vs list price. ` : ''}Tomorrow's forecast: profit before tips and rent`;
   const fc = m.orders === undefined
     ? `<span class="dc-fc off">Off the menu${m.fans ? ` · <em class="down" title="${esc(m.fans.join(', '))} will miss it">♥ ${m.fans.length}</em>` : ''}</span>`
-    : `<span class="dc-fc" title="${m.demandPct ? `${m.demandPct > 0 ? '+' : ''}${m.demandPct}% orders vs list price. ` : ''}Rough guess at tomorrow: profit before tips and rent">≈${m.orders} orders · <b>≈$${m.profit!.toFixed(0)}</b>${m.fans ? ` <span class="dc-fan" title="Regulars' favourite: ${esc(m.fans.join(', '))}">♥</span>` : ''}</span>`;
+    : `<span class="dc-fc" title="${esc(fcTip)}">≈${m.orders} orders · <b>≈$${m.profit!.toFixed(0)}</b>${m.fans ? ` <span class="dc-fan" title="Regulars' favourite: ${esc(m.fans.join(', '))}">♥</span>` : ''}</span>`;
   const tw = m.twist ? TWIST_INFO[m.twist] : null;
+  const setBy = m.setByStrategist ? '<em class="dc-strat" title="Your Strategist set this price tonight">Set by Strategist</em>' : '';
   return `<div class="dcard ${m.on ? '' : 'off'} ${m.stock ?? ''}" data-drink-row="${m.drink}">
     <div class="dc-top">${itemIcon(m.drink, 44)}<b class="dc-name">${esc(info.name)}</b>${stock}</div>
     <div class="dc-price">
@@ -295,7 +300,7 @@ function drinkCard(m: MenuLineVM, onlyOne: boolean): string {
       <span class="dc-p">$${m.price.toFixed(2)}${delta}</span>
       <button class="btn pr-btn" data-action="price" data-drink="${m.drink}" data-step="${m.step + 1}" ${m.canUp ? '' : 'disabled'} aria-label="Raise the ${esc(info.name)} price">+</button>
     </div>
-    ${fc}
+    ${setBy}${fc}
     <div class="dc-foot">
       <button class="btn mini sw ${m.on ? 'on' : ''}" data-action="menu" data-drink="${m.drink}" data-on="${m.on ? '0' : '1'}" ${m.on && onlyOne ? 'disabled title="Keep at least one drink on"' : ''} aria-pressed="${m.on}">${m.on ? 'On' : 'Off'}</button>
       <button class="btn mini ghost" data-action="drawer" data-d="twist:${m.drink}">${tw ? `${tw.icon} ${esc(tw.name)}` : 'Twist'} ▸</button>
@@ -319,7 +324,12 @@ function menuPane(vm: NightVM): string {
   const strat = vm.strategist
     ? `<div class="mn-strat" role="note">🧠 <b>Your Strategist sets the menu</b>; you can still override until next night.</div>`
     : '';
-  return `${strat}<div class="mn-head"><span class="mn-sum" title="Only a rough guess: weather, events and the rival can swing it. A strategist can tell you more."><em class="mn-guess">Rough guess</em> for tomorrow: <b>≈${sum.orders} orders</b> · <b>≈$${sum.profit.toFixed(0)}</b> profit <small class="mn-more">A strategist can tell you more</small></span>${sig}
+  // Review Block 6: "Rough guess" mark only when forecastIsRough (MenuLineVM.rough); Strategist → honest forecast.
+  const rough = menu.some((m) => m.rough);
+  const sumLabel = rough
+    ? `<span class="mn-sum" title="Only a rough guess: weather, events and the rival can swing it. A strategist can tell you more."><em class="mn-guess">Rough guess</em> for tomorrow: <b>≈${sum.orders} orders</b> · <b>≈$${sum.profit.toFixed(0)}</b> profit <small class="mn-more">A strategist can tell you more</small></span>`
+    : `<span class="mn-sum" title="Tomorrow's forecast: weather, events and the rival can still swing it.">${vm.strategist ? '<em class="mn-honest">Strategist forecast</em>' : 'Forecast'} for tomorrow: <b>≈${sum.orders} orders</b> · <b>≈$${sum.profit.toFixed(0)}</b> profit</span>`;
+  return `${strat}<div class="mn-head">${sumLabel}${sig}
       <button class="btn mini ghost" data-action="drawer" data-d="pricing">How pricing works ⓘ</button></div>
     ${vm.growth.waiting ? `<div class="mn-wait" role="status">${esc(vm.growth.waiting)} ${vm.gear ? '<button class="btn mini" data-action="tab" data-tab="gear">Gear shop ▸</button>' : ''}</div>` : ''}
     <div class="dgrid" style="--cols:${menuCols(menu.length)};--rows:${Math.ceil(menu.length / menuCols(menu.length)) || 1}">${menu.map((m) => drinkCard(m, onCount === 1)).join('')}</div>`;
@@ -347,8 +357,8 @@ function alertRow(a: BriefAlert): string {
 
 /** FB1 WP6: a bot's tip as one big tap-to-apply chip ("💬 Bo · hurried: Raise the latte to $5.50 ✓"). */
 function tipChip(t: TipVM): string {
-  return `<button class="tip p-${t.personality}" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.by}: ${t.full}. Tap to do it.`)}">
-    <span class="tip-by"><span aria-hidden="true">💬</span> ${esc(t.by)}</span><span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Do it</span></button>`;
+  return `<button class="tip p-${t.personality}" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.by}: ${t.full}. Tap to try it.`)}">
+    <span class="tip-by"><span aria-hidden="true">💬</span> ${esc(t.by)}</span><span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Try it</span></button>`;
 }
 
 /** Round 3 item 3: a Strategist or Marketer hire / fire card. */
@@ -362,15 +372,21 @@ function hireCard(role: 'strategist' | 'marketer', h: { hired: boolean; wage: st
     <button class="btn mini" data-action="staff" data-staff="hire" data-role="${role}">Hire · ${esc(h.wage)}/day</button></div>`;
 }
 
-/** P3 B15: the hired bot baristas, their wage, and hire / let go. Round 3: Strategist + Marketer cards. */
+/** P3 B15: the hired bot baristas, their wage, and hire / let go (specialists sit higher — see hireCardsRow). */
 function staffRow(s: StaffVM | undefined): string {
   if (!s) return '';
   const who = s.crew.length ? s.crew.map((c) => `<span class="sf-who" title="${esc(c.trait)}">🤖 ${esc(c.name)}</span>`).join('') : '<span class="sf-none">No hired help. You run the bar.</span>';
   return `<div class="staff" aria-label="Hired staff"><div class="sf-h"><b>Hired staff</b><span>${esc(s.wage)}/day each${s.crew.length ? ` · ${esc(s.total)} at closing` : ''}</span></div>
     <div class="sf-row">${who}</div>
     <div class="sf-btns"><button class="btn mini" data-action="staff" data-staff="hire" ${s.canHire ? '' : 'disabled'} title="${s.canHire ? 'A bot barista clocks in tomorrow' : 'All four spots behind the bar are taken'}">＋ Hire · ${esc(s.wage)}/day</button>
-    <button class="btn mini ghost" data-action="staff" data-staff="fire" ${s.crew.length ? '' : 'disabled'}>Let ${s.crew.length ? esc(s.crew[s.crew.length - 1].name) : 'one'} go</button></div>
-    <div class="hires" aria-label="Specialists">${hireCard('strategist', s.hires.strategist)}${hireCard('marketer', s.hires.marketer)}</div></div>`;
+    <button class="btn mini ghost" data-action="staff" data-staff="fire" ${s.crew.length ? '' : 'disabled'}>Let ${s.crew.length ? esc(s.crew[s.crew.length - 1].name) : 'one'} go</button></div></div>`;
+}
+
+/** Review Block 6: Strategist / Marketer cards high on Tonight (visible at 1512×982 and 1280×800 without scrolling). */
+function hireCardsRow(s: StaffVM | undefined): string {
+  if (!s) return '';
+  return `<div class="tn-card hire-row" aria-label="Specialists"><div class="tn-h">Specialists</div>
+    <div class="hires">${hireCard('strategist', s.hires.strategist)}${hireCard('marketer', s.hires.marketer)}</div></div>`;
 }
 
 /** Brief alerts shown on their own Stock card instead of in Heads up (ui-3.5.1 declutter: one warning, one place). */
@@ -447,7 +463,9 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     <button class="chip" data-action="edit-look">👕 Edit my barista ▸</button>
     ${regs.length ? `<button class="chip ${regWarn ? 'warn' : ''}" data-action="drawer" data-d="regulars">♥ ${regs.length} regulars${regWarn ? ` · ${regWarn} !` : ''} ▸</button>` : ''}
     ${r.scouted ? `<button class="chip" data-action="drawer" data-d="paper">🔭 Scouted ▸</button>` : `<button class="chip" data-action="scout" ${r.affordable ? '' : 'disabled'} title="See ${esc(r.name)}'s menu and prices for tomorrow">🔭 Scout ${esc(r.name)} · ${esc(short$(r.cost))}</button>`}${staffRow(vm.staff)}</div>`;
+  // Review Block 6: specialists first so hire cards are on-screen at 1512×982 / 1280×800 (not under Stock).
   return `${banner}${pick}<div class="tn-grid ${vm.gear ? 'flow' : ''}">
+    ${hireCardsRow(vm.staff)}
     <div class="tn-card st"><div class="tn-h">Stock</div><div class="restocks" style="--n:${n}">${stock}</div></div>
     ${alerts}${dayCard}</div>${moreRow}`;
 }
@@ -460,6 +478,8 @@ function receiptBody(vm: NightVM, day: number): string {
   const line = (a: string, b: string, cls = '') => `<div class="line ${cls}"><span>${a}</span><span>${b}</span></div>`;
   return `<div class="rc-paper"><h3>DAY ${day - 1}</h3>
     ${line('Sales', esc(t.sales))}${line('Tips', esc(t.tips))}${t.familyTips ? t.familyTips.map((f) => line(`&nbsp;&nbsp;${esc(f.label)}`, esc(f.amount), 'sub fam-tip')).join('') : ''}${line('Rent', `<span class="neg">−${esc(t.rent)}</span>`)}${t.wages ? line('Crew wages', `<span class="neg">−${esc(t.wages)}</span>`) : ''}
+    ${t.hireWages ? line('Specialist wages', `<span class="neg">−${esc(t.hireWages)}</span>`) : ''}
+    ${t.priceWalkouts ? line('Left over the price', String(t.priceWalkouts)) : ''}
     ${t.bonus ? line('Bonuses', `+${esc(t.bonus)}`) : ''}
     ${t.combos ? t.combos.map((c) => line(`New combo: ${TWIST_INFO[c.twist].icon} ${esc(TWIST_INFO[c.twist].name)} ${esc(DRINK_INFO[c.drink].short.toLowerCase())}`, `<span class="stars">${starRow(c.stars)}</span>`, 'combo')).join('') : ''}
     ${t.ad ? line(esc(t.ad), '') : ''}
@@ -584,10 +604,16 @@ function twistBody(m: MenuLineVM): string {
     <p class="dr-note">Recipe: ${DRINK_INFO[m.drink].ticket.map((s) => esc(s)).join(' → ')} → counter</p>`;
 }
 
-const PRICING_HELP = `<p>Each −/+ moves a drink's price one step from its list price.</p>
+function pricingHelp(vm: NightVM): string {
+  const honest = !!vm.strategist || !(vm.menu ?? []).some((m) => m.rough);
+  const guess = honest
+    ? 'The orders and $ under each price are tomorrow\'s forecast, before tips and rent. Weather, events and the rival can still swing it.'
+    : 'The orders and $ under each price are a rough guess at tomorrow, before tips and rent. Weather, events and the rival can swing it a lot. A strategist can tell you more.';
+  return `<p>Each −/+ moves a drink's price one step from its list price.</p>
   <p>Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</p>
   <p>Lower prices bring more orders but a thinner margin. Regulars notice when their favourite gets pricey.</p>
-  <p>The orders and $ under each price are a rough guess at tomorrow, before tips and rent. Weather, events and the rival can swing it a lot. A strategist can tell you more.</p>`;
+  <p>${guess}</p>`;
+}
 
 function drawerHtml(d: Drawer | null, vm: NightVM, extras: NightExtras | undefined, sig: SigDraft | null): string {
   if (!d) return '';
@@ -599,7 +625,7 @@ function drawerHtml(d: Drawer | null, vm: NightVM, extras: NightExtras | undefin
   else if (d === 'paper') { title = 'The paper'; body = newspaper(vm.forecast) + rivalCard(vm.rival); }
   else if (d === 'regulars') { title = 'Regulars'; body = regularsBody(vm.regulars ?? []); }
   else if (d === 'signature') { title = '⭐ Signature drink'; body = signatureCard(vm.signature, sig); }
-  else if (d === 'pricing') { title = 'How pricing works'; body = PRICING_HELP; }
+  else if (d === 'pricing') { title = 'How pricing works'; body = pricingHelp(vm); }
   else if (d === 'notebook') { title = '📓 Street notebook'; body = notebookBody(vm.gear); }
   else {
     const m = vm.menu?.find((x) => `twist:${x.drink}` === d);
@@ -706,10 +732,40 @@ export function createNight(
   let lastSig = '';
   let lastDay: number | null = null;
 
+  /** Review Block 6: soft open gate — warn when nothing is makeable; never hard-block. */
+  function confirmOpenAnyway(): void {
+    const shade = document.createElement('div');
+    shade.className = 'soft-open';
+    shade.setAttribute('role', 'dialog');
+    shade.setAttribute('aria-modal', 'true');
+    shade.setAttribute('aria-labelledby', 'soft-open-h');
+    shade.innerHTML = `<div class="soft-open-card">
+      <h3 id="soft-open-h">You can't make any drinks yet.</h3>
+      <p>No stock or no machine for anything on the menu. Open anyway?</p>
+      <div class="soft-open-btns">
+        <button type="button" class="btn primary" data-soft="go">Open anyway</button>
+        <button type="button" class="btn ghost" data-soft="back">Go back</button>
+      </div></div>`;
+    const close = () => shade.remove();
+    shade.addEventListener('click', (ev) => {
+      const a = (ev.target as HTMLElement).closest<HTMLElement>('[data-soft]')?.dataset.soft;
+      if (a === 'go') {
+        close();
+        handlers.onReady();
+      } else if (a === 'back' || ev.target === shade) close();
+    });
+    container.append(shade);
+    shade.querySelector<HTMLElement>('[data-soft=back]')?.focus();
+  }
+
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
     else if (action === 'restock') handlers.onRestock(el.dataset.supply as SupplyId);
-    else if (action === 'ready') handlers.onReady();
+    else if (action === 'ready') {
+      // Soft open: UI-only gate before onReady when nothing is makeable.
+      if (lastVm && !lastVm.makeable && !lastVm.meReady) confirmOpenAnyway();
+      else handlers.onReady();
+    }
     else if (action === 'menu') handlers.onMenu?.(el.dataset.drink as DrinkId, el.dataset.on === '1');
     else if (action === 'twist') handlers.onTwist?.(el.dataset.drink as DrinkId, (el.dataset.twist || null) as TwistId | null);
     else if (action === 'price') handlers.onPrice?.(el.dataset.drink as DrinkId, Number(el.dataset.step));

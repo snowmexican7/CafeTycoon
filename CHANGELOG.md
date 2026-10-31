@@ -26,6 +26,13 @@ when a build goes out, the line moves under its version with the date.
   takes its beat — including the self-order screen's honey bar. The "Ringing up…" hint is unchanged.
 - Waiting-area browsers inside the cart and café when the line is full; "Line's too long!" when someone complains;
   a tumbleweed rolls past when an arrival quietly leaves. The day's receipt notes how many left that way.
+- Morning note fades away after a few seconds, or as soon as you move — no click needed.
+- Station hints say what's wrong ("Needs a shot first", "Machine is busy") instead of a vague idle.
+- Bot name tags drop the "· bot" debug look; crew tip chips say "Try it".
+- "Rough guess" only shows when you don't have a Strategist; with one, prices say "Set by Strategist".
+- Strategist and Marketer hire cards sit high on Tonight (visible without scrolling at common laptop sizes).
+- Receipt lines for specialist wages and "Left over the price" walk-outs; price walk-outs also walk out the door.
+- Soft open gate: Open with nothing makeable asks "You can't make any drinks yet. Open anyway?" — warns, never blocks.
 
 ## 3.7.2 — 2026-10-31 · Fixes from the overnight review
 

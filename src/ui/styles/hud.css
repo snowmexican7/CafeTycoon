@@ -97,10 +97,12 @@
    four-drink menu); only the morning note gives way and scrolls. */
 #hud .hud-side.right > :not(.note) { flex-shrink: 0; }
 #hud .hud-side.right > .note { flex: 0 1 auto; min-height: 48px; }
-#hud .note { background: #fff1b8; transform: rotate(1.5deg); font-size: 13.5px; line-height: 1.35; overflow: auto; }
+#hud .note { background: #fff1b8; transform: rotate(1.5deg); font-size: 13.5px; line-height: 1.35; overflow: auto; transition: opacity .4s ease, transform .4s ease; }
 #hud .note b { font: 600 13px var(--font-display); display: block; letter-spacing: .08em; color: #7a5c0e; margin-bottom: 2px; }
 #hud .note p { margin: 0 0 4px; }
 #hud .note.fresh { animation: hud-wiggle .9s ease-in-out 2; }
+/* Review Block 6: morning note fades on its own (or on first move) instead of needing a click. */
+#hud .note.fade-out { opacity: 0; transform: rotate(1.5deg) translateY(-6px); pointer-events: none; }
 
 #hud .hud-bottom { position: absolute; bottom: 12px; left: 18px; right: 18px; height: 58px; display: flex; align-items: center; gap: 12px; }
 #hud .hold { background: var(--crema); border-radius: 16px; height: 58px; padding: 0 18px 0 8px; display: flex; align-items: center; gap: 10px; box-shadow: var(--sh-1); }

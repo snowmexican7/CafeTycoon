@@ -60,7 +60,7 @@ describe('hud live helpers', () => {
     p.holding = 'grounds';
     expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Pull a shot' });
     p.holding = null;
-    expect(handHint(s, 'p1').title).toBe('Needs grounds');
+    expect(handHint(s, 'p1').title).toBe('Needs grounds first');
     p.pos = { x: -50, y: -50 };
     expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Walk up to a station' });
     s.phase = 'night';

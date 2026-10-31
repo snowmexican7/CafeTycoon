@@ -44,7 +44,7 @@ describe('crew visuals model', () => {
     expect(botLook('steady')).toMatchObject({ headphones: true, emote: 'note' });
     expect(botLook('hurried')).toMatchObject({ headband: true, headphones: false, emote: 'clock' });
     expect(botLook('hurried').every).toBeLessThan(botLook('steady').every);
-    expect(botTag('Bo')).toBe('Bo \u00b7 bot');
+    expect(botTag('Bo')).toBe('Bo');
   });
 
   it('pops emotes briefly and staggers bots', () => {

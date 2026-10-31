@@ -526,8 +526,9 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
   // P3 B5: near the end of a run, empty hands can rush it.
   if (station.busyTicksLeft > 0 && held === null && station.making && station.busyTotal && station.busyTicksLeft <= station.busyTotal * ACCURACY.earlyShare)
     return go(`Rush it out now (−1★)`, `${where} · ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`);
-  if (station.busyTicksLeft > 0) return idle(`Ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`, where);
-  if (station.output !== null) return idle('Hands full', where);
+  // Review Block 6: say why E won't fire (busy / wrong item), not a vague idle.
+  if (station.busyTicksLeft > 0) return idle('Machine is busy', `${where} · ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`);
+  if (station.output !== null) return idle('Hands full: set it down first', where);
   // Gear G5: dead or jammed machines.
   if (station.dead) return idle('Dead till tonight', where);
   if (station.jammed) return held === null ? go('Whack it!', `${where} · jammed`) : idle('Jammed: empty hands to whack it', where);
@@ -540,7 +541,12 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
   // Smoke fix: a pod machine never wants grounds, so don't tell the player it does.
   const needText = station.gear && GEAR[station.gear].pods ? 'empty hands (it takes pods)' : need ? ITEM_LABEL[need].toLowerCase() : 'empty hands';
   if (held !== null && held !== 'grounds' && !recipeFor(state, kind, held)) return idle(`Wrong station: E fumbles it (−1★)`, `${where} needs ${needText}`);
-  if (held !== need) return idle(need ? `Needs ${ITEM_LABEL[need].toLowerCase()}` : 'Hands full', where);
+  if (held !== need) {
+    if (need === 'grounds') return idle('Needs grounds first', where);
+    if (need === 'espresso') return idle('Needs a shot first', where);
+    if (need) return idle(`Needs ${ITEM_LABEL[need].toLowerCase()} first`, where);
+    return idle('Hands full: empty hands here', where);
+  }
   const supply = USES[kind];
   if (state.gear === true) {
     // ui-3.4.1 (FB2 A4): Gear milk is what's out at the bar, not what's in the fridge

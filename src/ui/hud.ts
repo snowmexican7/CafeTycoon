@@ -32,6 +32,9 @@ const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a
  * The in-day HUD: a top bar of pills, order tickets on the left, pantry/menu/note on the right and
  * what you hold along the bottom. Every block renders once, then only per-tick values are patched.
  */
+/** Review Block 6: morning note fades after this many ms, or sooner on the first move. */
+export const NOTE_DISMISS_MS = 8000;
+
 export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void; onRestock?(id: SupplyId | 'condiments'): void; onReady?(): void; onOpenDoors?(): void; onSyrup?(flavour: 'vanilla' | 'caramel'): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
   render(vm: HudVM, live?: HudLive): void;
   /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
@@ -39,6 +42,8 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   toast(lines: string[]): void;
   /** FB2 C11: a live review.post as a phone pop-up (queued; each shows ~5 s). */
   feedPop(posts: FeedPostVM[]): void;
+  /** Review Block 6: first WASD / stick move fades the morning note (no click needed). */
+  onFirstMove(): void;
   /** ui-3.7.1: the day Restock button and panel (null outside the day and the closing phase). */
   setRestock(vm: DayRestockVM | null): void;
   /** ui-3.7.1: B toggles the panel; while it is open 1-9 buy and B / Esc close. True when the key was used. */
@@ -210,6 +215,39 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   }
 
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
+  // Review Block 6: morning note auto-dismiss (fade after a few seconds, or on first move).
+  let noteTimer: ReturnType<typeof setTimeout> | null = null;
+  let noteKey = '';
+  let noteGone = false;
+  function clearNoteTimer(): void {
+    if (noteTimer) {
+      clearTimeout(noteTimer);
+      noteTimer = null;
+    }
+  }
+  function hideNote(fade: boolean): void {
+    if (el.note.hidden || noteGone) return;
+    noteGone = true;
+    clearNoteTimer();
+    if (!fade) {
+      el.note.hidden = true;
+      el.note.classList.remove('fade-out', 'fresh');
+      return;
+    }
+    el.note.classList.add('fade-out');
+    window.setTimeout(() => {
+      if (!noteGone) return;
+      el.note.hidden = true;
+      el.note.classList.remove('fade-out', 'fresh');
+    }, 450);
+  }
+  function armNote(): void {
+    clearNoteTimer();
+    noteGone = false;
+    el.note.classList.remove('fade-out');
+    el.note.hidden = false;
+    noteTimer = setTimeout(() => hideNote(true), NOTE_DISMISS_MS);
+  }
   // Gear Tree G5: a small card of the crew's machines and how each is doing (Gear runs only).
   let gearHtml = '';
   function renderGear(vm: HudVM): void {
@@ -266,8 +304,24 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     notes = vm.notes;
     prices = Object.fromEntries(vm.menu.map((m) => [m.id, m.price]));
     lastOrders = '';
-    el.note.innerHTML = vm.notes.length ? `<b>MORNING NOTE</b>${vm.notes.map((n) => `<p>${esc(n)}</p>`).join('')}` : '';
-    el.note.hidden = vm.notes.length === 0;
+    const nextNote = vm.notes.length ? `${vm.dayLabel}|${vm.notes.join('\n')}` : '';
+    if (nextNote !== noteKey) {
+      noteKey = nextNote;
+      if (vm.notes.length) {
+        el.note.innerHTML = `<b>MORNING NOTE</b>${vm.notes.map((n) => `<p>${esc(n)}</p>`).join('')}`;
+        armNote();
+      } else {
+        clearNoteTimer();
+        noteGone = false;
+        el.note.innerHTML = '';
+        el.note.hidden = true;
+        el.note.classList.remove('fade-out', 'fresh');
+      }
+    } else if (!vm.notes.length) {
+      el.note.hidden = true;
+    } else if (noteGone) {
+      el.note.hidden = true;
+    }
     el.seed.textContent = `· seed ${vm.seed}`;
     el.events.innerHTML = (vm.events ?? [])
       .map((e) => {
@@ -554,7 +608,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     toast(lines) {
       if (lines.length === 0) return;
       // Morning notes already sit on the note card: give it a wiggle instead of repeating them.
-      if (lines.every((l) => notes.includes(l)) && !el.note.hidden) {
+      if (lines.every((l) => notes.includes(l)) && !el.note.hidden && !noteGone) {
         el.note.classList.remove('fresh');
         void el.note.offsetWidth;
         el.note.classList.add('fresh');
@@ -570,6 +624,9 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       const wasEmpty = feedQueue.length === 0 && !feedPopTimer;
       feedQueue.push(...posts);
       if (wasEmpty) showNextFeedPop();
+    },
+    onFirstMove() {
+      hideNote(true);
     },
     setRestock(vm) {
       restock.render(vm);
