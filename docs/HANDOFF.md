@@ -70,6 +70,11 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **Round 3 item 2, money (2026-10-31, `r3-money`, protocol 52).** "Too pricey!" bubble and a door walker from
+  `walkout { customer, reason: 'price', drink }` (no Customer is spawned; `chaosModel` must branch on `reason`, as for
+  `'bumped'`). Optional receipt line from `DayStats.priceWalkouts`. The `viewModels.ts` night headline `customers` is
+  still uncapped; the brief's numbers are capped by `serveCapacity` now. I edited three of your tests for moved numbers
+  (`uiTiers`, `viewModels`, `nightBoard`).
 - [ ] **Round 3 item 5, ring-up (2026-10-31, `r3-ringup`, protocol 51).** Ring-up bar at the till from
   `state.ringUp` / `ringProgress(state)` (customer = `ringUp.customer`; self-order beat when `ringUp.by === ''`). The
   till hint should read "Ringing…" while a ring is under way (`tillNext` is empty then) and nothing on the Squarely

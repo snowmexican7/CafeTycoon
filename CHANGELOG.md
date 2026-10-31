@@ -32,6 +32,9 @@ when a build goes out, the line moves under its version with the date.
 - Ringing up an order takes a moment at the till (1.5 s on the old register, 1 s on the kiosk): stay at the till
   until the bar fills; walk off and it cancels. The Squarely terminal is self-order, so customers move to pickup by
   themselves.
+- Prices ease a little: the kerbside stand can charge 80% of café prices (was 75%), supplies cost 10% less, pricey
+  menus scare off fewer people, and the night forecast only promises as many cups as your crew and machines can pour.
+  Someone put off by your prices now shows up and walks out ("Too pricey!") instead of never coming.
 
 ## 3.5.0 — 2026-10-30 · Open, close and clean up
 

@@ -2420,3 +2420,11 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   `till.start { customer, by, seconds }`, `till.cancel`, `till.rung`. Bots ring with the same time
   (`BotState.ringing`) and never in the self-order tier. Kennedy's call if the kiosk should be self-order instead
   (one line in `TILL.ring`).
+- **Round 3 item 2, money (`r3-money`, protocol 52).** Stand price ×0.75 → 0.8; supply packs −10% (beans 7.2, milk 9,
+  concentrate 8.1, flavour 8.1, pastry 6.3); `PRICING.elasticity` 1.8 → 1.4; cart/café multipliers untouched.
+  `unitCost(drink, state?)` counts every use (cappuccino two milks, doppio two beans, a drip cup its pot share via
+  `drinkSupplyUnits` / `dripPotCups`). `expectedUse` / `expectedOrders` are price-aware (`priceTraffic`,
+  `shareWeights`), in cups (`cupsPerArrival`, `officeCups`) and capped by `serveCapacity` (src/sim/capacity.ts: queue +
+  the slower of machine and crew rate; `CAPACITY.handlingSeconds` 6, `stepSeconds` 2, untuned); `priceForecast`
+  orders are capped cups. A price-driven non-arrival logs `walkout { customer, reason: 'price', drink }` and
+  `DayStats.priceWalkouts` (not lost, not turned away; it takes a fresh customer id).
