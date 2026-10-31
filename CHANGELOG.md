@@ -17,6 +17,9 @@ when a build goes out, the line moves under its version with the date.
 ## Unreleased
 
 - Each Gear morning starts with a short **rearrange** before the doors open: a countdown, Ready, and (host) Open doors. Pick up a machine with Z or E, walk to a green outline, and press E to set it down. (C10)
+- Hand-made lattes: fill the milk jug to the ticket's line, stop the steam meter in the middle for foam, and pick
+  vanilla or caramel (1 / 2) at the syrup rack. Tickets show double shots and syrup asks; the jug, steam meter and
+  recipe icons sit over your cup.
 
 ## 3.7.2 — 2026-10-31 · Fixes from the overnight review
 

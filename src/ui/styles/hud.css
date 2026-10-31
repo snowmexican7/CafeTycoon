@@ -379,3 +379,21 @@
 @media (max-width: 1180px) { #hud .hud-restock { padding: 0 10px; } #hud .hud-restock > span:nth-child(2) { display: none; } }
 /* ui-3.7.1: with the Restock panel open, the toast centres in the space left of it so both stay readable. */
 #hud .hud-restock-panel:not([hidden]) ~ .toast { left: calc((100% - min(460px, 44vw) - var(--gutter)) / 2); max-width: min(440px, 38vw); z-index: 7; }
+
+/* FB2 B8: double / syrup asks on order tickets. */
+#hud .ticket .asks { grid-column: 2 / span 2; font: 700 13px var(--font-body); color: var(--caramel-dk); margin-top: -1px; }
+#hud .ticket .stk-it .ask-d, #hud .ticket .stk-it .ask-s { position: absolute; top: -6px; left: -6px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 99px;
+  background: var(--caramel); color: #fff; font: 800 10px/16px var(--font-body); text-align: center; text-transform: none; font-style: normal; }
+#hud .ticket .stk-it .ask-s { left: auto; right: -6px; background: #6b3a12; }
+
+/* FB2 B8: syrup picker at the rack (1 vanilla · 2 caramel). */
+#hud .hud-syrup { position: absolute; bottom: 78px; left: 50%; transform: translateX(-50%); z-index: 5; pointer-events: auto;
+  display: flex; align-items: center; gap: 10px; background: var(--foam); padding: 8px 12px; border-radius: 16px; box-shadow: 0 0 0 3px var(--caramel), var(--sh-2);
+  animation: hud-drop .2s ease-out; }
+#hud .hud-syrup[hidden] { display: none; }
+#hud .hud-syrup b { font: 700 15px var(--font-display); color: var(--ink); margin-right: 2px; }
+#hud .hud-syrup button { display: inline-flex; align-items: center; gap: 8px; border: 0; cursor: pointer; background: #fff; color: var(--ink);
+  border-radius: 12px; padding: 8px 14px; font: 700 16px var(--font-display); box-shadow: var(--sh-1); }
+#hud .hud-syrup button:hover { background: #fff6ea; }
+#hud .hud-syrup .k { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--caramel); color: #fff;
+  font: 800 13px var(--font-body); box-shadow: 0 2px 0 var(--caramel-dk); }

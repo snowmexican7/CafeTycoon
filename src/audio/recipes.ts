@@ -191,6 +191,20 @@ export const RECIPES: Record<CueId, Layer[]> = {
     { synth: 'moo', gain: 0.9 },
     { sample: 'clink', gain: 0.2, delay: 0.75, rate: [1.3, 1.4] },
   ],
+  // FB2 B8: jug stop, steam stop, syrup pump, syrup miss
+  milkFill: [
+    { synth: 'pour', gain: 0.55 },
+    { sample: 'clink', gain: 0.22, delay: 0.12, rate: [1.15, 1.25] },
+  ],
+  steamResult: [
+    { synth: 'steam', gain: 0.45 },
+    { synth: 'ready', gain: 0.55, delay: 0.15 },
+  ],
+  syrupAdd: [
+    { synth: 'splash', gain: 0.35 },
+    { sample: 'clink', gain: 0.2, delay: 0.08, rate: [1.25, 1.35] },
+  ],
+  syrupMiss: [{ synth: 'hmph', gain: 0.65 }],
 };
 
 /** Seconds a cue will sound for, used to hold its voice slot in the gate. */
