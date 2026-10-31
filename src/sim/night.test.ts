@@ -72,10 +72,11 @@ describe('night phase', () => {
     s.cash = 100;
     const t = applyNightInput(s, { kind: 'restock', playerId: 'p1', supply: 'beans', packs: 2 });
     expect(t.supplies.beans).toBe(40);
-    expect(t.cash).toBe(84);
+    expect(t.cash).toBeCloseTo(100 - 2 * ECONOMY.packs.beans.cost, 6);
+    const cash = t.cash;
     t.owned.push({ itemId: 'bulkBeanDeal', effects: [{ kind: 'supplyCost', supply: 'beans', mul: 0.6 }] });
-    expect(restockCost(t, 'beans', 1)).toBeCloseTo(4.8);
-    expect(applyNightInput(t, { kind: 'restock', playerId: 'p1', supply: 'milk', packs: 100 }).cash).toBe(84); // unaffordable: no change
+    expect(restockCost(t, 'beans', 1)).toBeCloseTo(ECONOMY.packs.beans.cost * 0.6, 2);
+    expect(applyNightInput(t, { kind: 'restock', playerId: 'p1', supply: 'milk', packs: 100 }).cash).toBe(cash); // unaffordable: no change
   });
 
   it('ends the night on the timer or when all connected players are ready', () => {

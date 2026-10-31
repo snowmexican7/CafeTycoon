@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { ECONOMY } from '../data/economy';
 import { addCustomer, serveCustomer } from './customers';
 import { createRun, startDay } from './run';
 import { finishDay } from './closing';
@@ -17,7 +18,7 @@ describe('supplies that spoil (P3 B4)', () => {
     spoilOvernight(s);
     expect(s.supplies).toEqual({ beans: 30, milk: 14, concentrate: 15, flavour: 5, pastry: 3 });
     expect(s.today.spoiled).toEqual({ milk: 6, pastry: 3 });
-    expect(s.today.spoiledValue).toBeCloseTo(6 + 3.5, 5);
+    expect(s.today.spoiledValue).toBeCloseTo((6 * ECONOMY.packs.milk.cost) / ECONOMY.packs.milk.size + (3 * ECONOMY.packs.pastry.cost) / ECONOMY.packs.pastry.size, 5);
   });
 
   it('halves with a Manager on the crew, and a walk-in fridge cuts it again', () => {

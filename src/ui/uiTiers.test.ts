@@ -51,7 +51,7 @@ describe('ui-3.4.0 grow transition', () => {
     const by = Object.fromEntries(g.rows.map((r) => [r.label, r]));
     expect(by['Line holds']).toMatchObject({ from: '3 people', to: '5 people', tone: 'good' });
     expect(by['Prices you can charge']).toMatchObject({ tone: 'good' });
-    expect(by['Prices you can charge']!.from).toMatch(/75%/);
+    expect(by['Prices you can charge']!.from).toMatch(/80%/);
     expect(by['People walking by']).toMatchObject({ tone: 'good' });
     expect(by['Rent a day']).toMatchObject({ tone: 'bad' });
     expect(g.unlocks.some((u) => /more tiles/.test(u))).toBe(true);

@@ -40,7 +40,7 @@ describe('view models', () => {
       { id: 'p2', name: 'S', ready: true },
     ]);
     expect(n.meReady).toBe(false);
-    expect(n.restock[0]).toMatchObject({ supply: 'beans', count: 20, packSize: 10, packCost: '$8.00', affordable: true });
+    expect(n.restock[0]).toMatchObject({ supply: 'beans', count: 20, packSize: 10, packCost: '$7.20', affordable: true });
     s.day = 2;
     s.days = [{ day: 1, served: 7, lost: 3, turnedAway: 0, sales: 30, tips: 5, rent: 25 }];
     expect(nightViewModel(s, 'p1').takings).toEqual({ sales: '$30.00', tips: '$5.00', rent: '$25.00', profit: '$10.00' });

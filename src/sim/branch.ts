@@ -102,7 +102,7 @@ export function branchDay(state: GameState, day = state.day, withCall = false): 
   const served = Math.min(demand, cap);
   const ticket = drinks.length ? drinks.reduce((x, d) => x + menuPrice(state, d), 0) / drinks.length : 0;
   // The Manager's supplier discount reaches the branch too.
-  const cupCost = (drinks.length ? drinks.reduce((x, d) => x + unitCost(d), 0) / drinks.length : 0) * roleSupplyCost(state);
+  const cupCost = (drinks.length ? drinks.reduce((x, d) => x + unitCost(d, state), 0) / drinks.length : 0) * roleSupplyCost(state);
   const takings = r2(served * ticket * (1 + BRANCH.tipRate) + (call?.kind === 'order' && call.took ? CALL.orderProfit : 0));
   const supplies = r2(served * cupCost);
   // P4 B5: stock sent over from home pays for cups first.
