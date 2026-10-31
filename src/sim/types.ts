@@ -862,10 +862,6 @@ export interface GameState {
   staff?: { strategist?: true; marketer?: true };
   /** FB1 WP5: what stands in each back-bar slot, left to right (absent = the tier's defaults; see sim/slots.ts). */
   slots?: (StationKind | null)[];
-  /** FB1 WP5: stations the crew owns but has not placed (absent = none). */
-  equipment?: StationKind[];
-  /** FB1 WP5: each station bought from the stations shop (what, the coming day, who bought it). */
-  equipLog?: { station: StationKind; day: number; by: string }[];
   /** Gear Tree (docs/GEAR_TREE.md): true for a Gear run (absent = today's game; off unless created with `gear`). */
   gear?: true;
   /** Batch/pickup: the sticky cold brew steep target for tomorrow (Gear runs; absent = the taps' full cap). */

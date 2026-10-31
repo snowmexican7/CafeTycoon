@@ -11,7 +11,6 @@ import { crewTips, planNight, PLAN_PRIORITY, RESTOCK_MARGIN } from './planner';
 import type { Advice } from './planner';
 import { CHECKOUT } from '../checkout';
 import { TIERS } from '../growth';
-import { EQUIPMENT } from '../../data/equipment';
 import { ECONOMY } from '../../data/economy';
 import { RIVAL } from '../rival';
 import type { DayStats, DrinkId, GameState, TierId } from '../types';
@@ -53,8 +52,6 @@ function spend(s: GameState, a: Advice): number {
       return TIERS[i.tier].cost;
     case 'checkout':
       return CHECKOUT[i.checkout].cost;
-    case 'equip':
-      return EQUIPMENT[i.station as keyof typeof EQUIPMENT].cost;
     case 'scout':
       return RIVAL.scoutCost;
     default:
@@ -299,7 +296,6 @@ describe('planNight: opening night', () => {
     const s = run('stand');
     s.supplies = { ...FULL };
     s.cash = 500;
-    s.equipment = [];
     const kinds = planNight(s).map((a) => a.kind);
     expect(kinds).not.toContain('grow');
     expect(kinds).not.toContain('checkout');
@@ -310,49 +306,7 @@ describe('planNight: opening night', () => {
   });
 });
 
-describe('planNight: back bar', () => {
-  it('places unplaced equipment in the first empty slot', () => {
-    const s = quiet();
-    s.equipment = ['espresso', 'grinder'];
-    expect(find(s, 'slot:5')).toMatchObject({ kind: 'slot', input: { kind: 'slot', index: 5, station: 'espresso' }, priority: PLAN_PRIORITY.slot });
-    s.slots = ['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash', 'grinder'];
-    expect(planNight(s).some((a) => a.kind === 'slot')).toBe(false);
-  });
-
-  it('suggests a second espresso machine when yesterday lost more than it served at a one-machine bar', () => {
-    const s = quiet();
-    s.day = 2;
-    s.rival = { scouted: 2 };
-    s.days.push(dayStats({ served: 10, lost: 11 }));
-    s.checkout = { owned: ['register', 'kiosk', 'squarely'], active: 'squarely' }; // nothing else to spend on
-    s.cash = EQUIPMENT.espresso.cost + rentForDay(s);
-    expect(find(s, 'equip:espresso')).toMatchObject({ kind: 'equip', input: { kind: 'equip', station: 'espresso' }, priority: PLAN_PRIORITY.equip });
-    s.cash -= 0.01;
-    expect(find(s, 'equip:espresso')).toBeUndefined();
-  });
-
-  it('no second machine when it served as many as it lost, already has two, or has no room', () => {
-    const base = () => {
-      const s = quiet();
-      s.day = 2;
-      s.rival = { scouted: 2 };
-      s.days.push(dayStats({ served: 10, lost: 11 }));
-      s.cash = 500;
-      return s;
-    };
-    const even = base();
-    even.days[0].lost = 10;
-    expect(find(even, 'equip:espresso')).toBeUndefined();
-    const two = base();
-    two.equipment = ['espresso'];
-    expect(find(two, 'equip:espresso')).toBeUndefined();
-    const full = base();
-    full.tier = 'stand';
-    full.slots = ['grinder', 'espresso', 'coldBrewTap', 'trash'];
-    full.stations = full.stations.filter((x) => x.kind !== 'steamer');
-    expect(find(full, 'equip:espresso')).toBeUndefined();
-  });
-
+describe('planNight: the board', () => {
   it('switches off a drink the bar has no station for, while at least one other drink stays on', () => {
     const s = run('stand');
     s.supplies = { ...FULL };
@@ -366,27 +320,13 @@ describe('planNight: back bar', () => {
     expect(find(s, 'menu:latte')).toBeUndefined();
   });
 
-  it('keeps a drink on when its missing station is unplaced: the slot advice brings it back', () => {
+  it('makes the board honest on a stand with no cold brew tap (espresso, the one drink with a station, stays on)', () => {
     const s = run('stand');
     s.supplies = { ...FULL };
     s.cash = rentForDay(s);
     s.slots = ['grinder', 'espresso', null, 'trash'];
-    s.equipment = ['steamer', 'coldBrewTap'];
     s.stations = s.stations.filter((x) => x.kind !== 'coldBrewTap');
-    const plan = planNight(s);
-    expect(plan.find((a) => a.kind === 'slot')?.input).toEqual({ kind: 'slot', index: 2, station: 'steamer' });
-    expect(plan.some((a) => a.kind === 'menu')).toBe(false);
-    // The same stand with nothing unplaced: the board is made honest (espresso, the one drink with a station, stays on).
-    s.equipment = [];
     expect(planNight(s).filter((a) => a.kind === 'menu').map((a) => a.id)).toEqual(['menu:coldBrew', 'menu:latte']);
-  });
-
-  it('keeps it on when the steamer is unplaced on a full stand', () => {
-    const s = run('stand');
-    s.supplies = { ...FULL };
-    s.cash = rentForDay(s);
-    s.equipment = ['steamer'];
-    expect(planNight(s).some((a) => a.kind === 'menu')).toBe(false);
   });
 
   it('keeps it on while the plan grows to a tier that may add the station', () => {
@@ -409,7 +349,6 @@ describe('planNight: order, purity, money', () => {
     s.supplies.beans = 0;
     s.supplies.milk = 2;
     s.cash = 240;
-    s.equipment = ['grinder'];
     s.tasteBook = { 'espresso:honey': 5 };
     return s;
   };
@@ -499,25 +438,9 @@ describe('planNight: Gear runs', () => {
     return s;
   };
 
-  it('offers no classic equip advice, even after a day that lost more than it served', () => {
+  it('offers no equip input advice (Round 4 f: the classic shop is gone), even after a day that lost more than it served', () => {
     const s = gearRun();
     expect(s.stations.filter((st) => st.kind === 'espresso')).toHaveLength(1);
     expect(planNight(s).filter((a) => a.input.kind === 'equip')).toEqual([]); // gear buys share the 'equip' advice kind but send `gear`
-  });
-
-  it('offers no slot advice for spare equipment', () => {
-    const s = gearRun();
-    s.equipment = ['steamer'];
-    expect(s.slots).toContain(null);
-    expect(planNight(s).filter((a) => a.input.kind === 'slot')).toEqual([]);
-  });
-
-  it('the same day on a classic stand still gets the second-machine tip', () => {
-    const s = run('stand');
-    s.days.push(dayStats({ served: 3, lost: 9 }));
-    s.cash = 300;
-    s.supplies = { ...FULL };
-    s.slots = ['grinder', 'espresso', null, 'trash'];
-    expect(planNight(s).some((a) => a.kind === 'equip')).toBe(true);
   });
 });

@@ -20,7 +20,7 @@ import {
   type NightTimerVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM, type StaffVM,
 } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
-import { isEquipmentKind } from '../sim/slots';
+import { isEquipmentKind } from '../data/equipment';
 import { GEAR_VOTE_MIN } from '../sim/gear';
 import type { EquipmentKind } from '../data/equipment';
 import type { StationsVM } from './stationsVM';

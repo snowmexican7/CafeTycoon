@@ -10,10 +10,10 @@
  *
  *   interface Advice {
  *     id: string;   // restock:<supply> | price:<drink> | twist:<drink> | signature | scout | rival |
- *                   // grow:<tier> | checkout:<id> | slot:<index> | equip:espresso | menu:<drink>
+ *                   // grow:<tier> | checkout:<id> | menu:<drink>
  *                   // Gear runs: gear:<gearId> | staff:fire | staff:hire:strategist | staff:hire:marketer | rival:promo | rival:loyalty |
  *                   // branch:open | branch:staff | branch:send:<supply> | steep | condimentBox | fridge:f1 | fridge:f4 (FB2 A4)
- *     kind: AdviceKind;  // restock | price | twist | signature | scout | rival | grow | checkout | slot | equip | menu
+ *     kind: AdviceKind;  // restock | price | twist | signature | scout | rival | grow | checkout | equip (Gear rows) | menu
  *     text: string;
  *     input: NightFix;   // the input without its playerId
  *     priority: number;  // see the table below
@@ -23,10 +23,10 @@
  *
  * Priorities (PLAN_PRIORITY); Gear-only rows marked G:
  *
- *   100 restock, out of stock          55 slot (classic)               40 twist
+ *   100 restock, out of stock          54 staff:hire:* (G, kind equip)  40 twist
  *    90 restock, low                   53 staff:fire (G, kind equip)   35 signature
- *    86 steep (G, kind restock)        52 branch:staff (G, kind grow)  30 equip (classic)
- *    84 condimentBox (G, restock)      50 price                        20 scout
+ *    86 steep (G, kind restock)        52 branch:staff (G, kind grow)  20 scout
+ *    84 condimentBox (G, restock)      50 price
  *    80 rival (knock-off)              48 branch:send:* (G, restock)   10 menu
  *    75 rival:promo (G, rivalCounter)  45 rival:loyalty (G, stampCard)
  *    70 grow
@@ -40,7 +40,7 @@
  * tell them apart by `id` or `input.kind`: `steep` and `condimentBox` (batch coffee, below), `gear` buys, `staff` (fire only, never hire), `rivalCounter`,
  * `stampCard` and `branch` (open / staff / send).
  *
- * Gear runs: there is no `slot` or `equip` advice (the Gear board replaces the stations shop). The gear
+ * Round 4 f: the classic stations shop and its `slot` / `equip` advice are deleted (Gear runs are the game). The gear
  * hint walks the gearBalance upgrade path: it never trades the E1 pods for E2+ before a grinder is in a
  * slot, puts the polished C5 / E6 first when yesterday's cups averaged under 3 stars and they are affordable
  * tonight, says nothing while a crew vote is open, and leaves a flowing D4b alone (a daytime thing). FB2 C9: milk
@@ -52,8 +52,8 @@
  * print the stamp card once the rival's loyalty card is live (cash after bills >= $30 + a day's restock),
  * open the second shop at the café tier (cash after bills >= lease + a day's restock, a profitable day, the area
  * with the best `branchDay` estimate), add or cut a branch barista from yesterday's branch day (only if
- * `branchDay` says it pays), and send a pack of beans or milk when a Manager is on the crew and home stock is
- * more than two packs over tomorrow's use. Season pacing has no input to attach, so there is no season advice.
+ * `branchDay` says it pays), and send a pack of beans or milk when home stock is more than two packs over tomorrow's
+ * use (Round 4 f: the Manager role it used to wait for is cut). Season pacing has no input to attach, so there is no season advice.
  *
  * Batch coffee (docs/superpowers/specs/2026-10-30-batch-pickup-design.md §2, §4): `steep` sets tomorrow's cold brew
  * number to ceil(expected orders for every drink that takes cold brew from the tap x STEEP_MARGIN), within the taps'
@@ -62,13 +62,12 @@
  * drip and cold brew orders outrun the bar's servings plus the boxes waiting in the corner. Both draw on the same
  * budget, right after restock. Classic runs get neither.
  *
- * Opening night is for stocking up: grow, checkout and equip advice wait for a finished day (as
+ * Opening night is for stocking up: grow and checkout advice wait for a finished day (as
  * `nightBrief` does). A drink with no station is only taken off the board when something can be made at all
- * and nothing in this plan or in `state.equipment` could bring that station back (no grow advice, the kind
- * not unplaced).
+ * and nothing in this plan could bring that station back (no grow advice).
  *
  * Money: tomorrow's bills (rent plus wages: `billsForDay`, plus a losing branch's expected loss) are held back, and every advice that spends
- * (restock, grow, branch:open, checkout, gear, rival:loyalty, equip, scout) draws on what is left in
+ * (restock, grow, branch:open, checkout, gear, rival:loyalty, scout) draws on what is left in
  * priority order, so applying the whole list never overdraws the till or eats tomorrow's bills.
  *
  * Pure: no RNG, no Date, no mutation of `state`. Reads only what the crew can see (the taste
@@ -80,8 +79,6 @@ import { BASE_DRINKS, DRINK_INFO, TAP_DRINKS } from '../../data/drinks';
 import { ECONOMY } from '../../data/economy';
 import { GEAR, WANDS } from '../../data/gear';
 import type { AddOnWand, GearId } from '../../data/gear';
-import { EQUIPMENT } from '../../data/equipment';
-import type { EquipmentKind } from '../../data/equipment';
 import { expectedOrders, expectedUse } from '../brief';
 import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
@@ -101,14 +98,15 @@ import { BRANCH, branchAreas, branchDay, branchExpectedLoss, canOpenBranch } fro
 import { profitOf } from '../profit';
 import { copyIsLive, countered, hasStamps, isPromoDay, loyaltyLive, RIVAL, sigPrice } from '../rival';
 import { SIG } from '../signature';
-import { defaultSlots, reasonOff, slotCount } from '../slots';
+import { reasonOff, slotCount } from '../slots';
 import { knownStars, TWIST_INFO, TWISTS, twistFor } from '../taste';
 import type { TwistId } from '../taste';
 import { menuDrinks, SUPPLY_IDS, unlockedDrinks } from '../unlocks';
 import { BOT_IDS, botsFor, humanCount } from './roster';
 import type { CheckoutId, DrinkId, GameState, PlayerId, StationKind, SupplyId, TierId } from '../types';
 
-export type AdviceKind = 'restock' | 'price' | 'twist' | 'signature' | 'scout' | 'rival' | 'grow' | 'checkout' | 'slot' | 'equip' | 'menu';
+/** `equip` is only reused by Gear rows (gear, fridge, staff, hires); Round 4 f deleted the classic slot/equip advice. */
+export type AdviceKind = 'restock' | 'price' | 'twist' | 'signature' | 'scout' | 'rival' | 'grow' | 'checkout' | 'equip' | 'menu';
 
 export interface Advice {
   id: string;
@@ -131,7 +129,6 @@ export const PLAN_PRIORITY = {
   checkout: 60,
   fridge: 59,
   gear: 58,
-  slot: 55,
   staff: 53,
   staffHire: 54,
   branchStaff: 52,
@@ -140,7 +137,6 @@ export const PLAN_PRIORITY = {
   stampCard: 45,
   twist: 40,
   signature: 35,
-  equip: 30,
   scout: 20,
   menu: 10,
 } as const;
@@ -164,9 +160,11 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 const money = (n: number) => `$${n.toFixed(2)}`;
 const dollars = (n: number) => `$${n.toFixed(2).replace(/\.00$/, '')}`;
 const drinkName = (d: DrinkId) => DRINK_INFO[d].name;
-// G10a fix: the Gear-only drip machine has no EQUIPMENT entry.
-/** FB2 C9: in a Gear run the 'steamer' kind is the steam wand on the espresso machine. */
-const stationName = (k: StationKind, gear = false) => (k === 'counter' ? 'counter' : k === 'drip' ? 'drip machine' : gear && k === 'steamer' ? 'steam wand' : EQUIPMENT[k as EquipmentKind].name.toLowerCase());
+/** What a station is called in a tip (Round 4 f: was the classic shop's names). FB2 C9: in a Gear run the 'steamer' kind is the steam wand on the espresso machine. */
+const STATION_NAME: Record<StationKind, string> = {
+  grinder: 'bean grinder', espresso: 'espresso machine', steamer: 'milk steamer', coldBrewTap: 'cold-brew keg', trash: 'bin', counter: 'counter', drip: 'drip machine',
+};
+const stationName = (k: StationKind, gear = false) => (gear && k === 'steamer' ? 'steam wand' : STATION_NAME[k]);
 const byId = (a: Advice, b: Advice) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 /** Review M4: what closing will take before any spending: rent and wages (`billsForDay`) plus a losing branch's expected loss. */
@@ -485,65 +483,6 @@ function checkoutAdvice(state: GameState, budget: Budget): Advice[] {
   ];
 }
 
-/** The back bar as the slot inputs see it. */
-function slotsOf(state: GameState): (StationKind | null)[] {
-  const slots = state.slots ?? defaultSlots(state.tier);
-  return Array.from({ length: slotCount(state.tier) }, (_, i) => slots[i] ?? null);
-}
-
-function slotAdvice(state: GameState): Advice[] {
-  if (isGearRun(state)) return []; // Gear runs replace the classic stations shop: `slot` does nothing there.
-  const equipment = state.equipment ?? [];
-  if (equipment.length === 0) return [];
-  const index = slotsOf(state).indexOf(null);
-  if (index < 0) return [];
-  const station = equipment[0];
-  return [
-    {
-      id: `slot:${index}`,
-      kind: 'slot',
-      text: `Put the ${stationName(station)} in slot ${index + 1}`,
-      input: { kind: 'slot', index, station },
-      priority: PLAN_PRIORITY.slot,
-    },
-  ];
-}
-
-/** A placed station that could make way: a spare of a kind (not espresso), or one no known drink needs (never the bin). */
-function freeableSlot(state: GameState, slots: (StationKind | null)[]): boolean {
-  const known = state.unlocked ?? BASE_DRINKS;
-  return slots.some((k, i) => {
-    if (k === null || k === 'espresso' || k === 'trash') return false;
-    if (slots.indexOf(k) !== i) return true;
-    return !known.some((d) => DRINK_STATIONS[d].includes(k));
-  });
-}
-
-function equipAdvice(state: GameState, budget: Budget, slotTaken: boolean): Advice[] {
-  if (isGearRun(state)) return []; // ...and `equip` does nothing there either (the Gear board sells machines).
-  if (state.days.length === 0) return [];
-  const last = state.days.at(-1)!;
-  if (last.lost <= last.served) return [];
-  const slots = slotsOf(state);
-  const owned = slots.filter((k) => k === 'espresso').length + (state.equipment ?? []).filter((k) => k === 'espresso').length;
-  if (owned !== 1) return [];
-  const empty = slots.filter((k) => k === null).length - (slotTaken ? 1 : 0);
-  const room = empty > 0;
-  if (!room && !freeableSlot(state, slots)) return [];
-  const cost = EQUIPMENT.espresso.cost;
-  if (budget.left < cost) return [];
-  budget.left = round2(budget.left - cost);
-  return [
-    {
-      id: 'equip:espresso',
-      kind: 'equip',
-      text: `${last.lost} walked out to ${last.served} served: buy a second espresso machine (${dollars(cost)})${room ? '' : ', then free a slot for it'}`,
-      input: { kind: 'equip', station: 'espresso' },
-      priority: PLAN_PRIORITY.equip,
-    },
-  ];
-}
-
 /**
  * The upgrade path a sensible Gear crew follows (scripts/gearBalance.ts plays the same one). FB2 C9: no steamer tree;
  * milk drinks wait for E3 and its wand (`PATH_WAND`), so the path heads for E3 early and skips the wand-less E2.
@@ -846,21 +785,18 @@ function scoutAdvice(state: GameState, budget: Budget): Advice[] {
 
 /**
  * Switch off drinks the bar has no station for, as long as at least one other drink stays on. Not while the
- * plan grows (the new tier may bring the station) or a missing station sits unplaced in equipment (the
- * slot advice, or the crew, can put it back).
+ * plan grows (the new tier may bring the station). A hired Strategist does this by itself (sim/strategist.ts).
  */
 function menuAdvice(state: GameState, growing: boolean): Advice[] {
   if (growing) return [];
   // Nothing can be made yet (night 1 of a Gear run with an empty counter): there is no board to trim.
   if (unlockedDrinks(state).length === 0) return [];
-  const unplaced = state.equipment ?? [];
   const on = (state.unlocked ?? BASE_DRINKS).filter((d) => state.menu[d]);
   let stays = on.length;
   const advice: Advice[] = [];
   for (const d of on) {
     if (reasonOff(state, d) !== 'noStation' || stays <= 1) continue;
     const absent = DRINK_STATIONS[d].filter((k) => !state.stations.some((s) => s.kind === k));
-    if (absent.some((k) => unplaced.includes(k))) continue;
     stays -= 1;
     const missing = absent[0];
     advice.push({
@@ -877,7 +813,7 @@ function menuAdvice(state: GameState, growing: boolean): Advice[] {
 /** Everything worth doing tonight, highest priority first (ties by id). Pure and deterministic. */
 export function planNight(state: GameState): Advice[] {
   const budget: Budget = { left: round2(state.cash - billsHeldBack(state)) };
-  // Spending advice draws on the budget in priority order: restock (with the steep top-up), condiment boxes, grow, branch:open, checkout, gear, rival:loyalty, equip, scout.
+  // Spending advice draws on the budget in priority order: restock (with the steep top-up), condiment boxes, grow, branch:open, checkout, gear, rival:loyalty, scout.
   const steep = steepWant(state);
   const restock = restockAdvice(state, budget, steep ? { concentrate: Math.max(0, steep.want - steep.leftover) } : {});
   const condiments = condimentAdvice(state, budget);
@@ -886,9 +822,7 @@ export function planNight(state: GameState): Advice[] {
   const checkout = grow.length ? [] : checkoutAdvice(state, budget);
   const fridge = fridgeAdvice(state, budget);
   const gear = gearAdvice(state, budget);
-  const slot = slotAdvice(state);
   const stamp = stampAdvice(state, budget);
-  const equip = equipAdvice(state, budget, slot.length > 0);
   const scout = scoutAdvice(state, budget);
   const all = [
     ...restock,
@@ -901,7 +835,6 @@ export function planNight(state: GameState): Advice[] {
     ...checkout,
     ...fridge,
     ...gear,
-    ...slot,
     ...staffAdvice(state),
     ...hireAdvice(state),
     ...branchStaffAdvice(state),
@@ -910,7 +843,6 @@ export function planNight(state: GameState): Advice[] {
     ...branchSendAdvice(state),
     ...stamp,
     ...signatureAdvice(state),
-    ...equip,
     ...scout,
     ...menuAdvice(state, grow.length > 0),
   ];

@@ -64,7 +64,7 @@ export function stationsVM(state: GameState): StationsVM {
     seen.set(k, n);
     return { index: i, kind: k, name: n > 1 ? `${STATION_SHORT[k]} ${n}` : STATION_SHORT[k], icon: STATION_ICON[k] };
   });
-  const eq = (state.equipment ?? []).filter(isKind);
+  const eq: EquipmentKind[] = []; // Round 4 f (sim): state.equipment is gone with the classic shop. TODO(Grok): delete this board.
   const spares = EQUIPMENT_KINDS.filter((k) => eq.includes(k)).map((k) => ({ kind: k, name: STATION_SHORT[k], icon: STATION_ICON[k], n: eq.filter((x) => x === k).length }));
   const owned = (k: EquipmentKind) => slots.filter((x) => x === k).length + eq.filter((x) => x === k).length;
   const shop = EQUIPMENT_KINDS.map((k) => ({ kind: k, name: EQUIPMENT[k].name, icon: STATION_ICON[k], cost: EQUIPMENT[k].cost, blurb: EQUIPMENT[k].blurb, affordable: state.cash >= EQUIPMENT[k].cost, owned: owned(k) }));

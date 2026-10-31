@@ -104,7 +104,6 @@ export function createRun(opts: CreateRunOptions): GameState {
     ready: [],
     players,
     slots: defaultSlots(opts.tier),
-    equipment: [],
     stations: stationsFromSlots(opts.tier, defaultSlots(opts.tier)),
     ...(opts.tier && opts.tier !== 'cafe' ? { tier: opts.tier } : {}),
     customers: [],

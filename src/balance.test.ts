@@ -9,7 +9,6 @@ import { nextTier } from './sim/growth';
 import { PRICING } from './sim/pricing';
 import { RIVAL } from './sim/rival';
 import { CHECKOUT, nextCheckout } from './sim/checkout';
-import { EQUIPMENT } from './data/equipment';
 import type { Advice } from './sim/bots/planner';
 import { restockCost } from './sim/night';
 
@@ -79,13 +78,6 @@ describe('balance tester', () => {
     expect(applyAdvice(s, { id: `grow:${next}`, kind: 'grow', text: '', input: { kind: 'grow', tier: next }, priority: 1 })).toBe(true);
     expect(s.tier).toBe(next);
     expect(s.tierLog?.at(-1)).toMatchObject({ tier: next, day: s.day, by: 'tester' });
-    // the back bar: free a slot, then place the unplaced station again
-    const idx = s.slots!.indexOf('steamer');
-    s.slots![idx] = null;
-    s.equipment = ['steamer'];
-    expect(applyAdvice(s, { id: `slot:${idx}`, kind: 'slot', text: '', input: { kind: 'slot', index: idx, station: 'steamer' }, priority: 1 })).toBe(true);
-    expect(s.slots![idx]).toBe('steamer');
-    expect(s.equipment).toEqual([]);
     // the last drink on the board never goes off
     for (const d of DRINK_IDS) s.menu[d] = d === 'espresso';
     expect(applyAdvice(s, { id: 'menu:espresso', kind: 'menu', text: '', input: { kind: 'menu', drink: 'espresso', on: false }, priority: 1 })).toBe(false);
@@ -108,18 +100,15 @@ describe('balance tester', () => {
     expect(s.cash).toBe(100 - RIVAL.scoutCost);
     expect(s.rival?.scouted).toBe(s.day);
     expect(applyAdvice(s, scout)).toBe(false);
-    // the next checkout, then an equip into the first empty slot
+    // the next checkout (Round 4 f: the classic equip is gone, so its advice is refused)
     s.cash = 500;
     const co = nextCheckout(s)!;
     expect(applyAdvice(s, { id: `checkout:${co}`, kind: 'checkout', text: '', input: { kind: 'checkout', checkout: co }, priority: 1 })).toBe(true);
     expect(s.checkout).toMatchObject({ active: co, since: s.day });
     expect(s.cash).toBe(500 - CHECKOUT[co].cost);
     s.cash = 500;
-    s.slots![0] = null;
-    expect(applyAdvice(s, { id: 'equip:espresso', kind: 'equip', text: '', input: { kind: 'equip', station: 'espresso' }, priority: 1 })).toBe(true);
-    expect(s.slots![0]).toBe('espresso');
-    expect(s.cash).toBe(500 - EQUIPMENT.espresso.cost);
-    expect(s.equipLog?.at(-1)).toMatchObject({ station: 'espresso', day: s.day, by: 'tester' });
+    expect(applyAdvice(s, { id: 'equip:espresso', kind: 'equip', text: '', input: { kind: 'equip', station: 'espresso' }, priority: 1 })).toBe(false);
+    expect(s.cash).toBe(500);
   });
   it('applyLayout rearranges the opening slots', () => {
     const open = (layout: Layout) => {
@@ -127,16 +116,14 @@ describe('balance tester', () => {
       applyLayout(s, layout);
       return s;
     };
-    expect(open('default').equipment).toEqual([]);
+    expect(open('default').slots).toEqual(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash', null]);
     const twin = open('twinEspresso');
     expect(twin.slots).toEqual(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash', 'espresso']);
     expect(twin.stations.map((x) => x.id)).toContain('espresso-2');
     const nc = open('noColdBrew');
     expect(nc.slots).toContain(null);
-    expect(nc.equipment).toEqual(['coldBrewTap']);
     expect(nc.stations.some((x) => x.kind === 'coldBrewTap')).toBe(false);
     const nt = open('noTrash');
-    expect(nt.equipment).toEqual(['trash']);
     expect(nt.stations.some((x) => x.kind === 'trash')).toBe(false);
   });
   it('values on-path cards and set completions above strays', () => {

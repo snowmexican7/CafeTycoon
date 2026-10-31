@@ -131,7 +131,7 @@ describe('item 3: Gear buying hints', () => {
     const ads = gearAd(s);
     expect(ads).toHaveLength(1);
     expect(ads[0]).toMatchObject({ id: 'gear:c1', kind: 'equip', priority: PLAN_PRIORITY.gear, input: { kind: 'gear', action: 'buy', gear: 'c1' } });
-    expect(PLAN_PRIORITY.gear).toBeGreaterThan(PLAN_PRIORITY.slot);
+    expect(PLAN_PRIORITY.gear).toBeGreaterThan(PLAN_PRIORITY.staff);
     expect(PLAN_PRIORITY.gear).toBeLessThan(PLAN_PRIORITY.checkout);
   });
 

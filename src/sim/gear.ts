@@ -63,7 +63,6 @@ export function gearStart(state: GameState): void {
   state.slots = slots;
   state.slotGear = gear;
   state.slotWand = Array.from({ length: n }, () => null);
-  state.equipment = [];
   state.gearLog = [];
   state.stations = stationsFromSlots(state.tier, slots, gear);
   ensureCounterSpots(state); // FB2 A4: the fridge, when the shop size comes with one

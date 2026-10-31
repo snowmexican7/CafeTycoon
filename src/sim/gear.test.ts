@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from './run';
 import { step } from './step';
 import { applyGearInput, batchOut, gearMorning } from './gear';
-import { applyEquipInput, applySlotInput, reasonOff } from './slots';
+import { reasonOff } from './slots';
 import { applyGrowInput } from './growth';
 import { availableDrinks } from './customers';
 import { interact } from './stations';
@@ -67,7 +67,7 @@ describe('Gear Tree G2: the sim', () => {
     expect(s.slotGear).toEqual(['c1', 'g1', 'd1', 'b0']);
   });
 
-  it('day only, bots and strangers: nothing happens; classic equip/slot do nothing in a Gear run', () => {
+  it('day only, bots and strangers: nothing happens; classic equip/slot (Round 4 f: refused everywhere) do nothing', () => {
     const s = gearRun();
     s.phase = 'day';
     buy(s, 'c1');
@@ -75,9 +75,8 @@ describe('Gear Tree G2: the sim', () => {
     s.phase = 'night';
     applyGearInput(s, { kind: 'gear', playerId: 'nobody', action: 'buy', gear: 'c1' });
     expect(s.cash).toBe(120);
-    applyEquipInput(s, { kind: 'equip', playerId: 'p1', station: 'espresso' });
-    applySlotInput(s, { kind: 'slot', playerId: 'p1', index: 3, station: null });
-    expect([s.cash, s.slots]).toEqual([120, [null, null, null, 'trash']]);
+    const t = step(s, [{ kind: 'equip', playerId: 'p1', station: 'espresso' }, { kind: 'slot', playerId: 'p1', index: 3, station: null }]);
+    expect([t.cash, t.slots]).toEqual([120, [null, null, null, 'trash']]);
   });
 
   it('the gear input is validated and runs through step', () => {

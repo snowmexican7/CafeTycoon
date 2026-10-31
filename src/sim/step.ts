@@ -13,7 +13,6 @@ import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
 import { applyGrowInput } from './growth';
-import { applyEquipInput, applySlotInput } from './slots';
 import { finishDay } from './closing';
 import { markBeforeGrace, tickChallenges } from './challenges';
 import { TICK_RATE, secondsToTicks } from './constants';
@@ -174,12 +173,6 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'grow':
       applyGrowInput(s, input);
-      break;
-    case 'slot':
-      applySlotInput(s, input);
-      break;
-    case 'equip':
-      applyEquipInput(s, input);
       break;
     case 'gear':
       applyGearInput(s, input);

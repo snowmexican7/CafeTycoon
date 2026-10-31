@@ -159,7 +159,7 @@ export function sendStock(state: GameState, supply: SupplyId | undefined): void 
   const units = Math.min(state.supplies[supply] ?? 0, pack.size);
   if (units <= 0) return;
   state.supplies[supply] -= units;
-  // Review M3: valued at what a pack costs the crew tonight (a Manager or card discount counts), so a send can't be a money-maker.
+  // Review M3: valued at what a pack costs the crew tonight (a card discount counts), so a send can't be a money-maker.
   b.stockCredit = r2((b.stockCredit ?? 0) + (units * restockCost(state, supply, 1)) / pack.size);
 }
 
