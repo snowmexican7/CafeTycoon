@@ -69,6 +69,7 @@ describe('the pickup counter (Task 7)', () => {
     expect(s.log.some((e) => e.kind === 'pass.put')).toBe(true);
     stand(s, 'counter');
     s = step(s, use);
+    for (let i = 0; i < 100; i++) s = step(s, []); // Round 3 item 5: the ring-up takes 1.5 s at the register
     expect([s.pass.length, s.today.served, has(s, 1)]).toEqual([0, 1, false]);
     const kinds = s.log.map((e) => e.kind);
     expect(kinds.indexOf('till.rung')).toBeLessThan(kinds.indexOf('pickup.take'));

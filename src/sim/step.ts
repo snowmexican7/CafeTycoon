@@ -39,6 +39,7 @@ import { clearFloorFields, floorFields, stepStuns, trackTiles } from './tiles';
 import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
 import { stepPickup } from './pickup';
+import { stepRingUp } from './till';
 import { officeLeaves, stepOffice } from './orders';
 import { stepCooling } from './cooling';
 import { stepCleaning } from './mop';
@@ -261,6 +262,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
     if (p.bot) afterBotInteract(s, p, held);
   }
   resolveDrops(s);
+  stepRingUp(s); // Round 3 item 5: a ring-up at the till takes time (and self-order screens take orders)
   stepPickup(s); // batch/pickup: customers at pickup take their drinks (Gear only)
   for (const p of s.players) {
     p.interactQueued = false;

@@ -60,7 +60,7 @@ export const RESERVED_TELE_KINDS: readonly string[] = [
   'meta', 'snapshot', 'summary', 'input', 'input.mash', 'peer.join', 'peer.leave',
   'pass.put', 'pass.take', 'pass.serve', 'pass.stale', 'trash', 'bot.mistake', 'event.start', 'event.end', 'inspection', 'influencer',
   'drop', 'slip', 'clean', 'rogue.upset', 'rogue.remade', 'rogue.made', 'rogue.stormed', 'served',
-  'till.rung', 'pickup.take', 'condiment.use', 'condiment.black', 'condiment.refill', 'steep',
+  'till.rung', 'till.start', 'till.cancel', 'pickup.take', 'condiment.use', 'condiment.black', 'condiment.refill', 'steep',
   'cup.cold', 'pickup.cold', 'pickup.takeBack', 'review.bad',
   'order.combo', 'order.office', 'order.done', 'order.lost', 'office.call',
 ];

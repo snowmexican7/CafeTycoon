@@ -2457,3 +2457,12 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   first night; flag `GameState.growNudged?`). `growDiff(from, to, gear = true)` (growth.ts, type `GrowDiff`) and
   `grow.done { from, to, diff }` on every grow; diff = `{ queue, price, traffic, rent, crowd, unlocks }` before → after.
   Bots grow a little earlier at the cheaper cart (no tuning).
+- **Round 3 item 5, ring-up time (`r3-ringup`, protocol 51).** Register 1.5 s, OrderBot kiosk 1.0 s (`TILL.ring`,
+  `ringSeconds`). One press of E starts it (`GameState.ringUp { customer, by, startedAt, ticks }`,
+  `ringProgress(state)` 0..1); the person stays at the till empty-handed; walking away, picking something up, a stun
+  or the customer leaving cancels (`till.cancel { customer, by }`). One ring at a time (`tillNext` empty meanwhile).
+  Squarely (top checkout tier) is self-order: after `TILL.selfBeat` (1 s) the next customer moves to pickup by
+  themselves with +10% patience (`TILL.selfBoost`; `ringUp.by === ''`, `till.rung { by: '' }`). Events
+  `till.start { customer, by, seconds }`, `till.cancel`, `till.rung`. Bots ring with the same time
+  (`BotState.ringing`) and never in the self-order tier. Kennedy's call if the kiosk should be self-order instead
+  (one line in `TILL.ring`).

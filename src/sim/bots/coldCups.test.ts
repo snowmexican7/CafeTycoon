@@ -163,6 +163,7 @@ describe('cold cups with FB2 A1 helper bots', () => {
     expect(kinds).toContain('pickup.takeBack');
     expect(kinds).not.toContain('till.rung'); // the helper leaves the till to the person
     s = step(s, [{ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: true }]); // the person rings the espresso order
+    for (let i = 0; i < secs(2); i++) s = step(s, idle); // Round 3 item 5: it takes 1.5 s
     expect(s.log.some((e) => e.kind === 'till.rung')).toBe(true);
     expect(s.log.some((e) => e.kind === 'pickup.cold')).toBe(false);
   });
