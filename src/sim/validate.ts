@@ -17,7 +17,7 @@ import { STEEP } from './steep';
 import { CONDIMENTS } from './condiments';
 import type { BotSkill, Pace, PlayerInput, Settings, SupplyId } from './types';
 
-const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour'];
+const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour', 'pastry'];
 const MIN_PHASE_SEC = 30;
 const MAX_PHASE_SEC = 600;
 const MAX_PACKS = 100;

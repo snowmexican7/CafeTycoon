@@ -21,7 +21,7 @@ const run = (tier?: TierId): GameState =>
 
 const dayStats = (over: Partial<DayStats> = {}): DayStats => ({ day: 1, served: 23, lost: 2, turnedAway: 0, sales: 40.84, tips: 3, rent: 25, ...over });
 
-const FULL = { beans: 500, milk: 500, concentrate: 500, flavour: 500, pastry: 0 };
+const FULL = { beans: 500, milk: 500, concentrate: 500, flavour: 500, pastry: 500 };
 
 /** Prices settled at the planner's own choice (applied until it has none left to give). */
 function settlePrices(s: GameState): GameState {

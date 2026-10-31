@@ -8,6 +8,7 @@ import type { PlayerInput } from '../sim/types';
 const opening = () => {
   const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 'auto' } });
   s.supplies.beans = 0;
+  s.supplies.pastry = 500; // R4 b: a stocked case, so no pastry chip crowds the tips under test
   s.cash = 200;
   return s;
 };

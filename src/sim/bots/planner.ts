@@ -30,6 +30,7 @@
  *    80 rival (knock-off)              48 branch:send:* (G, restock)   10 menu
  *    75 rival:promo (G, rivalCounter)  45 rival:loyalty (G, stampCard)
  *    70 grow
+ *    62 restock, pastries (R4 b)
  *    65 branch:open (G, kind grow)
  *    60 checkout
  *    59 fridge:<id> (G, kind equip)
@@ -122,6 +123,7 @@ export const PLAN_PRIORITY = {
   rivalCounter: 75,
   grow: 70,
   branchOpen: 65,
+  restockPastry: 62,
   checkout: 60,
   fridge: 59,
   gear: 58,
@@ -146,8 +148,8 @@ export const STEEP_MARGIN = 1.2;
 export const PLAN_STEPS = { min: -2, max: 4 } as const;
 /** Scouting waits for this much spare cash after rent. */
 const SCOUT_SPARE = 20;
-/** Supplies the restock input accepts (pastries come with the stand, not by the pack). */
-const RESTOCKABLE: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour'];
+/** Supplies the restock input accepts (R4 b: pastries are a plain restock item too). */
+const RESTOCKABLE: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour', 'pastry'];
 const MAX_PACKS = 100;
 
 const STOCK_NAME: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', concentrate: 'cold brew', flavour: 'flavours', pastry: 'pastries' };
@@ -170,6 +172,29 @@ interface Budget {
 }
 
 /**
+ * R4 b: a restock for the pastry case when it will not cover the day's expected sales (a $7 pack of six sells for $18).
+ * No margin (half of what is left goes stale overnight); whole packs, rounded to the nearest.
+ */
+function pastryAdvice(state: GameState, budget: Budget, target: number): Advice | null {
+  const size = ECONOMY.packs.pastry.size;
+  const have = state.supplies.pastry ?? 0;
+  const gap = target - have;
+  if (gap < size / 2) return null;
+  let packs = Math.min(MAX_PACKS, Math.max(1, Math.round(gap / size)));
+  while (packs > 0 && restockCost(state, 'pastry', packs) > budget.left) packs -= 1;
+  if (packs <= 0) return null;
+  const cost = restockCost(state, 'pastry', packs);
+  budget.left = round2(budget.left - cost);
+  return {
+    id: 'restock:pastry',
+    kind: 'restock',
+    text: `${have < 1 ? 'No' : 'Low on'} ${STOCK_NAME.pastry} in the case: buy ${packs} ${packs === 1 ? 'pack' : 'packs'} (${money(cost)})`,
+    input: { kind: 'restock', supply: 'pastry', packs },
+    priority: PLAN_PRIORITY.restockPastry,
+  };
+}
+
+/**
  * Restock every supply a menu drink needs up to the day's expected use × RESTOCK_MARGIN; out-of-stock first.
  * A `targets` entry replaces that number for its supply (Gear: the steep top-up for concentrate).
  */
@@ -180,7 +205,8 @@ export function restockAdvice(
 ): Advice[] {
   const use = expectedUse(state);
   const menu = menuDrinks(state);
-  const wants = SUPPLY_IDS.filter((s) => RESTOCKABLE.includes(s) && menu.some((d) => ECONOMY.drinkSupplies[d].includes(s)))
+  // R4 b: no drink needs a pastry, so the case is stocked on its own terms (pastryAdvice, after every drink supply is paid).
+  const wants = SUPPLY_IDS.filter((s) => RESTOCKABLE.includes(s) && s !== 'pastry' && menu.some((d) => ECONOMY.drinkSupplies[d].includes(s)))
     .map((supply) => ({ supply, have: state.supplies[supply] ?? 0, target: targets[supply] ?? use[supply] * RESTOCK_MARGIN }))
     .filter((w) => w.have < w.target);
   const out = wants.filter((w) => w.have < 1);
@@ -202,6 +228,8 @@ export function restockAdvice(
       priority: isOut ? PLAN_PRIORITY.restockOut : PLAN_PRIORITY.restockLow,
     });
   }
+  const pastry = pastryAdvice(state, budget, targets.pastry ?? use.pastry);
+  if (pastry) advice.push(pastry);
   return advice;
 }
 

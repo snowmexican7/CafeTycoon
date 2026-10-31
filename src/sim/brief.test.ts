@@ -131,7 +131,10 @@ describe('nightBrief alerts', () => {
     expect(runOutFraction(s, 'beans')).toBeCloseTo(s.supplies.beans / use.beans, 6);
     s.supplies.beans = use.beans * 3;
     expect(runOutFraction(s, 'beans')).toBe(1);
-    expect(runOutFraction(s, 'pastry')).toBeNull();
+    expect(runOutFraction(s, 'flavour')).toBeNull();
+    // R4 b: the pastry case has a use (the attach rate on the day's cups), so it has a run-out too
+    s.supplies.pastry = 0;
+    expect(runOutFraction(s, 'pastry')).toBe(0);
   });
 
   it('stock: only supplies a menu drink needs are considered', () => {
@@ -169,7 +172,7 @@ describe('nightBrief alerts', () => {
     const a = find(s, 'spoil')!;
     expect(a).toMatchObject({ kind: 'spoil', severity: 'info' });
     expect(a.text).toBe('About 3 milk will go off tonight');
-    s.supplies.pastry = 12;
+    s.supplies.pastry = expectedUse(s).pastry + 12; // R4 b: what is left after a normal day's pastry sales
     expect(find(s, 'spoil')!.text).toBe('About 3 milk and 6 pastries will go off tonight');
   });
 
