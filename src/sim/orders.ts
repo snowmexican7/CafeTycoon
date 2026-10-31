@@ -8,12 +8,14 @@
  * - Combos: from day 2, about one walk-in in eight orders two drinks: a pair (one for the spouse in the car), or an
  *   espresso-bar drink and a drip. The ticket waits 1.3× as long. `order.combo { customer, items }`.
  * - Groups (Gear): one ticket too (was: pay per drink); each cup taken still tops their patience up.
- * - Office runs: on the cart and at the café from day 3, about every other day (drawn at day start), 6-10 drinks off
- *   the menu, 3× the patience, a 25% bonus tip on the order's price when complete. The phone rings 10 s before they
- *   walk in (`office.call { at }`, `at` the tick they arrive). Lost: `order.lost { customer }`, no lost customers, no
- *   bad review, no reputation hit. Served: one customer for reputation (`DayStats.officeExtra`). Since losing one costs
- *   nothing, it never comes before walk-ins: it takes a cup off the pickup counter only when no one else wants it
- *   (`pickup.ts`), and bots make its drinks only when no walk-in's order is waiting (`bots/brain.ts`).
+ * - Office runs: on the cart and at the café from day 3, about every other day (drawn at day start), 4-6 drinks off
+ *   the menu on the cart and 5-8 at the café, 4× the patience, a 25% bonus tip on the order's price when complete. The phone rings 10 s before they
+ *   walk in (`office.call { at }`, `at` the tick they are due: with the queue over capacity they wait outside, so it can
+ *   be later). Lost (patience out, or still in when the doors lock): `order.lost { customer }`, no lost customers, no
+ *   wasted cups, no bad review, no reputation hit. Served: one customer for reputation (`DayStats.officeExtra`). Since losing one costs
+ *   nothing, it never takes a walk-in's place: it takes a cup off the pickup counter only when no one else wants it
+ *   (`pickup.ts`), and bots keep one of its drinks in the queue at its place, the rest after the walk-ins'
+ *   (`bots/brain.ts`, fix round 1 I1).
  * Events: `order.combo`, `order.office { customer, count }`, `office.call`, `order.done { customer, paid, tip }`,
  * `order.lost`. Randomness from `state.rng` only, drawn only in Gear runs inside each window.
  */
@@ -45,16 +47,16 @@ export const ORDERS = {
     fromDay: 3,
     /** Chance a day has one. */
     chance: 0.5,
-    min: 6,
-    max: 10,
-    patience: 3,
+    /** Drinks on the order, from..to, by tier (fix round 1: smaller on the cart, which has less room to make them). */
+    size: { cart: [4, 6], cafe: [5, 8] },
+    patience: 4,
     /** Bonus tip on completion, as a share of the order's price. */
     bonus: 0.25,
     /** The phone rings this long before they walk in. */
     callSeconds: 10,
-    /** They walk in between 7% and 20% of the way through opening hours (the day, not their patience, is the limit). */
-    from: 0.07,
-    span: 0.13,
+    /** They walk in between 5% and 15% of the way through opening hours (the day, not their patience, is the limit). */
+    from: 0.05,
+    span: 0.1,
   },
 } as const;
 
@@ -173,20 +175,30 @@ function completeTicket(state: GameState, c: Customer): void {
 }
 
 /**
- * A ticket leaves unfinished (patience out, or the doors shut): nothing paid, the cups taken (warm ones) are wasted.
- * An office run: `order.lost`, and it never counts against the café. Anyone else: every drink on the ticket is lost.
+ * A ticket leaves unfinished (patience out, or the doors shut): nothing paid. An office run: `order.lost`, and it never
+ * counts against the café (no lost drinks, no waste). Anyone else: every drink on the ticket is lost and the warm cups
+ * taken are wasted.
  * The caller removes the customer.
  */
 export function loseTicket(state: GameState, c: Customer): void {
   const items: OrderItem[] = c.items ?? [];
-  const taken = items.filter((x) => x.done && !x.cold).length;
-  if (taken > 0) tally(state.today, 'wasted', taken);
   if (c.order === 'office') {
+    // Fix round 1 (I3): losing an office run costs nothing, so the cups it took aren't waste (nor an inspector's fail).
     state.today.office = 'lost';
     emitLog(state, 'order.lost', { customer: c.id });
     return;
   }
+  const taken = items.filter((x) => x.done && !x.cold).length;
+  if (taken > 0) tally(state.today, 'wasted', taken);
   state.today.lost += items.length;
+}
+
+/** The doors lock: an office run still in leaves unfinished (`order.lost`), so the shop never waits out the grace on it. */
+export function officeLeaves(state: GameState): void {
+  const office = state.customers.filter((c) => c.order === 'office');
+  if (office.length === 0) return;
+  for (const c of office) loseTicket(state, c);
+  state.customers = state.customers.filter((c) => c.order !== 'office');
 }
 
 /**
@@ -227,7 +239,8 @@ function spawnOffice(state: GameState): Customer | null {
   if (menu.length === 0 || state.customers.length > tierInfo(state).queue) return null;
   const cfg = ORDERS.office;
   const m = computeModifiers(state);
-  const n = cfg.min + rngInt(state, cfg.max - cfg.min + 1);
+  const [min, max] = cfg.size[tierOf(state) === 'cart' ? 'cart' : 'cafe'];
+  const n = min + rngInt(state, max - min + 1);
   const drinks = Array.from({ length: n }, () => drawDrink(state, menu, m));
   const wait = Math.max(...drinks.map((d) => drinkWait(state, d) * pricePatience(state, d)));
   const patienceMax = patienceFor(m, cfg.patience * wait * areaPatienceMul(state, drinks));

@@ -39,7 +39,7 @@ import { clearFloorFields, floorFields, stepStuns, trackTiles } from './tiles';
 import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
 import { stepPickup } from './pickup';
-import { stepOffice } from './orders';
+import { officeLeaves, stepOffice } from './orders';
 import { stepCooling } from './cooling';
 import { stepCleaning } from './mop';
 import { applySteepInput } from './steep';
@@ -218,6 +218,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
 export function enterClosing(s: GameState): void {
   markBeforeGrace(s);
   startClosingSoon(s); // FB2 A4: closing early skips straight to it
+  officeLeaves(s); // FB2 B6 (fix round 1, M7): an unfinished office run doesn't wait out the grace
   s.phase = 'closing';
   s.phaseTicksLeft = secondsToTicks(ECONOMY.closingGraceSeconds);
 }

@@ -4,6 +4,7 @@ import { stationsFromSlots } from './slots';
 import { addCustomer, stepCustomers } from './customers';
 import { stepPickup, wantsDrink } from './pickup';
 import { finishDay } from './closing';
+import { enterClosing } from './step';
 import { ORDERS, isEspressoBar, makeTicket, officeMorning, stepOffice } from './orders';
 import { secondsToTicks, TICK_RATE } from './constants';
 import { ECONOMY } from '../data/economy';
@@ -182,7 +183,7 @@ describe('combos (FB2 B6)', () => {
 });
 
 describe('office runs (FB2 B6)', () => {
-  it('rings ~10 s ahead, walks in with 6-10 drinks and ×3 patience; never two at once', () => {
+  it('rings ~10 s ahead, walks in with the tier\'s order size; never two at once', () => {
     let s: GameState | null = null;
     for (let seed = 1; seed < 60 && !s; seed++) {
       const t = gearDay(3, 'cafe', undefined, seed);
@@ -205,8 +206,9 @@ describe('office runs (FB2 B6)', () => {
     expect(came - called).toBe(secondsToTicks(ORDERS.office.callSeconds));
     expect(events(s!, 'office.call')[0].at).toBe(s!.tick);
     const c = s!.customers.find((x) => x.order === 'office')!;
-    expect(c.items!.length).toBeGreaterThanOrEqual(6);
-    expect(c.items!.length).toBeLessThanOrEqual(10);
+    const [min, max] = ORDERS.office.size.cafe;
+    expect(c.items!.length).toBeGreaterThanOrEqual(min);
+    expect(c.items!.length).toBeLessThanOrEqual(max);
     expect(events(s!, 'order.office')).toEqual([{ customer: c.id, count: c.items!.length }]);
     expect(c.stage).toBe('order');
     // Stepping on never brings a second one.
@@ -215,6 +217,24 @@ describe('office runs (FB2 B6)', () => {
       stepOffice(s!);
     }
     expect(s!.customers.filter((x) => x.order === 'office')).toHaveLength(1);
+  });
+
+  it('a smaller order on the cart than at the café', () => {
+    expect(ORDERS.office.size.cart).toEqual([4, 6]);
+    expect(ORDERS.office.size.cafe).toEqual([5, 8]);
+    const sizes = { cart: new Set<number>(), cafe: new Set<number>() };
+    for (let seed = 1; seed <= 120; seed++) {
+      for (const tier of ['cart', 'cafe'] as const) {
+        const s = gearDay(4, tier, undefined, seed);
+        if (!s.office) continue;
+        s.customers = [];
+        s.phaseTicksLeft = secondsToTicks(s.settings.dayLengthSec) - s.office.at;
+        stepOffice(s);
+        sizes[tier].add(s.customers.find((c) => c.order === 'office')!.items!.length);
+      }
+    }
+    expect([...sizes.cart].sort()).toEqual([4, 5, 6]);
+    expect([...sizes.cafe].sort()).toEqual([5, 6, 7, 8]);
   });
 
   it('about every other day from day 3, on the cart and at the café; never on the stand, never before day 3', () => {
@@ -262,17 +282,17 @@ describe('office runs (FB2 B6)', () => {
     expect(office.items![0].done).toBe(true);
   });
 
-  it('walks in 7-20% of the way through the day', () => {
+  it('walks in 5-15% of the way through the day', () => {
     const ticks = secondsToTicks(ECONOMY.dayLengthSec);
     for (let seed = 1; seed <= 80; seed++) {
       const s = gearDay(4, 'cafe', undefined, seed);
       if (!s.office) continue;
-      expect(s.office.at).toBeGreaterThanOrEqual(Math.floor(ticks * 0.07));
-      expect(s.office.at).toBeLessThanOrEqual(Math.floor(ticks * 0.2));
+      expect(s.office.at).toBeGreaterThanOrEqual(Math.floor(ticks * 0.05));
+      expect(s.office.at).toBeLessThanOrEqual(Math.floor(ticks * 0.15));
     }
   });
 
-  it('lost: order.lost, no lost customers, no bad review, no reputation hit', () => {
+  it('lost: order.lost, no lost customers, no wasted cups, no bad review, no reputation hit', () => {
     const s = gearDay(4, 'cafe');
     const c = ticket(s, ['drip', 'latte'], { order: 'office' });
     put(s, 'drip');
@@ -281,15 +301,28 @@ describe('office runs (FB2 B6)', () => {
     stepCustomers(s);
     expect(events(s, 'order.lost')).toEqual([{ customer: 50 }]);
     expect(events(s, 'review.bad')).toEqual([]);
-    expect([s.today.lost, s.today.wasted, s.today.office]).toEqual([0, 1, 'lost']);
+    // Fix round 1 (I3): the cups it took aren't waste (losing an office run costs nothing, the inspector included).
+    expect([s.today.lost, s.today.wasted, s.today.office]).toEqual([0, 0, 'lost']);
     // Still in the shop at closing: lost the same way.
     const t = gearDay(4, 'cafe');
     ticket(t, ['drip', 'latte'], { order: 'office' });
+    put(t, 'drip');
+    stepPickup(t);
     t.today.served = 10;
     const rep = t.reputation;
     finishDay(t);
-    expect(t.days.at(-1)!.lost).toBe(0);
+    expect([t.days.at(-1)!.lost, t.days.at(-1)!.wasted ?? 0]).toEqual([0, 0]);
     expect(t.reputation).toBeGreaterThanOrEqual(rep);
+  });
+
+  it('an office run still in when the doors lock leaves (order.lost); everyone else stays (fix round 1, M7)', () => {
+    const s = gearDay(4, 'cafe');
+    ticket(s, ['drip', 'latte'], { order: 'office' });
+    s.customers.push({ id: 51, drink: 'drip', patienceLeft: 900, patienceMax: 1800, stage: 'pickup', rungAt: s.tick });
+    enterClosing(s);
+    expect(s.customers.map((c) => c.id)).toEqual([51]);
+    expect(events(s, 'order.lost')).toEqual([{ customer: 50 }]);
+    expect([s.today.office, s.today.lost]).toEqual(['lost', 0]);
   });
 
   it('a served office run counts as one customer for reputation', () => {
@@ -300,6 +333,13 @@ describe('office runs (FB2 B6)', () => {
     put(s, 'drip');
     stepPickup(s);
     expect([s.today.served, s.today.officeExtra]).toEqual([3, 2]);
+    // The reputation ratio sees 1 served against 1 lost (below the bar), not 3 against 1 (above it).
+    s.today.lost = 1;
+    const asThree = structuredClone(s);
+    delete asThree.today.officeExtra;
+    finishDay(s);
+    finishDay(asThree);
+    expect(asThree.reputation - s.reputation).toBeCloseTo(2 * ECONOMY.reputation.delta, 5);
   });
 
   it('officeMorning draws nothing outside its window (classic runs keep their rng stream)', () => {
