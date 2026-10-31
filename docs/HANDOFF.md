@@ -20,6 +20,11 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 - Neither lane edits the other's files. If you need a change there, put it in "Needs from you".
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-10-31: **Night clutter (Round 4 f), Kennedy's answers:** (1) restock also works during the day (Claude's call:
+  instant "rush delivery" at +25% during the day, normal price at night); (2) the Strategist hire sets prices and the
+  menu by default, so the Menu tab can nearly disappear (manual still overrides); (3) crew roles and card rerolls are
+  cut; (4) growing the shop moves to the end-of-day receipt (UI only; the grow input is unchanged); (5) the classic
+  Stations/slots code is deleted.
 - 2026-10-30: **Round 4 approved (Kennedy, Oct 30, 2026 ~10:27 PM):** condiment box card, character creator + night
   edit, pastries made buyable, bumping into customers, stacked multi-drink tickets, night opens on Restock (spoilage
   stays), dev mode (`?dev=1`: unlimited money, paused night), night screen declutter. Sim side:
@@ -42,7 +47,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 - 2026-10-30: **Solo runs default to 1 bot.** Co-op lobbies keep their own choice.
 
 ## Open questions
-- **Round 4 f, night clutter (Claude's proposal, needs Kennedy):** easiest win is letting the existing `restock`
+- **Round 4 f, night clutter: answered 2026-10-31 (see Decisions), being built as `r4-night`.** Was: easiest win is letting the existing `restock`
   input work during the day (one phase check) with a day-HUD "Restock" button, shrinking the Restock tab to a "stock
   is low" chip. Keep at night: grow, gear, hire/fire bots, steep, ads/pitch. Automate or cut: prices/menu via the
   Strategist hire (Round 3 item 3), roles, card reroll, the classic Stations/slots screen. Full table: BACKLOG
