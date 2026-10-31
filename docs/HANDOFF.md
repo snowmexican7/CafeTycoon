@@ -20,6 +20,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 - Neither lane edits the other's files. If you need a change there, put it in "Needs from you".
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-10-30: **Round 4 approved (Kennedy, Oct 30, 2026 ~10:27 PM):** condiment box card, character creator + night
+  edit, pastries made buyable, bumping into customers, stacked multi-drink tickets, night opens on Restock (spoilage
+  stays), dev mode (`?dev=1`: unlimited money, paused night), night screen declutter. Sim side:
+  `docs/CLAUDE_PROMPT_ROUND_4.md`; overview: `docs/ROADMAP.md` "Where we are now".
 - 2026-10-30: **Round 3 approved (Kennedy, Oct 30, 2026 7:46 PM):** money changes stay VERY slight (the main squeeze was
   playing at the stand, 0.75 price); the honest price forecast becomes a paid Strategist hire. Spec: BACKLOG "Round 3".
 - 2026-10-30: **Gear is the game.** There are no classic runs any more; don't preserve classic behaviour or
@@ -114,6 +118,13 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 ## Grok → Claude
 
 ### State of the UI (2026-10-30, `ui-3.4.1` / `v3.4.1`)
+- **2026-10-30 (`docs-round4`): Round 4 approved.** Please read `docs/CLAUDE_PROMPT_ROUND_4.md` (your items a–g)
+  and `docs/ROADMAP.md` "Where we are now" (the single current picture: state, lanes, Now / Next / Later).
+  **A full code review by another agent is coming soon:** both lanes, leave the repo tidy (everything merged,
+  docs current, no stray WIP branches or worktrees).
+- **UI lane now building (Round 4):** condiment box card on the Restock tab, night always opens on Restock,
+  character creator + "Edit my barista", stacked multi-drink tickets, bump bubbles, dev-mode toggle UI, night
+  screen declutter.
 - **Landed (2026-10-30, `ui-3.4.1`):** FB2 A4 fridge UI: art for all four fridges, carton and bar box in hand,
   milk-out cartons + tag by the steamer, "N milk left" count, fridge/carry/closing hints, closing-soon checklist,
   night Fridge row + brief buy button (Udder-Matic vote via the gear vote), bubbles and sounds for all eight events.
@@ -134,6 +145,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
 
 ### Grok → Claude log
+- 2026-10-30 (`docs-round4`): docs only. New `docs/CLAUDE_PROMPT_ROUND_4.md`; `docs/ROADMAP.md` gains "Where we are
+  now" at the top; Decisions line and Round 4 request here.
 - 2026-10-30, `ui-3.4.1`: UI files only. New `src/render/{fridgeModel.ts,layers/fridge.ts,layers/fridgeArt.ts,
   layers/fridgeArtRise.ts}`; touched `render/{scene,countsModel,crewModel,pickupModel}.ts`,
   `render/layers/{actors,counts,stations}.ts`, `audio/{cues,recipes,synth}.ts`, `ui/{live,hud,gearVM,night,
@@ -170,6 +183,12 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
+- [ ] 2026-10-30: **Round 4 (Kennedy approved ~10:27 PM).** Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. Summary:
+  a. dev mode: unlimited money + paused night behind `?dev=1`; b. pastries buyable (or tied to combos);
+  c. `customer.bump { customer, by }`, repeat bumps → angry leave; d. confirm `Customer.items` is enough to stack
+  one customer's cups; e. `Player.look` through lobby/join/protocol + `{ kind: 'look' }` input; f. proposal only:
+  what night decisions could move mid-day or be cut; g. Round 3 / FB2 leftovers stay as listed. Also: export
+  `emptyHandsWanted` (or `fridgeWants`). Post names as built in "Claude → Grok".
 - [ ] 2026-10-30: **Round 3 (Kennedy approved Oct 30, 2026 7:46 PM).** Full goal / freedom / don't touch / what Grok
   wires for each item: BACKLOG "Round 3 (Kennedy approved 2026-10-30)". Summary:
   1. **More lattes:** shift the order mix toward `latte` / `cappuccino` where the gear can make them; optional

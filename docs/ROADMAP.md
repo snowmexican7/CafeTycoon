@@ -3,6 +3,79 @@
 > Agreed order with Kennedy (2026-10-28): **phases go from easiest and lowest risk to hardest and riskiest.** AI is the hardest, so it comes late (Phase 5), and a polish phase closes it out. The machine-readable copy the game reads is `public/roadmap.json`.
 > The design spec (`superpowers/specs/2026-10-28-cafetycoon-design.md`, §17) uses older numbering (P3 = AI, P4 = bigger games). This roadmap supersedes it.
 
+## Where we are now (updated 2026-10-30, ~10:30 PM Toronto)
+
+> **Start here.** This section is the single, current picture for anyone new to the repo (including code
+> reviewers). The phase plan below is the long-range history. Details live in
+> [`HANDOFF.md`](HANDOFF.md) (what each lane needs right now), [`BACKLOG.md`](BACKLOG.md) (long record and
+> names as built), [`GEAR_TREE.md`](GEAR_TREE.md) (gear lines) and [`CHANGELOG.md`](../CHANGELOG.md).
+
+### State
+- **Live:** https://snowmexican7.github.io/CafeTycoon/ deploys from `main` on every push.
+- **Versions:** sim release **v3.5.0** (Feedback 2 part A + balance fixes); UI release **v3.4.1** (fridge UI).
+  On `main` but unreleased: B6 multi-drink orders (protocol 45).
+- **Rule of thumb:** sim releases use 3.5.x, UI releases use 3.4.x-style UI tags (`ui-3.4.x`) until the next
+  minor bump is agreed.
+- **Gear is the game** (no classic runs), no save compatibility for now, runs start at the stand, solo starts
+  with 1 bot. All rulings: HANDOFF "Decisions".
+
+### Lanes
+- **Claude (sim lane):** `src/sim/**` (bots too), `src/net/**`, `src/host/**`, `src/storage/**`, `src/data/**`,
+  `scripts/**`.
+- **Grok (UI lane):** `src/ui/**`, `src/render/**`, `src/audio/**`, styles, `src/main.ts`, docs like this one.
+- They coordinate through `docs/HANDOFF.md` on `main`. Each change is a dash-named branch merged `--no-ff` and
+  tagged; nobody force-pushes.
+
+### Shipped recently
+- **v3.4.1 (UI):** fridges for each shop size, milk cartons in hand, "Grab milk" / "Put the milk away" hints,
+  "Closing soon" checklist, fridges in the night shop.
+- **v3.4.0 (UI):** stand and cart each have their own look; "Grand re-opening" transition with a "What you
+  gained" card; "You can afford a cart!" nudge; first-run tips (snooze / off); forecast labelled "Rough guess".
+- **v3.5.0 (sim):** cups go cold, back sink and pot dumping, milk in a fridge, closing rush, solo bot count.
+- **On main, unreleased (sim):** combo orders and office runs (B6): one ticket per customer, paid at the last cup.
+
+### Now: Round 4 (Kennedy approved Oct 30, 2026, ~10:27 PM)
+Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
+
+| # | Item | Grok (UI) | Claude (sim) |
+|---|------|-----------|--------------|
+| 1 | **Cream and sugar restock** (missing button) | "Condiment box, $6" card on the Restock tab (input exists) | nothing |
+| 2 | **Create your own barista** | Creator before the first day + "Edit my barista" at night: 5–6 hairstyles each male/female, skin tones, shirt colours, outfit styles incl. dresses, click-through arrows, saved on the device | `Player.look` through lobby/join + protocol, `{kind:'look'}` input |
+| 3 | **Pastries** (half-wired, can't be bought) | Card / row once named | Make them buyable (restock or pastry case) and/or tie to combos |
+| 4 | **Bumping into customers** (fun quirk) | "Hey!" / "Watch it!" bubbles, angry exit | `customer.bump {customer, by}`, patience hit, repeat bumps → angry leave |
+| 5 | **Stacked multi-drink orders** | One customer's cards fan out, slightly overlapping, with a "×N" badge | Confirm `Customer.items` is enough |
+| 6 | **Night opens on the Restock tab** | Always open on Restock; keep "runs out around…" and spoilage | nothing |
+| 7 | **Dev mode** (`?dev=1`) | Toggle UI, pause the night timer, money display | Unlimited money + paused-night support |
+| 8 | **Night screen declutter** | Reorganise / trim the night tabs | Proposal: what could move to a mid-day moment or be cut |
+
+### Next: still open from Round 3 and Feedback 2
+- **Round 3** (BACKLOG "Round 3 (Kennedy approved 2026-10-30)"), sim then UI:
+  more latte demand; very slight money tuning with "Too pricey!" walkouts; Strategist and Marketer hires (the
+  honest forecast becomes a paid hire); line and waiting area with "Line's too long!" and the tumbleweed;
+  register ring-up time with a progress bar; small early-growth nudge; grow diff for the "What you gained" card.
+  UI parts of items 6–7 shipped in v3.4.0.
+- **Feedback 2** ([`CLAUDE_PROMPT_FEEDBACK_2.md`](CLAUDE_PROMPT_FEEDBACK_2.md)): B6 multi-drink orders (sim
+  merged; UI tall ticket, office phone card, receipt line to do) · C9 espresso rework, wand on the machine
+  (built, waits on Kennedy's milk-timeline call; then the UI "Add a wand" button) · B7 tray table · B8 hand-made
+  lattes and cappuccinos · C10 station rearranging · C11 daily social feed and reviews.
+- **Design review ideas** (Kennedy's Muse review, not yet approved): bigger in-world text, a slimmer or
+  collapsible sidebar, one clear state per order card, a smaller FOR LEASE teaser while playing, each shop size
+  pushed further apart in look.
+
+### Later (not scheduled)
+- **Café add-ons first:** a seating nook that juts out as a trapezoid with a big window; an outside queue of
+  shadow figures.
+- A cashier hire who entertains the line (so it can grow to 6+).
+- Area upgrades in the middle of the day rather than on another screen.
+- A split money pool for co-op.
+- Upgrade paths per line: speed, reliability, taste, quality.
+- A smart café that runs itself (top registers pair with smart machines), with conveyor belts as the Easter-egg
+  win.
+- 2v2 battles (maybe Phase 5).
+- Mobile: a phone-browser test build first, then the App Store.
+
+---
+
 ## Release approach
 - **`main` is always the stable, playable build.** The live GitHub Pages site deploys from `main`, so game night always runs on it.
 - **Every build has a version and a changelog entry** in [`CHANGELOG.md`](../CHANGELOG.md), written for players, and a git tag (`v1.0.0`, …). Numbers are `major.minor.patch`: patch for a small change (fix, number tweak, wording), minor for a big change (new feature, system, screen or content), major for a finished roadmap phase or an overhaul of something that already existed. `1.0.0` is the 2026-10-28 build. Any earlier version can be checked out from its tag.
