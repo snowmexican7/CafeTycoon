@@ -28,6 +28,7 @@ import { tierInfo } from './growth';
 import { menuDrinks, unlockedDrinks } from './unlocks';
 import { comboDrinks, latteAddon, loseTicket, makeTicket, ORDERS } from './orders';
 import { isMilkDrink, milkPush } from './lattes';
+import { addCustomerAsks } from './handmade';
 import { promoteWaiting, quietLeave, sendToBrowse, waitingFree } from './line';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
@@ -233,6 +234,7 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   }
   if (asksSig) customer.sig = true;
   if (state.gear === true) customer.stage = 'order';
+  addCustomerAsks(state, customer); // FB2 B8: a latte or cappuccino may ask for a double, a latte for a syrup
   if (regular) {
     regular.visits += 1;
     customer.kind = 'regular';
@@ -271,6 +273,7 @@ export function spawnInfluencer(state: GameState): Customer | null {
   const patienceMax = patienceFor(m, ECONOMY.events.influencer.patience);
   const customer: Customer = { id: state.nextCustomerId++, drink, patienceLeft: patienceMax, patienceMax, kind: 'influencer' };
   if (state.gear === true) customer.stage = 'order';
+  addCustomerAsks(state, customer); // FB2 B8
   state.customers.push(customer);
   return customer;
 }

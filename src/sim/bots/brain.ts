@@ -30,6 +30,8 @@ import { answerPhone } from './phone';
 import { wantsItem } from '../orders';
 import { ticketOpen, trayCups } from '../tray';
 import { heldByPerson, heldForPeople, isPerson, ringsAtOnce } from './helper';
+import { addSyrup, askedSyrup } from '../handmade';
+import { SYRUP_ID } from '../../data/layout';
 
 const BOTS = ECONOMY.bots;
 const MESS = ECONOMY.mess;
@@ -820,7 +822,7 @@ export function think(state: GameState, p: Player): BotStep[] {
   if (job) {
     b.claim = job.order.id;
     b.claimDrink = job.order.drink;
-    return job.chain;
+    return withSyrup(state, job.order, job.chain);
   }
   // 3. Prep cold brew for the pass.
   const prep = shouldPrep(state, p) ? chainFor(state, p, 'coldBrew', 'put') : [];
@@ -841,6 +843,16 @@ export function think(state: GameState, p: Player): BotStep[] {
   if (dump) return dump;
   // 4. Wait near the counter.
   return [{ kind: 'idle', node: idleNode(state, p) }];
+}
+
+/**
+ * FB2 B8: an order that asks for a syrup gets it at the rack just before the cup is set down (the rack on the floor and
+ * flavour in stock; else the cup goes as it is and the customer grumbles).
+ */
+function withSyrup(state: GameState, order: Customer, chain: BotStep[]): BotStep[] {
+  const flavour = askedSyrup(order);
+  if (!flavour || chain.length === 0 || (state.supplies.flavour ?? 0) < 1 || !state.stations.some((st) => st.id === SYRUP_ID)) return chain;
+  return [...chain.slice(0, -1), { kind: 'use', station: SYRUP_ID, action: 'syrup', flavour }, chain[chain.length - 1]!];
 }
 
 /**
@@ -1258,6 +1270,10 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
     case 'whack':
       // FB2 C9: still clogged and the hands are empty: whack it (gearBlocked clears it); else someone beat us to it.
       if (st.jammed && p.holding === null && p.tool === null) return execute(p);
+      return pop(b);
+    case 'syrup':
+      // FB2 B8: the ticket's syrup into the cup in hand (no flavour left or a syrup already in: move on regardless).
+      if (step.flavour) addSyrup(state, p, step.flavour);
       return pop(b);
   }
 }

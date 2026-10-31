@@ -86,6 +86,7 @@ describe('FB2 A3: milk drips and spilled grounds', () => {
     const s = gearStand();
     below(s, 'steamer');
     s.players[0].holding = 'espresso';
+    s.players[0].jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
     s.rng = rngWhere((r) => r < MESSES.milkDrip);
     interact(s, 'p1');
     expect(st(s, 'steamer').making).toBe('latte');
@@ -100,6 +101,7 @@ describe('FB2 A3: milk drips and spilled grounds', () => {
     expect(wand.twin).toBe(true);
     s.players[0].pos = { x: Math.round(wand.pos.x + 0.45), y: wand.pos.y + 1 };
     s.players[0].holding = 'espresso';
+    s.players[0].jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
     s.rng = rngWhere((r) => r < MESSES.milkDrip);
     interact(s, 'p1');
     expect(wand.making).toBe('latte');

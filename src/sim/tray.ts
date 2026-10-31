@@ -89,6 +89,7 @@ function clearHands(p: Player): void {
   delete p.cupSlips;
   delete p.cupTemp;
   delete p.heldSince;
+  delete p.made;
 }
 
 /** The cup in `p`'s hands, as it goes onto a tray. */
@@ -99,6 +100,7 @@ function cupFromHand(state: GameState, p: Player, drink: DrinkId): TrayCup {
     ...(p.cupSlips ? { slips: p.cupSlips } : {}),
     ...(p.cupTemp ? { temp: true as const } : {}),
     madeAt: madeAtFromHand(state, p),
+    ...(p.made ? { made: p.made } : {}), // FB2 B8: how it was hand-made rides on the tray
   };
 }
 

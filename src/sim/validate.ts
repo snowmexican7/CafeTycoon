@@ -16,6 +16,7 @@ import { DRINK_IDS } from '../data/drinks';
 import { isReservedId } from './constants';
 import { STEEP } from './steep';
 import { CONDIMENTS } from './condiments';
+import { isFlavour } from './handmade';
 import type { BotSkill, Pace, PlayerInput, Settings, SupplyId } from './types';
 
 const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour', 'pastry'];
@@ -189,6 +190,9 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       return typeof input.on === 'boolean' ? { kind: 'closeEarly', playerId: input.playerId, on: input.on } : null;
     case 'drop':
       return { kind: 'drop', playerId: input.playerId };
+    case 'syrup':
+      // FB2 B8: a syrup into the cup in hand at the rack (day or closing, people: sim/handmade.ts).
+      return isFlavour(input.flavour) ? { kind: 'syrup', playerId: input.playerId, flavour: input.flavour } : null;
     case 'secret': {
       const code = typeof input.code === 'string' ? input.code.trim().slice(0, 16) : '';
       return code ? { kind: 'secret', playerId: input.playerId, code } : null;

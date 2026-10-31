@@ -28,6 +28,7 @@ import { applyNightInput, stepNight } from './night';
 import { startNight } from './run';
 import { stepPass } from './pass';
 import { interact, stepStations } from './stations';
+import { applySyrupInput, stepHandmade } from './handmade';
 import type { GameState, PlayerInput } from './types';
 import { validateInput } from './validate';
 import { isBotId, syncBots } from './bots/roster';
@@ -129,6 +130,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
       if (p && (s.phase === 'day' || s.phase === 'closing')) p.dropQueued = true;
       break;
     }
+    case 'syrup':
+      applySyrupInput(s, input); // FB2 B8
+      break;
     case 'secret':
       if (s.phase === 'day' || s.phase === 'closing' || s.phase === 'night') unlockSecret(s, input.playerId, input.code);
       break;
@@ -281,6 +285,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   }
   stepCleaning(s);
   stepStations(s);
+  stepHandmade(s); // FB2 B8: the milk jug fills, a steam meter left running scalds the milk
   stepFridge(s); // FB2 A4: the Udder-Matic pours milk out by itself
   stepPass(s);
   stepCooling(s); // A2: cups go cold (Gear only)

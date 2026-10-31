@@ -2341,6 +2341,22 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   'Pour cold brew' / 'Ice + milk' / 'Cold brew again (sweet cream)'; equipment 'Cold-brew keg', catalogue 'Second
   cold brew keg', gear c4 'The Kegerator', describe 'cold brew', steep's morning note "…had no room left…". Code ids
   (`coldBrewTap`, `batchLeft`) unchanged; card-payment "tap terminal" unchanged.
+- **Balance pass (`fb2-balance`, stopped early by Kennedy's call: playtests drive balance now).** Fixes kept:
+  the balance harness steeps cold brew on night 1; bots `reclaim` a lost claim onto another order for the same
+  drink and collect grounds left in a grinder after 15 s (`leftGrounds`, ported from B6); during closing soon, E
+  at the cold brew for a sweet cream pours instead of lifting the milk; bots meeting head-on behind the bar no
+  longer block each other all day (also in v3.3.1). No constants changed; the cube stays $20.
+- **3.5.0 released** (Feedback 2 part A + balance fixes). UI lane already shipped 3.4.0/3.4.1, hence 3.5.0.
+- **B6 multi-drink orders (`fb2-b6`, protocol 45; UI lane to draw).** Gear only.
+  - **Tickets:** a group, a combo or an office run is one ticket: `Customer.items: { drink, done, by?, slips?, temp?, black?, cold? }[]`, with `Customer.order: 'combo' | 'office'` (absent for groups). `drink`/`extra` mirror the undone items. Rung once; each cup taken off the pickup counter ticks one item; the ticket pays when the last item is taken (`order.done { customer, paid, tip }`, and every cup's `served` event lands then, with `left: 0`). Walk out part done: nothing paid, the cups taken are wasted (not an office run's).
+  - **Cold cups:** a cold cup ticks its item unpaid (`pickup.cold`, plus `review.bad` except office) and the rest carries on.
+  - **Gear groups** now pay once, at the end.
+  - **Combos:** from day 2, about 1 in 12 walk-ins order 2 drinks (`ORDERS.combo.chance` 0.08; a pair, or espresso drink + drip), ×1.3 patience. `order.combo { customer, items: "latte,drip" }`.
+  - **Office runs:** on the cart and at the café from day 3, about every other day (`GameState.office { day, at, called?, came? }`). The phone rings 10 s ahead (`office.call { at }`, `at` = the tick they're due; with the queue over capacity they wait outside and come later). 4–6 drinks (`ORDERS.office.size` by tier), ×4 patience, arriving 5–15% into the day (`order.office { customer, count }`). Finished: +25% bonus tip, counts as one customer for reputation (`DayStats.officeExtra`). Lost (patience out, or still in when the doors lock): `order.lost { customer }`, no lost customers, no waste, no bad review, no reputation hit. `DayStats.office: 'served' | 'lost'`. They take a cup only when nobody else wants it; bots keep one office drink in the queue at a time and make the rest after the walk-ins'. Kennedy to tune size, patience and combo rate in play.
+  - **Bots:** cover each undone item as its own order (one claim per item, never two on one item left). In Gear, a claim lost mid-chain moves to another order for the same drink (never onto a ticket held for a free person), and grounds left in a grinder are collected after 15 s (30 s while someone else on the floor counts as a person by A1's rule).
+  - **UI to do:** a tall ticket with a tick per item (`items[].done`, maybe the cold one crossed out), the office-run phone card (`office.call`, a countdown to `at`), and a receipt line for `DayStats.office`.
+  - Open: two bots crossing a corridor mirrored each other all day on p4 seed 205 day 9 before the balance
+    branch's head-on fix (748100f); recheck in play.
 
 
 ## Round 3 (Kennedy approved 2026-10-30)
@@ -2380,26 +2396,11 @@ Approved Oct 30, 2026 7:46 PM (Toronto). Sim lane builds; UI lane (Grok) wires. 
 - A split money pool for co-op.
 - Upgrade paths: speed, reliability, taste, quality.
 - A smart café path (top registers pair with smart machines), ending in a self-running shop with conveyor belts.
-- **Balance pass (`fb2-balance`, stopped early by Kennedy's call: playtests drive balance now).** Fixes kept:
-  the balance harness steeps cold brew on night 1; bots `reclaim` a lost claim onto another order for the same
-  drink and collect grounds left in a grinder after 15 s (`leftGrounds`, ported from B6); during closing soon, E
-  at the cold brew for a sweet cream pours instead of lifting the milk; bots meeting head-on behind the bar no
-  longer block each other all day (also in v3.3.1). No constants changed; the cube stays $20.
-- **3.5.0 released** (Feedback 2 part A + balance fixes). UI lane already shipped 3.4.0/3.4.1, hence 3.5.0.
-- **B6 multi-drink orders (`fb2-b6`, protocol 45; UI lane to draw).** Gear only.
-  - **Tickets:** a group, a combo or an office run is one ticket: `Customer.items: { drink, done, by?, slips?, temp?, black?, cold? }[]`, with `Customer.order: 'combo' | 'office'` (absent for groups). `drink`/`extra` mirror the undone items. Rung once; each cup taken off the pickup counter ticks one item; the ticket pays when the last item is taken (`order.done { customer, paid, tip }`, and every cup's `served` event lands then, with `left: 0`). Walk out part done: nothing paid, the cups taken are wasted (not an office run's).
-  - **Cold cups:** a cold cup ticks its item unpaid (`pickup.cold`, plus `review.bad` except office) and the rest carries on.
-  - **Gear groups** now pay once, at the end.
-  - **Combos:** from day 2, about 1 in 12 walk-ins order 2 drinks (`ORDERS.combo.chance` 0.08; a pair, or espresso drink + drip), ×1.3 patience. `order.combo { customer, items: "latte,drip" }`.
-  - **Office runs:** on the cart and at the café from day 3, about every other day (`GameState.office { day, at, called?, came? }`). The phone rings 10 s ahead (`office.call { at }`, `at` = the tick they're due; with the queue over capacity they wait outside and come later). 4–6 drinks (`ORDERS.office.size` by tier), ×4 patience, arriving 5–15% into the day (`order.office { customer, count }`). Finished: +25% bonus tip, counts as one customer for reputation (`DayStats.officeExtra`). Lost (patience out, or still in when the doors lock): `order.lost { customer }`, no lost customers, no waste, no bad review, no reputation hit. `DayStats.office: 'served' | 'lost'`. They take a cup only when nobody else wants it; bots keep one office drink in the queue at a time and make the rest after the walk-ins'. Kennedy to tune size, patience and combo rate in play.
-  - **Bots:** cover each undone item as its own order (one claim per item, never two on one item left). In Gear, a claim lost mid-chain moves to another order for the same drink (never onto a ticket held for a free person), and grounds left in a grinder are collected after 15 s (30 s while someone else on the floor counts as a person by A1's rule).
-  - **UI to do:** a tall ticket with a tick per item (`items[].done`, maybe the cold one crossed out), the office-run phone card (`office.call`, a countdown to `at`), and a receipt line for `DayStats.office`.
-  - Open: two bots crossing a corridor mirrored each other all day on p4 seed 205 day 9 before the balance
-    branch's head-on fix (748100f); recheck in play.
 
-## Round 4 (sim lane, Claude)
+## Round 4 + wrap-up (sim lane, Claude, 2026-10-31)
 
-Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. One branch and tag per item; names as built.
+Spec: `docs/CLAUDE_PROMPT_ROUND_4.md` (a–f), BACKLOG "Round 3" (items 1–7) and `docs/CLAUDE_PROMPT_FEEDBACK_2.md`
+(C9, B7, B8, C10, C11). One branch and tag per item; names as built; protocol bumps in merge order.
 
 - **c. Bumping into customers (`r4-bump`, protocol 46).** `stepCustomerBumps` (src/sim/bumps.ts): a person (not a bot,
   `ECONOMY.bump.botsBumpCustomers: false`) walking into a customer within `customerTiles` (0.6) costs them
@@ -2472,13 +2473,13 @@ Key fact: `startDay()` reads the night's choices once (menu, prices, twists, ad 
 | Branch (second shop) (drawer) | night, Gear only | KEEP | Too rare to matter. |
 | Classic `slot`/`equip` (Spend > Stations) | night, classic only | CUT | Memory says no classic runs any more; deleting the input, UI and tests removes a whole spend view. |
 
-## Mid-day design, if wanted (a "lull")
+#### Mid-day design, if wanted (a "lull")
 A fixed pause point at e.g. 50% of the day (like `ringFrom` in call.ts: derive the time from a hash of seed+day, no RNG draw). Phase stays `day` with a `lull` flag. Only restock and one "quick buy" accepted. Host authority: timer is the host's (as the close vote is). Co-op: one shared pause, any human can act, no votes unless a big spend. Customers keep queuing (no freeze) so it is a cost, not a free break. Needs a new protocol bump and a UI card.
 
-## Recommended first step (trivial)
+#### Recommended first step (trivial)
 Allow the existing `restock` input during `day` and `closing` (extend the one phase check in `applyNightInput`/step.ts `restock` case) and surface a small "Restock" button on the day HUD. No new phase, no new input kind, no new state. Optionally cut the classic `slot`/`equip` UI at the same time. Then Grok can drop the Restock tab to a one-line "stock is low" chip on the night screen.
 
-## Needs Kennedy's call
+#### Needs Kennedy's call
 1. Should restocking mid-day be free of consequence, or cost more (rush delivery +25%) or take time (delivery arrives in 30 s)?
 2. Should Menu/price/twist be handed to the Strategist hire by default (Round 3 item 3) so the Menu tab nearly disappears?
 3. Are roles and reroll worth keeping at all?
@@ -2553,3 +2554,29 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   - **Open:**
     - Bots never carry a tray. If a person leaves a complete tray on the table, that ticket waits (and may be lost) until a person delivers it.
     - There is no way to put a lifted tray back on the table.
+- **B8 hand-made lattes and cappuccinos (`fb2-b8`, protocol 58).** `src/sim/handmade.ts`.
+  - **Milk jug:**
+    - A person with a shot in hand at a wand with milk out presses E to start filling `Player.jug { fill, startedAt, line, done? }` (0→1 over 2 s); E again (anywhere) stops it, and left alone it stops itself full.
+    - Lines `JUG_LINES { cappuccino: 0.35, latte: 0.6, large: 0.85 }`; `jug.line` is the cappuccino mark for a cup heading to a cappuccino ticket, else the latte mark.
+    - ±0.08 is right; under is −1★ and tip ×0.8; over wastes one more milk from `milkOut` when the shot goes on. The jug's milk is the wand recipe's one serving.
+    - Event `milk.fill { by, level, line, grade }`.
+  - **Steam meter:**
+    - The next E puts the shot on the wand (it runs at the wand's speed) and starts `Player.steam { startedAt, speed, station }`; `steamPos(state, player)` is a 0..1 triangle wave every 1.2 s.
+    - E in reach of that wand stops it: within 0.08 of the middle is perfect (+1★, tip ×1.2), within 0.25 ok, else a miss (−1★, tip ×0.8). If the wand finishes first, the milk is scalded (miss).
+    - Event `steam.result { by, grade }`.
+  - **Shots:** 30% of latte and cappuccino asks want a double (`Customer.shots` / `OrderItem.shots` = 2). While doubles are owed beyond those in flight (`wantsDouble`), a pull takes ×1.5 time and a second bean (`Station.made.shots`). No extra press.
+  - **Syrup rack:**
+    - `SYRUP_ID` (`'syrups'`, counter kind) at `SYRUP_SPOT` (2,6), the left end of the front counter, present while the floor has a wand. `spotOf` returns `'syrups'`.
+    - While the shop has flavour stock, 25% of latte asks want vanilla or caramel (`Customer.syrup` / `OrderItem.syrup`).
+    - Input `{ kind: 'syrup', playerId, flavour }` at the rack (day or closing, people) puts one flavour serving in the shot, latte or cappuccino in hand, one per cup: `syrup.add { by, flavour }`.
+    - A wanted syrup that is wrong or missing at pickup: `syrup.miss { customer }`, tip ×0.5.
+  - **How a cup was made** travels with it: `HandMade { shots?, syrup?, milk?, foam? }` on `Player.made`, `Station.made`, `PassItem.made`. `judgeCup` scores it at pickup (`OrderItem.tipMul` on tickets). Pickup prefers a ticket the cup fits exactly (`pickupTarget(state, drink, made?)`).
+  - **UI helper:** `heldRecipe(state, player)` → `{ drink, shots, syrup?, steps: { step: 'shot'|'double'|'vanilla'|'caramel'|'milk'|'steam'|'foam', done }[] }` or null.
+  - **Bots** skip the meters (count as right and ok), pull doubles, and stop at the rack for the ticket's syrup (BotAction `'syrup'`).
+  - **UI to do:**
+    - jug meter with the three marks (`Player.jug`) and the steam meter (`steamPos`);
+    - recipe icons over the cup (`heldRecipe`);
+    - the syrup rack sprite at `SYRUP_SPOT` and a vanilla/caramel picker sending the `syrup` input there;
+    - double, syrup and asks on tickets (`Customer.shots/syrup`, `items[].shots/syrup`);
+    - popups and sounds for `milk.fill` / `steam.result` / `syrup.add` / `syrup.miss`;
+    - `counterName` / `pickupModel.counterSpotOf` must not draw `'syrups'` as a till.
