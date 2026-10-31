@@ -22,6 +22,10 @@ when a build goes out, the line moves under its version with the date.
   like; dev runs never count toward records or head starts.
 - Your barista has a look you pick (hair, skin, outfit, shirt colour), your crewmates see it, and you can change it
   between days.
+- The steamer is gone: steamed milk comes from a wand on the espresso machine. Add a little wand to the Sylvia, or a
+  proper one to La Marzipana Due; The Annihilator and the new top machine, Double Trouble, have theirs built in.
+  Lattes wait until you have a Sylvia with a wand. The little wand clogs now and then: give it a whack. Saves from
+  earlier versions can't be loaded.
 
 ## 3.5.0 — 2026-10-30 · Open, close and clean up
 

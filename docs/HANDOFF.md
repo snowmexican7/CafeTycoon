@@ -63,6 +63,17 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **C9 wand on the espresso machine (2026-10-31, `fb2-c9`, protocol 49, snapshot 29). Blocks a release:** milk
+  drinks need a wand, and there's no way to buy one on screen yet.
+  - E3/E4 buy card: a wand choice (`wand?: 'weak' | 'strong'` on the gear buy). "Add a wand" button from
+    `wandCards(state)` (sends `{ kind: 'wand', playerId, station, wand }`). Wand art from `Station.wand`; clogged look
+    from the wand twin's `jammed`; events `wand.add`, `wand.clog`, `wand.unclog`.
+  - Files still reading `steamer`: `ui/live.ts` (name, verbs, carton hints), `ui/gearVM.ts` 226,
+    `ui/viewModels.ts` 511–514, `ui/stationsVM.ts` 13–14, `ui/nightInputs.ts` + `ui/night.ts` (`onGear` has no wand,
+    no `onWand`), `render/layers/stations.ts` 442/515, `render/theme.ts` 75/86, `dev/fixtures.ts` 506–536; comments in
+    `render/{fridgeModel,crewModel,chaosModel,slotModel}.ts`, `render/layers/fridge.ts`, `audio/cues.ts`.
+  - I touched your `src/ui/gearVM.ts` `gearStats` (wand text from `GEAR[id].wand`) and a few UI tests to keep tsc
+    green.
 - [ ] **e. Character look (2026-10-31, `r4-look`, protocol 48).** Wire the saved look into `src/main.ts`
   `runOptions` (`players[].look: m.look`), the host's `Member.look`, and `PeerSessionOptions.look` for joiners; edit
   at night with `{ kind: 'look', playerId, look }` (type `PlayerLook` in src/sim/types.ts). Bots have no look.

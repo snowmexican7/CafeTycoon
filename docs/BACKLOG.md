@@ -2347,3 +2347,22 @@ Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. One branch and tag per item; names as bui
   decided at take time); for a "who'd take this cup" hint use `pickupTarget(state, drink)` (exported).
 - **Export (`r4-look`).** `emptyHandsWanted` is exported from src/sim/stations.ts, so `src/ui/live.ts` can drop its
   mirror.
+- **C9 espresso rework (`fb2-c9`, protocol 49, snapshot 29).** The steamer tree (S1–S3) and its shop line are gone;
+  milk is steamed at a wand on the espresso machine.
+  - Ladder (`GEAR` e1–e6): e1 Pod-o-Matic 3000 $45, no wand; e2 Brevelle $80, no wand; e3 Sylvia $150, little wand
+    add-on; e4 La Marzipana Due $260, two groups ×1.1, little or proper wand add-on; e5 The Annihilator $450, built-in
+    wand 3.5 s; e6 Double Trouble $800, dual boiler, built-in wand 3 s (fastest).
+  - Wands (`WANDS`, `WAND_SECONDS`, `WAND_UPGRADE`, `GearInfo.wand`): weak "Little steam wand" 4.5 s, $25 with the
+    machine / $30 later, sells $10, clogs 1 in 30 uses until whacked; strong "Proper steam wand" 3.5 s, $40, E4 only,
+    sells $20, weak → strong $15.
+  - State: `Station.wand?: 'weak' | 'strong' | 'built'` on the espresso machine (the UI reads this); the wand itself is
+    a 'steamer' twin carrying `wand` and `wandOf`; `GameState.slotWand?`; `GearVote.wand`; gearLog `action: 'wand'`.
+  - Inputs: gear buy takes `wand?: 'weak' | 'strong'` (one price, one vote at $50+); `{ kind: 'wand', playerId,
+    station, wand }` adds or upgrades later (night, people, never voted). Offers: `wandCards(state)`.
+  - Events: `wand.add { station, wand, by }`, `wand.clog` / `wand.unclog { station, by }` (station = the wand twin).
+  - Rules: no steamed-milk drink without a wand; café au lait needs a wand; the milk snob needs a proper or built-in
+    one. Bots whack a clogged wand. Planner: `GEAR_PATH` skips E2, `pathWandCard`, `wandFirst` holds the café until a
+    wand is on the floor. Old saves refused.
+  - Open: milk drinks now start around day 7–11 instead of day 1 (Kennedy approved merging; tune in play). M6 (E4's
+    second group moves left when a wand is added), M7 (dead battery quirk code), M8 (iced milk at the tap needs no
+    wand, intended).
