@@ -5,7 +5,6 @@ import { finishDay } from './closing';
 import { SPOIL, spoilCount, spoilOvernight, spoilRate, sellPastry } from './spoilage';
 import { step } from './step';
 import type { GameState } from './types';
-import { migrateSnapshot } from '../storage/snapshotStore';
 import { nightViewModel } from '../ui/viewModels';
 import { computeModifiers } from './effects';
 
@@ -71,10 +70,4 @@ describe('supplies that spoil (P3 B4)', () => {
     expect(vm.restock.find((r) => r.supply === 'beans')!.spoilPct).toBeUndefined();
   });
 
-  it('migrates a v12 save by adding an empty pastry case', () => {
-    const s = run() as GameState & { supplies: Record<string, number> };
-    delete (s.supplies as Partial<Record<string, number>>).pastry;
-    const m = migrateSnapshot(12, s)!;
-    expect(m.supplies.pastry).toBe(0);
-  });
 });

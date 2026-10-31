@@ -89,11 +89,11 @@ describe('G10: top-tier perks', () => {
     expect(gearPullMul(gym, 'latte')).toBeCloseTo(1);
   });
 
-  it('the top espresso machine draws influencers; classic runs are untouched', () => {
+  it('The Annihilator (E5 since FB2 C9) draws influencers; classic runs are untouched', () => {
     const s = run(true);
-    kit(s, ['espresso', 'grinder', null, 'trash'], ['e5', 'g3', null, 'b0']);
+    kit(s, ['espresso', 'grinder', null, 'trash'], ['e4', 'g3', null, 'b0']);
     const without = computeModifiers(s).eventOdds.influencerVisit;
-    kit(s, ['espresso', 'grinder', null, 'trash'], ['e6', 'g3', null, 'b0']);
+    kit(s, ['espresso', 'grinder', null, 'trash'], ['e5', 'g3', null, 'b0']);
     expect(computeModifiers(s).eventOdds.influencerVisit / without).toBeCloseTo(1.5);
     const c = run(false);
     const m = computeModifiers(c);
@@ -105,7 +105,7 @@ describe('G10: top-tier perks', () => {
 
   it('the cards say so', () => {
     expect(gearStats('c5')).toMatch(/slip/);
-    expect(gearStats('e6')).toMatch(/Influencers/);
+    expect(gearStats('e5')).toMatch(/Influencers/);
     expect(gearStats('d4b')).toMatch(/flow/i);
   });
 });
@@ -114,7 +114,7 @@ describe('G10: bots and the pod machine', () => {
   it('a stand-in pulls pod shots with no grinder in the shop', () => {
     let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 150 }, tier: 'stand', gear: true });
     addStandIns(s, 1);
-    for (const g of ['c1', 'e1', 's1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
+    for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
     expect(s.stations.some((x) => x.kind === 'grinder')).toBe(false);
     s.supplies.beans = 40;
     s.supplies.milk = 40;

@@ -129,14 +129,3 @@ describe('recipe accuracy (P3 B5)', () => {
   });
 });
 
-describe('accuracy save migration (v13 -> v14)', () => {
-  it('gives a machine mid-run a run length so it can still be pulled early', async () => {
-    const { migrateSnapshot } = await import('../storage/snapshotStore');
-    const s = day();
-    s.stations[1].busyTicksLeft = 90;
-    s.stations[1].making = 'espresso';
-    delete s.stations[1].busyTotal;
-    const st = migrateSnapshot(13, structuredClone(s))!;
-    expect(st.stations[1].busyTotal).toBe(90);
-  });
-});

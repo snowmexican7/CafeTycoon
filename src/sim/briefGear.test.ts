@@ -23,10 +23,11 @@ function gearNight(gear: GearId[]): GameState {
 const find = (s: GameState, id: string) => nightBrief(s).alerts.find((a) => a.id === id);
 
 describe('expectedUse / expectedOrders', () => {
-  it('expectedUse is unchanged for a classic run', () => {
+  it('expectedUse is unchanged for a classic run (bar the pastry case)', () => {
     const c = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
     // captured from main before expectedUse was rebuilt on expectedOrders
-    expect(expectedUse(c)).toEqual({ beans: 14, milk: 7, concentrate: 11, flavour: 0, pastry: 0 });
+    // R4 b: the pastry case sells 35% of the day's cups on the side, so it has a use too (ceil of 0.35 × the day's cups)
+    expect(expectedUse(c)).toEqual({ beans: 14, milk: 7, concentrate: 11, flavour: 0, pastry: 9 });
   });
 
   it('expectedOrders is 0 off the menu and sums to the day\'s arrivals on it', () => {

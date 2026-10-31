@@ -48,7 +48,7 @@ export const FORECASTS: Forecast[] = [
   {
     id: 'rainy', name: 'Rainy {day}', headline: 'DOWNPOUR ALL DAY, UMBRELLAS SOLD OUT', icon: '☔',
     blurb: 'Hot drinks fly, iced ones sit. A slow, soggy start, then everyone ducks in.',
-    plan: 'Stock milk and beans; go easy on cold brew. Someone lives on the steamer.',
+    plan: 'Stock milk and beans; go easy on cold brew. Someone lives at the steam wand.',
     effects: [{ kind: 'orderTag', tag: 'hot', mul: 1.7 }, { kind: 'orderTag', tag: 'iced', mul: 0.5 }, { kind: 'traffic', mul: 0.9 }, { kind: 'patience', mul: 1.1 }],
     shape: 'slowStart', weight: 10, family: 'wet',
   },

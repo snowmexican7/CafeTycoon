@@ -135,7 +135,8 @@ export function gearStats(id: GearId): string {
   if (g.flow) out.push('Rare flow state: ×2 speed');
   if (g.draws) out.push(`+${Math.round((g.draws.mul - 1) * 100)}% ${g.draws.family} orders`);
   if (g.influencerOdds) out.push(`Influencers ×${g.influencerOdds}`);
-  if (g.twin) out.push(g.twin.includes('espresso') ? 'Two groups + steam wand' : 'Steam wand built in');
+  if (g.twin?.includes('espresso')) out.push('Two groups');
+  if (g.wand?.built) out.push('Steam wand built in'); else if (g.wand?.addOns) out.push('Takes an add-on steam wand'); // FB2 C9
   if (g.pot) out.push(`${g.pot.cups}-cup pot · ${g.pot.coldAfter === null ? 'stays hot' : `cold after ${g.pot.coldAfter} s`}${g.pot.miss ? ` · ${Math.round(g.pot.miss * 100)}% too hot/cold` : ''}`);
   if (g.priceMul && g.priceMul !== 1) out.push(`Sells at ×${g.priceMul}`);
   if (g.batch) out.push(`${g.batch} cups/day`);
@@ -230,12 +231,11 @@ export function fridgeVM(state: GameState, voters = 1): FridgeVM {
 export function sellLabel(id: GearId, sell: number): { text: string; title: string } {
   if (sell > 0) return { text: `Sell · $${sell}`, title: `Sell it back for $${sell}.` };
   if (id === 'c1') return { text: 'Bin the sock', title: 'Nobody wants the sock. Frees the slot ($0).' };
-  if (id === 's1') return { text: 'Toss it', title: 'Even the dollar store won\'t take it back. Frees the slot ($0).' };
   return { text: 'Toss it', title: 'Worth nothing, but frees the slot ($0).' };
 }
 
 /** 3.3.2: a short "which machine" word for the HUD row ("7/8 left" alone didn't say what). */
-export const HUD_MACHINE: Record<GearTree, string> = { coldBrew: 'Cold brew', espresso: 'Espresso', grinder: 'Grinder', steamer: 'Steamer', drip: 'Drip', pourOver: 'Pour-over', bin: 'Bin' };
+export const HUD_MACHINE: Record<GearTree, string> = { coldBrew: 'Cold brew', espresso: 'Espresso', grinder: 'Grinder', drip: 'Drip', pourOver: 'Pour-over', bin: 'Bin' };
 
 export interface HudGearVM { icon: string; name: string; status: string; warn: boolean; /** 3.3.2: "Cold brew", "Drip 2"… */ label: string }
 

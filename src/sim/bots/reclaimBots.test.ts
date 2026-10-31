@@ -66,7 +66,7 @@ describe('Gear bots passing in the back corridor (FB2 balance)', () => {
     let s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, tier: 'cart', gear: true });
     s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
     s.slots = ['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash'];
-    s.slotGear = ['g2', 'e3', 's3', 'c3', 'b0'];
+    s.slotGear = ['g2', 'e3', null, 'c3', 'b0'];
     s.stations = stationsFromSlots('cart', s.slots, s.slotGear);
     ensureCounterSpots(s);
     addStandIns(s, 2);

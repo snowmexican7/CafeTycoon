@@ -101,8 +101,8 @@ export function createHostRoom(
       if (member.token === seat && otherPeer !== peerId) byPeer.delete(otherPeer);
     }
     if (seat !== msg.token) link.send('seat', { t: 'seat', token: seat }, peerId);
-    byPeer.set(peerId, { token: seat, name: msg.name });
-    local.sendInput({ kind: 'join', playerId: seat, name: msg.name });
+    byPeer.set(peerId, { token: seat, name: msg.name, ...(msg.look ? { look: msg.look } : {}) });
+    local.sendInput({ kind: 'join', playerId: seat, name: msg.name, ...(msg.look ? { look: msg.look } : {}) });
     sendKeyframe(peerId);
     broadcastLobby();
   });

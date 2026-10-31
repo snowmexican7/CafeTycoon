@@ -17,6 +17,17 @@ when a build goes out, the line moves under its version with the date.
 ## Unreleased
 
 - Bigger orders: some customers now order two drinks (one for the spouse in the car), and on the cart and at the café an office run sometimes phones ahead and walks in for 4–6 drinks. A multi-drink order pays when the last drink is collected; finish an office run for a 25% bonus tip, and losing one costs you nothing (they leave when you lock up). Groups now pay for their round at the end too.
+- Walking into a customer annoys them; bump the same person three times in a few seconds and they storm out.
+- Dev mode (open the game with `?dev=1`): unlimited cash to try anything, and the night can be paused as long as you
+  like; dev runs never count toward records or head starts.
+- Your barista has a look you pick (hair, skin, outfit, shirt colour), your crewmates see it, and you can change it
+  between days.
+- The steamer is gone: steamed milk comes from a wand on the espresso machine. Add a little wand to the Sylvia, or a
+  proper one to La Marzipana Due; The Annihilator and the new top machine, Double Trouble, have theirs built in.
+  Lattes wait until you have a Sylvia with a wand. The little wand clogs now and then: give it a whack. Saves from
+  earlier versions can't be loaded.
+- Pastries on the Restock tab (a pack of six for $7): they sell for $3 on the side with about a third of drinks, half
+  the leftovers go stale overnight, and the night brief tells you when the case will run out.
 
 ## 3.5.0 — 2026-10-30 · Open, close and clean up
 

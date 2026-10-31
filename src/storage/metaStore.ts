@@ -102,7 +102,7 @@ const runKey = (s: GameState) => `${s.seed}|${s.hostId}`;
 
 /** Add a Gear run's progress. Pure and idempotent: folding the same state twice changes nothing. */
 export function foldMeta(prev: MetaSave, state: GameState): { meta: MetaSave; newly: PerkId[] } {
-  if (!state.gear) return { meta: prev, newly: [] };
+  if (!state.gear || state.dev) return { meta: prev, newly: [] }; // R4 a: a dev run never earns head starts
   const key = runKey(state);
   const before = prev.counted.find((c) => c.key === key) ?? { key, served: 0, week: false, tier: 'stand' as TierId };
   const served = state.days.reduce((n, d) => n + d.served, 0);

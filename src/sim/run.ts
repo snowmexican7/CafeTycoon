@@ -1,3 +1,4 @@
+import { cleanLook } from './look';
 import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
 import { canMake, growthMorning } from './growth';
@@ -28,6 +29,7 @@ import { potMorning } from './sink';
 import { settle } from './spawn';
 import { applyPerk } from './perks';
 import { officeMorning } from './orders';
+import { topUpDevCash } from './dev';
 import type { CreateRunOptions, DayStats, DrinkId, GameState, Player, Settings } from './types';
 
 export function freshDayStats(day: number): DayStats {
@@ -64,9 +66,11 @@ export function createRun(opts: CreateRunOptions): GameState {
   };
   const players: Player[] = opts.players.map((p, i) => {
     const pos = { ...(LAYOUT.spawnPoints[i] ?? LAYOUT.door) };
+    const look = cleanLook(p.look);
     return {
       id: p.id,
       name: p.name,
+      ...(look ? { look } : {}),
       pos,
       moveDir: { x: 0, y: 0 },
       interactQueued: false,
@@ -127,6 +131,10 @@ export function createRun(opts: CreateRunOptions): GameState {
   if (opts.gear) gearStart(state);
   for (const p of state.players) settle(state, p); // FB2 A3: the Gear fixtures (the sink) may cover a spawn point
   applyPerk(state, opts.perk);
+  if (opts.dev) {
+    state.dev = true;
+    topUpDevCash(state);
+  }
   return startNight(state);
 }
 
@@ -157,6 +165,7 @@ export function startDay(state: GameState): GameState {
   delete state.gearVote;
   delete state.gearVoteLast;
   delete state.lastCall;
+  delete state.devPaused; // R4 a
   state.phaseTicksLeft = secondsToTicks(state.settings.dayLengthSec);
   state.customers = [];
   delete state.closeVotes;

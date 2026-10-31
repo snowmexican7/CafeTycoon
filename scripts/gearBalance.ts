@@ -10,9 +10,9 @@ import { step } from '../src/sim/step';
 import { addStandIns, syncBots } from '../src/sim/bots/roster';
 import { restockCost } from '../src/sim/night';
 import { expectedUse } from '../src/sim/brief';
-import { planNight } from '../src/sim/bots/planner';
+import { GEAR_PATH, PATH_WAND, pathWandCard, planNight, wandFirst } from '../src/sim/bots/planner';
 import { ECONOMY } from '../src/data/economy';
-import { GEAR, type GearId } from '../src/data/gear';
+import { GEAR, WANDS } from '../src/data/gear';
 import { fridgeWanted } from '../src/sim/fridge';
 import { TIERS, nextTier } from '../src/sim/growth';
 import { gearArea } from '../src/sim/gear';
@@ -20,7 +20,8 @@ import type { GameState, PlayerInput, ScenarioId, SupplyId, TierId } from '../sr
 // Node globals, typed locally so src tests can import this file without @types/node.
 declare const process: { env: Record<string, string | undefined>; argv: string[]; exit(code?: number): never };
 
-const PATH: GearId[] = ['c1', 'e1', 's1', 'c2', 's2', 'g1', 'e2', 'c3', 'g2', 'e3', 's3', 'd1', 'c4', 'e4', 'd2', 'd3', 'g3', 'e5', 'd4b', 'c5', 'd5b', 'e6'];
+// FB2 C9: the planner's path (milk waits for E3 and its wand, so E3 comes with the little wand and E4 with the proper one).
+const PATH = GEAR_PATH;
 const RESERVE = 45;
 /** FB2 A4: what the crew keeps back when buying the $20 Dorm Room Cube (milk drinks need it). */
 const CUBE_RESERVE = 25;
@@ -54,13 +55,16 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
     return out;
   }
   const nt = nextTier(state);
-  if (nt && !skip.has('grow') && state.day >= 3 && state.cash > TIERS[nt].cost + 60) return [{ kind: 'grow', playerId: by, tier: nt }];
+  if (nt && !skip.has('grow') && !wandFirst(state, nt) && state.day >= 3 && state.cash > TIERS[nt].cost + 60) return [{ kind: 'grow', playerId: by, tier: nt }];
   // FB2 A4: a fridge card when one is worth it (the cube as soon as a milk drink is on the board: lattes need it, so it
   // only keeps a small reserve for the night's restock; the Udder-Matic keeps the full reserve).
   const fridge = fridgeWanted(state, expectedUse(state).milk);
   if (fridge && !skip.has(fridge.id) && state.cash - fridge.price >= (fridge.id === 'f1' ? CUBE_RESERVE : RESERVE)) {
     return [{ kind: 'fridge', playerId: by, fridge: fridge.id }];
   }
+  // FB2 C9: a machine that takes a wand and has none (or E4's little one) gets it first, as the planner advises.
+  const card = pathWandCard(state);
+  if (card && !skip.has(`wand:${card.station}`)) return state.cash - card.price >= RESERVE ? [{ kind: 'wand', playerId: by, station: card.station, wand: card.wand }] : [];
   const owned = new Set(state.slotGear ?? []);
   for (const id of PATH) {
     if (owned.has(id) || skip.has(id)) continue;
@@ -69,9 +73,13 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
     if (g.tree === 'espresso' && g.tier >= 2 && !state.stations.some((x) => x.kind === 'grinder')) continue;
     const better = (state.slotGear ?? []).some((o) => o && GEAR[o].tree === g.tree && GEAR[o].tier >= g.tier);
     if (better) continue;
-    const trade = (state.slotGear ?? []).reduce((t, o) => (o && GEAR[o].tree === g.tree ? Math.max(t, GEAR[o].sell) : t), 0);
-    if (state.cash + trade - g.price < RESERVE) return [];
-    return [{ kind: 'gear', playerId: by, action: 'buy', gear: id }];
+    const trade = (state.slotGear ?? []).reduce((t, o, i) => {
+      const w = state.slotWand?.[i];
+      return o && GEAR[o].tree === g.tree ? Math.max(t, GEAR[o].sell + (w ? WANDS[w].sell : 0)) : t;
+    }, 0);
+    const wand = PATH_WAND[id];
+    if (state.cash + trade - g.price - (wand ? WANDS[wand].withMachine : 0) < RESERVE) return [];
+    return [{ kind: 'gear', playerId: by, action: 'buy', gear: id, ...(wand ? { wand } : {}) }];
   }
   return [];
 }
@@ -127,13 +135,14 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
     if (extra && start && s.phase === 'night' && stage === 0) inputs = extra(s, ids);
     if (inputs.length === 0 && s.phase === 'night' && stage >= 0) {
       inputs = night(s, ids, stage, skip);
-      const sg = JSON.stringify([s.slotGear, s.tier, s.gearVote, s.fridge]);
+      const sg = JSON.stringify([s.slotGear, s.slotWand, s.tier, s.gearVote, s.fridge]);
       if (stage !== 99 && inputs.length && sg === lastSlotGear && ++stuck > 2) {
         // The deal didn't go through (no free slot, a requirement, an open vote): skip it tonight.
         const want = inputs[0]!;
         if (want.kind === 'gear' && want.action === 'buy') skip.add(want.gear);
         else if (want.kind === 'grow') skip.add('grow');
         else if (want.kind === 'fridge') skip.add(want.fridge);
+        else if (want.kind === 'wand') skip.add(`wand:${want.station}`);
         stuck = 0;
         delete s.gearVote;
       } else if (inputs.length === 0 || sg !== lastSlotGear) stuck = 0;

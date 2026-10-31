@@ -14,10 +14,13 @@ import { crewBursts, newCrewMemory } from './crewModel';
 import { chaosBursts } from './chaosModel';
 import { diffCues, type CueId } from '../audio/cues';
 
-function stand(gear: GearId[] = ['d1', 's3', 'g2', 'b0']): GameState {
+/** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
+type Kit = GearId | 'steamer';
+
+function stand(gear: Kit[] = ['d1', 'steamer', 'g2', 'b0']): GameState {
   const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'Lu' }], settings: { bots: 0 }, tier: 'stand', gear: true });
-  s.slotGear = [...gear];
-  s.slots = gear.map((id) => GEAR[id].station);
+  s.slotGear = gear.map((id) => (id === 'steamer' ? null : id));
+  s.slots = gear.map((id) => (id === 'steamer' ? 'steamer' : GEAR[id].station));
   s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
   s.unlocked = [...(s.unlocked ?? []), 'drip'];
   s.menu.drip = true;

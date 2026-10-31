@@ -1,6 +1,6 @@
 import { applyBranchInput } from './branch';
 import { applySignatureInput } from './signature';
-import { applyFridgeInput, applyGearInput, settleVote } from './gear';
+import { applyFridgeInput, applyGearInput, applyWandInput, settleVote } from './gear';
 import { applyPitchInput } from './pitch';
 import { applyAdInput } from './ads';
 import { applyCheckoutInput } from './checkout';
@@ -34,7 +34,7 @@ import { applyStaffInput } from './staff';
 import { afterBotInteract, stepBots } from './bots/brain';
 import { drinkEspresso, stepEspresso } from './espresso';
 import { stepEggs, unlockSecret } from './eggs';
-import { stepBumps } from './bumps';
+import { stepBumps, stepCustomerBumps } from './bumps';
 import { clearFloorFields, floorFields, stepStuns, trackTiles } from './tiles';
 import { onTileEntry, stepCleanliness } from './floor';
 import { resolveDrops } from './drop';
@@ -48,8 +48,10 @@ import { putAwayPending, startClosingSoon, stepClosingSoon, stepFridge, storeInF
 import { returnPot } from './sink';
 import { freeSpot } from './spawn';
 import { stepRogue } from './rogue';
+import { applyDevPause, topUpDevCash } from './dev';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
+import { setLook } from './look';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -57,12 +59,15 @@ function applyInput(s: GameState, input: PlayerInput): void {
   if (existing?.bot || (input.kind === 'join' && isBotId(input.playerId))) return;
   switch (input.kind) {
     case 'join': {
-      if (existing) existing.connected = true;
-      else if (s.players.filter((p) => !p.bot).length < ECONOMY.maxHumans) {
+      if (existing) {
+        existing.connected = true;
+        setLook(existing, input.look); // a returning tab brings its look along (cosmetic, any phase)
+      } else if (s.players.filter((p) => !p.bot).length < ECONOMY.maxHumans) {
         const firstBot = s.players.findIndex((p) => p.bot);
         s.players.splice(firstBot === -1 ? s.players.length : firstBot, 0, {
           id: input.playerId,
           name: input.name,
+          ...(input.look ? { look: { ...input.look } } : {}),
           pos: freeSpot(s, LAYOUT.door),
           moveDir: { x: 0, y: 0 },
           interactQueued: false,
@@ -72,6 +77,11 @@ function applyInput(s: GameState, input: PlayerInput): void {
           ...floorFields(freeSpot(s, LAYOUT.door)),
         });
       }
+      break;
+    }
+    case 'look': {
+      // R4 e: between days only (the validated look replaces the old one). Bots never get here (see the top of applyInput).
+      if (existing && (s.phase === 'night' || s.phase === 'weekEnd')) setLook(existing, input.look);
       break;
     }
     case 'leave': {
@@ -167,6 +177,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'fridge':
       applyFridgeInput(s, input);
       break;
+    case 'wand':
+      applyWandInput(s, input);
+      break;
     case 'ad':
       applyAdInput(s, input);
       break;
@@ -200,6 +213,9 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'closeEarly':
       applyCloseEarly(s, input);
       break;
+    case 'devPause':
+      applyDevPause(s, input);
+      break;
     case 'weekEnd':
       if (isHost && s.phase === 'weekEnd') {
         if (input.choice === 'stop') s.phase = 'ended';
@@ -231,6 +247,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepBots(s, m);
   applyMovement(s, m.moveSpeed);
   stepBumps(s);
+  stepCustomerBumps(s);
   onTileEntry(s, trackTiles(s));
   // Idle total (not a streak): a connected person's ticks with no movement and no interact.
   for (const p of s.players) {
@@ -321,6 +338,7 @@ export function step(state: GameState, inputs: PlayerInput[]): GameState {
     case 'ended':
       break;
   }
+  topUpDevCash(s); // R4 a: after every spend this tick (no-op unless a dev run)
   tallyStats(s);
   pruneLog(s);
   return s;

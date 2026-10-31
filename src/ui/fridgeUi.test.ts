@@ -15,13 +15,16 @@ import { FRIDGE_RISE } from '../render/layers/fridgeArtRise';
 import { diffCues } from '../audio/cues';
 import { nightViewModel } from './viewModels';
 
-function gearNight(gear: GearId[] = ['s2', 'e2'], tier: TierId = 'stand', fridge: FridgeId | null = 'f1'): GameState {
+/** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
+type Kit = GearId | 'steamer';
+
+function gearNight(gear: Kit[] = ['steamer', 'e2'], tier: TierId = 'stand', fridge: FridgeId | null = 'f1'): GameState {
   const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
-    slots[i] = GEAR[id].station;
-    slotGear[i] = id;
+    slots[i] = (id === 'steamer' ? 'steamer' : GEAR[id].station);
+    slotGear[i] = id === 'steamer' ? null : id;
   });
   s.slots = slots;
   s.slotGear = slotGear;
@@ -31,7 +34,7 @@ function gearNight(gear: GearId[] = ['s2', 'e2'], tier: TierId = 'stand', fridge
   return s;
 }
 function gearDay(fridge: FridgeId | null = 'f1'): GameState {
-  const s = gearNight(['s2', 'e2'], 'stand', fridge);
+  const s = gearNight(['steamer', 'e2'], 'stand', fridge);
   s.supplies.milk = 20;
   s.supplies.beans = 20;
   return startDay(s);

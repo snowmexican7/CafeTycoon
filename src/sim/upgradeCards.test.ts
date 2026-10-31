@@ -10,7 +10,6 @@ import { createRun, startDay, startNight } from './run';
 import { finishDay } from './closing';
 import { isDownside, splitEffects } from './describe';
 import { TEMP_ID, isBotId, resetBotsForNight } from './bots/roster';
-import { migrateSnapshot } from '../storage/snapshotStore';
 import { nightViewModel, forecastViewModel } from '../ui/viewModels';
 import type { CardSetId, GameState } from './types';
 
@@ -242,14 +241,6 @@ describe('upgrade cards: the temp barista', () => {
   });
 });
 
-describe('upgrade cards: saves', () => {
-  it('migrates a v5 save (no re-roll count) to v6', () => {
-    const s = solo() as GameState & { rerolls?: number };
-    delete s.rerolls;
-    const m = migrateSnapshot(5, s)!;
-    expect(m.rerolls).toBe(0);
-  });
-});
 
 describe('upgrade cards: B11 balance', () => {
   it('every set has at least three cards and a third-card bonus on top of the pair', () => {

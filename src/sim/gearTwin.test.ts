@@ -16,16 +16,16 @@ const run = (gear: boolean): GameState =>
 describe('G9: dual boiler (two sides in one slot)', () => {
   const slots = ['grinder', 'espresso', null, 'trash'] as const;
 
-  it('E4 adds a steam wand half a tile to the right; plain machines add nothing', () => {
+  it('FB2 C9: an E3 with its add-on wand gets the wand half a tile to the right; plain machines add nothing', () => {
     const plain = stationsFromSlots('stand', [...slots], ['g1', 'e3', null, 'b0']);
     expect(plain.some((s) => s.twin)).toBe(false);
-    const st = stationsFromSlots('stand', [...slots], ['g1', 'e4', null, 'b0']);
+    const st = stationsFromSlots('stand', [...slots], ['g1', 'e3', null, 'b0'], [null, 'weak', null, null]);
     const shot = st.find((s) => s.id === 'espresso')!;
     const wand = st.find((s) => s.twin)!;
     expect(wand).toMatchObject({ id: 'steamer', kind: 'steamer', twin: true });
     expect(wand.gear).toBeUndefined();
     expect(wand.pos).toEqual({ x: shot.pos.x + TWIN_OFFSET, y: shot.pos.y });
-    expect(shot.gear).toBe('e4');
+    expect(shot.gear).toBe('e3');
     expect(st[st.length - 1]!.kind).toBe('counter');
   });
 
@@ -45,7 +45,7 @@ describe('G9: dual boiler (two sides in one slot)', () => {
   });
 
   it('a steamer elsewhere keeps its id; the wand numbers after it', () => {
-    const st = stationsFromSlots('stand', ['steamer', 'espresso', null, 'trash'], [null, 'e4', null, 'b0']);
+    const st = stationsFromSlots('stand', ['steamer', 'espresso', null, 'trash'], [null, 'e5', null, 'b0']);
     expect(st.filter((s) => s.kind === 'steamer').map((s) => s.id)).toEqual(['steamer', 'steamer-2']);
   });
 
@@ -72,7 +72,7 @@ describe('G9: dual boiler (two sides in one slot)', () => {
   });
 
   it('one barista can pull a shot and steam milk at the same time (two separate stations)', () => {
-    const st = stationsFromSlots('stand', [...slots], ['g1', 'e4', null, 'b0']);
+    const st = stationsFromSlots('stand', [...slots], ['g1', 'e6', null, 'b0']);
     const shot = st.find((s) => s.id === 'espresso')!;
     const wand = st.find((s) => s.id === 'steamer')!;
     shot.busyTicksLeft = 10;
@@ -80,12 +80,14 @@ describe('G9: dual boiler (two sides in one slot)', () => {
     expect(shot).not.toBe(wand);
   });
 
-  it("E4's wand counts as a milk steamer for café au lait", () => {
+  it("FB2 C9: a wand (add-on or built in) is what café au lait needs", () => {
     const s = run(true);
     const aulait = LEVEL_UPS.find((l) => l.unlocks === 'cafeAuLait')!;
-    s.slotGear = ['g1', 'e3', null, 'b0'];
+    s.stations = stationsFromSlots('stand', [...slots], ['g1', 'e4', null, 'b0']);
     expect(levelUpGearOk(s, aulait)).toBe(false);
-    s.slotGear = ['g1', 'e4', null, 'b0'];
+    s.stations = stationsFromSlots('stand', [...slots], ['g1', 'e4', null, 'b0'], [null, 'weak', null, null]);
+    expect(levelUpGearOk(s, aulait)).toBe(true);
+    s.stations = stationsFromSlots('stand', [...slots], ['g1', 'e6', null, 'b0']);
     expect(levelUpGearOk(s, aulait)).toBe(true);
   });
 
@@ -97,7 +99,7 @@ describe('G9: dual boiler (two sides in one slot)', () => {
     const hud = hudGearVM(s);
     const ids = JSON.stringify(hud);
     expect((ids.match(/e5/g) ?? []).length).toBeLessThanOrEqual(1);
-    expect(gearStats('e4')).toContain('Steam wand');
+    expect(gearStats('e4')).toContain('Two groups');
     expect(gearStats('e5')).toContain('Two groups');
     expect(GEAR.e4.blurb).not.toContain('later');
   });
@@ -114,7 +116,7 @@ describe('G9: a bot crew works a day with a two-group machine', () => {
     const { startDay } = await import('./run');
     const { step } = await import('./step');
     let s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 2 }, tier: 'stand', gear: true });
-    s.slots = ['grinder', 'espresso', 'steamer', 'trash'];
+    s.slots = ['grinder', 'espresso', null, 'trash'];
     s.slotGear = ['g1', 'e5', null, 'b0'];
     s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
     for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 60;
@@ -136,7 +138,7 @@ describe('G9: a bot crew works a day with a two-group machine', () => {
     const { startDay } = await import('./run');
     const { step } = await import('./step');
     let s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 2 }, tier: 'stand', gear: true });
-    s.slots = ['grinder', 'espresso', 'steamer', 'trash'];
+    s.slots = ['grinder', 'espresso', null, 'trash'];
     s.slotGear = ['g1', 'e5', null, 'b0'];
     s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
     for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 60;

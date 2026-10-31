@@ -12,11 +12,14 @@ import { ECONOMY } from '../data/economy';
 import { GEAR, type GearId } from '../data/gear';
 import type { GameState, Station } from './types';
 
+/** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
+type Kit = GearId | 'steamer';
+
 /** A Gear stand open for the day: grinder, steamer, espresso and the bin. */
-function gearStand(gear: GearId[] = ['g2', 's3', 'e3', 'b0']): GameState {
+function gearStand(gear: Kit[] = ['g2', 'steamer', 'e3', 'b0']): GameState {
   const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
-  s.slotGear = [...gear];
-  s.slots = gear.map((id) => GEAR[id].station);
+  s.slotGear = gear.map((id) => (id === 'steamer' ? null : id));
+  s.slots = gear.map((id) => (id === 'steamer' ? 'steamer' : GEAR[id].station));
   s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
   s.supplies.beans = 10;
   s.supplies.milk = 10;
@@ -92,7 +95,7 @@ describe('FB2 A3: milk drips and spilled grounds', () => {
   });
 
   it('the dual boiler\'s steam wand drips too', () => {
-    const s = gearStand(['g2', 'e4', 'c1', 'b0']);
+    const s = gearStand(['g2', 'e6', 'c1', 'b0']); // FB2 C9: Double Trouble is the dual boiler now
     const wand = s.stations.find((x) => x.kind === 'steamer')!;
     expect(wand.twin).toBe(true);
     s.players[0].pos = { x: Math.round(wand.pos.x + 0.45), y: wand.pos.y + 1 };

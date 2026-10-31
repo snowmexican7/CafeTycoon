@@ -169,6 +169,7 @@ export function stepNight(state: GameState): GameState {
   const everyoneReady = connected.length > 0 && readyConnected === connected.length;
   if (state.settings.nightLengthSec === 0) {
     if (everyoneReady) return startDay(state);
+    if (state.devPaused) return state; // R4 a: no last call while the host holds the night
     if (state.lastCall === undefined && (connected.length === 0 || readyConnected * 2 > connected.length)) {
       state.lastCall = secondsToTicks(LAST_CALL_SECONDS);
     }
@@ -178,7 +179,7 @@ export function stepNight(state: GameState): GameState {
     }
     return state;
   }
-  state.phaseTicksLeft -= 1;
+  if (!state.devPaused) state.phaseTicksLeft -= 1; // R4 a: a paused dev night holds still (Ready still opens the shop)
   if (state.phaseTicksLeft <= 0 || everyoneReady) return startDay(state);
   return state;
 }

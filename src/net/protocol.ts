@@ -1,18 +1,21 @@
 import type { Patch } from './delta';
 import { RESERVED_TELE_KINDS, type TeleEvent } from '../host/telemetry';
 import { isReservedId } from '../sim/constants';
-import type { BotsChoice, GameState, PlayerInput } from '../sim/types';
+import { cleanLook } from '../sim/look';
+import type { BotsChoice, GameState, PlayerInput, PlayerLook } from '../sim/types';
 
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
 export const APP_ID = 'cafetycoon-v1';
 /** Bump when any message below changes shape; mismatched builds refuse each other politely. */
-export const PROTOCOL_VERSION = 45; // 45: FB2 B6 multi-drink orders: Customer.items/order, GameState.office, DayStats.office/officeExtra, order.* and office.call events. 44: FB2 A4 fridge: fridge input + fridgeVote, milkOut/closingSoonAt/barAway, Player.tool 'milk'|'bar', CounterSpot 'fridge'. 43: FB2 A3 back sink: Station.potOut/stale, Player.tool 'pot', sink/pot/mess events. 42: FB2 A2 cups go cold: PassItem.madeAt, Player.heldSince, cup.cold/pickup.cold/pickup.takeBack/review.bad events. 41: batch coffee / pickup / condiments: steep + condimentBox inputs, Customer.stage, pickup counter, condiment bar, Player.tool 'box'. 40: P4 F2 stampCard input + Rival.stamps (rival loyalty card). 39: P4 B6 call input + GameState.callAnswer + DayStats.branch.call (phone calls). 38: P4 B5 branch 'send' (stock to the second shop) + Branch.stockCredit + DayStats.branch.fromStock. 37: P4 B4 branch input + GameState.branch + DayStats.branch (second shop). 36: P4 B3 DayStats.waitTicks/takingsByDrink/byPlayer (manager report). 35: P4 B2 GameState.season (week-end checkpoints after week 1 of a Gear run). 34: P4 B1 rivalCounter input + Rival.counter. 33: P3 B15 staff input + DayStats.wages. 32: G11 v3.0.0 flip (every new run is Gear; v2 tabs must reload). 31: Gear G8 vote input + gearVote state
+export const PROTOCOL_VERSION = 49; // 49: FB2 C9 wand input and gear-buy wand, Station.wand/wandOf, slotWand, GearVote.wand, wand events; snapshot 29. 48: Round 4 e look input, Player.look, JoinMsg/Member/PeerSessionOptions look. 47: Round 4 a devPause input, GameState.dev/devPaused. 46: Round 4 c customer.bump event, Customer.bumpedAt, DayStats.customerBumps. 45: FB2 B6 multi-drink orders: Customer.items/order, GameState.office, DayStats.office/officeExtra, order.* and office.call events. 44: FB2 A4 fridge: fridge input + fridgeVote, milkOut/closingSoonAt/barAway, Player.tool 'milk'|'bar', CounterSpot 'fridge'. 43: FB2 A3 back sink: Station.potOut/stale, Player.tool 'pot', sink/pot/mess events. 42: FB2 A2 cups go cold: PassItem.madeAt, Player.heldSince, cup.cold/pickup.cold/pickup.takeBack/review.bad events. 41: batch coffee / pickup / condiments: steep + condimentBox inputs, Customer.stage, pickup counter, condiment bar, Player.tool 'box'. 40: P4 F2 stampCard input + Rival.stamps (rival loyalty card). 39: P4 B6 call input + GameState.callAnswer + DayStats.branch.call (phone calls). 38: P4 B5 branch 'send' (stock to the second shop) + Branch.stockCredit + DayStats.branch.fromStock. 37: P4 B4 branch input + GameState.branch + DayStats.branch (second shop). 36: P4 B3 DayStats.waitTicks/takingsByDrink/byPlayer (manager report). 35: P4 B2 GameState.season (week-end checkpoints after week 1 of a Gear run). 34: P4 B1 rivalCounter input + Rival.counter. 33: P3 B15 staff input + DayStats.wages. 32: G11 v3.0.0 flip (every new run is Gear; v2 tabs must reload). 31: Gear G8 vote input + gearVote state
 export const ACTIONS = ['hello', 'join', 'input', 'snap', 'lobby', 'tele', 'seat', 'snapd', 'resync'] as const;
 export type ActionKind = (typeof ACTIONS)[number];
 
 export interface Member {
   token: string;
   name: string;
+  /** R4 e: the character look (UI-defined ids; absent = default). */
+  look?: PlayerLook;
 }
 export interface HelloMsg {
   t: 'hello';
@@ -26,6 +29,8 @@ export interface JoinMsg {
   protocol: number;
   token: string;
   name: string;
+  /** R4 e: the character look this player made (cleaned; a bad one is dropped, the join still stands). */
+  look?: PlayerLook;
   /** The seat this browser held in this room before (a closed tab coming back). */
   prev?: string;
 }
@@ -101,6 +106,8 @@ export function parseHello(data: unknown): HelloMsg | null {
 export function parseJoin(data: unknown): JoinMsg | null {
   if (!isObj(data) || data.t !== 'join' || !finite(data.protocol) || !okToken(data.token)) return null;
   const msg: JoinMsg = { t: 'join', protocol: data.protocol, token: data.token, name: cleanName(data.name) };
+  const look = cleanLook(data.look);
+  if (look) msg.look = look;
   if (okToken(data.prev) && data.prev !== data.token) msg.prev = data.prev;
   return msg;
 }
@@ -144,7 +151,8 @@ export function parseLobby(data: unknown): LobbyMsg | null {
   const members: Member[] = [];
   for (const m of data.members) {
     if (!isObj(m) || !str(m.token) || !str(m.name)) return null;
-    members.push({ token: m.token, name: m.name });
+    const look = cleanLook(m.look);
+    members.push({ token: m.token, name: m.name, ...(look ? { look } : {}) });
   }
   const msg: LobbyMsg = { t: 'lobby', members, started: data.started };
   const bots = parseBots(data.bots);

@@ -1,7 +1,8 @@
 import { BRANCH_AREAS, BRANCH_SUPPLIES } from './branch';
 import type { AreaId } from '../data/areas';
 import { cleanDraft } from './signature';
-import { isGearId } from '../data/gear';
+import { cleanLook } from './look';
+import { isAddOnWand, isGearId } from '../data/gear';
 import { isFridgeId } from '../data/fridges';
 import { cleanPitch, isPitchKind } from './pitch';
 import { isAdId } from './ads';
@@ -17,11 +18,13 @@ import { STEEP } from './steep';
 import { CONDIMENTS } from './condiments';
 import type { BotSkill, Pace, PlayerInput, Settings, SupplyId } from './types';
 
-const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour'];
+const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour', 'pastry'];
 const MIN_PHASE_SEC = 30;
 const MAX_PHASE_SEC = 600;
 const MAX_PACKS = 100;
 const MAX_NAME = 16;
+/** FB2 C9: station ids are short ('espresso', 'espresso-2'). */
+const MAX_STATION_ID = 32;
 const MAX_BOTS = LAYOUT.spawnPoints.length - 1; // four baristas in all, at least one of them a person
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -86,7 +89,12 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
         ? { kind: 'slot', playerId: input.playerId, index: input.index, station: input.station }
         : null;
     case 'gear':
-      if (input.action === 'buy') return isGearId(input.gear) ? { kind: 'gear', playerId: input.playerId, action: 'buy', gear: input.gear } : null;
+      if (input.action === 'buy') {
+        if (!isGearId(input.gear)) return null;
+        // FB2 C9: an optional add-on wand bought with the machine (whether this machine takes it is the sim's call).
+        if (input.wand !== undefined && !isAddOnWand(input.wand)) return null;
+        return { kind: 'gear', playerId: input.playerId, action: 'buy', gear: input.gear, ...(input.wand !== undefined ? { wand: input.wand } : {}) };
+      }
       if (input.action === 'sell') return Number.isInteger(input.index) ? { kind: 'gear', playerId: input.playerId, action: 'sell', index: input.index } : null;
       if (input.action === 'vote') return typeof input.yes === 'boolean' ? { kind: 'gear', playerId: input.playerId, action: 'vote', yes: input.yes } : null;
       return null;
@@ -112,6 +120,11 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
     case 'steep':
       return Number.isInteger(input.cups) && input.cups >= 0 && input.cups <= STEEP.maxInput
         ? { kind: 'steep', playerId: input.playerId, cups: input.cups }
+        : null;
+    case 'wand':
+      // FB2 C9: a wand for the espresso machine with station id `station` (night, people, owning it, cash: sim/gear.ts).
+      return typeof input.station === 'string' && input.station.length > 0 && input.station.length <= MAX_STATION_ID && isAddOnWand(input.wand)
+        ? { kind: 'wand', playerId: input.playerId, station: input.station, wand: input.wand }
         : null;
     case 'fridge':
       return isFridgeId(input.fridge) ? { kind: 'fridge', playerId: input.playerId, fridge: input.fridge } : null;
@@ -147,10 +160,17 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
     case 'join': {
       if (isReservedId(input.playerId)) return null;
       const name = typeof input.name === 'string' ? input.name.trim().slice(0, MAX_NAME) : '';
-      return { kind: 'join', playerId: input.playerId, name: name || 'Barista' };
+      const look = cleanLook(input.look);
+      return { kind: 'join', playerId: input.playerId, name: name || 'Barista', ...(look ? { look } : {}) };
+    }
+    case 'look': {
+      const look = cleanLook(input.look);
+      return look ? { kind: 'look', playerId: input.playerId, look } : null;
     }
     case 'call':
       return typeof input.take === 'boolean' ? { kind: 'call', playerId: input.playerId, take: input.take } : null;
+    case 'devPause':
+      return typeof input.paused === 'boolean' ? { kind: 'devPause', playerId: input.playerId, paused: input.paused } : null;
     case 'closeEarly':
       return typeof input.on === 'boolean' ? { kind: 'closeEarly', playerId: input.playerId, on: input.on } : null;
     case 'drop':

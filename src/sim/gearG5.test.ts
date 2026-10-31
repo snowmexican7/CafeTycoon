@@ -16,37 +16,6 @@ const at = (s: GameState, kind: string) => {
 const finish = (s: GameState) => { while (s.stations.some((x) => x.busyTicksLeft > 0)) { s.tick += 1; stepStations(s); } };
 
 describe('Gear Tree G5: downsides and funny events', () => {
-  it('the battery whisk dies after its uses for the day and is back next morning', () => {
-    const s = createRun(opts(true));
-    buy(s, 's1');
-    s.supplies.milk = 50;
-    startDay(s);
-    s.milkOut = 50; // FB2 A4: the steamer draws the milk out at the bar
-    const st = at(s, 'steamer');
-    const left = st.usesToDie!;
-    expect(left).toBeGreaterThanOrEqual(GEAR.s1.quirks!.dieAfter!);
-    let uses = 0;
-    for (let i = 0; i < 40 && !st.dead; i++) {
-      const before = st.usesToDie;
-      s.players[0].holding = 'espresso';
-      interact(s, 'p1');
-      finish(s);
-      s.players[0].holding = null;
-      interact(s, 'p1'); // pick up the latte
-      s.players[0].holding = null;
-      if (st.dead || st.usesToDie !== before) uses++;
-    }
-    expect(uses).toBe(left);
-    expect(st.dead).toBe(true);
-    expect(s.log.some((e) => e.kind === 'gear.quirk' && String(e.data.text).includes('batteries died'))).toBe(true);
-    s.players[0].holding = 'espresso';
-    const milk = s.milkOut;
-    interact(s, 'p1');
-    expect([st.making ?? null, s.milkOut, s.players[0].holding]).toEqual([null, milk, 'espresso']);
-    gearMorning(s);
-    expect(st.dead).toBeUndefined();
-    expect(st.usesToDie).toBeGreaterThan(0);
-  });
 
   it('a jammed Pod-o-Matic blocks until empty hands whack it', () => {
     const s = createRun(opts(true));

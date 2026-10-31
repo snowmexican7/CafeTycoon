@@ -2318,3 +2318,91 @@ Approved Oct 30, 2026 7:46 PM (Toronto). Sim lane builds; UI lane (Grok) wires. 
   - **UI to do:** a tall ticket with a tick per item (`items[].done`, maybe the cold one crossed out), the office-run phone card (`office.call`, a countdown to `at`), and a receipt line for `DayStats.office`.
   - Open: two bots crossing a corridor mirrored each other all day on p4 seed 205 day 9 before the balance
     branch's head-on fix (748100f); recheck in play.
+
+## Round 4 (sim lane, Claude)
+
+Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. One branch and tag per item; names as built.
+
+- **c. Bumping into customers (`r4-bump`, protocol 46).** `stepCustomerBumps` (src/sim/bumps.ts): a person (not a bot,
+  `ECONOMY.bump.botsBumpCustomers: false`) walking into a customer within `customerTiles` (0.6) costs them
+  `customerPatience` (8%) of max patience, logs `customer.bump { customer, by, x, y }`, with a per-customer cooldown of
+  `customerCooldownSeconds` (1 s); the 3rd bump (`customerAngryAt`) within `customerWindowSeconds` (10 s) logs
+  `walkout { customer, reason: 'bumped', x, y }` and loses them like any walk-out (no extra reputation hit). State:
+  `Customer.bumpedAt?: number[]`, `DayStats.customerBumps?`. Customer positions: `customerSpots(state)`
+  (src/sim/customerSpots.ts), a sim copy of the render's `pickupModel.customerSpots`, kept equal by a test.
+- **a. Dev mode (`r4-dev`, protocol 47).** `?dev=1` → `CreateRunOptions.dev` → `GameState.dev` (only when true).
+  `DEV_CASH` 999,999 topped up at the end of every step and in `createRun` (`topUpDevCash`, src/sim/dev.ts); it
+  raises `startingCash` too, so score, profit and season targets ignore it. Input `{ kind: 'devPause', playerId,
+  paused }` (host, dev run, night/weekEnd) sets `GameState.devPaused`, holding the night timer (and a relaxed night's
+  last call); Ready still opens the shop and `startDay` clears it. Dev runs write nothing to meta, records or history
+  (`foldMeta`, `recordsStore.record`, `historyStore.append` via `RunRecord.dev`). Cash can read a bit over 999,999
+  after takings. The café's six slots still limit gear (pour-over lines don't fit beside everything).
+- **e. Character look (`r4-look`, protocol 48).** `PlayerLook { hair, hairColor?, skin, outfit, shirtColor }` (UI
+  ids; 1–32 chars of `[A-Za-z0-9_#-]`), `Player.look?`, `cleanLook` / `setLook` in src/sim/look.ts. Join path:
+  `CreateRunOptions.players[].look?`, `join` input `look?`, `JoinMsg.look?`, lobby `Member.look?`,
+  `PeerSessionOptions.look?`. Edit: `{ kind: 'look', playerId, look }`, night/weekEnd only, people only, own player;
+  a bad look is refused. Bots have none.
+- **d. Stacking (answered in `r4-look`).** `Customer.id` + `Customer.items` is all the UI needs to stack one
+  customer's drinks, groups included. No `PassItem.customer`: a cup isn't anyone's until it's taken (the taker is
+  decided at take time); for a "who'd take this cup" hint use `pickupTarget(state, drink)` (exported).
+- **Export (`r4-look`).** `emptyHandsWanted` is exported from src/sim/stations.ts, so `src/ui/live.ts` can drop its
+  mirror.
+- **C9 espresso rework (`fb2-c9`, protocol 49, snapshot 29).** The steamer tree (S1–S3) and its shop line are gone;
+  milk is steamed at a wand on the espresso machine.
+  - Ladder (`GEAR` e1–e6): e1 Pod-o-Matic 3000 $45, no wand; e2 Brevelle $80, no wand; e3 Sylvia $150, little wand
+    add-on; e4 La Marzipana Due $260, two groups ×1.1, little or proper wand add-on; e5 The Annihilator $450, built-in
+    wand 3.5 s; e6 Double Trouble $800, dual boiler, built-in wand 3 s (fastest).
+  - Wands (`WANDS`, `WAND_SECONDS`, `WAND_UPGRADE`, `GearInfo.wand`): weak "Little steam wand" 4.5 s, $25 with the
+    machine / $30 later, sells $10, clogs 1 in 30 uses until whacked; strong "Proper steam wand" 3.5 s, $40, E4 only,
+    sells $20, weak → strong $15.
+  - State: `Station.wand?: 'weak' | 'strong' | 'built'` on the espresso machine (the UI reads this); the wand itself is
+    a 'steamer' twin carrying `wand` and `wandOf`; `GameState.slotWand?`; `GearVote.wand`; gearLog `action: 'wand'`.
+  - Inputs: gear buy takes `wand?: 'weak' | 'strong'` (one price, one vote at $50+); `{ kind: 'wand', playerId,
+    station, wand }` adds or upgrades later (night, people, never voted). Offers: `wandCards(state)`.
+  - Events: `wand.add { station, wand, by }`, `wand.clog` / `wand.unclog { station, by }` (station = the wand twin).
+  - Rules: no steamed-milk drink without a wand; café au lait needs a wand; the milk snob needs a proper or built-in
+    one. Bots whack a clogged wand. Planner: `GEAR_PATH` skips E2, `pathWandCard`, `wandFirst` holds the café until a
+    wand is on the floor. Old saves refused.
+  - Open: milk drinks now start around day 7–11 instead of day 1 (Kennedy approved merging; tune in play). M6 (E4's
+    second group moves left when a wand is added), M7 (dead battery quirk code), M8 (iced milk at the tap needs no
+    wand, intended).
+- **b. Pastries (`r4-pastry`, no protocol change).** Decided: a plain restock item (`{ kind: 'restock', supply:
+  'pastry', packs }`, pack of 6 for $7) — one obvious step on the Restock tab, no add-on, no hidden third path; a
+  "latte and a muffin" combo can come later. Still sell on the side with ~35% of cups ($3), half the leftovers go
+  stale overnight, no fridge needed. Names: `expectedUse(state).pastry` (brief.ts) feeds run-out and spoil
+  estimates; brief alert `stock:pastry:low` (only once the case has held some); planner advice `restock:pastry`
+  (`PLAN_PRIORITY.restockPastry` 62), bought last, after drink supplies and rent.
+
+### f. Night clutter proposal (Round 4 f, proposal only; awaiting Kennedy)
+
+Every handler below starts with `if (state.phase !== 'night') return state` (growth, ads, pricing, menu, roles, gear, staff, steep, condiments, checkout, rival, pitch, signature, taste, night.ts). `weekEnd` is host-only in its own phase. Almost all are "humans only", and the rest of the night UI is just a view of them.
+Key fact: `startDay()` reads the night's choices once (menu, prices, twists, ad outcome, steep target, bots, forecast), so most of them are "set before the doors open" by design.
+
+| Decision (tab in Gear night) | Today | Proposal | Cost |
+|---|---|---|---|
+| Restock beans/milk/cold brew/flavours/pastries (Restock) | night only; cash and stock are plain numbers | MID-DAY (best candidate) | Low. Stock is read live (`supplies.*`) and inputs already apply in tick order, so determinism is fine. Cost: removes the "ran out at 2pm" tension unless it carries a price or delay. Host/votes: none (any human). Busy machines unaffected. |
+| Condiment boxes, steep target (Restock) | night; steep feeds morning cold brew | KEEP steep. Condiments could go mid-day with restock | Steep is a plan for tomorrow, so it has to stay at night. |
+| Roles (Restock) | night; per player, no cash | CUT as a screen: let people pick on the floor or auto-assign | Players lose a bit of crew coordination. Cheap to automate. |
+| Hire/fire bot (Restock) | night; `syncBots` only reconciles at night or weekEnd | KEEP | Mid-day would add/remove bodies in a live floor: big determinism risk. |
+| Gear buy/sell, fridge card (Gear shop) | night; big deals are a co-op vote (G8) | KEEP | Mid-day would hit busy machines, held cups and a half-full cash till; vote lapses at open by design. |
+| Menu on/off, prices, twists (Menu) | night; read at `startDay` | AUTOMATE (a "Strategist" default, already planned as Round 3 item 3) and fold twist into price card | Players keep manual override. Mid-day pricing would change demand curves mid-queue: no. |
+| Signature drink designer (Menu drawer) | night | KEEP, but hide until unlocked | Rare use; clutter only if shown early. |
+| Cards (buy/reroll) (Extras) | night; shared hand | KEEP, or CUT reroll | Reroll is cash-for-luck; nobody misses it. Low value. |
+| Ads, pitch (Extras) | night; booked for tomorrow | KEEP | Both are tomorrow's bets. Could collapse into one "Marketing" card. |
+| Scout rival, rival counter, stamp card (Extras) | night | KEEP, collapse behind a "Rival" row shown only once a rival exists | Pure UI tidy. |
+| Grow tier, checkout upgrade (Extras) | night; instant floor rebuild | MID-DAY is NOT safe | Growing rebuilds layout, stations, mop, queue cap under live customers, bots and carried items. Offer it at the closing screen / first thing at night instead. |
+| Branch (second shop) (drawer) | night, Gear only | KEEP | Too rare to matter. |
+| Classic `slot`/`equip` (Spend > Stations) | night, classic only | CUT | Memory says no classic runs any more; deleting the input, UI and tests removes a whole spend view. |
+
+## Mid-day design, if wanted (a "lull")
+A fixed pause point at e.g. 50% of the day (like `ringFrom` in call.ts: derive the time from a hash of seed+day, no RNG draw). Phase stays `day` with a `lull` flag. Only restock and one "quick buy" accepted. Host authority: timer is the host's (as the close vote is). Co-op: one shared pause, any human can act, no votes unless a big spend. Customers keep queuing (no freeze) so it is a cost, not a free break. Needs a new protocol bump and a UI card.
+
+## Recommended first step (trivial)
+Allow the existing `restock` input during `day` and `closing` (extend the one phase check in `applyNightInput`/step.ts `restock` case) and surface a small "Restock" button on the day HUD. No new phase, no new input kind, no new state. Optionally cut the classic `slot`/`equip` UI at the same time. Then Grok can drop the Restock tab to a one-line "stock is low" chip on the night screen.
+
+## Needs Kennedy's call
+1. Should restocking mid-day be free of consequence, or cost more (rush delivery +25%) or take time (delivery arrives in 30 s)?
+2. Should Menu/price/twist be handed to the Strategist hire by default (Round 3 item 3) so the Menu tab nearly disappears?
+3. Are roles and reroll worth keeping at all?
+4. Is growing the shop OK as a night-only choice, moved to the end-of-day receipt so it is not a tab?
+5. Do we delete classic Stations/slots code now (memory says yes), or only hide it?

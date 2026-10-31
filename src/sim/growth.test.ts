@@ -10,7 +10,6 @@ import { queueCapacity } from './customers';
 import { computeModifiers, rentForDay } from './effects';
 import { fittingsValue } from './score';
 import { ECONOMY } from '../data/economy';
-import { migrateSnapshot } from '../storage/snapshotStore';
 import { growthVM, nightViewModel } from '../ui/viewModels';
 import type { GameState, TierId } from './types';
 
@@ -144,14 +143,6 @@ describe('growth path (P3 B13)', () => {
     g = growthVM(s);
     expect(g.milestone).toBeTruthy();
     expect(nightViewModel(s, 'p1').growth.current.id).toBe('cart');
-  });
-
-  it('old saves migrate to the café (v21 → v22)', () => {
-    const old = run();
-    expect(old.tier).toBeUndefined();
-    const m = migrateSnapshot(21, old)!;
-    expect(m.tier).toBe('cafe');
-    expect(floorWidth(m)).toBe(12);
   });
 
   it('a played night then day at the stand keeps the stand floor after startNight', () => {

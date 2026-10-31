@@ -3,7 +3,6 @@ import { closeEarlyState } from './closeEarly';
 import { createRun, startDay, startNight } from './run';
 import { secondsToTicks } from './constants';
 import { step } from './step';
-import { migrateSnapshot } from '../storage/snapshotStore';
 import { validateInput } from './validate';
 import { ECONOMY } from '../data/economy';
 import type { GameState, PlayerInput } from './types';
@@ -224,20 +223,3 @@ describe('closeEarly determinism', () => {
   });
 });
 
-describe('snapshot migration 22 to 23', () => {
-  it('gives today and every past day soldOutWalkouts 0', () => {
-    const old = two();
-    old.days = [{ ...old.today, day: 0 }];
-    delete old.today.soldOutWalkouts;
-    delete old.days[0]!.soldOutWalkouts;
-    const s = migrateSnapshot(22, old)!;
-    expect(s.today.soldOutWalkouts).toBe(0);
-    expect(s.days[0]!.soldOutWalkouts).toBe(0);
-  });
-
-  it('keeps counts that are already there', () => {
-    const old = two();
-    old.today.soldOutWalkouts = 4;
-    expect(migrateSnapshot(22, old)!.today.soldOutWalkouts).toBe(4);
-  });
-});

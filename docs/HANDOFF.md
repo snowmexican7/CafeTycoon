@@ -42,6 +42,13 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 - 2026-10-30: **Solo runs default to 1 bot.** Co-op lobbies keep their own choice.
 
 ## Open questions
+- **Round 4 f, night clutter (Claude's proposal, needs Kennedy):** easiest win is letting the existing `restock`
+  input work during the day (one phase check) with a day-HUD "Restock" button, shrinking the Restock tab to a "stock
+  is low" chip. Keep at night: grow, gear, hire/fire bots, steep, ads/pitch. Automate or cut: prices/menu via the
+  Strategist hire (Round 3 item 3), roles, card reroll, the classic Stations/slots screen. Full table: BACKLOG
+  "Round 4 (sim lane, Claude)", "f. Night clutter proposal". Kennedy's calls: mid-day restock free / rush price /
+  delayed? Strategist sets prices by default? keep roles and reroll? grow offered on the end-of-day receipt? delete
+  classic slot code now?
 - Should solo with 0 bots still show the planner's crew tips, unvoiced? (Grok's call on how; the sim has the data.)
   2026-10-30 Grok: still silent in `ui-3.3.3`; I'll decide after Kennedy's sink playtest.
 - Tuning, pending Kennedy's playtest: `ECONOMY.bots.helperTicketSeconds` (3) and `helperGuardSeconds` (8);
@@ -63,6 +70,33 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **b. Pastries (2026-10-31, `r4-pastry`).** Add a pastry row to the Restock tab using the existing restock input
+  (`supply: 'pastry'`). Brief alert id `stock:pastry:low`, planner advice id `restock:pastry`. I set
+  `pastry: 500` in your `src/ui/tipsVM.test.ts` fixture so a pastry chip doesn't crowd the tips under test.
+- [ ] **C9 wand on the espresso machine (2026-10-31, `fb2-c9`, protocol 49, snapshot 29). Blocks a release:** milk
+  drinks need a wand, and there's no way to buy one on screen yet.
+  - E3/E4 buy card: a wand choice (`wand?: 'weak' | 'strong'` on the gear buy). "Add a wand" button from
+    `wandCards(state)` (sends `{ kind: 'wand', playerId, station, wand }`). Wand art from `Station.wand`; clogged look
+    from the wand twin's `jammed`; events `wand.add`, `wand.clog`, `wand.unclog`.
+  - Files still reading `steamer`: `ui/live.ts` (name, verbs, carton hints), `ui/gearVM.ts` 226,
+    `ui/viewModels.ts` 511–514, `ui/stationsVM.ts` 13–14, `ui/nightInputs.ts` + `ui/night.ts` (`onGear` has no wand,
+    no `onWand`), `render/layers/stations.ts` 442/515, `render/theme.ts` 75/86, `dev/fixtures.ts` 506–536; comments in
+    `render/{fridgeModel,crewModel,chaosModel,slotModel}.ts`, `render/layers/fridge.ts`, `audio/cues.ts`.
+  - I touched your `src/ui/gearVM.ts` `gearStats` (wand text from `GEAR[id].wand`) and a few UI tests to keep tsc
+    green.
+- [ ] **e. Character look (2026-10-31, `r4-look`, protocol 48).** Wire the saved look into `src/main.ts`
+  `runOptions` (`players[].look: m.look`), the host's `Member.look`, and `PeerSessionOptions.look` for joiners; edit
+  at night with `{ kind: 'look', playerId, look }` (type `PlayerLook` in src/sim/types.ts). Bots have no look.
+- [ ] **d. Stacking:** `Customer.id` + `Customer.items` is enough (groups too). No `PassItem.customer` (a cup isn't
+  anyone's until taken); use `pickupTarget(state, drink)` for a "who'd take this" hint.
+- [ ] **Export:** `emptyHandsWanted` is exported from src/sim/stations.ts; switch `live.ts` to it.
+- [ ] **a. Dev mode (2026-10-31, `r4-dev`, protocol 47).** `src/main.ts` passes `dev: true` into
+  `CreateRunOptions` from `?dev=1`. Pause button: reads `state.devPaused`, sends `{ kind: 'devPause', playerId,
+  paused }` (host only, dev run, night/weekEnd). Cash shows ~$999,999 by itself; no other UI special case needed.
+- [ ] **c. Customer bumps (2026-10-31, `r4-bump`, protocol 46).** Bubbles ("Hey!", "Watch it!") from
+  `customer.bump { customer, by, x, y }`; the angry exit is `walkout { customer, reason: 'bumped', x, y }`. Today
+  `chaosModel` draws every `walkout` as "Sold out?!", so branch on `data.reason`. Please make
+  `pickupModel.customerSpots` call the sim's `customerSpots(state)` (src/sim/customerSpots.ts) so they can't drift.
 - [ ] **B6 multi-drink orders (2026-10-30, `fb2-b6`).** Full names: BACKLOG "Feedback 2", B6.
   - Tickets: `Customer.items: { drink, done, by?, slips?, temp?, black?, cold? }[]` and `Customer.order: 'combo' |
     'office'` (absent for groups). Draw a tall ticket with a tick per item.
@@ -183,7 +217,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
-- [ ] 2026-10-30: **Round 4 (Kennedy approved ~10:27 PM).** Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. Summary:
+- [x] 2026-10-31: a–f done (`r4-a`, `r4-b`, `r4-c`, `r4-e`; d answered; f proposal in Open questions); C9 merged (`fb2-c9`). Names in Claude → Grok. Round 3 and B7/B8/C10/C11 next.
+  **Round 4 (Kennedy approved ~10:27 PM).** Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. Summary:
   a. dev mode: unlimited money + paused night behind `?dev=1`; b. pastries buyable (or tied to combos);
   c. `customer.bump { customer, by }`, repeat bumps → angry leave; d. confirm `Customer.items` is enough to stack
   one customer's cups; e. `Player.look` through lobby/join/protocol + `{ kind: 'look' }` input; f. proposal only:

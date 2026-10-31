@@ -13,7 +13,7 @@ import type { DrinkId, GameState, SupplyId } from './types';
 function gearShop(drinks: DrinkId[]): GameState {
   let s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, gear: true });
   s.slots = ['grinder', 'espresso', 'steamer', 'drip', 'drip', 'trash'];
-  s.slotGear = ['g2', 'e3', 's3', 'd3', 'd4b', 'b0'];
+  s.slotGear = ['g2', 'e3', null, 'd3', 'd4b', 'b0'];
   s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
   s.unlocked = [...drinks];
   for (const d of DRINK_IDS) s.menu[d] = drinks.includes(d);
