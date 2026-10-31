@@ -20,6 +20,7 @@ when a build goes out, the line moves under its version with the date.
 - Hand-made lattes: fill the milk jug to the ticket's line, stop the steam meter in the middle for foam, and pick
   vanilla or caramel (1 / 2) at the syrup rack. Tickets show double shots and syrup asks; the jug, steam meter and
   recipe icons sit over your cup.
+- The tray table now shows a live list of drinks (with ticks and cooling), a tray in your hands, a named tray coaster on pickup, a "doesn't go here" bubble when a drink is refused, and little cues when a tray is claimed, filled, picked up, set down, taken, spilled or voided.
 
 ## 3.7.2 — 2026-10-31 · Fixes from the overnight review
 

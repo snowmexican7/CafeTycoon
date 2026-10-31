@@ -224,6 +224,15 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'egg.nameMix':
         if (e.data.wrong || e.data.refuse) cues.push({ id: 'eggNameMix' });
         break;
+      // FB2 B7: tray table — reuse familiar cup / spill / refuse sounds (no new CueIds)
+      case 'tray.claim':
+      case 'tray.add':
+      case 'tray.put': cues.push({ id: 'cupDown', mine }); break;
+      case 'tray.pick': cues.push({ id: 'liftUp', mine }); break;
+      case 'tray.take': cues.push({ id: 'serve', mine }); break;
+      case 'tray.refuse': cues.push({ id: 'buzz', mine }); break;
+      case 'tray.spill': cues.push({ id: 'splash', mine }); break;
+      case 'tray.void': cues.push({ id: 'trash', mine }); break;
       default: break;
     }
   }

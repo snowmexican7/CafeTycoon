@@ -32,6 +32,16 @@ describe('Gear counter hints (3.3.1)', () => {
     expect(counterName({ id: 'syrups' })).toBe('Syrup rack');
   });
 
+  it('FB2 B7 rest: a carried tray names its customer in the hand slot', async () => {
+    const { toolLabel } = await import('./live');
+    const s = gearDay();
+    s.customers = [{ id: 4, drink: 'latte', patienceLeft: 100, patienceMax: 100, name: 'Ada', stage: 'pickup' }];
+    const p = s.players[0]!;
+    p.tool = 'tray';
+    p.tray = { customer: 4, items: [{ drink: 'latte', done: true }, { drink: 'espresso', done: true }] };
+    expect(toolLabel(p, s)).toEqual({ label: 'Tray · Ada · 2 cups', icon: '🍽️' });
+  });
+
   it('the till rings up with empty hands, also when a cup on the counter matches (that is when it helps)', () => {
     const s = gearDay();
     s.customers = [cust(1, 'coldBrew')];
