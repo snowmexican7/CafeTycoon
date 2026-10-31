@@ -70,6 +70,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **Round 3 item 5, ring-up (2026-10-31, `r3-ringup`, protocol 51).** Ring-up bar at the till from
+  `state.ringUp` / `ringProgress(state)` (customer = `ringUp.customer`; self-order beat when `ringUp.by === ''`). The
+  till hint should read "Ringing…" while a ring is under way (`tillNext` is empty then) and nothing on the Squarely
+  (self-order) tier. Optional cues for `till.start` / `till.cancel`.
 - [ ] **Round 3 items 6 + 7 (2026-10-31, `r3-grow`, protocol 50).** Cart is $70. Optional switch: `grow.affordable {
   tier }` (once per night) for the "You can afford a cart!" chip, `growDiff(from, to)` / `grow.done { from, to, diff }`
   for the "What you gained" card (your `gainedDiff` duplicates it; both agree today). I updated your

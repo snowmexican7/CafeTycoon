@@ -29,6 +29,9 @@ when a build goes out, the line moves under its version with the date.
 - Pastries on the Restock tab (a pack of six for $7): they sell for $3 on the side with about a third of drinks, half
   the leftovers go stale overnight, and the night brief tells you when the case will run out.
 - The coffee cart now costs $70, and you get a nudge the moment you can afford the next shop size.
+- Ringing up an order takes a moment at the till (1.5 s on the old register, 1 s on the kiosk): stay at the till
+  until the bar fills; walk off and it cancels. The Squarely terminal is self-order, so customers move to pickup by
+  themselves.
 
 ## 3.5.0 — 2026-10-30 · Open, close and clean up
 
