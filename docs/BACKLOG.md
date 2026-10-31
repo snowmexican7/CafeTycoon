@@ -2372,3 +2372,37 @@ Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. One branch and tag per item; names as bui
   stale overnight, no fridge needed. Names: `expectedUse(state).pastry` (brief.ts) feeds run-out and spoil
   estimates; brief alert `stock:pastry:low` (only once the case has held some); planner advice `restock:pastry`
   (`PLAN_PRIORITY.restockPastry` 62), bought last, after drink supplies and rent.
+
+### f. Night clutter proposal (Round 4 f, proposal only; awaiting Kennedy)
+
+Every handler below starts with `if (state.phase !== 'night') return state` (growth, ads, pricing, menu, roles, gear, staff, steep, condiments, checkout, rival, pitch, signature, taste, night.ts). `weekEnd` is host-only in its own phase. Almost all are "humans only", and the rest of the night UI is just a view of them.
+Key fact: `startDay()` reads the night's choices once (menu, prices, twists, ad outcome, steep target, bots, forecast), so most of them are "set before the doors open" by design.
+
+| Decision (tab in Gear night) | Today | Proposal | Cost |
+|---|---|---|---|
+| Restock beans/milk/cold brew/flavours/pastries (Restock) | night only; cash and stock are plain numbers | MID-DAY (best candidate) | Low. Stock is read live (`supplies.*`) and inputs already apply in tick order, so determinism is fine. Cost: removes the "ran out at 2pm" tension unless it carries a price or delay. Host/votes: none (any human). Busy machines unaffected. |
+| Condiment boxes, steep target (Restock) | night; steep feeds morning cold brew | KEEP steep. Condiments could go mid-day with restock | Steep is a plan for tomorrow, so it has to stay at night. |
+| Roles (Restock) | night; per player, no cash | CUT as a screen: let people pick on the floor or auto-assign | Players lose a bit of crew coordination. Cheap to automate. |
+| Hire/fire bot (Restock) | night; `syncBots` only reconciles at night or weekEnd | KEEP | Mid-day would add/remove bodies in a live floor: big determinism risk. |
+| Gear buy/sell, fridge card (Gear shop) | night; big deals are a co-op vote (G8) | KEEP | Mid-day would hit busy machines, held cups and a half-full cash till; vote lapses at open by design. |
+| Menu on/off, prices, twists (Menu) | night; read at `startDay` | AUTOMATE (a "Strategist" default, already planned as Round 3 item 3) and fold twist into price card | Players keep manual override. Mid-day pricing would change demand curves mid-queue: no. |
+| Signature drink designer (Menu drawer) | night | KEEP, but hide until unlocked | Rare use; clutter only if shown early. |
+| Cards (buy/reroll) (Extras) | night; shared hand | KEEP, or CUT reroll | Reroll is cash-for-luck; nobody misses it. Low value. |
+| Ads, pitch (Extras) | night; booked for tomorrow | KEEP | Both are tomorrow's bets. Could collapse into one "Marketing" card. |
+| Scout rival, rival counter, stamp card (Extras) | night | KEEP, collapse behind a "Rival" row shown only once a rival exists | Pure UI tidy. |
+| Grow tier, checkout upgrade (Extras) | night; instant floor rebuild | MID-DAY is NOT safe | Growing rebuilds layout, stations, mop, queue cap under live customers, bots and carried items. Offer it at the closing screen / first thing at night instead. |
+| Branch (second shop) (drawer) | night, Gear only | KEEP | Too rare to matter. |
+| Classic `slot`/`equip` (Spend > Stations) | night, classic only | CUT | Memory says no classic runs any more; deleting the input, UI and tests removes a whole spend view. |
+
+## Mid-day design, if wanted (a "lull")
+A fixed pause point at e.g. 50% of the day (like `ringFrom` in call.ts: derive the time from a hash of seed+day, no RNG draw). Phase stays `day` with a `lull` flag. Only restock and one "quick buy" accepted. Host authority: timer is the host's (as the close vote is). Co-op: one shared pause, any human can act, no votes unless a big spend. Customers keep queuing (no freeze) so it is a cost, not a free break. Needs a new protocol bump and a UI card.
+
+## Recommended first step (trivial)
+Allow the existing `restock` input during `day` and `closing` (extend the one phase check in `applyNightInput`/step.ts `restock` case) and surface a small "Restock" button on the day HUD. No new phase, no new input kind, no new state. Optionally cut the classic `slot`/`equip` UI at the same time. Then Grok can drop the Restock tab to a one-line "stock is low" chip on the night screen.
+
+## Needs Kennedy's call
+1. Should restocking mid-day be free of consequence, or cost more (rush delivery +25%) or take time (delivery arrives in 30 s)?
+2. Should Menu/price/twist be handed to the Strategist hire by default (Round 3 item 3) so the Menu tab nearly disappears?
+3. Are roles and reroll worth keeping at all?
+4. Is growing the shop OK as a night-only choice, moved to the end-of-day receipt so it is not a tab?
+5. Do we delete classic Stations/slots code now (memory says yes), or only hide it?

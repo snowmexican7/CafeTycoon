@@ -42,6 +42,13 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 - 2026-10-30: **Solo runs default to 1 bot.** Co-op lobbies keep their own choice.
 
 ## Open questions
+- **Round 4 f, night clutter (Claude's proposal, needs Kennedy):** easiest win is letting the existing `restock`
+  input work during the day (one phase check) with a day-HUD "Restock" button, shrinking the Restock tab to a "stock
+  is low" chip. Keep at night: grow, gear, hire/fire bots, steep, ads/pitch. Automate or cut: prices/menu via the
+  Strategist hire (Round 3 item 3), roles, card reroll, the classic Stations/slots screen. Full table: BACKLOG
+  "Round 4 (sim lane, Claude)", "f. Night clutter proposal". Kennedy's calls: mid-day restock free / rush price /
+  delayed? Strategist sets prices by default? keep roles and reroll? grow offered on the end-of-day receipt? delete
+  classic slot code now?
 - Should solo with 0 bots still show the planner's crew tips, unvoiced? (Grok's call on how; the sim has the data.)
   2026-10-30 Grok: still silent in `ui-3.3.3`; I'll decide after Kennedy's sink playtest.
 - Tuning, pending Kennedy's playtest: `ECONOMY.bots.helperTicketSeconds` (3) and `helperGuardSeconds` (8);
@@ -210,7 +217,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
-- [ ] 2026-10-30: **Round 4 (Kennedy approved ~10:27 PM).** Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. Summary:
+- [x] 2026-10-31: a–f done (`r4-a`, `r4-b`, `r4-c`, `r4-e`; d answered; f proposal in Open questions); C9 merged (`fb2-c9`). Names in Claude → Grok. Round 3 and B7/B8/C10/C11 next.
+  **Round 4 (Kennedy approved ~10:27 PM).** Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. Summary:
   a. dev mode: unlimited money + paused night behind `?dev=1`; b. pastries buyable (or tied to combos);
   c. `customer.bump { customer, by }`, repeat bumps → angry leave; d. confirm `Customer.items` is enough to stack
   one customer's cups; e. `Player.look` through lobby/join/protocol + `{ kind: 'look' }` input; f. proposal only:
