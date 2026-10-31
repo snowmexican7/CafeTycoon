@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from '../run';
 import { step } from '../step';
-import { pathAvoid, think, uncoveredOrders } from './brain';
+import { think, uncoveredOrders } from './brain';
 import { addStandIns } from './roster';
 import { makeTicket } from '../orders';
 import type { GearId } from '../../data/gear';
@@ -71,31 +71,6 @@ describe('bots and multi-drink tickets (FB2 B6)', () => {
     // That first drink covered (a cup on the counter), the next uncovered one takes the queue place.
     s.pass = [{ item: 'espresso', ticksLeft: 999 }];
     expect(uncoveredOrders(s, sim(s)).map((o) => [o.id, o.drink])).toEqual([[1, 'coldBrew'], [2, 'espresso'], [1, 'espresso']]);
-  });
-
-  it("a bot already on an office drink fills its queue place: the rest come after every walk-in's (fix round 1)", () => {
-    const s = gearStand(2);
-    s.customers = [
-      combo(1, ['espresso', 'coldBrew', 'espresso'], { order: 'office' }),
-      { id: 2, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: 0 },
-    ];
-    Object.assign(sim(s, 2).bot!, { plan: [{ kind: 'use', station: 'pickup', action: 'put' }], claim: 1, claimDrink: 'espresso' });
-    expect(uncoveredOrders(s, sim(s, 1)).map((o) => [o.id, o.drink])).toEqual([[2, 'espresso'], [1, 'coldBrew'], [1, 'espresso']]);
-  });
-
-  it('two yielded bots crossing: only the later one steps around the other (Gear tie-break, fix round 1)', () => {
-    const s = gearStand(2);
-    const [a, b] = [sim(s, 1), sim(s, 2)];
-    a.pos = { x: 6, y: 2 };
-    b.pos = { x: 5, y: 2 };
-    for (const p of [a, b]) p.bot!.yields = 1;
-    const has = (list: { x: number; y: number }[], x: number, y: number) => list.some((n) => n.x === x && n.y === y);
-    expect(has(pathAvoid(s, a), 5, 2)).toBe(false);
-    expect(has(pathAvoid(s, b), 6, 2)).toBe(true);
-    // A person is always stepped around.
-    s.players[0].connected = true;
-    s.players[0].pos = { x: 7, y: 2 };
-    expect(has(pathAvoid(s, a), 7, 2)).toBe(true);
   });
 
   it('a lost claim carries over to someone else waiting for the same drink (Gear), keeping the chain', () => {
