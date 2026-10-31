@@ -171,6 +171,23 @@ describe('FB2 A4: bots and the fridge', () => {
     expect(ids(think(s, sim(s)))).toEqual(['condiments:stow', `${FRIDGE_ID}:store`]);
   });
 
+  it('balance: after the doors lock, a drink still to make comes before putting away (the closing waits for it); last call does not wait', () => {
+    const s = shop();
+    s.milkOut = 5;
+    s.condiments = { servings: 4 };
+    enterClosing(s);
+    s.customers = [rung(1, 'espresso')];
+    expect(ids(think(s, sim(s)))[0]).toBe('grinder:insert');
+    // nothing left to make: now it goes away
+    const t = shop();
+    t.milkOut = 5;
+    enterClosing(t);
+    expect(ids(think(t, sim(t)))).toEqual(['steamer:stow', `${FRIDGE_ID}:store`]);
+    // last call: away first, whatever is still to make
+    s.phaseTicksLeft = 60 * 8;
+    expect(ids(think(s, sim(s)))).toEqual(['steamer:stow', `${FRIDGE_ID}:store`]);
+  });
+
   it('M2: no box is carried to the bar during closing soon (it would only be lifted back into the fridge)', () => {
     const s = shop();
     s.condiments = { servings: 0 };

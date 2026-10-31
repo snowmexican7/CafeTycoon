@@ -765,8 +765,10 @@ export function think(state: GameState, p: Player): BotStep[] {
     // FB2 A1: a helper leaves the till to a person standing at it.
     const ring = tillNext(state) && !ringPlanned(state, p) && !tillHeld(state, p) ? spotStep(state, 'counter', 'ring') : null;
     if (ring) return [ring];
-    // 1b. FB2 A4, closing soon: put away the milk and the bar once nobody needs them (one bot does it).
-    const away = putAwayPlan(state, p);
+    // 1b. FB2 A4, closing soon: put away the milk and the bar once nobody needs them (one bot does it). Balance pass:
+    // only at last call does it come before making drinks (rule 2b); the closing waits for the put-away, but not for
+    // the queue, so a drink still to make goes first.
+    const away = lastCall(state) ? putAwayPlan(state, p) : null;
     if (away) return away;
     // 1c. FB2 A4: milk out at the bar runs low and a milk drink is wanted: fetch a carton from the fridge.
     const carton = cartonPlan(state, p);
@@ -784,6 +786,9 @@ export function think(state: GameState, p: Player): BotStep[] {
     b.claimDrink = job.order.drink;
     return job.chain;
   }
+  // 2b. FB2 A4 (balance pass): nothing left to make: put away the milk and the bar once nobody needs them.
+  const away = state.gear === true ? putAwayPlan(state, p) : null;
+  if (away) return away;
   // 3. Prep cold brew for the pass.
   const prep = shouldPrep(state, p) ? chainFor(state, p, 'coldBrew', 'put') : [];
   if (prep.length > 0) return prep;
