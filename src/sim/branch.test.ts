@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { ECONOMY } from '../data/economy';
 import { createRun, startDay, startNight } from './run';
 import { finishDay } from './closing';
 import { step } from './step';
@@ -99,7 +100,7 @@ describe('manager mode (P4 B5)', () => {
     s.supplies.beans = 7;
     s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'send', supply: 'beans' }]);
     expect(s.supplies.beans).toBe(0);
-    const credit = (7 * 8) / 10;
+    const credit = (7 * ECONOMY.packs.beans.cost) / 10;
     expect(s.branch?.stockCredit).toBeCloseTo(credit, 2);
     const plain = branchDay({ ...s, branch: { ...s.branch!, stockCredit: undefined } })!;
     const est = branchDay(s)!;
@@ -116,7 +117,7 @@ describe('manager mode (P4 B5)', () => {
     s.players[0]!.role = 'manager';
     s.supplies.beans = 7;
     const perUnit = restockCost(s, 'beans', 1) / 10;
-    expect(perUnit).toBeLessThan(8 / 10);
+    expect(perUnit).toBeLessThan(ECONOMY.packs.beans.cost / 10);
     s = step(s, [{ kind: 'branch', playerId: 'p1', action: 'send', supply: 'beans' }]);
     expect(s.branch?.stockCredit).toBeCloseTo(7 * perUnit, 2);
   });

@@ -172,3 +172,17 @@ export function suppliesFor(drink: DrinkId): SupplyId[] {
   for (const { recipe } of recipeChain(drink)) for (const s of recipe.consumes) if (!out.includes(s)) out.push(s);
   return out;
 }
+
+/**
+ * Round 3 money: how many units of each supply one cup of `drink` really uses, every use down the chain counted
+ * (a cappuccino is two milks, a doppio two beans). A drip pot is one unit of beans shared by `potCups` cups, so
+ * a cup from a pot is `1 / potCups` (the pour-over is handmade: a whole unit). Supplies it never uses are absent.
+ */
+export function drinkSupplyUnits(drink: DrinkId, potCups = 1): Partial<Record<SupplyId, number>> {
+  const out: Partial<Record<SupplyId, number>> = {};
+  for (const { recipe } of recipeChain(drink)) {
+    const share = recipe.gives === 'drip' ? 1 / Math.max(1, potCups) : 1;
+    for (const s of recipe.consumes) out[s] = (out[s] ?? 0) + share;
+  }
+  return out;
+}

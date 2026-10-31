@@ -10,11 +10,12 @@ export const ECONOMY = {
   rentPerDay: 25,
   startingSupplies: { beans: 20, milk: 10, concentrate: 15, flavour: 0, pastry: 0 } as Record<SupplyId, number>,
   packs: {
-    beans: { size: 10, cost: 8 },
-    milk: { size: 10, cost: 10 },
-    concentrate: { size: 10, cost: 9 },
-    flavour: { size: 10, cost: 9 },
-    pastry: { size: 6, cost: 7 },
+    // Round 3 money: every pack 10% cheaper than before (8, 10, 9, 9, 7).
+    beans: { size: 10, cost: 7.2 },
+    milk: { size: 10, cost: 9 },
+    concentrate: { size: 10, cost: 8.1 },
+    flavour: { size: 10, cost: 8.1 },
+    pastry: { size: 6, cost: 6.3 },
   } as Record<SupplyId, { size: number; cost: number }>,
   prices: { espresso: 3, latte: 4.75, coldBrew: 4, icedLatte: 5.25, mocha: 6, matcha: 5.5, special: 6.25, drip: 2.5, americano: 3.5, cappuccino: 5.25, doppio: 4.5, sweetCream: 5, cafeAuLait: 3.75, redEye: 4.25, pourOver: 4.5 } as Record<DrinkId, number>,
   stationSeconds: { grinder: 2.5, espresso: 5, steamer: 3.5, coldBrewTap: 1.5, drip: 20 } as Record<

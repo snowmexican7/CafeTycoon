@@ -587,6 +587,8 @@ export interface DayStats {
   closedEarly?: number;
   /** FB1 WP4: people who walked up to a sold-out board and left (absent until it happens; migrated to 0). */
   soldOutWalkouts?: number;
+  /** Round 3 money: would-be customers who read the board and left over the price (absent until it happens; never lost or turned away). */
+  priceWalkouts?: number;
   /** P4 B3 manager report: summed wait (ticks from arrival to the hand-off) over served customers. */
   waitTicks?: number;
   /** P4 B3: takings (price + tip) per drink today. */

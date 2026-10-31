@@ -82,7 +82,7 @@ import { GEAR, WANDS } from '../../data/gear';
 import type { AddOnWand, GearId } from '../../data/gear';
 import { EQUIPMENT } from '../../data/equipment';
 import type { EquipmentKind } from '../../data/equipment';
-import { expectedUse } from '../brief';
+import { expectedOrders, expectedUse } from '../brief';
 import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
 import { CONDIMENTS } from '../condiments';
@@ -237,14 +237,10 @@ export function restockAdvice(
   return advice;
 }
 
-/** Expected orders per drink tomorrow, unrounded (the share of arrivals by order bias; 0 off the menu). Same split as `expectedUse`. */
+/** Expected orders per drink tomorrow, unrounded (`expectedOrders`: price-aware, capped by capacity; 0 off the menu). */
 function expectedOrdersFor(state: GameState): Partial<Record<DrinkId, number>> {
-  const m = computeModifiers(state);
-  const arrivals = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
-  const menu = menuDrinks(state);
-  const w = (d: DrinkId) => m.orderBias[d] * DRINK_INFO[d].bias;
-  const total = menu.reduce((sum, d) => sum + w(d), 0) || 1;
-  return Object.fromEntries(menu.map((d) => [d, (arrivals * w(d)) / total]));
+  const orders = expectedOrders(state);
+  return Object.fromEntries(menuDrinks(state).map((d) => [d, orders[d]]));
 }
 
 /** Gear runs with a cold brew tap: the number of cups worth steeping tomorrow and the orders behind it. */

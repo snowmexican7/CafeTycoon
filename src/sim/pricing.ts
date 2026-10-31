@@ -7,7 +7,8 @@
  * With no steps set every factor is exactly 1, so un-priced runs play identically to before.
  */
 import { ECONOMY } from '../data/economy';
-import { DRINK_INFO, DRINK_IDS } from '../data/drinks';
+import { DRINK_INFO, DRINK_IDS, drinkSupplyUnits } from '../data/drinks';
+import { dripPotCups, expectedCups, shareWeights } from './capacity';
 import type { Modifiers } from './effects';
 import type { DrinkId, GameState, PlayerInput } from './types';
 
@@ -15,7 +16,8 @@ export const PRICING = {
   step: 0.25,
   minStep: -4,
   maxStep: 8,
-  elasticity: 1.8,
+  /** Round 3 money: 1.8 -> 1.4, a softer squeeze on pricey menus. */
+  elasticity: 1.4,
   /** Patience multiplier = 1 + patience * (1 - ratio), clamped. */
   patience: 0.6,
   patienceClamp: [0.7, 1.25] as const,
@@ -87,9 +89,15 @@ export function applyPriceInput(state: GameState, input: Extract<PlayerInput, { 
   return state;
 }
 
-/** Ingredient cost of one drink at list pack prices (beans, milk… one unit each). */
-export function unitCost(d: DrinkId): number {
-  return round2(ECONOMY.drinkSupplies[d].reduce((a, s) => a + ECONOMY.packs[s].cost / ECONOMY.packs[s].size, 0));
+/**
+ * Ingredient cost of one cup at list pack prices, every use counted (a cappuccino is two milks); a drip cup is its
+ * share of the pot (the biggest pot `state` owns, else the smallest pot).
+ */
+export function unitCost(d: DrinkId, state?: GameState): number {
+  const units = drinkSupplyUnits(d, dripPotCups(state));
+  let cost = 0;
+  for (const s of Object.keys(units) as (keyof typeof units)[]) cost += (units[s] ?? 0) * (ECONOMY.packs[s].cost / ECONOMY.packs[s].size);
+  return round2(cost);
 }
 
 export interface PriceLine {
@@ -106,15 +114,17 @@ export interface PriceLine {
 
 /**
  * The night's pricing forecast: for each drink on the menu, expected orders and margin.
- * `walkIns` is the forecast's walk-ins at list prices.
+ * `walkIns` is the forecast's walk-ins at list prices; `orders` are cups (capped by what the shop can pour).
  */
 export function priceForecast(state: GameState, menu: DrinkId[], m: Modifiers, walkIns: number): PriceLine[] {
   const traffic = priceTraffic(state, menu, m);
-  const weights = menu.map((d) => orderWeight(m, d) * demandFactor(state, d));
+  const weights = shareWeights(state, menu, m);
   const total = weights.reduce((a, b) => a + b, 0) || 1;
+  // Round 3 money: cups, not people (groups and combos order more), and never more than the shop can pour in a day.
+  const cups = expectedCups(state, menu, m, walkIns * traffic);
   return menu.map((d, i) => {
     const price = round2(menuPrice(state, d) * m.price[d]);
-    const orders = Math.round(walkIns * traffic * (weights[i] / total));
+    const orders = Math.round(cups * (weights[i] / total));
     return {
       drink: d,
       price,
@@ -122,7 +132,7 @@ export function priceForecast(state: GameState, menu: DrinkId[], m: Modifiers, w
       step: priceStep(state, d),
       demandPct: Math.round((demandFactor(state, d) * traffic - 1) * 100),
       orders,
-      profit: round2(orders * (price - unitCost(d))),
+      profit: round2(orders * (price - unitCost(d, state))),
     };
   });
 }

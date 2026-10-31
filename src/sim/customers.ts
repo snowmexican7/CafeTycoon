@@ -67,13 +67,43 @@ function soldOutWalkup(state: GameState): GameState {
   return state;
 }
 
-/** One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. */
+/**
+ * Round 3 money: a would-be customer read the board and left over the price. Not a queued customer, never lost or
+ * turned away (they never ordered): a fresh customer id, the drink they balked at (the likelier the dearer it is
+ * against its list price) and one `walkout { customer, reason: 'price', drink }` for the renderer's "Too pricey!"
+ * bubble at the door. One rngNext.
+ */
+function priceWalkout(state: GameState, menu: DrinkId[], m: Modifiers): void {
+  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * Math.max(0, 1 - demandFactor(state, d)));
+  const total = weights.reduce((a, b) => a + b, 0);
+  let drink = menu[menu.length - 1];
+  let roll = rngNext(state) * total;
+  for (let i = 0; i < menu.length; i++) {
+    roll -= weights[i];
+    if (roll < 0) {
+      drink = menu[i];
+      break;
+    }
+  }
+  tally(state.today, 'priceWalkouts');
+  emitLog(state, 'walkout', { customer: state.nextCustomerId++, reason: 'price', drink });
+}
+
+/**
+ * One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. The roll is made against
+ * the list-price rate: a roll the price takes away (below list, above the priced rate) is a price walkout.
+ */
 export function spawnCustomers(state: GameState): GameState {
   const menu = availableDrinks(state);
   if (menu.length === 0) return soldOutWalkup(state);
   const m = computeModifiers(state);
-  const p = (ECONOMY.baseArrivalsPerSecond * m.traffic * priceTraffic(state, menu, m)) / TICK_RATE;
-  if (rngNext(state) >= p) return state;
+  const list = (ECONOMY.baseArrivalsPerSecond * m.traffic) / TICK_RATE;
+  const p = list * priceTraffic(state, menu, m);
+  const roll = rngNext(state);
+  if (roll >= p) {
+    if (roll < list) priceWalkout(state, menu, m);
+    return state;
+  }
   if (gearAskedFor(state, menu)) return state; // Gear G7c: wanted something you don't serve
   if (state.customers.length >= queueCapacity(m, tierInfo(state).queue)) {
     state.today.turnedAway += 1;
