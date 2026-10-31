@@ -194,7 +194,11 @@ export type SimEventKind =
   | 'grow.done'
   /** Round 3 item 4 (src/sim/line.ts): a stalled line complains; arrivals during a fresh complaint may leave quietly. */
   | 'line.complain'
-  | 'line.leave';
+  | 'line.leave'
+  /** Round 3 item 3 (src/sim/strategist.ts, staff.ts): a hire or a firing ({ role, by }); the strategist set the prices ({ changed }). */
+  | 'staff.hire'
+  | 'staff.fire'
+  | 'strategist.set';
 
 /** R3 7: what a grow changes, before → after (src/sim/growth.ts growDiff). */
 export interface GrowDiff {
@@ -587,6 +591,8 @@ export interface DayStats {
   checkoutFees?: number;
   /** P3 B15: wages paid to the hired bot baristas at closing (Gear runs; absent = none). */
   wages?: number;
+  /** Round 3 item 3: the part of `wages` that went to the Strategist and Marketer (absent = none). */
+  hireWages?: number;
   /** Challenge tip paid at closing (folded into bonus too). */
   challengeBonus?: number;
   /** Challenge ids won today. */
@@ -735,6 +741,8 @@ export interface GameState {
   tierLog?: { tier: TierId; day: number; by: string }[];
   /** R3 6: tonight's `grow.affordable` has fired (reset each night). */
   growNudged?: true;
+  /** Round 3 item 3: the Strategist and Marketer on the books (absent = neither; src/sim/hires.ts). */
+  staff?: { strategist?: true; marketer?: true };
   /** FB1 WP5: what stands in each back-bar slot, left to right (absent = the tier's defaults; see sim/slots.ts). */
   slots?: (StationKind | null)[];
   /** FB1 WP5: stations the crew owns but has not placed (absent = none). */
@@ -828,7 +836,7 @@ export type PlayerInput =
   | { kind: 'rivalCounter'; playerId: PlayerId; on?: boolean }
   | { kind: 'stampCard'; playerId: PlayerId }
   /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
-  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire' }
+  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire'; /** Round 3 item 3: absent = a barista. */ role?: 'strategist' | 'marketer' }
   | { kind: 'branch'; playerId: PlayerId; action: 'open' | 'staff' | 'send' | 'close'; area?: AreaId; staff?: number; supply?: SupplyId }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
