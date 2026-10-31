@@ -23,6 +23,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-10-31: **Review follow-ups (Kennedy):** night always opens on Restock first; add a soft "Open anyway?" warning when opening with no makeable drinks (UI); Day-HUD declutter in stages he reviews; no save-compat work until saves are a real feature; the per-tick `structuredClone` speed fix is parked.
 - 2026-10-31: **New workflow (Kennedy, Oct 31 morning):** Grok becomes lead reviewer/merger and coordinator; Cursor
   (and Claude) do most of the coding. Cursor works through PRs; Grok reviews, merges, releases and writes the next
   prompt. Muse may take art pieces later if that proves simpler.

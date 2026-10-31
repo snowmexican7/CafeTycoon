@@ -74,9 +74,8 @@
   `strategist.set`, receipt line from `DayStats.hireWages`.
 - Move the Strategist/Marketer hire cards higher on the night screen so they show without scrolling at 1512x982 and 1280x800.
 - Price walkout leftovers: door walker for `walkout { reason: 'price' }`, optional `DayStats.priceWalkouts` line.
-- **Do not** start these without Kennedy's OK (they are waiting on him): soft "Open anyway?" gate, first-night tab
-  change, Day-HUD declutter, save-compat notice, the `structuredClone` perf change (sim lane;
-  plan only).
+- **Soft open gate (Kennedy approved 2026-10-31):** when the player presses Open with zero makeable drinks (no stock / no machine for anything on the menu), show a friendly "You can't make any drinks yet. Open anyway?" prompt with "Open anyway" and "Go back" buttons. It warns, never blocks. UI only.
+- **Kennedy's rulings (2026-10-31), do not change:** the night ALWAYS opens on Restock first (no "pick gear" first-night tab); Day-HUD declutter goes in small stages Kennedy reviews, so only do the auto-dismiss morning note and debug-tag fixes above for now; no save-compatibility work (saves aren't a feature yet); the per-tick `structuredClone` speed fix is parked, so don't touch it.
 
 ## When you're done
 Leave a short summary (PR numbers in order, what's open, any "Needs from Claude") in the last PR's description.
