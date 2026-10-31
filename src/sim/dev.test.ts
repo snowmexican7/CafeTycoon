@@ -60,12 +60,12 @@ describe('R4 a: dev mode', () => {
       s = step(s, [{ kind: 'gear', playerId: 'p2', action: 'vote', yes: true }]); // ... and the second yes carries it
       expect(s.gearVote).toBeUndefined();
       if (id === 'e6') expect(s.gearVoteLast).toMatchObject({ passed: true }); // the $800 vote carries: cash never fails it
-      // (d4b and d5b find no free slot: the six are full, which is room, not cash)
+      // (with no steamer line since C9, d5b takes the sixth slot; d4b finds none: room, not cash)
       expect(s.cash).toBeGreaterThanOrEqual(DEV_CASH);
     }
-    // the top of every ladder went in (the Annihilator is $800), one machine per slot
+    // the top of every ladder went in (Double Trouble is $800), one machine per slot
     const top = (s.slotGear ?? []).filter(Boolean).sort();
-    expect(top).toEqual(['b0', 'c5', 'd4', 'e6', 'g3', 's3']);
+    expect(top).toEqual(['b0', 'c5', 'd4', 'd5b', 'e6', 'g3']);
     // the same night-1 buys without dev are out of reach
     const poor = step(step(createRun(opts()), []), [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e6' }]);
     expect((poor.slotGear ?? []).includes('e6')).toBe(false);
