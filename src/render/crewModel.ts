@@ -59,7 +59,21 @@ export type CrewBurst =
   /** The branch phone was picked up (`by` is a name) or left to ring. */
   | { kind: 'call'; by: string; take: boolean; call: 'order' | 'machine' }
   /** 3.3.3 (FB2 A2/A3): a sink, pot, leak or cold-cup line, toasted over `at` (a station id; absent = mid-floor). */
-  | { kind: 'note'; text: string; tone: 'good' | 'warn' | 'bad'; at?: string };
+  | { kind: 'note'; text: string; tone: 'good' | 'warn' | 'bad'; at?: string }
+  /**
+   * ui-3.5.1 (pre-wired for Claude's `customer.bump` log entry): a customer someone walked into says so in a
+   * speech bubble at (x, y) in tiles (absent = over the queue).
+   */
+  | { kind: 'bumpSay'; text: string; x?: number; y?: number };
+
+/** ui-3.5.1: Claude's planned log kind (not in SimEvent's union yet; widen the check until it lands). */
+export const CUSTOMER_BUMP = 'customer.bump';
+
+/** ui-3.5.1: what a bumped customer says (picked by log seq, so every client shows the same line). */
+export const BUMP_LINES = ['Hey, watch it!', 'Oof! Careful!', 'Excuse you!', 'Mind the coffee!'] as const;
+export function bumpLine(seq: number, text?: unknown): string {
+  return typeof text === 'string' && text.trim() ? text.trim().slice(0, 40) : BUMP_LINES[Math.abs(seq) % BUMP_LINES.length];
+}
 
 /** Visual-only memory between snapshots: pass putters, combo streak, and crew vibe. */
 export interface CrewMemory {
@@ -217,6 +231,10 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       bursts.push({ kind: 'steep', cups: Number(e.data.cups) || 0, paid: Number(e.data.paid) || 0 });
     } else if (e.kind === 'call.answer') {
       bursts.push({ kind: 'call', by: String(e.data.by ?? 'Someone'), take: e.data.take === true, call: e.data.kind === 'machine' ? 'machine' : 'order' });
+    } else if ((e.kind as string) === CUSTOMER_BUMP) {
+      const x = Number(e.data.x);
+      const y = Number(e.data.y);
+      bursts.push({ kind: 'bumpSay', text: bumpLine(e.seq, e.data.text), ...(Number.isFinite(x) && Number.isFinite(y) ? { x, y } : {}) });
     } else if (e.kind === 'rogue.stormed') {
       bursts.push({ kind: 'storm', count: 1 });
       resetCombo(mem);
