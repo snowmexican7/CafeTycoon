@@ -34,8 +34,10 @@ describe('customers', () => {
     for (let i = 0; i < 60 * 60; i++) s = spawnCustomers(s);
     expect(s.customers).toHaveLength(6);
     expect(s.today.turnedAway).toBeGreaterThan(0);
+    expect(s.waiting).toHaveLength(ECONOMY.line.waiting.cafe); // Round 3 item 4: then the waiting area fills
     s.supplies.concentrate = 0;
     s.customers = [];
+    delete s.waiting;
     s.today.turnedAway = 0;
     for (let i = 0; i < 60 * 60; i++) s = spawnCustomers(s);
     expect(s.customers).toHaveLength(0);

@@ -170,6 +170,8 @@ export function startDay(state: GameState): GameState {
   delete state.ringUp; // Round 3 item 5
   state.phaseTicksLeft = secondsToTicks(state.settings.dayLengthSec);
   state.customers = [];
+  delete state.waiting; // Round 3 item 4
+  delete state.line;
   delete state.closeVotes;
   delete state.emptySince;
   state.today = freshDayStats(state.day);

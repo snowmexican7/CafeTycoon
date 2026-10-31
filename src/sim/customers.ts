@@ -26,6 +26,7 @@ import { checkoutFee } from './checkout';
 import { tierInfo } from './growth';
 import { menuDrinks, unlockedDrinks } from './unlocks';
 import { comboDrinks, loseTicket, makeTicket, ORDERS } from './orders';
+import { promoteWaiting, quietLeave, sendToBrowse, waitingFree } from './line';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
 
@@ -91,9 +92,12 @@ function priceWalkout(state: GameState, menu: DrinkId[], m: Modifiers): void {
 
 /**
  * One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. The roll is made against
- * the list-price rate: a roll the price takes away (below list, above the priced rate) is a price walkout.
+ * the list-price rate: a roll the price takes away (below list, above the priced rate) is a price walkout. Round 3
+ * item 4: browsers move up first (so an arrival never jumps them), an arrival may leave quietly during a line
+ * complaint, and with the line full they browse in the waiting area while it has room.
  */
 export function spawnCustomers(state: GameState): GameState {
+  promoteWaiting(state);
   const menu = availableDrinks(state);
   if (menu.length === 0) return soldOutWalkup(state);
   const m = computeModifiers(state);
@@ -105,8 +109,14 @@ export function spawnCustomers(state: GameState): GameState {
     return state;
   }
   if (gearAskedFor(state, menu)) return state; // Gear G7c: wanted something you don't serve
+  if (quietLeave(state)) return state; // Round 3 item 4: "Line's too long!"
   if (state.customers.length >= queueCapacity(m, tierInfo(state).queue)) {
-    state.today.turnedAway += 1;
+    if (waitingFree(state) <= 0) {
+      state.today.turnedAway += 1;
+      return state;
+    }
+    const c = addCustomer(state, rollKind(state));
+    if (c) sendToBrowse(state, c);
     return state;
   }
   // B8: rare Wi-Fi camper takes a seat instead of ordering.
@@ -157,7 +167,8 @@ export function pickRegular(state: GameState, menu: DrinkId[]): Regular | null {
     state.regulars.push(regular);
     return regular;
   }
-  const candidates = state.regulars.filter((r) => !state.customers.some((c) => c.name === r.name) && menu.includes(r.drink));
+  const inside = [...state.customers, ...(state.waiting ?? [])];
+  const candidates = state.regulars.filter((r) => !inside.some((c) => c.name === r.name) && menu.includes(r.drink));
   return candidates.length === 0 ? null : candidates[rngInt(state, candidates.length)];
 }
 
