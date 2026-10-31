@@ -23,6 +23,8 @@ when a build goes out, the line moves under its version with the date.
 - Customers post about your café: a cold cup or a long wait can earn a bad review mid-shift, a great serve a good
   one; every night shows the day's posts and whether you gained or lost fans, and each week-end three silly reviewers
   rate the week.
+- Hire a Strategist ($1 a day) to see the honest forecast and have your best prices set each night, and a Marketer
+  ($2 a day) to bring in about 15% more customers; without a Strategist the night forecast is only a rough guess.
 
 ## 3.5.1 — 2026-10-30 · Bigger orders, a tidier night
 

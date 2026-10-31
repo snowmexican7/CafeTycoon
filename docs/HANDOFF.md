@@ -70,6 +70,11 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **Round 3 item 3, hires (2026-10-31, `r3-hires`, protocol 56).** Hire cards send the staff input with
+  `role: 'strategist' | 'marketer'` (no role = barista); state `GameState.staff { strategist?, marketer? }`. Show the
+  night forecast as rough when `forecastIsRough(state)` (`PriceLine.rough`), "Set by Strategist" marks on
+  `strategist.set { changed }`, events `staff.hire` / `staff.fire { role, by }`, receipt line `DayStats.hireWages`.
+  Planner advice ids `staff:hire:strategist` / `staff:hire:marketer` (kind `equip`).
 - [ ] **C11 social feed (2026-10-31, `fb2-c11`, protocol 55).** Phone feed from `dayReviews(state)` (night), pop-up
   posts from `review.post { name, text, sentiment, stars, … }` (day), week card from `weekRating(state)` (don't parse
   `week.rating`'s JSON string). Fans: `GameState.fans`, `DayStats.fansDelta`.
