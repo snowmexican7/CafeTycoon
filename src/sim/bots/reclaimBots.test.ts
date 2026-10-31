@@ -3,6 +3,7 @@ import { createRun, startDay } from '../run';
 import { step } from '../step';
 import { think } from './brain';
 import { addStandIns } from './roster';
+import { ensureCounterSpots, stationsFromSlots } from '../slots';
 import type { GearId } from '../../data/gear';
 import type { Customer, GameState, Player } from '../types';
 
@@ -54,5 +55,34 @@ describe('Gear bots and dropped chains (FB2 balance, from B6)', () => {
     expect(think(s, sim(s))).toEqual([{ kind: 'idle', node: expect.anything() }]);
     s.tick += 15 * 60;
     expect(think(s, sim(s))).toEqual([{ kind: 'use', station: grinder.id, action: 'take' }]);
+  });
+});
+
+describe('Gear bots passing in the back corridor (FB2 balance)', () => {
+  // Two bots meeting head-on behind the bar, both having yielded once, each re-planned around the tile the other stood
+  // on, picked the same spare row, and swapped rows in step for the rest of the day (p4 traces: a shot stuck in the
+  // machine for 40-99 s on 5 of 331 days, 28 served / 81 lost, one bankruptcy). Moving bots are not routed around.
+  it('a bot binning grounds and a bot fetching a shot get past each other', () => {
+    let s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, tier: 'cart', gear: true });
+    s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
+    s.slots = ['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash'];
+    s.slotGear = ['g2', 'e3', 's3', 'c3', 'b0'];
+    s.stations = stationsFromSlots('cart', s.slots, s.slotGear);
+    ensureCounterSpots(s);
+    addStandIns(s, 2);
+    s = startDay(s);
+    s.eventSchedule = [];
+    s.players[0].connected = false;
+    const shot = () => s.stations.find((x) => x.kind === 'espresso')!;
+    Object.assign(shot(), { output: 'espresso', outputSince: s.tick - 30 * 60 });
+    const [a, b] = [sim(s, 1), sim(s, 2)];
+    a.pos = { x: 5, y: 2.2 };
+    a.holding = 'grounds';
+    b.pos = { x: 6, y: 2.4 };
+    Object.assign(a.bot!, { plan: [{ kind: 'use', station: 'trash', action: 'trash' }], yields: 1 });
+    Object.assign(b.bot!, { plan: [{ kind: 'use', station: shot().id, action: 'take' }], yields: 1 });
+    for (let t = 0; t < 10 * 60 && (sim(s, 1).holding === 'grounds' || shot().output === 'espresso'); t++) s = step(s, []);
+    expect(sim(s, 1).holding).not.toBe('grounds');
+    expect(shot().output).not.toBe('espresso');
   });
 });

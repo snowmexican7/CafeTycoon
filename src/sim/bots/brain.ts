@@ -1216,11 +1216,15 @@ function yieldWay(state: GameState, b: BotState, maxRank: number): void {
 /**
  * A path to `node`, around spills when possible; after a yield, also around the nodes other players
  * (and the rogue) stand on. Falls back to fewer avoided tiles, then the plain path.
+ * FB2 balance (Gear): not around a bot that is walking. Two bots meeting head-on each re-planned around the other's
+ * tile, chose the same spare row, and swapped rows in step for the rest of the day; a walking bot's tile is about to
+ * change anyway, and the yield (random length) breaks the tie.
  */
 function planPath(state: GameState, p: Player, node: Vec2): Vec2[] | null {
   const spills = spillTiles(state);
+  const walking = (o: Player): boolean => state.gear === true && !!o.bot && (o.moveDir.x !== 0 || o.moveDir.y !== 0);
   const people = hasYielded(p.bot!)
-    ? [...state.players.filter((o) => o !== p && o.connected).map((o) => nodeOf(state, o.pos)), ...rogueTiles(state)]
+    ? [...state.players.filter((o) => o !== p && o.connected && !walking(o)).map((o) => nodeOf(state, o.pos)), ...rogueTiles(state)]
     : [];
   for (const avoid of [[...spills, ...people], spills]) {
     if (avoid.length === 0) continue;
