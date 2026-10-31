@@ -135,7 +135,8 @@ describe('Review Block 6: hires leftovers', () => {
     expect(night.takings?.hireWages).toBe('$3.00');
     expect(night.takings?.priceWalkouts).toBe(4);
     const receipt = nightHtml(night, { day: 2, weekday: 'Tuesday', left: 1, served: 30, lost: 0, reputation: 3.2, crew: [], bought: [] }, null, ui({ drawer: 'receipt' }));
-    expect(receipt).toContain('Specialist wages');
+    expect(receipt).toContain('incl. specialists');
+    expect(receipt).not.toContain('Specialist wages'); // already inside crew wages: a note, not a second cost
     expect(receipt).toContain('Left over the price');
   });
 
@@ -154,6 +155,15 @@ describe('Review Block 6: soft open + price door walker', () => {
     s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
     expect(nightViewModel(s, 'p1').makeable).toBe(false);
     expect(nightHtml(nightViewModel(s, 'p1'), undefined, null, ui())).toContain('Open the shop');
+  });
+
+  it('NightVM.makeable needs a machine, not just stock (ui-3.8.0)', () => {
+    const s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true });
+    s.slots = s.slots!.map(() => null);
+    s.slotGear = s.slotGear!.map(() => null);
+    s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
+    for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 50;
+    expect(nightViewModel(s, 'p1').makeable).toBe(false);
   });
 
   it('price walkouts burst at the door with door: true', () => {

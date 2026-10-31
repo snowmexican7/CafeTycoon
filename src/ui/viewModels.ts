@@ -6,7 +6,7 @@ import { SIG, sigShare } from '../sim/signature';
 import { gearVM, hudGearVM, type GearVM, type HudGearVM } from './gearVM';
 import { AD_IDS, ADS } from '../sim/ads';
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../sim/checkout';
-import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
+import { canMake, DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
 import { layoutFor } from '../data/layout';
 import { stationMenuNote } from './stationsVM';
 import { tipsVM, type TipVM } from './tipsVM';
@@ -763,7 +763,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     grow: growOffer(state),
     ...(state.staff?.strategist ? { strategist: true } : {}),
     // Soft open: warn when nothing makeable (no stock / no machine for anything on the menu).
-    makeable: availableDrinks(state).length > 0,
+    makeable: availableDrinks(state).some((d) => canMake(state, d)),
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
     ...(state.gear ? { staff: staffViewModel(state) } : {}),
     ...(state.regulars.length ? { regulars: regularsViewModel(state) } : {}),

@@ -107,3 +107,32 @@ describe('rearrangeCarry (FB2 C10)', () => {
     expect(atCarrySpot({ x: 1, y: 1 }, { x: 4, y: 2 })).toBe(false);
   });
 });
+
+describe('ui-3.8.0 review fix-ups (C10 hints)', () => {
+  it('says Press Ready, never Tap', () => {
+    const s = gearDay();
+    s.preOpenUntil = s.tick + secondsToTicks(15);
+    const html = preOpenHtml(preOpenVM(s, 'p1'));
+    expect(html).not.toMatch(/\btap\b/i);
+  });
+
+  it('a carried machine is green only on a spot where E sets it down', async () => {
+    const { handHint } = await import('./live');
+    const s = gearDay();
+    s.preOpenUntil = s.tick + secondsToTicks(15);
+    const me = s.players.find((p) => p.id === 'p1')!;
+    const drip = s.stations.find((st) => st.kind === 'drip')!;
+    me.pos = { x: drip.pos.x, y: drip.pos.y + 1 };
+    const t = carryTarget(s, 'p1');
+    expect(t).not.toBeNull();
+    const spot = t!.spots[0]!;
+    me.pos = { x: spot.x + 0.5, y: spot.y + 0.5 };
+    expect(atCarrySpot(me.pos, nearestCarrySpot(t!.spots, me.pos)!)).toBe(true);
+    expect(handHint(s, 'p1', t).go).toBe(true);
+    // Far from every outline: still carrying, but grey.
+    me.pos = { x: 40, y: 40 };
+    const far = handHint(s, 'p1', t);
+    expect(far.go).toBe(false);
+    expect(far.title).toMatch(/^Carrying/);
+  });
+});

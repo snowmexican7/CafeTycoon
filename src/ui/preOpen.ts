@@ -38,7 +38,7 @@ export const preOpenKey = (vm: PreOpenVM | undefined): string =>
 
 /** Banner HTML (pure, for tests). */
 export function preOpenHtml(vm: PreOpenVM): string {
-  const count = vm.needed > 1 ? `${vm.ready}/${vm.needed} ready` : vm.mine ? 'You’re ready' : 'Tap Ready when the layout looks good';
+  const count = vm.needed > 1 ? `${vm.ready}/${vm.needed} ready` : vm.mine ? 'You’re ready' : 'Press Ready when the layout looks good';
   const openBtn = vm.isHost
     ? `<button type="button" class="po-open" data-action="openDoors" tabindex="-1">Open doors</button>`
     : '';

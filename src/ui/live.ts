@@ -16,6 +16,7 @@ import { ACCURACY } from '../sim/accuracy';
 import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
 import { preOpenVM, type PreOpenVM } from './preOpen';
 import { inPreOpen, validStationSpots } from '../sim/rearrange';
+import { atCarrySpot, nearestCarrySpot, type StationCarry } from './rearrangeCarry';
 import { CALL, callRinging } from '../sim/call';
 import { AREAS } from '../data/areas';
 import { coolTicks, heldCool, takeBackCold, takeBackIndex } from '../sim/cooling';
@@ -424,19 +425,30 @@ export const checklistKey = (c: ClosingListVM | undefined): string => (c ? `${c.
 export const CONDIMENTS_LOW = 5;
 
 /** A plain-words hint for the nearest station, mirroring the interact rules (display only). */
-export function handHint(state: GameState, me: PlayerId, carry?: { stationId: string } | null): HandHint {
+/** ui-3.8.0: `validStationSpots` is a full-floor search; the hint only needs "any spot?", once per layout and machine. */
+let spotMemo = { key: '', any: false };
+function anyStationSpot(state: GameState, id: string): boolean {
+  const key = `${id}|${state.stations.map((s) => `${s.id}@${s.pos.x},${s.pos.y}`).join(';')}`;
+  if (spotMemo.key !== key) spotMemo = { key, any: validStationSpots(state, id).length > 0 };
+  return spotMemo.any;
+}
+
+export function handHint(state: GameState, me: PlayerId, carry?: Pick<StationCarry, 'stationId'> & Partial<Pick<StationCarry, 'spots'>> | null): HandHint {
   // FB2 C10: during the pre-open, E/jug/steam/syrup do nothing in the sim — show rearrange hints instead.
   if (inPreOpen(state)) {
+    const player = state.players.find((p) => p.id === me);
     if (carry?.stationId) {
       const st = state.stations.find((s) => s.id === carry.stationId);
       const name = st ? STATION_NAME[st.kind] : 'Machine';
-      return { go: true, title: `Set down · ${name}`, detail: 'Walk to a green outline, then press E' };
+      // Green only on a spot where Z/E really sets it down (same test as main.ts's tryRearrangeKey).
+      const spot = carry.spots && player ? nearestCarrySpot(carry.spots, player.pos) : null;
+      if (spot && player && atCarrySpot(player.pos, spot)) return { go: true, title: `Set down · ${name}`, detail: 'Press E to put it here' };
+      return { go: false, title: `Carrying · ${name}`, detail: 'Walk to a green outline, then press E' };
     }
     // Only green "go" when Z/E really picks something up (same gate as carryTarget / validStationSpots).
-    const player = state.players.find((p) => p.id === me);
     if (player) {
       const near = nearestStation(state, player.pos);
-      if (near && validStationSpots(state, near.id).length > 0) {
+      if (near && anyStationSpot(state, near.id)) {
         return { go: true, title: `Pick up · ${STATION_NAME[near.kind]}`, detail: 'Z or E · rearrange before the doors open' };
       }
     }
@@ -545,7 +557,7 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
     if (need === 'grounds') return idle('Needs grounds first', where);
     if (need === 'espresso') return idle('Needs a shot first', where);
     if (need) return idle(`Needs ${ITEM_LABEL[need].toLowerCase()} first`, where);
-    return idle('Hands full: empty hands here', where);
+    return idle('Needs empty hands', where);
   }
   const supply = USES[kind];
   if (state.gear === true) {
@@ -571,7 +583,7 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
   return go(VERB[kind], `${where} · ${secs.toFixed(1)} s`);
 }
 
-export function hudLive(state: GameState, me: PlayerId, carry?: { stationId: string } | null): HudLive {
+export function hudLive(state: GameState, me: PlayerId, carry?: Pick<StationCarry, 'stationId'> & Partial<Pick<StationCarry, 'spots'>> | null): HudLive {
   const total = state.phase === 'closing' ? ECONOMY.closingGraceSeconds * TICK_RATE : state.settings.dayLengthSec * TICK_RATE;
   const progress = total > 0 ? Math.max(0, Math.min(1, 1 - state.phaseTicksLeft / total)) : 0;
   const player = state.players.find((p) => p.id === me);
