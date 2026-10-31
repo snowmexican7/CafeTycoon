@@ -368,9 +368,10 @@ export function uncoveredOrders(state: GameState, self: Player): Customer[] {
     // FB2 B6 (fix round 1, I1): an office run keeps one drink in the queue (its first uncovered one, in its queue
     // place) and the rest go after everyone else's: it gets made steadily without starving the walk-ins.
     const office = c.order === 'office';
-    let queued = false;
     const wants = c.items ? undoneDrinks(c) : [c.drink];
     const claims = c.items ? ticketClaims(state, self, c.id) : null;
+    // A bot already on one of its drinks fills the office run's queue place (fix round 1: else each bot took the next).
+    let queued = office && claims !== null && [...claims.values()].some((n) => n > 0);
     if (!claims && claimedByOther(state, self, c.id)) continue;
     for (const d of wants) {
       if (claims && (claims.get(d) ?? 0) > 0) {

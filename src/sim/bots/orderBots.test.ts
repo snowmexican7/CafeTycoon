@@ -73,6 +73,16 @@ describe('bots and multi-drink tickets (FB2 B6)', () => {
     expect(uncoveredOrders(s, sim(s)).map((o) => [o.id, o.drink])).toEqual([[1, 'coldBrew'], [2, 'espresso'], [1, 'espresso']]);
   });
 
+  it("a bot already on an office drink fills its queue place: the rest come after every walk-in's (fix round 1)", () => {
+    const s = gearStand(2);
+    s.customers = [
+      combo(1, ['espresso', 'coldBrew', 'espresso'], { order: 'office' }),
+      { id: 2, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: 0 },
+    ];
+    Object.assign(sim(s, 2).bot!, { plan: [{ kind: 'use', station: 'pickup', action: 'put' }], claim: 1, claimDrink: 'espresso' });
+    expect(uncoveredOrders(s, sim(s, 1)).map((o) => [o.id, o.drink])).toEqual([[2, 'espresso'], [1, 'coldBrew'], [1, 'espresso']]);
+  });
+
   it('a lost claim carries over to someone else waiting for the same drink (Gear), keeping the chain', () => {
     const s = gearStand();
     const single = (id: number): Customer => ({ id, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: id });
