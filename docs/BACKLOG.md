@@ -2330,3 +2330,10 @@ Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. One branch and tag per item; names as bui
   `walkout { customer, reason: 'bumped', x, y }` and loses them like any walk-out (no extra reputation hit). State:
   `Customer.bumpedAt?: number[]`, `DayStats.customerBumps?`. Customer positions: `customerSpots(state)`
   (src/sim/customerSpots.ts), a sim copy of the render's `pickupModel.customerSpots`, kept equal by a test.
+- **a. Dev mode (`r4-dev`, protocol 47).** `?dev=1` → `CreateRunOptions.dev` → `GameState.dev` (only when true).
+  `DEV_CASH` 999,999 topped up at the end of every step and in `createRun` (`topUpDevCash`, src/sim/dev.ts); it
+  raises `startingCash` too, so score, profit and season targets ignore it. Input `{ kind: 'devPause', playerId,
+  paused }` (host, dev run, night/weekEnd) sets `GameState.devPaused`, holding the night timer (and a relaxed night's
+  last call); Ready still opens the shop and `startDay` clears it. Dev runs write nothing to meta, records or history
+  (`foldMeta`, `recordsStore.record`, `historyStore.append` via `RunRecord.dev`). Cash can read a bit over 999,999
+  after takings. The café's six slots still limit gear (pour-over lines don't fit beside everything).

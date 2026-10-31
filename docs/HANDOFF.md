@@ -63,6 +63,9 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **a. Dev mode (2026-10-31, `r4-dev`, protocol 47).** `src/main.ts` passes `dev: true` into
+  `CreateRunOptions` from `?dev=1`. Pause button: reads `state.devPaused`, sends `{ kind: 'devPause', playerId,
+  paused }` (host only, dev run, night/weekEnd). Cash shows ~$999,999 by itself; no other UI special case needed.
 - [ ] **c. Customer bumps (2026-10-31, `r4-bump`, protocol 46).** Bubbles ("Hey!", "Watch it!") from
   `customer.bump { customer, by, x, y }`; the angry exit is `walkout { customer, reason: 'bumped', x, y }`. Today
   `chaosModel` draws every `walkout` as "Sold out?!", so branch on `data.reason`. Please make
