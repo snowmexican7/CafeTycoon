@@ -336,6 +336,24 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** FB2 C10: Gear morning pre-open — countdown, Ready / Open doors, Ana near a movable machine. */
+  preOpen: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
+      s.customers = [];
+      s.preOpenUntil = s.tick + secondsToTicks(12);
+      s.ready = [];
+      const machine = s.stations.find((x) => x.kind === 'drip' || x.kind === 'espresso' || x.kind === 'grinder');
+      if (machine) s.players[0]!.pos = { x: machine.pos.x, y: machine.pos.y + 1 };
+    },
+    timeline: [
+      [0.8, (s) => emit(s, 'station.place', { by: 'ana', station: 'espresso', to: { x: 3, y: 2 }, swapped: false })],
+      [1.6, (s) => emit(s, 'station.refuse', { by: 'ana', station: 'espresso' })],
+      [2.4, (s) => emit(s, 'station.reset')],
+    ],
+  },
   /** P3 B2: the night menu board with prices moved (latte up $1, espresso down $0.50). */
   pricing: {
     night: true,

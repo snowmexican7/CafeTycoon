@@ -7,6 +7,7 @@ import { loadRecipeHints, MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticket
 import { DRINK_LABEL } from './tickets';
 import { mountCloseEarly } from './closeEarly';
 import { mountDayRestock, type DayRestockVM } from './dayRestock';
+import { mountPreOpen } from './preOpen';
 import { cleanMeter, EVENT_INTRO, hudStructureKey, SOLD_OUT_RUSH, type HudVM } from './viewModels';
 import type { EventKind } from '../sim/types';
 
@@ -30,7 +31,7 @@ const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a
  * The in-day HUD: a top bar of pills, order tickets on the left, pantry/menu/note on the right and
  * what you hold along the bottom. Every block renders once, then only per-tick values are patched.
  */
-export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void; onRestock?(id: SupplyId | 'condiments'): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
+export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void; onRestock?(id: SupplyId | 'condiments'): void; onReady?(): void; onOpenDoors?(): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
   render(vm: HudVM, live?: HudLive): void;
   /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
   setRecipeHints(mode: RecipeHints): void;
@@ -77,12 +78,13 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       <div class="hold hand"></div>
       <div class="hold hint"></div>
       <div class="spacer"></div>
-      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">R</span> drop <span class="key">Q</span> drink espresso <span class="key">C</span> hold to close early <span class="key">B</span> restock <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
+      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">Z</span> move machine <span class="key">R</span> drop <span class="key">Q</span> drink espresso <span class="key">C</span> hold to close early <span class="key">B</span> restock <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
     </div>
     <div class="hud-challenges" aria-live="polite" hidden></div>
     <div class="hud-events" aria-live="polite"></div>
     <div class="hud-eventcard" role="status" hidden></div>
     <div class="hud-call" role="alert" hidden></div>
+    <div class="hud-preopen" role="region" aria-label="Morning rearrange" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
     <div class="hud-checklist" role="status" hidden></div>
     <section class="hud-restock-panel" id="hud-restock-panel" aria-label="Rush delivery" hidden></section>
@@ -134,6 +136,11 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   const restock = mountDayRestock($<HTMLButtonElement>('.hud-restock'), $('.hud-restock-panel'), (id) => handlers.onRestock?.(id));
   const closeBtn = $<HTMLButtonElement>('.hud-close');
   const closeEarly = mountCloseEarly(closeBtn, (on) => handlers.onCloseEarly?.(on));
+  // FB2 C10: morning pre-open rearrange banner (Ready + host Open doors).
+  const preOpen = mountPreOpen($('.hud-preopen'), {
+    onReady: () => handlers.onReady?.(),
+    onOpenDoors: () => handlers.onOpenDoors?.(),
+  });
   // P4 B6: the second shop's phone call.
   const callEl = $<HTMLElement>('.hud-call');
   let lastCall = '';
@@ -492,6 +499,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
         renderHand(live);
       }
       closeEarly.render(live?.closeEarly);
+      preOpen.render(live?.preOpen);
       renderCall(live?.call);
       renderChecklist(live?.checklist);
     },
