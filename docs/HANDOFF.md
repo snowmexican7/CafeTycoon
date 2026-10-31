@@ -70,6 +70,14 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **B8 hand-made lattes (2026-10-31, `fb2-b8`, protocol 58).** Full names in BACKLOG "Round 4 + wrap-up", B8. To draw:
+    - jug meter with the three marks (`Player.jug`) and the steam meter (`steamPos`);
+    - recipe icons over the cup (`heldRecipe`);
+    - the syrup rack sprite at `SYRUP_SPOT` and a vanilla/caramel picker sending the `syrup` input there;
+    - double, syrup and asks on tickets (`Customer.shots/syrup`, `items[].shots/syrup`);
+    - popups and sounds for `milk.fill` / `steam.result` / `syrup.add` / `syrup.miss`;
+    - `counterName` / `pickupModel.counterSpotOf` must not draw `'syrups'` as a till.
+  Tray cups keep `made` too (`TrayCup.made`).
 - [ ] **B7 tray table (2026-10-31, `fb2-b7`, protocol 57).** `spotOf` → `'trayTable'` (`TRAY_ID`, (1,4) on every tier). I added `tray` to your `TOOL_LABEL` in `live.ts` for tsc. To draw: draw the table (`render/pickupModel.counterSpotOf` falls back to a till for unknown counter ids, and `live.ts counterName` says "Till"); the live list over it (`state.tray.items`, done ticks, customer name/number); the tray in hand (`tool === 'tray'`, `Player.tray`); the tray coaster with the customer's name on a pickup slot (`PassItem.tray`); per-cup cooling via `trayCool`; hints:
     - "Set it on the tray" with a drink at the table;
     - "Pick up the tray" when `trayComplete`;

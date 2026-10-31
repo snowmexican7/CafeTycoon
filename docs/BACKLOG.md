@@ -2554,3 +2554,29 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   - **Open:**
     - Bots never carry a tray. If a person leaves a complete tray on the table, that ticket waits (and may be lost) until a person delivers it.
     - There is no way to put a lifted tray back on the table.
+- **B8 hand-made lattes and cappuccinos (`fb2-b8`, protocol 58).** `src/sim/handmade.ts`.
+  - **Milk jug:**
+    - A person with a shot in hand at a wand with milk out presses E to start filling `Player.jug { fill, startedAt, line, done? }` (0→1 over 2 s); E again (anywhere) stops it, and left alone it stops itself full.
+    - Lines `JUG_LINES { cappuccino: 0.35, latte: 0.6, large: 0.85 }`; `jug.line` is the cappuccino mark for a cup heading to a cappuccino ticket, else the latte mark.
+    - ±0.08 is right; under is −1★ and tip ×0.8; over wastes one more milk from `milkOut` when the shot goes on. The jug's milk is the wand recipe's one serving.
+    - Event `milk.fill { by, level, line, grade }`.
+  - **Steam meter:**
+    - The next E puts the shot on the wand (it runs at the wand's speed) and starts `Player.steam { startedAt, speed, station }`; `steamPos(state, player)` is a 0..1 triangle wave every 1.2 s.
+    - E in reach of that wand stops it: within 0.08 of the middle is perfect (+1★, tip ×1.2), within 0.25 ok, else a miss (−1★, tip ×0.8). If the wand finishes first, the milk is scalded (miss).
+    - Event `steam.result { by, grade }`.
+  - **Shots:** 30% of latte and cappuccino asks want a double (`Customer.shots` / `OrderItem.shots` = 2). While doubles are owed beyond those in flight (`wantsDouble`), a pull takes ×1.5 time and a second bean (`Station.made.shots`). No extra press.
+  - **Syrup rack:**
+    - `SYRUP_ID` (`'syrups'`, counter kind) at `SYRUP_SPOT` (2,6), the left end of the front counter, present while the floor has a wand. `spotOf` returns `'syrups'`.
+    - While the shop has flavour stock, 25% of latte asks want vanilla or caramel (`Customer.syrup` / `OrderItem.syrup`).
+    - Input `{ kind: 'syrup', playerId, flavour }` at the rack (day or closing, people) puts one flavour serving in the shot, latte or cappuccino in hand, one per cup: `syrup.add { by, flavour }`.
+    - A wanted syrup that is wrong or missing at pickup: `syrup.miss { customer }`, tip ×0.5.
+  - **How a cup was made** travels with it: `HandMade { shots?, syrup?, milk?, foam? }` on `Player.made`, `Station.made`, `PassItem.made`. `judgeCup` scores it at pickup (`OrderItem.tipMul` on tickets). Pickup prefers a ticket the cup fits exactly (`pickupTarget(state, drink, made?)`).
+  - **UI helper:** `heldRecipe(state, player)` → `{ drink, shots, syrup?, steps: { step: 'shot'|'double'|'vanilla'|'caramel'|'milk'|'steam'|'foam', done }[] }` or null.
+  - **Bots** skip the meters (count as right and ok), pull doubles, and stop at the rack for the ticket's syrup (BotAction `'syrup'`).
+  - **UI to do:**
+    - jug meter with the three marks (`Player.jug`) and the steam meter (`steamPos`);
+    - recipe icons over the cup (`heldRecipe`);
+    - the syrup rack sprite at `SYRUP_SPOT` and a vanilla/caramel picker sending the `syrup` input there;
+    - double, syrup and asks on tickets (`Customer.shots/syrup`, `items[].shots/syrup`);
+    - popups and sounds for `milk.fill` / `steam.result` / `syrup.add` / `syrup.miss`;
+    - `counterName` / `pickupModel.counterSpotOf` must not draw `'syrups'` as a till.
