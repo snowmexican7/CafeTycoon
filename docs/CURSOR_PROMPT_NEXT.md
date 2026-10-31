@@ -1,13 +1,20 @@
-# CafeTycoon — next run for Cursor (after v3.7.2)
+# CafeTycoon — next run for Cursor (after v3.8.0)
 
-**Repo:** github.com/snowmexican7/CafeTycoon · **Base:** latest `main` (v3.7.2, merge 14a60dc or newer).
+**Repo:** github.com/snowmexican7/CafeTycoon · **Base:** latest `main` (v3.8.0 or newer).
 **Your role:** contributor. You code; Grok reviews and merges your PRs; Claude owns the sim.
 
 ## Before you start (required)
 1. Read `docs/HANDOFF.md` in full (Lanes, Decisions, "Claude → Grok / Needs from you (UI lane)", "Grok → Claude").
    The exact event, state and helper names for every block below are there and in `docs/BACKLOG.md`.
-2. Read `docs/ROADMAP.md` "Where we are now", and your own review `docs/reviews/composer-2026-10-31.md`.
-3. `npm ci && npm test && npm run build` on a clean `main` so you know the baseline is green (1,806 tests).
+2. Read `docs/ROADMAP.md` "Where we are now" and BACKLOG "3.8.0: Cursor's blocks 1–6" (what Grok changed in your PRs).
+3. `npm ci && npm test && npm run build` on a clean `main` so you know the baseline is green (1,862 tests).
+
+## How your last run went (v3.8.0)
+All six PRs (#13–#18) were merged with merge commits, none needed a blocking review. Grok's fix-ups, so you don't
+redo them: the C10 set-down hint is green only on an outline (`atCarrySpot`); the syrup picker stays shut in the
+pre-open (the sim ignores `syrup` then); "Open anyway?" counts a missing machine (`canMake`); the hires receipt line
+is "incl. specialists" under Wages (`wages` already includes `hireWages`, so a minus line double-counted); waiting
+browsers stand just inside the door, not behind the bar; "Tray cleared" instead of "voided"; no "tap" anywhere.
 
 ## Rules
 - **One PR per block below**, each branched off the **latest `main`** (re-fetch before each branch; rebase your
@@ -32,50 +39,44 @@
 
 ## Blocks (suggested order; one PR each)
 
-### 1. C10 rearranging UI (`fb2-c10`, protocol 59)
-- Pre-open timer from `preOpenUntil - tick` (60 ticks/s); the day clock is frozen meanwhile.
-- **Ready** button (sends `ready`; `GameState.ready`) and host-only **Open doors** (`openDoors`).
-- Pick up a machine with Z/E (local only), ghost outline from `validStationSpots(state, id)` computed once on
-  pick-up (not every frame); set down sends `moveStation { station, to }`.
-- Feedback: `station.place` (machine's new spot), `station.refuse` (buzz), `station.reset` (note that the layout
-  went back to default after a grow or gear change).
-- During pre-open, hide or grey the E / jug / steam / syrup prompts (they do nothing then).
+### 1. What's left of blocks 1–6 (polish)
+- **Feed phone below the fold:** on Tonight the café phone sits in the day card under "Tomorrow" and is cut off at
+  1280x800 and 1512x982 (fixture `dayFeed`). Make the first two posts visible without scrolling, e.g. use the empty
+  space in the Heads-up card. Keep the night opening on Restock.
+- **Overlapping floaters at the wand:** in `handmade`, "Milk right on the line", "Foam perfect!" and "Ben added caramel
+  syrup" stack on each other. Stagger or queue floaters per player.
+- **Syrup key chip:** the hint chip reads "12"; show "1 · 2" (or two chips).
+- **Night headline:** `customers` in the `viewModels.ts` night headline is still uncapped; cap it like the brief
+  (`serveCapacity`) so the two numbers agree.
+- **Ghost outlines:** the full-floor `validStationSpots` search draws a lot of outlines (fixture `preOpenCarry`).
+  Consider dimming the far ones or showing only the nearest few. Hint honesty stays as it is.
 
-### 2. B8 hand-made lattes (`fb2-b8`, protocol 58)
-- Jug meter with the three marks (`Player.jug`) and the steam meter (`steamPos`).
-- Recipe icons over the cup in hand (`heldRecipe`); tray cups keep `TrayCup.made`.
-- **Syrup picker** at the rack (`SYRUP_ID 'syrups'`, art already exists from PR #7): vanilla / caramel choice that
-  sends `{ kind: 'syrup', playerId, flavour }`. Then (and only then) turn the syrup-rack hint in `src/ui/live.ts`
-  green.
-- Tickets show double shot, syrup and asks (`Customer.shots/syrup`, `items[].shots/syrup`).
-- Popups + sounds for `milk.fill`, `steam.result`, `syrup.add`, `syrup.miss`.
+### 2. Grok's fix-ups to keep (don't undo)
+- Keep the behaviours listed in "How your last run went". Tests guard them: `src/ui/preOpen.test.ts` "ui-3.8.0 review
+  fix-ups", `src/ui/reviewFixes.test.ts` ("incl. specialists", `makeable` needs a machine),
+  `src/render/waitingModel.test.ts` (browsers on the customers' side).
 
-### 3. B7 tray table, the rest (`fb2-b7`, protocol 57)
-- Live list over the table (`state.tray.items`, done ticks, customer name/number).
-- Tray in hand (`tool === 'tray'`, `Player.tray`); tray coaster with the customer's name on a pickup slot
-  (`PassItem.tray`); per-cup cooling via `trayCool`.
-- Refuse bubble on `tray.refuse`; small cues for `tray.claim/add/pick/put/take/spill/void`.
+### 3. B6 leftovers (`fb2-b6`)
+- **Tall combo ticket:** `Customer.items: { drink, done, by?, … }[]` and `Customer.order: 'combo' | 'office'`; a tall
+  ticket with a tick per item (groups have no `order`).
+- **Office phone card:** from `office.call { at }`, with a countdown to `at` (`GameState.office { day, at, called?,
+  came? }`).
+- **Receipt line:** `DayStats.office` (`'served' | 'lost'`) and `DayStats.officeExtra`.
+- Also the add-on ask bubble ("…and a latte for my friend") from `order.addon { customer, drink }` (Round 3 item 1).
 
-### 4. C11 social feed (`fb2-c11`, protocol 55)
-- Night phone feed from `dayReviews(state)`; day pop-up posts from `review.post { name, text, sentiment, stars }`;
-  week card from `weekRating(state)` (don't parse `week.rating`'s JSON). Fans: `GameState.fans`, `DayStats.fansDelta`.
+### 4. Claude-pending UI (only if the sim has landed it; check HANDOFF "Grok → Claude / Needs from you")
+- **Look sync in co-op:** when `createPeerTransport` (`src/net/peerTransport.ts`) takes a `look` parameter, pass the
+  saved look through it in `src/main.ts` instead of the current workaround. Not landed as of v3.8.0; skip if still open.
+- **Pastries:** any new pastry fields or events Claude adds after v3.8.0 (the Restock tab already lists the jar).
+  Nothing pending as of v3.8.0.
+- **`canAddSyrup` / `canSetDown`:** if Claude exports them, switch `src/render/handmadeModel.ts` and
+  `src/ui/live.ts` to call them instead of mirroring the sim's gates.
 
-### 5. Ring-up bar + waiting area (Round 3 items 5 and 4)
-- Ring-up bar over the till from `state.ringUp` / `ringProgress(state)` (self-order beat when `ringUp.by === ''`);
-  optional cues for `till.start` / `till.cancel`.
-- Waiting-area art for `state.waiting` (stand 0 / cart 2 / café 4); "Line's too long!" bubble on `line.complain`;
-  tumbleweed on `line.leave { quiet: true }`; optional receipt line from `DayStats.lineLeft`.
-
-### 6. Review fixes (from your review; agreed by Grok)
-- Morning note auto-dismisses (fades after a few seconds or on first move) instead of needing a click.
-- Replace the vague "Nothing here!" with what's actually wrong (e.g. "Needs a cup first", "Machine is busy").
-- Rename/hide debug-looking tags such as "Do bot!".
-- Hires leftovers: "Rough guess" mark on the forecast when `forecastIsRough(state)`, "Set by Strategist" marks on
-  `strategist.set`, receipt line from `DayStats.hireWages`.
-- Move the Strategist/Marketer hire cards higher on the night screen so they show without scrolling at 1512x982 and 1280x800.
-- Price walkout leftovers: door walker for `walkout { reason: 'price' }`, optional `DayStats.priceWalkouts` line.
-- **Soft open gate (Kennedy approved 2026-10-31):** when the player presses Open with zero makeable drinks (no stock / no machine for anything on the menu), show a friendly "You can't make any drinks yet. Open anyway?" prompt with "Open anyway" and "Go back" buttons. It warns, never blocks. UI only.
-- **Kennedy's rulings (2026-10-31), do not change:** the night ALWAYS opens on Restock first (no "pick gear" first-night tab); Day-HUD declutter goes in small stages Kennedy reviews, so only do the auto-dismiss morning note and debug-tag fixes above for now; no save-compatibility work (saves aren't a feature yet); the per-tick `structuredClone` speed fix is parked, so don't touch it.
+### Kennedy's rulings (2026-10-31), do not change
+- The night ALWAYS opens on Restock first (no "pick gear" first-night tab).
+- Day-HUD declutter goes in small stages Kennedy reviews. Don't do more of it unless a block above asks.
+- No save-compatibility work (saves aren't a feature yet).
+- The per-tick `structuredClone` speed fix is parked. Don't touch it.
 
 ## When you're done
 Leave a short summary (PR numbers in order, what's open, any "Needs from Claude") in the last PR's description.
