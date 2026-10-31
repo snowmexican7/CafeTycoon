@@ -29,6 +29,24 @@ when a build goes out, the line moves under its version with the date.
   In the last 30 seconds the shop is "closing soon": put the milk and the condiment bar back in the fridge, or
   whatever's left out goes bad.
 
+## 3.4.0 — 2026-10-30 · A stand, a cart, a café
+
+- **Each shop size has its own place.** The stand is a folding table on the sidewalk: pavement, a market umbrella,
+  a lamppost, flower pots, an A-frame sign and the street running past. The cart parks in a park plaza with a
+  striped awning, wheels, string lights, a bench and trees. The café is unchanged. Stations sit in the same spots,
+  so nothing plays differently. The FOR LEASE sign next door says what the next size costs and what it gives you.
+- **Growing feels like an event.** Buying a bigger shop plays a quick "Grand re-opening!" wipe with confetti, then
+  a big "What you gained" card: how long the line can be, the prices you can charge, how many people walk by, the
+  rent, who comes by, and what's new. Close it with the button, the ×, Esc or a click outside.
+- **"You can afford a cart!"** At night, when you have the cash for the next size, a gold chip by your cash takes
+  you straight to Extras ▸ Shopfront (the tab that used to be called "Grow").
+- **Tips for new players.** Short tips pop up once each, at the moment they matter: take orders at the till, put
+  drinks on the pickup counter, dump cold pots at the sink, why stand prices are lower, restocking at night, and the
+  Shopfront tab. They sit at the edge of the screen, never on the floor. "Snooze tips" hides them for 15 minutes,
+  "Turn off" hides them for good; both are also in the pause menu, with "Show them again".
+- **Price forecasts are a rough guess.** The orders and profit under the menu prices are now labelled "Rough guess"
+  (≈), since weather, events and the rival can swing them. A strategist will be able to tell you more later.
+
 ## 3.3.5 — 2026-10-30 · Cold brew, not "tap"
 
 - **Plainer cold brew words.** Order steps say "Pour cold brew" instead of "Tap" (an iced latte's step is

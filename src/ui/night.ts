@@ -22,6 +22,7 @@ import { GEAR_VOTE_MIN } from '../sim/gear';
 import type { EquipmentKind } from '../data/equipment';
 import type { StationsVM } from './stationsVM';
 import type { TipVM } from './tipsVM';
+import type { GrowNudge } from './growModel';
 import type { NightFix } from '../sim/brief';
 import { isRole, type RoleId } from '../sim/roles';
 
@@ -71,7 +72,7 @@ export const SPEND_VIEWS: { id: SpendView; label: string }[] = [
   { id: 'stations', label: '🛠️ Stations' },
   { id: 'ads', label: '📣 Ads' },
   { id: 'pitch', label: '🎤 Pitch' },
-  { id: 'grow', label: '🌱 Grow' },
+  { id: 'grow', label: '🏪 Shopfront' },
   { id: 'checkout', label: '🧾 Checkout' },
 ];
 /** What opens over the board. `twist:<drink>` is that drink's twist picker. */
@@ -285,7 +286,7 @@ function drinkCard(m: MenuLineVM, onlyOne: boolean): string {
   const stock = m.stock === 'out' ? '<span class="dc-stock out">Sold out</span>' : m.stock === 'low' ? '<span class="dc-stock low">Low</span>' : '';
   const fc = m.orders === undefined
     ? `<span class="dc-fc off">Off the menu${m.fans ? ` · <em class="down" title="${esc(m.fans.join(', '))} will miss it">♥ ${m.fans.length}</em>` : ''}</span>`
-    : `<span class="dc-fc" title="${m.demandPct ? `${m.demandPct > 0 ? '+' : ''}${m.demandPct}% orders vs list price. ` : ''}Profit before tips and rent">~${m.orders} orders · <b>$${m.profit!.toFixed(0)}</b>${m.fans ? ` <span class="dc-fan" title="Regulars' favourite: ${esc(m.fans.join(', '))}">♥</span>` : ''}</span>`;
+    : `<span class="dc-fc" title="${m.demandPct ? `${m.demandPct > 0 ? '+' : ''}${m.demandPct}% orders vs list price. ` : ''}Rough guess at tomorrow: profit before tips and rent">≈${m.orders} orders · <b>≈$${m.profit!.toFixed(0)}</b>${m.fans ? ` <span class="dc-fan" title="Regulars' favourite: ${esc(m.fans.join(', '))}">♥</span>` : ''}</span>`;
   const tw = m.twist ? TWIST_INFO[m.twist] : null;
   return `<div class="dcard ${m.on ? '' : 'off'} ${m.stock ?? ''}" data-drink-row="${m.drink}">
     <div class="dc-top">${itemIcon(m.drink, 44)}<b class="dc-name">${esc(info.name)}</b>${stock}</div>
@@ -315,10 +316,16 @@ function menuPane(vm: NightVM): string {
   const sig = vm.signature?.drinks.length
     ? `<button class="mn-sig ${cur && !cur.onMenu ? 'bad' : ''}" data-action="drawer" data-d="signature">⭐ ${cur ? `“${esc(cur.name)}” <small>${cur.onMenu ? `~${vm.signature.asks} asks` : 'base is off'}</small>` : 'Make a signature'} <em>Edit ▸</em></button>`
     : '';
-  return `<div class="mn-head"><span class="mn-sum">Tomorrow: <b>~${sum.orders} orders</b> · <b>$${sum.profit.toFixed(0)}</b> profit</span>${sig}
+  return `<div class="mn-head"><span class="mn-sum" title="Only a rough guess: weather, events and the rival can swing it. A strategist can tell you more."><em class="mn-guess">Rough guess</em> for tomorrow: <b>≈${sum.orders} orders</b> · <b>≈$${sum.profit.toFixed(0)}</b> profit <small class="mn-more">A strategist can tell you more</small></span>${sig}
       <button class="btn mini ghost" data-action="drawer" data-d="pricing">How pricing works ⓘ</button></div>
     ${vm.growth.waiting ? `<div class="mn-wait" role="status">${esc(vm.growth.waiting)} <button class="btn mini" data-action="goto" data-tab="spend" data-sub="stations">Stations ▸</button></div>` : ''}
     <div class="dgrid" style="--cols:${menuCols(menu.length)};--rows:${Math.ceil(menu.length / menuCols(menu.length)) || 1}">${menu.map((m) => drinkCard(m, onCount === 1)).join('')}</div>`;
+}
+
+/** ui-3.4.0: "You can afford a cart!" beside the cash, a button straight to Extras ▸ Shopfront. */
+function nudgeChip(n: GrowNudge): string {
+  return `<button class="nudge-chip" data-nudge data-action="goto" data-tab="spend" data-sub="grow" title="Grow into ${esc(n.name)} for $${n.cost}">
+    <span class="nc-ic" aria-hidden="true">${n.icon}</span><span class="nc-t">You can afford ${n.tier === 'cafe' ? 'the café' : `a ${esc(n.short)}`}!</span><b>Shopfront ▸</b></button>`;
 }
 
 /** FB1: who is ready, on the night clock pill ("✓ 1/2 ready"). */
@@ -538,7 +545,7 @@ function twistBody(m: MenuLineVM): string {
 const PRICING_HELP = `<p>Each −/+ moves a drink's price one step from its list price.</p>
   <p>Higher prices earn more per cup but bring fewer customers, and the ones who come are less patient.</p>
   <p>Lower prices bring more orders but a thinner margin. Regulars notice when their favourite gets pricey.</p>
-  <p>The orders and $ under each price are tomorrow's estimate, before tips and rent.</p>`;
+  <p>The orders and $ under each price are a rough guess at tomorrow, before tips and rent. Weather, events and the rival can swing it a lot. A strategist can tell you more.</p>`;
 
 function drawerHtml(d: Drawer | null, vm: NightVM, extras: NightExtras | undefined, sig: SigDraft | null): string {
   if (!d) return '';
@@ -619,6 +626,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
     <div class="night-head">${moon(34)}<h1>${title} <small>· ${esc(sub)}</small></h1>${extras?.season ? `<span class="season-chip" title="This week's season target: profit made so far this week">🏆 ${esc(extras.season)}</span>` : ''}<div class="spacer"></div>
       <div class="pill timer ${relaxed ? 'relaxed' : ''}" role="timer" aria-label="${relaxed ? 'Relaxed night' : 'Night time left'}">${relaxed ? '<span aria-hidden="true">☾</span>' : `<svg class="ring" viewBox="0 0 36 36"><circle cx="18" cy="18" r="14" fill="none" stroke="#ffffff22" stroke-width="5"/><circle class="arc" cx="18" cy="18" r="14" fill="none" stroke="#ffcf7a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${RING} ${RING}" transform="rotate(-90 18 18)"/></svg>`}<span class="clock">${relaxed ? 'Relaxed' : esc(vm.clock)}</span>${readyTag(vm.timer)}</div>
       <div class="pill">${coin(24)}<span class="cash">${esc(vm.cash)}</span></div>
+      ${vm.growth.nudge ? nudgeChip(vm.growth.nudge) : ''}
       ${room ? `<div class="pill room"><small>ROOM</small><b>${esc(room)}</b></div>` : ''}
     </div>
     <div class="board" data-tab="${ui.tab}">

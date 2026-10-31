@@ -42,6 +42,10 @@ import { createLobby } from './ui/lobby';
 import { createNight } from './ui/night';
 import { nightInputHandlers } from './ui/nightInputs';
 import { createPause } from './ui/pause';
+import { createGrowFx } from './ui/growFx';
+import { detectGrow, gainedDiff, growSeen, type GrowSeen } from './ui/growModel';
+import { createHints } from './ui/hints';
+import { hintsStatus, isSnoozed } from './ui/hintsModel';
 import { createRoadmap } from './ui/roadmap';
 import { createTitle, type StartChoice } from './ui/title';
 import { closingViewModel, hudViewModel, lobbyViewModel, migrateNightLength, NIGHT_LENGTH_MIGRATION, nightLengthForSim, nightViewModel, titleViewModel, weekEndViewModel } from './ui/viewModels';
@@ -126,6 +130,8 @@ interface Session {
   nextArrivedAt: number;
   lastPhase: Phase | null;
   lastClosing: GameState | null;
+  /** ui-3.4.0: last seen seed + tier, to spot a grow and play the transition. */
+  growSeen?: GrowSeen | null;
   lastSaveMs: number;
   recorded: boolean;
   /** P3 B16: head starts this run unlocked (shown on the week-end screen). */
@@ -211,7 +217,30 @@ async function main(): Promise<void> {
       saveRecipeHints(hintStore, mode);
       hud.setRecipeHints(mode);
     },
+    onTips: (action) => {
+      hints.act(action);
+      if (session?.next) pause.render(pauseInfo(session));
+    },
   }, roadmap);
+  // ui-3.4.0: the grow transition + "What you gained" card, and the new-player tips.
+  const growFx = createGrowFx();
+  const hints = createHints(hintStore ?? null);
+  const pauseEl = $('#pause');
+  const closingEl = $('#closing');
+  const weekEndEl = $('#weekEnd');
+  function pauseInfo(s: Session) {
+    const st = hints.get();
+    const now = Date.now();
+    return {
+      audio: audio.settings(),
+      recipeHints,
+      tips: { status: hintsStatus(st, now), off: !!st.off, snoozed: isSnoozed(st, now) },
+      pace: s.next!.settings.pace,
+      dayLengthSec: s.next!.settings.dayLengthSec,
+      isHost: s.me === s.next!.hostId,
+      room: s.code ? { code: s.code, members: s.members.map((m) => m.name) } : undefined,
+    };
+  }
   const lobby = createLobby($('#lobby'), {
     onStart: () => startHostedRun(),
     onBots: (count) => {
@@ -473,6 +502,8 @@ async function main(): Promise<void> {
     setUiTelemetrySink(null);
     hud.setRoom(null);
     hud.setJuice(null);
+    hints.hide();
+    growFx.close();
     renderer.setLocalPlayer(null);
     lobby.hide();
     if (backToTitle) showTitle();
@@ -510,6 +541,11 @@ async function main(): Promise<void> {
     }
 
     if (state.phase === 'closing') s.lastClosing = state;
+    // ui-3.4.0: a grow (same run, bigger tier) plays the re-opening wipe, then the "What you gained" card.
+    const grew = detectGrow(s.growSeen ?? null, state);
+    s.growSeen = growSeen(state);
+    if (grew) growFx.play(gainedDiff(grew.from, grew.to, !!state.gear));
+    hints.update(state, s.me, growFx.isOpen() || !pauseEl.hidden || !closingEl.hidden || !weekEndEl.hidden || state.phase === 'weekEnd' || state.phase === 'ended');
     if (state.phase === 'night') night.render(nightViewModel(state, s.me), nightExtras(state, s.me), s.code);
 
     const canSave = s.role !== 'peer';
@@ -565,15 +601,7 @@ async function main(): Promise<void> {
     }
     if (e.code === 'Escape' && session?.next) {
       e.preventDefault();
-      const s = session;
-      pause.render({
-        audio: audio.settings(),
-        recipeHints,
-        pace: s.next!.settings.pace,
-        dayLengthSec: s.next!.settings.dayLengthSec,
-        isHost: s.me === s.next!.hostId,
-        room: s.code ? { code: s.code, members: s.members.map((m) => m.name) } : undefined,
-      });
+      pause.render(pauseInfo(session));
       pause.toggle();
     }
     const field = document.activeElement?.tagName ?? '';

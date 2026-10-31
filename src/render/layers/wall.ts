@@ -4,7 +4,7 @@ import { FONT_BODY, MAT, PALETTE, WALL } from '../theme';
 import { label, vertical } from './draw';
 
 /** The back wall band (render-only, above sim row 0): wallpaper, shelf, chalkboard menu, window, wainscot. */
-export function buildWall(width: number): { root: Container; setNight(night: boolean): void; setMenu(rows: readonly [string, string][]): void } {
+export function buildWall(width: number): { root: Container; menuBoard: Container; setNight(night: boolean): void; setMenu(rows: readonly [string, string][]): void } {
   const root = new Container();
   const g = new Graphics();
   root.addChild(g);
@@ -35,13 +35,18 @@ export function buildWall(width: number): { root: Container; setNight(night: boo
   g.ellipse(200, 24, 6, 8).fill(0x82c47c);
 
   // chalkboard menu (the scene keeps it in step with the live menu)
-  g.roundRect(378, 18, 98, 70, 8).fill(MAT.frame);
-  g.roundRect(384, 24, 86, 58, 4).fill(MAT.chalk);
+  // ui-3.4.0: its own container, so the scene can keep it above an outdoor backdrop.
+  const menuBoard = new Container();
+  root.addChild(menuBoard);
+  const mg = new Graphics();
+  menuBoard.addChild(mg);
+  mg.roundRect(378, 18, 98, 70, 8).fill(MAT.frame);
+  mg.roundRect(384, 24, 86, 58, 4).fill(MAT.chalk);
   const menu = label('MENU', 11, 0xf6efe2, '600');
   menu.position.set(427, 36);
-  root.addChild(menu);
+  menuBoard.addChild(menu);
   const chalkRows = new Container();
-  root.addChild(chalkRows);
+  menuBoard.addChild(chalkRows);
   let chalkKey = '';
   const setMenu = (rows: readonly [string, string][]) => {
     const key = JSON.stringify(rows);
@@ -102,6 +107,7 @@ export function buildWall(width: number): { root: Container; setNight(night: boo
 
   return {
     root,
+    menuBoard,
     setMenu,
     setNight(night) {
       if (dayGlass.visible === !night) return;
