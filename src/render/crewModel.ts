@@ -239,6 +239,19 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       bursts.push({ kind: 'storm', count: 1 });
       resetCombo(mem);
       bumpVibe(mem, -8);
+    } else if (e.kind === 'station.reset') {
+      // FB2 C10: layout snapped back after a grow or gear change.
+      bursts.push({ kind: 'note', text: 'Bar layout went back to the default', tone: 'warn' });
+    } else if (e.kind === 'station.place') {
+      const to = e.data.to as { x?: number; y?: number } | undefined;
+      const at = typeof e.data.station === 'string' ? String(e.data.station) : undefined;
+      bursts.push({
+        kind: 'note',
+        text: e.data.swapped === true ? 'Swapped!' : 'Placed!',
+        tone: 'good',
+        ...(at ? { at } : {}),
+      });
+      void to;
     }
   }
 

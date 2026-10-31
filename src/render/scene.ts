@@ -25,6 +25,7 @@ import { fridgeGear } from '../sim/fridge';
 import type { FridgeId } from '../data/fridges';
 import { counterSpotOf } from './pickupModel';
 import { emptySlotPositions, stationBadges, wallMenuRows } from './slotModel';
+import { GhostSpots } from './ghostSpots';
 import { GEAR } from '../data/gear';
 import { buildWall } from './layers/wall';
 import { buildLot } from './layers/lot';
@@ -65,6 +66,8 @@ export class Scene {
   private readonly counts = new CountsLayer();
   private readonly sink: SinkVisuals;
   private readonly fridge: FridgeVisuals;
+  /** FB2 C10: valid set-down outlines while carrying a machine in the pre-open. */
+  private readonly ghosts = new GhostSpots();
   /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
   private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
@@ -90,7 +93,7 @@ export class Scene {
     this.pickup = new PickupVisuals(this.depth);
     this.sink = new SinkVisuals(this.depth);
     this.fridge = new FridgeVisuals(this.depth);
-    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.sink.overlay, this.fridge.overlay, this.counts.root, this.tags, this.chaos.overlay);
+    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.sink.overlay, this.fridge.overlay, this.counts.root, this.tags, this.chaos.overlay, this.ghosts.root);
     // ui-3.4.0: the outdoor backdrop (stand, cart) covers the café wallpaper and floor; the menu board stays on top.
     this.root.addChild(this.wall.root, buildLamps(), floor, this.outdoorBack, this.wall.menuBoard, this.soldOutSign, this.chaos.floor, this.pickup.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
@@ -181,6 +184,11 @@ export class Scene {
   /** Which barista is "me" (gets the ring and the station focus). Unset = the only player, if there's exactly one. */
   setLocalPlayer(id: PlayerId | null): void {
     this.localId = id;
+  }
+
+  /** FB2 C10: ghost outlines for valid set-down tiles (null clears). */
+  setGhostSpots(spots: readonly Vec2[] | null): void {
+    this.ghosts.setSpots(spots);
   }
 
   update(view: RenderView): void {

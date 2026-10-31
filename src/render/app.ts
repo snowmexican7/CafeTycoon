@@ -1,6 +1,6 @@
 import { Application } from 'pixi.js';
 import '../ui/theme.css';
-import type { PlayerId } from '../sim/types';
+import type { PlayerId, Vec2 } from '../sim/types';
 import type { RenderView } from './interpolate';
 import { SCENE_BACKGROUND, SCENE_HEIGHT, SCENE_WIDTH, Scene } from './scene';
 
@@ -14,7 +14,14 @@ async function loadFonts(): Promise<void> {
 /** Mount a PixiJS canvas into `mount` and return a renderer that draws RenderViews. */
 export async function createRenderer(
   mount: HTMLElement,
-): Promise<{ update(view: RenderView): void; setLocalPlayer(id: PlayerId | null): void; getJuice(): { vibe: number; combo: number; label: string; tone: 'high' | 'mid' | 'low' }; destroy(): void }> {
+): Promise<{
+  update(view: RenderView): void;
+  setLocalPlayer(id: PlayerId | null): void;
+  /** FB2 C10: ghost outlines for valid set-down tiles (null clears). */
+  setGhostSpots(spots: readonly Vec2[] | null): void;
+  getJuice(): { vibe: number; combo: number; label: string; tone: 'high' | 'mid' | 'low' };
+  destroy(): void;
+}> {
   await loadFonts();
   const app = new Application();
   await app.init({
@@ -48,6 +55,7 @@ export async function createRenderer(
   return {
     update: (view) => scene.update(view),
     setLocalPlayer: (id) => scene.setLocalPlayer(id),
+    setGhostSpots: (spots) => scene.setGhostSpots(spots),
     getJuice: () => scene.getJuice(),
     destroy: () => {
       window.removeEventListener('resize', fit);
