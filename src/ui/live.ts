@@ -1,6 +1,6 @@
 import { seasonNow } from '../sim/season';
 import { money } from './viewModels';
-import { recipeAt, recipeFor, stocked } from '../sim/stations';
+import { emptyHandsWanted, recipeAt, recipeFor, stocked } from '../sim/stations';
 import { autoMilk, closingChecklist, closingSoon, fridgeGear, isFridge, isMilkStation } from '../sim/fridge';
 import { FRIDGES } from '../data/fridges';
 import { TILL, tillNext } from '../sim/till';
@@ -292,14 +292,7 @@ function fridgeHint(state: GameState, player: GameState['players'][number]): Han
 /** A carton holds this many (sim/fridge.ts FRIDGE.carton; display only). */
 const FRIDGE_CARTON = 8;
 
-/** ui-3.4.1 (mirrors sim/stations.ts emptyHandsWanted): an empty-hands press here would make a drink someone wants. */
-function emptyHandsWanted(state: GameState, st: Station): boolean {
-  const r = recipeAt(state, st, null);
-  if (!r || !stocked(state, r) || (tapCupRecipe(r) && st.batchLeft !== undefined && st.batchLeft <= 0)) return false;
-  return state.customers.some((c) => c.drink === r.gives || (c.extra?.includes(r.gives as never) ?? false));
-}
-
-/** ui-3.4.1 (FB2 A4): the milk or the condiment bar in hand goes back in the fridge (or the milk out by the steamer). */
+/** ui-3.4.1 (FB2 A4): the milk or the condiment bar in hand goes back in the fridge (or the milk out by the steam wand). */
 function carryHint(state: GameState, player: GameState['players'][number], station: Station | null): HandHint {
   const n = player.carry ?? 0;
   const soon = closingSoon(state);
