@@ -455,3 +455,56 @@ export const buzz: Synth = (ctx, out, t, _dur, rnd) => {
   g.connect(out);
   return 0.45;
 };
+
+/** ui-3.4.1 (FB2 A4): a fridge door unsticking: a soft rubbery pop with a puff of cold air. */
+export const fridgeSeal: Synth = (ctx, out, t, _dur, rnd) => {
+  const o = osc(ctx, 'sine', 140, t, t + 0.12);
+  o.frequency.exponentialRampToValueAtTime(70, t + 0.1);
+  const g = gain(ctx);
+  perc(g.gain, t, 0.3, 0.09);
+  o.connect(g).connect(out);
+  const n = noise(ctx, t + 0.02, 0.35, rnd);
+  const ng = gain(ctx);
+  ahr(ng.gain, t + 0.02, 0.04, 0.05, 0.08, 0.2);
+  n.connect(filter(ctx, 'highpass', 2500, 0.6)).connect(ng).connect(out);
+  return 0.4;
+};
+
+/** ui-3.4.1: something went bad: a sour, sagging two-note wah. */
+export const sour: Synth = (ctx, out, t) => {
+  let end = t;
+  for (const [at, from, to] of [[0, 330, 300], [0.22, 280, 210]] as const) {
+    const o = osc(ctx, 'triangle', from, t + at, t + at + 0.32);
+    o.frequency.linearRampToValueAtTime(to, t + at + 0.3);
+    const g = gain(ctx);
+    end = Math.max(end, ahr(g.gain, t + at, 0.02, 0.12, 0.12, 0.16));
+    o.connect(filter(ctx, 'lowpass', 1400, 1.2)).connect(g).connect(out);
+  }
+  return end - t;
+};
+
+/** ui-3.4.1: closing soon: a shop-door ding-dong, high then low. */
+export const closingChime: Synth = (ctx, out, t) => {
+  bell(ctx, out, t, 1046, 0.07, 0.9);
+  return bell(ctx, out, t + 0.32, 784, 0.07, 1.1) - t;
+};
+
+/** ui-3.4.1: the Udder-Matic 3000's moo: a low, nasal sawtooth that rises then sags, with a little vibrato. */
+export const moo: Synth = (ctx, out, t) => {
+  const o = osc(ctx, 'sawtooth', 120, t, t + 1.1);
+  o.frequency.setValueAtTime(120, t);
+  o.frequency.linearRampToValueAtTime(150, t + 0.25);
+  o.frequency.linearRampToValueAtTime(138, t + 0.7);
+  o.frequency.linearRampToValueAtTime(100, t + 1.05);
+  const lfo = osc(ctx, 'sine', 5.5, t, t + 1.1);
+  const depth = gain(ctx, 3);
+  lfo.connect(depth).connect(o.frequency);
+  const vowel = filter(ctx, 'bandpass', 520, 2.2);
+  vowel.frequency.setValueAtTime(380, t);
+  vowel.frequency.linearRampToValueAtTime(700, t + 0.35);
+  vowel.frequency.linearRampToValueAtTime(450, t + 1.0);
+  const g = gain(ctx);
+  const end = ahr(g.gain, t, 0.12, 0.22, 0.6, 0.3);
+  o.connect(filter(ctx, 'lowpass', 1800, 0.7)).connect(vowel).connect(g).connect(out);
+  return end - t;
+};

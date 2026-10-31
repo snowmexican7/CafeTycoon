@@ -351,3 +351,15 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .br-stock { display: flex; flex-direction: column; gap: 6px; }
 #night .br-stock-h { display: flex; flex-direction: column; gap: 2px; } #night .br-stock-h small { font-size: 14px; opacity: 0.8; }
 #night .br-stock-btns { display: flex; flex-wrap: wrap; gap: 6px; } #night .br-stock-btns .btn { font-size: 15px; }
+
+/* ui-3.4.1 (FB2 A4): the fridge panel in the Gear tab. */
+#night .gr-fridge { display: grid; grid-template-columns: 130px 1fr; gap: 10px; align-items: stretch; margin: 4px 0 6px; }
+#night .gr-fr-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; align-items: stretch; }
+#night .gr-fr { position: relative; padding-left: 52px; min-height: 76px; }
+#night .gr-fr .gr-fr-ic { position: absolute; left: 10px; top: 10px; font-size: 30px; line-height: 1; }
+#night .gr-fr .gr-stats { font-size: var(--fs-xs); }
+#night .gr-fr-own { font: 700 var(--fs-xs) var(--font-body); color: #3f7d45; }
+#night .gr-fr.none { background: #fff3ea; box-shadow: 0 0 0 2px #e0564a55, 0 3px 0 #e2cfb2; }
+#night .gr-fr.voting { box-shadow: 0 0 0 3px #e8a33a, 0 3px 0 #e2cfb2; }
+#night .gr-fr .btn { margin-top: 4px; align-self: flex-start; white-space: nowrap; }
+#night .gr-fr-note { grid-column: 1 / -1; margin: 0; font: 600 var(--fs-xs) var(--font-body); color: var(--ink-soft); }

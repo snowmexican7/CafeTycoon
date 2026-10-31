@@ -2,7 +2,7 @@ import { ECONOMY } from '../data/economy';
 import type { DrinkId } from '../sim/types';
 import { esc, hide, show } from './dom';
 import { coin, itemIcon, jar, logoCup, pauseGlyph, speakerGlyph, stars, sun, SUPPLY_COLOR } from './icons';
-import { callKey, crewKey, handKey, ITEM_LABEL, ordersKey, type CallVM, type HudLive } from './live';
+import { callKey, checklistKey, crewKey, handKey, ITEM_LABEL, ordersKey, type CallVM, type ClosingListVM, type HudLive } from './live';
 import { loadRecipeHints, MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, URGENT as TICKET_URGENT, type RecipeHints, type TicketOpts } from './tickets';
 import { DRINK_LABEL } from './tickets';
 import { mountCloseEarly } from './closeEarly';
@@ -78,6 +78,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <div class="hud-eventcard" role="status" hidden></div>
     <div class="hud-call" role="alert" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
+    <div class="hud-checklist" role="status" hidden></div>
     <div class="toast" role="status" hidden></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(sel: string) => container.querySelector<T>(sel)!;
   const el = {
@@ -134,6 +135,21 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     ev.preventDefault();
     handlers.onCall?.(b.dataset.take === '1');
   });
+  // ui-3.4.1 (FB2 A4): the closing-soon checklist, ticked off as things get put away
+  const listEl = $<HTMLElement>('.hud-checklist');
+  let lastList = '';
+  function renderChecklist(c: ClosingListVM | undefined): void {
+    const key = checklistKey(c);
+    if (key === lastList) return;
+    lastList = key;
+    listEl.hidden = !c;
+    if (!c) return;
+    const left = c.rows.filter((r) => !r.done).length;
+    listEl.classList.toggle('done', left === 0);
+    listEl.innerHTML = `<b>⏰ ${esc(c.title)}</b><ul>${c.rows
+      .map((r) => `<li class="${r.done ? 'ok' : r.warn ? 'warn' : ''}"><span class="i">${r.done ? '✓' : esc(r.icon)}</span>${esc(r.text)}</li>`)
+      .join('')}</ul>${left === 0 ? '<small>All put away. Nice!</small>' : ''}`;
+  }
   function renderCall(c: CallVM | undefined): void {
     const key = callKey(c);
     if (key === lastCall) return;
@@ -469,6 +485,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       }
       closeEarly.render(live?.closeEarly);
       renderCall(live?.call);
+      renderChecklist(live?.checklist);
     },
     toast(lines) {
       if (lines.length === 0) return;

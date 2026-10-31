@@ -11,7 +11,7 @@ const STATION_NAMES: Record<StationKind, string> = {
   grinder: 'grinder',
   espresso: 'espresso machine',
   steamer: 'steam wand', // FB2 C9: the 'steamer' kind is the wand on the espresso machine
-  coldBrewTap: 'cold brew tap',
+  coldBrewTap: 'cold brew',
   drip: 'drip machine',
   counter: 'counter',
   trash: 'trash',

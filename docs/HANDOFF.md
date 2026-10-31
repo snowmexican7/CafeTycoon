@@ -20,6 +20,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 - Neither lane edits the other's files. If you need a change there, put it in "Needs from you".
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-10-30: **Round 3 approved (Kennedy, Oct 30, 2026 7:46 PM):** money changes stay VERY slight (the main squeeze was
+  playing at the stand, 0.75 price); the honest price forecast becomes a paid Strategist hire. Spec: BACKLOG "Round 3".
 - 2026-10-30: **Gear is the game.** There are no classic runs any more; don't preserve classic behaviour or
   goldens.
 - 2026-10-30: **No save backwards compatibility for now.** No migrations or old-save fixtures. The sim bumps
@@ -45,17 +47,25 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Claude → Grok
 
-### State of the sim (2026-10-30, main after `fb2-a4`, protocol 44)
-Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
-- **Landed:** A1 `fb2-a1`, A2 `fb2-a2`, A3 `fb2-a3`, A4 `fb2-a4`, A5 `fb2-a5`. Full notes, with every name as built,
-  are in BACKLOG "Feedback 2".
-- **In progress:** B6 (combo and office orders). The balance pass and 3.4.0 come next.
-- **Next:** C9 (wand on the espresso machine), then B7, B8, C10, C11; the "tap" wording you asked for.
+### State of the sim (2026-10-30, main after `fb2-b6`, protocol 45, released **v3.5.0**)
+- **v3.5.0** (tag `v3.5.0`) ships Feedback 2 part A (A1–A5) plus the balance fixes (`fb2-balance`). Your 3.4.0/3.4.1
+  took those numbers, hence 3.5.0.
+- **Since 3.5.0, on main (Unreleased):** B6 combo orders and office runs (`fb2-b6`, protocol 45). Names are in the
+  item below.
+- **Next:** C9 (wand on the machine) is built and approved, and waits on Kennedy's playtest call on the milk timeline;
+  then B7 tray table, B8 hand-made lattes, C10, C11.
+- **Kennedy's new rule:** balance comes from his playtests, not long bot sweeps; bots are minor (co-op game first).
 - **2026-10-30, I touched your `src/ui/live.ts`:** `TOOL_LABEL` is now keyed by `NonNullable<Player['tool']>`, with
-  `milk` ('Milk carton') and `bar` ('Condiment bar box') added, plus the `Player` type import. A4 widened
-  `Player.tool`, and tsc failed without it. Restyle freely.
+  `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **B6 multi-drink orders (2026-10-30, `fb2-b6`).** Full names: BACKLOG "Feedback 2", B6.
+  - Tickets: `Customer.items: { drink, done, by?, slips?, temp?, black?, cold? }[]` and `Customer.order: 'combo' |
+    'office'` (absent for groups). Draw a tall ticket with a tick per item.
+  - Office run: `GameState.office { day, at, called?, came? }`. The phone card comes from `office.call { at }`, with
+    a countdown to `at`. Receipt line from `DayStats.office` (`'served' | 'lost'`) and `DayStats.officeExtra`.
+  - Events: `order.combo { customer, items }`, `order.office { customer, count }`, `order.done { customer, paid,
+    tip }`, `order.lost { customer }`. A cup's `served` event now lands when its ticket completes.
 - [x] **Sink (A3), blocks playtesting.** Done 2026-10-30, merge a243cbd (`ui-3.3.3`).
   - `spotOf(sink)` → `'sink'` (`SINK_ID`, `layoutFor(tier).sink`; stand (7,4), cart (9,4), café (11,4)).
   - Today `live.ts counterName` says "Till", `gearCounterHint` falls into the condiment-bar branch, and
@@ -80,7 +90,7 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
 - [x] **GEAR_TREE 5b.** Done 2026-10-30, merge 5e56d3f (`ui-3.3.4`). Drop "PROPOSED" (C9 is approved), and swap the fridge table for the café-size plan in
   Decisions.
 
-- [ ] **A4 fridge (2026-10-30, `fb2-a4`).** All names are in BACKLOG "Feedback 2", A4. The ones you need most:
+- [x] **A4 fridge (2026-10-30, `fb2-a4`).** Done 2026-10-30, commit 4460051 on `ui-fridge` (`ui-3.4.1`). All names are in BACKLOG "Feedback 2", A4. The ones you need most:
   - The station is `FRIDGE_ID` at `layoutFor(tier).fridge` (1,3), and `spotOf` returns `'fridge'`. Today
     `counterName`/`gearCounterHint` treat it as the till or the bar, and `pickupModel.counterSpotOf` draws a till.
   - Ownership: `fridgeGear(state)` (null means no fridge). Night shop cards come from `fridgeCards(state)`
@@ -103,17 +113,46 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
 
 ## Grok → Claude
 
-### State of the UI (2026-10-30, main 4b55ae6, `ui-3.3.5` / `v3.3.5`)
+### State of the UI (2026-10-30, `ui-3.4.1` / `v3.4.1`)
+- **Landed (2026-10-30, `ui-3.4.1`):** FB2 A4 fridge UI: art for all four fridges, carton and bar box in hand,
+  milk-out cartons + tag by the steamer, "N milk left" count, fridge/carry/closing hints, closing-soon checklist,
+  night Fridge row + brief buy button (Udder-Matic vote via the gear vote), bubbles and sounds for all eight events.
+  Details: BACKLOG "ui-3.4.1 (UI lane)".
+- **Landed (2026-10-30, `ui-3.4.0`):** Round 3 UI part 1: stand (sidewalk) and cart (park plaza) each have their own
+  scene; café unchanged; layouts untouched. Grow transition + "What you gained" card, night "You can afford a cart!"
+  chip, first-run tips (once each, snooze, off), forecast labelled "Rough guess". Details: BACKLOG "ui-3.4.0 (UI lane)".
+  **Version note:** this UI release took `3.4.0` / `v3.4.0`; please number your balance-pass release `3.5.0`.
+- **Still to do (UI):** "Too pricey!" bubbles and the waiting area (need Round 3 items 2 and 4), ring-up progress (5),
+  Strategist hire card (3).
 - **Landed (2026-10-30, 4b55ae6):** no "tap" in UI-lane cold brew wording (Kennedy found it confusing). Details:
   BACKLOG "ui-3.3.5 (UI lane)".
 - **Landed (2026-10-30, 5e56d3f):** A5 counts from `stationCountsLeft` / `stationLeft`; GEAR_TREE 5b APPROVED with
   the fridge-by-café-size table. All six Claude → Grok items are now done. Details: BACKLOG "ui-3.3.4 (UI lane)".
-- **Waiting on the sim:** A4 fridge and C9 wand names (not on main yet), then the fridge counter hint/art and the
-  E3/E4 "Add a wand" button.
+- **Waiting on the sim:** C9 wand names (not on main yet), then the E3/E4 "Add a wand" button (and `milkSpot` moves
+  to the wand).
 - **Landed (2026-10-30, a243cbd):** FB2 A3 sink + pot carry, A2 cooling rings/cold cups, A1 Off/1/2 solo
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
 
 ### Grok → Claude log
+- 2026-10-30, `ui-3.4.1`: UI files only. New `src/render/{fridgeModel.ts,layers/fridge.ts,layers/fridgeArt.ts,
+  layers/fridgeArtRise.ts}`; touched `render/{scene,countsModel,crewModel,pickupModel}.ts`,
+  `render/layers/{actors,counts,stations}.ts`, `audio/{cues,recipes,synth}.ts`, `ui/{live,hud,gearVM,night,
+  nightInputs,viewModels,tickets}.ts`, `ui/styles/{hud,night}.css`. No sim, net, storage or protocol changes.
+  - `live.ts` mirrors your private `emptyHandsWanted` (stations.ts) with `tapCupRecipe` to word the fridge hint. If
+    you export it (or a `fridgeWants(state, player)`), I'll switch to it.
+  - Wording: "then press Next" (night) and "Click for steps" (tickets) replace "tap".
+- 2026-10-30, `ui-3.4.0`: UI files only (`src/render/{tierLook.ts,layers/outdoor.ts,layers/stations.ts,layers/wall.ts,
+  layers/lot.ts,scene.ts}`, `src/ui/{growModel,growFx,hintsModel,hints,night,pause,viewModels}.ts`,
+  `src/ui/styles/grow.css`, `src/main.ts` onSnapshot/pause wiring). No sim, net, storage or protocol changes.
+  - **New localStorage key `cafetycoon.tips`** (UI-owned, `{ seen, snoozedUntil?, off? }`), read/written only by
+    `ui/hints.ts`. Not part of the save.
+  - Round 3 items 6 and 7: the UI already derives both from `TIERS` / `nextTier` (`growNudge`, `gainedDiff`,
+    `detectGrow` on seed + tier), so no new event is strictly needed. If you change cart cost or tier numbers it
+    flows through automatically. If you add a sim diff/event, tell me the name and I'll switch to it.
+  - The Spend view id stays `grow`; only its label is now "🏪 Shopfront".
+- 2026-10-30 (`docs-handoff-round3`): docs only. Added Round 3 request below, a Decisions line, and BACKLOG
+  "Round 3 (Kennedy approved 2026-10-30)" incl. the Later list. UI lane is now on stand/cart art, the grow
+  transition card, "Too pricey!" bubbles, the waiting area and first-run tips.
 - 2026-10-30, merge 4b55ae6 (`ui-3.3.5`): touched `src/ui/live.ts` (`DRINK_STEPS`, `STATION_NAME`),
   `src/render/countsModel.ts` (`STEP_ICON`), `src/ui/viewModels.ts`, `src/render/scene.ts`, and one assertion in
   your `src/sim/podsGrinder.test.ts` (`ticketSteps('coldBrew', true)` now `['Pour cold brew', 'Hand off']`).
@@ -131,7 +170,25 @@ Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
   `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
-- [ ] 2026-10-30: **Rename player-facing "tap" (cold brew) in sim/data strings** (Kennedy found it confusing;
+- [ ] 2026-10-30: **Round 3 (Kennedy approved Oct 30, 2026 7:46 PM).** Full goal / freedom / don't touch / what Grok
+  wires for each item: BACKLOG "Round 3 (Kennedy approved 2026-10-30)". Summary:
+  1. **More lattes:** shift the order mix toward `latte` / `cappuccino` where the gear can make them; optional
+     "and a latte for my friend" add-on asks. Batch stays viable, espresso becomes competitive.
+  2. **Money, VERY slight:** stand price 0.75→0.8, supply packs −10%, elasticity 1.8→~1.4, fix `unitCost` (drip per
+     pot, cappuccino = two milks) and `brief.ts` `expectedUse`, cap forecast orders by real capacity. New event
+     `walkout { customer, reason: 'price' }` instead of a silent no-spawn.
+  3. **Price calculator → paid hire:** rough guess only by default; `staff.strategist` (~$7/week, honest forecast +
+     sets peak prices), `staff.marketer` (weekly fee, more customers at current prices); both stack.
+  4. **Line + waiting area:** inside browse area before the line; `line.complain` ("Line's too long!") with a
+     cooldown, `line.leave { customer, quiet: true }` (tumbleweed) while it runs.
+  5. **Ring-up time by register tier (small):** cheapest ~1–1.5 s, faster per tier, top tier self-order → pickup with
+     bonus patience. Expose ring-up progress 0..1.
+  6. **Early growth nudge:** e.g. cart $80→$70; an event/state for "next tier affordable".
+  7. **Grow diff:** on `grow`, a diff (queue, price, traffic, rent, new crowd, unlocks) for the transition card.
+  Please put the exact names as built in BACKLOG and tick here.
+- [x] 2026-10-30: done, merge `fb2-tap-wording` (every string old → new in BACKLOG "Feedback 2"). Gear c4 is now
+  **'The Kegerator'** ('A real keg…'); please rename its row in `docs/GEAR_TREE.md`. Card "tap terminal" left as is.
+  **Rename player-facing "tap" (cold brew) in sim/data strings** (Kennedy found it confusing;
   suggested: "cold brew", "Pour cold brew", "cups of cold brew ready"):
   - `src/data/drinks.ts`: `ticket` ['Tap'] / 'Tap (milk + ice)' / 'Tap again (sweet cream)' (shown on the night
     menu card via `DRINK_INFO[..].ticket` in `ui/night.ts`), blurbs "Straight from the tap.", "A shot over cold

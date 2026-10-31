@@ -12,10 +12,10 @@ import { nearestStation } from './movement';
 import { mopInteract } from './mop';
 import { dumpDrink, dumpPot, isSink, potPress } from './sink';
 import { rollBinLeak, rollStationMess } from './messes';
-import { BASE_DRINKS, RECIPES, type Recipe, type RecipeStation } from '../data/drinks';
+import { BASE_DRINKS, RECIPES, recipeChain, type Recipe, type RecipeStation } from '../data/drinks';
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
 import { fridgeInteract, readyStock, useStock } from './fridge';
-import type { GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from './types';
+import type { DrinkId, GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from './types';
 
 /** Each working station's first (classic) recipe: what it takes, gives back and uses up. See RECIPES for all of them. */
 export const STATION_RECIPES: Record<RecipeStation, { takes: ItemKind | null; gives: ItemKind; consumes: SupplyId | null }> = {
@@ -68,7 +68,9 @@ export function stocked(state: GameState, r: Recipe): boolean {
 function emptyHandsWanted(state: GameState, st: Station): boolean {
   const r = recipeAt(state, st, null);
   if (!r || !stocked(state, r) || (tapCupRecipe(r) && st.batchLeft !== undefined && st.batchLeft <= 0)) return false;
-  return state.customers.some((c) => c.drink === r.gives || (c.extra?.includes(r.gives as never) ?? false));
+  // Balance pass: a step on the way counts too (a sweet cream's first pour is a cold brew).
+  const needs = (d: DrinkId) => d === r.gives || recipeChain(d).some((x) => x.recipe.gives === r.gives);
+  return state.customers.some((c) => needs(c.drink) || (c.extra?.some(needs) ?? false));
 }
 
 /** Stations keep working after you walk away; finished items wait on the station. */

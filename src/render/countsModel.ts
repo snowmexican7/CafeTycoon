@@ -6,7 +6,9 @@ import { passSlots } from '../sim/pickup';
 import { coolsOnCounter, slotCool } from '../sim/cooling';
 import { outputFreshness } from './sinkModel';
 import { stationCountsLeft } from '../sim/counts';
-import { CONDIMENTS_ID } from '../data/layout';
+import { CONDIMENTS_ID, FRIDGE_ID } from '../data/layout';
+import { fridgeGear } from '../sim/fridge';
+import { FRIDGE_RISE } from './layers/fridgeArtRise';
 import type { DrinkId, GameState, PlayerId, Station, Vec2 } from '../sim/types';
 import { nextStepIndex, ticketSteps } from '../ui/tickets';
 
@@ -27,6 +29,10 @@ export interface StationCount {
   tone: CountTone;
   /** 0..1 freshness of what's waiting (1 = just made, 0 = cold), when the sim has a real timer for it. */
   cool: number | null;
+  /** ui-3.4.1: a word after the number ("milk left" over the fridge); absent = the number alone. */
+  unit?: string;
+  /** ui-3.4.1: px above the spot to float at, for art taller than its kind's (the fridge). */
+  rise?: number;
 }
 
 /** At or below this many left the count reads low (amber). */
@@ -56,6 +62,12 @@ export function stationCounts(state: GameState): StationCount[] {
         cool = outputFreshness(state, s);
         cold = cool === 0;
       }
+    }
+    if (id === FRIDGE_ID) {
+      // ui-3.4.1 (FB2 A4): the milk still in the fridge, as words (a bare number on a fridge reads as a temperature)
+      const f = fridgeGear(state);
+      out.push({ id, pos: s.pos, n, tone: n < 8 ? 'low' : 'ok', cool: null, unit: 'milk left', ...(f ? { rise: FRIDGE_RISE[f] } : {}) });
+      continue;
     }
     out.push({ id, pos: s.pos, n, tone: cold ? 'cold' : n <= COUNT_LOW && s.batchLeft !== undefined ? 'low' : 'ok', cool });
   }

@@ -66,7 +66,14 @@ export type CueId =
   | 'potBack'
   | 'stalePot'
   | 'binLeak'
-  | 'coldCup';
+  | 'coldCup'
+  | 'fridgeOpen'
+  | 'fridgeShut'
+  | 'milkOut'
+  | 'liftUp'
+  | 'spoil'
+  | 'closingSoon'
+  | 'moo';
 
 export interface Cue {
   id: CueId;
@@ -149,6 +156,15 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'pot.lift': cues.push({ id: 'potLift', mine }); break;
       case 'pot.stale': cues.push({ id: 'stalePot' }); break;
       case 'bin.leak': cues.push({ id: 'binLeak', mine }); break;
+      // ui-3.4.1 (FB2 A4): the fridge door, a carton set down, the milk or the bar picked up, things going bad
+      case 'fridge.take': cues.push({ id: 'fridgeOpen', mine }); break;
+      case 'fridge.put': cues.push({ id: 'fridgeShut', mine }); break;
+      case 'milk.out': cues.push({ id: 'milkOut', mine }); break;
+      case 'milk.lift':
+      case 'bar.lift': cues.push({ id: 'liftUp', mine }); break;
+      case 'supply.spoil': cues.push({ id: 'spoil' }); break;
+      case 'closing.soon': cues.push({ id: 'closingSoon' }); break;
+      case 'fridge.auto': cues.push({ id: 'moo' }); break;
       case 'mess.spawn':
         // spills already splash on their own drop/bump event, and a leak sounds once on bin.leak
         if (e.data.kind === 'milk') cues.push({ id: 'splash' });

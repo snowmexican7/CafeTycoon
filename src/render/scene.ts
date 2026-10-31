@@ -16,15 +16,20 @@ import { Effects } from './layers/fx';
 import { ESPRESSO } from '../sim/espresso';
 import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
-import { StationOverlay, buildEmptySlot, buildStation, type StationOverlayState } from './layers/stations';
+import { StationOverlay, buildEmptySlot, buildStation, setBarSkin, type StationOverlayState } from './layers/stations';
 import { PickupVisuals } from './layers/pickup';
 import { CountsLayer } from './layers/counts';
 import { SinkVisuals } from './layers/sink';
+import { FridgeVisuals } from './layers/fridge';
+import { fridgeGear } from '../sim/fridge';
+import type { FridgeId } from '../data/fridges';
 import { counterSpotOf } from './pickupModel';
 import { emptySlotPositions, stationBadges, wallMenuRows } from './slotModel';
 import { GEAR } from '../data/gear';
 import { buildWall } from './layers/wall';
 import { buildLot } from './layers/lot';
+import { buildOutdoor } from './layers/outdoor';
+import { barSkin, isOutdoor, tierLook } from './tierLook';
 import { layoutFor } from '../data/layout';
 import { availableDrinks } from '../sim/customers';
 import { menuDrinks } from '../sim/unlocks';
@@ -59,6 +64,7 @@ export class Scene {
   private readonly pickup: PickupVisuals;
   private readonly counts = new CountsLayer();
   private readonly sink: SinkVisuals;
+  private readonly fridge: FridgeVisuals;
   /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
   private readonly shotsSeen = new Map<PlayerId, number>();
   private localId: PlayerId | null = null;
@@ -72,15 +78,21 @@ export class Scene {
     floor.cacheAsTexture(true);
     this.depth.sortableChildren = true;
     this.buildStations('register', undefined);
-    for (const d of buildDecor(SCENE_WIDTH, LAYOUT.height)) this.depth.addChild(d);
+    for (const d of buildDecor(SCENE_WIDTH, LAYOUT.height)) {
+      d.visible = !isOutdoor(tierLook(this.lotTier));
+      this.decor.push(d);
+      this.depth.addChild(d);
+    }
     this.actors = new Actors(this.depth, this.tags);
     this.gags = new EspressoGags(this.depth);
     this.chaos = new Chaos(this.depth);
     this.eventFx = new EventVisuals(this.depth, this.chaos.overlay, SCENE_WIDTH, SCENE_HEIGHT);
     this.pickup = new PickupVisuals(this.depth);
     this.sink = new SinkVisuals(this.depth);
-    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.sink.overlay, this.counts.root, this.tags, this.chaos.overlay);
-    this.root.addChild(this.wall.root, this.soldOutSign, buildLamps(), floor, this.chaos.floor, this.pickup.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
+    this.fridge = new FridgeVisuals(this.depth);
+    this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.sink.overlay, this.fridge.overlay, this.counts.root, this.tags, this.chaos.overlay);
+    // ui-3.4.0: the outdoor backdrop (stand, cart) covers the café wallpaper and floor; the menu board stays on top.
+    this.root.addChild(this.wall.root, buildLamps(), floor, this.outdoorBack, this.wall.menuBoard, this.soldOutSign, this.chaos.floor, this.pickup.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
 
   /** FB1 WP4: a red "SOLD OUT" strip hung across the chalkboard menu while nothing can be made. */
@@ -91,34 +103,55 @@ export class Scene {
   private stationKey = '';
   /** P3 B13: the hoarding and awning, rebuilt (with the stations and the line) when the shop grows. */
   private readonly lot = new Container();
-  private buildStations(checkout: CheckoutId, tier: TierId | undefined, stations?: readonly Station[]): void {
+  private buildStations(checkout: CheckoutId, tier: TierId | undefined, stations?: readonly Station[], fridge: FridgeId | null = null): void {
     // FB1 WP5: the art follows state.stations (bought duplicates, swapped slots), with a plinth in every empty slot.
     const lay = layoutFor(tier);
     const list = stations ?? lay.stations;
     const gearOf = (s: (typeof list)[number]) => ('gear' in s ? s.gear : undefined);
-    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}`;
+    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}:${fridge ?? ''}`;
     if (key === this.stationKey) return;
     this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
+    const look = tierLook(tier);
+    setBarSkin(barSkin(look));
     // 3.3.1: the pickup counter and the condiment bar are named counters, not a second and third till, so no number badge
     // (3.3.3: nor the back sink)
-    const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: ('twin' in s && s.twin === true) || ['pickup', 'condiments', 'sink'].includes(counterSpotOf(s, list) ?? '') })));
+    const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: ('twin' in s && s.twin === true) || ['pickup', 'condiments', 'sink', 'fridge'].includes(counterSpotOf(s, list) ?? '') })));
     this.stationArt = list.map((s, i) => {
       const twin = 'twin' in s && s.twin === true;
       const g = gearOf(s);
-      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list));
+      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge);
     });
     for (const pos of emptySlotPositions(tier, list)) this.stationArt.push(buildEmptySlot(pos));
+    setBarSkin('cabinet');
     for (const c of this.stationArt) this.depth.addChild(c);
     const lotKey = tier ?? 'cafe';
     if (lotKey !== this.lotKey) {
       this.lotKey = lotKey;
+      this.lotTier = tier;
       for (const c of this.lot.removeChildren()) c.destroy({ children: true });
       this.lot.addChild(buildLot(tier));
+      for (const c of this.outdoorBack.removeChildren()) c.destroy({ children: true });
+      for (const c of this.outdoorProps) c.destroy({ children: true });
+      this.outdoorProps = [];
+      if (isOutdoor(look)) {
+        const out = buildOutdoor(look as Exclude<typeof look, 'cafe'>);
+        out.back.cacheAsTexture(true);
+        this.outdoorBack.addChild(out.back);
+        this.outdoorProps = out.props;
+        for (const p of out.props) this.depth.addChild(p);
+        this.lot.addChild(out.over);
+      }
+      for (const d of this.decor) d.visible = !isOutdoor(look);
     }
     if (this.actors) this.actors.queueSlots = lay.queueSlots;
   }
   private lotKey = '';
+  private lotTier: TierId | undefined = undefined;
+  /** ui-3.4.0: the stand's sidewalk or the cart's plaza (empty in the café), its props, and the café-only decor. */
+  private readonly outdoorBack = new Container();
+  private outdoorProps: Container[] = [];
+  private readonly decor: Container[] = [];
 
   /** P3 B13: the milestone moment in the scene, once, when the bigger floor first appears. */
   private celebrated = '';
@@ -146,7 +179,7 @@ export class Scene {
 
   update(view: RenderView): void {
     const { state } = view;
-    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations);
+    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations, fridgeGear(state));
     this.maybeCelebrate(state);
     const now = performance.now() / 1000;
     const dt = Math.min(0.1, Math.max(0, now - this.lastTime));
@@ -194,6 +227,7 @@ export class Scene {
     this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses);
     this.pickup.update(state, now);
     this.sink.update(state, localId, now);
+    this.fridge.update(state, localId, now);
     // 3.3.2: floating counts over stations + recipe steps over carried cups (day only)
     const live = state.phase === 'day' || state.phase === 'closing';
     this.counts.root.visible = live;

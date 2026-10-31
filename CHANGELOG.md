@@ -16,6 +16,13 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- Bigger orders: some customers now order two drinks (one for the spouse in the car), and on the cart and at the café an office run sometimes phones ahead and walks in for 4–6 drinks. A multi-drink order pays when the last drink is collected; finish an office run for a 25% bonus tip, and losing one costs you nothing (they leave when you lock up). Groups now pay for their round at the end too.
+
+## 3.5.0 — 2026-10-30 · Open, close and clean up
+
+Cups go cold, there's a sink to pour things away, milk lives in a fridge, and the last 30 seconds are a
+closing rush. Solo runs start with one helper bot.
+
 - Solo runs now start with one bot barista instead of a full crew (0 to 3 can be picked), and bots act as
   helpers: they leave the machine you're working and give you a few seconds to grab new orders.
 - Drinks go cold: hot cups cool on the pickup counter, in the machine and in your hands. A lukewarm cup earns half
@@ -28,6 +35,45 @@ when a build goes out, the line moves under its version with the date.
   the café can splurge on the self-pouring Udder-Matic 3000. Carry a carton to the steamer before you can steam.
   In the last 30 seconds the shop is "closing soon": put the milk and the condiment bar back in the fridge, or
   whatever's left out goes bad.
+- Fixed: during closing soon, pressing E at the cold brew for a sweet cream pours it instead of picking up the
+  milk carton; helper bots no longer get stuck behind a shot left in the machine or dancing with each other
+  behind the bar.
+
+## 3.4.1 — 2026-10-30 · The fridge, on screen
+
+- **You can see the fridge.** The stand's Dorm Room Cube, the cart's Garage Beer Fridge, the café's Chrome Reach-In
+  and the Udder-Matic 3000 (a cow-spotted fridge with a milk tap) each have their own look against the left wall,
+  with a "12 milk left" count above it.
+- **Milk in your hands.** Carrying a carton or the packed-up condiment bar shows it in your barista's hands and in
+  the hand box ("Milk carton · 8 milk"). Cartons put out sit by the steamer with a "6 milk out" tag that turns amber
+  when it runs low, and a glow on the floor shows where to take what you hold.
+- **Plain hints.** At the fridge: "Grab milk". With a carton: "Put a carton out" at the steamer, "Put the milk away"
+  at the fridge. At closing: "Pick up the milk" and "Pack up the condiment bar".
+- **"Closing soon" checklist.** In the last 30 seconds a small list in the top corner ticks off: milk back in the
+  fridge, condiment bar in the fridge, pots empty, floor clean, pickup counter clear.
+- **Buy a fridge at night.** The Pick gear tab has a Fridge row: the one you have and the one you can buy ("Buy it ·
+  $20"). In co-op the $320 Udder-Matic asks the crew first. The night brief's fridge warning has a buy button too.
+- **Bubbles and sounds** for grabbing milk, putting it away, a carton out, things going bad, closing soon, and the
+  Udder-Matic's moo when it pours milk by itself.
+- Wording: "press Next" and "Click for steps" instead of "tap".
+
+## 3.4.0 — 2026-10-30 · A stand, a cart, a café
+
+- **Each shop size has its own place.** The stand is a folding table on the sidewalk: pavement, a market umbrella,
+  a lamppost, flower pots, an A-frame sign and the street running past. The cart parks in a park plaza with a
+  striped awning, wheels, string lights, a bench and trees. The café is unchanged. Stations sit in the same spots,
+  so nothing plays differently. The FOR LEASE sign next door says what the next size costs and what it gives you.
+- **Growing feels like an event.** Buying a bigger shop plays a quick "Grand re-opening!" wipe with confetti, then
+  a big "What you gained" card: how long the line can be, the prices you can charge, how many people walk by, the
+  rent, who comes by, and what's new. Close it with the button, the ×, Esc or a click outside.
+- **"You can afford a cart!"** At night, when you have the cash for the next size, a gold chip by your cash takes
+  you straight to Extras ▸ Shopfront (the tab that used to be called "Grow").
+- **Tips for new players.** Short tips pop up once each, at the moment they matter: take orders at the till, put
+  drinks on the pickup counter, dump cold pots at the sink, why stand prices are lower, restocking at night, and the
+  Shopfront tab. They sit at the edge of the screen, never on the floor. "Snooze tips" hides them for 15 minutes,
+  "Turn off" hides them for good; both are also in the pause menu, with "Show them again".
+- **Price forecasts are a rough guess.** The orders and profit under the menu prices are now labelled "Rough guess"
+  (≈), since weather, events and the rival can swing them. A strategist will be able to tell you more later.
 
 ## 3.3.5 — 2026-10-30 · Cold brew, not "tap"
 

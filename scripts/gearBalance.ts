@@ -45,9 +45,13 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
       out.push({ kind: 'restock', playerId: by, supply: sup, packs });
     }
     // Batch coffee / condiments: the stand-ins have no human to steep or buy boxes, so take the planner's advice for both.
-    for (const a of planNight(state)) {
-      if ((a.id === 'steep' || a.id === 'condimentBox') && (a.input.kind === 'steep' || a.input.kind === 'condimentBox')) out.push({ ...a.input, playerId: by });
-    }
+    // FB2 balance: the steep is asked of the shop as it will be after the crew's own restock (the planner sizes it from
+    // the concentrate in stock plus what its own budget would buy, and on a tight night that said "steep 0").
+    const restocked: GameState = JSON.parse(JSON.stringify(state));
+    for (const r of out) if (r.kind === 'restock') restocked.supplies[r.supply] = (restocked.supplies[r.supply] ?? 0) + r.packs * ECONOMY.packs[r.supply].size;
+    restocked.cash = cash;
+    for (const a of planNight(state)) if (a.id === 'condimentBox' && a.input.kind === 'condimentBox') out.push({ ...a.input, playerId: by });
+    for (const a of planNight(restocked)) if (a.id === 'steep' && a.input.kind === 'steep') out.push({ ...a.input, playerId: by });
     return out;
   }
   const nt = nextTier(state);

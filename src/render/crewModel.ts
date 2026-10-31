@@ -1,4 +1,5 @@
 import { sinkToast, SINK_ID } from './sinkModel';
+import { fridgeLabel, fridgeToast, isFridgeEvent } from './fridgeModel';
 import { TWIST_INFO, type TwistId } from '../sim/taste';
 import type { DrinkId, GameState, Personality } from '../sim/types';
 
@@ -207,6 +208,11 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
         resetCombo(mem);
         bumpVibe(mem, -3);
       }
+    } else if (isFridgeEvent(e.kind)) {
+      // ui-3.4.1 (FB2 A4): the fridge's lines rise over the fridge (or the steamer, or the condiment bar)
+      const t = fridgeToast(e, (id) => next.players.find((p) => p.id === id)?.name ?? 'Someone', fridgeLabel(next));
+      if (t) bursts.push({ kind: 'note', text: t.text, tone: t.tone, ...(t.at ? { at: t.at } : {}) });
+      if (e.kind === 'supply.spoil') bumpVibe(mem, -2);
     } else if (e.kind === 'steep') {
       bursts.push({ kind: 'steep', cups: Number(e.data.cups) || 0, paid: Number(e.data.paid) || 0 });
     } else if (e.kind === 'call.answer') {

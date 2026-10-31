@@ -30,6 +30,7 @@ import { recipeChain } from '../../data/drinks';
 import { tillNext } from '../till';
 import type { BotStep, Customer, GameState, Player, Station } from '../types';
 import { humanCount } from './roster';
+import { undoneDrinks } from '../orders';
 
 const BOTS = ECONOMY.bots;
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
@@ -70,7 +71,9 @@ const ticketAge = (state: GameState, c: Customer): number => (c.rungAt === undef
 /** Some order that needs a machine of `st`'s kind has waited `helperGuardSeconds` or more. */
 function staleOrderNeeds(state: GameState, st: Station): boolean {
   const limit = secondsToTicks(BOTS.helperGuardSeconds);
-  return state.customers.some((c) => c.egg !== 'camper' && ticketAge(state, c) >= limit && recipeChain(c.drink).some((x) => x.station === st.kind));
+  // FB2 B6: any drink still to come on a multi-drink ticket counts; an office run doesn't (it comes last, fix round 1 M5).
+  const wants = (c: Customer) => (c.items ? undoneDrinks(c) : [c.drink]);
+  return state.customers.some((c) => c.egg !== 'camper' && c.order !== 'office' && ticketAge(state, c) >= limit && wants(c).some((d) => recipeChain(d).some((x) => x.station === st.kind)));
 }
 
 /** `o` is plausibly using `st`, the station nearest them (review C1/I1: see the header). */
@@ -126,6 +129,7 @@ export function heldForPeople(state: GameState, self: Player, orders: readonly C
   let free = people(state, self).filter((o) => personFree(state, o)).length;
   for (const c of orders) {
     if (free <= 0) break;
+    if (held.has(c.id)) continue; // FB2 B6 (fix round 1, M3): a ticket's other drinks are already held with it
     if (!ticketFresh(state, c)) continue;
     held.add(c.id);
     free -= 1;

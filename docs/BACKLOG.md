@@ -2053,6 +2053,48 @@ Open (sim lane):
 - A cold drip pot can't be dumped; bots serve it at half tip until empty.
 - Bots answer the phone but never travel to the branch (travel is not built).
 
+## ui-3.4.1 (UI lane): FB2 A4 fridge
+
+UI side of A4 (sim `fb2-a4`, protocol 44). No sim, net, host, storage or data changes; protocol unchanged.
+
+- [x] **Fridge art:** `render/layers/fridgeArt.ts` (`buildFridgeArt(id)` f1 Dorm Room Cube, f2 Garage Beer Fridge,
+  f3 Chrome Reach-In, f4 Udder-Matic 3000; `drawCarton`, `drawBarCaddy`), `fridgeArtRise.ts` (`FRIDGE_RISE`, no Pixi).
+  `layers/stations.ts` `buildFridge`; `pickupModel.counterSpotOf` → `'fridge'`; `scene.buildStations` keys on
+  `fridgeGear(state)`.
+- [x] **Milk out + glow:** `render/fridgeModel.ts` (pure: `fridgeToast`, `fridgeLabel`, `milkSpot`, `cartonsFor`,
+  `fridgeGlow`) and `render/layers/fridge.ts` (`FridgeVisuals`: cartons by the steamer, "N milk out" tag, floor glow).
+- [x] **Counts:** `countsModel` gives the fridge `unit: 'milk left'` and `rise` (`FRIDGE_RISE`); `counts.ts` draws it.
+- [x] **Carry art:** `actors.ts` draws the carton (`tool 'milk'`) and the bar box (`tool 'bar'`).
+- [x] **Hints (`ui/live.ts`):** `fridgeHint` (Grab milk / No milk in the fridge / Hands full), `carryHint` (Put a
+  carton out / Put the milk away / Put the condiment bar away / Set the bar back out), `liftHint` at closing (Pick
+  up the milk / Pack up the condiment bar). `emptyHandsWanted` is mirrored with `tapCupRecipe` (not exported by sim).
+  `toolLabel(player)` adds "· N milk" / "· N servings"; `TOOL_LABEL.bar` is "Condiment bar, packed up" 🧺.
+- [x] **Closing checklist:** `closingListVM(state)` → `HudLive.checklist` while `closingSoon`; `hud.ts` `.hud-checklist`.
+- [x] **Night:** `gearVM.fridgeVM(state, voters)` → `GearVM.fridge`; `night.ts` `fridgePanel` (`data-action="fridge-buy"`),
+  `onFridge` → `{ kind: 'fridge', fridge }`; the Udder-Matic vote shows in the existing gear-vote bar. Brief row
+  `fix.kind === 'fridge'` gets "Buy it · $N" / "🗳️ Ask the crew · $N".
+- [x] **Bubbles and sounds:** `crewModel` (all eight events; `supply.spoil` also dips the vibe), `audio/cues.ts` cues
+  `fridgeOpen`, `fridgeShut`, `milkOut`, `liftUp`, `spoil`, `closingSoon`, `moo`.
+- Tests: `src/ui/fridgeUi.test.ts`. Screenshots: `/workspace/overnight/sprint/ui-fridge/`.
+- [ ] Later: C9 wand (steamer → espresso wand) will need `milkSpot` to point at the espresso machine.
+
+## ui-3.4.0 (UI lane): tier looks, grow transition, nudge, tips
+
+- [x] **Tier looks:** `render/tierLook.ts` (`tierLook`, `isOutdoor`, `barSkin`, `leaseLines`) and
+  `render/layers/outdoor.ts` (`buildOutdoor(look)` → back / props / over). Stand = sidewalk (umbrella, lamppost,
+  pots, A-frame, kerb + road); cart = park plaza (awning, string lights, bench, trees, cobbles). Café unchanged.
+  `layers/stations.ts` `setBarSkin` draws the counters as a folding table (stand) or cart panels (cart). Layout and
+  station positions untouched; the menu board moved into its own container (`wall.menuBoard`).
+- [x] **Grow transition:** `ui/growModel.ts` `detectGrow(prev, state)` (same seed, tier index up) +
+  `gainedDiff(from, to, gear)`; `ui/growFx.ts` wipe + banner + confetti (1.6 s), then the "What you gained" card.
+- [x] **Night nudge:** `growNudge(state)` (night, next tier affordable, not a Gear run's day 1) →
+  `GrowthVM.nudge` → chip `[data-nudge]` jumping to Extras ▸ Shopfront (Spend view `grow` renamed "🏪 Shopfront").
+- [x] **Tips:** `ui/hintsModel.ts` (pure: once each, snooze 15 min, off, reset; triggers) + `ui/hints.ts` bubble.
+  Stored per browser under localStorage `cafetycoon.tips` (UI-owned). Pause menu: Snooze / Turn off / on / Show again.
+- [x] **Price forecast** labelled "Rough guess … A strategist can tell you more" (no strategist hire built).
+- Tests: `src/ui/uiTiers.test.ts`.
+- [ ] Later: a strategist hire that gives a better forecast (Kennedy's idea; not built).
+
 ## ui-3.3.5 (UI lane): no "tap" in cold brew wording
 
 - [x] UI strings: `live.ts` `DRINK_STEPS` ('Tap' → 'Pour cold brew'; iced latte 'Ice + milk') and
@@ -2217,3 +2259,62 @@ Source: `docs/CLAUDE_PROMPT_FEEDBACK_2.md`. One branch and tag per item. Names b
   **Co-op vote.** The Udder-Matic card ($320) goes to a co-op vote like $50+ gear: `state.fridgeVote { by, byName, fridge, amount, yes, no }`, voted with the gear vote input, one proposal at a time, lapsing at opening, with the result in `gearVoteLast`. The UI lane draws it like the gear vote.
 
   **Known limit.** Last call doesn't interrupt a bot that is busy making a drink.
+- **Cold brew wording (`fb2-tap-wording`, Grok's request).** No "tap" in sim/data player text: tickets read
+  'Pour cold brew' / 'Ice + milk' / 'Cold brew again (sweet cream)'; equipment 'Cold-brew keg', catalogue 'Second
+  cold brew keg', gear c4 'The Kegerator', describe 'cold brew', steep's morning note "…had no room left…". Code ids
+  (`coldBrewTap`, `batchLeft`) unchanged; card-payment "tap terminal" unchanged.
+
+
+## Round 3 (Kennedy approved 2026-10-30)
+Approved Oct 30, 2026 7:46 PM (Toronto). Sim lane builds; UI lane (Grok) wires. Linked from HANDOFF.
+
+1. **More lattes.** Goal: coffee shops make their money on lattes; shift the order mix toward `latte` and
+   `cappuccino` when the gear can make them, plus occasional "and a latte for my friend" add-on asks if cheap.
+   Freedom: weights, how add-ons attach (combo machinery from B6 is fine). Don't touch: batch must stay viable,
+   don't make espresso mandatory. Grok wires: add-on ask bubble and ticket line.
+2. **Money (VERY slight).** Goal: soften the squeeze a little; the main cause was the stand's 0.75 price. Suggested:
+   stand price 0.75→0.8, supply packs −10%, elasticity 1.8→~1.4, fix `unitCost` (drip per pot, cappuccino counts two
+   milks), fix `brief.ts` `expectedUse` restock estimate, cap forecast orders by real capacity (queue + serve rate).
+   Log price walkouts as `walkout { customer, reason: 'price' }` instead of silently not spawning. Freedom: exact
+   numbers within "slight". Don't touch: cart/café price multipliers. Grok wires: "Too pricey!" bubble + walk-out.
+3. **Price calculator becomes a paid hire.** Goal (Kennedy's idea): without a hire, the night shows only a rough
+   guess. `staff.strategist` (~$7/week) gives the honest forecast and sets peak prices for the current crowd.
+   `staff.marketer` (weekly fee) brings more customers at your current prices. Both stack. Freedom: fees, how
+   "rough" the guess is, input names (please list). Don't touch: manual pricing stays available. Grok wires: hire
+   cards on the night screen, rough-vs-honest forecast display, "set by Strategist" marks.
+4. **Line and waiting area.** Queue capacity is already per tier (stand 3, cart 5, café `ECONOMY.queueCapacity`).
+   Goal: an inside waiting area where a few customers browse before joining the line. If the line doesn't move for a
+   while, one customer says "Line's too long!" (`line.complain`), with a cooldown; during it, others just leave with a
+   tumbleweed (`line.leave { customer, quiet: true }`). Freedom: timings, area size per tier. Don't touch: queue
+   caps. Grok wires: waiting-area art and browsers, complaint bubble, tumbleweed.
+5. **Order-taking time by register tier (small).** Cheapest register ~1–1.5 s to ring up, faster per tier; the top
+   tier is self-order and moves the customer to pickup with bonus patience. Expose ring-up progress 0..1. Freedom:
+   exact seconds, field name. Don't touch: keep it small. Grok wires: ring-up bar at the till.
+6. **Early growth (nudge).** Maybe cart $80→$70. Emit an event or state for "next tier affordable". Freedom: name
+   and amount. Grok wires: night nudge "You can afford a cart!".
+7. **Tier upgrade summary.** On `grow`, give the UI a diff (queue, price, traffic, rent, new crowd, unlocks).
+   Grok wires: transition between stand / cart / café and a "what you gained" card.
+
+### Later (not this round)
+- **Café add-ons first:** a seating nook that juts out with a big window; an outside queue of shadow figures.
+- A cashier hire who entertains the line (line can grow to 6+).
+- Area upgrades mid-day rather than on another screen.
+- A split money pool for co-op.
+- Upgrade paths: speed, reliability, taste, quality.
+- A smart café path (top registers pair with smart machines), ending in a self-running shop with conveyor belts.
+- **Balance pass (`fb2-balance`, stopped early by Kennedy's call: playtests drive balance now).** Fixes kept:
+  the balance harness steeps cold brew on night 1; bots `reclaim` a lost claim onto another order for the same
+  drink and collect grounds left in a grinder after 15 s (`leftGrounds`, ported from B6); during closing soon, E
+  at the cold brew for a sweet cream pours instead of lifting the milk; bots meeting head-on behind the bar no
+  longer block each other all day (also in v3.3.1). No constants changed; the cube stays $20.
+- **3.5.0 released** (Feedback 2 part A + balance fixes). UI lane already shipped 3.4.0/3.4.1, hence 3.5.0.
+- **B6 multi-drink orders (`fb2-b6`, protocol 45; UI lane to draw).** Gear only.
+  - **Tickets:** a group, a combo or an office run is one ticket: `Customer.items: { drink, done, by?, slips?, temp?, black?, cold? }[]`, with `Customer.order: 'combo' | 'office'` (absent for groups). `drink`/`extra` mirror the undone items. Rung once; each cup taken off the pickup counter ticks one item; the ticket pays when the last item is taken (`order.done { customer, paid, tip }`, and every cup's `served` event lands then, with `left: 0`). Walk out part done: nothing paid, the cups taken are wasted (not an office run's).
+  - **Cold cups:** a cold cup ticks its item unpaid (`pickup.cold`, plus `review.bad` except office) and the rest carries on.
+  - **Gear groups** now pay once, at the end.
+  - **Combos:** from day 2, about 1 in 12 walk-ins order 2 drinks (`ORDERS.combo.chance` 0.08; a pair, or espresso drink + drip), ×1.3 patience. `order.combo { customer, items: "latte,drip" }`.
+  - **Office runs:** on the cart and at the café from day 3, about every other day (`GameState.office { day, at, called?, came? }`). The phone rings 10 s ahead (`office.call { at }`, `at` = the tick they're due; with the queue over capacity they wait outside and come later). 4–6 drinks (`ORDERS.office.size` by tier), ×4 patience, arriving 5–15% into the day (`order.office { customer, count }`). Finished: +25% bonus tip, counts as one customer for reputation (`DayStats.officeExtra`). Lost (patience out, or still in when the doors lock): `order.lost { customer }`, no lost customers, no waste, no bad review, no reputation hit. `DayStats.office: 'served' | 'lost'`. They take a cup only when nobody else wants it; bots keep one office drink in the queue at a time and make the rest after the walk-ins'. Kennedy to tune size, patience and combo rate in play.
+  - **Bots:** cover each undone item as its own order (one claim per item, never two on one item left). In Gear, a claim lost mid-chain moves to another order for the same drink (never onto a ticket held for a free person), and grounds left in a grinder are collected after 15 s (30 s while someone else on the floor counts as a person by A1's rule).
+  - **UI to do:** a tall ticket with a tick per item (`items[].done`, maybe the cold one crossed out), the office-run phone card (`office.call`, a countdown to `at`), and a receipt line for `DayStats.office`.
+  - Open: two bots crossing a corridor mirrored each other all day on p4 seed 205 day 9 before the balance
+    branch's head-on fix (748100f); recheck in play.

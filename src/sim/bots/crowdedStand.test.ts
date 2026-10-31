@@ -2,15 +2,22 @@ import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from '../run';
 import { step } from '../step';
 import { addStandIns } from './roster';
+import { ensureCounterSpots, stationsFromSlots } from '../slots';
 import type { GearId } from '../../data/gear';
 import type { GameState } from '../types';
 
-/** A stocked Gear stand (C1 tap, E1 pods, S1 steamer) worked by `n` stand-ins for one day of `secs` seconds. */
+/**
+ * A stocked Gear stand (C1 tap, E1 pods, and a plain steam station in the third slot: FB2 C9 retired the S1 steamer; a
+ * Gear shop only gets one as a wand, which works the same) worked by `n` stand-ins for one day of `secs` seconds.
+ */
 function standDay(n: number, seed: number, secs = 420): GameState {
   let s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: secs }, tier: 'stand', gear: true });
   s.owned.push({ itemId: 'test-busy', effects: [{ kind: 'traffic', mul: 2.5 }] }); // a busy day: the bar, not the door, is the limit
   addStandIns(s, n);
-  for (const g of ['c1', 'e1', 's1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
+  for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
+  s.slots = s.slots!.map((k, i) => (i === 2 ? 'steamer' : k));
+  s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear, s.slotWand);
+  ensureCounterSpots(s);
   s.supplies.beans = 60;
   s.supplies.milk = 60;
   s.fridge = 'f1'; // FB2 A4: the stand's Dorm Room Cube (milk needs a fridge)

@@ -76,7 +76,7 @@ export const FORECASTS: Forecast[] = [
   {
     id: 'heatWave', name: 'Heat wave', headline: 'MERCURY HITS 34°, CITY MELTS', icon: '🔥',
     blurb: 'Iced drinks spike, hot ones barely sell, and tempers are short. The grid is straining.',
-    plan: 'Load up on concentrate. Keep the tap busy. Expect the lights to flicker.',
+    plan: 'Load up on concentrate. Keep the cold brew pouring. Expect the lights to flicker.',
     effects: [{ kind: 'orderTag', tag: 'iced', mul: 2.4 }, { kind: 'orderTag', tag: 'hot', mul: 0.55 }, { kind: 'patience', mul: 0.9 }, { kind: 'eventOdds', event: 'powerFlicker', mul: 3 }, { kind: 'orderBias', drink: 'icedLatte', mul: 1.2 }],
     shape: 'flat', weight: 9, family: 'hot', eventNote: "Every AC on the block is on: a power flicker is likely.",
   },

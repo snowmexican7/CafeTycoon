@@ -1,3 +1,5 @@
+import { FRIDGES } from '../data/fridges';
+import { GEAR_VOTE_MIN } from '../sim/gear';
 import type { PerkId } from '../data/perks';
 import { SIG, sigShare } from '../sim/signature';
 import { gearVM, hudGearVM, type GearVM, type HudGearVM } from './gearVM';
@@ -7,6 +9,7 @@ import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '.
 import { layoutFor } from '../data/layout';
 import { stationMenuNote, stationsVM, type StationsVM } from './stationsVM';
 import { tipsVM, type TipVM } from './tipsVM';
+import { growNudge, type GrowNudge } from './growModel';
 import { nightBrief, type NightAlert, type NightFix } from '../sim/brief';
 import { JUDGES, PITCH } from '../sim/pitch';
 import { copyIsLive, daysToCopy, RIVAL, rivalAskFactor, rivalMenu, sigPrice } from '../sim/rival';
@@ -501,6 +504,8 @@ export interface GrowthVM {
   milestone?: { name: string; icon: string; by: string; line: string; width: number; queue: number };
   /** Known drinks this shop has no station for yet (the menu tab's note). */
   waiting?: string;
+  /** ui-3.4.0: the night chip "You can afford a cart!" (growNudge). */
+  nudge?: GrowNudge;
 }
 
 const STATION_ICON: Record<string, string> = { grinder: '⚙️ grinder', espresso: '☕ espresso', steamer: '🥛 steamer', coldBrewTap: '🧊 cold brew' };
@@ -532,6 +537,7 @@ export function growthVM(state: GameState): GrowthVM {
     }),
     current: { id: now, name: TIERS[now].name, icon: TIERS[now].icon },
     ...waitingNote(state),
+    ...((n) => (n ? { nudge: n } : {}))(growNudge(state)),
     ...(g ? { milestone: { name: TIERS[g.tier].name, icon: TIERS[g.tier].icon, by: g.by, line: TIERS[g.tier].milestone, width: layoutFor(g.tier).width, queue: TIERS[g.tier].queue } } : {}),
   };
 }
@@ -1232,6 +1238,12 @@ function briefRow(state: GameState, a: NightAlert): BriefAlert {
     row.fix = { label: f.on === false ? 'Undo' : `Match it · ${Math.round((1 - RIVAL.counterPrice) * 100)}% off`, action: 'fix', data: { fix: a.id }, input: f };
   } else if (f?.kind === 'stampCard') {
     row.fix = { label: `Stamp card · $${RIVAL.stampCost}`, action: 'fix', data: { fix: a.id }, input: f };
+  } else if (f?.kind === 'fridge') {
+    // ui-3.4.1 (FB2 A4): buy the fridge card right from the brief (the Udder-Matic asks the crew in co-op)
+    const price = FRIDGES[f.fridge].price;
+    const vote = price >= GEAR_VOTE_MIN && state.players.filter((p) => p.connected && !p.bot).length > 1;
+    row.icon = f.fridge === 'f4' ? '🐄' : '🧊';
+    row.fix = { label: `${vote ? '🗳️ Ask the crew' : 'Buy it'} · $${price}`, action: 'fix', data: { fix: a.id }, input: f };
   } else if (a.kind === 'grow') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'grow' } };
   else if (a.kind === 'checkout') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'checkout' } };
   else if ((a.kind === 'rival' && a.id !== 'rival:loyalty') || a.kind === 'signature') row.fix = { label: 'Menu', action: 'goto', data: { tab: 'menu' } };

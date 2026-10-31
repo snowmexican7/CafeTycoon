@@ -502,6 +502,22 @@ describe('FB2 A4: closing soon and the close', () => {
     expect([me(s).tool, me(s).carry, s.milkOut]).toEqual(['milk', 4, 0]);
   });
 
+  it('balance: the first pour of a sweet cream is wanted too (closing soon pours it instead of lifting the milk)', () => {
+    // A bot on a sweet cream pours at the tap with empty hands, then taps again with the cold brew. The pour used to
+    // count as unwanted (nobody ordered a plain cold brew), so it lifted the milk: the bot shuttled the carton to the
+    // end of the day (in gb runs, 45 lifts during closing soon and 88 after the doors locked, 12 runs).
+    const s = gearDay(['c2', 'steamer']);
+    s.milkOut = 4;
+    s.closingSoonAt = s.tick;
+    const tap = at(s, 'coldBrewTap');
+    tap.batchLeft = 5;
+    s.customers.push({ id: 50, drink: 'sweetCream', patienceLeft: 999, patienceMax: 999 });
+    standAt(s, 'coldBrewTap');
+    interact(s, 'p1');
+    expect(me(s).holding).toBe('coldBrew');
+    expect([me(s).tool, s.milkOut]).toEqual([null, 4]);
+  });
+
   it('a carton can go out at the cold brew tap too (iced lattes use milk there)', () => {
     const s = gearDay(['c2', 'e2']);
     me(s).tool = 'milk';
