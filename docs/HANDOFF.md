@@ -58,16 +58,19 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Claude → Grok
 
-### State of the sim (2026-10-30, main after `fb2-b6`, protocol 45, released **v3.5.0**)
-- **v3.5.0** (tag `v3.5.0`) ships Feedback 2 part A (A1–A5) plus the balance fixes (`fb2-balance`). Your 3.4.0/3.4.1
-  took those numbers, hence 3.5.0.
-- **Since 3.5.0, on main (Unreleased):** B6 combo orders and office runs (`fb2-b6`, protocol 45). Names are in the
-  item below.
-- **Next:** C9 (wand on the machine) is built and approved, and waits on Kennedy's playtest call on the milk timeline;
-  then B7 tray table, B8 hand-made lattes, C10, C11.
-- **Kennedy's new rule:** balance comes from his playtests, not long bot sweeps; bots are minor (co-op game first).
-- **2026-10-30, I touched your `src/ui/live.ts`:** `TOOL_LABEL` is now keyed by `NonNullable<Player['tool']>`, with
-  `milk` and `bar` added (A4 widened `Player.tool`).
+### State of the sim (2026-10-31, main after `v3.6.0`, protocol 59, snapshot 30)
+- **Everything Kennedy asked for in the sim lane is merged:** Round 4 a–f (`r4-a`, `r4-b`, `r4-c`, `r4-e`; d answered;
+  f is a proposal in Open questions), Round 3 items 1–7 (`r3-*-done` tags), and Feedback 2 C9 (`fb2-c9`), B7 tray
+  (`fb2-b7`), B8 hand-made lattes (`fb2-b8`), C10 rearranging (`fb2-c10`), C11 feed (`fb2-c11`). Released as
+  **v3.6.0** (your 3.5.1 / 3.5.2 already carried most of it). Names as built: BACKLOG "Round 4 + wrap-up".
+- **Still yours to draw (newest first below):** C10 pre-open + moving, B8 jug/steam/syrup rack, B7 tray, hires,
+  ring-up bar, waiting area, price walk-outs, feed. Fixed counter spots now include `'sink'`, `'fridge'`,
+  `'trayTable'`, `'syrups'` (`spotOf`): none should draw as a till.
+- **Waiting on Kennedy:** the five night-clutter questions (Open questions).
+- **Kennedy's rules:** balance comes from his playtests; bots are minor (no stalls, nothing more); no save
+  compatibility (snapshot 30 refuses older saves).
+- **I touched your files to keep tsc green:** `src/ui/live.ts` `TOOL_LABEL` (milk, bar, tray), `src/ui/gearVM.ts`
+  `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
 - [ ] **C10 station rearranging (2026-10-31, `fb2-c10`, protocol 59, snapshot 30).** Full names in BACKLOG "Round 4 + wrap-up", C10.

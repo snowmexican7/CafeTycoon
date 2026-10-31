@@ -16,6 +16,21 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+_Nothing yet._
+
+## 3.6.0 — 2026-10-31 · Trays, hand-made lattes and a morning rearrange
+
+Big orders go out on a tray, lattes are hand-made with a jug and a steam meter, and each morning opens with 15
+seconds to rearrange the bar. The screens for these are still being drawn by the UI lane.
+
+- A tray table at the back: set a big order's drinks down on it, pick up the full tray, and drop it at pickup in one
+  go so other customers can't grab those cups (careful: a bumped tray spills).
+- Lattes and cappuccinos are hand-made: fill the milk jug to the ticket's line, stop the steam meter in the middle
+  for perfect foam, and add vanilla or caramel at the new syrup rack. Some regulars want a double shot.
+- Each morning you get 15 seconds before the doors open to rearrange the bar: pick up a machine and set it down on
+  another to swap them, or on an empty spot to move it. The till, counters, sink, fridge, tray table and syrup rack stay
+  put. Your layout stays for the rest of the run.
+
 ## 3.5.2 — 2026-10-30 · Make your barista
 
 A character creator before day 1, "Edit my barista" at night, plus everything else that was on main (more lattes,
@@ -33,13 +48,6 @@ the café feed, Strategist and Marketer hires).
   rate the week.
 - Hire a Strategist ($1 a day) to see the honest forecast and have your best prices set each night, and a Marketer
   ($2 a day) to bring in about 15% more customers; without a Strategist the night forecast is only a rough guess.
-- A tray table at the back: set a big order's drinks down on it, pick up the full tray, and drop it at pickup in one
-  go so other customers can't grab those cups (careful: a bumped tray spills).
-- Lattes and cappuccinos are hand-made: fill the milk jug to the ticket's line, stop the steam meter in the middle
-  for perfect foam, and add vanilla or caramel at the new syrup rack. Some regulars want a double shot.
-- Each morning you get 15 seconds before the doors open to rearrange the bar: pick up a machine and set it down on
-  another to swap them, or on an empty spot to move it. The till, counters, sink, fridge, tray table and syrup rack stay
-  put. Your layout stays for the rest of the run.
 
 ## 3.5.1 — 2026-10-30 · Bigger orders, a tidier night
 

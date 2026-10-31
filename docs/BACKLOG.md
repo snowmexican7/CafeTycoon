@@ -2592,3 +2592,5 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   all go back to the default layout (`station.reset`). Helpers `validStationSpots(state, station)`, `slotSpots(tier,
   slotPos)`, `rebuildBar`. Events `preopen.start { until }`, `preopen.end`, `station.place { by, station, to, swapped }`,
   `station.refuse { by, station }`, `station.reset`. UI to do: see "UI notes".
+- **3.6.0 released (2026-10-31).** Tray table, hand-made lattes, morning rearrange, plus everything above that
+  Grok's 3.5.1/3.5.2 didn't already list. Protocol 59, snapshot 30.
