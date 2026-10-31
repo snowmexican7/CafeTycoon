@@ -29,6 +29,24 @@ when a build goes out, the line moves under its version with the date.
   In the last 30 seconds the shop is "closing soon": put the milk and the condiment bar back in the fridge, or
   whatever's left out goes bad.
 
+## 3.4.1 — 2026-10-30 · The fridge, on screen
+
+- **You can see the fridge.** The stand's Dorm Room Cube, the cart's Garage Beer Fridge, the café's Chrome Reach-In
+  and the Udder-Matic 3000 (a cow-spotted fridge with a milk tap) each have their own look against the left wall,
+  with a "12 milk left" count above it.
+- **Milk in your hands.** Carrying a carton or the packed-up condiment bar shows it in your barista's hands and in
+  the hand box ("Milk carton · 8 milk"). Cartons put out sit by the steamer with a "6 milk out" tag that turns amber
+  when it runs low, and a glow on the floor shows where to take what you hold.
+- **Plain hints.** At the fridge: "Grab milk". With a carton: "Put a carton out" at the steamer, "Put the milk away"
+  at the fridge. At closing: "Pick up the milk" and "Pack up the condiment bar".
+- **"Closing soon" checklist.** In the last 30 seconds a small list in the top corner ticks off: milk back in the
+  fridge, condiment bar in the fridge, pots empty, floor clean, pickup counter clear.
+- **Buy a fridge at night.** The Pick gear tab has a Fridge row: the one you have and the one you can buy ("Buy it ·
+  $20"). In co-op the $320 Udder-Matic asks the crew first. The night brief's fridge warning has a buy button too.
+- **Bubbles and sounds** for grabbing milk, putting it away, a carton out, things going bad, closing soon, and the
+  Udder-Matic's moo when it pours milk by itself.
+- Wording: "press Next" and "Click for steps" instead of "tap".
+
 ## 3.4.0 — 2026-10-30 · A stand, a cart, a café
 
 - **Each shop size has its own place.** The stand is a folding table on the sidewalk: pavement, a market umbrella,
