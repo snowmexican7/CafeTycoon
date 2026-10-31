@@ -10,6 +10,7 @@ import { Actors } from './layers/actors';
 import { Chaos } from './layers/chaos';
 import { EventVisuals } from './layers/events';
 import { crewBursts, newCrewMemory, vibeLabel, type CrewBurst } from './crewModel';
+import { trayBursts, type TrayBurst } from './trayModel';
 import { buildDecor } from './layers/decor';
 import { EspressoGags, fellAtScreen, shakePx } from './layers/espresso';
 import { Effects } from './layers/fx';
@@ -72,6 +73,8 @@ export class Scene {
   private crewState: GameState | null = null;
   private crewSeq = -1;
   private readonly crewMem = newCrewMemory();
+  /** FB2 B7: tray refuse / cue cursor (same idea as crewSeq; shared log, separate so a miss never eats the other). */
+  private traySeq = -1;
 
   constructor() {
     const floor = buildFloor(SCENE_WIDTH, SCENE_HEIGHT, LAYOUT.door);
@@ -255,10 +258,24 @@ export class Scene {
     if (state !== this.crewState) {
       const { bursts, lastSeq } = crewBursts(this.crewState, state, this.crewSeq, this.crewMem);
       this.crewSeq = lastSeq;
+      const tray = trayBursts(this.crewState, state, this.traySeq);
+      this.traySeq = tray.lastSeq;
       this.crewState = state;
       for (const b of bursts) this.crewBurst(b, state, view.baristaPositions);
+      for (const b of tray.bursts) this.trayBurst(b);
     }
     this.fx.step(dt);
+  }
+
+  /** FB2 B7: refuse speech bubble at the barista; small floating cues for the other tray events. */
+  private trayBurst(b: TrayBurst): void {
+    const x = Math.max(80, Math.min(SCENE_WIDTH - 80, sx(b.at.x)));
+    const y = sy(b.at.y) - 100;
+    if (b.kind === 'refuse') this.fx.say(b.text, x, y);
+    else {
+      const color = b.tone === 'good' ? 0xa8f0d2 : b.tone === 'warn' ? 0xffd36b : 0xff8a7a;
+      this.fx.spawn(b.text, x, y - 10, color, 15, 2.4);
+    }
   }
 
   /** Serve toasts, combo cheers, fail feedback, and juice punches. */
