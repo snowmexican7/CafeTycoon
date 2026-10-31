@@ -9,20 +9,21 @@ import type { Customer, GameState, TierId, Vec2 } from '../sim/types';
 import { customerSpots, type SpotsLayout } from './pickupModel';
 
 /**
- * Inside waiting-area tiles by shop size (stand 0 / cart 2 / café 4), near the door and clear of
- * the order line at y ≈ 7.6. Length matches `ECONOMY.line.waiting`.
+ * Inside waiting-area tiles by shop size (stand 0 / cart 2 / café 4): on the customers' side of the counter row
+ * (y 6), between the door and the order line at y ≈ 7.6. Length matches `ECONOMY.line.waiting`.
+ * ui-3.8.0: moved down from y 4.6–5.4, which stood the browsers on the baristas' floor behind the counter.
  */
 export const WAITING_SPOTS: Record<TierId, readonly Vec2[]> = {
   stand: [],
   cart: [
-    { x: 2.2, y: 5.4 },
-    { x: 3.2, y: 5.4 },
+    { x: 2.0, y: 6.8 },
+    { x: 2.9, y: 6.8 },
   ],
   cafe: [
-    { x: 2.2, y: 5.4 },
-    { x: 3.2, y: 5.4 },
-    { x: 2.2, y: 4.6 },
-    { x: 3.2, y: 4.6 },
+    { x: 2.0, y: 6.8 },
+    { x: 2.9, y: 6.8 },
+    { x: 2.45, y: 7.35 },
+    { x: 3.35, y: 7.35 },
   ],
 };
 

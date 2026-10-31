@@ -5,7 +5,7 @@ import { gearStart } from '../sim/gear';
 import { waitingRoom } from '../sim/line';
 import type { GameState, TierId } from '../sim/types';
 import { complainSpot, tumbleweedSpawn, WAITING_SPOTS, waitingArtRoom, waitingSpotCap, waitingSpots, waitingToDraw } from './waitingModel';
-import { LAYOUT } from '../data/layout';
+import { LAYOUT, layoutFor } from '../data/layout';
 
 function shop(tier: TierId): GameState {
   let s = createRun({ seed: 4, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }], settings: { bots: 0 } });
@@ -29,10 +29,19 @@ describe('waitingModel', () => {
   it('places browsers in arrival order and clips to the room', () => {
     expect(waitingSpots('stand', 3)).toEqual([]);
     expect(waitingSpots('cart', 2)).toEqual([
-      { x: 2.2, y: 5.4 },
-      { x: 3.2, y: 5.4 },
+      { x: 2.0, y: 6.8 },
+      { x: 2.9, y: 6.8 },
     ]);
     expect(waitingSpots('cafe', 99)).toHaveLength(4);
+  });
+
+  it('keeps browsers on the customers\' side of the counter, off the order line (ui-3.8.0)', () => {
+    for (const tier of ['cart', 'cafe'] as const) {
+      for (const p of waitingSpots(tier, 99)) {
+        expect(p.y).toBeGreaterThan(6.5); // the counter row is y 6; the bar is above it
+        for (const q of layoutFor(tier).queueSlots) expect(Math.hypot(p.x - q.x, p.y - q.y)).toBeGreaterThan(0.6);
+      }
+    }
   });
 
   it('draws only as many browsers as the art room allows', () => {
