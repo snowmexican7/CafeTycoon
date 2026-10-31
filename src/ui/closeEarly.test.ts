@@ -14,7 +14,7 @@ describe('close early button (FB1 WP3)', () => {
     expect(closeEarlyHtml(vm({ votes: 1, needed: 3 }))).toContain('1/3 voted');
     const mine = closeEarlyHtml(vm({ votes: 2, needed: 3, mine: true }));
     expect(mine).toContain('Voted to close');
-    expect(mine).toContain('2/3 voted · tap to undo');
+    expect(mine).toContain('2/3 voted · click to undo');
     expect(closeEarlyLabel(vm({ votes: 2, needed: 3, mine: true }))).toMatch(/take the vote back/);
   });
   it('nudge line when sold out or empty', () => {

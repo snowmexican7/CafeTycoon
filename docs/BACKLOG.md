@@ -2614,7 +2614,10 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   `AdviceKind 'slot'` removed; a classic (test-only) run grows with `classicGrowSlots`. `slot` / `equip` stay in
   `PlayerInput` (DEPRECATED), refused. `src/data/equipment.ts` (with `isEquipmentKind`) stays, DEPRECATED, only for
   the UI's classic Stations board. Gear's slots (`slotGear`, `slotWand`, `slotPos`) unchanged.
-- [ ] UI (Grok): day-HUD Restock button, `strategist.menu` bubble, grow on the receipt, and remove the crew roles,
-  re-roll, classic Stations board and branch Manager line (HANDOFF list).
+- [x] UI (Grok): day-HUD Restock button, `strategist.menu` bubble, grow on the receipt, and remove the crew roles,
+  re-roll, classic Stations board and branch Manager line (HANDOFF list). Done in `ui-3.7.1` (commit 09864d6):
+  `src/ui/dayRestock.ts` (`dayRestockVM`, HUD panel, B key), `src/ui/logToasts.ts` (`restock.rush` /
+  `strategist.menu` toasts), `src/ui/growOffer.ts` (`growOffer`, `growOfferHtml`; closing receipt and night receipt
+  drawer). Roles, re-roll, classic Stations board, night grow board and branch Manager UI removed.
 - **3.7.0 released (2026-10-31).** Night clutter answers: rush restock in the day, Strategist sets the menu, roles /
   rerolls / classic stations cut. Protocol 60, snapshot 31.

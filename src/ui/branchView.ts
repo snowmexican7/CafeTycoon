@@ -35,10 +35,11 @@ export interface BranchVM {
   tomorrow?: BranchDayVM;
   yesterday?: BranchDayVM;
   resale?: number;
-  /** P4 B5: stock credit waiting at the branch, what can be sent, and the Manager's effect. */
+  /** P4 B5: stock credit waiting at the branch and what can be sent. */
   credit?: number;
   supplies?: BranchSupplyVM[];
-  manager?: { name: string; cups: number; discountPct: number } | null;
+  /** DEPRECATED (ui-3.7.1): the Manager role is cut and nothing sets this; kept only for src/sim/branch.test.ts (asked of Claude to drop). */
+  manager?: null;
 }
 
 function fitWord(fit: number): string {
@@ -69,10 +70,9 @@ export function branchViewModel(state: GameState): BranchVM | undefined {
       const pack = ECONOMY.packs[id];
       const have = state.supplies[id] ?? 0;
       const send = Math.min(have, pack.size);
-      // 3.3.1: the sim credits a send at tonight's restock price (Manager / card discounts count, review M3)
+      // 3.3.1: the sim credits a send at tonight's restock price (card discounts count, review M3)
       return { id, name: SUPPLY[id], have, send, worth: Math.round(((send * restockCost(state, id, 1)) / pack.size) * 100) / 100 };
     });
-    vm.manager = null; // Round 4 f (sim): the Manager role is cut. TODO(Grok): drop BranchVM.manager and managerHtml.
   }
   const cl = callLine(last?.call);
   if (last) vm.yesterday = { served: last.served, walked: last.walked, profit: last.profit, ...(last.fromStock ? { fromStock: last.fromStock } : {}), ...(cl ? { call: cl } : {}) };
@@ -105,16 +105,9 @@ export function branchBody(v: BranchVM | undefined): string {
     <div class="br-staff"><span>Baristas</span><button class="btn mini" data-action="branch" data-op="staff" data-staff="${s - 1}" ${s <= BRANCH.staff.min ? 'disabled' : ''} aria-label="One fewer barista">−</button>
       <b>${s}</b><button class="btn mini" data-action="branch" data-op="staff" data-staff="${s + 1}" ${s >= BRANCH.staff.max ? 'disabled' : ''} aria-label="One more barista">＋</button>
       <small>up to ${s * BRANCH.perStaff} cups · ${$(s * v.wage)}/day</small></div>
-    ${managerHtml(v)}${stockHtml(v)}
+    ${stockHtml(v)}
     <p class="br-fine">Walked customers mean too few baristas; a loss with nobody walking means too many. Menu changes at home change what this area thinks of us.</p>
     <button class="btn mini ghost" data-action="branch" data-op="close">Sell the lease (+${$(v.resale ?? 0)})</button></div>`;
-}
-
-function managerHtml(v: BranchVM): string {
-  const m = v.manager;
-  return m
-    ? `<p class="br-mgr">📋 <b>${esc(m.name)}</b> is Manager: +${m.cups} cups per barista here${m.discountPct ? `, cups ${m.discountPct}% cheaper` : ''}.</p>`
-    : '';
 }
 
 function stockHtml(v: BranchVM): string {

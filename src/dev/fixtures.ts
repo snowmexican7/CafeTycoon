@@ -19,6 +19,8 @@ import type { GameState, SimEvent, TierId } from '../sim/types';
 import { defaultSlots, stationsFromSlots } from '../sim/slots';
 import { createClosing } from '../ui/closing';
 import { createHud } from '../ui/hud';
+import { dayRestockVM } from '../ui/dayRestock';
+import { freshEvents, logToastLines, TOAST_KINDS } from '../ui/logToasts';
 import { hudLive } from '../ui/live';
 import { closingViewModel, hudViewModel, nightViewModel, weekEndViewModel } from '../ui/viewModels';
 import { createWeekEnd } from '../ui/weekEnd';
@@ -29,7 +31,7 @@ import { awardsFor } from '../sim/awards';
 import { blank } from '../sim/stats';
 import { emptyRecords, foldRecords } from '../storage/recordsStore';
 
-type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean };
+type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string };
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
@@ -261,12 +263,50 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
-  /** P3 B1: the night shop (Round 4 f: crew roles are cut, so nobody holds one any more). */
-  roles: {
+  /** ui-3.7.1: the plain night shop: no crew roles, no card re-roll, no Stations board. */
+  nightPlain: {
     night: true,
     setup(s) {
       s.cash = 260;
       s.ready = ['cleo'];
+    },
+    timeline: [],
+  },
+  /** ui-3.7.1: the day HUD's Restock panel open on a Gear run, beans running low, after Ben rush-ordered milk. */
+  restockDay: {
+    restock: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cart', 4);
+      s.cash = 64;
+      s.supplies = { ...s.supplies, beans: 3, milk: 12, concentrate: 8, flavour: 6, pastry: 2 };
+      s.condiments = { servings: 6 };
+      emit(s, 'restock.rush', { by: 'ben', supply: 'milk', packs: 1, cost: 8.75 });
+    },
+    timeline: [],
+  },
+  /** ui-3.7.1: the end-of-day receipt with the cart affordable (Grow is on the receipt now). */
+  receiptGrow: {
+    closing: true,
+    setup(s) {
+      atTier(s, 'stand', 0);
+      s.cash = 128;
+      s.today = { ...s.today, served: 24, lost: 2, turnedAway: 3, sales: 104.2, tips: 10.4, rent: 10 };
+    },
+    timeline: [],
+  },
+  /** ui-3.7.1: a Strategist hired: the Menu tab steps back with its note, and the bubble about tonight's menu change. */
+  strategist: {
+    night: true,
+    nightToast: true,
+    nightTab: 'menu',
+    setup(s) {
+      atTier(s, 'cafe', 0);
+      s.cash = 240;
+      s.day = 4;
+      s.staff = { strategist: true };
+      s.today = { ...s.today, day: 3, served: 41, lost: 2, turnedAway: 1, sales: 188.4, tips: 21.5, rent: 25 };
     },
     timeline: [],
   },
@@ -680,6 +720,15 @@ async function main(): Promise<void> {
     const n = createNight($('#night'), { onBuy() {}, onRestock() {}, onReady() {} });
     n.render(nightViewModel(state, 'ana'), fx.extras ? nightExtras(state, 'ana') : undefined);
     n.show();
+    if (fx.nightTab) document.querySelector<HTMLElement>(`#night [data-action="tab"][data-tab="${fx.nightTab}"]`)?.click();
+    if (fx.nightToast) {
+      if (!state.log.some((e) => e.kind === 'strategist.menu')) {
+        emit(state, 'strategist.menu', { drink: 'mocha', on: true });
+        emit(state, 'strategist.menu', { drink: 'icedLatte', on: false });
+      }
+      const names = (id: string) => state.players.find((p) => p.id === id)?.name ?? id;
+      n.toast(logToastLines(freshEvents(state, -1, TOAST_KINDS).events, names, 'ana'));
+    }
   }
   if (fx.records) {
     let r = emptyRecords();
@@ -703,6 +752,12 @@ async function main(): Promise<void> {
   renderer.setLocalPlayer(me);
   const hud = createHud($('#hud'));
   hud.show();
+  if (fx.restock) {
+    hud.setRestock(dayRestockVM(state));
+    hud.restockKey({ code: 'KeyB', key: 'b' });
+    const names = (id: string) => state.players.find((p) => p.id === id)?.name ?? id;
+    hud.toast(logToastLines(freshEvents(state, -1, TOAST_KINDS).events, names, me));
+  }
   const t0 = performance.now();
   const pending = [...fx.timeline];
   const frame = () => {
@@ -718,6 +773,7 @@ async function main(): Promise<void> {
     const c0 = performance.now();
     renderer.update({ state, baristaPositions: positions });
     hud.render(hudViewModel(state), hudLive(state, me));
+    hud.setRestock(dayRestockVM(state));
     const w = window as unknown as { fixtureCost: number[] };
     (w.fixtureCost ??= []).push(performance.now() - c0);
     (window as unknown as { fixtureTime: number }).fixtureTime = t;

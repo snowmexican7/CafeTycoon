@@ -16,14 +16,12 @@ import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
 import {
   nightStructureKey,
-  type AdsVM, type BriefAlert, type CheckoutVM, type GrowthVM, type PitchVM, type ForecastVM, type HandCardVM, type MenuLineVM,
-  type NightTimerVM, type NightVM, type RivalVM, type RoleVM, type SignatureVM, type StaffVM,
+  type AdsVM, type BriefAlert, type CheckoutVM, type PitchVM, type ForecastVM, type HandCardVM, type MenuLineVM,
+  type NightTimerVM, type NightVM, type RivalVM, type SignatureVM, type StaffVM,
 } from './viewModels';
 import type { RegularVM } from '../sim/regulars';
-import { isEquipmentKind } from '../data/equipment';
 import { GEAR_VOTE_MIN } from '../sim/gear';
-import type { EquipmentKind } from '../data/equipment';
-import type { StationsVM } from './stationsVM';
+import { growOfferHtml } from './growOffer';
 import type { TipVM } from './tipsVM';
 import type { GrowNudge } from './growModel';
 import type { NightFix } from '../sim/brief';
@@ -31,9 +29,9 @@ import type { NightFix } from '../sim/brief';
 /*
  * FB1 WP1: the night board, redesigned. Three tabs instead of seven:
  *   Tonight  the brief (yesterday's profit, tomorrow's paper in one line, up to three heads-ups with
- *            one-tap fixes), stock and crew roles;
+ *            one-click fixes) and stock;
  *   Menu     one big card per drink with a big price and −/+;
- *   Spend    cards, stations (slots and the shop), ads, the pitch, growing the shop, the checkout.
+ *   Spend    cards, ads, the pitch, the checkout. (ui-3.7.1: growing the shop is on the receipt.)
  * Anything long (the receipt, the full paper, the signature designer, twist notebooks, how pricing
  * works) opens in a drawer over the board. Rebuilt only on structure changes; the clock, cash,
  * timer ring, warning text and "need $X" tags are patched in place.
@@ -53,7 +51,7 @@ export const NIGHT_TABS: { id: NightTab; label: string; icon: string }[] = [
 /**
  * G4f (playtest: "the night tabs are confusing"): a Gear run's night is one numbered order —
  * ① Restock (stock first, then yesterday and the heads-ups), ② Gear shop, ③ Menu, ④ Extras (cards,
- * ads, pitch, grow, checkout). The pick-your-gear night puts the gear first (nothing to stock yet).
+ * ads, pitch, checkout). The pick-your-gear night puts the gear first (nothing to stock yet).
  * A "Next ▸" button in the footer walks the order. Classic runs keep their three tabs.
  */
 /*
@@ -74,17 +72,16 @@ export function nightTabs(gear: GearVM | undefined | null): { id: NightTab; labe
   const [restock, menu, shop, extras] = GEAR_NIGHT_TABS;
   return [restock, { ...shop, label: 'Pick gear' }, menu, extras];
 }
-export type SpendView = 'cards' | 'stations' | 'ads' | 'pitch' | 'grow' | 'checkout';
+/** ui-3.7.1: the classic Stations board and the Shopfront (grow) view are gone; growing is on the receipt. */
+export type SpendView = 'cards' | 'ads' | 'pitch' | 'checkout';
 export const SPEND_VIEWS: { id: SpendView; label: string }[] = [
   { id: 'cards', label: '🃏 Cards' },
-  { id: 'stations', label: '🛠️ Stations' },
   { id: 'ads', label: '📣 Ads' },
   { id: 'pitch', label: '🎤 Pitch' },
-  { id: 'grow', label: '🏪 Shopfront' },
   { id: 'checkout', label: '🧾 Checkout' },
 ];
 /** What opens over the board. `twist:<drink>` is that drink's twist picker. */
-export type Drawer = 'receipt' | 'report' | 'branch' | 'paper' | 'regulars' | 'signature' | 'pricing' | 'crew' | 'notebook' | `twist:${DrinkId}`;
+export type Drawer = 'receipt' | 'report' | 'branch' | 'paper' | 'regulars' | 'signature' | 'pricing' | 'notebook' | `twist:${DrinkId}`;
 
 function needText(cost: number, cash: number): string {
   const need = cost - cash;
@@ -125,40 +122,6 @@ function boughtCard(itemId: string): string {
   return `<div class="icard sold" title="${esc(item.flavor)}">
     <span class="art" style="background:${CATEGORY_TINT[item.category]}">${cardArt(item.category)}</span>
     <span class="body"><h4>${esc(item.name)}</h4></span><span class="stamp">BOUGHT</span></div>`;
-}
-
-// ---------------------------------------------------------------------------------------------- Spend: stations (FB1 WP5)
-
-/** The back bar as big slot tiles; a picked tile opens the swap row (spares from the back room, or empty it); then the shop. */
-export function stationsBoard(st: StationsVM, sel: number | null): string {
-  const picked = sel !== null ? st.slots[sel] : undefined;
-  const tiles = st.slots
-    .map((t) => `<button class="st-slot ${t.kind ? '' : 'empty'} ${picked?.index === t.index ? 'on' : ''}" data-action="slot-pick" data-index="${t.index}" aria-pressed="${picked?.index === t.index}" aria-label="Slot ${t.index + 1}: ${esc(t.name)}">
-        <span class="st-ic" aria-hidden="true">${t.icon}</span><b>${esc(t.name)}</b><small>Slot ${t.index + 1}</small></button>`)
-    .join('');
-  let pick = '<div class="st-pick hint">Tap a slot to swap what stands there. Swapping is free.</div>';
-  if (picked) {
-    const opts = st.spares.filter((x) => x.kind !== picked.kind)
-      .map((x) => `<button class="btn st-put" data-action="slot-set" data-index="${picked.index}" data-station="${x.kind}">${x.icon} Put ${esc(x.name)} here</button>`).join('');
-    const clear = picked.kind ? `<button class="btn ghost st-put" data-action="slot-set" data-index="${picked.index}" data-station="">Empty slot ${picked.index + 1}</button>` : '';
-    const none = opts ? '' : `<span class="st-none">${picked.kind ? 'Nothing spare in the back room.' : 'Nothing spare to put here.'} Buy one below.</span>`;
-    pick = `<div class="st-pick"><b>Slot ${picked.index + 1}:</b>${opts}${clear}${none}</div>`;
-  }
-  const spares = st.spares.length
-    ? `<div class="st-spares">Back room: ${st.spares.map((x) => `<span>${x.icon} ${esc(x.name)}${x.n > 1 ? ` ×${x.n}` : ''}</span>`).join('')}</div>`
-    : '';
-  const notes = st.notes.length
-    ? `<div class="st-trade warn" role="status">⚖️ ${esc(st.notes[0])}</div>${st.notes.slice(1).map((n) => `<div class="st-trade more">${esc(n)}</div>`).join('')}`
-    : '<div class="st-trade">⚖️ Every station is on the floor.</div>';
-  const shop = st.shop
-    .map((x) => `<div class="sp-card st-buy" title="${esc(x.blurb)}">
-        <div class="sp-top"><span class="sp-ic" aria-hidden="true">${x.icon}</span><b>${esc(x.name)}</b></div>
-        <span class="sp-sub">${x.owned ? `You own ${x.owned}` : 'You own none'}</span>
-        <button class="btn" data-action="equip" data-station="${x.kind}" ${x.affordable ? '' : 'disabled'}>Buy · $${x.cost}</button>
-      </div>`)
-    .join('');
-  return `<div class="st-board">${notes}<div class="st-slots" style="--n:${st.slots.length}">${tiles}</div>${pick}${spares}
-    <div class="st-shop-h">Buy a station <small>It goes in the first empty slot, else the back room.</small></div><div class="sp-grid st-shop">${shop}</div></div>`;
 }
 
 // ---------------------------------------------------------------------------------------------- Spend: gear (Gear Tree G3)
@@ -296,20 +259,6 @@ function pitchCard(p: PitchVM, d: PitchDraft): string {
     <div class="pc-foot"><small title="${p.greenlit}+ is green-lit (a small boost tomorrow), ${p.ovation}+ is a standing ovation">${p.greenlit}+ of 30 gets a boost</small><button class="btn" data-action="pitch" ${d.text.trim() ? '' : 'disabled'}>Pitch it</button></div></div>`;
 }
 
-function growthBoard(g: GrowthVM): string {
-  const cards = g.tiers
-    .map((t, i) => {
-      const state = t.current ? 'on' : t.past ? 'past' : t.next ? 'next' : 'locked';
-      const btn = t.current ? '<span class="sp-ok">📍 Here</span>' : t.past ? '<span class="sp-sub">✓ Outgrown</span>'
-        : t.next ? `<button class="btn" data-action="grow" data-tier="${t.id}" ${t.affordable ? '' : 'disabled'}>Grow · ${esc(short$(t.cost))}</button>`
-          : `<span class="sp-sub">🔒 After the ${esc(g.tiers[i - 1]?.name.replace(/^The /, '').toLowerCase() ?? '')}</span>`;
-      return `<div class="sp-card gr-card ${state}" data-tier-card="${t.id}" title="${esc(`${t.blurb} ${t.stations.join(', ')}. ${t.drinks}. ${t.crowd}.`)}">
-        <div class="sp-top"><span class="sp-ic" aria-hidden="true">${t.icon}</span><b>${esc(t.name)}</b></div>
-        <span class="sp-sub">Line ${t.queue} · ${esc(short$(t.rent))}/day rent</span>${btn}</div>`;
-    })
-    .join('');
-  return `<div class="sp-note">Bigger shop: more floor and stations, higher rent. No going back.</div><div class="sp-grid">${cards}</div>`;
-}
 
 function checkoutBoard(c: CheckoutVM): string {
   const cards = c.options
@@ -366,16 +315,19 @@ function menuPane(vm: NightVM): string {
   const sig = vm.signature?.drinks.length
     ? `<button class="mn-sig ${cur && !cur.onMenu ? 'bad' : ''}" data-action="drawer" data-d="signature">⭐ ${cur ? `“${esc(cur.name)}” <small>${cur.onMenu ? `~${vm.signature.asks} asks` : 'base is off'}</small>` : 'Make a signature'} <em>Edit ▸</em></button>`
     : '';
-  return `<div class="mn-head"><span class="mn-sum" title="Only a rough guess: weather, events and the rival can swing it. A strategist can tell you more."><em class="mn-guess">Rough guess</em> for tomorrow: <b>≈${sum.orders} orders</b> · <b>≈$${sum.profit.toFixed(0)}</b> profit <small class="mn-more">A strategist can tell you more</small></span>${sig}
+  const strat = vm.strategist
+    ? `<div class="mn-strat" role="note">🧠 <b>Your Strategist sets the menu</b>; you can still override until next night.</div>`
+    : '';
+  return `${strat}<div class="mn-head"><span class="mn-sum" title="Only a rough guess: weather, events and the rival can swing it. A strategist can tell you more."><em class="mn-guess">Rough guess</em> for tomorrow: <b>≈${sum.orders} orders</b> · <b>≈$${sum.profit.toFixed(0)}</b> profit <small class="mn-more">A strategist can tell you more</small></span>${sig}
       <button class="btn mini ghost" data-action="drawer" data-d="pricing">How pricing works ⓘ</button></div>
-    ${vm.growth.waiting ? `<div class="mn-wait" role="status">${esc(vm.growth.waiting)} <button class="btn mini" data-action="goto" data-tab="spend" data-sub="stations">Stations ▸</button></div>` : ''}
+    ${vm.growth.waiting ? `<div class="mn-wait" role="status">${esc(vm.growth.waiting)} ${vm.gear ? '<button class="btn mini" data-action="tab" data-tab="gear">Gear shop ▸</button>' : ''}</div>` : ''}
     <div class="dgrid" style="--cols:${menuCols(menu.length)};--rows:${Math.ceil(menu.length / menuCols(menu.length)) || 1}">${menu.map((m) => drinkCard(m, onCount === 1)).join('')}</div>`;
 }
 
-/** ui-3.4.0: "You can afford a cart!" beside the cash, a button straight to Extras ▸ Shopfront. */
+/** ui-3.4.0: "You can afford a cart!" beside the cash; ui-3.7.1: it opens the receipt, where growing lives. */
 function nudgeChip(n: GrowNudge): string {
-  return `<button class="nudge-chip" data-nudge data-action="goto" data-tab="spend" data-sub="grow" title="Grow into ${esc(n.name)} for $${n.cost}">
-    <span class="nc-ic" aria-hidden="true">${n.icon}</span><span class="nc-t">You can afford ${n.tier === 'cafe' ? 'the café' : `a ${esc(n.short)}`}!</span><b>Shopfront ▸</b></button>`;
+  return `<button class="nudge-chip" data-nudge data-action="drawer" data-d="receipt" title="Grow into ${esc(n.name)} for $${n.cost}: it is on the receipt">
+    <span class="nc-ic" aria-hidden="true">${n.icon}</span><span class="nc-t">You can afford ${n.tier === 'cafe' ? 'the café' : `a ${esc(n.short)}`}!</span><b>Grow ▸</b></button>`;
 }
 
 /** FB1: who is ready, on the night clock pill ("✓ 1/2 ready"). */
@@ -396,17 +348,6 @@ function alertRow(a: BriefAlert): string {
 function tipChip(t: TipVM): string {
   return `<button class="tip p-${t.personality}" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.by}: ${t.full}. Tap to do it.`)}">
     <span class="tip-by"><span aria-hidden="true">💬</span> ${esc(t.by)}</span><span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Do it</span></button>`;
-}
-
-function rolesRow(roles: RoleVM[] | undefined): string {
-  if (!roles?.length) return '';
-  return roles
-    .map((r) => {
-      const btn = r.mine ? '<button class="btn mini" data-action="role" data-role="" aria-pressed="true">Drop</button>'
-        : r.holder ? `<span class="rl-who">${esc(r.holder)}</span>` : `<button class="btn mini" data-action="role" data-role="${r.id}">Take</button>`;
-      return `<div class="rl ${r.mine ? 'mine' : r.holder ? 'taken' : ''}" data-role-id="${r.id}" title="${esc(`＋ ${r.perk}  － ${r.weakness}`)}"><span class="rl-ic" aria-hidden="true">${r.icon}</span><b>${esc(r.name)}</b>${btn}</div>`;
-    })
-    .join('');
 }
 
 /** P3 B15: the hired bot baristas, their wage, and hire / let go. */
@@ -483,14 +424,12 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     })
     .join('') + (vm.condiments ? condimentCard(vm.condiments, jarAlert.get('condiments')) : '');
   const n = (vm.restock?.length || 1) + (vm.condiments ? 1 : 0);
-  // ui-3.5.1 declutter: crew roles, hired help, regulars and the scout sit in one "More" row (the roles and staff in a drawer).
+  // ui-3.5.1 declutter: hired help, regulars and the scout sit in one "More" row.
   const regs = vm.regulars ?? [];
   const regWarn = regs.filter((r) => r.status !== 'ok').length;
   const r = vm.rival;
-  const mine = vm.roles?.find((x) => x.mine);
   const moreRow = `<div class="tn-more" aria-label="More"><span class="tn-h">More</span>
     <button class="chip" data-action="edit-look">👕 Edit my barista ▸</button>
-    ${vm.roles?.length ? `<button class="chip" data-action="drawer" data-d="crew">🎭 Crew roles${mine ? ` · you: ${mine.icon} ${esc(mine.name)}` : ''} ▸</button>` : ''}
     ${regs.length ? `<button class="chip ${regWarn ? 'warn' : ''}" data-action="drawer" data-d="regulars">♥ ${regs.length} regulars${regWarn ? ` · ${regWarn} !` : ''} ▸</button>` : ''}
     ${r.scouted ? `<button class="chip" data-action="drawer" data-d="paper">🔭 Scouted ▸</button>` : `<button class="chip" data-action="scout" ${r.affordable ? '' : 'disabled'} title="See ${esc(r.name)}'s menu and prices for tomorrow">🔭 Scout ${esc(r.name)} · ${esc(short$(r.cost))}</button>`}${staffRow(vm.staff)}</div>`;
   return `${banner}${pick}<div class="tn-grid ${vm.gear ? 'flow' : ''}">
@@ -498,16 +437,11 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     ${alerts}${dayCard}</div>${moreRow}`;
 }
 
-/** ui-3.5.1: the crew roles drawer (moved off the Restock tab; hired staff stays on the tab's "More" row). */
-function crewBody(vm: NightVM): string {
-  return `<div class="roles">${rolesRow(vm.roles)}</div>`;
-}
-
 // ---------------------------------------------------------------------------------------------- Drawers
 
 function receiptBody(vm: NightVM, day: number): string {
   const t = vm.takings;
-  if (!t) return '<p>No sales yet.</p>';
+  if (!t) return `<p>No sales yet.</p>${growOfferHtml(vm.grow)}`;
   const line = (a: string, b: string, cls = '') => `<div class="line ${cls}"><span>${a}</span><span>${b}</span></div>`;
   return `<div class="rc-paper"><h3>DAY ${day - 1}</h3>
     ${line('Sales', esc(t.sales))}${line('Tips', esc(t.tips))}${t.familyTips ? t.familyTips.map((f) => line(`&nbsp;&nbsp;${esc(f.label)}`, esc(f.amount), 'sub fam-tip')).join('') : ''}${line('Rent', `<span class="neg">−${esc(t.rent)}</span>`)}${t.wages ? line('Crew wages', `<span class="neg">−${esc(t.wages)}</span>`) : ''}
@@ -525,7 +459,8 @@ function receiptBody(vm: NightVM, day: number): string {
     ${vm.branch?.yesterday ? line(`Second shop (${vm.branch.yesterday.served} served)`, vm.branch.yesterday.profit < 0 ? `<span class="neg">−$${Math.abs(vm.branch.yesterday.profit).toFixed(2)}</span>` : `+$${vm.branch.yesterday.profit.toFixed(2)}`) : ''}
     ${t.ambulance ? line('Ambulance ride', `<span class="neg">−${esc(t.ambulance)}</span>`, 'ambulance') : ''}
     ${line('Profit', t.profit.startsWith('-') ? esc(t.profit) : `+${esc(t.profit)}`, `total ${t.profit.startsWith('-') ? 'loss' : ''}`)}
-    ${vm.tab ? line('Hospital tab (half of each profit pays it)', esc(vm.tab)) : ''}</div>`;
+    ${vm.tab ? line('Hospital tab (half of each profit pays it)', esc(vm.tab)) : ''}</div>
+    ${growOfferHtml(vm.grow)}`;
 }
 
 /** P4 B3: the manager's report drawer. */
@@ -650,7 +585,6 @@ function drawerHtml(d: Drawer | null, vm: NightVM, extras: NightExtras | undefin
   else if (d === 'regulars') { title = 'Regulars'; body = regularsBody(vm.regulars ?? []); }
   else if (d === 'signature') { title = '⭐ Signature drink'; body = signatureCard(vm.signature, sig); }
   else if (d === 'pricing') { title = 'How pricing works'; body = PRICING_HELP; }
-  else if (d === 'crew') { title = '🎭 Crew roles'; body = crewBody(vm); }
   else if (d === 'notebook') { title = '📓 Street notebook'; body = notebookBody(vm.gear); }
   else {
     const m = vm.menu?.find((x) => `twist:${x.drink}` === d);
@@ -670,7 +604,7 @@ function nextStep(order: { id: NightTab; label: string; icon: string }[], tab: N
 }
 const nextLabel = (t: { label: string; icon: string; n: number }) => `Next: ${t.n} ${t.icon} ${esc(t.label)} ▸`;
 
-export interface NightUiState { tab: NightTab; spend: SpendView; drawer: Drawer | null; sig: SigDraft | null; pitch: PitchDraft; slotSel: number | null }
+export interface NightUiState { tab: NightTab; spend: SpendView; drawer: Drawer | null; sig: SigDraft | null; pitch: PitchDraft }
 
 /** The whole board as HTML (pure: tests and the word-count check use it). */
 export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: string | null | undefined, ui: NightUiState): string {
@@ -682,29 +616,26 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
   const badge: Record<NightTab, string> = { tonight: alertN ? `${alertN}` : '', menu: '', spend: vm.hand.length ? `${vm.hand.length}` : '', gear: '' };
   const order = nightTabs(vm.gear);
   const tabs = order
-    .map((t, i) => `<button class="tab ntab ${t.id === ui.tab ? 'on' : ''} ${t.id === 'tonight' && alertN ? 'alert' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="${t.id === ui.tab}">${vm.gear ? `<span class="step-n" aria-hidden="true">${i + 1}</span>` : ''}${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}</button>`)
+    .map((t, i) => `<button class="tab ntab ${t.id === ui.tab ? 'on' : ''} ${t.id === 'tonight' && alertN ? 'alert' : ''} ${t.id === 'menu' && vm.strategist ? 'quiet' : ''}" role="tab" data-action="tab" data-tab="${t.id}" aria-selected="${t.id === ui.tab}"${t.id === 'menu' && vm.strategist ? ' title="Your Strategist sets the menu; you can still override until next night"' : ''}>${vm.gear ? `<span class="step-n" aria-hidden="true">${i + 1}</span>` : ''}${t.icon} ${t.label}${badge[t.id] ? ` <small>${esc(badge[t.id])}</small>` : ''}${t.id === 'menu' && vm.strategist ? ' <small class="by-strat">Strategist</small>' : ''}</button>`)
     .join('');
   const next = vm.gear ? nextStep(order, ui.tab) : null;
   const bought = extras?.bought ?? [];
   const cards = vm.hand.map((c) => handCard(c, cash)).join('') + bought.map((b) => boughtCard(b.itemId)).join('');
   const spendBody: Record<SpendView, string> = {
-    cards: `<div class="sp-bar"><button class="btn" data-action="reroll" ${vm.reroll.affordable ? '' : 'disabled'} title="Swap the cards on the table for a fresh deal">🎲 Re-roll · ${esc(short$(vm.reroll.cost))}</button>
-      ${vm.sets.length ? `<span class="sets-on" title="Set bonuses switched on">${vm.sets.map((n) => `<span>✓ ${esc(n)}</span>`).join('')}</span>` : ''}</div>
+    cards: `${vm.sets.length ? `<div class="sp-bar"><span class="sets-on" title="Set bonuses switched on">${vm.sets.map((n) => `<span>✓ ${esc(n)}</span>`).join('')}</span></div>` : ''}
       <div class="hand">${cards || '<p class="empty">Nothing left to buy tonight.</p>'}</div>`,
-    stations: vm.gear ? gearBoard(vm.gear) : stationsBoard(vm.stations, ui.slotSel),
     ads: adsBoard(vm.ads),
     pitch: pitchCard(vm.pitch, ui.pitch),
-    grow: growthBoard(vm.growth),
     checkout: checkoutBoard(vm.checkout),
   };
-  const views = vm.gear ? SPEND_VIEWS.filter((s) => s.id !== 'stations') : SPEND_VIEWS;
-  const spend = `<div class="sp-nav" role="tablist">${views.map((s) => `<button class="chip sv ${s.id === ui.spend ? 'on' : ''}" data-action="spend" data-sv="${s.id}" aria-selected="${s.id === ui.spend}">${s.id === 'stations' && vm.gear ? '⚙️ Gear' : s.label}</button>`).join('')}</div>
+  const views = SPEND_VIEWS;
+  const spend = `<div class="sp-nav" role="tablist">${views.map((s) => `<button class="chip sv ${s.id === ui.spend ? 'on' : ''}" data-action="spend" data-sv="${s.id}" aria-selected="${s.id === ui.spend}">${s.label}</button>`).join('')}</div>
     ${views.map((s) => `<div class="sv-pane ${s.id === ui.spend ? 'on' : ''}" data-sv-pane="${s.id}">${spendBody[s.id]}</div>`).join('')}`;
   const colors = new Map((extras?.crew ?? []).map((c) => [c.id, c]));
   const ready = vm.ready
     .map((p) => {
       const c = colors.get(p.id);
-      return `<span class="rp"><span class="av" style="background:${c?.color ?? '#c9b294'}">${esc(c?.initial ?? p.name[0] ?? '?')}</span>${p.role ? `<span class="rl-badge" aria-hidden="true">${p.role}</span>` : ''}${esc(p.name)}${c?.me ? ' <em>(you)</em>' : ''}
+      return `<span class="rp"><span class="av" style="background:${c?.color ?? '#c9b294'}">${esc(c?.initial ?? p.name[0] ?? '?')}</span>${esc(p.name)}${c?.me ? ' <em>(you)</em>' : ''}
         ${p.ready ? '<span class="ok">✓</span>' : '<span class="wait">…</span>'}</span>`;
     })
     .join('');
@@ -743,29 +674,32 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: string | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
-): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
-  const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
+): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; toast(lines: string[]): void; show(): void; hide(): void } {
+  // ui-3.7.1: a bubble for news like the Strategist's menu changes; it sits outside the board, which rebuilds.
+  const bubble = document.createElement('div');
+  bubble.className = 'night-bubble';
+  bubble.setAttribute('role', 'status');
+  bubble.hidden = true;
+  if (container.parentElement) container.after(bubble);
+  else container.append(bubble);
+  let bubbleTimer: ReturnType<typeof setTimeout> | null = null;
+  const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' } };
   let lastVm: NightVM | null = null;
   let lastExtras: NightExtras | undefined;
   let lastKey = '';
   let lastSig = '';
   let lastDay: number | null = null;
-  let pendingSub: string | null = null;
 
   onAction(container, (action, el) => {
     if (action === 'buy') handlers.onBuy(el.dataset.item!);
-    else if (action === 'reroll') handlers.onReroll?.();
     else if (action === 'restock') handlers.onRestock(el.dataset.supply as SupplyId);
     else if (action === 'ready') handlers.onReady();
     else if (action === 'menu') handlers.onMenu?.(el.dataset.drink as DrinkId, el.dataset.on === '1');
     else if (action === 'twist') handlers.onTwist?.(el.dataset.drink as DrinkId, (el.dataset.twist || null) as TwistId | null);
     else if (action === 'price') handlers.onPrice?.(el.dataset.drink as DrinkId, Number(el.dataset.step));
-    else if (action === 'role') handlers.onRole?.(el.dataset.role || null);
     else if (action === 'tab' || action === 'goto') {
-      pendingSub = el.dataset.sub ?? null;
       selectTab(el.dataset.tab as NightTab);
-      pendingSub = null;
       if (el.dataset.sub) selectSpend(el.dataset.sub as SpendView);
     } else if (action === 'spend') selectSpend(el.dataset.sv as SpendView);
     else if (action === 'drawer') openDrawer(el.dataset.d as Drawer);
@@ -790,14 +724,6 @@ export function createNight(
     else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);
     else if (action === 'checkout' && el.dataset.checkout) handlers.onCheckout?.(el.dataset.checkout as CheckoutId);
     else if (action === 'grow' && el.dataset.tier) handlers.onGrow?.(el.dataset.tier as TierId);
-    else if (action === 'slot-pick') {
-      const i = Number(el.dataset.index);
-      ui.slotSel = ui.slotSel === i ? null : i;
-      redrawStations();
-    } else if (action === 'slot-set') {
-      handlers.onSlot?.(Number(el.dataset.index), isEquipmentKind(el.dataset.station) ? el.dataset.station : null);
-      ui.slotSel = null;
-    } else if (action === 'equip' && isEquipmentKind(el.dataset.station)) handlers.onEquip?.(el.dataset.station);
     else if (action === 'gear-buy' && isGearId(el.dataset.gear)) handlers.onGear?.('buy', el.dataset.gear, isAddOnWand(el.dataset.wand) ? el.dataset.wand : undefined);
     else if (action === 'edit-look') handlers.onEditLook?.();
     else if (action === 'wand-buy' && el.dataset.station && isAddOnWand(el.dataset.wand)) handlers.onWand?.(el.dataset.station, el.dataset.wand);
@@ -840,10 +766,6 @@ export function createNight(
     ui.drawer = d;
     redrawDrawer();
   }
-  function redrawStations(): void {
-    const el = container.querySelector('.st-board');
-    if (el && lastVm) el.outerHTML = stationsBoard(lastVm.stations, ui.slotSel);
-  }
   function redrawPitch(): void {
     const el = container.querySelector('.pitch-card');
     if (el && lastVm) el.outerHTML = pitchCard(lastVm.pitch, ui.pitch);
@@ -872,8 +794,6 @@ export function createNight(
   });
   function selectTab(tab: NightTab): void {
     const order = nightTabs(lastVm?.gear);
-    // Gear runs: the old "Spend › Stations" links land on the Gear shop tab.
-    if (lastVm?.gear && tab === 'spend' && pendingSub === 'stations') tab = 'gear';
     if (!order.some((t) => t.id === tab)) return;
     ui.tab = tab;
     const nx = container.querySelector<HTMLElement>('.next-step');
@@ -947,8 +867,7 @@ export function createNight(
         ui.tab = 'tonight';
         ui.drawer = null;
       }
-      // a Gear run has no Spend › Stations view (it is the Gear shop tab); a classic run has no Gear tab
-      if (vm.gear && ui.spend === 'stations') ui.spend = 'cards';
+      // a classic run has no Gear tab
       if (!vm.gear && ui.tab === 'gear') ui.tab = 'tonight';
       syncDraft(vm.signature);
       if (ui.drawer?.startsWith('twist:') && !vm.menu?.some((m) => `twist:${m.drink}` === ui.drawer)) ui.drawer = null;
@@ -960,7 +879,20 @@ export function createNight(
       if (focusSel) container.querySelector<HTMLElement>(focusSel)?.focus({ preventScroll: true });
       patch(vm, extras);
     },
+    toast(lines) {
+      if (!lines.length) return;
+      bubble.innerHTML = lines.map((l) => `<div>${esc(l)}</div>`).join('');
+      bubble.hidden = false;
+      bubble.classList.remove('in');
+      void bubble.offsetWidth;
+      bubble.classList.add('in');
+      if (bubbleTimer) clearTimeout(bubbleTimer);
+      bubbleTimer = setTimeout(() => (bubble.hidden = true), 8000);
+    },
     show: () => show(container),
-    hide: () => hide(container),
+    hide: () => {
+      hide(container);
+      bubble.hidden = true;
+    },
   };
 }

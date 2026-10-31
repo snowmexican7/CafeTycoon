@@ -1,7 +1,13 @@
+import { dayRestockVM } from './ui/dayRestock';
+import { freshEvents, logToastLines, TOAST_KINDS } from './ui/logToasts';
 import './style.css';
 import { gearFlag } from './ui/gearFlag';
 /** Gear Tree G5: the last gear quirk already toasted (log seq). */
 let gearSeenSeq = -1;
+/** ui-3.7.1: last log seq turned into a toast (rush restocks, Strategist menu changes); null until a session's first snapshot. */
+let toastSeenSeq: number | null = null;
+/** ui-3.7.1: the Konami code ends …→ B A, so a B straight after → isn't the Restock key. */
+let lastKey = { code: '', at: 0 };
 import { ambienceFor, createHeartbeat, diffCues, heartbeatGapMs } from './audio/cues';
 import { createAudioEngine } from './audio/engine';
 import { SNAPSHOT_INTERVAL_MS } from './host/loop';
@@ -221,11 +227,15 @@ async function main(): Promise<void> {
     if (look) send({ kind: 'look', playerId: me(), look });
   }
   let recipeHints = loadRecipeHints(hintStore);
-  const hud = createHud($('#hud'), { onMute: () => audio.toggleMute(), onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }), onCall: (take) => send({ kind: 'call', playerId: me(), take }) }, { recipeHints });
+  const hud = createHud($('#hud'), {
+    onMute: () => audio.toggleMute(),
+    // ui-3.7.1: day-HUD Restock (rush delivery, 25% more). Cream & sugar comes by the box.
+    onRestock: (id) => send(id === 'condiments' ? { kind: 'condimentBox', playerId: me(), boxes: 1 } : { kind: 'restock', playerId: me(), supply: id, packs: 1 }),
+    onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }), onCall: (take) => send({ kind: 'call', playerId: me(), take }) }, { recipeHints });
   const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook() });
   // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).
   const dev = isDevMode(location.search) ? createDevPanel(document, send, me) : null;
-  const closing = createClosing($('#closing'));
+  const closing = createClosing($('#closing'), { onGrow: (tier) => send({ kind: 'grow', playerId: me(), tier }) });
   const weekEnd = createWeekEnd($('#weekEnd'), {
     onContinue: () => send({ kind: 'weekEnd', playerId: me(), choice: 'continue' }),
     onStop: () => send({ kind: 'weekEnd', playerId: me(), choice: 'stop' }),
@@ -361,6 +371,7 @@ async function main(): Promise<void> {
       }),
     );
     session = s;
+    toastSeenSeq = null; // ui-3.7.1: no toasts for events from before this session joined
     title.hide();
     hud.setRoom(code);
     hud.show();
@@ -564,6 +575,15 @@ async function main(): Promise<void> {
     }
     if (s.peerStatus !== 'hostAway') lobby.hide();
     hud.render(hudViewModel(state), hudLive(state, s.me));
+    hud.setRestock(dayRestockVM(state));
+    // ui-3.7.1: rush restocks and the Strategist's menu changes pop up (HUD by day, a bubble at night).
+    {
+      const fresh = freshEvents(state, toastSeenSeq ?? state.nextLogSeq - 1, TOAST_KINDS);
+      toastSeenSeq = fresh.seen;
+      const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? 'Someone';
+      const lines = logToastLines(fresh.events, nameOf, s.me);
+      if (lines.length) (state.phase === 'night' ? night.toast(lines) : hud.toast(lines));
+    }
     // Gear Tree G5: jams, dead batteries and goose noises pop up as a toast.
     if (state.gear) {
       if (state.nextLogSeq <= gearSeenSeq) gearSeenSeq = -1; // a new run restarts the log
@@ -578,7 +598,10 @@ async function main(): Promise<void> {
     // ui-3.4.0: a grow (same run, bigger tier) plays the re-opening wipe, then the "What you gained" card.
     const grew = detectGrow(s.growSeen ?? null, state);
     s.growSeen = growSeen(state);
-    if (grew) growFx.play(gainedDiff(grew.from, grew.to, !!state.gear));
+    if (grew) {
+      closing.hide();
+      growFx.play(gainedDiff(grew.from, grew.to, !!state.gear));
+    }
     hints.update(state, s.me, growFx.isOpen() || !pauseEl.hidden || !closingEl.hidden || !weekEndEl.hidden || state.phase === 'weekEnd' || state.phase === 'ended');
     if (state.phase === 'night') night.render(nightViewModel(state, s.me), nightExtras(state, s.me), s.code);
     dev?.update({ phase: state.phase, isHost: s.me === state.hostId, devRun: !!state.dev, paused: !!state.devPaused });
@@ -630,6 +653,16 @@ async function main(): Promise<void> {
   }
 
   window.addEventListener('keydown', (e) => {
+    const prevKey = lastKey;
+    lastKey = { code: e.code, at: e.timeStamp };
+    // ui-3.7.1: B opens the day Restock panel; 1-9 buy, B/Esc close (only by day, nothing on top, not while typing).
+    if (!e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && session?.next && !typingText() && pauseEl.hidden && closingEl.hidden && weekEndEl.hidden) {
+      const afterArrow = e.code === 'KeyB' && prevKey.code === 'ArrowRight' && e.timeStamp - prevKey.at < 1500;
+      if (!afterArrow && hud.restockKey(e)) {
+        e.preventDefault();
+        return;
+      }
+    }
     if (e.code === 'KeyM' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !typingText()) {
       audio.toggleMute();
       return;

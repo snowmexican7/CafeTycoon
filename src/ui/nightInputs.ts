@@ -23,11 +23,6 @@ export function nightInputHandlers(send: (input: PlayerInput) => void, me: () =>
     onCheckout: (checkout) => send({ kind: 'checkout', playerId: me(), checkout }),
     onGrow: (tier) => send({ kind: 'grow', playerId: me(), tier }),
     onPitch: (pitchKind, text) => send({ kind: 'pitch', playerId: me(), pitchKind, text }),
-    onRole: (role) => send({ kind: 'role', playerId: me(), role }),
-    onReroll: () => send({ kind: 'reroll', playerId: me() }),
-    // FB1 WP5: swap a slot (free) or buy a station at its fixed price.
-    onSlot: (index, station) => send({ kind: 'slot', playerId: me(), index, station }),
-    onEquip: (station) => send({ kind: 'equip', playerId: me(), station }),
     // Gear Tree G3: buy/upgrade a tier, or sell what stands in a slot.
     onGear: (action, gear, wand) => send({ kind: 'gear', playerId: me(), action, gear, ...(wand ? { wand } : {}) }),
     onWand: (station, wand) => send({ kind: 'wand', playerId: me(), station, wand }),

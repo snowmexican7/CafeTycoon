@@ -4,7 +4,7 @@ import { nightHtml, nightTabs, type NightUiState } from './night';
 import { nightViewModel } from './viewModels';
 
 const run = (gear: boolean) => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear });
-const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null, ...over });
+const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, ...over });
 
 describe('G4f: one clear night order in Gear runs', () => {
   it('classic keeps Tonight · Menu · Spend; Gear is Restock → Menu → Gear shop → Extras (pick night: Restock, then Pick gear)', () => {
@@ -27,12 +27,12 @@ describe('G4f: one clear night order in Gear runs', () => {
     expect(nightHtml(vm, undefined, null, ui({ tab: 'spend' }))).toMatch(/next-step"[^>]*hidden/);
     expect(h).toContain('tn-grid flow');
   });
-  it('classic boards are unchanged: no gear tab, no next button', () => {
+  it('classic boards: no gear tab, no next button, and no Stations board any more (ui-3.7.1)', () => {
     const vm = nightViewModel(run(false), 'p1');
     const h = nightHtml(vm, undefined, null, ui());
     expect(h).not.toContain('data-pane="gear"');
     expect(h).not.toContain('next-step');
-    expect(h).toContain('data-sv="stations"');
+    expect(h).not.toContain('data-sv="stations"');
   });
 });
 
