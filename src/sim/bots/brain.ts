@@ -365,8 +365,10 @@ export function uncoveredOrders(state: GameState, self: Player): Customer[] {
   const later: Customer[] = [];
   for (const c of state.customers) {
     if (c.egg === 'camper') continue; // the Wi-Fi camper never orders (pickup review M3)
-    // FB2 B6: an office run's drinks go after everyone else's (losing it costs nothing; walk-ins would walk out).
-    const list = c.order === 'office' ? later : out;
+    // FB2 B6 (fix round 1, I1): an office run keeps one drink in the queue (its first uncovered one, in its queue
+    // place) and the rest go after everyone else's: it gets made steadily without starving the walk-ins.
+    const office = c.order === 'office';
+    let queued = false;
     const wants = c.items ? undoneDrinks(c) : [c.drink];
     const claims = c.items ? ticketClaims(state, self, c.id) : null;
     if (!claims && claimedByOther(state, self, c.id)) continue;
@@ -384,7 +386,8 @@ export function uncoveredOrders(state: GameState, self: Player): Customer[] {
         shots -= 1;
         continue;
       }
-      list.push(c.items ? { ...c, drink: d } : c);
+      (office && queued ? later : out).push(c.items ? { ...c, drink: d } : c);
+      queued = true;
     }
   }
   return later.length > 0 ? [...out, ...later] : out;
@@ -460,7 +463,9 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
     const since = st.outputSince ?? st.doneAt;
     if (since === undefined) return true;
     const secs = st.output === 'espresso' || st.output === 'grounds' ? BOTS.orphanPrepSeconds : BOTS.orphanDrinkSeconds;
-    return state.tick - since >= secondsToTicks(secs);
+    // FB2 B6 (fix round 1, M4): grounds left in a grinder may be a person's (gone to the till): twice as long then.
+    const person = leftGrounds(state, st) && state.players.some((o) => !o.bot && o.connected && !o.espresso?.out);
+    return state.tick - since >= secondsToTicks(person ? secs * 2 : secs);
   };
   const candidates = state.stations
     // G4d: a pot's cups wait in the pot for the orders that claim them (pouring it out would only fill the pass).
@@ -944,15 +949,29 @@ function execute(p: Player): void {
 function reclaim(state: GameState, p: Player): boolean {
   const b = p.bot!;
   if (state.gear !== true || b.claimDrink === null) return false;
-  const next = uncoveredOrders(state, p).find((o) => o.drink === b.claimDrink);
+  const orders = uncoveredOrders(state, p);
+  const held = heldForPeople(state, p, orders); // fix round 1 (M2): never onto a ticket a free person is about to make
+  const next = orders.find((o) => o.drink === b.claimDrink && !held.has(o.id));
   if (!next) return false;
   b.claim = next.id;
   return true;
 }
 
-function claimLost(state: GameState, b: BotState): boolean {
+function claimLost(state: GameState, p: Player): boolean {
+  const b = p.bot!;
   const c = state.customers.find((x) => x.id === b.claim);
-  if (c?.items) return b.claimDrink === null || !wantsItem(c, b.claimDrink); // FB2 B6: an item of its drink is still to come
+  if (c?.items) {
+    // FB2 B6: an item of its drink is still to come, and (fix round 1, M1) not every one of them is claimed by a bot
+    // earlier in the crew: two bots on one item left would make an extra cup, so the later one lets go.
+    if (b.claimDrink === null) return true;
+    const left = c.items.filter((x) => !x.done && x.drink === b.claimDrink).length;
+    let ahead = 0;
+    for (const o of state.players) {
+      if (o === p) break;
+      if (o.bot?.claim === c.id && o.bot.claimDrink === b.claimDrink) ahead += 1;
+    }
+    return ahead >= left;
+  }
   return c === undefined || c.drink !== b.claimDrink;
 }
 
@@ -1324,7 +1343,7 @@ function walkToward(state: GameState, p: Player, node: Vec2, maxRank: number): v
 function stepBot(state: GameState, p: Player): void {
   const b = p.bot!;
   p.moveDir = { x: 0, y: 0 };
-  if (b.claim !== null && claimLost(state, b) && !reclaim(state, p)) {
+  if (b.claim !== null && claimLost(state, p) && !reclaim(state, p)) {
     b.claim = null;
     b.claimDrink = null;
     setPlan(b, dropPlan(state, p)); // Review Focus 1

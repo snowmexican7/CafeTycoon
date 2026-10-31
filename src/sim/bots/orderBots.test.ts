@@ -59,12 +59,18 @@ describe('bots and multi-drink tickets (FB2 B6)', () => {
     expect(sim(t, 3).bot!.claim).toBeNull();
   });
 
-  it("an office run's drinks come after every walk-in's", () => {
+  it("an office run keeps one drink in the queue; the rest come after every walk-in's", () => {
     const s = gearStand();
-    s.customers = [combo(1, ['espresso', 'coldBrew'], { order: 'office' }), { id: 2, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: 0 }];
-    expect(uncoveredOrders(s, sim(s)).map((o) => [o.id, o.drink])).toEqual([[2, 'espresso'], [1, 'espresso'], [1, 'coldBrew']]);
+    s.customers = [
+      combo(1, ['espresso', 'coldBrew', 'espresso'], { order: 'office' }),
+      { id: 2, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: 0 },
+    ];
+    expect(uncoveredOrders(s, sim(s)).map((o) => [o.id, o.drink])).toEqual([[1, 'espresso'], [2, 'espresso'], [1, 'coldBrew'], [1, 'espresso']]);
     think(s, sim(s));
-    expect(sim(s).bot!.claim).toBe(2);
+    expect(sim(s).bot!.claim).toBe(1);
+    // That first drink covered (a cup on the counter), the next uncovered one takes the queue place.
+    s.pass = [{ item: 'espresso', ticksLeft: 999 }];
+    expect(uncoveredOrders(s, sim(s)).map((o) => [o.id, o.drink])).toEqual([[1, 'coldBrew'], [2, 'espresso'], [1, 'espresso']]);
   });
 
   it('a lost claim carries over to someone else waiting for the same drink (Gear), keeping the chain', () => {
@@ -93,12 +99,29 @@ describe('bots and multi-drink tickets (FB2 B6)', () => {
     s = startDay(s);
     s.players[0].connected = false;
     const grinder = s.stations.find((x) => x.kind === 'grinder');
-    if (!grinder) return; // the stand has no grinder slot in this layout
+    if (!grinder) throw new Error('the stand needs a grinder for this test');
     Object.assign(grinder, { output: 'grounds', outputSince: s.tick });
     s.customers = [{ id: 1, drink: 'espresso', patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: 0 }];
     expect(think(s, sim(s))).toEqual([{ kind: 'idle', node: expect.anything() }]);
     s.tick += 15 * 60;
     expect(think(s, sim(s))).toEqual([{ kind: 'use', station: grinder.id, action: 'take' }]);
+    // Fix round 1 (M4): with a person on the floor they may be theirs (gone to the till): twice as long.
+    s.players[0].connected = true;
+    s.players[0].pos = { x: 1, y: 5 };
+    expect(think(s, sim(s))).toEqual([{ kind: 'idle', node: expect.anything() }]);
+    s.tick += 15 * 60;
+    expect(think(s, sim(s))).toEqual([{ kind: 'use', station: grinder.id, action: 'take' }]);
+  });
+
+  it('two claims on one item left: the later bot lets go (no extra cup) (fix round 1, M1)', () => {
+    const s = gearStand(2);
+    const c = combo(1, ['espresso', 'espresso']);
+    s.customers = [c];
+    const take = { kind: 'use', station: s.stations.find((x) => x.kind === 'espresso')!.id, action: 'take' } as const;
+    for (const n of [1, 2]) Object.assign(sim(s, n).bot!, { plan: [take], claim: 1, claimDrink: 'espresso', reactionTicksLeft: 100 });
+    c.items![0].done = true; // a cup from elsewhere landed: one espresso still to come, two bots on it
+    const after = step(s, []);
+    expect([sim(after, 1).bot!.claim, sim(after, 2).bot!.claim]).toEqual([1, null]);
   });
 
   it('a claim on a ticket holds while an item of its drink is still to come', () => {
