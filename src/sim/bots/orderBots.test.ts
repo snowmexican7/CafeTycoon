@@ -116,10 +116,20 @@ describe('bots and multi-drink tickets (FB2 B6)', () => {
     s.tick += 15 * 60;
     expect(think(s, sim(s))).toEqual([{ kind: 'use', station: grinder.id, action: 'take' }]);
     // Fix round 1 (M4): with a person on the floor they may be theirs (gone to the till): twice as long.
+    const fresh = () => Object.assign(grinder, { output: 'grounds', outputSince: s.tick - 15 * 60 });
     s.players[0].connected = true;
     s.players[0].pos = { x: 1, y: 5 };
+    fresh();
     expect(think(s, sim(s))).toEqual([{ kind: 'idle', node: expect.anything() }]);
     s.tick += 15 * 60;
+    expect(think(s, sim(s))).toEqual([{ kind: 'use', station: grinder.id, action: 'take' }]);
+    // Fix round 2: a stand-in counts as a person too (A1's isPerson), the bot itself never.
+    s.players[0].connected = false;
+    const other = { ...structuredClone(sim(s)), id: 'sim-2', pos: { x: 1, y: 5 } };
+    s.players.push(other);
+    fresh();
+    expect(think(s, sim(s))).toEqual([{ kind: 'idle', node: expect.anything() }]);
+    s.players = s.players.filter((p) => p !== other);
     expect(think(s, sim(s))).toEqual([{ kind: 'use', station: grinder.id, action: 'take' }]);
   });
 

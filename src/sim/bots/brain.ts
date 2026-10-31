@@ -28,7 +28,7 @@ import { CONDIMENTS, canTakeBox, returnBox } from '../condiments';
 import { isSink, needsDump } from '../sink';
 import { answerPhone } from './phone';
 import { undoneDrinks, wantsItem } from '../orders';
-import { heldByPerson, heldForPeople, ringsAtOnce } from './helper';
+import { heldByPerson, heldForPeople, isPerson, ringsAtOnce } from './helper';
 
 const BOTS = ECONOMY.bots;
 const MESS = ECONOMY.mess;
@@ -465,7 +465,8 @@ function orphanedDrink(state: GameState, self: Player): Station | null {
     if (since === undefined) return true;
     const secs = st.output === 'espresso' || st.output === 'grounds' ? BOTS.orphanPrepSeconds : BOTS.orphanDrinkSeconds;
     // FB2 B6 (fix round 1, M4): grounds left in a grinder may be a person's (gone to the till): twice as long then.
-    const person = leftGrounds(state, st) && state.players.some((o) => !o.bot && o.connected && !o.espresso?.out);
+    // Fix round 2: a person by A1's rule (`isPerson`: stand-ins count), never the bot itself.
+    const person = leftGrounds(state, st) && state.players.some((o) => o !== self && isPerson(o));
     return state.tick - since >= secondsToTicks(person ? secs * 2 : secs);
   };
   const candidates = state.stations
