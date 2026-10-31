@@ -35,7 +35,7 @@ import type { EquipmentKind } from '../data/equipment';
 import { GEAR, type AddOnWand, type GearId, type WandKind } from '../data/gear';
 import { batchOut, drinkSuppliesFor } from './gear';
 import { TAP_DRINKS } from '../data/drinks';
-import { CONDIMENTS_ID, PICKUP_ID, SINK_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
+import { CONDIMENTS_ID, PICKUP_ID, SINK_ID, SLOT_POSITIONS, TRAY_ID, layoutFor } from '../data/layout';
 import { ensureFridgeStation, stockOf } from './fridge';
 import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
@@ -119,13 +119,14 @@ export function wandOn(gid: GearId, addOn: AddOnWand | null): WandKind | null {
   return addOn && w.addOns?.includes(addOn) ? addOn : null;
 }
 
-/** The Gear-run fixed spots: the pickup counter, then the condiment bar beside the till, then the back sink (fresh and idle). */
+/** The Gear-run fixed spots: the pickup counter, then the condiment bar beside the till, then the back sink, then (FB2 B7) the tray table (fresh and idle). */
 function counterSpots(tier: TierId | undefined): Station[] {
   const l = layoutFor(tier);
   return [
     { id: PICKUP_ID, kind: 'counter', pos: { ...l.pickup }, busyTicksLeft: 0, output: null, occupiedBy: null },
     { id: CONDIMENTS_ID, kind: 'counter', pos: { ...l.condiments }, busyTicksLeft: 0, output: null, occupiedBy: null },
     { id: SINK_ID, kind: 'counter', pos: { ...l.sink }, busyTicksLeft: 0, output: null, occupiedBy: null },
+    { id: TRAY_ID, kind: 'counter', pos: { ...l.trayTable }, busyTicksLeft: 0, output: null, occupiedBy: null },
   ];
 }
 

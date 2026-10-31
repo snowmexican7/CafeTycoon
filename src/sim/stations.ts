@@ -15,6 +15,7 @@ import { rollBinLeak, rollStationMess } from './messes';
 import { BASE_DRINKS, RECIPES, recipeChain, type Recipe, type RecipeStation } from '../data/drinks';
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
 import { fridgeInteract, readyStock, useStock } from './fridge';
+import { trayInteract } from './tray';
 import type { DrinkId, GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from './types';
 
 /** Each working station's first (classic) recipe: what it takes, gives back and uses up. See RECIPES for all of them. */
@@ -98,6 +99,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return state;
   if (player.holding === null) { delete player.cupSlips; delete player.cupTemp; } // P3 B5: empty hands, no cup, no marks
+  if (trayInteract(state, player)) return state; // FB2 B7: a carried tray, or a press at the tray table
   if (player.tool === 'pot') {
     dumpPot(state, player); // FB2 A3: only the sink takes the pot
     return state;

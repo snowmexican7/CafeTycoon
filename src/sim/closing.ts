@@ -20,6 +20,7 @@ import { returnBox } from './condiments';
 import { fridgeClose } from './fridge';
 import { steepClosing } from './steep';
 import { stalePotsAtClose } from './sink';
+import { clearTrays } from './tray';
 import type { GameState } from './types';
 import { settleEspresso } from './espresso';
 import { settleChallenges } from './challenges';
@@ -41,6 +42,7 @@ export function finishDay(state: GameState): GameState {
   state.rogue = null;
   state.mop = { pos: { ...layoutFor(state.tier).mopHome }, heldBy: null };
   state.pass = [];
+  clearTrays(state); // FB2 B7 (every ticket has left, voiding its trays; this only tidies)
   for (const e of state.events) emitLog(state, 'event.end', { kind: e.kind });
   state.events = [];
   state.eventSchedule = [];

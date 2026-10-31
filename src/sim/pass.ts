@@ -63,7 +63,7 @@ export function counterInteract(state: GameState, playerId: PlayerId, at?: Stati
  */
 function gearCounter(state: GameState, player: Player, at?: Station): GameState {
   const spot = spotOf(at);
-  if (spot === 'sink') return state; // FB2 A3: the sink has its own rules (src/sim/sink.ts), never the counter's
+  if (spot === 'sink' || spot === 'trayTable') return state; // FB2 A3/B7: the sink and the tray table have their own rules, never the counter's
   if (player.holding !== null) {
     if (player.holding !== 'grounds' && state.pass.length < passSlots(state)) {
       const drink = player.holding;
@@ -86,7 +86,7 @@ function gearCounter(state: GameState, player: Player, at?: Station): GameState 
   if (spot === 'till') {
     if (!tryKickCamper(state, player.id)) tillRingUp(state, player.id);
   } else if (spot === 'pickup') {
-    if (!tryCorrectName(state, player.id, at) && state.pass.length > 0) takeBack(state, player);
+    if (!tryCorrectName(state, player.id, at) && takeBackIndex(state) >= 0) takeBack(state, player); // FB2 B7: never a tray
   }
   return state;
 }
@@ -127,7 +127,8 @@ function stalestIndex(state: GameState, drink?: string): number {
 export function stepPass(state: GameState): GameState {
   const kept = [];
   for (const item of state.pass) {
-    if (coolsOnCounter(state, item)) {
+    if (item.tray || coolsOnCounter(state, item)) {
+      // FB2 B7: a tray slot waits for its customer (its cups cool by their own made ticks).
       kept.push(item);
       continue;
     }
