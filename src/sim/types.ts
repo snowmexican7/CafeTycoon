@@ -165,6 +165,9 @@ export type SimEventKind =
   | 'pickup.cold'
   | 'pickup.takeBack'
   | 'review.bad'
+  /** FB2 C11: the social feed (src/sim/feed.ts): a live post after a bad or great moment; the week's reviewer rating. */
+  | 'review.post'
+  | 'week.rating'
   /** FB2 A4 (src/sim/fridge.ts): the fridge, milk out at the bar, putting away, spoiling at close, closing soon. */
   | 'fridge.take'
   | 'fridge.put'
@@ -176,6 +179,8 @@ export type SimEventKind =
   | 'closing.soon'
   /** FB2 B6: multi-drink orders (src/sim/orders.ts). */
   | 'order.combo'
+  /** Round 3 item 1 (src/sim/lattes.ts): "and a latte for my friend", `{ customer, drink }`. */
+  | 'order.addon'
   | 'order.office'
   | 'order.done'
   | 'order.lost'
@@ -186,7 +191,14 @@ export type SimEventKind =
   | 'wand.unclog'
   /** R3 6: tonight the cash first covers the next shop size ({ tier }). R3 7: the shop grew ({ from, to, diff }). */
   | 'grow.affordable'
-  | 'grow.done';
+  | 'grow.done'
+  /** Round 3 item 4 (src/sim/line.ts): a stalled line complains; arrivals during a fresh complaint may leave quietly. */
+  | 'line.complain'
+  | 'line.leave'
+  /** Round 3 item 3 (src/sim/strategist.ts, staff.ts): a hire or a firing ({ role, by }); the strategist set the prices ({ changed }). */
+  | 'staff.hire'
+  | 'staff.fire'
+  | 'strategist.set';
 
 /** R3 7: what a grow changes, before → after (src/sim/growth.ts growDiff). */
 export interface GrowDiff {
@@ -579,6 +591,8 @@ export interface DayStats {
   checkoutFees?: number;
   /** P3 B15: wages paid to the hired bot baristas at closing (Gear runs; absent = none). */
   wages?: number;
+  /** Round 3 item 3: the part of `wages` that went to the Strategist and Marketer (absent = none). */
+  hireWages?: number;
   /** Challenge tip paid at closing (folded into bonus too). */
   challengeBonus?: number;
   /** Challenge ids won today. */
@@ -587,6 +601,8 @@ export interface DayStats {
   closedEarly?: number;
   /** FB1 WP4: people who walked up to a sold-out board and left (absent until it happens; migrated to 0). */
   soldOutWalkouts?: number;
+  /** Round 3 money: would-be customers who read the board and left over the price (absent until it happens; never lost or turned away). */
+  priceWalkouts?: number;
   /** P4 B3 manager report: summed wait (ticks from arrival to the hand-off) over served customers. */
   waitTicks?: number;
   /** P4 B3: takings (price + tip) per drink today. */
@@ -605,6 +621,30 @@ export interface DayStats {
   office?: 'served' | 'lost';
   /** FB2 B6: cups served to office runs beyond the first (an office run counts as one customer for reputation). */
   officeExtra?: number;
+  /** Round 3 item 4: would-be customers who left quietly during a line complaint (stats only: not lost, no reputation). */
+  lineLeft?: number;
+  /** FB2 C11: every bad or great moment today by reason (posted or not), the live posts they made, and the day's feed. */
+  feedMoments?: Partial<Record<FeedReason, number>>;
+  posts?: FeedPost[];
+  feed?: FeedPost[];
+  /** FB2 C11: fans gained (or lost) at closing, and the fan count after it. */
+  fansDelta?: number;
+  fansAfter?: number;
+}
+
+/** FB2 C11: why a post was made. Live: cold, lukewarm, black, wait, bump, great. Day summaries add the rest. */
+export type FeedReason = 'cold' | 'lukewarm' | 'black' | 'wait' | 'bump' | 'great' | 'service' | 'crowd' | 'quiet' | 'speed' | 'quality' | 'tips';
+export type FeedSentiment = 'good' | 'bad';
+/** FB2 C11: one post on the fake social app. `customer`, `drink` and `at` (the sim tick) are set on live posts. */
+export interface FeedPost {
+  name: string;
+  text: string;
+  sentiment: FeedSentiment;
+  reason: FeedReason;
+  stars: number;
+  drink?: DrinkId;
+  customer?: number;
+  at?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -624,6 +664,8 @@ export interface GameState {
   devPaused?: true;
   /** P4 B2: the four-week season started by Keep going after week 1 (Gear runs). */
   season?: Season;
+  /** FB2 C11: fans of the café (absent = 0), moved by each day's net sentiment at closing. */
+  fans?: number;
   /** P4 B4: the second shop, once opened. */
   branch?: Branch;
   bankrupt: boolean;
@@ -666,6 +708,16 @@ export interface GameState {
   ringUp?: { customer: number; by: PlayerId | ''; startedAt: number; ticks: number };
   /** FB1 WP3: tick stamp of when the queue last emptied (absent while someone is queued). */
   emptySince?: number;
+  /**
+   * Round 3 item 4: customers browsing in the inside waiting area while the line is full, in arrival order (absent =
+   * nobody). They are not in `customers` (the till, pickup and bots don't see them) and join its end as it frees.
+   */
+  waiting?: Customer[];
+  /**
+   * Round 3 item 4: the line's stall clock (absent until the day's first step). `front` is the id at the front of the
+   * order line (absent = empty), `since` the tick it got there, `complainedAt` the tick of the last `line.complain`.
+   */
+  line?: { front?: number; since: number; complainedAt?: number };
   pass: PassItem[];
   menu: Record<DrinkId, boolean>;
   /** Phase 3 B2: price steps per drink ($0.25 each); absent or 0 = list price. */
@@ -689,6 +741,8 @@ export interface GameState {
   tierLog?: { tier: TierId; day: number; by: string }[];
   /** R3 6: tonight's `grow.affordable` has fired (reset each night). */
   growNudged?: true;
+  /** Round 3 item 3: the Strategist and Marketer on the books (absent = neither; src/sim/hires.ts). */
+  staff?: { strategist?: true; marketer?: true };
   /** FB1 WP5: what stands in each back-bar slot, left to right (absent = the tier's defaults; see sim/slots.ts). */
   slots?: (StationKind | null)[];
   /** FB1 WP5: stations the crew owns but has not placed (absent = none). */
@@ -782,7 +836,7 @@ export type PlayerInput =
   | { kind: 'rivalCounter'; playerId: PlayerId; on?: boolean }
   | { kind: 'stampCard'; playerId: PlayerId }
   /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
-  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire' }
+  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire'; /** Round 3 item 3: absent = a barista. */ role?: 'strategist' | 'marketer' }
   | { kind: 'branch'; playerId: PlayerId; action: 'open' | 'staff' | 'send' | 'close'; area?: AreaId; staff?: number; supply?: SupplyId }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }

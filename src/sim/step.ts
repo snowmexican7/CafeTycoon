@@ -19,6 +19,7 @@ import { finishDay } from './closing';
 import { markBeforeGrace, tickChallenges } from './challenges';
 import { TICK_RATE, secondsToTicks } from './constants';
 import { spawnCustomers, stepCustomers } from './customers';
+import { stepLine, stepWaiting } from './line';
 import { stepEvents } from './events';
 import { computeModifiers } from './effects';
 import { applyMenuInput } from './menu';
@@ -277,12 +278,14 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   if (doorsOpen) spawnCustomers(s);
   if (doorsOpen) stepOffice(s); // FB2 B6: the office run's phone call, then the office run
   stepCustomers(s);
+  stepWaiting(s); // Round 3 item 4: browsers lose patience slowly and move up into the line
+  if (doorsOpen) stepLine(s); // Round 3 item 4: a stalled line complains
   stepRogue(s);
   stepEggs(s);
   if (doorsOpen) tickChallenges(s);
   if (doorsOpen) {
     // FB1 WP3: queue-empty stamp for the close-early hint; set when the queue empties, cleared when someone is queued.
-    if (s.customers.length > 0) delete s.emptySince;
+    if (s.customers.length > 0 || (s.waiting?.length ?? 0) > 0) delete s.emptySince;
     else s.emptySince ??= s.tick;
     // Checked every tick, so a vote that becomes unanimous because someone left still closes the shop.
     if (closeVoteUnanimous(s)) {
@@ -304,9 +307,9 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   }
 }
 
-/** Doors locked and nobody left inside (queue or rogue), after the short minimum closing beat. */
+/** Doors locked and nobody left inside (queue, browsers or rogue), after the short minimum closing beat. */
 export function shopEmpty(s: GameState): boolean {
-  return s.customers.length === 0 && s.rogue === null;
+  return s.customers.length === 0 && (s.waiting?.length ?? 0) === 0 && s.rogue === null;
 }
 
 function stepClosing(s: GameState): void {

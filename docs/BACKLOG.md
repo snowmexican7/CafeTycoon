@@ -2466,3 +2466,35 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   `till.start { customer, by, seconds }`, `till.cancel`, `till.rung`. Bots ring with the same time
   (`BotState.ringing`) and never in the self-order tier. Kennedy's call if the kiosk should be self-order instead
   (one line in `TILL.ring`).
+- **Round 3 item 2, money (`r3-money`, protocol 52).** Stand price ×0.75 → 0.8; supply packs −10% (beans 7.2, milk 9,
+  concentrate 8.1, flavour 8.1, pastry 6.3); `PRICING.elasticity` 1.8 → 1.4; cart/café multipliers untouched.
+  `unitCost(drink, state?)` counts every use (cappuccino two milks, doppio two beans, a drip cup its pot share via
+  `drinkSupplyUnits` / `dripPotCups`). `expectedUse` / `expectedOrders` are price-aware (`priceTraffic`,
+  `shareWeights`), in cups (`cupsPerArrival`, `officeCups`) and capped by `serveCapacity` (src/sim/capacity.ts: queue +
+  the slower of machine and crew rate; `CAPACITY.handlingSeconds` 6, `stepSeconds` 2, untuned); `priceForecast`
+  orders are capped cups. A price-driven non-arrival logs `walkout { customer, reason: 'price', drink }` and
+  `DayStats.priceWalkouts` (not lost, not turned away; it takes a fresh customer id).
+- **Round 3 item 4, line and waiting area (`r3-line`, protocol 53).** A full line sends arrivals to browse in a small inside
+  waiting area (`ECONOMY.line.waiting`: stand 0, cart 2, café 4), `GameState.waiting` (arrival order; not in
+  `customers`, so till/pickup/bots don't see them). They join the line's end as it frees, and browse at half patience
+  drain (`browsePatience` 0.5); out of patience they leave as a turn-away (not lost, no reputation hit). Only with the area full is an arrival turned away.
+  When the front of the order line hasn't changed for `stallSeconds` (12) with at least `complainMin` (2) in it, the
+  last one in line complains: `line.complain { customer }`, at most once per `cooldownSeconds` (30)
+  (`GameState.line { front, since, complainedAt }`). For `freshSeconds` (8) after, each arrival leaves with
+  `quietLeaveChance` (0.5): `line.leave { customer, quiet: true }` (a fresh id for the tumbleweed), no reputation,
+  not lost, `DayStats.lineLeft`. Office runs still wait outside a full line. Helpers in src/sim/line.ts.
+  **UI to do:** waiting-area art with `state.waiting` browsers, the "Line's too long!" bubble on `line.complain`,
+  the tumbleweed on `line.leave`, maybe a receipt line for `DayStats.lineLeft`.
+- **Round 3 item 1, more lattes (`r3-lattes`, protocol 54).** `milkPush` (src/sim/lattes.ts) scales `latte` and
+  `cappuccino` weights so they're `LATTES.milkShare` (0.42) of the draw, clamped ×1..`LATTES.maxPush` (4); a bar with
+  no milk drink on its menu is unchanged. Batch is ~38% of orders on the early menu, ~11% on the full 14-drink menu.
+  Add-on: `latteAddon` / `latteAddonChance` (src/sim/orders.ts), `LATTES.addon` 0.05 of single walk-ins, Gear, from
+  day 2, only with `latte` on the board; reuses B6 (`order: 'combo'`, ×1.3 patience, pays at the last cup) and logs
+  `order.addon { customer, drink: 'latte' }` instead of `order.combo`. `cupsPerArrival` counts the add-on cup.
+- **C11 daily feed and reviews (`fb2-c11`, protocol 55).** `GameState.fans`; `DayStats.feed` (3–5 end-of-day posts),
+  `posts` (live), `feedMoments`, `fansDelta`, `fansAfter`. Events `review.post { customer, drink, sentiment, reason,
+  stars, at, name, text }` (`at` = tick) and `week.rating { reviewers (JSON string), fans }`. Night views
+  `dayReviews(state) → { posts, fans, fansDelta }`, `weekRating(state) → { reviewers: { name, score }[], fans }`
+  (src/sim/feed.ts; text and numbers in src/data/feed.ts). Rolls use a hash of seed/day/customer/reason, not
+  `state.rng`, so no other roll moves.
+- **Round 3 item 3, hires (`r3-hires`, protocol 56).** Strategist ($1/day) and Marketer ($2/day), Gear runs, night, people only, no cost up front, wages at closing with the crew's (by the hour like theirs; `HIRE_WAGE`, `hireWage`, `hireWagesForDay`, `DayStats.hireWages` is the part of `wages` they took). `GameState.staff { strategist?, marketer? }`; input is the staff input with `role: 'strategist' | 'marketer'` (no role = barista). Without a Strategist the night's price table is a rough guess (`forecastIsRough(state)`: orders and profit skewed up to +-25% by a hash of seed + day, rounded to 5, `PriceLine.rough`; stock warnings stay honest). With one the forecast is honest and `setPeakPrices` (src/sim/strategist.ts, `bestStep`) sets the calculator's best prices at every night start and on hire (`strategist.set { changed }`); hand-set prices stand until the next night start. Marketer: `MARKETER_TRAFFIC` 1.15 on walk-ins at current prices; both stack; firing stops both. Events `staff.hire { role, by }`, `staff.fire { role, by }`. Planner advice `staff:hire:strategist` / `staff:hire:marketer` (kind `equip`, priority 54) when the forecast gain beats the wage. **UI to do:** hire cards, rough-vs-honest forecast display, "Set by Strategist" marks, receipt line for `hireWages`.

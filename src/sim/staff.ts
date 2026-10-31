@@ -3,11 +3,15 @@
  * daily wage at closing (stand $1, cart $3, café $5: the stand's line is machine-bound, so a bot
  * there adds little and costs little; the bigger shops lean on their crew). At night any person
  * on the crew can hire one more (up to the four spots behind the bar) or let the newest one go.
- * Classic runs keep free bots. Agency temps (the hire-temp card) and tester stand-ins never draw a wage.
+ * Round 3 item 3: the Strategist and Marketer (src/sim/hires.ts) are hired the same way (`role` on the staff input)
+ * and draw their own daily wages at the same closing. Classic runs keep free bots. Agency temps (the hire-temp card) and tester stand-ins never draw a wage.
  */
 import { ECONOMY } from '../data/economy';
 import { BOT_IDS, botsFor, humanCount, syncBots, wantedBots } from './bots/roster';
 import { rentForDay } from './effects';
+import { emitLog } from './log';
+import { hireWagesForDay, isHired, type HireRole } from './hires';
+import { setPeakPrices } from './strategist';
 import type { GameState, PlayerInput, TierId } from './types';
 
 export const WAGE_BY_TIER: Record<TierId, number> = { stand: 1, cart: 3, cafe: 5 };
@@ -57,9 +61,9 @@ export function hiredCount(state: GameState): number {
 /** The bots that draw a wage today. */
 const paidCount = (state: GameState): number => Math.min(crewCount(state), hiredCount(state));
 
-/** Wages owed at today's closing. */
+/** Wages owed at today's closing: the crew's, plus the Strategist's and Marketer's (Round 3 item 3). */
 export function wagesForDay(state: GameState): number {
-  return round2(wageEach(state) * paidCount(state));
+  return round2(wageEach(state) * paidCount(state) + hireWagesForDay(state));
 }
 
 /** Everything closing will take from the till: rent plus wages. */
@@ -73,11 +77,16 @@ export function canHire(state: GameState): boolean {
   return !!state.gear && n < ECONOMY.bots.names.length && botsFor(n + 1, humanCount(state)) > n;
 }
 
-/** A hire or a firing, from the night board. Gear runs, night only, people only. */
+/**
+ * A hire or a firing, from the night board. Gear runs, night only, people only. With a `role` it is the Strategist or
+ * the Marketer (one each, wage at closing, nothing up front; a Strategist sets the peak prices at once); without one,
+ * a barista.
+ */
 export function applyStaffInput(state: GameState, input: Extract<PlayerInput, { kind: 'staff' }>): GameState {
   if (!state.gear || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
   if (!p || !p.connected || p.bot) return state;
+  if (input.role) return applyHireRole(state, input.role, input.action, input.playerId);
   const n = crewCount(state);
   if (input.action === 'hire') {
     if (!canHire(state)) return state;
@@ -90,10 +99,32 @@ export function applyStaffInput(state: GameState, input: Extract<PlayerInput, { 
   return state;
 }
 
-/** Closing: pay the crew. Recorded on the day as `wages`. */
+/** Round 3 item 3: put the Strategist or the Marketer on the books, or let them go. */
+function applyHireRole(state: GameState, role: HireRole, action: 'hire' | 'fire', by: string): GameState {
+  const on = isHired(state, role);
+  if (action === 'hire') {
+    if (on) return state;
+    state.staff = { ...(state.staff ?? {}), [role]: true };
+    emitLog(state, 'staff.hire', { role, by });
+    if (role === 'strategist') setPeakPrices(state);
+    return state;
+  }
+  if (!on) return state;
+  const rest = { ...state.staff };
+  delete rest[role];
+  if (Object.keys(rest).length) state.staff = rest;
+  else delete state.staff;
+  emitLog(state, 'staff.fire', { role, by });
+  return state;
+}
+
+/** Closing: pay the crew, the Strategist and the Marketer. Recorded on the day as `wages` (`hireWages` is the specialists' part). */
 export function payWages(state: GameState): void {
-  const w = round2(wageEach(state) * Math.min(staff(state).length, hiredCount(state)));
+  const crew = round2(wageEach(state) * Math.min(staff(state).length, hiredCount(state)));
+  const hires = hireWagesForDay(state);
+  const w = round2(crew + hires);
   if (w <= 0) return;
   state.cash = round2(state.cash - w);
   state.today.wages = w;
+  if (hires > 0) state.today.hireWages = hires;
 }

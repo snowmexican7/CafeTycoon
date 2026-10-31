@@ -11,6 +11,7 @@ import { CONDIMENTS, noteCondiments, wantsCondiments } from './condiments';
 import { loseCustomer, serveCustomer } from './customers';
 import { LUKEWARM, coolTicks, slotCool } from './cooling';
 import { emitLog } from './log';
+import { noteFeedMoment } from './feed';
 import { takeItem, wantsItem } from './orders';
 import type { Customer, DrinkId, GameState, Station } from './types';
 
@@ -116,9 +117,10 @@ export function stepPickup(state: GameState): void {
     const want = wantsCondiments(state, c, item.item);
     const black = want && (state.condiments?.servings ?? 0) <= 0;
     const served = state.today.served;
+    if (cool >= LUKEWARM) noteFeedMoment(state, 'lukewarm', c, item.item); // FB2 C11
     // A2: lukewarm halves the tip, like an off pot; a cup that is both is still halved once.
     serveCustomer(state, c, item.item, item.by, item.slips ?? 0, item.temp === true || cool >= LUKEWARM, black ? CONDIMENTS.blackTip : 1);
-    if (want && state.today.served > served) noteCondiments(state, c, black);
+    if (want && state.today.served > served) noteCondiments(state, c, black, item.item);
   }
 }
 
@@ -126,6 +128,7 @@ export function stepPickup(state: GameState): void {
 function takeCold(state: GameState, c: Customer, drink: DrinkId): void {
   emitLog(state, 'pickup.cold', { customer: c.id, drink });
   emitLog(state, 'review.bad', { customer: c.id, drink, reason: 'cold' });
+  noteFeedMoment(state, 'cold', c, drink); // FB2 C11
   loseCustomer(state, c);
   state.customers = state.customers.filter((x) => x !== c);
 }

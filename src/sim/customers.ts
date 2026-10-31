@@ -9,6 +9,7 @@ import { ECONOMY } from '../data/economy';
 import { TICK_RATE, isReservedId, secondsToTicks } from './constants';
 import { computeModifiers, type Modifiers } from './effects';
 import { emitLog } from './log';
+import { isGreatServe, noteFeedMoment } from './feed';
 import { tillSpeedTip } from './till';
 import { levelUpOnServe } from './levelUp';
 import { rngInt, rngNext } from './rng';
@@ -25,7 +26,9 @@ import { comboTip, serveCombo, TASTE } from './taste';
 import { checkoutFee } from './checkout';
 import { tierInfo } from './growth';
 import { menuDrinks, unlockedDrinks } from './unlocks';
-import { comboDrinks, loseTicket, makeTicket, ORDERS } from './orders';
+import { comboDrinks, latteAddon, loseTicket, makeTicket, ORDERS } from './orders';
+import { isMilkDrink, milkPush } from './lattes';
+import { promoteWaiting, quietLeave, sendToBrowse, waitingFree } from './line';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
 
@@ -67,16 +70,55 @@ function soldOutWalkup(state: GameState): GameState {
   return state;
 }
 
-/** One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. */
+/**
+ * Round 3 money: a would-be customer read the board and left over the price. Not a queued customer, never lost or
+ * turned away (they never ordered): a fresh customer id, the drink they balked at (the likelier the dearer it is
+ * against its list price) and one `walkout { customer, reason: 'price', drink }` for the renderer's "Too pricey!"
+ * bubble at the door. One rngNext.
+ */
+function priceWalkout(state: GameState, menu: DrinkId[], m: Modifiers): void {
+  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * Math.max(0, 1 - demandFactor(state, d)));
+  const total = weights.reduce((a, b) => a + b, 0);
+  let drink = menu[menu.length - 1];
+  let roll = rngNext(state) * total;
+  for (let i = 0; i < menu.length; i++) {
+    roll -= weights[i];
+    if (roll < 0) {
+      drink = menu[i];
+      break;
+    }
+  }
+  tally(state.today, 'priceWalkouts');
+  emitLog(state, 'walkout', { customer: state.nextCustomerId++, reason: 'price', drink });
+}
+
+/**
+ * One arrival trial per tick; the queue has a cap and the menu drives what gets ordered. The roll is made against
+ * the list-price rate: a roll the price takes away (below list, above the priced rate) is a price walkout. Round 3
+ * item 4: browsers move up first (so an arrival never jumps them), an arrival may leave quietly during a line
+ * complaint, and with the line full they browse in the waiting area while it has room.
+ */
 export function spawnCustomers(state: GameState): GameState {
+  promoteWaiting(state);
   const menu = availableDrinks(state);
   if (menu.length === 0) return soldOutWalkup(state);
   const m = computeModifiers(state);
-  const p = (ECONOMY.baseArrivalsPerSecond * m.traffic * priceTraffic(state, menu, m)) / TICK_RATE;
-  if (rngNext(state) >= p) return state;
+  const list = (ECONOMY.baseArrivalsPerSecond * m.traffic) / TICK_RATE;
+  const p = list * priceTraffic(state, menu, m);
+  const roll = rngNext(state);
+  if (roll >= p) {
+    if (roll < list) priceWalkout(state, menu, m);
+    return state;
+  }
   if (gearAskedFor(state, menu)) return state; // Gear G7c: wanted something you don't serve
+  if (quietLeave(state)) return state; // Round 3 item 4: "Line's too long!"
   if (state.customers.length >= queueCapacity(m, tierInfo(state).queue)) {
-    state.today.turnedAway += 1;
+    if (waitingFree(state) <= 0) {
+      state.today.turnedAway += 1;
+      return state;
+    }
+    const c = addCustomer(state, rollKind(state));
+    if (c) sendToBrowse(state, c);
     return state;
   }
   // B8: rare Wi-Fi camper takes a seat instead of ordering.
@@ -87,7 +129,8 @@ export function spawnCustomers(state: GameState): GameState {
 
 /** Weighted drink draw over the menu, biased by the café's order modifiers (one rngNext). */
 export function drawDrink(state: GameState, menu: DrinkId[], m: Modifiers): DrinkId {
-  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d) * gearPullMul(state, d));
+  const push = milkPush(state, menu, m); // Round 3 item 1: lean toward lattes when the bar can make them
+  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d) * gearPullMul(state, d) * (isMilkDrink(d) ? push : 1));
   let roll = rngNext(state) * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < menu.length; i++) {
     roll -= weights[i];
@@ -127,7 +170,8 @@ export function pickRegular(state: GameState, menu: DrinkId[]): Regular | null {
     state.regulars.push(regular);
     return regular;
   }
-  const candidates = state.regulars.filter((r) => !state.customers.some((c) => c.name === r.name) && menu.includes(r.drink));
+  const inside = [...state.customers, ...(state.waiting ?? [])];
+  const candidates = state.regulars.filter((r) => !inside.some((c) => c.name === r.name) && menu.includes(r.drink));
   return candidates.length === 0 ? null : candidates[rngInt(state, candidates.length)];
 }
 
@@ -167,7 +211,11 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   const asksSig = !regular && count === 1 && sig !== undefined && menu.includes(sig.drink) && rngNext(state) < sigShare(sig) * rivalAskFactor(state);
   if (asksSig) drinks[0] = sig.drink;
   // FB2 B6: a Gear walk-in may order a second drink (a combo, from day 2): the ticket waits longer.
-  const combo = !regular && !asksSig && (kind === 'normal' || kind === 'impatient') && comboDrinks(state, menu, drinks);
+  const single = !regular && !asksSig && (kind === 'normal' || kind === 'impatient');
+  const pair = single && comboDrinks(state, menu, drinks);
+  // Round 3 item 1: "and a latte for my friend": a single walk-in who did not roll a combo may add a latte to the ticket.
+  const addon = single && !pair && latteAddon(state, menu, drinks);
+  const combo = pair || addon;
   const mul = (kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1) * (combo ? ORDERS.combo.patience : 1);
   // Gear runs: poured drinks wait less, made-to-order ones more (GEAR_WAIT); a group waits as long as its slowest order
   const wait = Math.max(...drinks.map((d) => drinkWait(state, d) * pricePatience(state, d)));
@@ -192,7 +240,8 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
     maybeNameMix(state, customer);
   }
   state.customers.push(customer);
-  if (combo) emitLog(state, 'order.combo', { customer: customer.id, items: drinks.join(',') });
+  if (pair) emitLog(state, 'order.combo', { customer: customer.id, items: drinks.join(',') });
+  if (addon) emitLog(state, 'order.addon', { customer: customer.id, drink: 'latte' });
   return customer;
 }
 
@@ -244,6 +293,7 @@ export function stepCustomers(state: GameState): GameState {
         // Quiet exit — not a storm-out, just packed up the laptop.
         emitLog(state, 'egg.camper', { id: c.id, left: 1 });
       } else {
+        noteFeedMoment(state, 'wait', c, c.drink); // FB2 C11: a walk-out after a long wait
         loseCustomer(state, c);
       }
     } else remaining.push(c);
@@ -338,6 +388,7 @@ export function payCup(state: GameState, customer: Customer, drink: DrinkId, by?
   // For the "Dev served a latte +$6" toast: who, what, how much, and whether it was a perfect serve.
   const perfect = customer.patienceLeft / customer.patienceMax >= PERFECT_PATIENCE;
   if (perfect) state.today.perfect = (state.today.perfect ?? 0) + 1;
+  if (isGreatServe(perfect, tempMiss, tipMul, tip, price)) noteFeedMoment(state, 'great', customer, drink); // FB2 C11
   const served: SimEvent['data'] = {
     by: by ?? '',
     item: drink,

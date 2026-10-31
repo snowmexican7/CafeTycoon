@@ -70,6 +70,25 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **Round 3 item 3, hires (2026-10-31, `r3-hires`, protocol 56).** Hire cards send the staff input with
+  `role: 'strategist' | 'marketer'` (no role = barista); state `GameState.staff { strategist?, marketer? }`. Show the
+  night forecast as rough when `forecastIsRough(state)` (`PriceLine.rough`), "Set by Strategist" marks on
+  `strategist.set { changed }`, events `staff.hire` / `staff.fire { role, by }`, receipt line `DayStats.hireWages`.
+  Planner advice ids `staff:hire:strategist` / `staff:hire:marketer` (kind `equip`).
+- [ ] **C11 social feed (2026-10-31, `fb2-c11`, protocol 55).** Phone feed from `dayReviews(state)` (night), pop-up
+  posts from `review.post { name, text, sentiment, stars, … }` (day), week card from `weekRating(state)` (don't parse
+  `week.rating`'s JSON string). Fans: `GameState.fans`, `DayStats.fansDelta`.
+- [ ] **Round 3 item 1, more lattes (2026-10-31, `r3-lattes`, protocol 54).** Add-on ask bubble ("…and a latte for my
+  friend") from `order.addon { customer, drink }`; the ticket is a normal B6 combo (`Customer.items`, `order: 'combo'`).
+- [ ] **Round 3 item 4, line + waiting area (2026-10-31, `r3-line`, protocol 53).** Browsers in `state.waiting`
+  (not in `customers`; stand 0 / cart 2 / café 4) for the waiting-area art; "Line's too long!" bubble on
+  `line.complain { customer }`; tumbleweed on `line.leave { customer, quiet: true }` (a fresh id, no Customer);
+  optional receipt line from `DayStats.lineLeft`. Line state: `GameState.line { front, since, complainedAt }`.
+- [ ] **Round 3 item 2, money (2026-10-31, `r3-money`, protocol 52).** "Too pricey!" bubble and a door walker from
+  `walkout { customer, reason: 'price', drink }` (no Customer is spawned; `chaosModel` must branch on `reason`, as for
+  `'bumped'`). Optional receipt line from `DayStats.priceWalkouts`. The `viewModels.ts` night headline `customers` is
+  still uncapped; the brief's numbers are capped by `serveCapacity` now. I edited three of your tests for moved numbers
+  (`uiTiers`, `viewModels`, `nightBoard`).
 - [ ] **Round 3 item 5, ring-up (2026-10-31, `r3-ringup`, protocol 51).** Ring-up bar at the till from
   `state.ringUp` / `ringProgress(state)` (customer = `ringUp.customer`; self-order beat when `ringUp.by === ''`). The
   till hint should read "Ringing…" while a ring is under way (`tillNext` is empty then) and nothing on the Squarely

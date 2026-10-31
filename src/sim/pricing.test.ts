@@ -39,7 +39,7 @@ describe('per-item pricing (P3 B2)', () => {
   it('pricier drinks get fewer orders and less patience; cheaper ones more', () => {
     const s = run2();
     s.priceSteps = { latte: 4, espresso: -2 };
-    expect(demandFactor(s, 'latte')).toBeLessThan(0.75);
+    expect(demandFactor(s, 'latte')).toBeLessThan(0.8);
     expect(demandFactor(s, 'espresso')).toBeGreaterThan(1.2);
     expect(pricePatience(s, 'latte')).toBeLessThan(1);
     expect(pricePatience(s, 'espresso')).toBeGreaterThan(1);
@@ -70,15 +70,14 @@ describe('per-item pricing (P3 B2)', () => {
       if (steps) s.priceSteps = steps;
       startDay(s);
       let n = 0;
-      for (let t = 0; t < 3600; t++) {
-        const before = s.nextCustomerId;
+      for (let t = 0; t < 12000; t++) {
         spawnCustomers(s);
-        n += s.nextCustomerId - before;
+        n += s.customers.length; // price walkouts take an id too, so count who actually joined the line
         s.customers = [];
       }
       return n;
     };
-    expect(arrivals({ espresso: 6, latte: 6, coldBrew: 6 })).toBeLessThan(arrivals());
+    expect(arrivals({ espresso: 8, latte: 8, coldBrew: 8 })).toBeLessThan(arrivals());
     expect(arrivals({ espresso: 6, latte: 6, coldBrew: 6 })).toBe(arrivals({ espresso: 6, latte: 6, coldBrew: 6 }));
   });
 

@@ -27,6 +27,7 @@ describe('telemetry', () => {
 
   it('reserves the chaos sim kinds', () => {
     expect(RESERVED_TELE_KINDS).toEqual(expect.arrayContaining(['drop', 'slip', 'clean', 'rogue.upset', 'rogue.remade', 'rogue.made', 'rogue.stormed']));
+    expect(RESERVED_TELE_KINDS).toEqual(expect.arrayContaining(['line.complain', 'line.leave'])); // Round 3 item 4
   });
 
   it('starts with a meta row and records phase-boundary snapshots once each', () => {

@@ -47,7 +47,8 @@ describe('nightBrief headline and profit', () => {
     const b = nightBrief(run());
     expect(b.profit).toBeNull();
     expect(b.headline).toBe('Opening night: stock up, then open the shop.');
-    expect(b.alerts).toEqual([]);
+    // no cash or stock trouble (a single player can pour about 21 cups, so a milk may be left to go off: an info line)
+    expect(b.alerts.filter((a) => a.kind !== 'spoil')).toEqual([]);
   });
 
   it('later nights: yesterday profit and the Yesterday headline', () => {

@@ -11,7 +11,7 @@
  *   interface Advice {
  *     id: string;   // restock:<supply> | price:<drink> | twist:<drink> | signature | scout | rival |
  *                   // grow:<tier> | checkout:<id> | slot:<index> | equip:espresso | menu:<drink>
- *                   // Gear runs: gear:<gearId> | staff:fire | rival:promo | rival:loyalty |
+ *                   // Gear runs: gear:<gearId> | staff:fire | staff:hire:strategist | staff:hire:marketer | rival:promo | rival:loyalty |
  *                   // branch:open | branch:staff | branch:send:<supply> | steep | condimentBox | fridge:f1 | fridge:f4 (FB2 A4)
  *     kind: AdviceKind;  // restock | price | twist | signature | scout | rival | grow | checkout | slot | equip | menu
  *     text: string;
@@ -82,20 +82,21 @@ import { GEAR, WANDS } from '../../data/gear';
 import type { AddOnWand, GearId } from '../../data/gear';
 import { EQUIPMENT } from '../../data/equipment';
 import type { EquipmentKind } from '../../data/equipment';
-import { expectedUse } from '../brief';
+import { expectedOrders, expectedUse } from '../brief';
 import type { NightFix } from '../brief';
 import { CHECKOUT, nextCheckout } from '../checkout';
 import { CONDIMENTS } from '../condiments';
 import { fridgeCapacity, fridgeWanted, packsThatFit } from '../fridge';
 import { FRIDGES } from '../../data/fridges';
-import { computeModifiers } from '../effects';
 import { billsForDay, crewCount, crewNames, wageEach } from '../staff';
 import { averageStars } from '../accuracy';
 import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun, wandCards, type WandCard } from '../gear';
 import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
 import { restockCost } from '../night';
 import { steepPlan } from '../steep';
-import { PRICING, priceForecast, priceStep } from '../pricing';
+import { PRICING, priceStep } from '../pricing';
+import { bestStep, forecastProfit, peakSteps } from '../strategist';
+import { HIRE_ROLES, hireWage, isHired, type HireRole } from '../hires';
 import { BRANCH, branchAreas, branchDay, branchExpectedLoss, canOpenBranch, hasManager } from '../branch';
 import { profitOf } from '../profit';
 import { copyIsLive, countered, hasStamps, isPromoDay, loyaltyLive, RIVAL, sigPrice } from '../rival';
@@ -132,6 +133,7 @@ export const PLAN_PRIORITY = {
   gear: 58,
   slot: 55,
   staff: 53,
+  staffHire: 54,
   branchStaff: 52,
   price: 50,
   branchSend: 48,
@@ -237,14 +239,10 @@ export function restockAdvice(
   return advice;
 }
 
-/** Expected orders per drink tomorrow, unrounded (the share of arrivals by order bias; 0 off the menu). Same split as `expectedUse`. */
+/** Expected orders per drink tomorrow, unrounded (`expectedOrders`: price-aware, capped by capacity; 0 off the menu). */
 function expectedOrdersFor(state: GameState): Partial<Record<DrinkId, number>> {
-  const m = computeModifiers(state);
-  const arrivals = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
-  const menu = menuDrinks(state);
-  const w = (d: DrinkId) => m.orderBias[d] * DRINK_INFO[d].bias;
-  const total = menu.reduce((sum, d) => sum + w(d), 0) || 1;
-  return Object.fromEntries(menu.map((d) => [d, (arrivals * w(d)) / total]));
+  const orders = expectedOrders(state);
+  return Object.fromEntries(menuDrinks(state).map((d) => [d, orders[d]]));
 }
 
 /** Gear runs with a cold brew tap: the number of cups worth steeping tomorrow and the orders behind it. */
@@ -300,17 +298,6 @@ function condimentAdvice(state: GameState, budget: Budget): Advice[] {
   ];
 }
 
-/** The forecast profit on `drink` if its price step were `step` (every other step as it is). */
-function drinkProfitAt(state: GameState, menu: DrinkId[], drink: DrinkId, step: number): number {
-  const m = computeModifiers(state);
-  const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
-  const steps = { ...(state.priceSteps ?? {}) };
-  if (step === 0) delete steps[drink];
-  else steps[drink] = step;
-  const probe: GameState = { ...state, priceSteps: Object.keys(steps).length ? steps : undefined };
-  return priceForecast(probe, menu, m, walkIns).find((l) => l.drink === drink)?.profit ?? 0;
-}
-
 function priceAdvice(state: GameState): Advice[] {
   const menu = menuDrinks(state);
   // While the rival's knock-off of the signature is live, its price is the rival rule's call.
@@ -319,17 +306,7 @@ function priceAdvice(state: GameState): Advice[] {
   for (const d of menu) {
     if (d === held) continue;
     const now = priceStep(state, d);
-    let best = now;
-    let bestProfit = drinkProfitAt(state, menu, d, now);
-    for (let s = PLAN_STEPS.min; s <= PLAN_STEPS.max; s++) {
-      if (s === now) continue;
-      const p = drinkProfitAt(state, menu, d, s);
-      // Ties keep the current step, then prefer the step nearer list price.
-      if (p > bestProfit || (p === bestProfit && best !== now && Math.abs(s) < Math.abs(best))) {
-        best = s;
-        bestProfit = p;
-      }
-    }
+    const best = bestStep(state, menu, d, PLAN_STEPS);
     if (best === now) continue;
     const price = round2(ECONOMY.prices[d] + best * PRICING.step);
     const was = round2(ECONOMY.prices[d] + now * PRICING.step);
@@ -712,6 +689,36 @@ function staffAdvice(state: GameState): Advice[] {
   ];
 }
 
+const HIRE_NAME: Record<HireRole, string> = { strategist: 'a Strategist', marketer: 'a Marketer' };
+
+/**
+ * Round 3 item 3: advice to hire the Strategist or the Marketer when the forecast says they pay for themselves (the
+ * day's forecast profit with them beats today's by more than their wage) and the till can carry it after tomorrow's
+ * bills. Reuses the `equip` kind; ids `staff:hire:strategist` and `staff:hire:marketer`.
+ */
+function hireAdvice(state: GameState): Advice[] {
+  if (!isGearRun(state)) return [];
+  const now = forecastProfit(state);
+  const advice: Advice[] = [];
+  for (const role of HIRE_ROLES) {
+    if (isHired(state, role)) continue;
+    const wage = hireWage(state, role);
+    if (wage <= 0 || round2(state.cash - billsHeldBack(state)) < round2(wage * 3)) continue;
+    const probe: GameState = { ...state, staff: { ...(state.staff ?? {}), [role]: true } };
+    if (role === 'strategist') probe.priceSteps = peakSteps(probe).steps;
+    const gain = round2(forecastProfit(probe) - now);
+    if (gain <= wage) continue;
+    advice.push({
+      id: `staff:hire:${role}`,
+      kind: 'equip',
+      text: `Hire ${HIRE_NAME[role]} (${dollars(wage)} a day): the forecast says it adds about ${dollars(gain)} a day`,
+      input: { kind: 'staff', action: 'hire', role },
+      priority: PLAN_PRIORITY.staffHire,
+    });
+  }
+  return advice;
+}
+
 /** What it costs to stock one normal day (expected use, whole packs), whatever is in the pantry. */
 function dayRestockCost(state: GameState): number {
   const use = expectedUse(state);
@@ -896,6 +903,7 @@ export function planNight(state: GameState): Advice[] {
     ...gear,
     ...slot,
     ...staffAdvice(state),
+    ...hireAdvice(state),
     ...branchStaffAdvice(state),
     ...priceAdvice(state),
     ...twistAdvice(state),

@@ -166,9 +166,9 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
     s.supplies.milk = 0;
     const t = step(s, [{ kind: 'restock', playerId: 'p1', supply: 'milk', packs: 5 }]);
     expect(t.supplies.milk).toBe(20); // 24 holds two packs of 10
-    expect(t.cash).toBe(80);
+    expect(t.cash).toBeCloseTo(100 - 2 * ECONOMY.packs.milk.cost, 6);
     const u = step(t, [{ kind: 'restock', playerId: 'p1', supply: 'milk', packs: 1 }]);
-    expect([u.supplies.milk, u.cash]).toEqual([20, 80]);
+    expect([u.supplies.milk, u.cash]).toEqual([20, t.cash]);
     // beans are not in the fridge
     expect(step(u, [{ kind: 'restock', playerId: 'p1', supply: 'beans', packs: 3 }]).supplies.beans).toBe(30);
   });

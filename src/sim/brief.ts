@@ -24,7 +24,9 @@
  * when cash is for stock and rent). Spoilage counts what is left after a normal day's use.
  */
 import { ECONOMY } from '../data/economy';
-import { DRINK_IDS, DRINK_INFO } from '../data/drinks';
+import { DRINK_IDS, drinkSupplyUnits } from '../data/drinks';
+import { dripPotCups, expectedCups, shareWeights } from './capacity';
+import { priceTraffic } from './pricing';
 import { CHECKOUT, nextCheckout } from './checkout';
 import { CONDIMENTS } from './condiments';
 import { computeModifiers } from './effects';
@@ -93,28 +95,37 @@ export function dayClock(fraction: number): string {
 }
 
 /**
- * Expected orders over a normal day for each drink: expected arrivals split across the drinks on the menu
- * by order bias, unrounded. A drink off the menu is 0.
+ * Expected orders (cups) over a normal day for each drink: the walk-ins the forecast and the menu's prices bring,
+ * turned into cups (groups and combos order more, an office run adds its drinks), capped by what the crew and
+ * machines can pour in a day (Round 3 money), then split across the drinks on the menu by order weight (bias,
+ * price, gear pull), unrounded. A drink off the menu is 0.
  */
 export function expectedOrders(state: GameState): Record<DrinkId, number> {
   const m = computeModifiers(state);
-  const arrivals = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic;
   const menu = menuDrinks(state);
-  const w = (d: DrinkId) => m.orderBias[d] * DRINK_INFO[d].bias;
-  const total = menu.reduce((s, d) => s + w(d), 0) || 1;
+  const walkIns = ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic * priceTraffic(state, menu, m);
+  const cups = menu.length > 0 ? expectedCups(state, menu, m, walkIns) : 0;
+  const w = shareWeights(state, menu, m);
+  const total = w.reduce((a, b) => a + b, 0) || 1;
   const out = Object.fromEntries(DRINK_IDS.map((d) => [d, 0])) as Record<DrinkId, number>;
-  for (const d of menu) out[d] = (arrivals * w(d)) / total;
+  menu.forEach((d, i) => {
+    out[d] = (cups * w[i]) / total;
+  });
   return out;
 }
 
 /**
- * Roughly how many of each supply a day will use: the expected orders per drink, each drink using one unit
- * of each supply it needs.
+ * Roughly how many of each supply a day will use: the expected orders per drink, each cup using what its recipe
+ * really uses (a cappuccino is two milks; a drip cup is a share of a pot of beans).
  */
 export function expectedUse(state: GameState): Record<SupplyId, number> {
   const orders = expectedOrders(state);
+  const pot = dripPotCups(state);
   const use: Record<SupplyId, number> = { beans: 0, milk: 0, concentrate: 0, flavour: 0, pastry: 0 };
-  for (const d of menuDrinks(state)) for (const s of ECONOMY.drinkSupplies[d]) use[s] += orders[d];
+  for (const d of menuDrinks(state)) {
+    const units = drinkSupplyUnits(d, pot);
+    for (const s of SUPPLY_IDS) use[s] += (units[s] ?? 0) * orders[d];
+  }
   // R4 b: no drink needs a pastry; the case sells the attach rate of the day's cups (one pastry at most per cup).
   use.pastry += SPOIL.pastry.attach * Object.values(orders).reduce((a, b) => a + b, 0);
   for (const s of SUPPLY_IDS) use[s] = Math.ceil(use[s]);

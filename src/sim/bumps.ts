@@ -4,6 +4,7 @@ import { secondsToTicks } from './constants';
 import { isOut } from './espresso';
 import { ownTile, placeMess, spillHeld } from './floor';
 import { emitLog } from './log';
+import { noteFeedMoment } from './feed';
 import { blocked } from './movement';
 import { rngNext } from './rng';
 import { tally } from './tally';
@@ -126,6 +127,7 @@ export function stepCustomerBumps(state: GameState): void {
     if (c.bumpedAt.length >= B.customerAngryAt) {
       gone.add(c.id);
       emitLog(state, 'walkout', { customer: c.id, reason: 'bumped', x: round2(at.x), y: round2(at.y) });
+      noteFeedMoment(state, 'bump', c, c.drink); // FB2 C11
       loseCustomer(state, c);
     }
   });

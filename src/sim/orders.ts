@@ -30,8 +30,10 @@ import { computeModifiers } from './effects';
 import { areaPatienceMul } from './gear';
 import { tierInfo, tierOf } from './growth';
 import { emitLog } from './log';
+import { noteFeedMoment } from './feed';
 import { pricePatience } from './pricing';
 import { rngInt, rngNext } from './rng';
+import { LATTES } from './lattes';
 import { tally } from './tally';
 import type { Customer, DrinkId, GameState, OrderItem, PassItem } from './types';
 
@@ -117,6 +119,27 @@ export function comboDrinks(state: GameState, menu: DrinkId[], drinks: DrinkId[]
 }
 
 /**
+ * Round 3 item 1: the chance a single walk-in adds a latte ("and a latte for my friend"): `LATTES.addon` in a Gear
+ * run from the combo's first day when `latte` is on the board (so the bar has a wand and milk), else 0.
+ */
+export function latteAddonChance(state: GameState, menu: DrinkId[]): number {
+  return state.gear === true && state.day >= ORDERS.combo.fromDay && menu.includes('latte') ? LATTES.addon : 0;
+}
+
+/**
+ * The add-on roll for a single walk-in who did not roll a combo: one rngNext when the bar can make lattes; on a hit
+ * a latte joins `drinks` (it is the same two-item `combo` ticket, ×1.3 patience, paid at the last cup). The caller
+ * logs `order.addon { customer, drink: 'latte' }` once it has the customer's id.
+ */
+export function latteAddon(state: GameState, menu: DrinkId[], drinks: DrinkId[]): boolean {
+  const chance = latteAddonChance(state, menu);
+  if (chance <= 0 || drinks.length !== 1) return false;
+  if (rngNext(state) >= chance) return false;
+  drinks.push('latte');
+  return true;
+}
+
+/**
  * A ticket holder takes `cup` off the pickup counter (already spliced off by `stepPickup`): the first matching item
  * is done. A cold cup (`cool` ≥ 1) is taken unpaid (a bad review, except from an office run); otherwise the drip and
  * cold brew drinkers stop at the condiment bar. A group relaxes a little with each cup. The last item pays the ticket.
@@ -130,13 +153,15 @@ export function takeItem(state: GameState, c: Customer, cup: PassItem, cool: num
     item.cold = true;
     emitLog(state, 'pickup.cold', { customer: c.id, drink: cup.item });
     if (c.order !== 'office') emitLog(state, 'review.bad', { customer: c.id, drink: cup.item, reason: 'cold' });
+    noteFeedMoment(state, 'cold', c, cup.item); // FB2 C11 (an office run never posts)
   } else {
+    if (cool >= LUKEWARM) noteFeedMoment(state, 'lukewarm', c, cup.item); // FB2 C11
     if (cup.temp === true || cool >= LUKEWARM) item.temp = true;
     emitLog(state, 'pickup.take', { drink: cup.item, customer: c.id, by: cup.by ?? '' });
     if (wantsCondiments(state, c, cup.item)) {
       const black = (state.condiments?.servings ?? 0) <= 0;
       if (black) item.black = true;
-      noteCondiments(state, c, black);
+      noteCondiments(state, c, black, cup.item);
     }
   }
   if (c.kind === 'group') {

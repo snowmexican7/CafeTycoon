@@ -18,6 +18,13 @@ when a build goes out, the line moves under its version with the date.
 
 - Your barista has a look you pick (hair, skin, outfit, shirt colour), your crewmates see it, and you can change it
   between days.
+- More lattes: once you can steam milk, about two in five customers want a latte or a cappuccino, and now and then
+  someone adds "and a latte for my friend" to their order.
+- Customers post about your café: a cold cup or a long wait can earn a bad review mid-shift, a great serve a good
+  one; every night shows the day's posts and whether you gained or lost fans, and each week-end three silly reviewers
+  rate the week.
+- Hire a Strategist ($1 a day) to see the honest forecast and have your best prices set each night, and a Marketer
+  ($2 a day) to bring in about 15% more customers; without a Strategist the night forecast is only a rough guess.
 
 ## 3.5.1 — 2026-10-30 · Bigger orders, a tidier night
 
@@ -50,6 +57,11 @@ restocked, and espresso machines get steam wands.
 - Ringing up an order takes a moment at the till (1.5 s on the old register, 1 s on the kiosk): stay at the till
   until the bar fills (the hint reads "Ringing up… 50%"); walk off and it cancels. The Squarely terminal is self-order, so customers move to pickup by
   themselves.
+- Prices ease a little: the kerbside stand can charge 80% of café prices (was 75%), supplies cost 10% less, pricey
+  menus scare off fewer people, and the night forecast only promises as many cups as your crew and machines can pour.
+  Someone put off by your prices now shows up and walks out ("Too pricey!") instead of never coming.
+- When the line is full, a couple of customers wait inside and browse until there's room (two at the cart, four at
+  the café); if the line stalls, someone grumbles "Line's too long!" and a few passers-by quietly walk on.
 
 ## 3.5.0 — 2026-10-30 · Open, close and clean up
 

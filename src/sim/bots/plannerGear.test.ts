@@ -252,10 +252,13 @@ describe('item 4: let a barista go when the wages beat what the crew adds', () =
 /** The cost of a day's restock at today's prices (what the planner calls "a day's restock"). */
 function dayRestock(s: GameState): number {
   const use = expectedUse(s);
-  return (['beans', 'milk', 'concentrate', 'flavour'] as const).reduce((n, sup) => {
-    if (!menuDrinks(s).some((d) => ECONOMY.drinkSupplies[d].includes(sup))) return n;
-    return n + restockCost(s, sup, Math.ceil(use[sup] / ECONOMY.packs[sup].size));
-  }, 0);
+  // pack prices are cents now (Round 3 money): round the sum the way the planner does
+  return round2(
+    (['beans', 'milk', 'concentrate', 'flavour'] as const).reduce((n, sup) => {
+      if (!menuDrinks(s).some((d) => ECONOMY.drinkSupplies[d].includes(sup))) return n;
+      return n + restockCost(s, sup, Math.ceil(use[sup] / ECONOMY.packs[sup].size));
+    }, 0),
+  );
 }
 
 describe('item 5a: match the rival’s happy hour', () => {
@@ -297,7 +300,8 @@ describe('item 5a: match the rival’s happy hour', () => {
 
 describe('item 5b: the stamp card against the loyalty card', () => {
   const night = (cash: number, day = RIVAL.loyaltyDay): GameState => {
-    const s = equipped(['c1', 'e1'], {}, cash);
+    // c2 owned: the next cold-brew step ($55) is dearer than the spare cash, so gear advice does not spend it first
+    const s = equipped(['c1', 'c2', 'e1'], {}, cash);
     s.day = day;
     return s;
   };

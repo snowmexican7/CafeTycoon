@@ -72,7 +72,8 @@ describe('FB1 WP1 night brief', () => {
     s.cash = 500;
     const b = nightViewModel(s, 'p1').brief;
     expect(b.headline?.sub).toMatch(/walk-ins/);
-    expect(b.alerts.filter((a) => a.severity !== 'good')).toEqual([]);
+    // (a single player can pour about 21 cups, so the forecast leaves a milk to go off: an info line, no more)
+    expect(b.alerts.filter((a) => a.severity !== 'good' && a.id !== 'spoil')).toEqual([]);
   });
   it('grow and checkout fixes jump to their own Spend views', () => {
     const s = run();
