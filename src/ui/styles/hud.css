@@ -326,3 +326,31 @@
 #hud .ticket .stk-nm { margin-left: 4px; font: 700 14px var(--font-body); color: var(--ink-soft); }
 #hud .ticket.stack { padding-right: 34px; }
 #hud .ticket .stk-it { width: 32px; height: 32px; }
+
+/* ui-3.7.1: the day Restock button and its rush-delivery panel (non-modal: the floor keeps playing behind it). */
+#hud .hud-restock { cursor: pointer; border: 0; color: var(--ink); gap: 8px; }
+#hud .hud-restock:hover { background: #fff; }
+#hud .hud-restock[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--caramel), var(--sh-1); }
+#hud .hud-restock .rs-low { font: 700 12px var(--font-display); color: #8f3b22; background: #ffe3d6; border-radius: 99px; padding: 3px 9px; animation: hud-pop .25s ease-out; }
+#hud .hud-restock.low { box-shadow: 0 0 0 2px #f0b48f, var(--sh-1); }
+#hud .hud-restock-panel { position: absolute; top: calc(var(--topbar) + 8px); right: calc(var(--gutter) + 8px); width: min(460px, 44vw); z-index: 6; pointer-events: auto;
+  background: var(--foam); border-radius: 20px; box-shadow: var(--sh-2), 0 0 0 3px var(--caramel); padding: 14px 16px 12px; animation: hud-drop .2s ease-out; }
+#hud .rs-h { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+#hud .rs-h b { font: 700 22px var(--font-display); }
+#hud .rs-h small, #hud .rs-f { font: 600 14px var(--font-body); color: var(--ink-soft); }
+#hud .rs-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+#hud .rs-row { display: flex; align-items: center; gap: 12px; background: #fff; border-radius: 14px; padding: 8px 10px; box-shadow: var(--sh-1); }
+#hud .rs-row.low { box-shadow: 0 0 0 2px #f0b48f; background: #fff6f0; }
+#hud .rs-ic { font-size: 28px; width: 34px; text-align: center; }
+#hud .rs-t { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#hud .rs-t b { font: 700 18px var(--font-display); }
+#hud .rs-t small { font: 600 14px var(--font-body); color: var(--ink-soft); }
+#hud .rs-row.low .rs-t small { color: #8f3b22; }
+#hud .rs-row .btn { display: flex; align-items: center; gap: 8px; min-width: 176px; justify-content: space-between; font-size: 16px; padding: 8px 12px; }
+#hud .rs-row .btn .rs-g { font: 600 14px var(--font-body); }
+#hud .rs-row .btn .rs-c { font: 700 18px var(--font-display); font-variant-numeric: tabular-nums; }
+#hud .rs-f { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+#hud .rs-f b { font: 700 16px var(--font-display); color: var(--ink); }
+@media (max-width: 1180px) { #hud .hud-restock { padding: 0 10px; } #hud .hud-restock > span:nth-child(2) { display: none; } }
+/* ui-3.7.1: with the Restock panel open, the toast centres in the space left of it so both stay readable. */
+#hud .hud-restock-panel:not([hidden]) ~ .toast { left: calc((100% - min(460px, 44vw) - var(--gutter)) / 2); max-width: min(440px, 38vw); z-index: 7; }

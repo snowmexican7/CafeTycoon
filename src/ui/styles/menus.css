@@ -220,3 +220,32 @@
 .sweeks tr.hit td:nth-child(3) { color: #2f8a4f; font-weight: 700; } .sweeks tr.miss td:nth-child(3) { color: #c0453a; }
 .seasons li b { font: 700 16px var(--font-display); } .seasons li small { font-size: 13px; color: var(--ink-soft); }
 .seasons li.live { box-shadow: var(--sh-1), inset 0 0 0 2px var(--caramel); }
+
+/* ui-3.7.1: grow on the receipt (the closing dialog and the night's Receipt drawer). */
+.grow-offer { background: #fff; border-radius: 18px; padding: 12px 16px; box-shadow: var(--sh-1); display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.grow-offer.ok { box-shadow: 0 0 0 3px var(--mint, #6cc9a8), var(--sh-1); }
+.grow-offer .go-top { display: flex; align-items: center; gap: 14px; }
+.grow-offer .go-ic { font-size: 40px; line-height: 1; }
+.grow-offer .go-t { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.grow-offer .go-t small { font: 700 12px var(--font-body); letter-spacing: .12em; color: var(--ink-soft); }
+.grow-offer .go-t b { font: 700 22px var(--font-display); }
+.grow-offer .go-t span { font: 600 15px var(--font-body); color: var(--ink-soft); }
+.grow-offer .go-need { font: 700 16px var(--font-display); color: #8f3b22; background: #fff0e4; border-radius: 12px; padding: 8px 14px; white-space: nowrap; }
+.grow-offer .btn.big { white-space: nowrap; }
+.grow-offer .go-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 18px; font: 600 15px var(--font-body); }
+.grow-offer .go-rows li { display: inline-flex; gap: 6px; white-space: nowrap; }
+.grow-offer .go-rows li.good b { color: #237a4f; } .grow-offer .go-rows li.bad b { color: #a3402a; }
+.grow-offer .go-unlocks, .grow-offer .go-fine { margin: 0; font: 600 14px var(--font-body); color: var(--ink-soft); }
+@media (max-height: 820px) { .grow-offer { padding: 8px 14px; gap: 5px; } .grow-offer .go-ic { font-size: 32px; } .grow-offer .go-fine { display: none; } }
+/* With a grow offer the receipt goes two-wide so it still fits 1280×800 without scrolling. */
+.menu.results.has-grow { width: min(100%, 900px); display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; align-items: start;
+  grid-template-areas: 'hd hd' 'profit tiles' 'lines grow' 'money grow' 'rep rep' 'btn btn'; }
+.menu.results.has-grow > .menu-hd { grid-area: hd; }
+.menu.results.has-grow > .profit { grid-area: profit; align-self: stretch; }
+.menu.results.has-grow > .tiles { grid-area: tiles; align-self: stretch; }
+.menu.results.has-grow > .receipt-lines { grid-area: lines; }
+.menu.results.has-grow > .money-split { grid-area: money; }
+.menu.results.has-grow > .grow-offer { grid-area: grow; align-self: stretch; }
+.menu.results.has-grow > .rep { grid-area: rep; }
+.menu.results.has-grow > .btn { grid-area: btn; }
+@media (max-width: 760px) { .menu.results.has-grow { display: flex; } }

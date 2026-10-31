@@ -11,7 +11,7 @@ import { nightViewModel } from './viewModels';
 
 const run = (tier: 'stand' | 'cart' | 'cafe', gear = true): GameState =>
   createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear });
-const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null, ...over });
+const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, ...over });
 
 describe('ui-3.4.0 tier looks', () => {
   it('each tier picks its own scene; the café stays the indoor default', () => {
@@ -89,13 +89,14 @@ describe('ui-3.4.0 night nudge', () => {
     c.cash = 9999;
     expect(growNudge(c)).toBeNull();
   });
-  it('renders a chip that jumps to Extras ▸ Shopfront', () => {
+  it('renders a chip that opens the receipt, where Grow lives (ui-3.7.1)', () => {
     const s = run('stand');
     s.phase = 'night';
     s.day = 2;
     s.cash = 200;
     const h = nightHtml(nightViewModel(s, 'p1'), undefined, null, ui());
-    expect(h).toMatch(/data-nudge data-action="goto" data-tab="spend" data-sub="grow"/);
+    expect(h).toMatch(/data-nudge data-action="drawer" data-d="receipt"/);
+    expect(h).not.toContain('data-sub="grow"');
     expect(h).toContain('You can afford a cart!');
     s.cash = 10;
     expect(nightHtml(nightViewModel(s, 'p1'), undefined, null, ui())).not.toContain('data-nudge');

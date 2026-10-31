@@ -1,13 +1,20 @@
 import { esc, hide, onAction, show } from './dom';
 import { coin, moon, stars } from './icons';
+import type { TierId } from '../sim/types';
+import { growOfferHtml } from './growOffer';
 import type { ClosingVM } from './viewModels';
 
 const rep = (s: string) => Number.parseFloat(s) || 0;
 
 /** End-of-day results: a receipt for the day, then on to the night shop. */
-export function createClosing(container: HTMLElement): { render(vm: ClosingVM): void; show(): void; hide(): void } {
-  onAction(container, (action) => {
+export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: TierId): void } = {}): { render(vm: ClosingVM): void; show(): void; hide(): void } {
+  onAction(container, (action, el) => {
     if (action === 'continue') hide(container);
+    // ui-3.7.1: grow from the receipt; the dialog steps aside so the re-opening wipe and "What you gained" card play.
+    else if (action === 'grow' && el.dataset.tier) {
+      handlers.onGrow?.(el.dataset.tier as TierId);
+      hide(container);
+    }
   });
   return {
     render(vm) {
@@ -16,7 +23,7 @@ export function createClosing(container: HTMLElement): { render(vm: ClosingVM): 
       const after = rep(vm.reputationAfter);
       const repTrend = after > before ? 'up' : after < before ? 'down' : 'same';
       container.innerHTML = `
-        <div class="paper menu results" role="dialog" aria-modal="true" aria-labelledby="res-h">
+        <div class="paper menu results${vm.grow ? ' has-grow' : ''}" role="dialog" aria-modal="true" aria-labelledby="res-h">
           <div class="menu-hd"><span class="badge-ic night">${moon(26)}</span><div><h2 id="res-h">${esc(vm.dayLabel)} closed</h2><p>Lights off, chairs up. Here's how it went.</p></div></div>
           <div class="profit ${loss ? 'loss' : ''}">${coin(34)}<span>${loss ? '' : '+'}${esc(vm.profit)}</span><small>today's net profit</small></div>
           <div class="tiles">
@@ -45,6 +52,7 @@ export function createClosing(container: HTMLElement): { render(vm: ClosingVM): 
             <div><small>CASH IN THE TILL</small><b class="${vm.cash.startsWith('-') ? 'neg' : ''}">${esc(vm.cash)}</b></div>
             <div><small>PROFIT VS. START</small><b class="${vm.profitVsStart.startsWith('-') ? 'neg' : 'pos'}">${vm.profitVsStart.startsWith('-') ? '' : '+'}${esc(vm.profitVsStart)}</b><em>started with ${esc(vm.startingCash)}</em></div>
           </div>
+          ${growOfferHtml(vm.grow)}
           <div class="rep ${repTrend}"><span class="lbl">Reputation</span><span class="st">${stars(before)}</span><span class="arrow">→</span><span class="st">${stars(after)}</span>
             <b>${esc(vm.reputationAfter)}</b></div>
           <button class="btn primary big block" data-action="continue">On to the night shop</button>

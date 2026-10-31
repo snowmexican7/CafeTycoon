@@ -1,11 +1,12 @@
 import { ECONOMY } from '../data/economy';
-import type { DrinkId } from '../sim/types';
+import type { DrinkId, SupplyId } from '../sim/types';
 import { esc, hide, show } from './dom';
 import { coin, itemIcon, jar, logoCup, pauseGlyph, speakerGlyph, stars, sun, SUPPLY_COLOR } from './icons';
 import { callKey, checklistKey, crewKey, handKey, ITEM_LABEL, ordersKey, type CallVM, type ClosingListVM, type HudLive } from './live';
 import { loadRecipeHints, MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, URGENT as TICKET_URGENT, type RecipeHints, type TicketOpts } from './tickets';
 import { DRINK_LABEL } from './tickets';
 import { mountCloseEarly } from './closeEarly';
+import { mountDayRestock, type DayRestockVM } from './dayRestock';
 import { cleanMeter, EVENT_INTRO, hudStructureKey, SOLD_OUT_RUSH, type HudVM } from './viewModels';
 import type { EventKind } from '../sim/types';
 
@@ -29,11 +30,15 @@ const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a
  * The in-day HUD: a top bar of pills, order tickets on the left, pantry/menu/note on the right and
  * what you hold along the bottom. Every block renders once, then only per-tick values are patched.
  */
-export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
+export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void; onRestock?(id: SupplyId | 'condiments'): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
   render(vm: HudVM, live?: HudLive): void;
   /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
   setRecipeHints(mode: RecipeHints): void;
   toast(lines: string[]): void;
+  /** ui-3.7.1: the day Restock button and panel (null outside the day and the closing phase). */
+  setRestock(vm: DayRestockVM | null): void;
+  /** ui-3.7.1: B toggles the panel; while it is open 1-9 buy and B / Esc close. True when the key was used. */
+  restockKey(ev: Pick<KeyboardEvent, 'code' | 'key'>): boolean;
   setRoom(code: string | null): void;
   setMuted(muted: boolean): void;
   setJuice(j: { vibe: number; combo: number; label: string; tone: 'high' | 'mid' | 'low' } | null): void;
@@ -50,6 +55,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       <div class="pill hud-cash">${coin()}<span class="cash"></span><span class="plus" hidden></span></div>
       <div class="pill hud-rep"></div>
       <div class="pill hud-vibe" hidden title="Crew vibe"><span class="vbar"><i></i></span><span class="vlab"></span><span class="vcombo" hidden></span></div>
+      <button class="pill hud-restock" type="button" tabindex="-1" aria-controls="hud-restock-panel" aria-expanded="false" title="Rush delivery (B)" hidden></button>
       <div class="spacer"></div>
       <div class="pill hud-room" hidden></div>
       <div class="hud-crew"></div>
@@ -71,7 +77,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       <div class="hold hand"></div>
       <div class="hold hint"></div>
       <div class="spacer"></div>
-      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">R</span> drop <span class="key">Q</span> drink espresso <span class="key">C</span> hold to close early <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
+      <div class="keys"><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> move <span class="key">E</span> use <span class="key">R</span> drop <span class="key">Q</span> drink espresso <span class="key">C</span> hold to close early <span class="key">B</span> restock <span class="key">M</span> mute <span class="key">Esc</span> pause <span class="seed"></span></div>
     </div>
     <div class="hud-challenges" aria-live="polite" hidden></div>
     <div class="hud-events" aria-live="polite"></div>
@@ -79,6 +85,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <div class="hud-call" role="alert" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
     <div class="hud-checklist" role="status" hidden></div>
+    <section class="hud-restock-panel" id="hud-restock-panel" aria-label="Rush delivery" hidden></section>
     <div class="toast" role="status" hidden></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(sel: string) => container.querySelector<T>(sel)!;
   const el = {
@@ -124,6 +131,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     handlers.onMute?.();
   });
 
+  const restock = mountDayRestock($<HTMLButtonElement>('.hud-restock'), $('.hud-restock-panel'), (id) => handlers.onRestock?.(id));
   const closeBtn = $<HTMLButtonElement>('.hud-close');
   const closeEarly = mountCloseEarly(closeBtn, (on) => handlers.onCloseEarly?.(on));
   // P4 B6: the second shop's phone call.
@@ -500,6 +508,17 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       show(el.toast);
       if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(() => hide(el.toast), 6000);
+    },
+    setRestock(vm) {
+      restock.render(vm);
+    },
+    restockKey(ev) {
+      if (restock.handleKey(ev)) return true;
+      if (ev.code !== 'KeyB' || container.hidden) return false;
+      const b = container.querySelector<HTMLElement>('.hud-restock');
+      if (!b || b.hidden) return false;
+      restock.toggle();
+      return true;
     },
     setMuted(muted) {
       if (muteBtn.getAttribute('aria-pressed') === String(muted)) return;

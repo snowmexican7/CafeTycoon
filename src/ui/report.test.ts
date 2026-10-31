@@ -63,7 +63,7 @@ describe('manager report (P4 B3)', () => {
     s.phase = 'night';
     const vm = nightViewModel(s, 'p1');
     expect(vm.report?.day).toBe(1);
-    const ui = { tab: 'tonight', spend: 'cards', drawer: 'report', sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null } as Parameters<typeof nightHtml>[3];
+    const ui = { tab: 'tonight', spend: 'cards', drawer: 'report', sig: null, pitch: { kind: 'promo', text: '' } } as Parameters<typeof nightHtml>[3];
     const html = nightHtml(vm, undefined, null, ui);
     expect(html).toContain('data-d="report"');
     expect(html).toMatch(/Manager(&#39;|'|&#x27;)s report · Day 1/);

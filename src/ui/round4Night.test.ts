@@ -17,7 +17,7 @@ function withGear(ids: GearId[]) {
 }
 
 const run = (gear = true) => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear });
-const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null, ...over });
+const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, ...over });
 
 describe('ui-3.5.1: condiment box card on the Restock tab', () => {
   it('shows the price, the corner boxes and the bar servings, with a +1 box button', () => {
@@ -77,12 +77,14 @@ describe('ui-3.5.1: decluttered Restock tab', () => {
       expect(h).toContain(`data-wid="${a.id}"`);
     }
   });
-  it('crew roles and the street notebook live behind "More" drawers', () => {
+  it('the street notebook lives behind a "More" drawer; crew roles are gone (ui-3.7.1)', () => {
     const s = run();
     s.day = 2;
     const vm = nightViewModel(s, 'p1');
     expect(nightHtml(vm, undefined, null, ui())).toContain('tn-more');
-    expect(nightHtml(vm, undefined, null, ui({ drawer: 'crew' }))).toContain('Crew roles');
+    const h = nightHtml(vm, undefined, null, ui());
+    expect(h).not.toContain('Crew roles');
+    expect(h).not.toContain('data-action="role"');
     expect(typeof notebookBody(vm.gear!)).toBe('string');
   });
 });

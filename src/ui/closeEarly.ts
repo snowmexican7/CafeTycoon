@@ -34,7 +34,7 @@ export const closeEarlyKey = (vm: CloseEarlyVM | undefined): string =>
 /** The button's inner HTML (pure, for tests): ring, label, the vote count in co-op, and the nudge. */
 export function closeEarlyHtml(vm: CloseEarlyVM): string {
   const count = vm.needed > 1 ? `${vm.votes}/${vm.needed} voted` : '';
-  const sub = vm.mine ? (vm.needed > 1 ? `${count} · tap to undo` : 'tap to undo') : [count, 'hold C'].filter(Boolean).join(' · ');
+  const sub = vm.mine ? (vm.needed > 1 ? `${count} · click to undo` : 'click to undo') : [count, 'hold C'].filter(Boolean).join(' · ');
   const ring = `<svg class="ce-ring" viewBox="0 0 36 36" aria-hidden="true"><circle class="bg" cx="18" cy="18" r="15"/><circle class="fg" cx="18" cy="18" r="15" pathLength="100"/><path class="door" d="M13 11h10v15H13z M20 18.5h1.2"/></svg>`;
   return `${ring}<span class="ce-t"><b>${vm.mine ? 'Voted to close' : 'Close early'}</b>${vm.nudge ? `<small class="ce-nudge" role="status">${esc(vm.nudge)}</small>` : `<small>${esc(sub)}</small>`}</span>`;
 }

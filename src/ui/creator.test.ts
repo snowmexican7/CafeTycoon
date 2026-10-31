@@ -97,7 +97,7 @@ describe('ui-3.5.2: night "Edit my barista"', () => {
     const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K', look: DEFAULT_LOOK }], settings: { bots: 0 } });
     expect(s.players[0].look).toEqual(DEFAULT_LOOK);
     s.phase = 'night';
-    const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
+    const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' } };
     expect(nightHtml(nightViewModel(s, 'p1'), undefined, null, ui)).toContain('data-action="edit-look"');
   });
 });

@@ -1,3 +1,4 @@
+import { growOffer, type GrowOffer } from './growOffer';
 import { FRIDGES } from '../data/fridges';
 import { GEAR_VOTE_MIN } from '../sim/gear';
 import type { PerkId } from '../data/perks';
@@ -7,7 +8,7 @@ import { AD_IDS, ADS } from '../sim/ads';
 import { CHECKOUT, CHECKOUT_IDS, checkoutOf, nextCheckout } from '../sim/checkout';
 import { DRINK_STATIONS, grownToday, nextTier, TIER_IDS, TIERS, tierOf } from '../sim/growth';
 import { layoutFor } from '../data/layout';
-import { stationMenuNote, stationsVM, type StationsVM } from './stationsVM';
+import { stationMenuNote } from './stationsVM';
 import { tipsVM, type TipVM } from './tipsVM';
 import { growNudge, type GrowNudge } from './growModel';
 import { nightBrief, type NightAlert, type NightFix } from '../sim/brief';
@@ -293,9 +294,11 @@ export interface NightVM {
    * corner, servings in the bar (of 20), and the $6 box. `full` once the corner holds CONDIMENTS.maxBoxes.
    */
   condiments?: { boxes: number; servings: number; max: number; cost: number; affordable: boolean; full: boolean };
-  ready: { id: PlayerId; name: string; ready: boolean; role?: string }[];
-  /** Phase 3 B1: the four roles, who holds each, and whether this barista can take it. */
-  roles?: RoleVM[];
+  /** ui-3.7.1: the next tier to grow into, shown on the Receipt drawer (null at the top tier). */
+  grow?: GrowOffer | null;
+  /** ui-3.7.1: a Strategist is hired, so it sets the menu (the Menu tab steps back, with a note). */
+  strategist?: boolean;
+  ready: { id: PlayerId; name: string; ready: boolean }[];
   /** P3 B15 (Gear runs): the hired bot baristas, each one's daily wage, and whether a spot is free. */
   staff?: StaffVM;
   /** Phase 3 B3: regulars, their favourite and loyalty. */
@@ -310,11 +313,9 @@ export interface NightVM {
   pitch: PitchVM;
   /** P3 B12: the checkout path on the Shopfront tab. */
   checkout: CheckoutVM;
-  /** P3 B13: the growth path (stand → cart → café) on the Shopfront tab. */
+  /** P3 B13: the growth path (stand → cart → café); ui-3.7.1: the menu note, the nudge and the milestone. */
   growth: GrowthVM;
-  /** FB1 WP5: the Spend › Stations card. */
-  stations: StationsVM;
-  /** Gear Tree G3: the Spend › Gear card (Gear runs only; it replaces Stations). */
+  /** Gear Tree G3: the Gear shop tab (Gear runs only). */
   gear?: GearVM;
   /** Heads-ups before Ready: short on rent, out of or low on a supply. Never blocks. */
   warnings: NightWarning[];
@@ -322,8 +323,6 @@ export interface NightVM {
   forecast?: ForecastVM;
   /** "New on the menu": drinks that joined tonight, with their recipe ticket. */
   fresh?: FreshDrinkVM[];
-  /** Re-roll tonight's unbought cards (B6): its price and whether the till covers it. */
-  reroll: { cost: string; affordable: boolean; count: number };
   /** Card sets switched on, for the hand's header. */
   sets: string[];
   /** FB1 WP1: the Tonight tab's at-a-glance brief (UI adapter until the sim's nightBrief lands). */
@@ -679,18 +678,6 @@ export function menuLines(state: GameState): MenuLineVM[] {
   });
 }
 
-/** DEPRECATED (Round 4 f, sim): crew roles are cut; `NightVM.roles` is never set. TODO(Grok): drop with the crew drawer. */
-export interface RoleVM {
-  id: string;
-  name: string;
-  icon: string;
-  perk: string;
-  weakness: string;
-  /** Holder's name, or null when free. */
-  holder: string | null;
-  mine: boolean;
-}
-
 function spoiledWhat(s: Partial<Record<SupplyId, number>> | undefined): string {
   if (!s) return '';
   return Object.entries(s)
@@ -745,7 +732,6 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     takings,
     ...(state.debt ? { tab: money(state.debt) } : {}),
     hand: state.hand.map((id) => handCardViewModel(state, catalogueById[id])),
-    reroll: { cost: money(0), affordable: false, count: 0 }, // Round 4 f (sim): re-rolls are cut. TODO(Grok): drop the field and the button.
     sets: activeSets(state).map((id) => (fullSets(state).includes(id) ? `${CARD_SETS[id].name} (full)` : CARD_SETS[id].name)),
     restock: neededSupplies(state).map((supply) => {
       const cost = restockCost(state, supply, 1);
@@ -757,6 +743,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
       };
     }),
     ...(state.gear && state.condiments ? { condiments: condimentsVM(state) } : {}),
+    grow: growOffer(state),
+    ...(state.staff?.strategist ? { strategist: true } : {}),
     ready: state.players.filter((p) => !p.bot).map((p) => ({ id: p.id, name: p.name, ready: state.ready.includes(p.id) })),
     ...(state.gear ? { staff: staffViewModel(state) } : {}),
     ...(state.regulars.length ? { regulars: regularsViewModel(state) } : {}),
@@ -767,7 +755,6 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     ads: adsVM(state),
     checkout: checkoutVM(state),
     growth: growthVM(state),
-    stations: stationsVM(state),
     ...(state.gear ? { gear: gearVM(state, me) } : {}),
     pitch: pitchVM(state),
     ...(state.freshDrinks?.length ? { fresh: state.freshDrinks.map(freshDrink) } : {}),
@@ -832,6 +819,8 @@ export interface ClosingVM {
   bonus?: string;
   /** Challenges won today (B7): label and tip. */
   challenges?: { label: string; reward: string }[];
+  /** ui-3.7.1: the next tier to grow into (only when the receipt opens the night, where growing works). */
+  grow?: GrowOffer;
 }
 
 /** `before` is the last snapshot of the closing phase; `after` is the first of the next phase. */
@@ -867,6 +856,7 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     cash: money(after.cash),
     profitVsStart: money(scoreRun(after)),
     startingCash: money(after.startingCash),
+    ...((g) => (g ? { grow: g } : {}))(after.phase === 'night' ? growOffer(after) : null),
   };
 }
 
@@ -1200,7 +1190,7 @@ export type BriefSeverity = 'danger' | 'warn' | 'info' | 'good';
  * A one-tap fix: a night action and its data attributes (go to a tab, scout), or 'fix': send the
  * sim's own fix input for the alert (restock the packs nightBrief worked out).
  */
-export interface BriefFix { label: string; action: 'restock' | 'goto' | 'scout' | 'fix'; data: Record<string, string>; input?: NightFix }
+export interface BriefFix { label: string; action: 'restock' | 'goto' | 'scout' | 'fix' | 'drawer'; data: Record<string, string>; input?: NightFix }
 export interface BriefAlert { id: string; severity: BriefSeverity; icon: string; text: string; fix?: BriefFix }
 export interface NightBriefVM {
   /** Yesterday's profit, signed ('+$12.84' / '-$3.10'); null on the opening night. */
@@ -1258,7 +1248,7 @@ function briefRow(state: GameState, a: NightAlert): BriefAlert {
     // ui-3.5.1: the brief's "cream and sugar run out" line buys the boxes it worked out
     row.icon = '🥛';
     row.fix = { label: `Buy ${f.boxes === 1 ? 'a box' : `${f.boxes} boxes`} · $${f.boxes * CONDIMENTS.boxCost}`, action: 'fix', data: { fix: a.id }, input: f };
-  } else if (a.kind === 'grow') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'grow' } };
+  } else if (a.kind === 'grow') row.fix = { label: 'See it', action: 'drawer', data: { d: 'receipt' } }; // ui-3.7.1: growing is on the receipt
   else if (a.kind === 'checkout') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'checkout' } };
   else if ((a.kind === 'rival' && a.id !== 'rival:loyalty') || a.kind === 'signature') row.fix = { label: 'Menu', action: 'goto', data: { tab: 'menu' } };
   else if (a.kind === 'stock') {
