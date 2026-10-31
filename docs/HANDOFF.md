@@ -70,6 +70,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **Round 3 item 4, line + waiting area (2026-10-31, `r3-line`, protocol 53).** Browsers in `state.waiting`
+  (not in `customers`; stand 0 / cart 2 / café 4) for the waiting-area art; "Line's too long!" bubble on
+  `line.complain { customer }`; tumbleweed on `line.leave { customer, quiet: true }` (a fresh id, no Customer);
+  optional receipt line from `DayStats.lineLeft`. Line state: `GameState.line { front, since, complainedAt }`.
 - [ ] **Round 3 item 2, money (2026-10-31, `r3-money`, protocol 52).** "Too pricey!" bubble and a door walker from
   `walkout { customer, reason: 'price', drink }` (no Customer is spawned; `chaosModel` must branch on `reason`, as for
   `'bumped'`). Optional receipt line from `DayStats.priceWalkouts`. The `viewModels.ts` night headline `customers` is

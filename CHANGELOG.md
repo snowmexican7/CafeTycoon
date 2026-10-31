@@ -35,6 +35,8 @@ when a build goes out, the line moves under its version with the date.
 - Prices ease a little: the kerbside stand can charge 80% of café prices (was 75%), supplies cost 10% less, pricey
   menus scare off fewer people, and the night forecast only promises as many cups as your crew and machines can pour.
   Someone put off by your prices now shows up and walks out ("Too pricey!") instead of never coming.
+- When the line is full, a couple of customers wait inside and browse until there's room (two at the cart, four at
+  the café); if the line stalls, someone grumbles "Line's too long!" and a few passers-by quietly walk on.
 
 ## 3.5.0 — 2026-10-30 · Open, close and clean up
 

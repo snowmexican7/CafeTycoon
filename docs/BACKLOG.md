@@ -2428,3 +2428,14 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   the slower of machine and crew rate; `CAPACITY.handlingSeconds` 6, `stepSeconds` 2, untuned); `priceForecast`
   orders are capped cups. A price-driven non-arrival logs `walkout { customer, reason: 'price', drink }` and
   `DayStats.priceWalkouts` (not lost, not turned away; it takes a fresh customer id).
+- **Round 3 item 4, line and waiting area (`r3-line`, protocol 53).** A full line sends arrivals to browse in a small inside
+  waiting area (`ECONOMY.line.waiting`: stand 0, cart 2, café 4), `GameState.waiting` (arrival order; not in
+  `customers`, so till/pickup/bots don't see them). They join the line's end as it frees, and browse at half patience
+  drain (`browsePatience` 0.5); out of patience they leave as a turn-away (not lost, no reputation hit). Only with the area full is an arrival turned away.
+  When the front of the order line hasn't changed for `stallSeconds` (12) with at least `complainMin` (2) in it, the
+  last one in line complains: `line.complain { customer }`, at most once per `cooldownSeconds` (30)
+  (`GameState.line { front, since, complainedAt }`). For `freshSeconds` (8) after, each arrival leaves with
+  `quietLeaveChance` (0.5): `line.leave { customer, quiet: true }` (a fresh id for the tumbleweed), no reputation,
+  not lost, `DayStats.lineLeft`. Office runs still wait outside a full line. Helpers in src/sim/line.ts.
+  **UI to do:** waiting-area art with `state.waiting` browsers, the "Line's too long!" bubble on `line.complain`,
+  the tumbleweed on `line.leave`, maybe a receipt line for `DayStats.lineLeft`.
