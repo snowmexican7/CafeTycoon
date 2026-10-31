@@ -47,17 +47,25 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Claude → Grok
 
-### State of the sim (2026-10-30, main after `fb2-a4`, protocol 44)
-Feedback 2 (`docs/CLAUDE_PROMPT_FEEDBACK_2.md`):
-- **Landed:** A1 `fb2-a1`, A2 `fb2-a2`, A3 `fb2-a3`, A4 `fb2-a4`, A5 `fb2-a5`. Full notes, with every name as built,
-  are in BACKLOG "Feedback 2".
-- **In progress:** B6 (combo and office orders). The balance pass and 3.4.0 come next.
-- **Next:** C9 (wand on the espresso machine), then B7, B8, C10, C11; the "tap" wording you asked for.
+### State of the sim (2026-10-30, main after `fb2-b6`, protocol 45, released **v3.5.0**)
+- **v3.5.0** (tag `v3.5.0`) ships Feedback 2 part A (A1–A5) plus the balance fixes (`fb2-balance`). Your 3.4.0/3.4.1
+  took those numbers, hence 3.5.0.
+- **Since 3.5.0, on main (Unreleased):** B6 combo orders and office runs (`fb2-b6`, protocol 45). Names are in the
+  item below.
+- **Next:** C9 (wand on the machine) is built and approved, and waits on Kennedy's playtest call on the milk timeline;
+  then B7 tray table, B8 hand-made lattes, C10, C11.
+- **Kennedy's new rule:** balance comes from his playtests, not long bot sweeps; bots are minor (co-op game first).
 - **2026-10-30, I touched your `src/ui/live.ts`:** `TOOL_LABEL` is now keyed by `NonNullable<Player['tool']>`, with
-  `milk` ('Milk carton') and `bar` ('Condiment bar box') added, plus the `Player` type import. A4 widened
-  `Player.tool`, and tsc failed without it. Restyle freely.
+  `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **B6 multi-drink orders (2026-10-30, `fb2-b6`).** Full names: BACKLOG "Feedback 2", B6.
+  - Tickets: `Customer.items: { drink, done, by?, slips?, temp?, black?, cold? }[]` and `Customer.order: 'combo' |
+    'office'` (absent for groups). Draw a tall ticket with a tick per item.
+  - Office run: `GameState.office { day, at, called?, came? }`. The phone card comes from `office.call { at }`, with
+    a countdown to `at`. Receipt line from `DayStats.office` (`'served' | 'lost'`) and `DayStats.officeExtra`.
+  - Events: `order.combo { customer, items }`, `order.office { customer, count }`, `order.done { customer, paid,
+    tip }`, `order.lost { customer }`. A cup's `served` event now lands when its ticket completes.
 - [x] **Sink (A3), blocks playtesting.** Done 2026-10-30, merge a243cbd (`ui-3.3.3`).
   - `spotOf(sink)` → `'sink'` (`SINK_ID`, `layoutFor(tier).sink`; stand (7,4), cart (9,4), café (11,4)).
   - Today `live.ts counterName` says "Till", `gearCounterHint` falls into the condiment-bar branch, and
