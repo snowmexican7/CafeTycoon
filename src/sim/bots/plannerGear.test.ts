@@ -19,7 +19,7 @@ import { stationsFromSlots } from '../slots';
 import type { DayStats, GameState, TierId } from '../types';
 
 const dayStats = (over: Partial<DayStats> = {}): DayStats => ({ day: 1, served: 23, lost: 2, turnedAway: 0, sales: 40.84, tips: 3, rent: 25, ...over });
-const FULL = { beans: 500, milk: 500, concentrate: 500, flavour: 500, pastry: 0 };
+const FULL = { beans: 500, milk: 500, concentrate: 500, flavour: 500, pastry: 500 };
 
 /** A Gear run at night with `bots` hired baristas. */
 const gearRun = (opts: { bots?: number; tier?: TierId; dayLengthSec?: number; seed?: number } = {}): GameState =>

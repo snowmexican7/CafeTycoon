@@ -20,7 +20,7 @@ function gearNight(gears: GearId[], cash: number, dayLengthSec = 150): GameState
   s.cash = 5000;
   for (const gear of gears) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear }]);
   s.cash = cash;
-  s.supplies = { beans: 500, milk: 500, concentrate: 500, flavour: 500, pastry: 0 };
+  s.supplies = { beans: 500, milk: 500, concentrate: 500, flavour: 500, pastry: 500 };
   return s;
 }
 const find = (s: GameState, id: string): Advice | undefined => planNight(s).find((a) => a.id === id);
@@ -216,7 +216,7 @@ describe('Task 12: the shared budget', () => {
 
   it('restock draws first: with cash for one thing, the pack beats the box', () => {
     const s = gearNight(['c1', 'd1'], 0, 900);
-    s.supplies = { beans: 500, milk: 500, concentrate: 0, flavour: 500, pastry: 0 };
+    s.supplies = { beans: 500, milk: 500, concentrate: 0, flavour: 500, pastry: 500 };
     s.condiments = { servings: 0 };
     s.condimentBoxes = 0;
     s.cash = billsForDay(s) + 9; // one concentrate pack, nothing left for a box

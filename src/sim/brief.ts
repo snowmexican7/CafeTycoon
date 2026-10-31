@@ -34,7 +34,7 @@ import { nextTier, TIERS } from './growth';
 import { restockCost } from './night';
 import { profitOf } from './profit';
 import { copyIsLive, countered, isPromoDay, loyaltyLive, RIVAL, sigPrice } from './rival';
-import { FRESH, spoilCount } from './spoilage';
+import { FRESH, SPOIL, spoilCount } from './spoilage';
 import { steepPlan } from './steep';
 import { fridgeCapacity, fridgeWanted, packsThatFit } from './fridge';
 import { FRIDGES } from '../data/fridges';
@@ -115,6 +115,8 @@ export function expectedUse(state: GameState): Record<SupplyId, number> {
   const orders = expectedOrders(state);
   const use: Record<SupplyId, number> = { beans: 0, milk: 0, concentrate: 0, flavour: 0, pastry: 0 };
   for (const d of menuDrinks(state)) for (const s of ECONOMY.drinkSupplies[d]) use[s] += orders[d];
+  // R4 b: no drink needs a pastry; the case sells the attach rate of the day's cups (one pastry at most per cup).
+  use.pastry += SPOIL.pastry.attach * Object.values(orders).reduce((a, b) => a + b, 0);
   for (const s of SUPPLY_IDS) use[s] = Math.ceil(use[s]);
   return use;
 }
@@ -162,8 +164,9 @@ export function nightBrief(state: GameState): NightBrief {
   if (after < 0) alerts.push({ id: 'cash:short', kind: 'cash', severity: 'danger', text: `You'll be ${dollars(after)} short on ${bill}` });
   else if (after < rent) alerts.push({ id: 'cash:low', kind: 'cash', severity: 'warn', text: `Only ${dollars(after)} spare after ${bill}` });
 
-  // 2. stock
-  for (const s of needed) {
+  // 2. stock (R4 b: the pastry case is an optional side: it only warns while it holds some and will not last the day)
+  const pastryTrack = (state.supplies.pastry ?? 0) > 0 ? (['pastry'] as SupplyId[]) : [];
+  for (const s of [...needed, ...pastryTrack]) {
     if (state.gear === true && s === 'concentrate') continue; // Gear: cold brew is steeped at night (the steep alert below)
     const have = state.supplies[s] ?? 0;
     if (have <= 0) {

@@ -52,6 +52,7 @@ describe('FB2 A4: the planner and the brief know the fridge', () => {
     expect(planNight(s).some((x) => x.id.startsWith('fridge:'))).toBe(false);
     expect(nightBrief(s).alerts.some((x) => x.id === 'fridge')).toBe(false);
     s.settings.dayLengthSec = 3000;
+    s.supplies.pastry = 1e6; // R4 b: a case stocked for the day, so a 3000-second day's pastries don't eat the till first
     expect(expectedUse(s).milk).toBeGreaterThan(fridgeCapacity(s));
     expect(adviceOf(s, 'fridge:f4')?.input).toEqual({ kind: 'fridge', fridge: 'f4' });
   });
