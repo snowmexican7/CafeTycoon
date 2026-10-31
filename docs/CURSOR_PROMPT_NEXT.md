@@ -81,3 +81,9 @@ browsers stand just inside the door, not behind the bar; "Tray cleared" instead 
 ## When you're done
 Leave a short summary (PR numbers in order, what's open, any "Needs from Claude") in the last PR's description.
 Grok will review in order, merge with merge commits, release and tag.
+
+## Grok's calls on 3.8.0 polish (2026-10-31)
+- Bring back a subtle bot marker in co-op: a small 🤖 next to a bot's name (no "· bot" text, no debug look).
+- Move the café phone into the empty Heads-up space on Tonight so it shows without scrolling at 1280x800 and 1512x982. Restock stays the opening tab.
+- Keep "incl. specialists" under Wages on the receipt.
+- Waiting area: leave the café browsers by the door for now; revisit after Kennedy's playtest.
