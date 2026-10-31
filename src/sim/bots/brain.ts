@@ -368,9 +368,10 @@ export function uncoveredOrders(state: GameState, self: Player): Customer[] {
     // FB2 B6 (fix round 1, I1): an office run keeps one drink in the queue (its first uncovered one, in its queue
     // place) and the rest go after everyone else's: it gets made steadily without starving the walk-ins.
     const office = c.order === 'office';
-    let queued = false;
     const wants = c.items ? undoneDrinks(c) : [c.drink];
     const claims = c.items ? ticketClaims(state, self, c.id) : null;
+    // A bot already on one of its drinks fills the office run's queue place (fix round 1: else each bot took the next).
+    let queued = office && claims !== null && [...claims.values()].some((n) => n > 0);
     if (!claims && claimedByOther(state, self, c.id)) continue;
     for (const d of wants) {
       if (claims && (claims.get(d) ?? 0) > 0) {
@@ -1264,11 +1265,21 @@ function yieldWay(state: GameState, b: BotState, maxRank: number): void {
  * A path to `node`, around spills when possible; after a yield, also around the nodes other players
  * (and the rogue) stand on. Falls back to fewer avoided tiles, then the plain path.
  */
+/**
+ * The tiles a bot that has yielded steps around: everyone else on the floor and the rogue. FB2 B6 (fix round 1, Gear):
+ * of two crew bots, only the later in the crew steps around the earlier. Both stepping around each other made two bots
+ * crossing in a corridor mirror each other from row to row for the rest of the day (seed 205 day 9: 3 served).
+ */
+export function pathAvoid(state: GameState, p: Player): Vec2[] {
+  if (!hasYielded(p.bot!)) return [];
+  const me = state.players.indexOf(p);
+  const around = state.players.filter((o, i) => o !== p && o.connected && !(state.gear === true && o.bot && i > me));
+  return [...around.map((o) => nodeOf(state, o.pos)), ...rogueTiles(state)];
+}
+
 function planPath(state: GameState, p: Player, node: Vec2): Vec2[] | null {
   const spills = spillTiles(state);
-  const people = hasYielded(p.bot!)
-    ? [...state.players.filter((o) => o !== p && o.connected).map((o) => nodeOf(state, o.pos)), ...rogueTiles(state)]
-    : [];
+  const people = pathAvoid(state, p);
   for (const avoid of [[...spills, ...people], spills]) {
     if (avoid.length === 0) continue;
     const around = findPath(state, p.pos, node, avoid);
