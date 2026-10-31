@@ -16,7 +16,7 @@ import { EVENT_FORESHADOW } from '../sim/describe';
 import { createRun, startDay, startNight } from '../sim/run';
 import { createNight } from '../ui/night';
 import type { GameState, SimEvent, TierId } from '../sim/types';
-import { defaultSlots, stationsFromSlots } from '../sim/slots';
+import { defaultSlots, ensureCounterSpots, stationsFromSlots } from '../sim/slots';
 import { createClosing } from '../ui/closing';
 import { createHud } from '../ui/hud';
 import { dayRestockVM } from '../ui/dayRestock';
@@ -335,6 +335,113 @@ const FIXTURES: Record<string, Fixture> = {
       s.staff = { strategist: true };
     },
     timeline: [],
+  },
+  /**
+   * FB2 B7 rest: Gear café with a live tray list on the table (Ada, 2/3 done + cooling), Ben carrying a tray,
+   * a tray coaster with a name on pickup, and a refuse bubble.
+   */
+  trayTable: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 3);
+      ensureCounterSpots(s); // tray table / syrups / sink / fridge after atTier rebuilds the floor
+      const lay = layoutFor(s.tier);
+      s.customers = [
+        {
+          id: 21,
+          drink: 'latte',
+          patienceLeft: 1400,
+          patienceMax: 1800,
+          name: 'Ada',
+          stage: 'pickup',
+          rungAt: s.tick,
+          order: 'combo',
+          items: [
+            { drink: 'latte', done: false },
+            { drink: 'espresso', done: false },
+            { drink: 'mocha', done: false },
+          ],
+        },
+        {
+          id: 22,
+          drink: 'latte',
+          patienceLeft: 1200,
+          patienceMax: 1600,
+          name: 'Ravi',
+          stage: 'pickup',
+          rungAt: s.tick,
+          order: 'office',
+          items: [
+            { drink: 'latte', done: false },
+            { drink: 'cappuccino', done: false },
+          ],
+        },
+        { id: 23, drink: 'drip', patienceLeft: 900, patienceMax: 1400, stage: 'order' },
+      ];
+      // live tray on the table: latte + espresso on, mocha still open
+      s.tray = {
+        customer: 21,
+        items: [
+          { drink: 'latte', done: true, madeAt: s.tick - 20 * 60, by: 'ana' },
+          { drink: 'espresso', done: true, madeAt: s.tick - 5 * 60, by: 'ana' },
+          { drink: 'mocha', done: false },
+        ],
+      };
+      // Ben carries Ravi's finished tray toward pickup
+      const ben = s.players[1]!;
+      ben.pos = { x: lay.pickup.x - 0.4, y: lay.pickup.y - 1.1 };
+      ben.tool = 'tray';
+      ben.holding = null;
+      ben.tray = {
+        customer: 22,
+        items: [
+          { drink: 'latte', done: true, madeAt: s.tick - 10 * 60, by: 'ben' },
+          { drink: 'cappuccino', done: true, madeAt: s.tick - 8 * 60, by: 'ben' },
+        ],
+      };
+      // Ana at the tray table with a drink that will refuse
+      const ana = s.players[0]!;
+      ana.pos = { x: lay.trayTable.x + 1, y: lay.trayTable.y };
+      ana.holding = 'coldBrew';
+      // a tray coaster already on pickup for a third ticket (name tag)
+      s.pass = [
+        {
+          item: 'mocha',
+          ticksLeft: 9999,
+          by: 'cleo',
+          tray: {
+            customer: 24,
+            drinks: [
+              { drink: 'mocha', madeAt: s.tick - 15 * 60, by: 'cleo' },
+              { drink: 'latte', madeAt: s.tick - 12 * 60, by: 'cleo' },
+            ],
+          },
+        },
+        { item: 'drip', ticksLeft: 40 * 60, by: 'dev', madeAt: s.tick },
+      ];
+      s.customers.push({
+        id: 24,
+        drink: 'mocha',
+        patienceLeft: 1100,
+        patienceMax: 1500,
+        name: 'June',
+        stage: 'pickup',
+        rungAt: s.tick,
+        order: 'combo',
+        items: [
+          { drink: 'mocha', done: false },
+          { drink: 'latte', done: false },
+        ],
+      });
+      // Cleo near the syrups so the floor isn't empty
+      s.players[2]!.pos = { x: 3.2, y: 5.2 };
+      s.players[3]!.pos = { x: 8.5, y: 3.5 };
+    },
+    timeline: [
+      [0.4, (s) => emit(s, 'tray.refuse', { drink: 'coldBrew', by: 'ana', customer: 21 })],
+      [1.2, (s) => emit(s, 'tray.add', { drink: 'mocha', by: 'ana', customer: 21 })],
+    ],
   },
   /** P3 B2: the night menu board with prices moved (latte up $1, espresso down $0.50). */
   pricing: {

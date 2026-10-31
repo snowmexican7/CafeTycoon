@@ -6,6 +6,7 @@ import { FRIDGES } from '../data/fridges';
 import { TILL, ringProgress, selfOrder, tillNext } from '../sim/till';
 import { passSlots, pickupTarget, spotOf } from '../sim/pickup';
 import { ticketOpen, trayComplete } from '../sim/tray';
+import { trayToolLabel } from '../render/trayModel';
 import { CONDIMENTS, canTakeBox } from '../sim/condiments';
 import { CONDIMENTS_ID } from '../data/layout';
 import { DRINK_INFO } from '../data/drinks';
@@ -218,8 +219,16 @@ export const TOOL_LABEL: Record<NonNullable<Player['tool']>, { label: string; ic
 };
 
 /** ui-3.4.1 (FB2 A4): the hand slot's label, with how much milk or how many servings are in hand. */
-export function toolLabel(player: Pick<Player, 'tool' | 'carry'>): { label: string; icon: string } | undefined {
+export function toolLabel(
+  player: Pick<Player, 'tool' | 'carry' | 'tray'>,
+  state?: Pick<GameState, 'customers'>,
+): { label: string; icon: string } | undefined {
   if (!player.tool) return undefined;
+  // FB2 B7: a carried tray names its customer and cup count
+  if (player.tool === 'tray' && state) {
+    const tray = trayToolLabel(state, player);
+    if (tray) return tray;
+  }
   const base = TOOL_LABEL[player.tool];
   const n = player.carry ?? 0;
   if (player.tool === 'milk' && n > 0) return { ...base, label: `${base.label} · ${n} milk` };
@@ -521,7 +530,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     }),
     crew: crewOf(state, me),
     holding: player?.holding ?? null,
-    ...(player?.tool ? { tool: toolLabel(player)! } : {}),
+    ...(player?.tool ? { tool: toolLabel(player, state)! } : {}),
     ...(player && heldColdNow(state, player) ? { heldCold: true as const } : {}),
     ...(podsOnly(state) ? { pods: true } : {}),
     ...(state.gear === true ? { gear: true } : {}),

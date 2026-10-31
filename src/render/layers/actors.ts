@@ -9,7 +9,7 @@ import { flashOn } from '../eventsModel';
 import { botLook, botTag, emotePhase, type BotLook } from '../crewModel';
 import { jitterPx, type CollapsePose } from '../espressoPose';
 import { customerSpots, type SpotsLayout } from '../pickupModel';
-import { drawBox } from './pickup';
+import { drawBox, drawTrayBoard } from './pickup';
 import { drawCarafe } from './sink';
 import { CARRIED_FILL } from '../sinkModel';
 import { drawBarCaddy, drawCarton } from './fridgeArt';
@@ -334,7 +334,8 @@ export class Actors {
       const bl = p.bot ? botLook(p.bot.personality) : null;
       // ui-3.5.2 (R4 e): a person's own look (bots keep theirs); the ring and tag keep the player colour
       const art = p.look && !p.bot ? lookArt(p.look) : null;
-      const key = `${sprite.facing}|${p.holding}|${me}|${index}|${stunned}|${p.bot?.personality ?? ''}|${p.tool}|${art ? JSON.stringify(p.look) : ''}`;
+      const trayKey = p.tool === 'tray' && p.tray ? `${p.tray.customer}:${p.tray.items.map((x) => x.drink).join(',')}` : '';
+      const key = `${sprite.facing}|${p.holding}|${me}|${index}|${stunned}|${p.bot?.personality ?? ''}|${p.tool}|${trayKey}|${art ? JSON.stringify(p.look) : ''}`;
       if (key !== sprite.key) {
         sprite.body.clear();
         drawPerson(sprite.body, {
@@ -352,6 +353,8 @@ export class Actors {
         // ui-3.4.1 (FB2 A4): a milk carton held out in one hand, or the condiment bar boxed up in both
         else if (p.tool === 'milk') drawCarton(sprite.body, 12, -10, 1.1);
         else if (p.tool === 'bar') drawBarCaddy(sprite.body, 0, -14, 1.05);
+        // FB2 B7: a finished tray carried in both hands
+        else if (p.tool === 'tray' && p.tray) drawTrayBoard(sprite.body, 0, -18, p.tray.items.map((x) => x.drink), [], 0.95);
         sprite.key = key;
       }
       const pos = positions[p.id] ?? p.pos;
@@ -383,7 +386,7 @@ export class Actors {
       sprite.tag.visible = !out;
 
       // on mop duty: the tag says so, so the crew knows who to shout for
-      const toolTag = p.tool === 'mop' ? ' · mop' : p.tool === 'box' ? ' · box' : p.tool === 'pot' ? ' · pot' : p.tool === 'milk' ? ' · milk' : p.tool === 'bar' ? ' · condiments' : '';
+      const toolTag = p.tool === 'mop' ? ' · mop' : p.tool === 'box' ? ' · box' : p.tool === 'pot' ? ' · pot' : p.tool === 'milk' ? ' · milk' : p.tool === 'bar' ? ' · condiments' : p.tool === 'tray' ? ' · tray' : '';
       const name = `${p.name}${toolTag}`;
       // bots: a white tag in their colour ("Bo · bot"); away humans: a grey "· away" tag and z z z
       const text = p.bot ? `${botTag(p.name)}${toolTag}` : p.connected ? name : `${p.name} · away`;

@@ -219,4 +219,22 @@ describe('Gear batch/pickup sounds (3.3.1)', () => {
     const b = withLog(a, { kind: 'drop', data: { item: 'box', x: 1, y: 7 } }, { kind: 'drop', data: { item: 'latte', x: 2, y: 3 } });
     expect(ids(diffCues(a, b, 'p1', logCursor(a)))).toEqual(['boxDown', 'splash']);
   });
+
+  it('FB2 B7: tray events map to cup / lift / refuse / spill cues', () => {
+    const a = run();
+    const b = withLog(
+      a,
+      { kind: 'tray.claim', data: { customer: 3, by: 'p1' } },
+      { kind: 'tray.add', data: { drink: 'latte', by: 'p1', customer: 3 } },
+      { kind: 'tray.refuse', data: { drink: 'mocha', by: 'p2' } },
+      { kind: 'tray.pick', data: { by: 'p1', customer: 3 } },
+      { kind: 'tray.put', data: { by: 'p1', customer: 3 } },
+      { kind: 'tray.take', data: { customer: 3 } },
+      { kind: 'tray.spill', data: { by: 'p1', customer: 3, cups: 2 } },
+      { kind: 'tray.void', data: { customer: 3, cups: 1 } },
+    );
+    expect(ids(diffCues(a, b, 'p1', logCursor(a)))).toEqual([
+      'cupDown', 'cupDown', 'buzz', 'liftUp', 'cupDown', 'serve', 'splash', 'trash',
+    ]);
+  });
 });
