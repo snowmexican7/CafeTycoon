@@ -2491,3 +2491,9 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   Add-on: `latteAddon` / `latteAddonChance` (src/sim/orders.ts), `LATTES.addon` 0.05 of single walk-ins, Gear, from
   day 2, only with `latte` on the board; reuses B6 (`order: 'combo'`, ×1.3 patience, pays at the last cup) and logs
   `order.addon { customer, drink: 'latte' }` instead of `order.combo`. `cupsPerArrival` counts the add-on cup.
+- **C11 daily feed and reviews (`fb2-c11`, protocol 55).** `GameState.fans`; `DayStats.feed` (3–5 end-of-day posts),
+  `posts` (live), `feedMoments`, `fansDelta`, `fansAfter`. Events `review.post { customer, drink, sentiment, reason,
+  stars, at, name, text }` (`at` = tick) and `week.rating { reviewers (JSON string), fans }`. Night views
+  `dayReviews(state) → { posts, fans, fansDelta }`, `weekRating(state) → { reviewers: { name, score }[], fans }`
+  (src/sim/feed.ts; text and numbers in src/data/feed.ts). Rolls use a hash of seed/day/customer/reason, not
+  `state.rng`, so no other roll moves.

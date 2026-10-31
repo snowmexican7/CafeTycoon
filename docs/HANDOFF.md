@@ -70,6 +70,9 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **C11 social feed (2026-10-31, `fb2-c11`, protocol 55).** Phone feed from `dayReviews(state)` (night), pop-up
+  posts from `review.post { name, text, sentiment, stars, … }` (day), week card from `weekRating(state)` (don't parse
+  `week.rating`'s JSON string). Fans: `GameState.fans`, `DayStats.fansDelta`.
 - [ ] **Round 3 item 1, more lattes (2026-10-31, `r3-lattes`, protocol 54).** Add-on ask bubble ("…and a latte for my
   friend") from `order.addon { customer, drink }`; the ticket is a normal B6 combo (`Customer.items`, `order: 'combo'`).
 - [ ] **Round 3 item 4, line + waiting area (2026-10-31, `r3-line`, protocol 53).** Browsers in `state.waiting`

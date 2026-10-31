@@ -20,6 +20,9 @@ when a build goes out, the line moves under its version with the date.
   between days.
 - More lattes: once you can steam milk, about two in five customers want a latte or a cappuccino, and now and then
   someone adds "and a latte for my friend" to their order.
+- Customers post about your café: a cold cup or a long wait can earn a bad review mid-shift, a great serve a good
+  one; every night shows the day's posts and whether you gained or lost fans, and each week-end three silly reviewers
+  rate the week.
 
 ## 3.5.1 — 2026-10-30 · Bigger orders, a tidier night
 
