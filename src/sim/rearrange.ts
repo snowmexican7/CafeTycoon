@@ -10,7 +10,7 @@
  *
  * In the pre-open a person can set a back-bar machine down somewhere else: `{ kind: 'moveStation', playerId, station,
  * to }`. `station` is the id of any station of a slot (a twin moves its machine); fixtures (the till, pickup, condiment
- * bar, sink, fridge, tray table and any later fixed spot) never move. `to` is a whole tile in the bar area (x 1 to
+ * bar, sink, fridge, tray table, B8's syrup rack and any later fixed spot) never move; they count in every layout check. `to` is a whole tile in the bar area (x 1 to
  * width - 1, y 1 to the row above the till). On another slot's spot the two slots swap spots (`swapped` is true when
  * that slot holds a machine; an empty slot just takes the old spot); on a free tile the machine moves there. Refused
  * (`station.refuse { by, station }`) when the layout would then block anything that was fine before: a spawn point,
@@ -88,7 +88,7 @@ export function applyOpenDoors(state: GameState, input: Extract<PlayerInput, { k
   if (inPreOpen(state) && input.playerId === state.hostId) endPreOpen(state);
 }
 
-/** One pre-open tick: people walk (nothing is used: interact and drop do nothing), then the end checks. */
+/** One pre-open tick: people walk (nothing is used: interact, drop and so B8's jug and steam presses do nothing; step.ts drops `syrup`), then the end checks. */
 export function stepPreOpen(state: GameState): void {
   applyMovement(state, computeModifiers(state).moveSpeed);
   onTileEntry(state, trackTiles(state));

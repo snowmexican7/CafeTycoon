@@ -9,6 +9,8 @@ import type { AddOnWand, GearId } from '../data/gear';
 import type { Customer, GameState, PlayerInput, SupplyId, TierId, Vec2 } from './types';
 import { addStandIns } from './bots/roster';
 import { validStationSpots } from './rearrange';
+import { targetNodes } from './bots/path';
+import { SYRUP_ID, SYRUP_SPOT } from '../data/layout';
 import { wandCards } from './gear';
 import { validateInput } from './validate';
 
@@ -229,6 +231,56 @@ describe('FB2 C10: moving stations', () => {
     expect(has(7, 4)).toBe(false); // the sink
     expect(validStationSpots(s, 'sink')).toEqual([]);
     expect(validStationSpots(s, 'nope')).toEqual([]);
+  });
+});
+
+describe('FB2 C10 with B8: the syrup rack and the hand-made presses', () => {
+  const WAND_BAR = () => open(night(['grinder', 'espresso', 'drip', 'trash'], ['g1', 'e3', 'd1', 'b0'], { wands: [null, 'weak', null, null] }));
+
+  it('the syrup rack is a fixture: it never moves', () => {
+    let s = WAND_BAR();
+    expect(at(s, SYRUP_ID)).toEqual(SYRUP_SPOT);
+    s = move(s, SYRUP_ID, { x: 3, y: 3 });
+    expect(at(s, SYRUP_ID)).toEqual(SYRUP_SPOT);
+    expect(lastEvent(s, 'station.refuse')?.data).toEqual({ by: 'p1', station: SYRUP_ID });
+    expect(validStationSpots(s, SYRUP_ID)).toEqual([]);
+  });
+
+  it('every spot validStationSpots offers keeps the syrup rack workable', () => {
+    const s = WAND_BAR();
+    for (const id of ['grinder', 'espresso', 'drip', 'trash']) {
+      const spots = validStationSpots(s, id);
+      expect(spots.length).toBeGreaterThan(0);
+      for (const to of spots) {
+        const t = move(s, id, to);
+        expect(lastEvent(t, 'station.place')).toBeDefined();
+        const rack = t.stations.find((x) => x.id === SYRUP_ID)!;
+        expect(targetNodes(t, rack, rack.pos).length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('in the pre-open, the syrup and the jug presses do nothing', () => {
+    let s = WAND_BAR();
+    const flavour = s.supplies.flavour;
+    const p = s.players[0];
+    p.holding = 'espresso';
+    p.pos = { x: 2, y: 5 }; // at the rack
+    s = step(s, [{ kind: 'syrup', playerId: 'p1', flavour: 'vanilla' }]);
+    expect(s.supplies.flavour).toBe(flavour);
+    expect(s.players[0].made?.syrup).toBeUndefined();
+    expect(events(s, 'syrup.add')).toHaveLength(0);
+    // E with a shot in hand right below the wand: no jug starts.
+    s.players[0].pos = { x: 4, y: 2 };
+    s = step(s, [{ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: true }]);
+    expect(s.players[0].jug).toBeUndefined();
+    expect(s.players[0].steam).toBeUndefined();
+    expect(s.players[0].holding).toBe('espresso');
+    // Once the doors open the same press at the rack works.
+    s.players[0].pos = { x: 2, y: 5 };
+    s = step(s, [{ kind: 'openDoors', playerId: 'p1' }]);
+    s = step(s, [{ kind: 'syrup', playerId: 'p1', flavour: 'vanilla' }]);
+    expect(s.players[0].made?.syrup).toBe('vanilla');
   });
 });
 

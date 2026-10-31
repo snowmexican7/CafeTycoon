@@ -8,9 +8,10 @@ const KEY = 'cafetycoon.run';
  * Bump whenever GameState changes shape. Kennedy (2026-10-30, docs/HANDOFF.md "Decisions"): no save backwards
  * compatibility for now, so there are no migrations: a save from any other version is turned away (the title then starts
  * fresh) instead of crashing the worker. 29: FB2 C9, the steamer tree retired (wands on the espresso machine,
- * `slotWand`, `Station.wand`); every older save is refused. Recheck before 1.0.
+ * `slotWand`, `Station.wand`); every older save is refused. 30: FB2 C10, moved stations (`slotPos`) and the morning
+ * pre-open (`preOpenUntil`). Recheck before 1.0.
  */
-export const SNAPSHOT_VERSION = 29;
+export const SNAPSHOT_VERSION = 30;
 
 /** A saved state if it was written at SNAPSHOT_VERSION (with its shop's fixed spots made sure of), else null. */
 export function migrateSnapshot(version: number, state: GameState): GameState | null {
