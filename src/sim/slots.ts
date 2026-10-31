@@ -37,6 +37,7 @@ import { batchOut, drinkSuppliesFor } from './gear';
 import { TAP_DRINKS } from '../data/drinks';
 import { CONDIMENTS_ID, PICKUP_ID, SINK_ID, SLOT_POSITIONS, layoutFor } from '../data/layout';
 import { ensureFridgeStation, stockOf } from './fridge';
+import { ensureSyrupRack } from './handmade';
 import { canMake, tierOf } from './growth';
 import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
 
@@ -140,6 +141,7 @@ export function ensureCounterSpots(state: GameState): void {
     if (!state.stations.some((s) => s.id === spot.id)) state.stations.push(spot);
   }
   ensureFridgeStation(state);
+  ensureSyrupRack(state); // FB2 B8: the syrup rack, with a wand on the floor
 }
 
 const KIND_ORDER: EquipmentKind[] = EQUIPMENT_KINDS;

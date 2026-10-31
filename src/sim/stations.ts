@@ -15,6 +15,7 @@ import { rollBinLeak, rollStationMess } from './messes';
 import { BASE_DRINKS, RECIPES, recipeChain, type Recipe, type RecipeStation } from '../data/drinks';
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
 import { fridgeInteract, readyStock, useStock } from './fridge';
+import { afterInsert, handmadePress, jugFirst } from './handmade';
 import type { DrinkId, GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from './types';
 
 /** Each working station's first (classic) recipe: what it takes, gives back and uses up. See RECIPES for all of them. */
@@ -97,7 +98,9 @@ export function stepStations(state: GameState): GameState {
 export function interact(state: GameState, playerId: PlayerId): GameState {
   const player = state.players.find((p) => p.id === playerId);
   if (!player) return state;
-  if (player.holding === null) { delete player.cupSlips; delete player.cupTemp; } // P3 B5: empty hands, no cup, no marks
+  // FB2 B8: a press first stops a filling milk jug, or the steam meter at its wand.
+  if (handmadePress(state, player)) return state;
+  if (player.holding === null) { delete player.cupSlips; delete player.cupTemp; delete player.made; } // P3 B5: empty hands, no cup, no marks
   if (player.tool === 'pot') {
     dumpPot(state, player); // FB2 A3: only the sink takes the pot
     return state;
@@ -173,6 +176,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   if (idle && gearBlocked(state, station, player)) return state;
   const recipe = recipeAt(state, station, player.holding);
   if (idle && recipe && stocked(state, recipe) && (station.batchLeft !== 0 || !tapCupRecipe(recipe))) {
+    if (jugFirst(state, player, station, recipe)) return state; // FB2 B8: a person fills the milk jug first
     for (const s of recipe.consumes) useStock(state, s);
     cupIntoStation(player, station);
     // Gear Tree: the iced latte step uses a steeped cup (the sweet-cream step does not); cheap gear marks the cup.
@@ -184,7 +188,9 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     station.making = recipe.gives;
     const speed = computeModifiers(state).stationSpeed[station.kind];
     const seconds = recipe.seconds ?? ECONOMY.stationSeconds[station.kind as RecipeStation];
-    station.busyTicksLeft = Math.round(((seconds * roleMachineTime(state, playerId)) / (speed * gearSpeed(station, state.tick))) * TICK_RATE);
+    const ticks = Math.round(((seconds * roleMachineTime(state, playerId)) / (speed * gearSpeed(station, state.tick))) * TICK_RATE);
+    // FB2 B8: a double pull runs longer; a person's shot on a wand takes the jug's grade and starts the steam meter.
+    station.busyTicksLeft = afterInsert(state, player, station, recipe, ticks);
     station.busyTotal = station.busyTicksLeft;
     gearAfterUse(state, station, player);
     rollStationMess(state, station, player); // FB2 A3: milk drips at the steamer, grounds by the grinder (Gear runs)

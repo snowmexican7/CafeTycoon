@@ -49,6 +49,14 @@ export const CONDIMENTS_ID = 'condiments';
 export const FRIDGE_ID = 'fridge';
 /** FB2 A3: the back sink (Gear runs), a fixed counter-kind spot like the condiment bar. */
 export const SINK_ID = 'sink';
+/**
+ * FB2 B8: the syrup rack (Gear runs with a steam wand), a fixed counter-kind spot like the sink: at the left end of the
+ * front counter on every tier (a stop on the way to setting a cup down), worked from the tile behind it (2,5), which no
+ * other station claims. It takes nothing from the fridge's, the sink's or the counter spots' reach, and is out of reach
+ * of the mop's home and the box corner; the door and the rogue's way out stay open.
+ */
+export const SYRUP_ID = 'syrups';
+export const SYRUP_SPOT: Vec2 = { x: 2, y: 6 };
 
 /** P3 B13: what changes between the stand, the cart and the café. Door, spawn points, counter and the front of the queue stay put. */
 export interface TierLayout {

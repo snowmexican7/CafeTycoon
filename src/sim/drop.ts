@@ -11,6 +11,7 @@ import { FRIDGE_ID, PICKUP_ID } from '../data/layout';
 import { STATION_RECIPES } from './stations';
 import { madeAtFromHand } from './cooling';
 import { tally } from './tally';
+import { madeOnPass } from './handmade';
 import type { GameState, Player } from './types';
 
 /** Resolve every queued drop, in players order: a station in range first, else the floor. */
@@ -43,7 +44,7 @@ function resolveDrop(state: GameState, p: Player): void {
       rollBinLeak(state, station, p, item); // FB2 A3 (Gear runs)
     } else if (station.kind === 'counter' && state.gear === true) {
       // Batch/pickup: the till and the pickup counter set the drink down for its customer; the bar takes nothing.
-      if (item !== 'grounds' && spotOf(station) !== 'condiments' && state.pass.length < passSlots(state)) {
+      if (item !== 'grounds' && spotOf(station) !== 'condiments' && spotOf(station) !== 'syrups' && state.pass.length < passSlots(state)) {
         state.pass.push({
           item,
           ticksLeft: secondsToTicks(ECONOMY.pass.staleSeconds[item]),
@@ -51,11 +52,13 @@ function resolveDrop(state: GameState, p: Player): void {
           ...(p.cupTemp ? { temp: true } : {}),
           by: p.id,
           madeAt: madeAtFromHand(state, p), // A2: the cup's clock follows it onto the counter
+          ...madeOnPass(p), // FB2 B8: and how it was made
         });
         p.holding = null;
         delete p.cupSlips;
         delete p.cupTemp;
         delete p.heldSince;
+        delete p.made;
         emitLog(state, 'drop', { item, station: PICKUP_ID, by: p.id });
       }
     } else if (station.kind === 'counter') {
@@ -70,6 +73,9 @@ function resolveDrop(state: GameState, p: Player): void {
       if (station.busyTicksLeft === 0 && station.output === null && station.occupiedBy === null && !potBlocked) {
         station.output = item;
         station.outputSince = state.gear === true ? madeAtFromHand(state, p) : state.tick; // A2: the clock follows the cup
+        if (p.made) station.made = p.made; // FB2 B8: so does how it was made
+        else delete station.made;
+        delete p.made;
         p.holding = null;
         emitLog(state, 'drop', { item, station: station.id, by: p.id });
       }

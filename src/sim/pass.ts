@@ -7,6 +7,7 @@ import { tryCorrectName, tryKickCamper } from './eggs';
 import { tally } from './tally';
 import { passSlots, spotOf } from './pickup';
 import { coolsOnCounter, madeAtFromHand, takeBackIndex, slotCool } from './cooling';
+import { madeOnPass } from './handmade';
 import type { GameState, Player, PlayerId, Station } from './types';
 
 /**
@@ -63,7 +64,7 @@ export function counterInteract(state: GameState, playerId: PlayerId, at?: Stati
  */
 function gearCounter(state: GameState, player: Player, at?: Station): GameState {
   const spot = spotOf(at);
-  if (spot === 'sink') return state; // FB2 A3: the sink has its own rules (src/sim/sink.ts), never the counter's
+  if (spot === 'sink' || spot === 'syrups') return state; // FB2 A3: the sink has its own rules (src/sim/sink.ts); FB2 B8: so does the syrup rack
   if (player.holding !== null) {
     if (player.holding !== 'grounds' && state.pass.length < passSlots(state)) {
       const drink = player.holding;
@@ -74,11 +75,13 @@ function gearCounter(state: GameState, player: Player, at?: Station): GameState 
         ...(player.cupTemp ? { temp: true } : {}),
         by: player.id,
         madeAt: madeAtFromHand(state, player), // A2: the cup's clock follows it onto the counter
+        ...madeOnPass(player), // FB2 B8: and how it was made
       });
       player.holding = null;
       delete player.cupSlips;
       delete player.cupTemp;
       delete player.heldSince;
+      delete player.made;
       emitLog(state, 'pass.put', { item: drink, by: player.id });
     }
     return state;
@@ -102,6 +105,8 @@ function takeBack(state: GameState, player: Player): void {
   else delete player.cupTemp;
   if (gear && item.madeAt !== undefined) player.heldSince = item.madeAt;
   else delete player.heldSince;
+  if (item.made) player.made = item.made;
+  else delete player.made;
   emitLog(state, 'pass.take', { item: item.item, by: player.id });
   if (gear) emitLog(state, 'pickup.takeBack', { drink: item.item, by: player.id, cold: slotCool(state, item) >= 1 });
 }

@@ -64,6 +64,7 @@ export const RESERVED_TELE_KINDS: readonly string[] = [
   'cup.cold', 'pickup.cold', 'pickup.takeBack', 'review.bad',
   'order.combo', 'order.addon', 'order.office', 'order.done', 'order.lost', 'office.call',
   'line.complain', 'line.leave',
+  'milk.fill', 'steam.result', 'syrup.add', 'syrup.miss',
 ];
 
 const MASH_COUNT = 4;

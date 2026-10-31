@@ -273,6 +273,7 @@ describe('FB2 C9: steaming at the wand', () => {
       const s = open(gear, wand);
       atWand(s);
       s.players[0]!.holding = 'espresso';
+      s.players[0]!.jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
       interact(s, 'p1');
       const w = wandOf(s)!;
       expect([gear, w.making, w.busyTicksLeft]).toEqual([gear, 'latte', Math.round(secs * TICK_RATE)]);
@@ -292,6 +293,7 @@ describe('FB2 C9: steaming at the wand', () => {
       w.output = null;
       w.making = null;
       s.players[0]!.holding = 'espresso';
+      s.players[0]!.jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
       interact(s, 'p1');
       uses++;
     }
@@ -301,6 +303,7 @@ describe('FB2 C9: steaming at the wand', () => {
     w.output = null;
     w.making = null;
     s.players[0]!.holding = 'espresso';
+    s.players[0]!.jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
     interact(s, 'p1');
     expect([w.busyTicksLeft, s.players[0]!.holding]).toEqual([0, 'espresso']); // blocked
     s.players[0]!.holding = null;
@@ -309,6 +312,7 @@ describe('FB2 C9: steaming at the wand', () => {
     expect([w.busyTicksLeft, w.making ?? null]).toEqual([0, null]); // the whack makes nothing
     expect(logs(s, 'wand.unclog')).toEqual([{ station: 'steamer', by: 'p1' }]);
     s.players[0]!.holding = 'espresso';
+    s.players[0]!.jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
     interact(s, 'p1');
     expect(w.making).toBe('latte');
   });
@@ -323,6 +327,7 @@ describe('FB2 C9: steaming at the wand', () => {
     expect([s.players[0]!.tool, s.milkOut]).toEqual([null, 8]);
     expect(logs(s, 'milk.out').at(-1)).toEqual({ by: 'p1', n: 8, station: 'steamer' });
     s.players[0]!.holding = 'espresso';
+    s.players[0]!.jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
     interact(s, 'p1');
     expect([wandOf(s)!.making, s.milkOut]).toEqual(['latte', 7]);
   });
@@ -336,6 +341,7 @@ describe('FB2 C9: steaming at the wand', () => {
         w.busyTicksLeft = 0;
         w.output = null;
         s.players[0]!.holding = 'espresso';
+        s.players[0]!.jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
         interact(s, 'p1');
       }
       expect(logs(s, 'wand.clog')).toEqual([]);
