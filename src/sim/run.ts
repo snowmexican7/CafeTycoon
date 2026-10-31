@@ -119,6 +119,7 @@ export function createRun(opts: CreateRunOptions): GameState {
     log: [],
     nextLogSeq: 1,
     crew: { seen: 0, players: [] },
+    fans: 0,
     messes: [],
     nextMessId: 1,
     cleanliness: 100,

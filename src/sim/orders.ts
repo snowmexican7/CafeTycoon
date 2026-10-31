@@ -30,6 +30,7 @@ import { computeModifiers } from './effects';
 import { areaPatienceMul } from './gear';
 import { tierInfo, tierOf } from './growth';
 import { emitLog } from './log';
+import { noteFeedMoment } from './feed';
 import { pricePatience } from './pricing';
 import { rngInt, rngNext } from './rng';
 import { LATTES } from './lattes';
@@ -152,13 +153,15 @@ export function takeItem(state: GameState, c: Customer, cup: PassItem, cool: num
     item.cold = true;
     emitLog(state, 'pickup.cold', { customer: c.id, drink: cup.item });
     if (c.order !== 'office') emitLog(state, 'review.bad', { customer: c.id, drink: cup.item, reason: 'cold' });
+    noteFeedMoment(state, 'cold', c, cup.item); // FB2 C11 (an office run never posts)
   } else {
+    if (cool >= LUKEWARM) noteFeedMoment(state, 'lukewarm', c, cup.item); // FB2 C11
     if (cup.temp === true || cool >= LUKEWARM) item.temp = true;
     emitLog(state, 'pickup.take', { drink: cup.item, customer: c.id, by: cup.by ?? '' });
     if (wantsCondiments(state, c, cup.item)) {
       const black = (state.condiments?.servings ?? 0) <= 0;
       if (black) item.black = true;
-      noteCondiments(state, c, black);
+      noteCondiments(state, c, black, cup.item);
     }
   }
   if (c.kind === 'group') {

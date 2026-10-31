@@ -165,6 +165,9 @@ export type SimEventKind =
   | 'pickup.cold'
   | 'pickup.takeBack'
   | 'review.bad'
+  /** FB2 C11: the social feed (src/sim/feed.ts): a live post after a bad or great moment; the week's reviewer rating. */
+  | 'review.post'
+  | 'week.rating'
   /** FB2 A4 (src/sim/fridge.ts): the fridge, milk out at the bar, putting away, spoiling at close, closing soon. */
   | 'fridge.take'
   | 'fridge.put'
@@ -614,6 +617,28 @@ export interface DayStats {
   officeExtra?: number;
   /** Round 3 item 4: would-be customers who left quietly during a line complaint (stats only: not lost, no reputation). */
   lineLeft?: number;
+  /** FB2 C11: every bad or great moment today by reason (posted or not), the live posts they made, and the day's feed. */
+  feedMoments?: Partial<Record<FeedReason, number>>;
+  posts?: FeedPost[];
+  feed?: FeedPost[];
+  /** FB2 C11: fans gained (or lost) at closing, and the fan count after it. */
+  fansDelta?: number;
+  fansAfter?: number;
+}
+
+/** FB2 C11: why a post was made. Live: cold, lukewarm, black, wait, bump, great. Day summaries add the rest. */
+export type FeedReason = 'cold' | 'lukewarm' | 'black' | 'wait' | 'bump' | 'great' | 'service' | 'crowd' | 'quiet' | 'speed' | 'quality' | 'tips';
+export type FeedSentiment = 'good' | 'bad';
+/** FB2 C11: one post on the fake social app. `customer`, `drink` and `at` (the sim tick) are set on live posts. */
+export interface FeedPost {
+  name: string;
+  text: string;
+  sentiment: FeedSentiment;
+  reason: FeedReason;
+  stars: number;
+  drink?: DrinkId;
+  customer?: number;
+  at?: number;
 }
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
@@ -633,6 +658,8 @@ export interface GameState {
   devPaused?: true;
   /** P4 B2: the four-week season started by Keep going after week 1 (Gear runs). */
   season?: Season;
+  /** FB2 C11: fans of the café (absent = 0), moved by each day's net sentiment at closing. */
+  fans?: number;
   /** P4 B4: the second shop, once opened. */
   branch?: Branch;
   bankrupt: boolean;
