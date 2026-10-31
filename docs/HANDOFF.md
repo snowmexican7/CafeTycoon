@@ -70,6 +70,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **Round 3 item 1, more lattes (2026-10-31, `r3-lattes`, protocol 54).** Add-on ask bubble ("…and a latte for my
+  friend") from `order.addon { customer, drink }`; the ticket is a normal B6 combo (`Customer.items`, `order: 'combo'`).
 - [ ] **Round 3 item 4, line + waiting area (2026-10-31, `r3-line`, protocol 53).** Browsers in `state.waiting`
   (not in `customers`; stand 0 / cart 2 / café 4) for the waiting-area art; "Line's too long!" bubble on
   `line.complain { customer }`; tumbleweed on `line.leave { customer, quiet: true }` (a fresh id, no Customer);

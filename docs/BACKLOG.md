@@ -2485,3 +2485,9 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
   not lost, `DayStats.lineLeft`. Office runs still wait outside a full line. Helpers in src/sim/line.ts.
   **UI to do:** waiting-area art with `state.waiting` browsers, the "Line's too long!" bubble on `line.complain`,
   the tumbleweed on `line.leave`, maybe a receipt line for `DayStats.lineLeft`.
+- **Round 3 item 1, more lattes (`r3-lattes`, protocol 54).** `milkPush` (src/sim/lattes.ts) scales `latte` and
+  `cappuccino` weights so they're `LATTES.milkShare` (0.42) of the draw, clamped ×1..`LATTES.maxPush` (4); a bar with
+  no milk drink on its menu is unchanged. Batch is ~38% of orders on the early menu, ~11% on the full 14-drink menu.
+  Add-on: `latteAddon` / `latteAddonChance` (src/sim/orders.ts), `LATTES.addon` 0.05 of single walk-ins, Gear, from
+  day 2, only with `latte` on the board; reuses B6 (`order: 'combo'`, ×1.3 patience, pays at the last cup) and logs
+  `order.addon { customer, drink: 'latte' }` instead of `order.combo`. `cupsPerArrival` counts the add-on cup.

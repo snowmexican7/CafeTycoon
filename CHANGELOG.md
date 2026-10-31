@@ -18,6 +18,8 @@ when a build goes out, the line moves under its version with the date.
 
 - Your barista has a look you pick (hair, skin, outfit, shirt colour), your crewmates see it, and you can change it
   between days.
+- More lattes: once you can steam milk, about two in five customers want a latte or a cappuccino, and now and then
+  someone adds "and a latte for my friend" to their order.
 
 ## 3.5.1 — 2026-10-30 · Bigger orders, a tidier night
 
