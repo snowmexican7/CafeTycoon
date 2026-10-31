@@ -2,7 +2,7 @@ import { canMake, hasStation, nextTierAffordable } from './growth';
 import { emitLog } from './log';
 import { roleSupplyCost } from './roles';
 import { CATALOGUE, catalogueById } from '../data/catalogue';
-import { ECONOMY } from '../data/economy';
+import { ECONOMY, RESTOCK } from '../data/economy';
 import { computeModifiers, resolveGamble } from './effects';
 import { rngNext } from './rng';
 import { tuneRadio } from './events';
@@ -127,14 +127,36 @@ function reroll(state: GameState): void {
   dealHand(state, CATALOGUE, [...state.hand, ...state.boughtTonight]);
 }
 
-function restock(state: GameState, supply: SupplyId, want: number): void {
+/** Round 4 f follow-up: the same packs bought in the day or the closing phase (a rush delivery, `RESTOCK.rushMul`). */
+export function rushCost(state: GameState, supply: SupplyId, packs: number): number {
+  return round2(restockCost(state, supply, packs) * RESTOCK.rushMul);
+}
+
+/** Buy `want` packs (as many as fit) at `price`; returns the packs and what they cost, or null when nothing was bought. */
+function restock(state: GameState, supply: SupplyId, want: number, price = restockCost): { packs: number; cost: number } | null {
   // FB2 A4: Gear milk goes in the fridge, so only whole packs that fit are bought (nothing is lost on the way in).
   const packs = packsThatFit(state, supply, want);
-  if (packs <= 0) return;
-  const cost = restockCost(state, supply, packs);
-  if (state.cash < cost) return;
+  if (packs <= 0) return null;
+  const cost = price(state, supply, packs);
+  if (state.cash < cost) return null;
   state.cash = round2(state.cash - cost);
   state.supplies[supply] += packs * ECONOMY.packs[supply].size;
+  return { packs, cost };
+}
+
+/**
+ * The restock input in any phase: at night the normal price (applyNightInput); in the day or the closing phase a
+ * connected person's rush delivery at `rushCost`, arriving at once, logged as `restock.rush { by, supply, packs, cost }`.
+ * Bots never get here (step.ts drops their inputs).
+ */
+export function applyRestockInput(state: GameState, input: Extract<PlayerInput, { kind: 'restock' }>): GameState {
+  if (state.phase === 'night') return applyNightInput(state, input);
+  if (state.phase !== 'day' && state.phase !== 'closing') return state;
+  const p = state.players.find((x) => x.id === input.playerId);
+  if (!p || !p.connected || p.bot) return state;
+  const got = restock(state, input.supply, input.packs, rushCost);
+  if (got) emitLog(state, 'restock.rush', { by: p.id, supply: input.supply, packs: got.packs, cost: got.cost });
+  return state;
 }
 
 /** Apply a buy, restock, or ready input. Anything else, or any input outside the night, is ignored. */

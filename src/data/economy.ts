@@ -167,3 +167,9 @@ export const ECONOMY = {
   },
   rogue: { chance: 0.015, remakeSeconds: 15, waitSeconds: 5, makeSeconds: 10, speed: 0.8, repHit: 0.1, minDay: 2 },
 } as const;
+
+/**
+ * Round 4 f follow-up: restock (and condiment boxes) also work in the day and the closing phase, as a "rush delivery":
+ * the stock arrives at once, at `rushMul` times the night price (sim/night.ts `rushCost`). At night the price is normal.
+ */
+export const RESTOCK = { rushMul: 1.25 } as const;

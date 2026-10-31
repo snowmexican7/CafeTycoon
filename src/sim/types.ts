@@ -267,6 +267,11 @@ export type SimEventKind =
   | 'staff.hire'
   | 'staff.fire'
   | 'strategist.set'
+  /**
+   * Round 4 f follow-up (src/sim/night.ts, condiments.ts): a person bought stock in the day or the closing phase at the
+   * rush price ({ by, supply, packs, cost }); a condiment box has `supply: 'condiments'` and `packs` = boxes.
+   */
+  | 'restock.rush'
   /** FB2 B7 (src/sim/tray.ts): the tray table and carried trays. */
   | 'tray.claim'
   | 'tray.add'

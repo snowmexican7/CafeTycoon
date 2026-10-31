@@ -24,7 +24,7 @@ import { stepEvents } from './events';
 import { computeModifiers } from './effects';
 import { applyMenuInput } from './menu';
 import { applyMovement } from './movement';
-import { applyNightInput, stepNight } from './night';
+import { applyNightInput, applyRestockInput, stepNight } from './night';
 import { startNight } from './run';
 import { stepPass } from './pass';
 import { interact, stepStations } from './stations';
@@ -145,7 +145,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     }
     case 'restock':
-      applyNightInput(s, input);
+      applyRestockInput(s, input); // Round 4 f: night price at night, a rush delivery in the day and closing
       break;
     case 'ready':
       if (inPreOpen(s)) preOpenReady(s, input.playerId); // FB2 C10: Ready in the pre-open opens the doors once everyone is
