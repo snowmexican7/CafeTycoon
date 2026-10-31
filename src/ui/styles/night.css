@@ -393,3 +393,4 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 /* ui-3.5.1 (FB2 C9): steam wands */
 .gr-wand-on { color: var(--ink); font-weight: 700; }
 .gr-tier .gr-wand-buy { margin-top: 4px; font-size: 14px; }
+.gr-wands .gr-fr-note { font-size: 15px; font-weight: 700; color: var(--ink); }
