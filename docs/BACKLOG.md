@@ -2366,3 +2366,9 @@ Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. One branch and tag per item; names as bui
   - Open: milk drinks now start around day 7–11 instead of day 1 (Kennedy approved merging; tune in play). M6 (E4's
     second group moves left when a wand is added), M7 (dead battery quirk code), M8 (iced milk at the tap needs no
     wand, intended).
+- **b. Pastries (`r4-pastry`, no protocol change).** Decided: a plain restock item (`{ kind: 'restock', supply:
+  'pastry', packs }`, pack of 6 for $7) — one obvious step on the Restock tab, no add-on, no hidden third path; a
+  "latte and a muffin" combo can come later. Still sell on the side with ~35% of cups ($3), half the leftovers go
+  stale overnight, no fridge needed. Names: `expectedUse(state).pastry` (brief.ts) feeds run-out and spoil
+  estimates; brief alert `stock:pastry:low` (only once the case has held some); planner advice `restock:pastry`
+  (`PLAN_PRIORITY.restockPastry` 62), bought last, after drink supplies and rent.

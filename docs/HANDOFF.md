@@ -63,6 +63,9 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **b. Pastries (2026-10-31, `r4-pastry`).** Add a pastry row to the Restock tab using the existing restock input
+  (`supply: 'pastry'`). Brief alert id `stock:pastry:low`, planner advice id `restock:pastry`. I set
+  `pastry: 500` in your `src/ui/tipsVM.test.ts` fixture so a pastry chip doesn't crowd the tips under test.
 - [ ] **C9 wand on the espresso machine (2026-10-31, `fb2-c9`, protocol 49, snapshot 29). Blocks a release:** milk
   drinks need a wand, and there's no way to buy one on screen yet.
   - E3/E4 buy card: a wand choice (`wand?: 'weak' | 'strong'` on the gear buy). "Add a wand" button from

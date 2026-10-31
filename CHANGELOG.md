@@ -26,6 +26,8 @@ when a build goes out, the line moves under its version with the date.
   proper one to La Marzipana Due; The Annihilator and the new top machine, Double Trouble, have theirs built in.
   Lattes wait until you have a Sylvia with a wand. The little wand clogs now and then: give it a whack. Saves from
   earlier versions can't be loaded.
+- Pastries on the Restock tab (a pack of six for $7): they sell for $3 on the side with about a third of drinks, half
+  the leftovers go stale overnight, and the night brief tells you when the case will run out.
 
 ## 3.5.0 — 2026-10-30 · Open, close and clean up
 
