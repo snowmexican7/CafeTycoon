@@ -167,6 +167,7 @@ export function startDay(state: GameState): GameState {
   delete state.gearVoteLast;
   delete state.lastCall;
   delete state.devPaused; // R4 a
+  delete state.ringUp; // Round 3 item 5
   state.phaseTicksLeft = secondsToTicks(state.settings.dayLengthSec);
   state.customers = [];
   delete state.closeVotes;

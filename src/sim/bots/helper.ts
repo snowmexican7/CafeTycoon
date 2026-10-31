@@ -79,6 +79,7 @@ function staleOrderNeeds(state: GameState, st: Station): boolean {
 /** `o` is plausibly using `st`, the station nearest them (review C1/I1: see the header). */
 function using(state: GameState, o: Player, st: Station): boolean {
   if (st.id === 'counter') {
+    if (state.ringUp?.by === o.id) return true; // Round 3 item 5: mid ring-up
     const next = tillNext(state);
     return o.holding === null && !o.tool && next !== undefined && ticketFresh(state, next);
   }

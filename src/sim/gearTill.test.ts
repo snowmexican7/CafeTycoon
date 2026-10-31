@@ -3,7 +3,7 @@ import { createRun, startDay } from './run';
 import { applyGearInput } from './gear';
 import { counterInteract } from './pass';
 import { serveCustomer } from './customers';
-import { TILL, tillNext, tillSpeedTip } from './till';
+import { TILL, tillNext, tillSpeedTip, stepRingUp } from './till';
 import { TICK_RATE } from './constants';
 import { gearVM } from '../ui/gearVM';
 import type { CreateRunOptions, Customer, GameState } from './types';
@@ -14,6 +14,16 @@ const day = (gear: boolean) => {
   if (gear) applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
   startDay(s);
   return s;
+};
+/** Round 3 item 5: ringing takes time. Put p1 at the till, press E, and let the ring run its course. */
+const doRing = (s: GameState): void => {
+  const till = s.stations.find((x) => x.id === 'counter')!;
+  s.players[0].pos = { x: till.pos.x, y: till.pos.y - 1 };
+  counterInteract(s, 'p1');
+  if (s.ringUp) {
+    s.tick = s.ringUp.startedAt + s.ringUp.ticks;
+    stepRingUp(s);
+  }
 };
 const cust = (s: GameState, id: number): Customer => {
   const c: Customer = { id, drink: 'coldBrew', patienceLeft: 50, patienceMax: 100 };
@@ -28,13 +38,13 @@ describe('Gear G4g: the till is a job', () => {
     const a = cust(s, 901), b = cust(s, 902);
     b.patienceLeft = 20;
     expect(TILL.patienceBoost).toBe(0.5);
-    counterInteract(s, 'p1');
+    doRing(s);
     expect(a.rungAt).toBe(s.tick);
     expect(a.stage).toBe('pickup');
     expect(a.patienceLeft).toBe(100);
     expect(b.rungAt).toBeUndefined();
     expect(b.stage ?? 'order').toBe('order');
-    counterInteract(s, 'p1');
+    doRing(s);
     expect(b.rungAt).toBe(s.tick);
     expect(b.stage).toBe('pickup');
     expect(b.patienceLeft).toBe(70);
@@ -69,7 +79,7 @@ describe('Gear G4g: the till is a job', () => {
     s.customers = [];
     const c = cust(s, 920);
     s.players[0].tool = 'mop';
-    counterInteract(s, 'p1');
+    doRing(s);
     expect(c.rungAt).toBeUndefined();
   });
   it('fast hand-off pays a speed tip; slow or never rung pays none', () => {
@@ -87,7 +97,7 @@ describe('Gear G4g: the till is a job', () => {
       const s = day(true);
       s.customers = [];
       const c = cust(s, 900);
-      if (ring) counterInteract(s, 'p1');
+      if (ring) doRing(s);
       c.patienceLeft = 50;
       const before = s.today.tips;
       serveCustomer(s, c, 'coldBrew', 'p1');
@@ -99,7 +109,7 @@ describe('Gear G4g: the till is a job', () => {
     const s = day(false);
     s.customers = [];
     const c = cust(s, 903);
-    counterInteract(s, 'p1');
+    doRing(s);
     expect(c.rungAt).toBeUndefined();
   });
   it('bots ring too', () => {
@@ -107,7 +117,7 @@ describe('Gear G4g: the till is a job', () => {
     g.customers = [];
     const d = cust(g, 904);
     g.players[0].bot = {} as never;
-    counterInteract(g, 'p1');
+    doRing(g);
     expect(d.rungAt).toBe(g.tick);
     expect(d.stage).toBe('pickup');
     expect(g.log.some((e) => e.kind === 'till.rung' && e.data.by === 'p1')).toBe(true);
