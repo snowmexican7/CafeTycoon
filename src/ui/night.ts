@@ -3,7 +3,8 @@ import type { AreaId } from '../data/areas';
 import type { ReportVM } from './report';
 import { TASTE, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
 import { isGearId, type GearId } from '../data/gear';
-import { sellLabel, type GearTierState, type GearTierVM, type GearVM } from './gearVM';
+import { sellLabel, type FridgeVM, type GearTierState, type GearTierVM, type GearVM } from './gearVM';
+import { isFridgeId, type FridgeId } from '../data/fridges';
 import { catalogueById } from '../data/catalogue';
 import { DRINK_INFO } from '../data/drinks';
 import type { AdId, CheckoutId, DrinkId, PitchKind, SupplyId, TierId } from '../sim/types';
@@ -210,7 +211,26 @@ export function gearBoard(g: GearVM): string {
         .join('')}</div>`
     : '';
   return `<div class="st-board gr-board">${head}${vote}${note}${book}${lvl}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
-    <div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have. Got a free slot? Buy a second of the same machine.</small></div>${rule}${trees}</div>`;
+    ${g.fridge ? fridgePanel(g.fridge) : ''}<div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have. Got a free slot? Buy a second of the same machine.</small></div>${rule}${trees}</div>`;
+}
+
+/** ui-3.4.1 (FB2 A4): each fridge's little icon on its card. */
+export const FRIDGE_ICON: Record<FridgeId, string> = { f1: '🧊', f2: '🍺', f3: '❄️', f4: '🐄' };
+
+/** ui-3.4.1 (FB2 A4): the fridge panel: the shop's fridge, and the one fridge card on offer tonight (a vote in co-op at $50+). */
+export function fridgePanel(f: FridgeVM): string {
+  const have = f.have
+    ? `<div class="gr-tier owned gr-fr" title="${esc(f.have.blurb)}"><span class="gr-fr-ic" aria-hidden="true">${FRIDGE_ICON[f.have.id]}</span><b>${esc(f.have.name)}</b><span class="gr-stats">Holds ${f.have.holds} milk</span><span class="gr-fr-own">✓ Your fridge</span></div>`
+    : `<div class="gr-tier gr-fr none"><span class="gr-fr-ic" aria-hidden="true">🚫</span><b>No fridge</b><span class="gr-stats">Milk can't be kept</span></div>`;
+  const cards = f.cards
+    .map((c) => {
+      const label = c.state === 'voting' ? 'The crew is voting' : c.state === 'poor' ? `Need $${c.price}` : `${c.vote ? '🗳️ Ask the crew' : 'Buy it'} · $${c.price}`;
+      return `<div class="gr-tier gr-fr ${c.state}" title="${esc(`${c.blurb} Real-life sticker: ${c.sticker}. Fridges are never sold.`)}">
+        <span class="gr-fr-ic" aria-hidden="true">${FRIDGE_ICON[c.id]}</span><b>${esc(c.name)}</b><span class="gr-stats">${esc(c.blurb)}</span>
+        <button class="btn ${c.state === 'buy' ? '' : 'ghost'}" data-action="fridge-buy" data-fridge="${c.id}" ${c.state === 'buy' ? '' : 'disabled'}>${esc(label)}</button></div>`;
+    })
+    .join('');
+  return `<div class="gr-fridge" aria-label="Fridge"><div class="gr-tree-h"><span aria-hidden="true">🥛</span> Fridge</div><div class="gr-fr-row">${have}${cards}<p class="gr-fr-note">${esc(f.note)}</p></div></div>`;
 }
 
 // ---------------------------------------------------------------------------------------------- Spend: ads, pitch, grow, checkout
@@ -649,7 +669,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onTip?(input: NightFix): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
   let lastVm: NightVM | null = null;
@@ -707,6 +727,7 @@ export function createNight(
     else if (action === 'gear-buy' && isGearId(el.dataset.gear)) handlers.onGear?.('buy', el.dataset.gear);
     else if (action === 'gear-sell') handlers.onGearSell?.(Number(el.dataset.index));
     else if (action === 'gear-vote') handlers.onGearVote?.(el.dataset.yes === '1');
+    else if (action === 'fridge-buy' && isFridgeId(el.dataset.fridge)) handlers.onFridge?.(el.dataset.fridge);
     else if (action === 'fix') {
       const fix = lastVm?.brief.alerts.find((a) => a.id === el.dataset.fix)?.fix?.input;
       if (fix) handlers.onTip?.(fix);

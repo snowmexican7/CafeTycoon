@@ -1,4 +1,4 @@
-import { CONDIMENTS_ID, PICKUP_ID, SINK_ID } from '../data/layout';
+import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID } from '../data/layout';
 import { CONDIMENTS } from '../sim/condiments';
 import { TICK_RATE } from '../sim/constants';
 import { passSlots } from '../sim/pickup';
@@ -18,6 +18,7 @@ export function counterSpotOf(s: { id: string; kind: string }, list: readonly { 
   if (s.id === PICKUP_ID) return 'pickup';
   if (s.id === CONDIMENTS_ID) return 'condiments';
   if (s.id === SINK_ID) return 'sink';
+  if (s.id === FRIDGE_ID) return 'fridge';
   return list.some((x) => x.id === PICKUP_ID) ? 'till' : undefined;
 }
 

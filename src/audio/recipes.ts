@@ -165,6 +165,32 @@ export const RECIPES: Record<CueId, Layer[]> = {
     { synth: 'oops', gain: 0.6, delay: 0.15 },
   ],
   coldCup: [{ synth: 'hmph', gain: 0.65 }],
+  // ui-3.4.1 (FB2 A4): the fridge (a small door pop, then the seal thunk), cartons, spoiling, the closing chime, a moo
+  fridgeOpen: [
+    { synth: 'fridgeSeal', gain: 0.7 },
+    { sample: 'box', gain: 0.3, delay: 0.14, rate: [1.3, 1.42] },
+  ],
+  fridgeShut: [
+    { sample: 'box', gain: 0.25, rate: [1.25, 1.35] },
+    { sample: 'doorSlam', gain: 0.22, delay: 0.1, rate: [1.55, 1.7] },
+  ],
+  milkOut: [
+    { sample: 'box', gain: 0.4, rate: [1.4, 1.52] },
+    { sample: 'clink', gain: 0.18, delay: 0.06, rate: [1.2, 1.3] },
+  ],
+  liftUp: [
+    { sample: 'box', gain: 0.38, rate: [1.15, 1.25] },
+    { synth: 'clack', gain: 0.25, delay: 0.05 },
+  ],
+  spoil: [
+    { synth: 'sour', gain: 0.8 },
+    { synth: 'hmph', gain: 0.4, delay: 0.3 },
+  ],
+  closingSoon: [{ synth: 'closingChime', gain: 0.9 }],
+  moo: [
+    { synth: 'moo', gain: 0.9 },
+    { sample: 'clink', gain: 0.2, delay: 0.75, rate: [1.3, 1.4] },
+  ],
 };
 
 /** Seconds a cue will sound for, used to hold its voice slot in the gate. */
@@ -174,6 +200,7 @@ export function cueSeconds(id: CueId, dur = 0): number {
   if (id === 'buzz') return 0.5;
   if (id === 'heartbeat') return 0.35;
   if (id === 'click' || id === 'pickUp' || id === 'cupDown') return 0.25;
+  if (id === 'moo' || id === 'closingSoon') return 1.6;
   if (['dayStart', 'dayEnd', 'weekEnd', 'gameOver', 'rushHour', 'inspector', 'influencer', 'inspectPass', 'inspectFail'].includes(id)) return 2.5;
   return 1;
 }

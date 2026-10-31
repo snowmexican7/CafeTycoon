@@ -1,3 +1,5 @@
+import { FRIDGES } from '../data/fridges';
+import { GEAR_VOTE_MIN } from '../sim/gear';
 import type { PerkId } from '../data/perks';
 import { SIG, sigShare } from '../sim/signature';
 import { gearVM, hudGearVM, type GearVM, type HudGearVM } from './gearVM';
@@ -1236,6 +1238,12 @@ function briefRow(state: GameState, a: NightAlert): BriefAlert {
     row.fix = { label: f.on === false ? 'Undo' : `Match it · ${Math.round((1 - RIVAL.counterPrice) * 100)}% off`, action: 'fix', data: { fix: a.id }, input: f };
   } else if (f?.kind === 'stampCard') {
     row.fix = { label: `Stamp card · $${RIVAL.stampCost}`, action: 'fix', data: { fix: a.id }, input: f };
+  } else if (f?.kind === 'fridge') {
+    // ui-3.4.1 (FB2 A4): buy the fridge card right from the brief (the Udder-Matic asks the crew in co-op)
+    const price = FRIDGES[f.fridge].price;
+    const vote = price >= GEAR_VOTE_MIN && state.players.filter((p) => p.connected && !p.bot).length > 1;
+    row.icon = f.fridge === 'f4' ? '🐄' : '🧊';
+    row.fix = { label: `${vote ? '🗳️ Ask the crew' : 'Buy it'} · $${price}`, action: 'fix', data: { fix: a.id }, input: f };
   } else if (a.kind === 'grow') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'grow' } };
   else if (a.kind === 'checkout') row.fix = { label: 'See it', action: 'goto', data: { tab: 'spend', sub: 'checkout' } };
   else if ((a.kind === 'rival' && a.id !== 'rival:loyalty') || a.kind === 'signature') row.fix = { label: 'Menu', action: 'goto', data: { tab: 'menu' } };
