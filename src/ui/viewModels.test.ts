@@ -88,6 +88,15 @@ describe('view models', () => {
       isHost: false,
       bankrupt: false,
       week: { n: 2, days: [{ day: 1, profit: '$10.00', h: 0.43, neg: false }, { day: 2, profit: '$23.00', h: 1, neg: false }], profit: '$33.00', served: 16 },
+      // FB2 C11: weekRating(state) — three silly reviewers + fans
+      rating: {
+        fans: 0,
+        reviewers: [
+          { name: 'The Queue Inspector', score: 3 },
+          { name: 'Chef Foamington', score: 3 },
+          { name: 'Lady Latte', score: 2 },
+        ],
+      },
     });
   });
 

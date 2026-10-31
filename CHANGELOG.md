@@ -16,7 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- The café feed is on screen: customers post live during the day (a little phone pops up), the night board shows today's posts and fans, the closing receipt lists the fan change, and each week-end three silly reviewers rate the week.
 
 ## 3.7.2 — 2026-10-31 · Fixes from the overnight review
 

@@ -1,11 +1,14 @@
 import { dayRestockVM } from './ui/dayRestock';
 import { freshEvents, logToastLines, TOAST_KINDS } from './ui/logToasts';
+import { reviewPopVM } from './ui/feed';
 import './style.css';
 import { gearFlag } from './ui/gearFlag';
 /** Gear Tree G5: the last gear quirk already toasted (log seq). */
 let gearSeenSeq = -1;
 /** ui-3.7.1: last log seq turned into a toast (rush restocks, Strategist menu changes); null until a session's first snapshot. */
 let toastSeenSeq: number | null = null;
+/** FB2 C11: last log seq shown as a live review.post phone pop-up. */
+let reviewSeenSeq: number | null = null;
 /** ui-3.7.1: the Konami code ends …→ B A, so a B straight after → isn't the Restock key. */
 let lastKey = { code: '', at: 0 };
 import { ambienceFor, createHeartbeat, diffCues, heartbeatGapMs } from './audio/cues';
@@ -372,6 +375,7 @@ async function main(): Promise<void> {
     );
     session = s;
     toastSeenSeq = null; // ui-3.7.1: no toasts for events from before this session joined
+    reviewSeenSeq = null; // FB2 C11: no review pop-ups for events from before this session joined
     title.hide();
     hud.setRoom(code);
     hud.show();
@@ -583,6 +587,15 @@ async function main(): Promise<void> {
       const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? 'Someone';
       const lines = logToastLines(fresh.events, nameOf, s.me);
       if (lines.length) (state.phase === 'night' ? night.toast(lines) : hud.toast(lines));
+    }
+    // FB2 C11: live review.post → phone pop-up during the day (name, text, sentiment, stars).
+    {
+      const fresh = freshEvents(state, reviewSeenSeq ?? state.nextLogSeq - 1, ['review.post']);
+      reviewSeenSeq = fresh.seen;
+      if (state.phase === 'day') {
+        const posts = fresh.events.map(reviewPopVM).filter((p): p is NonNullable<typeof p> => !!p);
+        if (posts.length) hud.feedPop(posts);
+      }
     }
     // Gear Tree G5: jams, dead batteries and goose noises pop up as a toast.
     if (state.gear) {
