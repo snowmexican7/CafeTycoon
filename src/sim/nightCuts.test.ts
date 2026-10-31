@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createRun } from './run';
+import { createRun, startDay } from './run';
+import { finishDay } from './closing';
 import { step } from './step';
 import { validateInput } from './validate';
 import { defaultSlots } from './slots';
@@ -62,5 +63,20 @@ describe('cut night inputs: roles, re-roll, classic slot and equip', () => {
     expect(t.slots).toEqual(defaultSlots('cart'));
     expect(t.stations.filter((x) => x.kind !== 'counter').map((x) => x.kind)).toEqual(defaultSlots('cart').filter((k) => k !== null));
     expect('equipment' in t).toBe(false);
+  });
+});
+
+describe('Round 4 f item 4: growing from the end-of-day receipt', () => {
+  it('the grow input works on the very first tick of the night (the receipt shows at night start)', () => {
+    let s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+    s = startDay(s);
+    s.challenges = [];
+    s.phase = 'closing';
+    const night = finishDay(s);
+    expect(night.phase).toBe('night');
+    night.cash = 5000;
+    const t = step(night, [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
+    expect(t.tier).toBe('cart');
+    expect(t.log.filter((e) => e.kind === 'grow.done').map((e) => e.data.to)).toEqual(['cart']);
   });
 });
