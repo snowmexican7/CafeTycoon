@@ -8,3 +8,4 @@
 #devMode .dev-btn.on { background: #ffe3ec; box-shadow: 0 0 0 2px #d6336c; }
 #devMode .dev-btn[disabled] { opacity: .5; cursor: default; }
 #devMode .dev-why { font: 600 13px var(--font-body); color: var(--ink-soft); }
+#devMode .dev-note { font: 600 14px var(--font-body); color: var(--ink); max-width: 260px; }

@@ -34,8 +34,8 @@ describe('stationsVM (FB1 WP5)', () => {
     expect(vm.shop.find((x) => x.kind === 'espresso')!.owned).toBe(2);
     const steam = defaultSlots(s.tier).indexOf('steamer');
     s = applySlotInput(s, { kind: 'slot', playerId: 'ana', index: steam, station: null });
-    expect(stationMenuNote(s)).toMatch(/^No steamer on the floor: .*Latte/);
-    expect(stationsVM(s).notes.some((n) => n.startsWith('No steamer:'))).toBe(true);
+    expect(stationMenuNote(s)).toMatch(/^No steam wand on the floor: .*Latte/);
+    expect(stationsVM(s).notes.some((n) => n.startsWith('No steam wand:'))).toBe(true);
   });
   it('the board renders tiles, the swap row for a picked slot and buy buttons', () => {
     const s = night();

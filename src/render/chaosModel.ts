@@ -78,6 +78,8 @@ export type Burst =
   | { kind: 'leak'; at: Vec2 };
 
 /** FB1 WP4: what someone says as they read a sold-out board and walk away (picked by log seq). */
+/** ui-3.5.1: what a customer says leaving after being bumped (walkout reason 'bumped'). */
+export const BUMPED_LINES = ['That\'s it, I\'m off!', 'Forget it!', 'Rude!'] as const;
 export const WALKOUT_LINES = ['Sold out?!', 'Nothing left?', 'Aw, sold out.', 'Maybe tomorrow.'] as const;
 
 /**
@@ -94,6 +96,14 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
     if (e.seq <= lastSeq) continue;
     // One walk-away puff per snapshot, at the front of the line, however many turned round.
     if (e.kind === 'walkout') {
+      // ui-3.5.1 (R4 c): a customer bumped one time too many storms off from where they stood.
+      if (e.data.reason === 'bumped') {
+        const bx = Number(e.data.x);
+        const by = Number(e.data.y);
+        const at = Number.isFinite(bx) && Number.isFinite(by) ? { x: bx, y: by } : queueFrontFor(next);
+        bursts.push({ kind: 'walkout', at, text: BUMPED_LINES[e.seq % BUMPED_LINES.length]! });
+        continue;
+      }
       if (!walked) bursts.push({ kind: 'walkout', at: queueFrontFor(next), text: WALKOUT_LINES[e.seq % WALKOUT_LINES.length]! });
       walked = true;
       continue;

@@ -514,7 +514,7 @@ export interface GrowthVM {
   nudge?: GrowNudge;
 }
 
-const STATION_ICON: Record<string, string> = { grinder: '⚙️ grinder', espresso: '☕ espresso', steamer: '🥛 steamer', coldBrewTap: '🧊 cold brew' };
+const STATION_ICON: Record<string, string> = { grinder: '⚙️ grinder', espresso: '☕ espresso', steamer: '🥛 steam wand', coldBrewTap: '🧊 cold brew' };
 
 function waitingNote(state: GameState): { waiting?: string } {
   // FB1 WP5: from reasonOff, so a swapped-out steamer reads the same as a stand that never had one.

@@ -39,7 +39,7 @@ export const ITEM_LABEL: Record<ItemKind, string> = {
 export const STATION_NAME: Record<StationKind, string> = {
   grinder: 'Grinder',
   espresso: 'Espresso machine',
-  steamer: 'Steamer',
+  steamer: 'Steam wand',
   coldBrewTap: 'Cold brew',
   drip: 'Drip machine',
   counter: 'Pick-up counter',
@@ -312,7 +312,7 @@ function carryHint(state: GameState, player: GameState['players'][number], stati
     }
     return soon
       ? { go: false, title: 'Put the milk in the fridge', detail: 'Closing soon: walk it over, or R puts it back' }
-      : { go: false, title: 'Carry the milk to the steamer', detail: 'R puts it back in the fridge' };
+      : { go: false, title: 'Carry the milk to the steam wand', detail: 'R puts it back in the fridge' };
   }
   if (isFridge(station)) return { go: true, title: 'Put the condiment bar away', detail: `Fridge · ${n} servings kept for tomorrow` };
   if (station?.id === CONDIMENTS_ID) return { go: true, title: 'Set the bar back out', detail: `Condiment bar · ${n} servings` };

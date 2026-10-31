@@ -2,7 +2,9 @@ import { branchBody, branchChip, type BranchVM } from './branchView';
 import type { AreaId } from '../data/areas';
 import type { ReportVM } from './report';
 import { TASTE, TWIST_INFO, TWISTS, type TwistId } from '../sim/taste';
-import { isGearId, type GearId } from '../data/gear';
+import { isGearId, type AddOnWand, type GearId } from '../data/gear';
+
+const isAddOnWand = (v: unknown): v is AddOnWand => v === 'weak' || v === 'strong';
 import { sellLabel, type FridgeVM, type GearTierState, type GearTierVM, type GearVM } from './gearVM';
 import { isFridgeId, type FridgeId } from '../data/fridges';
 import { catalogueById } from '../data/catalogue';
@@ -195,14 +197,16 @@ export function gearBoard(g: GearVM): string {
   const rule = g.voteRule && !v ? `<div class="gr-vote-rule">🗳️ ${esc(g.voteRule)}</div>` : '';
   const slots = g.slots
     .map((s) => `<div class="st-slot gr-slot ${s.id ? '' : 'empty'}" aria-label="Slot ${s.index + 1}: ${esc(s.name)}">
-        <span class="st-ic" aria-hidden="true">${s.icon}</span><b>${esc(s.name)}</b><small>Slot ${s.index + 1}</small>
+        <span class="st-ic" aria-hidden="true">${s.icon}</span><b>${esc(s.name)}</b>${s.wand ? `<small class="gr-wand-on">🥛 ${esc(s.wand)}</small>` : ''}<small>Slot ${s.index + 1}</small>
         ${s.id && s.id !== 'b0' ? ((l) => `<button class="btn mini ghost" data-action="gear-sell" data-index="${s.index}" title="${esc(l.title)}">${esc(l.text)}</button>`)(sellLabel(s.id, s.sell)) : ''}</div>`)
     .join('');
   const trees = g.trees
     .map((t) => `<div class="gr-tree"><div class="gr-tree-h"><span aria-hidden="true">${t.icon}</span> ${esc(t.name)}</div><div class="gr-tiers">${t.tiers
       .map((x) => `<div class="gr-tier ${x.state === 'another' ? 'owned another' : x.state}" title="${esc(`${x.blurb} Real-life sticker: ${x.sticker}. Sells back for $${x.sell}.`)}">
           <b>${esc(x.name)}</b><span class="gr-stats">${esc(x.stats)}</span>
-          <button class="btn ${x.state === 'buy' || x.state === 'upgrade' || x.state === 'another' ? '' : 'ghost'}" data-action="gear-buy" data-gear="${x.id}" ${x.state === 'buy' || x.state === 'upgrade' || x.state === 'another' ? '' : 'disabled'}>${g.voteRule && x.price >= GEAR_VOTE_MIN && x.state !== 'owned' && x.state !== 'passed' ? '🗳️ ' : ''}${esc(GEAR_BTN[x.state](x))}</button>
+          <button class="btn ${x.state === 'buy' || x.state === 'upgrade' || x.state === 'another' ? '' : 'ghost'}" data-action="gear-buy" data-gear="${x.id}" ${x.state === 'buy' || x.state === 'upgrade' || x.state === 'another' ? '' : 'disabled'}>${g.voteRule && x.price >= GEAR_VOTE_MIN && x.state !== 'owned' && x.state !== 'passed' ? '🗳️ ' : ''}${esc(GEAR_BTN[x.state](x))}</button>${(x.wandBuys ?? [])
+          .map((w) => `<button class="btn ghost gr-wand-buy" data-action="gear-buy" data-gear="${x.id}" data-wand="${w.wand}" title="${esc(`Buy it with the ${w.name.toLowerCase()} fitted, so milk drinks work from tomorrow.`)}" ${w.ok ? '' : 'disabled'}>${g.voteRule && w.price >= GEAR_VOTE_MIN ? '🗳️ ' : ''}+ ${esc(w.name.toLowerCase())} · $${w.price}</button>`)
+          .join('')}
         </div>`).join('')}</div></div>`)
     .join('');
   // ui-3.5.1 declutter: the street notebook and drinks to learn open in a drawer (one button here).
@@ -210,7 +214,18 @@ export function gearBoard(g: GearVM): string {
     ? `<div class="gr-more"><button class="chip" data-action="drawer" data-d="notebook">📓 Street notebook${g.levelUps.length ? ' &amp; drinks to learn' : ''} ▸</button>${g.crowd ? `<span class="gr-crowd-line">👥 ${esc(g.crowd)}</span>` : ''}</div>`
     : '';
   return `<div class="st-board gr-board">${head}${vote}${note}${more}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
-    ${g.fridge ? fridgePanel(g.fridge) : ''}<div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have. Got a free slot? Buy a second of the same machine.</small></div>${rule}${trees}</div>`;
+    ${wandPanel(g)}${g.fridge ? fridgePanel(g.fridge) : ''}<div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have. Got a free slot? Buy a second of the same machine.</small></div>${rule}${trees}</div>`;
+}
+
+/** ui-3.5.1 (FB2 C9): steam wands for the espresso machine you already have, or why there's no milk yet. */
+export function wandPanel(g: GearVM): string {
+  if (!g.wands.length && !g.wandNote) return '';
+  const cards = g.wands
+    .map((w) => `<div class="gr-tier gr-wand ${w.ok ? 'buy' : 'poor'}" title="${esc(w.blurb)}">
+        <span class="gr-fr-ic" aria-hidden="true">🥛</span><b>${esc(w.name)}</b><span class="gr-stats">${esc(`For your ${w.machine} (slot ${w.index + 1}). ${w.blurb}`)}</span>
+        <button class="btn ${w.ok ? '' : 'ghost'}" data-action="wand-buy" data-station="${esc(w.station)}" data-wand="${w.wand}" ${w.ok ? '' : 'disabled'}>${w.ok ? `${w.upgrade ? 'Swap up' : 'Add it'} · $${w.price}` : `Need $${w.price}`}</button></div>`)
+    .join('');
+  return `<div class="gr-fridge gr-wands" aria-label="Steam wand"><div class="gr-tree-h"><span aria-hidden="true">🥛</span> Steam wand</div><div class="gr-fr-row">${cards}${g.wandNote ? `<p class="gr-fr-note">${esc(g.wandNote)}</p>` : ''}</div></div>`;
 }
 
 /** ui-3.5.1: the Gear shop's "Street notebook" drawer: how the street rates each kind of drink, and drinks to learn. */
@@ -728,7 +743,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onReroll?(): void; onRole?(role: RoleId | null): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onSlot?(index: number, station: EquipmentKind | null): void; onEquip?(station: EquipmentKind): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onStaff?(action: 'hire' | 'fire'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; show(): void; hide(): void } {
   const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null };
   let lastVm: NightVM | null = null;
@@ -783,7 +798,8 @@ export function createNight(
       handlers.onSlot?.(Number(el.dataset.index), isEquipmentKind(el.dataset.station) ? el.dataset.station : null);
       ui.slotSel = null;
     } else if (action === 'equip' && isEquipmentKind(el.dataset.station)) handlers.onEquip?.(el.dataset.station);
-    else if (action === 'gear-buy' && isGearId(el.dataset.gear)) handlers.onGear?.('buy', el.dataset.gear);
+    else if (action === 'gear-buy' && isGearId(el.dataset.gear)) handlers.onGear?.('buy', el.dataset.gear, isAddOnWand(el.dataset.wand) ? el.dataset.wand : undefined);
+    else if (action === 'wand-buy' && el.dataset.station && isAddOnWand(el.dataset.wand)) handlers.onWand?.(el.dataset.station, el.dataset.wand);
     else if (action === 'gear-sell') handlers.onGearSell?.(Number(el.dataset.index));
     else if (action === 'gear-vote') handlers.onGearVote?.(el.dataset.yes === '1');
     else if (action === 'fridge-buy' && isFridgeId(el.dataset.fridge)) handlers.onFridge?.(el.dataset.fridge);

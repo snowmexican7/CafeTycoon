@@ -389,3 +389,7 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .tn-more .staff { flex: 1 1 auto; width: auto; padding: 6px 10px; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px; background: #fff; }
 #night .tn-more .staff .sf-h { flex-direction: column; gap: 0; }
 #night .gr-more { align-items: center; flex-wrap: wrap; } #night .gr-crowd-line { font: 600 var(--fs-m) var(--font-display); color: var(--ink-soft); }
+
+/* ui-3.5.1 (FB2 C9): steam wands */
+.gr-wand-on { color: var(--ink); font-weight: 700; }
+.gr-tier .gr-wand-buy { margin-top: 4px; font-size: 14px; }

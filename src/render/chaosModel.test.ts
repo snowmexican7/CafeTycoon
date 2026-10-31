@@ -97,3 +97,16 @@ describe('no-bin floor drops (FB1 WP5)', () => {
     expect(kinds).toEqual(['scatter', 'No bin!', 'splash']);
   });
 });
+
+describe('ui-3.5.1: bumped walkouts (R4 c)', () => {
+  it('a bumped customer leaves with their own line, not "Sold out?!"', async () => {
+    const { BUMPED_LINES, WALKOUT_LINES } = await import('./chaosModel');
+    const a = run();
+    const b = withLog(a, { kind: 'walkout', data: { reason: 'bumped', customer: 'c1', x: 5, y: 6 } });
+    const w = chaosBursts(a, b, a.nextLogSeq - 1).bursts.filter((x) => x.kind === 'walkout');
+    expect(w).toHaveLength(1);
+    expect(BUMPED_LINES as readonly string[]).toContain((w[0] as { text: string }).text);
+    expect(WALKOUT_LINES as readonly string[]).not.toContain((w[0] as { text: string }).text);
+    expect((w[0] as { at: unknown }).at).toEqual({ x: 5, y: 6 });
+  });
+});

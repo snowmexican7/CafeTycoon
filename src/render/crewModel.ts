@@ -67,7 +67,7 @@ export type CrewBurst =
   | { kind: 'bumpSay'; text: string; x?: number; y?: number };
 
 /** ui-3.5.1: Claude's planned log kind (not in SimEvent's union yet; widen the check until it lands). */
-export const CUSTOMER_BUMP = 'customer.bump';
+export const CUSTOMER_BUMP = 'customer.bump' as const;
 
 /** ui-3.5.1: what a bumped customer says (picked by log seq, so every client shows the same line). */
 export const BUMP_LINES = ['Hey, watch it!', 'Oof! Careful!', 'Excuse you!', 'Mind the coffee!'] as const;
@@ -231,7 +231,7 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       bursts.push({ kind: 'steep', cups: Number(e.data.cups) || 0, paid: Number(e.data.paid) || 0 });
     } else if (e.kind === 'call.answer') {
       bursts.push({ kind: 'call', by: String(e.data.by ?? 'Someone'), take: e.data.take === true, call: e.data.kind === 'machine' ? 'machine' : 'order' });
-    } else if ((e.kind as string) === CUSTOMER_BUMP) {
+    } else if (e.kind === CUSTOMER_BUMP) {
       const x = Number(e.data.x);
       const y = Number(e.data.y);
       bursts.push({ kind: 'bumpSay', text: bumpLine(e.seq, e.data.text), ...(Number.isFinite(x) && Number.isFinite(y) ? { x, y } : {}) });

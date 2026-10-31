@@ -29,7 +29,8 @@ export function nightInputHandlers(send: (input: PlayerInput) => void, me: () =>
     onSlot: (index, station) => send({ kind: 'slot', playerId: me(), index, station }),
     onEquip: (station) => send({ kind: 'equip', playerId: me(), station }),
     // Gear Tree G3: buy/upgrade a tier, or sell what stands in a slot.
-    onGear: (action, gear) => send({ kind: 'gear', playerId: me(), action, gear }),
+    onGear: (action, gear, wand) => send({ kind: 'gear', playerId: me(), action, gear, ...(wand ? { wand } : {}) }),
+    onWand: (station, wand) => send({ kind: 'wand', playerId: me(), station, wand }),
     onGearSell: (index) => send({ kind: 'gear', playerId: me(), action: 'sell', index }),
     onGearVote: (yes) => send({ kind: 'gear', playerId: me(), action: 'vote', yes }),
     // ui-3.4.1 (FB2 A4): buy the fridge card (the Udder-Matic starts a crew vote in co-op)
