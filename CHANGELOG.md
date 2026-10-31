@@ -20,6 +20,8 @@ when a build goes out, the line moves under its version with the date.
 - Walking into a customer annoys them; bump the same person three times in a few seconds and they storm out.
 - Dev mode (open the game with `?dev=1`): unlimited cash to try anything, and the night can be paused as long as you
   like; dev runs never count toward records or head starts.
+- Your barista has a look you pick (hair, skin, outfit, shirt colour), your crewmates see it, and you can change it
+  between days.
 
 ## 3.5.0 — 2026-10-30 · Open, close and clean up
 

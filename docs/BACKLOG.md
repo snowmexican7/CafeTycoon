@@ -2337,3 +2337,13 @@ Spec: `docs/CLAUDE_PROMPT_ROUND_4.md`. One branch and tag per item; names as bui
   last call); Ready still opens the shop and `startDay` clears it. Dev runs write nothing to meta, records or history
   (`foldMeta`, `recordsStore.record`, `historyStore.append` via `RunRecord.dev`). Cash can read a bit over 999,999
   after takings. The café's six slots still limit gear (pour-over lines don't fit beside everything).
+- **e. Character look (`r4-look`, protocol 48).** `PlayerLook { hair, hairColor?, skin, outfit, shirtColor }` (UI
+  ids; 1–32 chars of `[A-Za-z0-9_#-]`), `Player.look?`, `cleanLook` / `setLook` in src/sim/look.ts. Join path:
+  `CreateRunOptions.players[].look?`, `join` input `look?`, `JoinMsg.look?`, lobby `Member.look?`,
+  `PeerSessionOptions.look?`. Edit: `{ kind: 'look', playerId, look }`, night/weekEnd only, people only, own player;
+  a bad look is refused. Bots have none.
+- **d. Stacking (answered in `r4-look`).** `Customer.id` + `Customer.items` is all the UI needs to stack one
+  customer's drinks, groups included. No `PassItem.customer`: a cup isn't anyone's until it's taken (the taker is
+  decided at take time); for a "who'd take this cup" hint use `pickupTarget(state, drink)` (exported).
+- **Export (`r4-look`).** `emptyHandsWanted` is exported from src/sim/stations.ts, so `src/ui/live.ts` can drop its
+  mirror.

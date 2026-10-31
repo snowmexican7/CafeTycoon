@@ -63,6 +63,12 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `milk` and `bar` added (A4 widened `Player.tool`).
 
 ### Needs from you (UI lane)
+- [ ] **e. Character look (2026-10-31, `r4-look`, protocol 48).** Wire the saved look into `src/main.ts`
+  `runOptions` (`players[].look: m.look`), the host's `Member.look`, and `PeerSessionOptions.look` for joiners; edit
+  at night with `{ kind: 'look', playerId, look }` (type `PlayerLook` in src/sim/types.ts). Bots have no look.
+- [ ] **d. Stacking:** `Customer.id` + `Customer.items` is enough (groups too). No `PassItem.customer` (a cup isn't
+  anyone's until taken); use `pickupTarget(state, drink)` for a "who'd take this" hint.
+- [ ] **Export:** `emptyHandsWanted` is exported from src/sim/stations.ts; switch `live.ts` to it.
 - [ ] **a. Dev mode (2026-10-31, `r4-dev`, protocol 47).** `src/main.ts` passes `dev: true` into
   `CreateRunOptions` from `?dev=1`. Pause button: reads `state.devPaused`, sends `{ kind: 'devPause', playerId,
   paused }` (host only, dev run, night/weekEnd). Cash shows ~$999,999 by itself; no other UI special case needed.
