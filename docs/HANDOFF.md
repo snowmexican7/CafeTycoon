@@ -164,9 +164,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   night forecast as rough when `forecastIsRough(state)` (`PriceLine.rough`), "Set by Strategist" marks on
   `strategist.set { changed }`, events `staff.hire` / `staff.fire { role, by }`, receipt line `DayStats.hireWages`.
   Planner advice ids `staff:hire:strategist` / `staff:hire:marketer` (kind `equip`).
-- [ ] **C11 social feed (2026-10-31, `fb2-c11`, protocol 55).** Phone feed from `dayReviews(state)` (night), pop-up
+- [x] **C11 social feed (2026-10-31, `fb2-c11`, protocol 55).** Phone feed from `dayReviews(state)` (night), pop-up
   posts from `review.post { name, text, sentiment, stars, … }` (day), week card from `weekRating(state)` (don't parse
-  `week.rating`'s JSON string). Fans: `GameState.fans`, `DayStats.fansDelta`.
+  `week.rating`'s JSON string). Fans: `GameState.fans`, `DayStats.fansDelta`. UI: `src/ui/feed.ts`, fixtures
+  `dayFeed` / `reviewPop` / `weekRating` / `closingFans`.
 - [ ] **Round 3 item 1, more lattes (2026-10-31, `r3-lattes`, protocol 54).** Add-on ask bubble ("…and a latte for my
   friend") from `order.addon { customer, drink }`; the ticket is a normal B6 combo (`Customer.items`, `order: 'combo'`).
 - [ ] **Round 3 item 4, line + waiting area (2026-10-31, `r3-line`, protocol 53).** Browsers in `state.waiting`

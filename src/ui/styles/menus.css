@@ -249,3 +249,27 @@
 .menu.results.has-grow > .rep { grid-area: rep; }
 .menu.results.has-grow > .btn { grid-area: btn; }
 @media (max-width: 760px) { .menu.results.has-grow { display: flex; } }
+
+/* FB2 C11: week rating card (weekRating → reviewers + fans). */
+.weekend .week-rating { margin: 8px 0 4px; padding: 10px 14px 12px; border-radius: 14px; background: #fff; box-shadow: var(--sh-1); }
+.weekend .week-rating .sec-h { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }
+.weekend .week-rating .sec-h .chip { background: #f3e8d8; color: var(--ink); box-shadow: none; font-size: 13px; padding: 4px 10px; min-height: 0; }
+.weekend .wr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.weekend .wr-row {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: baseline;
+  padding: 6px 8px; border-radius: 10px; background: #faf3e7;
+  animation: wr-in .35s ease-out both; animation-delay: calc(var(--i, 0) * .06s);
+}
+.weekend .wr-who { font: 700 15px var(--font-display); }
+.weekend .wr-stars { font: 700 14px var(--font-body); letter-spacing: .04em; }
+.weekend .fp-star.on { color: #c9972a; }
+.weekend .fp-star.off { color: #d2c0a6; }
+.weekend .wr-row b { font: 700 18px var(--font-display); color: var(--ink); font-variant-numeric: tabular-nums; }
+@keyframes wr-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+.results .line.fans .pos { color: var(--good); font-weight: 700; }
+.results .line.fans .neg { color: var(--bad); font-weight: 700; }
+@media (max-height: 820px) {
+  .weekend .week-rating { padding: 6px 12px 8px; margin: 4px 0 2px; }
+  .weekend .wr-row { padding: 3px 6px; }
+}
+@media (prefers-reduced-motion: reduce) { .weekend .wr-row { animation: none; } }

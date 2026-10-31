@@ -8,6 +8,7 @@ import { DRINK_LABEL } from './tickets';
 import { mountCloseEarly } from './closeEarly';
 import { mountDayRestock, type DayRestockVM } from './dayRestock';
 import { mountPreOpen } from './preOpen';
+import { reviewPopHtml, type FeedPostVM } from './feed';
 import { cleanMeter, EVENT_INTRO, hudStructureKey, SOLD_OUT_RUSH, type HudVM } from './viewModels';
 import type { EventKind } from '../sim/types';
 
@@ -36,6 +37,8 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
   setRecipeHints(mode: RecipeHints): void;
   toast(lines: string[]): void;
+  /** FB2 C11: a live review.post as a phone pop-up (queued; each shows ~5 s). */
+  feedPop(posts: FeedPostVM[]): void;
   /** ui-3.7.1: the day Restock button and panel (null outside the day and the closing phase). */
   setRestock(vm: DayRestockVM | null): void;
   /** ui-3.7.1: B toggles the panel; while it is open 1-9 buy and B / Esc close. True when the key was used. */
@@ -91,7 +94,8 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <div class="hud-checklist" role="status" hidden></div>
     <section class="hud-restock-panel" id="hud-restock-panel" aria-label="Rush delivery" hidden></section>
     <div class="hud-syrup" role="group" aria-label="Syrup picker" hidden></div>
-    <div class="toast" role="status" hidden></div>`;
+    <div class="toast" role="status" hidden></div>
+    <div class="hud-feed-pop" aria-live="polite" hidden></div>`;
   const $ = <T extends HTMLElement = HTMLElement>(sel: string) => container.querySelector<T>(sel)!;
   const el = {
     day: $('.hud-day'),
@@ -116,6 +120,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     hint: $('.hold.hint'),
     seed: $('.keys .seed'),
     toast: $('.toast'),
+    feedPop: $('.hud-feed-pop'),
     closing: $('.hud-closing'),
     closingN: $('.hud-closing .n'),
     challenges: $('.hud-challenges'),
@@ -134,6 +139,26 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     b.blur();
     handlers.onSyrup?.(b.dataset.syrup as 'vanilla' | 'caramel');
   });
+  let feedPopTimer: ReturnType<typeof setTimeout> | null = null;
+  const feedQueue: FeedPostVM[] = [];
+  const showNextFeedPop = () => {
+    if (!feedQueue.length) {
+      hide(el.feedPop);
+      el.feedPop.innerHTML = '';
+      return;
+    }
+    const next = feedQueue.shift()!;
+    el.feedPop.innerHTML = reviewPopHtml(next);
+    show(el.feedPop);
+    el.feedPop.classList.remove('in');
+    void el.feedPop.offsetWidth;
+    el.feedPop.classList.add('in');
+    if (feedPopTimer) clearTimeout(feedPopTimer);
+    feedPopTimer = setTimeout(() => {
+      feedPopTimer = null;
+      showNextFeedPop();
+    }, 5200);
+  };
   $('[data-action=pause]').addEventListener('click', (ev) => {
     (ev.currentTarget as HTMLElement).blur();
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape' }));
@@ -540,6 +565,12 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       if (toastTimer) clearTimeout(toastTimer);
       toastTimer = setTimeout(() => hide(el.toast), 6000);
     },
+    feedPop(posts) {
+      if (!posts.length) return;
+      const wasEmpty = feedQueue.length === 0 && !feedPopTimer;
+      feedQueue.push(...posts);
+      if (wasEmpty) showNextFeedPop();
+    },
     setRestock(vm) {
       restock.render(vm);
     },
@@ -590,7 +621,15 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       }
     },
     show: () => show(container),
-    hide: () => hide(container),
+    hide: () => {
+      hide(container);
+      hide(el.feedPop);
+      feedQueue.length = 0;
+      if (feedPopTimer) {
+        clearTimeout(feedPopTimer);
+        feedPopTimer = null;
+      }
+    },
   };
 }
 

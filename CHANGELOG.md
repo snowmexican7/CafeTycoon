@@ -21,6 +21,7 @@ when a build goes out, the line moves under its version with the date.
   vanilla or caramel (1 / 2) at the syrup rack. Tickets show double shots and syrup asks; the jug, steam meter and
   recipe icons sit over your cup.
 - The tray table now shows a live list of drinks (with ticks and cooling), a tray in your hands, a named tray coaster on pickup, a "doesn't go here" bubble when a drink is refused, and little cues when a tray is claimed, filled, picked up, set down, taken, spilled or voided.
+- The café feed is on screen: customers post live during the day (a little phone pops up), the night board shows today's posts and fans, the closing receipt lists the fan change, and each week-end three silly reviewers rate the week.
 
 ## 3.7.2 — 2026-10-31 · Fixes from the overnight review
 

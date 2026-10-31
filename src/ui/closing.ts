@@ -2,6 +2,7 @@ import { esc, hide, onAction, show } from './dom';
 import { coin, moon, stars } from './icons';
 import type { TierId } from '../sim/types';
 import { growOfferHtml } from './growOffer';
+import { closingFansHtml } from './feed';
 import type { ClosingVM } from './viewModels';
 
 const rep = (s: string) => Number.parseFloat(s) || 0;
@@ -46,6 +47,7 @@ export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: 
             ${vm.tabPaid ? `<div class="line"><span>Hospital tab paid</span><span class="neg">−${esc(vm.tabPaid)}</span></div>` : ''}
             ${vm.ambulance ? `<div class="line ambulance"><span>Ambulance ride: −${esc(vm.ambulance)}. Worth it?</span><span class="neg">on the tab</span></div>` : ''}
             ${vm.tab ? `<div class="line tab"><span>Hospital tab left</span><span>${esc(vm.tab)}</span></div>` : ''}
+            ${vm.fans !== undefined ? closingFansHtml(vm.fans, vm.fansDelta) : ''}
             <div class="line total ${loss ? 'loss' : ''}"><span>Net profit (after ${vm.wages ? 'rent, wages' : 'rent'}, fines and bonuses)</span><span>${loss ? esc(vm.profit) : `+${esc(vm.profit)}`}</span></div>
           </div>
           <div class="money-split">

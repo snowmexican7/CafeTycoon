@@ -1,6 +1,7 @@
 import { esc, hide, onAction, show } from './dom';
 import { coin, logoCup } from './icons';
 import type { Award } from '../sim/awards';
+import { weekRatingHtml } from './feed';
 import type { SeasonVM, WeekEndVM, WeekStripVM } from './viewModels';
 
 const avatar = (name: string) => esc(name.trim().charAt(0).toUpperCase() || '?');
@@ -71,6 +72,7 @@ export function createWeekEnd(
             <div><b>${vm.bestDay ? `Day ${vm.bestDay.day}` : '—'}</b><small>${vm.bestDay ? `BEST · ${esc(vm.bestDay.profit)}` : 'BEST DAY'}</small></div>
           </div>
           ${vm.week ? weekStripHtml(vm.week) : ''}
+          ${vm.rating ? weekRatingHtml(vm.rating) : ''}
           ${sn ? seasonHtml(sn) : ''}
           ${vm.unlocks?.length ? `<div class="unlocks" role="status"><b>🎁 Unlocked for your next run</b>${vm.unlocks.map((u) => `<span>${esc(u)}</span>`).join('')}<small>Pick it under Head start on the title screen.</small></div>` : ''}
           <div class="sec-h">Bought this run</div>
