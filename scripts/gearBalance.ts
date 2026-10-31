@@ -10,12 +10,12 @@ import { step } from '../src/sim/step';
 import { addStandIns, syncBots } from '../src/sim/bots/roster';
 import { restockCost } from '../src/sim/night';
 import { expectedUse } from '../src/sim/brief';
-import { GEAR_PATH, PATH_WAND, planNight, wandFirst } from '../src/sim/bots/planner';
+import { GEAR_PATH, PATH_WAND, pathWandCard, planNight, wandFirst } from '../src/sim/bots/planner';
 import { ECONOMY } from '../src/data/economy';
 import { GEAR, WANDS } from '../src/data/gear';
 import { fridgeWanted } from '../src/sim/fridge';
 import { TIERS, nextTier } from '../src/sim/growth';
-import { gearArea, wandCards } from '../src/sim/gear';
+import { gearArea } from '../src/sim/gear';
 import type { GameState, PlayerInput, ScenarioId, SupplyId, TierId } from '../src/sim/types';
 // Node globals, typed locally so src tests can import this file without @types/node.
 declare const process: { env: Record<string, string | undefined>; argv: string[]; exit(code?: number): never };
@@ -63,7 +63,7 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
     return [{ kind: 'fridge', playerId: by, fridge: fridge.id }];
   }
   // FB2 C9: a machine that takes a wand and has none (or E4's little one) gets it first, as the planner advises.
-  const card = wandCards(state).find((c) => !c.upgrade) ?? wandCards(state).find((c) => c.upgrade && c.wand === PATH_WAND[c.gear]);
+  const card = pathWandCard(state);
   if (card && !skip.has(`wand:${card.station}`)) return state.cash - card.price >= RESERVE ? [{ kind: 'wand', playerId: by, station: card.station, wand: card.wand }] : [];
   const owned = new Set(state.slotGear ?? []);
   for (const id of PATH) {

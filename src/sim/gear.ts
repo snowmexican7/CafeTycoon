@@ -88,6 +88,8 @@ export function applyGearInput(state: GameState, input: Extract<PlayerInput, { k
   if (input.action === 'vote' && !input.yes && state.gearVote?.by === p.id) return gearCastVote(state, p, false);
   settleVote(state); // someone may have left since the last vote
   if (input.action === 'vote') return gearCastVote(state, p, input.yes);
+  // FB2 C9 (review M1): a wand this machine can't take refuses the buy, in co-op as solo (no bare-machine proposal).
+  if (input.action === 'buy' && input.wand !== undefined && buyWand(input.gear, input.wand) === null) return state;
   // G8: a big buy/sell with more than one human becomes a proposal (one open at a time).
   const big = bigDeal(state, input);
   if (big && voters(state).length > 1) {

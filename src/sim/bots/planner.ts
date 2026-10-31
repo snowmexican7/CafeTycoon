@@ -90,7 +90,7 @@ import { FRIDGES } from '../../data/fridges';
 import { computeModifiers } from '../effects';
 import { billsForDay, crewCount, crewNames, wageEach } from '../staff';
 import { averageStars } from '../accuracy';
-import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun, wandCards } from '../gear';
+import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun, wandCards, type WandCard } from '../gear';
 import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
 import { restockCost } from '../night';
 import { steepPlan } from '../steep';
@@ -446,10 +446,27 @@ function growAdvice(state: GameState, budget: Budget): Advice[] {
 
 /**
  * FB2 C9: milk drinks wait for a wand (E3 and up), and they used to arrive with the cart. So at the cart (the café next)
- * a Gear crew with no wand on the floor puts the Sylvia and its little wand before growing again.
+ * a Gear crew with no wand on the floor puts the Sylvia and its little wand before growing again, but only while that
+ * can happen (review M3): a grinder on the floor and an espresso machine to trade up or put a wand on. A crew going the
+ * cold brew and drip way, or with no room for a grinder, grows as before.
  */
 export function wandFirst(state: GameState, next: TierId | null): boolean {
-  return isGearRun(state) && next === 'cafe' && !state.stations.some((s) => s.kind === 'steamer');
+  if (!isGearRun(state) || next !== 'cafe' || state.stations.some((s) => s.kind === 'steamer')) return false;
+  return state.stations.some((s) => s.kind === 'grinder') && state.stations.some((s) => s.kind === 'espresso' && !s.twin);
+}
+
+/**
+ * FB2 C9: the wand worth adding tonight (planner and gearBalance). With no wand on the floor: the path's wand for that
+ * machine if it is on offer (E4: the proper one, review M2), else the first offer. Once a wand is on the floor, only the
+ * path's upgrade (E4's little wand to a proper one); a second wandless machine waits (review M4). Null: none.
+ */
+export function pathWandCard(state: GameState): WandCard | null {
+  const cards = wandCards(state);
+  if (!state.stations.some((s) => s.kind === 'steamer' && s.wand !== undefined)) {
+    const fresh = cards.filter((c) => !c.upgrade);
+    return fresh.find((c) => c.wand === PATH_WAND[c.gear]) ?? fresh[0] ?? null;
+  }
+  return cards.find((c) => c.upgrade && c.wand === PATH_WAND[c.gear]) ?? null;
 }
 
 function checkoutAdvice(state: GameState, budget: Budget): Advice[] {
@@ -553,7 +570,7 @@ function gearAdvice(state: GameState, budget: Budget): Advice[] {
   const polishFirst = avg !== null && avg < POLISH_BELOW;
 
   // FB2 C9: an espresso machine that takes a wand and has none (or E4's little one) gets it first: milk drinks need it.
-  const card = wandCards(state).find((c) => !c.upgrade) ?? wandCards(state).find((c) => c.upgrade && c.wand === PATH_WAND[c.gear]);
+  const card = pathWandCard(state);
   if (card) {
     if (card.price > budget.left) return [];
     budget.left = round2(budget.left - card.price);

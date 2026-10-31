@@ -217,6 +217,17 @@ describe('FB2 C9: buying a wand', () => {
     expect([t.gearVote, wandOf(t)?.wand]).toEqual([undefined, 'weak']);
   });
 
+  it('review M1: co-op refuses a wand the machine can\'t take, as solo does (no bare-machine proposal)', () => {
+    for (const [gear, wand] of [['e2', 'weak'], ['e3', 'strong']] as const) {
+      const s = gearRun('stand', 2);
+      s.cash = 1000;
+      buy(s, 'g2');
+      buy(s, gear, wand);
+      expect(s.gearVote, `${gear}+${wand}`).toBeUndefined();
+      expect(s.slotGear).not.toContain(gear);
+    }
+  });
+
   it('validateInput: the wand rides on the gear buy; the wand input needs a station id and a known add-on', () => {
     expect(validateInput({ kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e3', wand: 'weak' })).toEqual({ kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e3', wand: 'weak' });
     expect(validateInput({ kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e3' })).toEqual({ kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e3' });
@@ -494,6 +505,10 @@ describe('FB2 C9: the planner and saves', () => {
     const s = gearRun('cart');
     s.cash = 1000;
     s.days.push({ day: 1, served: 20, lost: 0, turnedAway: 0, sales: 60, tips: 5, rent: 17 });
+    s.slots = ['grinder', 'espresso', null, null, 'trash'];
+    s.slotGear = ['g1', 'e1', null, null, 'b0'];
+    s.slotWand = [null, null, null, null, null];
+    s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear, s.slotWand);
     expect(wandFirst(s, 'cafe')).toBe(true);
     expect(planNight(s).some((a) => a.id === 'grow:cafe')).toBe(false);
     s.slots = ['grinder', 'espresso', null, null, 'trash'];
@@ -504,6 +519,42 @@ describe('FB2 C9: the planner and saves', () => {
     expect(planNight(s).some((a) => a.id === 'grow:cafe')).toBe(true);
     const st = gearRun('stand');
     expect(wandFirst(st, 'cart')).toBe(false);
+  });
+
+  it('review M3: the café hold needs a grinder and an espresso machine to put a wand on', () => {
+    const s = gearRun('cart');
+    s.cash = 1000;
+    s.days.push({ day: 1, served: 20, lost: 0, turnedAway: 0, sales: 60, tips: 5, rent: 17 });
+    const floor = (slots: (Station['kind'] | null)[], gear: (GearId | null)[]) => {
+      s.slots = slots;
+      s.slotGear = gear;
+      s.slotWand = slots.map(() => null);
+      s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear, s.slotWand);
+    };
+    floor(['grinder', 'espresso', null, null, 'trash'], ['g1', 'e1', null, null, 'b0']);
+    expect(wandFirst(s, 'cafe')).toBe(true);
+    floor(['coldBrewTap', 'drip', 'drip', null, 'trash'], ['c3', 'd3', 'd4b', null, 'b0']); // the cold brew and drip way
+    expect(wandFirst(s, 'cafe')).toBe(false);
+    expect(planNight(s).some((a) => a.id === 'grow:cafe')).toBe(true);
+    floor(['coldBrewTap', 'espresso', 'drip', 'drip', 'trash'], ['c3', 'e1', 'd3', 'd4b', 'b0']); // pods, no grinder slot
+    expect(wandFirst(s, 'cafe')).toBe(false);
+  });
+
+  it('review M2/M4: an E4 with no wand is advised the proper wand; a second wandless machine waits once a wand is on', () => {
+    const s = gearRun('cart');
+    s.cash = 1000;
+    s.slots = ['grinder', 'espresso', 'coldBrewTap', null, 'trash'];
+    s.slotGear = ['g2', 'e4', 'c3', null, 'b0'];
+    s.slotWand = [null, null, null, null, null];
+    s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear, s.slotWand);
+    expect(planNight(s).find((a) => a.id.startsWith('gear:wand:'))?.input).toEqual({ kind: 'wand', station: 'espresso', wand: 'strong' });
+    // a second copy of the Sylvia beside an E4 that already steams: no wand advice for it, the path goes on
+    s.slots = ['grinder', 'espresso', 'espresso', null, 'trash'];
+    s.slotGear = ['g2', 'e4', 'e3', null, 'b0'];
+    s.slotWand = [null, 'strong', null, null, null];
+    s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear, s.slotWand);
+    expect(planNight(s).some((a) => a.id.startsWith('gear:wand:'))).toBe(false);
+    expect(planNight(s).some((a) => a.id.startsWith('gear:'))).toBe(true);
   });
 
   it(`saves from before snapshot ${SNAPSHOT_VERSION} are turned away; a current one loads`, () => {
