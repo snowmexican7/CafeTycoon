@@ -16,7 +16,7 @@ import { ECONOMY } from '../data/economy';
 import { layoutFor } from '../data/layout';
 import type { Modifiers } from './effects';
 import { defaultSlots, ensureCounterSpots, growSlots, slotCount, stationsFromSlots } from './slots';
-import { growGearSlots, isGearRun } from './gear';
+import { growGearSlots, isGearRun, rebuildBar } from './gear';
 import { DRINK_IDS, DRINK_INFO, GEAR_ONLY_DRINKS } from '../data/drinks';
 import { emitLog } from './log';
 import type { DrinkId, GameState, GrowDiff, PlayerInput, Station, StationKind, TierId } from './types';
@@ -220,6 +220,7 @@ export function applyGrowInput(state: GameState, input: Extract<PlayerInput, { k
   const from = tierOf(state);
   state.tier = input.tier;
   ensureCounterSpots(state); // FB2 A4: the bigger shop's fridge (Gear runs; no-op in classic)
+  if (isGearRun(state)) rebuildBar(state); // FB2 C10: moved machines stay where they still fit, else the defaults win
   state.tierLog = [...(state.tierLog ?? []), { tier: input.tier, day: state.day, by: p.name }];
   if (state.mop.heldBy === null) state.mop = { pos: { ...layoutFor(input.tier).mopHome }, heldBy: null };
   emitLog(state, 'grow.done', { from, to: input.tier, diff: growDiff(from, input.tier, state.gear === true) }); // R3 7

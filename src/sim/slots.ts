@@ -39,7 +39,7 @@ import { CONDIMENTS_ID, PICKUP_ID, SINK_ID, SLOT_POSITIONS, TRAY_ID, layoutFor }
 import { ensureFridgeStation, stockOf } from './fridge';
 import { ensureSyrupRack } from './handmade';
 import { canMake, tierOf } from './growth';
-import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId } from './types';
+import type { DrinkId, GameState, PlayerInput, Station, StationKind, TierId, Vec2 } from './types';
 
 export type SlotContent = StationKind | null;
 
@@ -66,15 +66,52 @@ export function defaultSlots(tier: TierId | undefined): SlotContent[] {
 /**
  * Fresh, idle stations for the slots (in slot order), the counter last. FB2 C9: `wands` (parallel to the slots) is the
  * add-on wand on each espresso machine; with one, or a wand built in (E5/E6), the machine gets `wand` and a 'steamer'
- * twin (the wand itself, carrying `wand` and `wandOf`) on its first side.
+ * twin (the wand itself, carrying `wand` and `wandOf`) on its first side. FB2 C10: `moved` (parallel to the slots,
+ * `GameState.slotPos`) is where each slot stands when the crew moved it (null or absent = `SLOT_POSITIONS`).
  */
-export function stationsFromSlots(tier: TierId | undefined, slots: readonly SlotContent[], gear?: readonly (GearId | null)[], wands?: readonly (AddOnWand | null)[]): Station[] {
-  const positions = SLOT_POSITIONS[tier ?? 'cafe'];
+export function stationsFromSlots(
+  tier: TierId | undefined,
+  slots: readonly SlotContent[],
+  gear?: readonly (GearId | null)[],
+  wands?: readonly (AddOnWand | null)[],
+  moved?: readonly (Vec2 | null)[],
+): Station[] {
+  const out = slotGroups(tier, slots, gear, wands, moved).flat();
+  const counter = layoutFor(tier).stations.find((s) => s.kind === 'counter');
+  if (counter) out.push({ id: counter.id, kind: counter.kind, pos: { ...counter.pos }, busyTicksLeft: 0, output: null, occupiedBy: null });
+  // Batch/pickup: Gear shops get the pickup counter and the condiment bar after the till (the till stays first).
+  if (gear) out.push(...counterSpots(tier));
+  return out;
+}
+
+/** FB2 C10: where each slot stands (left to right): its moved spot, else its `SLOT_POSITIONS` spot. */
+export function slotSpots(tier: TierId | undefined, moved?: readonly (Vec2 | null)[]): Vec2[] {
+  return SLOT_POSITIONS[tier ?? 'cafe'].map((pos, i) => ({ ...(moved?.[i] ?? pos) }));
+}
+
+/**
+ * Gear G9: which side each twin of a machine at `pos` takes: the first twin goes right (left on the floor's last
+ * column, where no one can stand to its right); a second twin takes the other side.
+ */
+export function twinPos(tier: TierId | undefined, pos: Vec2, j: number): Vec2 {
+  const right = pos.x + 1 <= layoutFor(tier).width - 1;
+  const side = (j === 0) === right ? 1 : -1;
+  return { x: pos.x + side * TWIN_OFFSET, y: pos.y };
+}
+
+/** The stations of each slot (an empty slot has none): the machine first, then its twins. Ids as `stationsFromSlots`. */
+export function slotGroups(
+  tier: TierId | undefined,
+  slots: readonly SlotContent[],
+  gear?: readonly (GearId | null)[],
+  wands?: readonly (AddOnWand | null)[],
+  moved?: readonly (Vec2 | null)[],
+): Station[][] {
+  const positions = slotSpots(tier, moved);
   const seen = new Map<StationKind, number>();
-  const out: Station[] = [];
-  positions.forEach((pos, i) => {
+  return positions.map((pos, i) => {
     const kind = slots[i] ?? null;
-    if (kind === null || kind === 'counter') return;
+    if (kind === null || kind === 'counter') return [];
     const n = (seen.get(kind) ?? 0) + 1;
     seen.set(kind, n);
     const st: Station = { id: n === 1 ? kind : `${kind}-${n}`, kind, pos: { ...pos }, busyTicksLeft: 0, output: null, occupiedBy: null };
@@ -82,31 +119,24 @@ export function stationsFromSlots(tier: TierId | undefined, slots: readonly Slot
     if (gid) st.gear = gid;
     const wand = gid ? wandOn(gid, wands?.[i] ?? null) : null;
     if (wand) st.wand = wand;
-    out.push(st);
+    const group = [st];
     // Gear G9: a machine with two sides is two (or three) stations in one slot, TWIN_OFFSET apart, so a barista
-    // picks a side by standing nearer it. The first twin goes right (left on the floor's last column, where no
-    // one can stand to its right); a second twin takes the other side. FB2 C9: an add-on wand is the first twin.
+    // picks a side by standing nearer it (`twinPos`). FB2 C9: an add-on wand is the first twin.
     const own = gid ? (GEAR[gid].twin ?? []) : [];
     const twins = wand && !own.includes('steamer') ? ['steamer' as const, ...own] : own;
-    const right = pos.x + 1 <= layoutFor(tier).width - 1;
     twins.forEach((tk, j) => {
-      const side = (j === 0) === right ? 1 : -1;
       const tn = (seen.get(tk) ?? 0) + 1;
       seen.set(tk, tn);
-      const tw: Station = { id: tn === 1 ? tk : `${tk}-${tn}`, kind: tk, pos: { x: pos.x + side * TWIN_OFFSET, y: pos.y }, busyTicksLeft: 0, output: null, occupiedBy: null, twin: true };
+      const tw: Station = { id: tn === 1 ? tk : `${tk}-${tn}`, kind: tk, pos: twinPos(tier, pos, j), busyTicksLeft: 0, output: null, occupiedBy: null, twin: true };
       if (tk === kind && gid) tw.gear = gid;
       if (tk === 'steamer' && wand && gid) {
         tw.wand = wand;
         tw.wandOf = gid;
       }
-      out.push(tw);
+      group.push(tw);
     });
+    return group;
   });
-  const counter = layoutFor(tier).stations.find((s) => s.kind === 'counter');
-  if (counter) out.push({ id: counter.id, kind: counter.kind, pos: { ...counter.pos }, busyTicksLeft: 0, output: null, occupiedBy: null });
-  // Batch/pickup: Gear shops get the pickup counter and the condiment bar after the till (the till stays first).
-  if (gear) out.push(...counterSpots(tier));
-  return out;
 }
 
 /**

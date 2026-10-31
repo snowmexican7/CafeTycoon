@@ -275,7 +275,17 @@ export type SimEventKind =
   | 'tray.put'
   | 'tray.take'
   | 'tray.spill'
-  | 'tray.void';
+  | 'tray.void'
+  /**
+   * FB2 C10 (src/sim/rearrange.ts): the morning's pre-open (`{ until }` tick; `preopen.end` when the doors open); a station
+   * set down (`{ by, station, to: Vec2, swapped }`) or refused (`{ by, station }`); `station.reset` when a rebuild at night
+   * (a grow, a gear change) left the moved layout blocked, so every station went back to its default spot.
+   */
+  | 'preopen.start'
+  | 'preopen.end'
+  | 'station.place'
+  | 'station.refuse'
+  | 'station.reset';
 
 /** R3 7: what a grow changes, before → after (src/sim/growth.ts growDiff). */
 export interface GrowDiff {
@@ -291,7 +301,7 @@ export interface SimEvent {
   seq: number;
   tick: number;
   kind: SimEventKind;
-  data: Record<string, string | number | boolean | GrowDiff>;
+  data: Record<string, string | number | boolean | GrowDiff | Vec2>;
 }
 
 /** R4 e: how a barista looks. The UI defines the ids (hairstyle, outfit...); the sim only stores and forwards them
@@ -776,6 +786,12 @@ export interface GameState {
   hand: string[];
   boughtTonight: string[];
   ready: PlayerId[];
+  /**
+   * FB2 C10: the tick the morning's pre-open ends (Gear runs; absent = no pre-open, the doors are open). While it is set
+   * the doors are shut, the day clock stands still and people may move stations (`moveStation`). `ready` is reused: the
+   * pre-open also ends once every connected person is ready, or when the host sends `openDoors`.
+   */
+  preOpenUntil?: number;
   /** Relaxed night only: ticks left on the last call. Absent means no last call has started. */
   lastCall?: number;
   players: Player[];
@@ -878,6 +894,12 @@ export interface GameState {
   slotGear?: (GearId | null)[];
   /** FB2 C9: the add-on wand on each slot's espresso machine, parallel to `slots` (absent or null = none; built-in wands aren't listed). */
   slotWand?: (AddOnWand | null)[];
+  /**
+   * FB2 C10: where each slot's machine was moved to in a pre-open, parallel to `slots` (absent, or null for a slot = its
+   * `SLOT_POSITIONS` spot). Kept for the rest of the run; an empty slot keeps its spot too (it takes a moved machine's old
+   * spot in a swap). See sim/rearrange.ts.
+   */
+  slotPos?: (Vec2 | null)[];
   /** Gear Tree: every buy, upgrade and sale (what, the coming day, who, the cash change). */
   /** Gear G8: an open co-op proposal for a big buy/sell (night only; lapses at opening). */
   gearVote?: GearVote;
@@ -950,6 +972,10 @@ export type PlayerInput =
   | { kind: 'gear'; playerId: PlayerId; action: 'buy'; gear: GearId; /** FB2 C9: an add-on wand bought with it (E3: weak; E4: weak or strong). */ wand?: AddOnWand }
   /** FB2 C9: add a wand to (or upgrade the wand on) the espresso machine `station` (its station id). Night only, people only. */
   | { kind: 'wand'; playerId: PlayerId; station: string; wand: AddOnWand }
+  /** FB2 C10: in the morning's pre-open, set the movable station `station` (a station id; a twin moves its machine) down on tile `to`. People only. */
+  | { kind: 'moveStation'; playerId: PlayerId; station: string; to: Vec2 }
+  /** FB2 C10: the host ends the pre-open now. */
+  | { kind: 'openDoors'; playerId: PlayerId }
   | { kind: 'gear'; playerId: PlayerId; action: 'sell'; index: number }
   | { kind: 'gear'; playerId: PlayerId; action: 'vote'; yes: boolean }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }

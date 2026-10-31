@@ -566,10 +566,12 @@ describe('FB2 C9: the planner and saves', () => {
   it(`saves from before snapshot ${SNAPSHOT_VERSION} are turned away; a current one loads`, () => {
     const storage = memoryStorage();
     const s = gearRun('stand');
-    storage.setItem('cafetycoon.run', JSON.stringify({ version: 28, state: s }));
-    expect(createSnapshotStore(storage).load()).toBeNull();
+    for (const version of [28, 29]) {
+      storage.setItem('cafetycoon.run', JSON.stringify({ version, state: s }));
+      expect(createSnapshotStore(storage).load()).toBeNull();
+    }
     createSnapshotStore(storage).save(s);
     expect(createSnapshotStore(storage).load()?.gear).toBe(true);
-    expect(SNAPSHOT_VERSION).toBe(29);
+    expect(SNAPSHOT_VERSION).toBe(30); // FB2 C10: slotPos, preOpenUntil
   });
 });

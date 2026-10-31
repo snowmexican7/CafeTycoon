@@ -55,6 +55,7 @@ import { applyDevPause, topUpDevCash } from './dev';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
 import { setLook } from './look';
+import { applyMoveStation, applyOpenDoors, inPreOpen, preOpenReady, stepPreOpen } from './rearrange';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -130,7 +131,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     }
     case 'syrup':
-      applySyrupInput(s, input); // FB2 B8
+      if (!inPreOpen(s)) applySyrupInput(s, input); // FB2 B8 (FB2 C10: nothing is used in the pre-open)
       break;
     case 'secret':
       if (s.phase === 'day' || s.phase === 'closing' || s.phase === 'night') unlockSecret(s, input.playerId, input.code);
@@ -144,8 +145,17 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     }
     case 'restock':
-    case 'ready':
       applyNightInput(s, input);
+      break;
+    case 'ready':
+      if (inPreOpen(s)) preOpenReady(s, input.playerId); // FB2 C10: Ready in the pre-open opens the doors once everyone is
+      else applyNightInput(s, input);
+      break;
+    case 'moveStation':
+      applyMoveStation(s, input);
+      break;
+    case 'openDoors':
+      applyOpenDoors(s, input);
       break;
     case 'menu':
       applyMenuInput(s, input);
@@ -339,7 +349,8 @@ export function step(state: GameState, inputs: PlayerInput[]): GameState {
       stepNight(s);
       break;
     case 'day':
-      stepDay(s, true);
+      if (inPreOpen(s)) stepPreOpen(s); // FB2 C10: doors shut, the clock stands still, stations can move
+      else stepDay(s, true);
       break;
     case 'closing':
       stepClosing(s);

@@ -7,6 +7,7 @@ import { computeModifiers, resolveGamble } from './effects';
 import { rngNext } from './rng';
 import { tuneRadio } from './events';
 import { startDay } from './run';
+import { beginPreOpen } from './rearrange';
 import { TICK_RATE, secondsToTicks } from './constants';
 import { unlockDrink } from './unlocks';
 import { packsThatFit } from './fridge';
@@ -176,25 +177,32 @@ function nudgeGrow(state: GameState): void {
   emitLog(state, 'grow.affordable', { tier });
 }
 
+/** The night ends: the doors open for the day (FB2 C10: on a Gear morning, after the pre-open). */
+function openShop(state: GameState): GameState {
+  startDay(state);
+  beginPreOpen(state);
+  return state;
+}
+
 export function stepNight(state: GameState): GameState {
   nudgeGrow(state);
   const connected = state.players.filter((p) => p.connected && !p.bot);
   const readyConnected = connected.filter((p) => state.ready.includes(p.id)).length;
   const everyoneReady = connected.length > 0 && readyConnected === connected.length;
   if (state.settings.nightLengthSec === 0) {
-    if (everyoneReady) return startDay(state);
+    if (everyoneReady) return openShop(state);
     if (state.devPaused) return state; // R4 a: no last call while the host holds the night
     if (state.lastCall === undefined && (connected.length === 0 || readyConnected * 2 > connected.length)) {
       state.lastCall = secondsToTicks(LAST_CALL_SECONDS);
     }
     if (state.lastCall !== undefined) {
       state.lastCall -= 1;
-      if (state.lastCall <= 0) return startDay(state);
+      if (state.lastCall <= 0) return openShop(state);
     }
     return state;
   }
   if (!state.devPaused) state.phaseTicksLeft -= 1; // R4 a: a paused dev night holds still (Ready still opens the shop)
-  if (state.phaseTicksLeft <= 0 || everyoneReady) return startDay(state);
+  if (state.phaseTicksLeft <= 0 || everyoneReady) return openShop(state);
   return state;
 }
 
