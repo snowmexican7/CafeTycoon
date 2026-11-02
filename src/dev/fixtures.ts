@@ -1078,6 +1078,56 @@ const FIXTURES: Record<string, Fixture> = {
       [1.2, (s) => emit(s, 'review.post', { customer: 12, drink: 'espresso', sentiment: 'good', reason: 'great', stars: 5, at: s.tick, name: '@brewtus', text: 'Got my espresso before I finished my sentence. Wizardry.' })],
     ],
   },
+  /** FB2 B6 leftovers: office phone ringing with a countdown (Gear café, day 3). */
+  officePhone: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 3);
+      s.day = 3;
+      const dayTicks = secondsToTicks(s.settings.dayLengthSec);
+      // mid-ring: ~6 s until they walk in
+      s.phaseTicksLeft = dayTicks - Math.round(0.08 * dayTicks);
+      const elapsed = dayTicks - s.phaseTicksLeft;
+      s.office = { day: 3, at: elapsed + secondsToTicks(6), called: true };
+      s.customers = [
+        {
+          id: 30,
+          drink: 'latte',
+          patienceLeft: 2000,
+          patienceMax: 2400,
+          order: 'combo',
+          items: [
+            { drink: 'latte', done: false, shots: 2, syrup: 'vanilla' },
+            { drink: 'cappuccino', done: true },
+            { drink: 'espresso', done: false, cold: true },
+          ],
+        },
+      ];
+    },
+    timeline: [
+      [0.5, (s) => emit(s, 'order.addon', { customer: 30, drink: 'latte' })],
+    ],
+  },
+  /** FB2 B6 leftovers: closing receipt with DayStats.office / officeExtra. */
+  officeReceipt: {
+    closing: true,
+    setup(s) {
+      s.gear = true;
+      s.today = {
+        ...s.today,
+        day: 3,
+        served: 26,
+        lost: 2,
+        sales: 132,
+        tips: 19,
+        rent: 40,
+        office: 'served',
+        officeExtra: 5,
+      };
+    },
+    timeline: [],
+  },
   /** FB2 C11: week-end rating card from weekRating(state). */
   weekRating: {
     weekEnd: true,

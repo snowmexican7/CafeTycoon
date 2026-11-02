@@ -340,19 +340,34 @@
 #hud .hud-checklist small { display: block; margin-top: 6px; font: 700 13px var(--font-body); color: var(--mint-dk); }
 @media (max-width: 1440px) { #hud .hud-checklist { width: 220px; padding: 8px 12px 8px 10px; } #hud .hud-checklist li { font-size: 13px; } }
 
-/* ui-3.5.1 (Round 4): stacked multi-drink tickets (B6 combos, office runs, groups): back sheets fan out behind, a ×N badge, a cup strip. */
+/* ui-3.5.1 / B6 leftovers: tall stacked tickets (combo, office, group) — named row + tick per drink. */
 #hud .ticket.stack-2 { box-shadow: 5px 5px 0 -1px #efe2cc, 5px 5px 0 1px #00000014, var(--sh-1); margin: 0 8px 6px 0; }
 #hud .ticket.stack-3 { box-shadow: 5px 5px 0 -1px #efe2cc, 5px 5px 0 1px #00000014, 10px 10px 0 -2px #e4d1b2, 10px 10px 0 0 #00000014, var(--sh-1); margin: 0 12px 10px 0; }
 #hud .ticket.stack.urgent { box-shadow: 0 0 0 3px var(--cherry), 6px 6px 0 1px #efe2cc, var(--sh-1); }
 #hud .ticket .stk-badge { position: absolute; top: -10px; right: -10px; min-width: 36px; height: 36px; padding: 0 8px; border-radius: 99px; background: var(--espresso, #3b2418); color: #fff;
   font: 800 19px/36px var(--font-display); text-align: center; box-shadow: 0 0 0 3px var(--foam), var(--sh-1); z-index: 2; }
-#hud .ticket .stk-list { grid-column: 1 / span 3; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
-#hud .ticket .stk-it { position: relative; width: 28px; height: 28px; border-radius: 8px; background: #f6ead7; display: grid; place-items: center; }
-#hud .ticket .stk-it.done { opacity: .45; }
-#hud .ticket .stk-it b { position: absolute; right: -4px; bottom: -4px; width: 16px; height: 16px; border-radius: 99px; background: var(--mint-dk, #2f8a5b); color: #fff; font: 800 11px/16px var(--font-body); text-align: center; }
-#hud .ticket .stk-nm { margin-left: 4px; font: 700 14px var(--font-body); color: var(--ink-soft); }
+#hud .ticket .stk-list { grid-column: 1 / span 3; display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+#hud .ticket .stk-nm { font: 700 13px var(--font-body); color: var(--ink-soft); }
+#hud .ticket .stk-it { display: grid; grid-template-columns: 28px minmax(0, 1fr) 22px; gap: 6px; align-items: center; min-height: 28px; padding: 3px 6px; border-radius: 10px; background: #f6ead7; }
+#hud .ticket .stk-it .stk-ic { display: grid; place-items: center; }
+#hud .ticket .stk-it .stk-lab { font: 700 14px/1.2 var(--font-display); min-width: 0; }
+#hud .ticket .stk-it .stk-lab small { font: 600 12px var(--font-body); color: var(--ink-soft); }
+#hud .ticket .stk-it .stk-tick { font: 800 14px/1 var(--font-body); color: var(--mint-dk, #2f8a5b); text-align: center; }
+#hud .ticket .stk-it.done { opacity: .55; }
+#hud .ticket .stk-it.done .stk-lab { text-decoration: line-through; text-decoration-color: rgba(0,0,0,.28); }
+#hud .ticket .stk-it.cold .stk-lab { color: #3d79b0; text-decoration: line-through; text-decoration-color: #3d79b088; }
 #hud .ticket.stack { padding-right: 34px; }
-#hud .ticket .stk-it { width: 32px; height: 32px; }
+
+/* FB2 B6 leftovers: office-run phone (countdown only; not the P4 branch Take/Refuse card). */
+#hud .hud-office { position: absolute; top: calc(var(--topbar) + 150px); left: 50%; transform: translateX(-50%); z-index: 4; pointer-events: none; display: flex; gap: 12px; align-items: center;
+  max-width: min(520px, 56vw); padding: 12px 16px; border-radius: 18px; background: #fffaf0; color: var(--ink); box-shadow: 0 0 0 3px #7cc49a, 0 12px 30px rgba(40,20,0,0.28); animation: hc-pop 0.3s ease-out; }
+#hud .hud-office[hidden] { display: none; }
+#hud .hud-office .ho-ring { font-size: 36px; animation: hc-shake 0.6s ease-in-out infinite; }
+#hud .hud-office .ho-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#hud .hud-office .ho-t small { font-size: 14px; font-weight: 700; color: #2f7a4c; }
+#hud .hud-office .ho-t b { font-size: 20px; }
+#hud .hud-office .ho-t span { font-size: 15px; opacity: 0.85; }
+@media (prefers-reduced-motion: reduce) { #hud .hud-office, #hud .hud-office .ho-ring { animation: none; } }
 
 /* ui-3.7.1: the day Restock button and its rush-delivery panel (non-modal: the floor keeps playing behind it). */
 #hud .hud-restock { cursor: pointer; border: 0; color: var(--ink); gap: 8px; }

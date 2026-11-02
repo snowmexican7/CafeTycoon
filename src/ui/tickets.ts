@@ -98,20 +98,27 @@ export function ticketAsks(t: Pick<OrderTicket, 'shots' | 'syrup'>): string {
   return bits.join(' · ');
 }
 
-/** FB2 B8: asks for one drink on a stacked ticket's strip. */
-function itemAskTitle(it: { drink: DrinkId; done: boolean; shots?: 2; syrup?: Flavour }): string {
+/** FB2 B8 / B6 leftovers: asks for one drink on a tall ticket row. */
+function itemAskTitle(it: { drink: DrinkId; done: boolean; shots?: 2; syrup?: Flavour; cold?: true }): string {
   const asks = ticketAsks(it);
-  return `${DRINK_LABEL[it.drink]}${asks ? ` · ${asks}` : ''}${it.done ? ' · done' : ''}`;
+  const bits = [`${DRINK_LABEL[it.drink]}${asks ? ` · ${asks}` : ''}`];
+  if (it.cold) bits.push('cold');
+  if (it.done) bits.push('done');
+  return bits.join(' · ');
 }
 
-/** ui-3.5.1: the stacked ticket's strip: one small cup per drink, ticked once it's been taken. */
+/** B6 leftovers: tall combo / office / group ticket — one named row per drink with a tick. */
 function stackStrip(t: OrderTicket): string {
   const items = t.items ?? [];
   const done = items.filter((it) => it.done).length;
   const name = t.order ? STACK_NAME[t.order] : 'Group order';
-  return `<div class="stk-list" aria-label="${esc(name)}: ${done} of ${items.length} drinks done">${items
-    .map((it) => `<span class="stk-it${it.done ? ' done' : ''}" title="${esc(itemAskTitle(it))}">${itemIcon(it.drink, 24)}${it.shots === 2 ? '<i class="ask-d" title="Double shot">2×</i>' : ''}${it.syrup ? `<i class="ask-s" title="${esc(it.syrup)} syrup">${it.syrup === 'vanilla' ? 'V' : 'C'}</i>` : ''}${it.done ? '<b>✓</b>' : ''}</span>`)
-    .join('')}<span class="stk-nm">${esc(name)} · ${done}/${items.length}</span></div>`;
+  return `<div class="stk-list" aria-label="${esc(name)}: ${done} of ${items.length} drinks done"><span class="stk-nm">${esc(name)} · ${done}/${items.length}</span>${items
+    .map((it) => {
+      const asks = ticketAsks(it);
+      const cls = ['stk-it', it.done ? 'done' : '', it.cold ? 'cold' : ''].filter(Boolean).join(' ');
+      return `<div class="${cls}" title="${esc(itemAskTitle(it))}"><span class="stk-ic">${itemIcon(it.drink, 22)}</span><span class="stk-lab">${esc(DRINK_LABEL[it.drink])}${asks ? ` <small>${esc(asks)}</small>` : ''}</span><span class="stk-tick" aria-hidden="true">${it.done ? '✓' : ''}</span></div>`;
+    })
+    .join('')}</div>`;
 }
 
 const tilt = (id: number) => (((id * 37) % 7) - 3) * 0.3;

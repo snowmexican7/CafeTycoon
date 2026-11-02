@@ -39,6 +39,8 @@ export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: 
             ${vm.wages ? `<div class="line wages"><span>Crew wages</span><span class="neg">−${esc(vm.wages)}</span></div>` : ''}
             ${vm.hireWages ? `<div class="line wages sub"><span>&nbsp;&nbsp;incl. specialists</span><span>${esc(vm.hireWages)}</span></div>` : ''}
             ${vm.priceWalkouts ? `<div class="line chaos"><span>Left over the price</span><span>${vm.priceWalkouts}</span></div>` : ''}
+            ${vm.office === 'served' ? `<div class="line"><span>Office run</span><span>${vm.officeExtra ? `served · ${vm.officeExtra} extra cups` : 'served'}</span></div>` : ''}
+            ${vm.office === 'lost' ? `<div class="line chaos"><span>Office run</span><span>lost</span></div>` : ''}
             ${vm.events ? `<div class="line chaos"><span>Today: ${esc(vm.events.join(', '))}</span><span></span></div>` : ''}
             ${vm.inspection ? `<div class="line inspection ${vm.inspection}"><span>Health inspection</span><span>${vm.inspection === 'pass' ? 'PASSED' : `FAILED${vm.fines ? ` −${esc(vm.fines)}` : ''}`}</span></div>` : ''}
             ${vm.challenges ? vm.challenges.map((c) => `<div class="line challenge"><span>✓ ${esc(c.label)}</span><span class="pos">+${esc(c.reward)}</span></div>`).join('') : ''}

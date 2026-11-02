@@ -2,7 +2,7 @@ import { ECONOMY } from '../data/economy';
 import type { DrinkId, SupplyId } from '../sim/types';
 import { esc, hide, show } from './dom';
 import { coin, itemIcon, jar, logoCup, pauseGlyph, speakerGlyph, stars, sun, SUPPLY_COLOR } from './icons';
-import { callKey, checklistKey, crewKey, handKey, ITEM_LABEL, ordersKey, type CallVM, type ClosingListVM, type HudLive } from './live';
+import { callKey, checklistKey, crewKey, handKey, ITEM_LABEL, officePhoneKey, ordersKey, type CallVM, type ClosingListVM, type HudLive, type OfficePhoneVM } from './live';
 import { loadRecipeHints, MAX_TICKETS, pruneOpen, stepsOpen, ticketsHtml, ticketsKey, toggleTicket, URGENT as TICKET_URGENT, type RecipeHints, type TicketOpts } from './tickets';
 import { DRINK_LABEL } from './tickets';
 import { mountCloseEarly } from './closeEarly';
@@ -94,6 +94,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <div class="hud-events" aria-live="polite"></div>
     <div class="hud-eventcard" role="status" hidden></div>
     <div class="hud-call" role="alert" hidden></div>
+    <div class="hud-office" role="status" hidden></div>
     <div class="hud-preopen" role="region" aria-label="Morning rearrange" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
     <div class="hud-checklist" role="status" hidden></div>
@@ -185,6 +186,9 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   // P4 B6: the second shop's phone call.
   const callEl = $<HTMLElement>('.hud-call');
   let lastCall = '';
+  // FB2 B6 leftovers: office-run phone (countdown only).
+  const officeEl = $<HTMLElement>('.hud-office');
+  let lastOffice = '';
   callEl.addEventListener('pointerdown', (ev) => {
     const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-take]');
     if (!b) return;
@@ -212,6 +216,13 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     lastCall = key;
     callEl.hidden = !c;
     if (c) callEl.innerHTML = callHtml(c);
+  }
+  function renderOfficePhone(c: OfficePhoneVM | undefined): void {
+    const key = officePhoneKey(c);
+    if (key === lastOffice) return;
+    lastOffice = key;
+    officeEl.hidden = !c;
+    if (c) officeEl.innerHTML = officePhoneHtml(c);
   }
 
   let toastTimer: ReturnType<typeof setTimeout> | null = null;
@@ -603,6 +614,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       closeEarly.render(live?.closeEarly);
       preOpen.render(live?.preOpen);
       renderCall(live?.call);
+      renderOfficePhone(live?.officePhone);
       renderChecklist(live?.checklist);
     },
     toast(lines) {
@@ -693,4 +705,9 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
 /** P4 B6: the ringing phone card (pure, for tests). */
 export function callHtml(c: CallVM): string {
   return `<div class="hc-ring" aria-hidden="true">📞</div><div class="hc-t"><small>🏪 ${esc(c.where)} is calling · ${c.secsLeft}s</small><b>${esc(c.title)}</b><span>${esc(c.detail)}</span></div><div class="hc-b"><button class="btn primary" type="button" tabindex="-1" data-take="1">${esc(c.yes)}</button><button class="btn ghost" type="button" tabindex="-1" data-take="0">${esc(c.no)}</button></div>`;
+}
+
+/** FB2 B6 leftovers: office-run phone card (pure, for tests). */
+export function officePhoneHtml(c: OfficePhoneVM): string {
+  return `<div class="ho-ring" aria-hidden="true">📞</div><div class="ho-t"><small>Office run · ${c.secsLeft}s</small><b>They're on their way</b><span>A big order is ringing in. Get a few drinks ready.</span></div>`;
 }

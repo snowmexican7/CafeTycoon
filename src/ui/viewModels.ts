@@ -285,7 +285,7 @@ export interface NightVM {
   branch?: BranchVM;
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; wages?: string; hireWages?: string; priceWalkouts?: number; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; wages?: string; hireWages?: string; priceWalkouts?: number; office?: 'served' | 'lost'; officeExtra?: number; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -728,6 +728,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           ...(last.wages ? { wages: money(last.wages) } : {}),
           ...(last.hireWages ? { hireWages: money(last.hireWages) } : {}),
           ...(last.priceWalkouts ? { priceWalkouts: last.priceWalkouts } : {}),
+          ...(last.office ? { office: last.office } : {}),
+          ...(last.officeExtra ? { officeExtra: last.officeExtra } : {}),
           ...(last.ad ? { ad: `${ADS[last.ad.id].icon} ${ADS[last.ad.id].name} ad ${last.ad.outcome === 'viral' ? 'went viral' : last.ad.outcome === 'ok' ? 'did fine' : 'flopped'}` } : {}),
           ...(last.sigServed ? { sigSold: last.sigServed, sigBonus: money(last.sigBonus ?? 0) } : {}),
           ...(last.combosFound?.length ? {
@@ -849,6 +851,10 @@ export interface ClosingVM {
   hireWages?: string;
   /** Round 3 / review: walk-outs that left over price (`DayStats.priceWalkouts`). */
   priceWalkouts?: number;
+  /** FB2 B6 leftovers: how today's office run ended (`DayStats.office`). */
+  office?: 'served' | 'lost';
+  /** FB2 B6 leftovers: cups beyond the first on a served office run (`DayStats.officeExtra`). */
+  officeExtra?: number;
   profit: string;
   reputationBefore: string;
   reputationAfter: string;
@@ -896,6 +902,8 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     ...(d.wages ? { wages: money(d.wages) } : {}),
     ...(d.hireWages ? { hireWages: money(d.hireWages) } : {}),
     ...(d.priceWalkouts ? { priceWalkouts: d.priceWalkouts } : {}),
+    ...(d.office ? { office: d.office } : {}),
+    ...(d.officeExtra ? { officeExtra: d.officeExtra } : {}),
     profit: money(profitOf(d)),
     reputationBefore: stars(before.reputation),
     reputationAfter: stars(after.reputation),

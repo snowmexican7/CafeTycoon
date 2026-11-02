@@ -480,6 +480,8 @@ function receiptBody(vm: NightVM, day: number): string {
     ${line('Sales', esc(t.sales))}${line('Tips', esc(t.tips))}${t.familyTips ? t.familyTips.map((f) => line(`&nbsp;&nbsp;${esc(f.label)}`, esc(f.amount), 'sub fam-tip')).join('') : ''}${line('Rent', `<span class="neg">−${esc(t.rent)}</span>`)}${t.wages ? line('Crew wages', `<span class="neg">−${esc(t.wages)}</span>`) : ''}
     ${t.hireWages ? line('&nbsp;&nbsp;incl. specialists', esc(t.hireWages), 'sub') : ''}
     ${t.priceWalkouts ? line('Left over the price', String(t.priceWalkouts)) : ''}
+    ${t.office === 'served' ? line('Office run', t.officeExtra ? `served · ${t.officeExtra} extra cups` : 'served') : ''}
+    ${t.office === 'lost' ? line('Office run', 'lost') : ''}
     ${t.bonus ? line('Bonuses', `+${esc(t.bonus)}`) : ''}
     ${t.combos ? t.combos.map((c) => line(`New combo: ${TWIST_INFO[c.twist].icon} ${esc(TWIST_INFO[c.twist].name)} ${esc(DRINK_INFO[c.drink].short.toLowerCase())}`, `<span class="stars">${starRow(c.stars)}</span>`, 'combo')).join('') : ''}
     ${t.ad ? line(esc(t.ad), '') : ''}

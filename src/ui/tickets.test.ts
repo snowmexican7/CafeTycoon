@@ -87,17 +87,21 @@ describe('FB1 WP2 order tickets', () => {
   });
 });
 
-describe('ui-3.5.1: stacked multi-drink tickets', () => {
+describe('ui-3.5.1 / B6 leftovers: tall multi-drink tickets', () => {
   const opts = { mode: 'off' as const, open: new Set<number>(), day: 3, holding: null, prices: {} };
-  const combo = { id: 7, drink: 'latte', patience: 0.9, order: 'office', items: [{ drink: 'espresso', done: true }, { drink: 'latte', done: false }, { drink: 'drip', done: false }] } as OrderTicket;
-  it('one ticket fans out with a ×N badge for the drinks still to make, and ticks the done ones', () => {
+  const combo = { id: 7, drink: 'latte', patience: 0.9, order: 'office', items: [{ drink: 'espresso', done: true }, { drink: 'latte', done: false }, { drink: 'drip', done: false, cold: true }] } as OrderTicket;
+  it('one ticket fans out with a ×N badge and a tall named row per drink', () => {
     const h = ticketsHtml([combo], opts);
     expect(stackCount(combo)).toBe(2);
     expect(h).toContain('stack stack-2');
     expect(h).toContain('>×2<');
     expect(h).toContain('Office run · 1/3');
     expect(h.match(/class="stk-it/g)?.length).toBe(3);
-    expect(h.match(/stk-it done/g)?.length).toBe(1);
+    expect(h).toContain('stk-it done');
+    expect(h).toContain('stk-lab');
+    expect(h).toContain('Espresso');
+    expect(h).toContain('stk-tick');
+    expect(h).toContain('stk-it cold');
   });
   it('a one-drink order has no badge or strip', () => {
     const h = ticketsHtml(orders(1), opts);

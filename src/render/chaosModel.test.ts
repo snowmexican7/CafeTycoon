@@ -139,6 +139,17 @@ describe('Round 3 line + ring-up cues', () => {
     expect((c[0] as { text: string }).text).toBe(COMPLAIN_LINE);
   });
 
+  it('B6 leftovers: order.addon pops "…and a latte for my friend"', async () => {
+    const { addonAskLine } = await import('./chaosModel');
+    expect(addonAskLine('latte')).toBe('…and a latte for my friend');
+    const a = run();
+    a.customers = [{ id: 5, drink: 'latte', patienceLeft: 900, patienceMax: 1200 }];
+    const b = withLog(a, { kind: 'order.addon', data: { customer: 5, drink: 'latte' } });
+    const c = chaosBursts(a, b, a.nextLogSeq - 1).bursts.filter((x) => x.kind === 'complain');
+    expect(c).toHaveLength(1);
+    expect((c[0] as { text: string }).text).toBe('…and a latte for my friend');
+  });
+
   it('rolls a tumbleweed on a quiet line.leave', () => {
     const a = run();
     const b = withLog(a, { kind: 'line.leave', data: { customer: 99, quiet: true } });
