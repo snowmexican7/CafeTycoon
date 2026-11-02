@@ -41,8 +41,9 @@ describe('Review Block 6: morning note + idle hints + tags', () => {
     expect(NOTE_DISMISS_MS).toBe(8000);
   });
 
-  it('bot tags drop the debug "· bot" suffix', () => {
-    expect(botTag('Bo')).toBe('Bo');
+  it('bot tags drop the debug "· bot" suffix and keep a small robot mark', () => {
+    expect(botTag('Bo')).toBe('Bo 🤖');
+    expect(botTag('Bo')).not.toContain('· bot');
   });
 
   it('busy machines and missing cups get specific idle copy', () => {

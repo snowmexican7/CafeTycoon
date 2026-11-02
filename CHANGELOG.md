@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- Night board: the café phone sits beside Stock so the first posts clear the fold; overlapping milk / foam / syrup floaters stagger; syrup hints show "1" and "2" as separate chips; tomorrow's customer guess matches the brief cap; far rearrange outlines dim; bot name tags keep a small robot mark.
+
 ## 3.8.0 — 2026-10-31 · Hand-made lattes, a morning rearrange and the café feed
 
 Cursor's six-PR run (blocks 1–6 of `docs/CURSOR_PROMPT_NEXT.md`), reviewed, fixed up and merged by Grok.

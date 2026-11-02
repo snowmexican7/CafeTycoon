@@ -416,7 +416,10 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     const { go, title, detail, key: hintKey } = live.hint;
     el.hint.classList.toggle('idle', !go);
     el.hint.hidden = !title;
-    el.hint.innerHTML = `<span class="key ${go ? 'go' : ''}">${esc(hintKey ?? 'E')}</span><div class="t">${esc(title)}<small>${esc(detail)}</small></div>`;
+    // ui-3.8.0 polish: "1|2" → two chips so the syrup keys don't read as "12".
+    const keys = (hintKey ?? 'E').split('|').filter(Boolean);
+    const keyHtml = keys.map((k) => `<span class="key ${go ? 'go' : ''}">${esc(k)}</span>`).join('');
+    el.hint.innerHTML = `${keyHtml}<div class="t">${esc(title)}<small>${esc(detail)}</small></div>`;
     // FB2 B8: syrup picker at the rack (1 vanilla · 2 caramel) when add would succeed.
     const pick = live.syrupPicker;
     syrupOpen = !!pick;

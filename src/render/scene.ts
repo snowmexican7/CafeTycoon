@@ -78,6 +78,8 @@ export class Scene {
   private crewState: GameState | null = null;
   private crewSeq = -1;
   private readonly crewMem = newCrewMemory();
+  /** ui-3.8.0 polish: how many note floaters already rose over each station this burst batch. */
+  private readonly noteLane = new Map<string, number>();
   /** FB2 B7: tray refuse / cue cursor (same idea as crewSeq; shared log, separate so a miss never eats the other). */
   private traySeq = -1;
 
@@ -191,9 +193,9 @@ export class Scene {
     this.localId = id;
   }
 
-  /** FB2 C10: ghost outlines for valid set-down tiles (null clears). */
-  setGhostSpots(spots: readonly Vec2[] | null): void {
-    this.ghosts.setSpots(spots);
+  /** FB2 C10: ghost outlines for valid set-down tiles (null clears). `from` dims far spots. */
+  setGhostSpots(spots: readonly Vec2[] | null, from?: Vec2 | null): void {
+    this.ghosts.setSpots(spots, from);
   }
 
   update(view: RenderView): void {
@@ -274,6 +276,8 @@ export class Scene {
       const tray = trayBursts(this.crewState, state, this.traySeq);
       this.traySeq = tray.lastSeq;
       this.crewState = state;
+      // ui-3.8.0 polish: stagger note floaters that share a station (milk / foam / syrup no longer stack).
+      this.noteLane.clear();
       for (const b of bursts) this.crewBurst(b, state, view.baristaPositions);
       for (const b of tray.bursts) this.trayBurst(b);
     }
@@ -347,8 +351,11 @@ export class Scene {
     } else if (b.kind === 'note') {
       // 3.3.3 (FB2 A3): sink, pot and leak lines rise over the fixture they're about
       const st = b.at ? state.stations.find((s) => s.id === b.at) : undefined;
+      const lane = b.at ?? (st ? st.id : '_mid');
+      const stack = this.noteLane.get(lane) ?? 0;
+      this.noteLane.set(lane, stack + 1);
       const x = st ? sx(st.pos.x) : SCENE_WIDTH / 2;
-      const y = st ? sy(st.pos.y) - 120 : sy(2) + 10;
+      const y = (st ? sy(st.pos.y) - 120 : sy(2) + 10) - stack * 28;
       this.fx.spawn(b.text, Math.max(150, Math.min(SCENE_WIDTH - 150, x)), y, b.tone === 'good' ? 0xa8f0d2 : b.tone === 'warn' ? 0xffd36b : 0xff8a7a, 20, 3);
     } else if (b.kind === 'steep') {
       if (b.cups > 0) {

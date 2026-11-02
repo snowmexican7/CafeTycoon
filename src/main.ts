@@ -738,7 +738,7 @@ async function main(): Promise<void> {
     const t = carryTarget(state, playerId);
     if (!t) return true; // swallowed: E/Z do nothing else during pre-open
     stationCarry = t;
-    renderer.setGhostSpots(t.spots);
+    renderer.setGhostSpots(t.spots, mePlayer.pos);
     return true;
   }
 

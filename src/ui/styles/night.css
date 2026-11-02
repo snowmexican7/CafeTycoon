@@ -384,6 +384,10 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .tn-grid .st { order: 0; }
 #night .tn-grid .al-card { order: 2; }
 #night .tn-grid .dy { order: 3; }
+/* ui-3.8.0 polish: with a café feed, Stock + day card share a row so the phone sits above the fold. */
+#night .tn-grid:has(.feed-phone) .st { grid-column: 1; }
+#night .tn-grid:has(.feed-phone) .dy { grid-column: 2; order: 0; align-self: start; }
+#night .tn-grid:has(.feed-phone) .al-card { grid-column: 1 / -1; order: 2; }
 #night .hire-row .hires { display: flex; flex-wrap: wrap; gap: 10px; width: 100%; }
 #night .hire-row .hire { flex: 1 1 220px; min-height: 64px; }
 #night .dc-strat { display: block; font: 700 12px var(--font-display); color: #5a3f96; margin: 2px 0 4px; }
@@ -413,19 +417,19 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 .night-bubble.in { animation: nb-drop .3s ease-out; }
 @keyframes nb-drop { from { transform: translate(-50%, -14px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
 
-/* FB2 C11: night phone feed (dayReviews → posts, fans, fansDelta). Lives inside the day card. */
-#night .tn-card.dy .feed-phone { width: 100%; margin-top: 4px; }
+/* FB2 C11 / ui-3.8.0 polish: night phone feed first in the day card (beside Stock) so two posts clear the fold. */
+#night .tn-card.dy .feed-phone { width: 100%; margin: 0 0 10px; }
 #night .feed-phone {
-  display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 0;
-  max-width: 100%; background: #2a2438; border-radius: 18px; padding: 8px 8px 10px 0;
+  display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 0;
+  max-width: 100%; background: #2a2438; border-radius: 16px; padding: 6px 6px 8px 0;
   box-shadow: 0 8px 18px rgba(30, 18, 40, .22), inset 0 0 0 2px #4a3f62;
   align-self: stretch;
 }
-#night .feed-phone .ff-bezel { display: flex; justify-content: center; padding-top: 14px; }
-#night .feed-phone .ff-bezel i { width: 3px; height: 28px; border-radius: 99px; background: #4a3f62; }
+#night .feed-phone .ff-bezel { display: flex; justify-content: center; padding-top: 10px; }
+#night .feed-phone .ff-bezel i { width: 3px; height: 22px; border-radius: 99px; background: #4a3f62; }
 #night .feed-phone .ff-screen {
-  background: #fffaf2; border-radius: 14px; padding: 8px 10px 10px; min-width: 0;
-  display: flex; flex-direction: column; gap: 6px; max-height: min(200px, 26vh);
+  background: #fffaf2; border-radius: 12px; padding: 6px 8px 8px; min-width: 0;
+  display: flex; flex-direction: column; gap: 4px; max-height: min(260px, 34vh);
 }
 #night .feed-phone .ff-bar { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 #night .feed-phone .ff-bar b { font: 700 var(--fs-m) var(--font-display); color: var(--ink); }
@@ -448,8 +452,9 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .fp-empty { margin: 0; font: 600 var(--fs-s) var(--font-display); color: var(--ink-soft); }
 @keyframes fp-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (max-height: 820px) {
-  #night .feed-phone .ff-screen { max-height: min(150px, 20vh); }
-  #night .fp p { font-size: 13px; }
-  #night .fp { padding: 6px 8px; }
+  #night .feed-phone .ff-screen { max-height: min(210px, 30vh); }
+  #night .fp p { font-size: 13px; line-height: 1.25; }
+  #night .fp { padding: 5px 8px; }
+  #night .ff-fans { padding: 4px 8px; }
 }
 @media (prefers-reduced-motion: reduce) { #night .fp { animation: none; } }

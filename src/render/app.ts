@@ -17,8 +17,8 @@ export async function createRenderer(
 ): Promise<{
   update(view: RenderView): void;
   setLocalPlayer(id: PlayerId | null): void;
-  /** FB2 C10: ghost outlines for valid set-down tiles (null clears). */
-  setGhostSpots(spots: readonly Vec2[] | null): void;
+  /** FB2 C10: ghost outlines for valid set-down tiles (null clears). `from` dims far spots. */
+  setGhostSpots(spots: readonly Vec2[] | null, from?: Vec2 | null): void;
   getJuice(): { vibe: number; combo: number; label: string; tone: 'high' | 'mid' | 'low' };
   destroy(): void;
 }> {
@@ -55,7 +55,7 @@ export async function createRenderer(
   return {
     update: (view) => scene.update(view),
     setLocalPlayer: (id) => scene.setLocalPlayer(id),
-    setGhostSpots: (spots) => scene.setGhostSpots(spots),
+    setGhostSpots: (spots, from) => scene.setGhostSpots(spots, from),
     getJuice: () => scene.getJuice(),
     destroy: () => {
       window.removeEventListener('resize', fit);
