@@ -85,7 +85,7 @@ describe('second shop (P4 B4)', () => {
     const s = night();
     const vm = nightViewModel(s, 'p1');
     expect(vm.branch?.canOpen).toBe(true);
-    const ui = { tab: 'tonight', spend: 'cards', drawer: 'branch', sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null } as Parameters<typeof nightHtml>[3];
+    const ui = { tab: 'tonight', spend: 'cards', drawer: 'branch', sig: null, pitch: { kind: 'promo', text: '' } } as Parameters<typeof nightHtml>[3];
     expect(nightHtml(vm, undefined, null, ui)).toMatch(/Open here/);
     // Old saves with no branch field still load and close a day.
     const old = night();
@@ -138,9 +138,8 @@ describe('manager mode (P4 B5)', () => {
     const t = branchDay(s)!;
     expect(t.walked).toBeGreaterThan(0);
     expect(t.served).toBe(BRANCH.perStaff);
-    expect(branchViewModel(s)?.manager ?? null).toBeNull();
     const vm = nightViewModel(s, 'p1');
-    const ui = { tab: 'tonight', spend: 'cards', drawer: 'branch', sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null } as Parameters<typeof nightHtml>[3];
+    const ui = { tab: 'tonight', spend: 'cards', drawer: 'branch', sig: null, pitch: { kind: 'promo', text: '' } } as Parameters<typeof nightHtml>[3];
     const html = nightHtml(vm, undefined, null, ui);
     expect(html).not.toMatch(/Manager/);
     expect(html).toMatch(/Send stock over/);

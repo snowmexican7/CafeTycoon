@@ -167,7 +167,7 @@ describe('P3 B15: hired staff and wages', () => {
   });
 
   it('the night board shows the staff row with hire and let-go buttons (Gear only)', () => {
-    const ui = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, slotSel: null } as NightUiState;
+    const ui = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' } } as NightUiState;
     const s = gearRun();
     const html = nightHtml(nightViewModel(s, 'p1'), nightExtras(s, 'p1'), null, ui);
     expect(html).toContain('Hired staff');
