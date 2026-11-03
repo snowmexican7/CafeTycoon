@@ -14,6 +14,7 @@ import { slotCount } from '../sim/slots';
 import { FRIDGES, type FridgeId } from '../data/fridges';
 import { fridgeCards, fridgeGear } from '../sim/fridge';
 import type { DrinkId, GameState, PlayerId } from '../sim/types';
+import { gearLayoutBase, layoutRefuseLine, type GearLayoutBase } from './nightLayout';
 
 export type GearTierState = 'owned' | 'another' | 'passed' | 'buy' | 'upgrade' | 'poor' | 'noSlot' | 'needs';
 
@@ -90,6 +91,10 @@ export interface GearVM {
   wandNote: string | null;
   /** G4g: co-op pick-night hint (absent solo or after day 1). */
   coopHint?: string;
+  /** Round 5: top-down bar map for rearranging (selection is local UI state). */
+  layout: GearLayoutBase;
+  /** Round 5: last station.refuse for me, if nothing was placed since. */
+  layoutRefuse?: string;
 }
 
 export interface LevelUpVM { drink: DrinkId; name: string; icon: string; from: string; served: number; count: number; learned: boolean; also?: string; /** G6c: missing gear, e.g. "needs a Sylvia or better". */ needs?: string }
@@ -224,8 +229,26 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
       ? 'No steam wand yet: lattes and other milk drinks need one. Add one below.'
       : 'This machine has no steam wand, so no lattes yet. Sylvia the Prosumer or better takes one.'
     : null;
-  return { ...(fridge ? { fridge } : {}), wands, wandNote, pickNight: state.day <= 1, slots, trees, freeSlots, note, notebook, ...(crowd ? { crowd } : {}), levelUps: levelUpVM(state), ...(coopHint ? { coopHint } : {}),
-    ...(vote ? { vote } : {}), ...(state.gearVoteLast ? { voteLast: state.gearVoteLast } : {}), ...(voteRule ? { voteRule } : {}) };
+  const refuse = layoutRefuseLine(state, me);
+  return {
+    ...(fridge ? { fridge } : {}),
+    wands,
+    wandNote,
+    pickNight: state.day <= 1,
+    slots,
+    trees,
+    freeSlots,
+    note,
+    notebook,
+    ...(crowd ? { crowd } : {}),
+    levelUps: levelUpVM(state),
+    ...(coopHint ? { coopHint } : {}),
+    ...(vote ? { vote } : {}),
+    ...(state.gearVoteLast ? { voteLast: state.gearVoteLast } : {}),
+    ...(voteRule ? { voteRule } : {}),
+    layout: gearLayoutBase(state),
+    ...(refuse ? { layoutRefuse: refuse } : {}),
+  };
 }
 
 /** ui-3.4.1 (FB2 A4, from sim/fridge.ts fridgeCards): the fridge the shop has, and the one card on offer tonight. */

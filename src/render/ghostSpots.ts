@@ -1,6 +1,6 @@
 /**
- * FB2 C10: ghost outlines for valid set-down tiles while carrying a machine in the pre-open.
- * Pure model + a thin Pixi layer; spots are set once on pickup (not recomputed every frame).
+ * FB2 C10 ghost outlines (day-side pre-open carry removed in Round 5; the night Layout map is HTML).
+ * Kept on the scene so setGhostSpots(null) stays a no-op API for any leftover callers.
  */
 import { Container, Graphics } from 'pixi.js';
 import type { Vec2 } from '../sim/types';

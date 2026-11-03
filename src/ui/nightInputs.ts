@@ -34,5 +34,7 @@ export function nightInputHandlers(send: (input: PlayerInput) => void, me: () =>
     onCondimentBox: () => send({ kind: 'condimentBox', playerId: me(), boxes: 1 }),
     // FB1 WP6: a crew tip chip sends its advice's input as the local player.
     onTip: (input) => send({ ...input, playerId: me() } as PlayerInput),
+    // Round 5: Gear shop Layout map sends moveStation.
+    onMoveStation: (station, to) => send({ kind: 'moveStation', playerId: me(), station, to }),
   };
 }

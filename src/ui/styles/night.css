@@ -344,6 +344,32 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
 #night .br-stock-h { display: flex; flex-direction: column; gap: 2px; } #night .br-stock-h small { font-size: 14px; opacity: 0.8; }
 #night .br-stock-btns { display: flex; flex-wrap: wrap; gap: 6px; } #night .br-stock-btns .btn { font-size: 15px; }
 
+/* Round 5: Gear shop Layout map (rearrange at night). */
+#night .gr-layout { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 8px; }
+#night .lay-map {
+  display: grid;
+  grid-template-columns: repeat(var(--lay-w), minmax(28px, 1fr));
+  grid-template-rows: repeat(var(--lay-h), minmax(28px, 36px));
+  gap: 3px;
+  max-width: min(560px, 100%);
+  align-self: flex-start;
+}
+#night .lay-cell {
+  all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  border-radius: 10px; font: 700 12px/1.1 var(--font-display); text-align: center; min-height: 36px;
+  background: #f3ebe0; color: var(--ink-soft); cursor: default;
+}
+#night .lay-cell.machine { background: #fff; color: var(--ink); box-shadow: 0 2px 0 #e2cfb2; cursor: pointer; }
+#night .lay-cell.machine:hover { transform: translateY(-1px); }
+#night .lay-cell.machine.sel { box-shadow: 0 0 0 3px var(--caramel), 0 2px 0 #e2cfb2; background: #fff8ee; }
+#night .lay-cell.fixture { background: #e8e0d4; color: #8a7a68; cursor: default; opacity: .85; }
+#night .lay-cell.spot { background: #dff3e4; box-shadow: inset 0 0 0 2px #6aa36f; cursor: pointer; }
+#night .lay-cell.spot:hover { background: #cfe9d6; }
+#night .lay-cell.focus { outline: 3px solid var(--sky); outline-offset: 1px; }
+#night .lay-cell span { padding: 2px 4px; pointer-events: none; }
+#night .lay-blurb { margin: 0; font: 600 var(--fs-s) var(--font-body); color: var(--ink-soft); max-width: 52ch; }
+#night .lay-refuse { margin: 0; font: 700 var(--fs-s) var(--font-body); color: #8f3b22; background: #fff0e4; border: 2px solid #f0b48f; border-radius: 10px; padding: 6px 12px; align-self: flex-start; }
+
 /* ui-3.4.1 (FB2 A4): the fridge panel in the Gear tab. */
 #night .gr-fridge { display: grid; grid-template-columns: 130px 1fr; gap: 10px; align-items: stretch; margin: 4px 0 6px; }
 #night .gr-fr-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; align-items: stretch; }

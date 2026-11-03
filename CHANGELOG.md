@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Rearranging moves to the night.** The morning pre-open (Ready / Open doors / Z·E carry) is gone — each Gear day opens with the doors open. On the Gear shop tab, a **Layout** map lets you click a machine and then a highlighted tile to move it (`moveStation`). Fixtures stay put. Refusal shows a short line on the map. (Round 5 block 5)
+
 ## 3.8.0 — 2026-10-31 · Hand-made lattes, a morning rearrange and the café feed
 
 Cursor's six-PR run (blocks 1–6 of `docs/CURSOR_PROMPT_NEXT.md`), reviewed, fixed up and merged by Grok.
