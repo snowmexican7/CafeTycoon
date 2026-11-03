@@ -1,7 +1,7 @@
 import { callFor } from '../sim/call';
 import { secondsToTicks } from '../sim/constants';
 import { judgePitch } from '../sim/pitch';
-import { gearStart } from '../sim/gear';
+import { applyGearInput, gearStart } from '../sim/gear';
 import { isPromoDay } from '../sim/rival';
 import { comboStars } from '../sim/taste';
 /**
@@ -613,6 +613,34 @@ const FIXTURES: Record<string, Fixture> = {
       ensureCounterSpots(s);
       s.supplies = { ...s.supplies, beans: 20, milk: 12, concentrate: 10, flavour: 6 };
       s.customers = [];
+    },
+    timeline: [],
+  },
+  /**
+   * Round 5 block 6: café day with a drip pot seated on the row above the till (default buy seat),
+   * Ana standing at it, a drip ticket waiting at pickup.
+   */
+  dripByTill: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 1);
+      gearStart(s); // empty Gear slots after the size change
+      s.cash = 220;
+      applyGearInput(s, { kind: 'gear', playerId: 'ana', action: 'buy', gear: 'd1' });
+      s.supplies = { ...s.supplies, beans: 20, milk: 12, concentrate: 8, flavour: 4 };
+      // Buy already unlocks drip; keep the menu honest so the side panel isn't empty.
+      if (!s.unlocked?.includes('drip')) s.unlocked = [...(s.unlocked ?? []), 'drip'];
+      s.menu.drip = true;
+      const drip = s.stations.find((x) => x.kind === 'drip' && !x.twin);
+      if (drip) {
+        drip.output = 'drip';
+        drip.potLeft = 3;
+        s.players[0]!.pos = { x: drip.pos.x, y: drip.pos.y + 1 };
+      }
+      s.customers = [
+        { id: 41, drink: 'drip', patienceLeft: 1100, patienceMax: 1400, stage: 'pickup', rungAt: s.tick },
+      ];
     },
     timeline: [],
   },

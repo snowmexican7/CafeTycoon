@@ -199,6 +199,14 @@ export function canSetDown(state: GameState, playerId: string, station: string, 
   return mover(state, playerId) !== undefined && setDownPlan(state, station, to) !== null;
 }
 
+/** Apply a planned set-down (no player / night gate). */
+function applyPlan(state: GameState, plan: Plan, stations: Station[]): void {
+  state.stations = stations;
+  storeSpots(state, plan.spots);
+  for (const x of state.players) settle(state, x);
+  replan(state);
+}
+
 /** The `moveStation` input (Gear night, people only). */
 export function applyMoveStation(state: GameState, input: Extract<PlayerInput, { kind: 'moveStation' }>): void {
   const p = mover(state, input.playerId);
@@ -207,12 +215,23 @@ export function applyMoveStation(state: GameState, input: Extract<PlayerInput, {
   if (!found) return emitLog(state, 'station.refuse', { by: p.id, station: input.station });
   const { slot, plan, stations } = found;
   const machine = groups(state)[slot][0];
-  state.stations = stations;
-  storeSpots(state, plan.spots);
-  for (const x of state.players) settle(state, x); // anyone standing where a machine landed steps off it
-  replan(state);
+  applyPlan(state, plan, stations);
   const swapped = plan.other >= 0 && groups(state)[plan.other].length > 0;
   emitLog(state, 'station.place', { by: p.id, station: machine.id, to: { ...plan.spots[slot] }, swapped });
+}
+
+/**
+ * Round 5 block 6: seat an already-built slot on `to` when the layout is no worse (no player gate).
+ * Used to put a newly bought drip pot by the till. False when the spot or the layout refuses.
+ */
+export function seatSlotAt(state: GameState, slot: number, to: Vec2): boolean {
+  if (state.gear !== true || slot < 0) return false;
+  const plan = planMove(state, slot, to);
+  if (!plan) return false;
+  const stations = judge(state, plan, layoutProblems(state));
+  if (!stations) return false;
+  applyPlan(state, plan, stations);
+  return true;
 }
 
 /**
