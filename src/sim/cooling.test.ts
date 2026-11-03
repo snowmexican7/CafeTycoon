@@ -325,6 +325,31 @@ describe('cup.cold', () => {
     expect(stationCool(s, s.stations.find((x) => x.id === pot.id)!)).toBe(1);
   });
 
+  it('Round 5 pot times: a brewed d1 pot is still hot at 54 s and cold at 56 s; a d2 pot at 74 s and 76 s', () => {
+    for (const [kit, coldAfter] of [['d1', 55], ['d2', 75]] as const) {
+      expect(GEAR[kit].pot!.coldAfter).toBe(coldAfter);
+      let s = quiet(gearDay(['c1', 'e1', kit], { beans: 9 }));
+      const id = s.stations.find((x) => x.kind === 'drip')!.id;
+      const pot = () => s.stations.find((x) => x.id === id)!;
+      Object.assign(pot(), { making: 'drip', busyTicksLeft: 1, busyTotal: 100 }); // the brew finishes on the next tick
+      s = step(s, idle);
+      expect([pot().output, pot().potLeft]).toEqual(['drip', GEAR[kit].pot!.cups]);
+      const brewed = s.tick;
+      let coldAt = -1;
+      while (s.tick < brewed + secs(coldAfter - 1)) {
+        s = step(s, idle);
+        if (s.log.some((e) => e.kind === 'cup.cold' && e.tick === s.tick)) coldAt = s.tick;
+      }
+      expect([coldAt, stationCool(s, pot()) < 1]).toEqual([-1, true]);
+      while (s.tick < brewed + secs(coldAfter + 1)) {
+        s = step(s, idle);
+        if (s.log.some((e) => e.kind === 'cup.cold' && e.tick === s.tick)) coldAt = s.tick;
+      }
+      expect(coldAt).toBe(brewed + secs(coldAfter));
+      expect(stationCool(s, pot())).toBe(1);
+    }
+  });
+
   it('stepCooling does nothing in a classic run', () => {
     const c = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
     c.pass = [{ item: 'latte', ticksLeft: 999, madeAt: c.tick - secs(60) }];

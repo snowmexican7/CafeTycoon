@@ -3,6 +3,8 @@ import { createRun, startDay } from './run';
 import { step } from './step';
 import { secondsToTicks } from './constants';
 import { ECONOMY } from '../data/economy';
+import { nearestStation } from './movement';
+import { spotOf } from './pickup';
 import type { GameState, ItemKind, Player } from './types';
 
 const B = ECONOMY.bump;
@@ -141,6 +143,21 @@ describe('bumps', () => {
     expect(s.today.bumps).toBe(1);
   });
 
+  it('a bump shove straight away from a station keeps someone working it in reach (push + body + station half <= interact range)', () => {
+    let s = headOn();
+    const till = s.stations.find((st) => st.kind === 'counter' && spotOf(st) === 'till')!;
+    const a = pl(s, 'p1');
+    const b = pl(s, 'p2');
+    // p1 stands flush against the top of the till; p2 comes at p1 from the till's side, so p1 is shoved straight away.
+    a.pos = { x: till.pos.x, y: till.pos.y - 0.5 - ECONOMY.baristaHalfWidth };
+    b.pos = { x: till.pos.x, y: a.pos.y + B.bodyTiles - 0.1 };
+    a.heldDir = { x: 0, y: 0 };
+    b.heldDir = { x: 0, y: -1 };
+    s = step(s, []);
+    expect(bumps(s)).toHaveLength(1);
+    expect(nearestStation(s, pl(s, 'p1').pos)?.id).toBe(till.id);
+  });
+
   it('Round 5: overlapping bodies slide apart even when standing still (unstick)', () => {
     let s = headOn();
     pl(s, 'p1').heldDir = { x: 0, y: 0 };
@@ -166,9 +183,26 @@ describe('bumps', () => {
     pl(s, 'p1').heldDir = { x: 1, y: 0 };
     pl(s, 'p2').heldDir = { x: -1, y: 0 };
     for (let i = 0; i < secondsToTicks(3); i++) s = step(s, []);
-    // Cooldown is 1 s, so at most one bump per second while they keep walking into each other.
-    expect(s.today.bumps ?? 0).toBeLessThanOrEqual(3);
+    // The brief: no more than twice in 3 s while they keep walking into each other.
+    expect(s.today.bumps ?? 0).toBeLessThanOrEqual(2);
     expect(Math.hypot(pl(s, 'p2').pos.x - pl(s, 'p1').pos.x, pl(s, 'p2').pos.y - pl(s, 'p1').pos.y)).toBeGreaterThanOrEqual(B.bodyTiles - 1e-6);
+  });
+
+  it('Round 5: two people overlapped against the till, standing on cooldown, are unstuck (the free one takes the whole step)', () => {
+    let s = cafe(3);
+    const till = s.stations.find((st) => st.kind === 'counter' && spotOf(st) === 'till')!;
+    const a = pl(s, 'p1');
+    const b = pl(s, 'p2');
+    a.pos = { x: till.pos.x, y: till.pos.y - 0.5 - ECONOMY.baristaHalfWidth }; // flush on the till: can't be pushed into it
+    b.pos = { x: till.pos.x, y: a.pos.y - 0.1 };
+    a.tile = b.tile = { x: Math.floor(a.pos.x), y: Math.floor(a.pos.y) };
+    a.heldDir = b.heldDir = { x: 0, y: 0 };
+    a.bumpCooldown = b.bumpCooldown = secondsToTicks(10);
+    const flushY = a.pos.y;
+    for (let i = 0; i < secondsToTicks(0.3); i++) s = step(s, []);
+    expect(bumps(s)).toHaveLength(0);
+    expect(pl(s, 'p1').pos.y).toBe(flushY);
+    expect(flushY - pl(s, 'p2').pos.y).toBeGreaterThanOrEqual(B.bodyTiles - 1e-6);
   });
 
   it('a staggered player covers about 35% of the normal distance (Round 5 staggerSpeed)', () => {
