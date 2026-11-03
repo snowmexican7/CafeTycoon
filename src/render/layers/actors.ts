@@ -14,6 +14,7 @@ import { drawCarafe } from './sink';
 import { CARRIED_FILL } from '../sinkModel';
 import { drawBarCaddy, drawCarton } from './fridgeArt';
 import { lookArt, type BodyStyle, type HairStyle, type OutfitStyle } from '../lookModel';
+import { CROWN_RY, HEAD, HEAD_TOP, frontHairGeom } from '../hairGeom';
 import { waitingSpots } from '../waitingModel';
 
 /** Feet sit a little below the sim centre so a barista reads as standing on its tile. */
@@ -50,46 +51,53 @@ const TROUSERS = 0x4a3a33;
 const SKIRT = 0x3d4a6b;
 const WHITE_SHIRT = 0xf4efe6;
 
-/** ui-3.5.2: hair that hangs behind the head and body (drawn first). */
+/** ui-3.5.2 / Round 5: hair that hangs behind the head and body (drawn first). */
 function backHair(g: Graphics, style: HairStyle, hair: number, facing: Facing): void {
   if (facing !== 'down') return;
-  if (style === 'long') g.roundRect(-20, -70, 40, 46, 14).fill(hair);
-  else if (style === 'ponytail') g.ellipse(20, -52, 5.5, 12).fill(hair);
+  // Long hair and ponytail hang behind; crown coverage is drawn in frontHair.
+  if (style === 'long') g.roundRect(-20, HEAD.hairline, 40, 48, 14).fill(hair);
+  else if (style === 'ponytail') g.ellipse(20, HEAD.hairline + 10, 5.5, 12).fill(hair);
 }
 
-/** ui-3.5.2: hair on top of the head (after the face). */
+/** ui-3.5.2 / Round 5: hair on top of the head (after the face). Crown always covers HEAD.top → hairline. */
 function frontHair(g: Graphics, style: HairStyle, hair: number, skin: number, facing: Facing): void {
-  const spikes = () => g.poly([-14, -63, -11, -79, -5, -68, 0, -81, 5, -68, 11, -79, 14, -63]).fill(hair);
-  const curls = () => { for (const [cx, cy] of [[-15, -61], [-10, -71], [0, -75], [10, -71], [15, -61]]) g.circle(cx, cy, 6.5).fill(hair); };
+  const geom = frontHairGeom(style, facing);
+  const spikes = () => g.poly([-14, HEAD.hairline - 1, -11, HEAD_TOP - 4, -5, HEAD.hairline - 6, 0, HEAD_TOP - 6, 5, HEAD.hairline - 6, 11, HEAD_TOP - 4, 14, HEAD.hairline - 1]).fill(hair);
+  const curls = () => {
+    for (const [cx, cy] of [[-15, HEAD.hairline + 1], [-10, HEAD_TOP + 4], [0, HEAD_TOP], [10, HEAD_TOP + 4], [15, HEAD.hairline + 1]] as const) {
+      g.circle(cx, cy, 6.5).fill(hair);
+    }
+  };
   if (facing === 'down') {
-    if (style === 'buzz') halfDome(g, 0, -60, 16.5, 11).fill(hair);
-    else halfDome(g, 0, -57, 17, style === 'spiky' || style === 'curly' ? 13 : 15).fill(hair);
+    // Shared crown: half-dome from the hairline up to the skull top (no bald strip).
+    halfDome(g, HEAD.cx, geom.hairline, geom.rx, CROWN_RY).fill(hair);
     if (style === 'spiky') spikes();
     if (style === 'curly') curls();
     if (style === 'bob') {
-      g.roundRect(-20, -64, 8, 24, 4).fill(hair);
-      g.roundRect(12, -64, 8, 24, 4).fill(hair);
+      g.roundRect(-20, HEAD.hairline - 2, 8, 24, 4).fill(hair);
+      g.roundRect(12, HEAD.hairline - 2, 8, 24, 4).fill(hair);
     }
     if (style === 'long') {
-      g.roundRect(-20, -64, 7, 34, 3.5).fill(hair);
-      g.roundRect(13, -64, 7, 34, 3.5).fill(hair);
+      g.roundRect(-20, HEAD.hairline - 2, 7, 34, 3.5).fill(hair);
+      g.roundRect(13, HEAD.hairline - 2, 7, 34, 3.5).fill(hair);
     }
-    if (style === 'ponytail') g.roundRect(14, -62, 5, 5, 2).fill(darker(hair, 0.7));
+    if (style === 'ponytail') g.roundRect(14, HEAD.hairline, 5, 5, 2).fill(darker(hair, 0.7));
   } else {
-    g.circle(0, -59, 17).fill(hair);
+    // Back of head: full disk covering the skull crown (same top as HEAD_TOP).
+    g.circle(HEAD.cx, HEAD.cy, HEAD.r).fill(hair);
     if (style === 'spiky') spikes();
     if (style === 'curly') curls();
-    if (style === 'bob') g.roundRect(-19, -62, 38, 20, 8).fill(hair);
-    else if (style === 'long') g.roundRect(-18, -64, 36, 40, 12).fill(hair);
+    if (style === 'bob') g.roundRect(-19, HEAD.hairline, 38, 20, 8).fill(hair);
+    else if (style === 'long') g.roundRect(-18, HEAD.hairline - 2, 36, 40, 12).fill(hair);
     else if (style === 'ponytail') {
-      g.ellipse(0, -40, 5.5, 12).fill(hair);
-      g.roundRect(-3, -50, 6, 4, 2).fill(darker(hair, 0.7));
+      g.ellipse(0, HEAD.hairline + 22, 5.5, 12).fill(hair);
+      g.roundRect(-3, HEAD.hairline + 12, 6, 4, 2).fill(darker(hair, 0.7));
     } else {
-      g.ellipse(-16, -56, 3, 4).fill(skin);
-      g.ellipse(16, -56, 3, 4).fill(skin);
+      g.ellipse(-16, HEAD.cy + 2, 3, 4).fill(skin);
+      g.ellipse(16, HEAD.cy + 2, 3, 4).fill(skin);
     }
   }
-  if (style === 'bun') g.circle(0, -77, 8).fill(hair);
+  if (style === 'bun') g.circle(0, HEAD_TOP - 2, 8).fill(hair);
 }
 
 /** A chunky toy person with its feet at (0, 0). */
@@ -144,7 +152,7 @@ export function drawPerson(g: Graphics, o: PersonOpts): void {
   g.circle(half + 1, -24, 6).fill(top);
   g.circle(-half - 2, -19, 4.5).fill(o.skin);
   g.circle(half + 2, -19, 4.5).fill(o.skin);
-  g.circle(0, -58, 17).fill(o.skin);
+  g.circle(HEAD.cx, HEAD.cy, HEAD.r).fill(o.skin);
   if (o.facing === 'down') {
     if (st) frontHair(g, st.hairStyle, o.hair, o.skin, o.facing);
     else halfDome(g, 0, -56, 17, 15).fill(o.hair);
@@ -332,7 +340,9 @@ export class Actors {
     players.forEach((p, index) => {
       seen.add(p.id);
       const sprite = this.players.get(p.id) ?? this.addPlayer(p.id);
-      sprite.facing = nextFacing(sprite.facing, p.moveDir);
+      // Idle: match the sim facing (fixtures can set Player.facing). Moving: last vertical move wins.
+      const idle = p.moveDir.x === 0 && p.moveDir.y === 0;
+      sprite.facing = idle ? (p.facing.y < 0 ? 'up' : 'down') : nextFacing(sprite.facing, p.moveDir);
       const look = baristaLook(index);
       const me = p.id === localId;
       const stunned = p.stunTicksLeft > 0;

@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- Every hairstyle covers the crown down to one shared hairline (no bald strip on top), front and back.
+
 ## 3.8.0 — 2026-10-31 · Hand-made lattes, a morning rearrange and the café feed
 
 Cursor's six-PR run (blocks 1–6 of `docs/CURSOR_PROMPT_NEXT.md`), reviewed, fixed up and merged by Grok.

@@ -32,6 +32,8 @@ import { createRecordsDialog } from '../ui/records';
 import { awardsFor } from '../sim/awards';
 import { blank } from '../sim/stats';
 import { emptyRecords, foldRecords } from '../storage/recordsStore';
+import { HAIR_STYLES } from '../render/lookModel';
+import { floorFields } from '../sim/tiles';
 
 type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean; carry?: boolean };
 
@@ -1093,6 +1095,50 @@ const FIXTURES: Record<string, Fixture> = {
         feedMoments: i === 2 ? { cold: 2 } : undefined,
         fansDelta: 3 - (i % 3),
       }));
+    },
+    timeline: [],
+  },
+  /**
+   * Round 5 block 1: all 8 hairstyles × both facings on the floor (front row faces the camera,
+   * back row faces away) so the hairline fix is easy to screenshot.
+   */
+  hairGrid: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
+      s.customers = [];
+      const colours = ['brown', 'black', 'blonde', 'red', 'dark', 'blue', 'pink', 'grey'] as const;
+      const shirts = ['red', 'blue', 'green', 'purple', 'yellow', 'pink', 'teal', 'black'] as const;
+      const template = s.players[0]!;
+      s.players = [];
+      HAIR_STYLES.forEach((hs, i) => {
+        const x = 1.5 + (i % 8) * 1.35;
+        // Front row: facing down (toward camera). Back row: facing up.
+        for (const [row, facingY, suffix] of [[0, 1, ''], [1, -1, ' · back']] as const) {
+          const pos = { x, y: 2.2 + row * 2.2 };
+          const id = `h${i}${facingY > 0 ? 'f' : 'b'}`;
+          s.players.push({
+            ...structuredClone(template),
+            ...floorFields(pos),
+            id,
+            name: `${hs.name}${suffix}`,
+            connected: true,
+            holding: null,
+            look: {
+              hair: hs.id,
+              hairColor: colours[i]!,
+              skin: 's3',
+              outfit: 'slim-apron',
+              shirtColor: shirts[i]!,
+            },
+            pos,
+            facing: { x: 0, y: facingY },
+            moveDir: { x: 0, y: 0 },
+          });
+          delete s.players[s.players.length - 1]!.bot;
+        }
+      });
     },
     timeline: [],
   },
