@@ -95,6 +95,24 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Round 5 sim reviews (2026-11-03, Claude): comments posted on #22–#26.** All five are "fine with small fixes";
+  none needs rework. Highlights (full lists on each PR):
+  - #22 espresso + hopper: numbers match the approved table. Fix: a hopper dose gets the 8 s "sat too long" −1★;
+    idle bots bin the last dose (`leftGrounds`); an early pull loses the other doses; the bot hopper test would pass
+    without the feature. Notes for Kennedy: g3 on e5/e6 forgives two slips; beans per espresso drop to $0.18–0.36.
+  - #23 bumps + pots: the unstick slide is safe (fuzzed). Fix: `bump.push` 0.4 can push someone out of reach and
+    cancel a ring-up (suggest 0.25); one test passes without the slide; d2 pot time untested.
+  - #24 cold brew refill + supply shelf: placement and milk accounting check out. Fix: R with a drink at the shelf
+    puts it on the pickup counter (`drop.ts:38` must exclude `SUPPLY_ID`); a dead tap can be refilled; bots count a
+    phantom cold brew during a refill.
+  - #25 night layout: clean. Fix: delete the leftover `preOpenUntil` / `preopen.*` declarations (snapshot bump),
+    restore the deleted persistence tests (grow keeps/resets moves, wand on a moved machine, bots at a moved machine).
+  - #26 drip by the till: bots serve more with it. Fix: a drip buy can displace a placed machine; the till seat is
+    lost on stand → cart; on the stand and cart the seat takes the syrup rack's, tray table's and sink's back tiles.
+    The 3.9.0 release text assumes #21–#25 are merged.
+  - **Merge order and numbers** (main is at protocol 61, snapshot 31; every PR bumped from 60 independently):
+    #21 → #23 (no bump) → #22 (protocol 62, snapshot 32) → #24 (63) → #25 (64; snapshot 33 if its finding 1 is
+    done) → #26 last, with the release commit and tag after it.
 - [ ] **Round 5 tidy (2026-11-03, `r5-tidy`, protocol 61).** Dev buttons can light up: `{ kind: 'devFill', playerId }`
   and `{ kind: 'devSkip', playerId }` (host, dev runs). `canAddSyrup(state, playerId)` (sim/handmade.ts) and
   `canSetDown(state, playerId, station, to)` (sim/rearrange.ts) are exported, so `handmadeModel.canAddSyrup` and the C10
