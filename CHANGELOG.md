@@ -17,6 +17,7 @@ when a build goes out, the line moves under its version with the date.
 ## Unreleased
 
 - Every hairstyle covers the crown down to one shared hairline (no bald strip on top), front and back.
+- Bumping into another barista bounces you apart harder and unsticks overlapped bodies; cheap drip pots stay hot a little longer.
 
 ## 3.8.0 — 2026-10-31 · Hand-made lattes, a morning rearrange and the café feed
 

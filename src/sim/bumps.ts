@@ -57,10 +57,42 @@ function maybeSpill(state: GameState, p: Player): void {
   emitLog(state, 'bump.spill', { by: p.id, item, x: round2(p.pos.x), y: round2(p.pos.y) });
 }
 
+/** Round 5: unstick slides over about this many seconds (not a one-tick jump). */
+const UNSTICK_SECONDS = 0.15;
+
+/**
+ * Round 5: ease two overlapping bodies apart along the line between them. Each tick moves a slice of the
+ * remaining gap (about `UNSTICK_SECONDS` to clear), using `nudge` so walls/stations block. If one side
+ * can't move, the other takes that tick's whole step.
+ */
+function separate(state: GameState, a: Player, b: Player): void {
+  const dx = b.pos.x - a.pos.x;
+  const dy = b.pos.y - a.pos.y;
+  let dist = Math.hypot(dx, dy);
+  if (dist >= B.bodyTiles) return;
+  // Identical centres: pick a stable axis so we still can unstick.
+  const ux = dist < 1e-6 ? 1 : dx / dist;
+  const uy = dist < 1e-6 ? 0 : dy / dist;
+  if (dist < 1e-6) dist = 0;
+  const gap = B.bodyTiles - dist;
+  const perTick = B.bodyTiles / Math.max(1, secondsToTicks(UNSTICK_SECONDS));
+  const step = Math.min(gap, perTick);
+  const half = step / 2;
+  const beforeA = { ...a.pos };
+  const beforeB = { ...b.pos };
+  nudge(state, a, { x: -ux * half, y: -uy * half });
+  nudge(state, b, { x: ux * half, y: uy * half });
+  const movedA = a.pos.x !== beforeA.x || a.pos.y !== beforeA.y;
+  const movedB = b.pos.x !== beforeB.x || b.pos.y !== beforeB.y;
+  if (!movedA && movedB) nudge(state, b, { x: ux * half, y: uy * half });
+  else if (movedA && !movedB) nudge(state, a, { x: -ux * half, y: -uy * half });
+}
+
 /**
  * Overcooked-style collisions. Counts the stagger and cooldown down, then for each pair of baristas (array order) that are
  * touching, off cooldown and walking into each other: both stagger, both are shoved apart, and each carrier rolls to drop
  * what they hold. A pair that merely overlaps without anyone walking toward the other is not a bump.
+ * Round 5: after bumps, any still-overlapping pair is separated (unstick), whether or not they bumped this tick.
  */
 export function stepBumps(state: GameState): void {
   for (const p of state.players) {
@@ -85,14 +117,24 @@ export function stepBumps(state: GameState): void {
       a.staggerTicksLeft = b.staggerTicksLeft = stagger;
       a.bumpCooldown = b.bumpCooldown = cooldown;
       const mid = { x: round2((a.pos.x + b.pos.x) / 2), y: round2((a.pos.y + b.pos.y) / 2) };
-      const ux = dx / dist;
-      const uy = dy / dist;
+      const ux = dist < 1e-6 ? 1 : dx / dist;
+      const uy = dist < 1e-6 ? 0 : dy / dist;
       nudge(state, a, { x: -ux * B.push, y: -uy * B.push });
       nudge(state, b, { x: ux * B.push, y: uy * B.push });
       tally(state.today, 'bumps');
       emitLog(state, 'bump', { a: a.id, b: b.id, x: mid.x, y: mid.y });
       maybeSpill(state, a);
       maybeSpill(state, b);
+    }
+  }
+  // Round 5 unstick: keep every overlapping pair at least bodyTiles apart (even on cooldown / standing still).
+  for (let i = 0; i < ps.length; i++) {
+    const a = ps[i];
+    if (!isBody(a)) continue;
+    for (let j = i + 1; j < ps.length; j++) {
+      const b = ps[j];
+      if (!isBody(b)) continue;
+      if (Math.hypot(b.pos.x - a.pos.x, b.pos.y - a.pos.y) < B.bodyTiles) separate(state, a, b);
     }
   }
 }

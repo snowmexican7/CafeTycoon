@@ -22,8 +22,8 @@ function cafe(seed = 1): GameState {
 
 const pl = (s: GameState, id: string): Player => s.players.find((p) => p.id === id)!;
 
-/** p1 at (4, 6) facing p2 half a tile to its right, both walking into each other (open floor). */
-function headOn(seed = 1, gap = 0.5): GameState {
+/** p1 at (4, 6) facing p2 just inside `bodyTiles`, both walking into each other (open floor). */
+function headOn(seed = 1, gap = B.bodyTiles - 0.1): GameState {
   const s = cafe(seed);
   const a = pl(s, 'p1');
   const b = pl(s, 'p2');
@@ -129,10 +129,11 @@ describe('bumps', () => {
 
   it('the cooldown makes 30 ticks of pushing into each other exactly one bump', () => {
     let s = headOn();
+    const gap = B.bodyTiles - 0.1;
     for (let i = 0; i < 30; i++) {
       // keep them pressed together and pushing
       pl(s, 'p1').pos = { x: 4, y: 6 };
-      pl(s, 'p2').pos = { x: 4.5, y: 6 };
+      pl(s, 'p2').pos = { x: 4 + gap, y: 6 };
       s = step(s, []);
     }
     // log is pruned after 120 ticks, so all 30 ticks of logs are still here
@@ -140,7 +141,37 @@ describe('bumps', () => {
     expect(s.today.bumps).toBe(1);
   });
 
-  it('a staggered player covers about 40% of the normal distance', () => {
+  it('Round 5: overlapping bodies slide apart even when standing still (unstick)', () => {
+    let s = headOn();
+    pl(s, 'p1').heldDir = { x: 0, y: 0 };
+    pl(s, 'p2').heldDir = { x: 0, y: 0 };
+    pl(s, 'p1').pos = { x: 4, y: 6 };
+    pl(s, 'p2').pos = { x: 4.2, y: 6 };
+    const before = Math.hypot(pl(s, 'p2').pos.x - pl(s, 'p1').pos.x, pl(s, 'p2').pos.y - pl(s, 'p1').pos.y);
+    s = step(s, []);
+    expect(bumps(s)).toHaveLength(0);
+    expect(Math.hypot(pl(s, 'p2').pos.x - pl(s, 'p1').pos.x, pl(s, 'p2').pos.y - pl(s, 'p1').pos.y)).toBeGreaterThan(before);
+    // A short slide (~0.15 s) clears the overlap without a one-tick jump.
+    for (let i = 0; i < secondsToTicks(0.2); i++) s = step(s, []);
+    expect(Math.hypot(pl(s, 'p2').pos.x - pl(s, 'p1').pos.x, pl(s, 'p2').pos.y - pl(s, 'p1').pos.y)).toBeGreaterThanOrEqual(B.bodyTiles - 1e-6);
+  });
+
+  it('Round 5: two people running at the till from both sides stay unstuck (cooldown-capped bumps)', () => {
+    let s = cafe(3);
+    // Open floor just above the till at (6,6): approach from left and right.
+    pl(s, 'p1').pos = { x: 4.5, y: 5 };
+    pl(s, 'p2').pos = { x: 7.5, y: 5 };
+    pl(s, 'p1').tile = { x: 4, y: 5 };
+    pl(s, 'p2').tile = { x: 7, y: 5 };
+    pl(s, 'p1').heldDir = { x: 1, y: 0 };
+    pl(s, 'p2').heldDir = { x: -1, y: 0 };
+    for (let i = 0; i < secondsToTicks(3); i++) s = step(s, []);
+    // Cooldown is 1 s, so at most one bump per second while they keep walking into each other.
+    expect(s.today.bumps ?? 0).toBeLessThanOrEqual(3);
+    expect(Math.hypot(pl(s, 'p2').pos.x - pl(s, 'p1').pos.x, pl(s, 'p2').pos.y - pl(s, 'p1').pos.y)).toBeGreaterThanOrEqual(B.bodyTiles - 1e-6);
+  });
+
+  it('a staggered player covers about 35% of the normal distance (Round 5 staggerSpeed)', () => {
     const run = (stagger: number) => {
       const s = cafe();
       const a = pl(s, 'p1');

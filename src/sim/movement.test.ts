@@ -22,14 +22,16 @@ describe('movement', () => {
 
   it('stops at walls and station tiles, per axis', () => {
     const s = base();
-    s.players[0].pos = { x: 0.36, y: 4 };
+    // Round 5: baristaHalfWidth 0.3 — stand just outside the left wall's block band.
+    s.players[0].pos = { x: 0.31, y: 4 };
     s.players[0].moveDir = { x: -1, y: 0 };
-    expect(applyMovement(s, 1).players[0].pos.x).toBeCloseTo(0.36);
+    expect(applyMovement(s, 1).players[0].pos.x).toBeCloseTo(0.31);
     const u = base();
-    u.players[0].pos = { x: 3, y: 1.86 }; // just below the espresso machine at (3,1)
+    // Just below the espresso machine at (3,1): block when |dy| < 0.5+0.3, so y=1.81 is clear of the station.
+    u.players[0].pos = { x: 3, y: 1.81 };
     u.players[0].moveDir = { x: 1, y: -1 };
     const v = applyMovement(u, 1);
-    expect(v.players[0].pos.y).toBeCloseTo(1.86);
+    expect(v.players[0].pos.y).toBeCloseTo(1.81);
     expect(v.players[0].pos.x).toBeGreaterThan(3);
   });
 

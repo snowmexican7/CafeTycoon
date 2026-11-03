@@ -62,13 +62,15 @@ export const ECONOMY = {
   scoredWeekDays: 7,
   moveSpeedTilesPerSecond: 4,
   interactRangeTiles: 1.1,
-  baristaHalfWidth: 0.35,
+  baristaHalfWidth: 0.3, // Round 5: tighter body vs walls/stations
   /**
    * Overcooked-style bumps (src/sim/bumps.ts): two baristas closer than `bodyTiles` (centre to centre) who are walking
    * into each other stagger for `staggerSeconds` at `staggerSpeed` x their pace, can't bump again for `cooldownSeconds`,
    * are shoved `push` tiles apart each, and whoever is carrying something drops it with `spillChance`.
+   * Round 5: tighter body, harder bounce (`push`), slightly longer/slower stagger; a separate unstick step keeps
+   * overlapped bodies apart even off cooldown.
    */
-  bump: { bodyTiles: 0.6, staggerSeconds: 0.6, staggerSpeed: 0.4, cooldownSeconds: 1.0, spillChance: 0.05, push: 0.15,
+  bump: { bodyTiles: 0.5, staggerSeconds: 0.75, staggerSpeed: 0.35, cooldownSeconds: 1.0, spillChance: 0.05, push: 0.4,
     /**
      * Round 4 c: a person walking into a customer (src/sim/bumps.ts `stepCustomerBumps`). Within `customerTiles` and heading
      * toward them: they lose `customerPatience` of their max patience, can't be bumped again for `customerCooldownSeconds`
