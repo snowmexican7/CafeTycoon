@@ -28,6 +28,8 @@ function leftAt(state: GameState, s: Station): number | null {
     if (s.potOut !== undefined || s.busyTicksLeft > 0) return null;
     if (s.potLeft !== undefined) return positive(s.potLeft);
   }
+  // Round 5: a grinder hopper holds several doses.
+  if (s.kind === 'grinder' && s.doses !== undefined) return positive(s.doses);
   // A machine's finished item (a pulled shot, a steamed drink, a ground dose) sits in one slot.
   return s.output ? 1 : null;
 }

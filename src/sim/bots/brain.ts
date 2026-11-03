@@ -211,9 +211,13 @@ function canMake(state: GameState, p: Player, st: Station, need: Need): boolean 
   return r?.gives === need.gives && (st.batchLeft !== 0 || !tapCupRecipe(r)) && (!r.consumes.includes('milk') || milkFree(state, p) >= 1);
 }
 
-/** 0: start right away (idle, no other bot heading there); 1: it is busy or someone else plans it. Pots: potScore. */
+/**
+ * 0: start right away (idle, no other bot heading there); 1: it is busy or someone else plans it. Pots: potScore.
+ * Round 5: a hopper with doses is like a pot: free (0) while fewer bots plan it than it has doses.
+ */
 function stationScore(state: GameState, p: Player, st: Station, need: Need): number {
   if (hasPot(st) && need.held === null && need.gives === 'drip') return potScore(state, p, st, need);
+  if (st.kind === 'grinder' && st.doses !== undefined && st.output === 'grounds' && need.held === null) return plannersAt(state, p, st) < st.doses ? 0 : 1;
   return isIdle(st) && !plannedByOther(state, p, st) ? 0 : 1;
 }
 
@@ -445,11 +449,11 @@ const strayGrounds = (st: Station): boolean => st.kind !== 'grinder' && st.outpu
  * FB2 B6 (Gear): grounds left in a grinder whose chain was dropped (its customer was served by someone else's cup).
  * They count as a shot on its way (`coveragePool`), so once they have sat as long as any orphan they are collected
  * (and binned, or pulled), or the order they seem to cover would never be claimed.
- * Round 5: a hopper with more than one dose left is stock, not an abandoned chain — bots take those via the
- * normal leftover path when they need grounds. Only the last dose (or a classic one-dose grinder) is orphaned.
+ * Round 5: hopper doses (any left, the last one too) are stock, not an abandoned chain: `coveragePool` no longer counts
+ * them as a shot on its way, so they wait to be used or clear at closing. Only a one-dose grinder's grounds are orphaned.
  */
 const leftGrounds = (state: GameState, st: Station): boolean =>
-  state.gear === true && st.kind === 'grinder' && st.output === 'grounds' && !(st.doses !== undefined && st.doses > 1);
+  state.gear === true && st.kind === 'grinder' && st.output === 'grounds' && st.doses === undefined;
 
 /**
  * A drink left sitting in a machine, or stray grounds, that no other bot is already on its way to take;
@@ -1047,6 +1051,7 @@ function pullsEarly(state: GameState, p: Player, st: Station): boolean {
     !carefulCup(state, p) &&
     p.holding === null &&
     !hasPot(st) && // pulling a brewing pot early would take one cup and lose the rest of the pot
+    st.kind !== 'grinder' && // Round 5: a grind is short and fills a hopper; pulling it early saves nothing
     st.busyTicksLeft > 0 &&
     !!st.making &&
     !!st.busyTotal &&

@@ -160,6 +160,10 @@ describe('Round 3 money: forecast capped by real capacity', () => {
     expect(rate(fast)).toBeGreaterThan(rate(crowd));
     // Pods keep POD_SHOT 5 s (not the Round 5 espresso base of 3).
     expect(rate(crowd)).toBeLessThanOrEqual(1 / (5 / GEAR.e1.speed) + 1e-9);
+    // A mixed bar (a pod machine next to a real one) counts each machine at its own shot time.
+    const mixed = gearRun(['e1', 'e3', 'g3'], 8, 'cafe');
+    onlyMenu(mixed, ['espresso']);
+    expect(rate(mixed)).toBeLessThanOrEqual(GEAR.e1.speed / 5 + GEAR.e3.speed / ECONOMY.stationSeconds.espresso + 1e-9);
   });
 
   it('expected orders never pass the day\'s capacity, however many walk-ins the forecast promises', () => {

@@ -17,7 +17,7 @@ import { ECONOMY } from '../data/economy';
 import { DRINK_INFO, recipeChain, type RecipeStation } from '../data/drinks';
 import { GEAR } from '../data/gear';
 import type { Modifiers } from './effects';
-import { gearPullMul, gearSpeed } from './gear';
+import { gearPullMul, gearSpeed, POD_SHOT } from './gear';
 import { availableDrinks, queueCapacity } from './customers';
 import { tierInfo, tierOf } from './growth';
 import { demandFactor } from './pricing';
@@ -111,12 +111,14 @@ export function serveCapacity(state: GameState, menu: DrinkId[], m: Modifiers): 
       if (kind === 'drip' || seconds <= 0) continue;
       const machines = state.stations.filter((s) => s.kind === kind);
       if (machines.length === 0) continue;
-      const speed = machines.reduce((a, s) => a + m.stationSpeed[kind] * gearSpeed(s), 0);
-      // Round 5: base espresso pull is 3 s, but pods keep POD_SHOT at 5 s. Scale the share so a pods-only
-      // bar still caps at 6.0 s per shot (speed e1 = 5/6).
-      const pods = kind === 'espresso' && machines.every((s) => s.gear && GEAR[s.gear].pods);
-      const need = pods ? seconds * (5 / ECONOMY.stationSeconds.espresso) : seconds;
-      perSecond = Math.min(perSecond, speed / need);
+      // Round 5: base espresso pull is 3 s, but a pod machine keeps POD_SHOT's own time, so each machine is
+      // counted at its own shot time (a mixed bar, a pod next to a real machine, too).
+      const podScale = POD_SHOT.seconds! / ECONOMY.stationSeconds.espresso;
+      const rate = machines.reduce((a, s) => {
+        const pods = kind === 'espresso' && !!s.gear && !!GEAR[s.gear].pods;
+        return a + (m.stationSpeed[kind] * gearSpeed(s)) / (pods ? seconds * podScale : seconds);
+      }, 0);
+      perSecond = Math.min(perSecond, rate);
     }
     const crew = Math.max(1, state.players.filter((p) => p.connected).length);
     perSecond = Math.min(perSecond, crew / (CAPACITY.handlingSeconds + steps * CAPACITY.stepSeconds));

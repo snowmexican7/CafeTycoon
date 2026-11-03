@@ -8,9 +8,12 @@ import { GEAR, type GearId } from '../data/gear';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import { addStandIns } from './bots/roster';
+import { chainFor } from './bots/brain';
 import { stationsFromSlots } from './slots';
 import type { GameState, StationKind } from './types';
 import { gearStats } from '../ui/gearVM';
+import { ACCURACY } from './accuracy';
+import { stationLeft } from './counts';
 
 const gearRun = (seed = 9): GameState =>
   createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 200 }, tier: 'stand', gear: true });
@@ -124,9 +127,85 @@ describe('Round 5: grinder hopper', () => {
     const beans = s.supplies.beans;
     for (let i = 0; i < 60 * 90 && s.today.served < 1; i++) s = step(s, []);
     expect(s.today.served).toBe(1);
-    // Took a hopper dose rather than grinding again (beans unchanged or only one later grind for a second cup).
-    expect(s.supplies.beans).toBeGreaterThanOrEqual(beans - 1);
-    expect(g().doses === undefined || (g().doses ?? 0) < 2 || g().output === null || s.today.served === 1).toBe(true);
+    // Took a hopper dose rather than grinding again: no beans spent, one dose still waiting in the hopper.
+    expect(s.supplies.beans).toBe(beans);
+    expect(g().doses).toBe(1);
+    expect(g().output).toBe('grounds');
+  });
+
+  it('a bot with doses in the hopper takes one before a free pod machine (G4e mixed bar)', () => {
+    let s = gearRun();
+    s.slots = ['grinder', 'espresso', 'espresso', 'trash'];
+    s.slotGear = ['g1', 'e2', 'e1', 'b0'];
+    s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
+    addStandIns(s, 1);
+    for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 40;
+    s = startDay(s);
+    const g = s.stations.find((x) => x.kind === 'grinder')!;
+    g.output = 'grounds';
+    g.doses = 2;
+    g.outputSince = g.doneAt = s.tick;
+    const bot = s.players.find((p) => p.bot)!;
+    const steps = chainFor(s, bot, 'espresso', 'put');
+    expect(steps[0]).toMatchObject({ kind: 'use', station: g.id });
+  });
+
+  it('a dose taken long after the grind is not marked as sat too long (the hopper keeps doses for later)', () => {
+    let s = openBar('g1', 'e2');
+    s = grindDone(s);
+    const g = () => s.stations.find((x) => x.kind === 'grinder')!;
+    expect(g().doses).toBe(2);
+    for (const wait of [10, 30]) {
+      s.tick += wait * TICK_RATE;
+      s.players[0]!.holding = null;
+      at(s, 'grinder');
+      s = interact(s, 'p1');
+      expect(s.players[0]!.holding).toBe('grounds');
+      expect(s.players[0]!.cupSlips).toBeUndefined();
+    }
+    expect(30).toBeGreaterThan(ACCURACY.sitSeconds); // both waits are past the sit limit
+  });
+
+  it('idle bots leave the last hopper dose alone (it waits to be used or clears at closing)', () => {
+    let s = createRun({ seed: 44, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 240 }, tier: 'stand', gear: true });
+    s = buy(s, 'g1', 'e2');
+    addStandIns(s, 1);
+    for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 40;
+    s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
+    s = startDay(s);
+    s.eventSchedule = [];
+    s.customers = [];
+    const g = () => s.stations.find((x) => x.kind === 'grinder')!;
+    g().output = 'grounds';
+    g().doses = 1;
+    g().outputSince = s.tick - 20 * TICK_RATE; // the first dose went a while ago
+    g().doneAt = s.tick - 20 * TICK_RATE;
+    for (let i = 0; i < 30 * TICK_RATE; i++) s = step(s, []);
+    expect([g().output, g().doses]).toEqual(['grounds', 1]);
+    expect(s.today.wasted ?? 0).toBe(0);
+  });
+
+  it('pulling a hopper grind early takes one dose and keeps the rest', () => {
+    let s = openBar('g2', 'e3');
+    at(s, 'grinder');
+    s = interact(s, 'p1');
+    const g = () => s.stations.find((x) => x.kind === 'grinder')!;
+    expect(g().making).toBe('grounds');
+    while (g().busyTicksLeft > g().busyTotal! * ACCURACY.earlyShare) stepStations(s);
+    expect(g().busyTicksLeft).toBeGreaterThan(0);
+    s = interact(s, 'p1');
+    expect(s.players[0]!.holding).toBe('grounds');
+    expect([g().busyTicksLeft, g().output, g().doses]).toEqual([0, 'grounds', GEAR.g2.doses! - 1]);
+  });
+
+  it('the left count over a hopper grinder is its doses', () => {
+    let s = openBar('g3', 'e2');
+    s = grindDone(s);
+    const g = s.stations.find((x) => x.kind === 'grinder')!;
+    expect(stationLeft(s, g.id)).toBe(4);
+    at(s, 'grinder');
+    s = interact(s, 'p1');
+    expect(stationLeft(s, g.id)).toBe(3);
   });
 
   it('grinder + espresso beats two pods at every tier (shot time table, 0.4 s walk)', () => {
@@ -194,6 +273,16 @@ describe('Round 5: grinder hopper', () => {
 });
 
 describe('Round 5: preferPartnerSlot helper', () => {
+  it('measures from where the crew moved the partner (state.slotPos), not its default spot', () => {
+    const s = gearRun();
+    s.slots = [null, null, 'espresso', 'trash'];
+    s.slotGear = [null, null, 'e2', 'b0'];
+    // Stand slots sit at x 1, 3, 5, 7 on row 1. Move the espresso (slot 2) next to slot 0's spot.
+    s.slotPos = [null, null, { x: 1, y: 2 }, null];
+    expect(preferPartnerSlot(s, GEAR.g1, s.slots)).toBe(0);
+  });
+
+
   it('returns -1 with no partner or no empty slot', () => {
     const s = gearRun();
     s.slots = ['trash', 'trash', 'trash', 'trash'] as never;

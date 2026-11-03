@@ -5,7 +5,7 @@ import { computeModifiers } from './effects';
 import { eventActive } from './events';
 import { emitLog } from './log';
 import { counterInteract } from './pass';
-import { gearAfterUse, gearBlocked, gearHopperFinished, gearHopperPour, gearMarks, gearPolish, gearPotFinished, gearPotPour, gearRecipe, gearSpeed, gearTapPour, gearTempMiss, takeTapCup, tapCupRecipe } from './gear';
+import { gearAfterUse, gearBlocked, gearHopperEarly, gearHopperFinished, gearHopperPour, gearMarks, gearPolish, gearPotFinished, gearPotPour, gearRecipe, gearSpeed, gearTapPour, gearTempMiss, takeTapCup, tapCupRecipe } from './gear';
 import { GEAR } from '../data/gear';
 import { tally } from './tally';
 import { nearestStation } from './movement';
@@ -162,7 +162,8 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
       delete station.outputSince;
     }
     const doneAt = station.doneAt;
-    cupOutOfStation(state, player, station, pour.pot ? Infinity : ACCURACY.sitSeconds * TICK_RATE);
+    // Round 5: hopper doses are kept for later on purpose, so they never get the "sat too long" mark (they clear at closing).
+    cupOutOfStation(state, player, station, pour.pot || hop.hopper ? Infinity : ACCURACY.sitSeconds * TICK_RATE);
     if ((pour.more || hop.more) && doneAt !== undefined) station.doneAt = doneAt;
     if (pour.temp) gearTempMiss(state, station, player, pour.temp);
     return state;
@@ -175,6 +176,8 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     station.busyTicksLeft = 0;
     delete station.doneAt;
     cupOutOfStation(state, player, station, Infinity);
+    // Round 5: a hopper grinder pulled early still fills its hopper; this press takes one dose of it.
+    if (gearHopperEarly(state, station)) station.outputSince = state.tick;
     markCup(player);
     emitLog(state, 'cup.early', { by: playerId, item: player.holding });
     return state;

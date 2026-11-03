@@ -582,7 +582,7 @@ export function growGearSlots(state: GameState, to: TierId): void {
 /** Batch/pickup: the steeped tap's pour: empty hands, a cup of cold brew, nothing used up (concentrate was paid at night). */
 export const TAP_POUR: Recipe = { takes: null, gives: 'coldBrew', consumes: [] };
 
-const POD_SHOT: Recipe = { takes: null, gives: 'espresso', consumes: ['beans'], seconds: 5 };
+export const POD_SHOT: Recipe = { takes: null, gives: 'espresso', consumes: ['beans'], seconds: 5 };
 
 /**
  * G4: a gear machine's own recipe for what is in hand, or undefined to use the station's normal recipes.
@@ -798,6 +798,23 @@ export function gearHopperFinished(state: GameState, s: Station): void {
 }
 
 /**
+ * Round 5: a hopper grinder pulled early (P3 B5) still grinds its full batch: the press took one dose, the
+ * rest wait in the hopper as `output: 'grounds'`. Returns whether any doses are left.
+ */
+export function gearHopperEarly(state: GameState, s: Station): boolean {
+  if (s.kind !== 'grinder') return false;
+  gearHopperFinished(state, s);
+  if (s.doses === undefined) return false;
+  s.doses -= 1;
+  if (s.doses <= 0) {
+    delete s.doses;
+    return false;
+  }
+  s.output = 'grounds';
+  return true;
+}
+
+/**
  * Round 5: someone takes grounds off a hopper grinder. Returns whether the hopper keeps doses (station
  * keeps its output). Stations without a hopper: `{ hopper: false, more: false }`.
  */
@@ -811,7 +828,7 @@ export function gearHopperPour(s: Station): { hopper: boolean; more: boolean } {
 
 /**
  * Round 5: when buying a grinder or espresso into an empty slot, prefer the empty slot nearest a
- * partner already on the bar (Manhattan on `SLOT_POSITIONS`). −1 when there is no partner or no empty slot.
+ * partner already on the bar (Manhattan on `slotSpots`, so a moved station counts where it stands). −1 when there is no partner or no empty slot.
  */
 export function preferPartnerSlot(state: GameState, want: { tree: string }, slots: (StationKind | null)[]): number {
   if (want.tree !== 'grinder' && want.tree !== 'espresso') return -1;
@@ -822,7 +839,7 @@ export function preferPartnerSlot(state: GameState, want: { tree: string }, slot
     if (id && GEAR[id].tree === partner) partners.push(i);
   });
   if (partners.length === 0) return -1;
-  const spots = SLOT_POSITIONS[state.tier ?? 'cafe'] ?? SLOT_POSITIONS.cafe;
+  const spots = slotSpots(state.tier, state.slotPos); // FB2 C10: where the crew moved them
   const n = Math.min(slotCount(state.tier), spots.length, slots.length);
   let best = -1;
   let bestDist = Infinity;
