@@ -10,10 +10,11 @@ const KEY = 'cafetycoon.run';
  * fresh) instead of crashing the worker. 29: FB2 C9, the steamer tree retired (wands on the espresso machine,
  * `slotWand`, `Station.wand`); every older save is refused. 30: FB2 C10, moved stations (`slotPos`) and the morning
  * pre-open (`preOpenUntil`). 31: Round 4 night clutter, roles/rerolls/classic equipment removed from the state.
- * 32: Round 5 espresso hopper (`Station.doses`) and grounds polish credit (`Player.groundsPolish`).
+ * 32: Round 5 espresso hopper (`Station.doses`) and grounds polish credit (`Player.groundsPolish`). 33: Round 5
+ * block 5, the morning pre-open removed (`preOpenUntil` gone from the state; rearranging is at night).
  * Recheck before 1.0.
  */
-export const SNAPSHOT_VERSION = 32;
+export const SNAPSHOT_VERSION = 33;
 
 /** A saved state if it was written at SNAPSHOT_VERSION (with its shop's fixed spots made sure of), else null. */
 export function migrateSnapshot(version: number, state: GameState): GameState | null {

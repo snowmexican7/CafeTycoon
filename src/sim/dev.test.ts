@@ -249,7 +249,7 @@ describe('R4 a: dev mode', () => {
       open.ready = ['p1', 'p2'];
       let p = step(open, [{ kind: 'ready', playerId: 'p1' }, { kind: 'ready', playerId: 'p2' }]);
       expect(p.phase).toBe('day');
-      expect(p.preOpenUntil).toBeUndefined();
+      expect('preOpenUntil' in p).toBe(false); // Round 5: no morning pre-open
       p = step(p, [skip]);
       expect(p.phase).toBe('night');
       const closing = day();

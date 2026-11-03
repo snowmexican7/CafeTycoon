@@ -573,6 +573,6 @@ describe('FB2 C9: the planner and saves', () => {
     }
     createSnapshotStore(storage).save(s);
     expect(createSnapshotStore(storage).load()?.gear).toBe(true);
-    expect(SNAPSHOT_VERSION).toBe(32); // Round 5: hopper doses + grounds polish
+    expect(SNAPSHOT_VERSION).toBe(33); // Round 5: hopper doses + grounds polish; pre-open gone
   });
 });

@@ -287,10 +287,7 @@ export type SimEventKind =
   /**
    * FB2 C10 / Round 5 (src/sim/rearrange.ts): a station set down at night (`{ by, station, to: Vec2, swapped }`) or
    * refused (`{ by, station }`); `station.reset` when a rebuild at night left the moved layout blocked.
-   * `preopen.*` remain for old logs (the morning pre-open is gone).
    */
-  | 'preopen.start'
-  | 'preopen.end'
   | 'station.place'
   | 'station.refuse'
   | 'station.reset';
@@ -799,10 +796,6 @@ export interface GameState {
   hand: string[];
   boughtTonight: string[];
   ready: PlayerId[];
-  /**
-   * Round 5: unused (morning pre-open removed; rearrange at night). Kept optional so old snapshots still load.
-   */
-  preOpenUntil?: number;
   /** Relaxed night only: ticks left on the last call. Absent means no last call has started. */
   lastCall?: number;
   players: Player[];

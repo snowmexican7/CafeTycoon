@@ -123,7 +123,8 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
         ? { kind: 'wand', playerId: input.playerId, station: input.station, wand: input.wand }
         : null;
     case 'moveStation': {
-      // FB2 C10: a station id and a tile (whole numbers on the floor; the bar area and the layout are the sim's call).
+      // Round 5 (night rearrange): a station id and a tile (whole numbers on the floor; the phase, the bar area and the
+      // layout are the sim's call).
       const to = input.to as unknown;
       if (typeof input.station !== 'string' || input.station.length < 1 || input.station.length > MAX_STATION_ID) return null;
       if (!to || typeof to !== 'object') return null;
