@@ -15,7 +15,8 @@ import { createRenderer } from '../render/app';
 import { EVENT_FORESHADOW } from '../sim/describe';
 import { createRun, startDay, startNight } from '../sim/run';
 import { createNight } from '../ui/night';
-import type { GameState, SimEvent, TierId } from '../sim/types';
+import type { GameState, SimEvent, StationKind, TierId } from '../sim/types';
+import type { GearId } from '../data/gear';
 import { defaultSlots, ensureCounterSpots, stationsFromSlots } from '../sim/slots';
 import { createClosing } from '../ui/closing';
 import { createHud } from '../ui/hud';
@@ -624,6 +625,53 @@ const FIXTURES: Record<string, Fixture> = {
       ana.made = { shots: 2 };
       delete ana.jug;
       delete ana.steam;
+    },
+    timeline: [],
+  },
+  /** Round 5 block 2: grinder hopper with doses ready (×3 chip) and Ana about to take grounds. */
+  hopperDoses: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 2);
+      const slots: (StationKind | null)[] = ['grinder', 'espresso', 'drip', 'trash', null, null];
+      const slotGear: (GearId | null)[] = ['g2', 'e3', 'd1', 'b0', null, null];
+      s.slots = slots;
+      s.slotGear = slotGear;
+      s.stations = stationsFromSlots(s.tier, slots, slotGear);
+      ensureCounterSpots(s);
+      s.supplies = { ...s.supplies, beans: 20, milk: 12 };
+      const g = s.stations.find((st) => st.kind === 'grinder')!;
+      g.output = 'grounds';
+      g.doses = 3;
+      g.outputSince = s.tick;
+      g.doneAt = s.tick;
+      const ana = s.players[0]!;
+      ana.pos = { x: g.pos.x, y: g.pos.y + 1 };
+      ana.holding = null;
+      s.customers = [
+        { id: 31, drink: 'espresso', patienceLeft: 1200, patienceMax: 1400 },
+        { id: 32, drink: 'latte', patienceLeft: 1000, patienceMax: 1400 },
+      ];
+    },
+    timeline: [],
+  },
+  /** Round 5 block 2: night Gear shop showing new espresso/grinder seconds and hopper blurbs. */
+  gearHopperShop: {
+    night: true,
+    nightTab: 'gear',
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      s.cash = 400;
+      s.phase = 'night';
+      const slots: (StationKind | null)[] = ['grinder', 'espresso', null, 'trash'];
+      const slotGear: (GearId | null)[] = ['g1', 'e2', null, 'b0'];
+      s.slots = slots;
+      s.slotGear = slotGear;
+      s.stations = stationsFromSlots('stand', slots, slotGear);
+      s.tier = 'stand';
+      ensureCounterSpots(s);
     },
     timeline: [],
   },

@@ -59,6 +59,7 @@ export function finishDay(state: GameState): GameState {
     delete s.potLeft;
     delete s.potColdAt;
     delete s.potOff;
+    delete s.doses; // Round 5: hopper grounds clear at closing
   }
   fridgeClose(state); // FB2 A4: cartons go in the fridge, whatever is still out goes bad
   for (const p of state.players) {

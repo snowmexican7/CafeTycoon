@@ -10,7 +10,8 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SN
  *  - `applyGearInput(state, input)`: night only, connected humans only.
  *      buy:  pay `price`. If the crew already has a lower tier of the same tree in a slot, the new
  *            one replaces it in place and the old one is traded in for its `sell` value (an upgrade).
- *            Otherwise it goes into the first empty slot; with no empty slot nothing happens.
+ *            Otherwise it goes into an empty slot (Round 5: a grinder or espresso prefers the empty
+ *            slot nearest its partner; else the first empty); with no empty slot nothing happens.
  *            Buying the tier you already have adds a second copy in a free slot (G4e); a lower one does nothing.
  *      sell: empty slot `index` and get its `sell` value back.
  *  - `gearSpeed(station)` / `gearMarks(station)`: the machine's speed (1 = today) and the slip marks it
@@ -267,7 +268,9 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
     const tradeIn = at >= 0 ? GEAR[gear[at]!].sell + (oldWand ? WANDS[oldWand].sell : 0) : 0;
     if (state.cash + tradeIn < want.price + wandPrice) return state;
     if (at < 0) {
-      at = slots.findIndex((x, i) => x === null && i < slotCount(state.tier));
+      // Round 5: keep grinder next to espresso when either is bought into an empty slot.
+      at = preferPartnerSlot(state, want, slots);
+      if (at < 0) at = slots.findIndex((x, i) => x === null && i < slotCount(state.tier));
       if (at < 0) return state;
     } else {
       state.gearLog = [...(state.gearLog ?? []), { gear: gear[at]!, action: 'sell', day: state.day, by: p.name, cash: tradeIn, ...(oldWand ? { wand: oldWand } : {}) }];
@@ -420,6 +423,7 @@ export function gearMorning(state: GameState): void {
     delete s.potLeft;
     delete s.potColdAt;
     delete s.potOff;
+    delete s.doses; // Round 5: hopper grounds don't keep overnight
     const q = s.gear ? GEAR[s.gear].quirks : undefined;
     if (!q) continue;
     const name = GEAR[s.gear!].name;
@@ -781,6 +785,62 @@ export function gearPotFinished(state: GameState, s: Station): void {
     const r = rngNext(state);
     if (r < pot.miss) s.potOff = r < pot.miss / 2 ? 'hot' : 'cold';
   }
+}
+
+/**
+ * Round 5: a grinder finished grinding. Fill its hopper with `GearInfo.doses` grounds (each empty-hands
+ * press takes one at once). Classic grinders and gear without `doses` leave a single output as before.
+ */
+export function gearHopperFinished(state: GameState, s: Station): void {
+  const doses = s.gear && isGearRun(state) ? GEAR[s.gear].doses : undefined;
+  if (!doses || s.kind !== 'grinder') return;
+  s.doses = doses;
+}
+
+/**
+ * Round 5: someone takes grounds off a hopper grinder. Returns whether the hopper keeps doses (station
+ * keeps its output). Stations without a hopper: `{ hopper: false, more: false }`.
+ */
+export function gearHopperPour(s: Station): { hopper: boolean; more: boolean } {
+  if (s.doses === undefined) return { hopper: false, more: false };
+  s.doses -= 1;
+  const more = s.doses > 0;
+  if (!more) delete s.doses;
+  return { hopper: true, more };
+}
+
+/**
+ * Round 5: when buying a grinder or espresso into an empty slot, prefer the empty slot nearest a
+ * partner already on the bar (Manhattan on `SLOT_POSITIONS`). −1 when there is no partner or no empty slot.
+ */
+export function preferPartnerSlot(state: GameState, want: { tree: string }, slots: (StationKind | null)[]): number {
+  if (want.tree !== 'grinder' && want.tree !== 'espresso') return -1;
+  const partner = want.tree === 'grinder' ? 'espresso' : 'grinder';
+  const gear = state.slotGear ?? [];
+  const partners: number[] = [];
+  gear.forEach((id, i) => {
+    if (id && GEAR[id].tree === partner) partners.push(i);
+  });
+  if (partners.length === 0) return -1;
+  const spots = SLOT_POSITIONS[state.tier ?? 'cafe'] ?? SLOT_POSITIONS.cafe;
+  const n = Math.min(slotCount(state.tier), spots.length, slots.length);
+  let best = -1;
+  let bestDist = Infinity;
+  for (let i = 0; i < n; i++) {
+    if (slots[i] !== null) continue;
+    const a = spots[i];
+    if (!a) continue;
+    for (const p of partners) {
+      const b = spots[p];
+      if (!b) continue;
+      const d = Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = i;
+      }
+    }
+  }
+  return best;
 }
 
 /**

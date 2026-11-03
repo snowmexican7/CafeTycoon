@@ -112,10 +112,10 @@ export const RECIPES: Record<RecipeStation, Recipe[]> = {
   espresso: [
     { takes: 'grounds', gives: 'espresso', consumes: [] },
     // G6: an espresso in hand back at the machine gets hot water (Gear runs, once learned).
-    { takes: 'espresso', gives: 'americano', consumes: [], seconds: 1.5 },
+    { takes: 'espresso', gives: 'americano', consumes: [], seconds: 1.0 },
     // G6c: a second shot (clash with americano: the oldest ticket decides, see recipeFor); a shot on drip.
-    { takes: 'espresso', gives: 'doppio', consumes: ['beans'], seconds: 3 },
-    { takes: 'drip', gives: 'redEye', consumes: ['beans'], seconds: 3 },
+    { takes: 'espresso', gives: 'doppio', consumes: ['beans'], seconds: 2 },
+    { takes: 'drip', gives: 'redEye', consumes: ['beans'], seconds: 2 },
   ],
   steamer: [
     { takes: 'espresso', gives: 'latte', consumes: ['milk'] },

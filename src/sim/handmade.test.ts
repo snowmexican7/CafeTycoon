@@ -310,7 +310,8 @@ describe('FB2 B8: double shots', () => {
     interact(s, 'p1');
     const m = machine(s);
     expect(m.making).toBe('espresso');
-    expect(m.busyTicksLeft).toBe(Math.round(5 * TICK_RATE * 1.5));
+    // Round 5: e3 pull is 3/1.2 = 2.5 s; double ×1.5.
+    expect(m.busyTicksLeft).toBe(Math.round((3 / 1.2) * TICK_RATE * 1.5));
     expect(m.made).toEqual({ shots: 2 });
     expect(s.supplies.beans).toBe(49);
     expect(wantsDouble(s)).toBe(false);
@@ -324,7 +325,7 @@ describe('FB2 B8: double shots', () => {
     atMachine(t);
     p1(t).holding = 'grounds';
     interact(t, 'p1');
-    expect([machine(t).busyTicksLeft, machine(t).made, t.supplies.beans]).toEqual([5 * TICK_RATE, undefined, 50]);
+    expect([machine(t).busyTicksLeft, machine(t).made, t.supplies.beans]).toEqual([Math.round((3 / 1.2) * TICK_RATE), undefined, 50]);
   });
 
   it('no double without a bean to spare; nobody asking, no double', () => {
@@ -334,7 +335,7 @@ describe('FB2 B8: double shots', () => {
     atMachine(s);
     p1(s).holding = 'grounds';
     interact(s, 'p1');
-    expect([machine(s).busyTicksLeft, machine(s).made]).toEqual([5 * TICK_RATE, undefined]);
+    expect([machine(s).busyTicksLeft, machine(s).made]).toEqual([Math.round((3 / 1.2) * TICK_RATE), undefined]);
     const t = open();
     t.customers = [pickupCustomer(1, 'latte')];
     expect(wantsDouble(t)).toBe(false);

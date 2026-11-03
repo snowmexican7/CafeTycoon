@@ -5,7 +5,8 @@ import { computeModifiers } from './effects';
 import { eventActive } from './events';
 import { emitLog } from './log';
 import { counterInteract } from './pass';
-import { gearAfterUse, gearBlocked, gearMarks, gearPolish, gearPotFinished, gearPotPour, gearRecipe, gearSpeed, gearTapPour, gearTempMiss, takeTapCup, tapCupRecipe } from './gear';
+import { gearAfterUse, gearBlocked, gearHopperFinished, gearHopperPour, gearMarks, gearPolish, gearPotFinished, gearPotPour, gearRecipe, gearSpeed, gearTapPour, gearTempMiss, takeTapCup, tapCupRecipe } from './gear';
+import { GEAR } from '../data/gear';
 import { tally } from './tally';
 import { nearestStation } from './movement';
 import { mopInteract } from './mop';
@@ -87,6 +88,7 @@ export function stepStations(state: GameState): GameState {
         s.doneAt = state.tick;
         s.outputSince = state.tick;
         gearPotFinished(state, s); // G4d: a drip machine fills its pot
+        gearHopperFinished(state, s); // Round 5: a grinder fills its hopper
         if (s.output) onStationFinished(state, s, s.output);
       }
     }
@@ -100,7 +102,7 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   if (!player) return state;
   // FB2 B8: a press first stops a filling milk jug, or the steam meter at its wand.
   if (handmadePress(state, player)) return state;
-  if (player.holding === null) { delete player.cupSlips; delete player.cupTemp; delete player.made; } // P3 B5: empty hands, no cup, no marks
+  if (player.holding === null) { delete player.cupSlips; delete player.cupTemp; delete player.made; delete player.groundsPolish; } // P3 B5: empty hands, no cup, no marks
   if (trayInteract(state, player)) return state; // FB2 B7: a carried tray, or a press at the tray table
   if (player.tool === 'pot') {
     dumpPot(state, player); // FB2 A3: only the sink takes the pot
@@ -146,17 +148,22 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
 
   if (station.output !== null && player.holding === null) {
     player.holding = station.output;
+    // Round 5: grounds from a polish grinder carry forgiveness onto the espresso pull (polish only
+    // runs on the station that takes a cup in; the grinder itself never sees slips).
+    if (station.output === 'grounds' && station.gear && GEAR[station.gear].polish) player.groundsPolish = true;
     // G4d: a drip pot keeps pouring until it's empty; pot cups don't "sit" (they go cold instead).
+    // Round 5: a grinder hopper keeps doses the same way.
     const pour = gearPotPour(state, station);
+    const hop = gearHopperPour(station);
     // A2: a cup's clock: a pour from a pot starts now; a machine's output was made when it appeared.
     if (state.gear === true) player.heldSince = pour.pot ? state.tick : (station.outputSince ?? state.tick);
-    if (!pour.more) {
+    if (!pour.more && !hop.more) {
       station.output = null;
       delete station.outputSince;
     }
     const doneAt = station.doneAt;
     cupOutOfStation(state, player, station, pour.pot ? Infinity : ACCURACY.sitSeconds * TICK_RATE);
-    if (pour.more && doneAt !== undefined) station.doneAt = doneAt;
+    if ((pour.more || hop.more) && doneAt !== undefined) station.doneAt = doneAt;
     if (pour.temp) gearTempMiss(state, station, player, pour.temp);
     return state;
   }
@@ -185,6 +192,11 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     const gm = gearMarks(station);
     if (gm > 0) station.cupSlips = Math.min(ACCURACY.maxStars, (station.cupSlips ?? 0) + gm);
     else gearPolish(station);
+    // Round 5: g3 polish credit on grounds forgives one slip on this pull.
+    if (player.groundsPolish) {
+      if ((station.cupSlips ?? 0) > 0) station.cupSlips = station.cupSlips! - 1;
+      delete player.groundsPolish;
+    }
     player.holding = null;
     station.making = recipe.gives;
     const speed = computeModifiers(state).stationSpeed[station.kind];

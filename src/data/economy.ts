@@ -18,7 +18,7 @@ export const ECONOMY = {
     pastry: { size: 6, cost: 6.3 },
   } as Record<SupplyId, { size: number; cost: number }>,
   prices: { espresso: 3, latte: 4.75, coldBrew: 4, icedLatte: 5.25, mocha: 6, matcha: 5.5, special: 6.25, drip: 2.5, americano: 3.5, cappuccino: 5.25, doppio: 4.5, sweetCream: 5, cafeAuLait: 3.75, redEye: 4.25, pourOver: 4.5 } as Record<DrinkId, number>,
-  stationSeconds: { grinder: 2.5, espresso: 5, steamer: 3.5, coldBrewTap: 1.5, drip: 20 } as Record<
+  stationSeconds: { grinder: 2.5, espresso: 3, steamer: 3.5, coldBrewTap: 1.5, drip: 20 } as Record<
     Exclude<StationKind, 'counter' | 'trash'>,
     number
   >,

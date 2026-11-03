@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- Espresso gear is finally faster than two Pod-o-Matics: shorter pulls, a grinder hopper that holds several doses, quicker combos, and new grinders that sit next to the espresso machine when you buy them.
+
 ## 3.8.0 — 2026-10-31 · Hand-made lattes, a morning rearrange and the café feed
 
 Cursor's six-PR run (blocks 1–6 of `docs/CURSOR_PROMPT_NEXT.md`), reviewed, fixed up and merged by Grok.

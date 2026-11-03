@@ -47,10 +47,11 @@ describe('G10: top-tier perks', () => {
     expect(st.flowUntil).toBeUndefined();
   });
 
-  it('polish forgives one slip on the top cold brew and espresso machines only', () => {
+  it('polish forgives one slip on the top cold brew, espresso, and Monolith grinder', () => {
     const s = run(true);
     kit(s, ['coldBrewTap', 'espresso', 'grinder', 'trash'], ['c5', 'e6', 'g3', 'b0']);
-    for (const id of ['c5', 'e6'] as GearId[]) {
+    // Round 5: g3 also has polish (forgiveness rides on the grounds → shot via Player.groundsPolish).
+    for (const id of ['c5', 'e6', 'g3'] as GearId[]) {
       const st = s.stations.find((x) => x.gear === id)!;
       st.cupSlips = 2;
       gearPolish(st);
@@ -59,10 +60,6 @@ describe('G10: top-tier perks', () => {
       gearPolish(st);
       expect(st.cupSlips).toBe(0);
     }
-    const g = s.stations.find((x) => x.gear === 'g3')!;
-    g.cupSlips = 2;
-    gearPolish(g);
-    expect(g.cupSlips).toBe(2);
   });
 
   it('the nitro tap draws a few more iced orders', () => {

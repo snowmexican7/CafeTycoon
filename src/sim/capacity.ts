@@ -112,7 +112,11 @@ export function serveCapacity(state: GameState, menu: DrinkId[], m: Modifiers): 
       const machines = state.stations.filter((s) => s.kind === kind);
       if (machines.length === 0) continue;
       const speed = machines.reduce((a, s) => a + m.stationSpeed[kind] * gearSpeed(s), 0);
-      perSecond = Math.min(perSecond, speed / seconds);
+      // Round 5: base espresso pull is 3 s, but pods keep POD_SHOT at 5 s. Scale the share so a pods-only
+      // bar still caps at 6.0 s per shot (speed e1 = 5/6).
+      const pods = kind === 'espresso' && machines.every((s) => s.gear && GEAR[s.gear].pods);
+      const need = pods ? seconds * (5 / ECONOMY.stationSeconds.espresso) : seconds;
+      perSecond = Math.min(perSecond, speed / need);
     }
     const crew = Math.max(1, state.players.filter((p) => p.connected).length);
     perSecond = Math.min(perSecond, crew / (CAPACITY.handlingSeconds + steps * CAPACITY.stepSeconds));
