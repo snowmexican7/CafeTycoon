@@ -16,6 +16,12 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+_Nothing yet._
+
+## 3.9.0 — 2026-11-03 · Faster espresso, a night layout
+
+Cursor's Round 5 (blocks 1–6), with the sim review fixes, merged by Claude.
+
 - Every hairstyle covers the crown down to one shared hairline (no bald strip on top), front and back.
 - Bumping into another barista bounces you apart harder and unsticks overlapped bodies; cheap drip pots stay hot a little longer.
 - Espresso gear is finally faster than two Pod-o-Matics: shorter pulls, a grinder hopper that holds several doses, quicker combos, and new grinders that sit next to the espresso machine when you buy them.

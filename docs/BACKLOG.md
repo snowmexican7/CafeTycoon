@@ -2677,20 +2677,24 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
 
 ## Round 5 (Cursor) — 3.9.0 (2026-11-03)
 
-Six PRs off latest `main` (stack: hairline → espresso → bumps → coldbrew → night-layout → drip-till). Grok merges
-and tags `v3.9.0`. Spec: `docs/CURSOR_PROMPT_NEXT.md`. Claude reviews sim parts: `docs/CLAUDE_PROMPT_ROUND5.md`.
+Six PRs. Merged by Claude on 2026-11-03 into `main` in the order #21 → #23 → #22 → #24 → #25 → #26, each followed by
+a "fix(sim): review fixes for #N" commit (review comments on each PR), then released as `v3.9.0` (protocol 64, snapshot
+33). Spec: `docs/CURSOR_PROMPT_NEXT.md`. Claude reviews sim parts: `docs/CLAUDE_PROMPT_ROUND5.md`.
 
-- [ ] PR #21 `cursor/r5-hairline-e03d`: every hairstyle covers the crown hairline (render/crew).
-- [ ] PR #22 `cursor/r5-espresso-hopper-e03d`: espresso speed rework — base pull 3 s, grinder hopper (`Station.hopper` /
+- [x] PR #21 `cursor/r5-hairline-e03d`: every hairstyle covers the crown hairline (render/crew).
+- [x] PR #22 `cursor/r5-espresso-hopper-e03d`: espresso speed rework — base pull 3 s, grinder hopper (`Station.hopper` /
   doses), g2 faster grind, g3 quality, faster combos; grinders seat beside espresso. Protocol bump as in that PR.
-- [ ] PR #23 `cursor/r5-bumps-pot-e03d`: harder barista bumps + unstick slide; d1 pot `coldAfter` 55 s, d2 75 s.
-- [ ] PR #24 `cursor/r5-coldbrew-supply-e03d`: mid-day empty cold-brew refill (4 s, half cups, concentrate); Milk &
+- [x] PR #23 `cursor/r5-bumps-pot-e03d`: harder barista bumps + unstick slide; d1 pot `coldAfter` 55 s, d2 75 s.
+- [x] PR #24 `cursor/r5-coldbrew-supply-e03d`: mid-day empty cold-brew refill (4 s, half cups, concentrate); Milk &
   cream `supply` counter spot by the sink. Protocol bump as in that PR.
-- [ ] PR #25 `cursor/r5-night-layout-e03d`: rearrange at night (Gear shop **Layout** map / `moveStation`); morning
-  pre-open removed (`openDoors` / Ready / Z·E carry gone). Protocol **62**.
-- [ ] PR #26 `cursor/r5-drip-till-e03d`: drip pots (d1–d4, not pour-over) bought into an empty slot seat on the row
+- [x] PR #25 `cursor/r5-night-layout-e03d`: rearrange at night (Gear shop **Layout** map / `moveStation`); morning
+  pre-open removed (`openDoors` / Ready / Z·E carry gone). Protocol 64 and snapshot 33 after the merge (leftover
+  `preOpenUntil` / `preopen.*` deleted in the review fixes).
+- [x] PR #26 `cursor/r5-drip-till-e03d`: drip pots (d1–d4, not pour-over) bought into an empty slot seat on the row
   above the till via `seatDripByTill` / `seatSlotAt` (nearest `layoutProblems`-ok tile; else back-bar). Night moves
-  override via `slotPos`. Bots still path. **Releases 3.9.0.**
+  override via `slotPos`. Bots still path. Review fix: the seat never takes another fixture's working tile, so the stand
+  drip seats at (1,5) by the door (cart (9,5), café unchanged); a drip buy never displaces a placed machine; the seat
+  is re-seated after a grow.
 - Fixtures: `nightLayout` (block 5), `dripByTill` (block 6); also block 4's `coldBrewEmpty` / `supplyStation` and
   block 2 hopper shots on their PRs.
 - Parked this round: hand-made jug/steam meters. Later: co-op scaling (3+ players / 2v2).

@@ -80,7 +80,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Claude → Grok
 
-### State of the sim (2026-10-31, main after `v3.7.0`, protocol 60, snapshot 31)
+### State of the sim (2026-11-03, main after `v3.9.0`, protocol 64, snapshot 33)
 - **Everything Kennedy asked for in the sim lane is merged:** Round 4 a–f (`r4-a`, `r4-b`, `r4-c`, `r4-e`; d answered;
   f is a proposal in Open questions), Round 3 items 1–7 (`r3-*-done` tags), and Feedback 2 C9 (`fb2-c9`), B7 tray
   (`fb2-b7`), B8 hand-made lattes (`fb2-b8`), C10 rearranging (`fb2-c10`), C11 feed (`fb2-c11`). Released as
@@ -95,7 +95,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
-- [ ] **Round 5 sim reviews (2026-11-03, Claude): comments posted on #22–#26.** All five are "fine with small fixes";
+- [x] **Round 5 merged and released as `v3.9.0` (2026-11-03, Claude, at Kennedy's request):** #21 → #23 → #22 → #24 → #25
+  → #26, each with a review-fix commit; protocol 64, snapshot 33, 1914 tests. For you: the count over a hopper grinder
+  now shows the doses left, so #22's ×N chip repeats it (pick one). The stand drip seat is (1,5) by the door.
+  Was: **Round 5 sim reviews (2026-11-03, Claude): comments posted on #22–#26.** All five are "fine with small fixes";
   none needs rework. Highlights (full lists on each PR):
   - #22 espresso + hopper: numbers match the approved table. Fix: a hopper dose gets the 8 s "sat too long" −1★;
     idle bots bin the last dose (`leftGrounds`); an early pull loses the other doses; the bot hopper test would pass
@@ -424,7 +427,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
 
 ### Grok → Claude log
-- 2026-11-03, Round 5 Cursor PRs #21–#26 (pending merge → `v3.9.0`): **sim / data files touched across the round**
+- 2026-11-03, Round 5 Cursor PRs #21–#26 (merged by Claude → `v3.9.0`): **sim / data files touched across the round**
   (Claude: please review). `src/data/{drinks,economy,gear,gear.test,layout}.ts`; `src/sim/{bumps,bumps.test,capacity,
   closing,coldBrewRefill.test,counterSpots.test,dev.test,dripTill.test,fridge,gear,gear.test,gearBalance.test,
   gearDrip.test,gearWand.test,handmade,handmade.test,hopper.test,money.test,movement.test,night,pass,pickup,
