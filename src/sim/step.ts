@@ -56,7 +56,7 @@ import { setLook } from './look';
 import { hasStrategist } from './hires';
 import { strategistNewDrinks } from './strategist';
 import { unlockedDrinks } from './unlocks';
-import { applyMoveStation, applyOpenDoors, endPreOpen, inPreOpen, preOpenReady, stepPreOpen } from './rearrange';
+import { applyMoveStation } from './rearrange';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -147,14 +147,10 @@ function applyInput(s: GameState, input: PlayerInput): void {
       applyRestockInput(s, input); // Round 4 f: night price at night, a rush delivery in the day and closing
       break;
     case 'ready':
-      if (inPreOpen(s)) preOpenReady(s, input.playerId); // FB2 C10: Ready in the pre-open opens the doors once everyone is
-      else applyNightInput(s, input);
+      applyNightInput(s, input);
       break;
     case 'moveStation':
       applyMoveStation(s, input);
-      break;
-    case 'openDoors':
-      applyOpenDoors(s, input);
       break;
     case 'menu':
       applyMenuInput(s, input);
@@ -229,7 +225,6 @@ function applyInput(s: GameState, input: PlayerInput): void {
       // Round 5: as if the clock ran out. The doors lock (closing), the grace has one tick left, and this tick's
       // stepClosing runs finishDay: the same settlement, rent, wages and review as a day that ended by itself.
       if (canDevSkip(s, input.playerId)) {
-        endPreOpen(s);
         if (s.phase === 'day') enterClosing(s);
         s.phaseTicksLeft = 1;
       }
@@ -354,8 +349,7 @@ export function step(state: GameState, inputs: PlayerInput[]): GameState {
       stepNight(s);
       break;
     case 'day':
-      if (inPreOpen(s)) stepPreOpen(s); // FB2 C10: doors shut, the clock stands still, stations can move
-      else stepDay(s, true);
+      stepDay(s, true);
       break;
     case 'closing':
       stepClosing(s);

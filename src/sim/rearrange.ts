@@ -1,70 +1,37 @@
 /*
- * FB2 C10: station rearranging (Gear runs).
+ * FB2 C10 + Round 5 block 5: station rearranging (Gear runs).
  *
- * Each Gear morning opens with a pre-open (`ECONOMY.preOpenSeconds`, 15 s): `GameState.preOpenUntil` is the tick it
- * ends. Meanwhile the doors are shut (no walk-ins, no office run), the day clock and the day's events stand still,
- * people can walk about but not use anything, and bots wait. It ends when the time runs out, when every connected
- * person is ready (the night's `ready` input and `GameState.ready`, emptied when the pre-open starts), or when the
- * host sends `openDoors`. Events `preopen.start { until }`, `preopen.end`. The day's event schedule moves back by
- * however long the pre-open lasted, and bots drop their paths (they re-plan from where things now stand).
+ * Round 5: rearranging happens at night (any time on the Gear shop Layout map), not in a morning pre-open.
+ * The morning pre-open (`preOpenUntil`, `openDoors`, `preopen.*`, `ECONOMY.preOpenSeconds`) is removed — the day
+ * opens with the doors open. The night `ready` input is unchanged (it opens the shop).
  *
- * In the pre-open a person can set a back-bar machine down somewhere else: `{ kind: 'moveStation', playerId, station,
- * to }`. `station` is the id of any station of a slot (a twin moves its machine); fixtures (the till, pickup, condiment
- * bar, sink, fridge, tray table, B8's syrup rack and any later fixed spot) never move; they count in every layout check. `to` is a whole tile in the bar area (x 1 to
- * width - 1, y 1 to the row above the till). On another slot's spot the two slots swap spots (`swapped` is true when
- * that slot holds a machine; an empty slot just takes the old spot); on a free tile the machine moves there. Refused
- * (`station.refuse { by, station }`) when the layout would then block anything that was fine before: a spawn point,
- * the door, the mop's home or the box corner covered or cut off, a station with no tile to work it from on the
- * floor, no idle tile by the till, or two stations overlapping. Else `station.place { by, station, to, swapped }`.
+ * A connected person in a Gear night can set a back-bar machine down somewhere else: `{ kind: 'moveStation',
+ * playerId, station, to }`. `station` is the id of any station of a slot (a twin moves its machine); fixtures
+ * (the till, pickup, condiment bar, sink, fridge, tray table, syrup rack, milk & cream shelf and any later fixed
+ * spot) never move; they count in every layout check. `to` is a whole tile in the bar area (x 1 to width - 1, y 1
+ * to the row above the till). On another slot's spot the two slots swap spots (`swapped` is true when that slot
+ * holds a machine; an empty slot just takes the old spot); on a free tile the machine moves there. Refused
+ * (`station.refuse { by, station }`) when the layout would then block anything that was fine before: a spawn
+ * point, the door, the mop's home or the box corner covered or cut off, a station with no tile to work it from
+ * on the floor, no idle tile by the till, or two stations overlapping. Else
+ * `station.place { by, station, to, swapped }`.
  *
- * Moves are kept in `GameState.slotPos` (one spot per slot) for the rest of the run. A night rebuild of the bar (a
- * gear buy or sale, a wand, a grow) builds the slots on their kept spots; if that layout has a problem the default
- * one doesn't, every slot goes back to its default spot (`slotPos` cleared, `station.reset`). So after a grow the
- * moves stay when they still fit, else the bigger shop's default layout wins.
+ * Moves are kept in `GameState.slotPos` (one spot per slot) for the rest of the run. A night rebuild of the bar
+ * (a gear buy or sale, a wand, a grow) builds the slots on their kept spots; if that layout has a problem the
+ * default one doesn't, every slot goes back to its default spot (`slotPos` cleared, `station.reset`). So after a
+ * grow the moves stay when they still fit, else the bigger shop's default layout wins.
  */
-import { ECONOMY } from '../data/economy';
 import { LAYOUT, layoutFor } from '../data/layout';
-import { secondsToTicks } from './constants';
-import { computeModifiers } from './effects';
 import { floorWidth } from './growth';
 import { emitLog } from './log';
-import { applyMovement, blocked } from './movement';
+import { blocked } from './movement';
 import { slotGroups, slotSpots, twinPos } from './slots';
 import { settle } from './spawn';
-import { onTileEntry } from './floor';
-import { trackTiles } from './tiles';
 import { isWalkable, targetNodes, walkableNodes } from './bots/path';
 import type { GameState, PlayerInput, Station, Vec2 } from './types';
 
 const key = (v: Vec2) => `${v.x},${v.y}`;
 const same = (a: Vec2, b: Vec2) => a.x === b.x && a.y === b.y;
-
-/** True while the morning's pre-open runs. */
-export function inPreOpen(state: GameState): boolean {
-  return state.phase === 'day' && state.preOpenUntil !== undefined;
-}
-
-const people = (state: GameState) => state.players.filter((p) => p.connected && !p.bot);
-
-/** Called as the doors would open on a Gear morning: start the pre-open (none with nobody connected to use it). */
-export function beginPreOpen(state: GameState): void {
-  if (state.gear !== true || state.phase !== 'day' || people(state).length === 0) return;
-  state.preOpenUntil = state.tick + secondsToTicks(ECONOMY.preOpenSeconds);
-  state.ready = [];
-  emitLog(state, 'preopen.start', { until: state.preOpenUntil });
-}
-
-/** The pre-open ends: the day's events move back by its length, bots re-plan their paths. */
-export function endPreOpen(state: GameState): void {
-  if (state.preOpenUntil === undefined) return;
-  const began = state.preOpenUntil - secondsToTicks(ECONOMY.preOpenSeconds);
-  const lasted = Math.max(0, state.tick - began);
-  for (const e of state.eventSchedule) e.startTick += lasted;
-  delete state.preOpenUntil;
-  state.ready = [];
-  replan(state);
-  emitLog(state, 'preopen.end');
-}
 
 /** Bots forget their paths and pinned tiles (stations may have moved). */
 function replan(state: GameState): void {
@@ -73,32 +40,6 @@ function replan(state: GameState): void {
     p.bot.path = [];
     p.bot.target = null;
   }
-}
-
-/** A pre-open `ready`: the person is ready (the pre-open ends once every connected person is). */
-export function preOpenReady(state: GameState, playerId: string): void {
-  if (!inPreOpen(state)) return;
-  const p = state.players.find((x) => x.id === playerId);
-  if (!p || p.bot || state.ready.includes(p.id)) return;
-  state.ready.push(p.id);
-}
-
-/** `openDoors`: the host ends the pre-open now. */
-export function applyOpenDoors(state: GameState, input: Extract<PlayerInput, { kind: 'openDoors' }>): void {
-  if (inPreOpen(state) && input.playerId === state.hostId) endPreOpen(state);
-}
-
-/** One pre-open tick: people walk (nothing is used: interact, drop and so B8's jug and steam presses do nothing; step.ts drops `syrup`), then the end checks. */
-export function stepPreOpen(state: GameState): void {
-  applyMovement(state, computeModifiers(state).moveSpeed);
-  onTileEntry(state, trackTiles(state));
-  for (const p of state.players) {
-    p.interactQueued = false;
-    p.dropQueued = false;
-  }
-  const crew = people(state);
-  const allReady = crew.length > 0 && crew.every((p) => state.ready.includes(p.id));
-  if (state.tick >= (state.preOpenUntil ?? 0) || allReady || crew.length === 0) endPreOpen(state);
 }
 
 // ---------------------------------------------------------------------------------------------- the layout
@@ -110,7 +51,7 @@ function groups(state: GameState): Station[][] {
 }
 
 /** The slot a station belongs to (a twin: its machine's), or -1 for a fixture or an unknown id. */
-function slotOf(state: GameState, id: string): number {
+export function slotOf(state: GameState, id: string): number {
   return groups(state).findIndex((g) => g.some((x) => x.id === id));
 }
 
@@ -231,9 +172,9 @@ function storeSpots(state: GameState, spots: Vec2[]): void {
   else state.slotPos = kept;
 }
 
-/** The one who may rearrange: a connected person, in a Gear run's pre-open. (What `moveStation` checks before it judges the layout.) */
+/** The one who may rearrange: a connected person, in a Gear run's night. */
 function mover(state: GameState, playerId: string) {
-  if (!inPreOpen(state) || state.gear !== true) return undefined;
+  if (state.phase !== 'night' || state.gear !== true) return undefined;
   const p = state.players.find((x) => x.id === playerId);
   return p && p.connected && !p.bot ? p : undefined;
 }
@@ -250,15 +191,15 @@ function setDownPlan(state: GameState, station: string, to: Vec2): { slot: numbe
 
 /**
  * Round 5: would `moveStation` from `playerId` set `station` down on `to` right now? True exactly when it would take
- * (pre-open of a Gear run, a connected person, a known station of a slot, a whole bar tile, the layout no worse). The
- * input uses it, so they cannot drift. `validStationSpots` is the same test over every bar tile, without the
- * pre-open and person gates (it ignores who and when; for a person in the pre-open the two agree on every tile).
+ * (Gear night, a connected person, a known station of a slot, a whole bar tile, the layout no worse). The input uses
+ * it, so they cannot drift. `validStationSpots` is the same test over every bar tile, without the night and person
+ * gates (it ignores who and when; for a person at night the two agree on every tile).
  */
 export function canSetDown(state: GameState, playerId: string, station: string, to: Vec2): boolean {
   return mover(state, playerId) !== undefined && setDownPlan(state, station, to) !== null;
 }
 
-/** The `moveStation` input (pre-open, people only). */
+/** The `moveStation` input (Gear night, people only). */
 export function applyMoveStation(state: GameState, input: Extract<PlayerInput, { kind: 'moveStation' }>): void {
   const p = mover(state, input.playerId);
   if (!p) return;
@@ -277,7 +218,7 @@ export function applyMoveStation(state: GameState, input: Extract<PlayerInput, {
 /**
  * The tiles `station` (a station id; a twin stands for its machine) could be set down on now: every bar-area tile a
  * `moveStation` would accept, its own spot included (row by row). Empty for a fixture, an unknown id, or outside a
- * Gear run. For the UI's ghost outline.
+ * Gear run. For the night Layout map.
  */
 export function validStationSpots(state: GameState, station: string): Vec2[] {
   if (state.gear !== true) return [];

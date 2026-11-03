@@ -24,7 +24,6 @@ import { dayRestockVM } from '../ui/dayRestock';
 import { freshEvents, logToastLines, TOAST_KINDS } from '../ui/logToasts';
 import { reviewPopVM } from '../ui/feed';
 import { hudLive } from '../ui/live';
-import { carryTarget } from '../ui/rearrangeCarry';
 import { closingViewModel, hudViewModel, nightViewModel, weekEndViewModel } from '../ui/viewModels';
 import { createWeekEnd } from '../ui/weekEnd';
 import { nightExtras } from '../ui/live';
@@ -36,7 +35,7 @@ import { emptyRecords, foldRecords } from '../storage/recordsStore';
 import { HAIR_STYLES } from '../render/lookModel';
 import { floorFields } from '../sim/tiles';
 
-type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean; carry?: boolean };
+type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean };
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
@@ -593,23 +592,29 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
-  /** FB2 C10: Gear morning pre-open — countdown, Ready / Open doors, Ana near a movable machine. */
-  preOpen: {
+  /** Round 5 block 5: Gear night Gear shop Layout map (rearrange machines). */
+  nightLayout: {
+    night: true,
+    extras: true,
+    nightTab: 'gear',
     setup(s) {
       s.gear = true;
       gearStart(s);
-      atTier(s, 'cafe', 0);
+      s.tier = 'cafe';
+      s.day = 3;
+      s.cash = 220;
+      // A stocked café bar so the Layout map shows machines + fixtures (sink, fridge, tray).
+      // Gear has no steamer tree: espresso + wand, drip, cold brew (not classic's steamer slot).
+      const slots = ['grinder', 'espresso', 'drip', 'coldBrewTap', 'trash', null] as typeof s.slots;
+      s.slots = slots;
+      s.slotGear = ['g1', 'e3', 'd1', 'c1', 'b0', null];
+      s.slotWand = [null, 'weak', null, null, null, null];
+      s.stations = stationsFromSlots('cafe', slots!, s.slotGear, s.slotWand);
+      ensureCounterSpots(s);
+      s.supplies = { ...s.supplies, beans: 20, milk: 12, concentrate: 10, flavour: 6 };
       s.customers = [];
-      s.preOpenUntil = s.tick + secondsToTicks(12);
-      s.ready = [];
-      const machine = s.stations.find((x) => x.kind === 'drip' || x.kind === 'espresso' || x.kind === 'grinder');
-      if (machine) s.players[0]!.pos = { x: machine.pos.x, y: machine.pos.y + 1 };
     },
-    timeline: [
-      [0.8, (s) => emit(s, 'station.place', { by: 'ana', station: 'espresso', to: { x: 3, y: 2 }, swapped: false })],
-      [1.6, (s) => emit(s, 'station.refuse', { by: 'ana', station: 'espresso' })],
-      [2.4, (s) => emit(s, 'station.reset')],
-    ],
+    timeline: [],
   },
   /** FB2 B8: hand-made lattes — jug filling, steam meter, syrup rack, double/syrup tickets. */
   handmade: {
@@ -659,14 +664,6 @@ const FIXTURES: Record<string, Fixture> = {
       [2.0, (s) => emit(s, 'syrup.add', { by: 'ben', flavour: 'caramel' })],
       [2.6, (s) => emit(s, 'syrup.miss', { customer: 23 })],
     ],
-  },
-  /** ui-3.8.0 review: the pre-open with Ana mid-carry (ghost outlines on every valid tile). */
-  preOpenCarry: {
-    carry: true,
-    setup(s) {
-      FIXTURES.preOpen!.setup(s);
-    },
-    timeline: [],
   },
   /** ui-3.8.0 review: Ana at the syrup rack with a latte, so the 1 / 2 syrup picker is up. */
   syrupPick: {
@@ -1313,9 +1310,6 @@ async function main(): Promise<void> {
     const names = (id: string) => state.players.find((p) => p.id === id)?.name ?? id;
     hud.toast(logToastLines(freshEvents(state, -1, TOAST_KINDS).events, names, me));
   }
-  // ui-3.8.0: a fixture can start mid-carry (the local pre-open pickup) to show the ghost outlines.
-  const carry = fx.carry ? carryTarget(state, me) : null;
-  if (carry) renderer.setGhostSpots(carry.spots);
   let feedSeen = -1;
   const t0 = performance.now();
   const pending = [...fx.timeline];
@@ -1338,7 +1332,7 @@ async function main(): Promise<void> {
     const positions = Object.fromEntries(state.players.map((p) => [p.id, p.pos]));
     const c0 = performance.now();
     renderer.update({ state, baristaPositions: positions });
-    hud.render(hudViewModel(state), hudLive(state, me, carry));
+    hud.render(hudViewModel(state), hudLive(state, me));
     hud.setRestock(dayRestockVM(state));
     const w = window as unknown as { fixtureCost: number[] };
     (w.fixtureCost ??= []).push(performance.now() - c0);

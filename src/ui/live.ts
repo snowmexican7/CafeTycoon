@@ -14,9 +14,6 @@ import { GEAR } from '../data/gear';
 import { COLD_BREW_REFILL_SEC, canRefillColdBrew, gearSpeed, podsOnly, tapCupRecipe } from '../sim/gear';
 import { ACCURACY } from '../sim/accuracy';
 import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
-import { preOpenVM, type PreOpenVM } from './preOpen';
-import { inPreOpen, validStationSpots } from '../sim/rearrange';
-import { atCarrySpot, nearestCarrySpot, type StationCarry } from './rearrangeCarry';
 import { CALL, callRinging } from '../sim/call';
 import { AREAS } from '../data/areas';
 import { coolTicks, heldCool, takeBackCold, takeBackIndex } from '../sim/cooling';
@@ -153,8 +150,6 @@ export interface HudLive {
   hint: HandHint;
   /** FB1 WP3: the close-early vote (button by the clock). */
   closeEarly?: CloseEarlyVM;
-  /** FB2 C10: the morning pre-open rearrange banner. */
-  preOpen?: PreOpenVM;
   /** P4 B6: the second shop is ringing. */
   call?: CallVM;
   /** ui-3.4.1 (FB2 A4): the closing-soon checklist (last 30 s of the day, then the closing phase). */
@@ -428,35 +423,7 @@ export const checklistKey = (c: ClosingListVM | undefined): string => (c ? `${c.
 export const CONDIMENTS_LOW = 5;
 
 /** A plain-words hint for the nearest station, mirroring the interact rules (display only). */
-/** ui-3.8.0: `validStationSpots` is a full-floor search; the hint only needs "any spot?", once per layout and machine. */
-let spotMemo = { key: '', any: false };
-function anyStationSpot(state: GameState, id: string): boolean {
-  const key = `${id}|${state.stations.map((s) => `${s.id}@${s.pos.x},${s.pos.y}`).join(';')}`;
-  if (spotMemo.key !== key) spotMemo = { key, any: validStationSpots(state, id).length > 0 };
-  return spotMemo.any;
-}
-
-export function handHint(state: GameState, me: PlayerId, carry?: Pick<StationCarry, 'stationId'> & Partial<Pick<StationCarry, 'spots'>> | null): HandHint {
-  // FB2 C10: during the pre-open, E/jug/steam/syrup do nothing in the sim — show rearrange hints instead.
-  if (inPreOpen(state)) {
-    const player = state.players.find((p) => p.id === me);
-    if (carry?.stationId) {
-      const st = state.stations.find((s) => s.id === carry.stationId);
-      const name = st ? STATION_NAME[st.kind] : 'Machine';
-      // Green only on a spot where Z/E really sets it down (same test as main.ts's tryRearrangeKey).
-      const spot = carry.spots && player ? nearestCarrySpot(carry.spots, player.pos) : null;
-      if (spot && player && atCarrySpot(player.pos, spot)) return { go: true, title: `Set down · ${name}`, detail: 'Press E to put it here' };
-      return { go: false, title: `Carrying · ${name}`, detail: 'Walk to a green outline, then press E' };
-    }
-    // Only green "go" when Z/E really picks something up (same gate as carryTarget / validStationSpots).
-    if (player) {
-      const near = nearestStation(state, player.pos);
-      if (near && anyStationSpot(state, near.id)) {
-        return { go: true, title: `Pick up · ${STATION_NAME[near.kind]}`, detail: 'Z or E · rearrange before the doors open' };
-      }
-    }
-    return { go: false, title: 'Rearrange the bar', detail: 'Walk to a machine · Z or E picks it up' };
-  }
+export function handHint(state: GameState, me: PlayerId): HandHint {
   const hint = baseHandHint(state, me);
   // FB2 A2/A3: a cold cup anywhere but the sink or the bin says where it belongs
   const player = state.players.find((p) => p.id === me);
@@ -600,7 +567,7 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
   return go(VERB[kind], `${where} · ${secs.toFixed(1)} s`);
 }
 
-export function hudLive(state: GameState, me: PlayerId, carry?: Pick<StationCarry, 'stationId'> & Partial<Pick<StationCarry, 'spots'>> | null): HudLive {
+export function hudLive(state: GameState, me: PlayerId): HudLive {
   const total = state.phase === 'closing' ? ECONOMY.closingGraceSeconds * TICK_RATE : state.settings.dayLengthSec * TICK_RATE;
   const progress = total > 0 ? Math.max(0, Math.min(1, 1 - state.phaseTicksLeft / total)) : 0;
   const player = state.players.find((p) => p.id === me);
@@ -625,9 +592,8 @@ export function hudLive(state: GameState, me: PlayerId, carry?: Pick<StationCarr
     ...(podsOnly(state) ? { pods: true } : {}),
     ...(state.gear === true ? { gear: true } : {}),
     meName: player?.name ?? '',
-    hint: handHint(state, me, carry),
+    hint: handHint(state, me),
     closeEarly: closeEarlyVM(state, me),
-    preOpen: preOpenVM(state, me),
     ...(state.branch ? { call: callVM(state, me) } : {}),
     ...(closingSoon(state) ? { checklist: closingListVM(state) } : {}),
     ...(player && canAddSyrup(state, player) ? { syrupPicker: { flavours: ['vanilla', 'caramel'] as const } } : {}),

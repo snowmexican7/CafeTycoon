@@ -29,7 +29,6 @@ import { ACCURACY } from './accuracy';
 import { secondsToTicks } from './constants';
 import { readyStock, useStock } from './fridge';
 import { emitLog } from './log';
-import { inPreOpen } from './rearrange';
 import { rngNext } from './rng';
 import type { Customer, DrinkId, FillGrade, Flavour, GameState, HandMade, ItemKind, OrderItem, PassItem, Player, PlayerInput, Station, SteamGrade } from './types';
 
@@ -362,7 +361,7 @@ function syrupCupOk(state: GameState, p: Player): boolean {
  * `syrupCupOk`. The flavour chosen is not a gate (any flavour is served from the one stock).
  */
 export function canAddSyrup(state: GameState, playerId: string): boolean {
-  if ((state.phase !== 'day' && state.phase !== 'closing') || inPreOpen(state)) return false;
+  if (state.phase !== 'day' && state.phase !== 'closing') return false;
   const p = state.players.find((x) => x.id === playerId);
   return !!p && !p.bot && p.connected && syrupCupOk(state, p);
 }

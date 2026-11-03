@@ -4,7 +4,6 @@
  */
 import { ECONOMY } from '../data/economy';
 import { SYRUP_ID } from '../data/layout';
-import { inPreOpen } from '../sim/rearrange';
 import {
   FLAVOURS,
   HANDMADE,
@@ -132,7 +131,6 @@ export function handmadeHeldRecipe(state: GameState, p: Player): HandmadeRecipe 
  */
 export function canAddSyrup(state: GameState, p: Player): boolean {
   if (state.gear !== true || (state.phase !== 'day' && state.phase !== 'closing')) return false;
-  if (inPreOpen(state)) return false; // FB2 C10: the sim ignores syrup during the pre-open
   if (p.tool !== null || p.holding === null || !(SYRUP_CUPS as readonly string[]).includes(p.holding)) return false;
   if (p.made?.syrup || (state.supplies.flavour ?? 0) < 1) return false;
   const rack = state.stations.find(isSyrupRack);

@@ -132,8 +132,6 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       if ((x as number) < 0 || (x as number) > LAYOUT.width || (y as number) < 0 || (y as number) > LAYOUT.height) return null;
       return { kind: 'moveStation', playerId: input.playerId, station: input.station, to: { x: x as number, y: y as number } };
     }
-    case 'openDoors':
-      return { kind: 'openDoors', playerId: input.playerId };
     case 'fridge':
       return isFridgeId(input.fridge) ? { kind: 'fridge', playerId: input.playerId, fridge: input.fridge } : null;
     case 'condimentBox':

@@ -285,9 +285,9 @@ export type SimEventKind =
   | 'tray.spill'
   | 'tray.void'
   /**
-   * FB2 C10 (src/sim/rearrange.ts): the morning's pre-open (`{ until }` tick; `preopen.end` when the doors open); a station
-   * set down (`{ by, station, to: Vec2, swapped }`) or refused (`{ by, station }`); `station.reset` when a rebuild at night
-   * (a grow, a gear change) left the moved layout blocked, so every station went back to its default spot.
+   * FB2 C10 / Round 5 (src/sim/rearrange.ts): a station set down at night (`{ by, station, to: Vec2, swapped }`) or
+   * refused (`{ by, station }`); `station.reset` when a rebuild at night left the moved layout blocked.
+   * `preopen.*` remain for old logs (the morning pre-open is gone).
    */
   | 'preopen.start'
   | 'preopen.end'
@@ -800,9 +800,7 @@ export interface GameState {
   boughtTonight: string[];
   ready: PlayerId[];
   /**
-   * FB2 C10: the tick the morning's pre-open ends (Gear runs; absent = no pre-open, the doors are open). While it is set
-   * the doors are shut, the day clock stands still and people may move stations (`moveStation`). `ready` is reused: the
-   * pre-open also ends once every connected person is ready, or when the host sends `openDoors`.
+   * Round 5: unused (morning pre-open removed; rearrange at night). Kept optional so old snapshots still load.
    */
   preOpenUntil?: number;
   /** Relaxed night only: ticks left on the last call. Absent means no last call has started. */
@@ -976,10 +974,8 @@ export type PlayerInput =
   | { kind: 'gear'; playerId: PlayerId; action: 'buy'; gear: GearId; /** FB2 C9: an add-on wand bought with it (E3: weak; E4: weak or strong). */ wand?: AddOnWand }
   /** FB2 C9: add a wand to (or upgrade the wand on) the espresso machine `station` (its station id). Night only, people only. */
   | { kind: 'wand'; playerId: PlayerId; station: string; wand: AddOnWand }
-  /** FB2 C10: in the morning's pre-open, set the movable station `station` (a station id; a twin moves its machine) down on tile `to`. People only. */
+  /** Round 5 / FB2 C10: at night in a Gear run, set the movable station `station` (a station id; a twin moves its machine) down on tile `to`. People only. */
   | { kind: 'moveStation'; playerId: PlayerId; station: string; to: Vec2 }
-  /** FB2 C10: the host ends the pre-open now. */
-  | { kind: 'openDoors'; playerId: PlayerId }
   | { kind: 'gear'; playerId: PlayerId; action: 'sell'; index: number }
   | { kind: 'gear'; playerId: PlayerId; action: 'vote'; yes: boolean }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }

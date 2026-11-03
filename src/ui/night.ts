@@ -9,11 +9,12 @@ import { sellLabel, type FridgeVM, type GearTierState, type GearTierVM, type Gea
 import { isFridgeId, type FridgeId } from '../data/fridges';
 import { catalogueById } from '../data/catalogue';
 import { DRINK_INFO } from '../data/drinks';
-import type { AdId, CheckoutId, DrinkId, PitchKind, SupplyId, TierId } from '../sim/types';
+import type { AdId, CheckoutId, DrinkId, PitchKind, SupplyId, TierId, Vec2 } from '../sim/types';
 import { cardArt, CATEGORY_LABEL, CATEGORY_TINT } from './cardArt';
 import { esc, hide, onAction, show } from './dom';
 import { coin, itemIcon, jar, moon, sun, SUPPLY_COLOR } from './icons';
 import { categoryOf, nightExtrasKey, type NightExtras } from './live';
+import { layoutClick, layoutHtml, layoutWithSelection } from './nightLayout';
 import {
   nightStructureKey,
   type AdsVM, type BriefAlert, type CheckoutVM, type PitchVM, type ForecastVM, type HandCardVM, type MenuLineVM,
@@ -139,7 +140,10 @@ const GEAR_BTN: Record<GearTierState, (t: GearTierVM) => string> = {
 };
 
 /** The back bar (sell from a slot) and one row of tiers per tree. Bigger = better, cheapest on the left. */
-export function gearBoard(g: GearVM): string {
+export function gearBoard(
+  g: GearVM,
+  layoutUi: { selected: string | null; refuse?: string; focus?: Vec2 } = { selected: null },
+): string {
   const head = g.pickNight
     ? `<div class="gr-pick"><b>Pick your gear.</b> You start with $120 and an empty counter. Buy one machine to sell something tomorrow, then go back to <b>① Restock</b> to stock up.</div>${g.coopHint ? `<div class="gr-pick gr-coop" role="note"><b>👥 Co-op tip.</b> ${esc(g.coopHint)}</div>` : ''}`
     : '';
@@ -176,7 +180,10 @@ export function gearBoard(g: GearVM): string {
   const more = !g.pickNight && (g.notebook.length || g.levelUps.length)
     ? `<div class="gr-more"><button class="chip" data-action="drawer" data-d="notebook">📓 Street notebook${g.levelUps.length ? ' &amp; drinks to learn' : ''} ▸</button>${g.crowd ? `<span class="gr-crowd-line">👥 ${esc(g.crowd)}</span>` : ''}</div>`
     : '';
-  return `<div class="st-board gr-board">${head}${vote}${note}${more}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
+  const refuse = layoutUi.refuse ?? g.layoutRefuse;
+  const layout = layoutHtml(layoutWithSelection(g.layout, layoutUi.selected, refuse, layoutUi.focus));
+  // Layout sits high on the Gear shop pane so the map is visible without scrolling at 1280×800.
+  return `<div class="st-board gr-board">${head}${vote}${note}${more}${layout}<div class="st-slots" style="--n:${g.slots.length}">${slots}</div>
     ${wandPanel(g)}${g.fridge ? fridgePanel(g.fridge) : ''}<div class="st-shop-h">Gear trees <small>Upgrading trades in the one you have. Got a free slot? Buy a second of the same machine.</small></div>${rule}${trees}</div>`;
 }
 
@@ -645,7 +652,17 @@ function nextStep(order: { id: NightTab; label: string; icon: string }[], tab: N
 }
 const nextLabel = (t: { label: string; icon: string; n: number }) => `Next: ${t.n} ${t.icon} ${esc(t.label)} ▸`;
 
-export interface NightUiState { tab: NightTab; spend: SpendView; drawer: Drawer | null; sig: SigDraft | null; pitch: PitchDraft }
+export interface NightUiState {
+  tab: NightTab;
+  spend: SpendView;
+  drawer: Drawer | null;
+  sig: SigDraft | null;
+  pitch: PitchDraft;
+  /** Round 5: Gear shop Layout selection / keyboard focus (absent = none). */
+  layoutSelected?: string | null;
+  layoutRefuse?: string;
+  layoutFocus?: Vec2;
+}
 
 /** The whole board as HTML (pure: tests and the word-count check use it). */
 export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: string | null | undefined, ui: NightUiState): string {
@@ -700,7 +717,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
       <div class="pane tonight-pane ${ui.tab === 'tonight' ? 'on' : ''}" data-pane="tonight" role="tabpanel">${tonightPane(vm, extras)}</div>
       <div class="pane menu-pane ${ui.tab === 'menu' ? 'on' : ''}" data-pane="menu" role="tabpanel">${menuPane(vm)}</div>
       <div class="pane spend-pane ${ui.tab === 'spend' ? 'on' : ''}" data-pane="spend" role="tabpanel">${spend}</div>
-      ${vm.gear ? `<div class="pane gear-pane ${ui.tab === 'gear' ? 'on' : ''}" data-pane="gear" role="tabpanel">${gearBoard(vm.gear)}</div>` : ''}
+      ${vm.gear ? `<div class="pane gear-pane ${ui.tab === 'gear' ? 'on' : ''}" data-pane="gear" role="tabpanel">${gearBoard(vm.gear, { selected: ui.layoutSelected ?? null, refuse: ui.layoutRefuse, focus: ui.layoutFocus })}</div>` : ''}
       <div class="foot">
         <div class="ready">${ready}</div>
         <div class="spacer"></div>
@@ -715,7 +732,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire', role?: 'strategist' | 'marketer'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire', role?: 'strategist' | 'marketer'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void; onMoveStation?(station: string, to: Vec2): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; toast(lines: string[]): void; show(): void; hide(): void } {
   // ui-3.7.1: a bubble for news like the Strategist's menu changes; it sits outside the board, which rebuilds.
   const bubble = document.createElement('div');
@@ -725,12 +742,37 @@ export function createNight(
   if (container.parentElement) container.after(bubble);
   else container.append(bubble);
   let bubbleTimer: ReturnType<typeof setTimeout> | null = null;
-  const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' } };
+  const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, layoutSelected: null };
   let lastVm: NightVM | null = null;
   let lastExtras: NightExtras | undefined;
+  let lastRoom: string | null | undefined;
   let lastKey = '';
   let lastSig = '';
   let lastDay: number | null = null;
+
+  function redrawBoard(): void {
+    if (!lastVm) return;
+    const focused = document.activeElement instanceof HTMLElement && container.contains(document.activeElement) ? document.activeElement : null;
+    const focusSel = focused?.dataset.action === 'layout' && focused.dataset.x && focused.dataset.y
+      ? `[data-action="layout"][data-x="${focused.dataset.x}"][data-y="${focused.dataset.y}"]`
+      : '';
+    lastKey = `${nightStructureKey(lastVm)}#${lastExtras ? nightExtrasKey(lastExtras) : ''}#${lastRoom ?? ''}#lay:${ui.layoutSelected ?? ''}:${ui.layoutFocus?.x ?? ''},${ui.layoutFocus?.y ?? ''}:${ui.layoutRefuse ?? ''}`;
+    container.innerHTML = nightHtml(lastVm, lastExtras, lastRoom, ui);
+    if (focusSel) container.querySelector<HTMLElement>(focusSel)?.focus({ preventScroll: true });
+    else container.querySelector<HTMLElement>('.lay-cell.focus, .lay-cell.sel')?.focus({ preventScroll: true });
+  }
+
+  function applyLayoutClick(x: number, y: number): void {
+    const base = lastVm?.gear?.layout;
+    if (!base) return;
+    const r = layoutClick(base, ui.layoutSelected ?? null, x, y);
+    ui.layoutSelected = r.selected;
+    ui.layoutFocus = { x, y };
+    if (r.refuse) ui.layoutRefuse = r.refuse;
+    else delete ui.layoutRefuse;
+    if (r.move) handlers.onMoveStation?.(r.move.station, r.move.to);
+    redrawBoard();
+  }
 
   /** Review Block 6: soft open gate — warn when nothing is makeable; never hard-block. */
   function confirmOpenAnyway(): void {
@@ -805,6 +847,11 @@ export function createNight(
     else if (action === 'gear-vote') handlers.onGearVote?.(el.dataset.yes === '1');
     else if (action === 'fridge-buy' && isFridgeId(el.dataset.fridge)) handlers.onFridge?.(el.dataset.fridge);
     else if (action === 'condiment-box') handlers.onCondimentBox?.();
+    else if (action === 'layout') {
+      const x = Number(el.dataset.x);
+      const y = Number(el.dataset.y);
+      if (Number.isInteger(x) && Number.isInteger(y)) applyLayoutClick(x, y);
+    }
     else if (action === 'fix') {
       const fix = lastVm?.brief.alerts.find((a) => a.id === el.dataset.fix)?.fix?.input;
       if (fix) handlers.onTip?.(fix);
@@ -821,7 +868,33 @@ export function createNight(
     if (e.key === 'Escape' && ui.drawer) {
       e.stopPropagation();
       openDrawer(null);
+      return;
     }
+    // Round 5: Layout map — arrows move focus, Enter picks/places, Esc cancels selection.
+    if (ui.tab !== 'gear' || !lastVm?.gear) return;
+    const lay = lastVm.gear.layout;
+    if (e.key === 'Escape' && ui.layoutSelected) {
+      e.preventDefault();
+      e.stopPropagation();
+      ui.layoutSelected = null;
+      delete ui.layoutRefuse;
+      redrawBoard();
+      return;
+    }
+    const cur = ui.layoutFocus ?? { x: 1, y: 1 };
+    let next = { ...cur };
+    if (e.key === 'ArrowLeft') next.x = Math.max(1, cur.x - 1);
+    else if (e.key === 'ArrowRight') next.x = Math.min(lay.width, cur.x + 1);
+    else if (e.key === 'ArrowUp') next.y = Math.max(1, cur.y - 1);
+    else if (e.key === 'ArrowDown') next.y = Math.min(lay.height, cur.y + 1);
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      applyLayoutClick(cur.x, cur.y);
+      return;
+    } else return;
+    e.preventDefault();
+    ui.layoutFocus = next;
+    redrawBoard();
   });
   const draftOr = (v: SignatureVM): SigDraft => ui.sig ?? { name: '', drink: v.drinks[0], twist: TWISTS[0], premium: 2 };
   function syncDraft(v: SignatureVM | undefined): void {
@@ -930,8 +1003,9 @@ export function createNight(
     render(vm, extras, room) {
       lastVm = vm;
       lastExtras = extras;
+      lastRoom = room;
       if (vm.pitch?.result) ui.pitch = { ...ui.pitch, text: '' };
-      const key = `${nightStructureKey(vm)}#${extras ? nightExtrasKey(extras) : ''}#${room ?? ''}`;
+      const key = `${nightStructureKey(vm)}#${extras ? nightExtrasKey(extras) : ''}#${room ?? ''}#lay:${ui.layoutSelected ?? ''}:${ui.layoutFocus?.x ?? ''},${ui.layoutFocus?.y ?? ''}:${ui.layoutRefuse ?? ''}`;
       if (key === lastKey) return patch(vm, extras);
       lastKey = key;
       // ui-3.5.1: every night opens on ① Restock (Tonight in a classic run), whatever tab was open last night.
@@ -940,7 +1014,12 @@ export function createNight(
         lastDay = day;
         ui.tab = 'tonight';
         ui.drawer = null;
+        ui.layoutSelected = null;
+        delete ui.layoutRefuse;
+        delete ui.layoutFocus;
       }
+      // Sim refuse line wins when present; clear local pick-a-tile nudge once the board moves.
+      if (vm.gear?.layoutRefuse) ui.layoutRefuse = vm.gear.layoutRefuse;
       // a classic run has no Gear tab
       if (!vm.gear && ui.tab === 'gear') ui.tab = 'tonight';
       syncDraft(vm.signature);

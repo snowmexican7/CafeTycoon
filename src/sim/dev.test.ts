@@ -244,15 +244,14 @@ describe('R4 a: dev mode', () => {
       expect(skipped.day).toBe(natural.day);
     });
 
-    it('devSkip in the pre-open and in closing both end the day', () => {
-      const pre = createRun(opts(true));
-      pre.ready = ['p1', 'p2'];
-      let p = step(pre, [{ kind: 'ready', playerId: 'p1' }, { kind: 'ready', playerId: 'p2' }]);
+    it('devSkip in the day and in closing both end the day', () => {
+      const open = createRun(opts(true));
+      open.ready = ['p1', 'p2'];
+      let p = step(open, [{ kind: 'ready', playerId: 'p1' }, { kind: 'ready', playerId: 'p2' }]);
       expect(p.phase).toBe('day');
-      expect(p.preOpenUntil).toBeDefined();
+      expect(p.preOpenUntil).toBeUndefined();
       p = step(p, [skip]);
       expect(p.phase).toBe('night');
-      expect(p.preOpenUntil).toBeUndefined();
       const closing = day();
       closing.phase = 'closing';
       closing.phaseTicksLeft = 900;
