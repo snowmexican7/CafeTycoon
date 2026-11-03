@@ -189,7 +189,7 @@ const TWIN_SCALE = 0.7;
  * register only; `pickup` has the four cup coasters; `condiments` is the cream & sugar bar. Classic = undefined.
  * FB2 B7/B8: `trayTable` and `syrups` are fixed fixtures — never draw them as a till (HANDOFF).
  */
-export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge' | 'trayTable' | 'syrups';
+export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge' | 'supply' | 'trayTable' | 'syrups';
 
 /** Where pickup coaster `i` (0..3) sits on the pickup counter, in screen px. Shared with the per-frame cups. */
 export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: number } {
@@ -205,6 +205,8 @@ export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: n
 export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour' | 'pot', spot?: CounterSpot, fridge?: FridgeId | null): Container {
   // ui-3.4.1 (FB2 A4): the fridge stands on its own (no counter under it), one look per fridge
   if (kind === 'counter' && spot === 'fridge') return buildFridge(pos, fridge ?? 'f1');
+  // Round 5 block 4: milk & cream shelf by the sink
+  if (kind === 'counter' && spot === 'supply') return buildSupplyShelf(pos);
   plainArt = twin;
   let root: Container;
   try {
@@ -316,6 +318,34 @@ function buildSink(pos: Vec2): Container {
 function buildFridge(pos: Vec2, id: FridgeId): Container {
   const { root } = buildFridgeArt(pos, id);
   root.zIndex = stationDepth(pos);
+  return root;
+}
+
+/** Round 5 block 4: a small fridge-ish shelf with a milk jug and a cream carton by the sink. */
+function buildSupplyShelf(pos: Vec2): Container {
+  const root = new Container();
+  const g = new Graphics();
+  root.addChild(g);
+  const cx = sx(pos.x);
+  const cy = sy(pos.y);
+  root.zIndex = stationDepth(pos);
+  shadow(g, cx, cy + 28, 32, 7);
+  // open shelf cabinet
+  g.roundRect(cx - 26, cy - 40, 52, 56, 5).fill(0xe8efe6).stroke({ width: 2, color: 0x6f8a72 });
+  g.roundRect(cx - 22, cy - 36, 44, 22, 3).fill(0xd5e0d4);
+  g.roundRect(cx - 22, cy - 10, 44, 22, 3).fill(0xd5e0d4);
+  g.moveTo(cx - 22, cy - 12).lineTo(cx + 22, cy - 12).stroke({ width: 1.5, color: 0x6f8a72 });
+  // milk jug (top shelf)
+  g.roundRect(cx - 14, cy - 32, 10, 14, 2).fill(0xffffff).stroke({ width: 1.2, color: 0x6f8aa6 });
+  g.moveTo(cx - 14, cy - 30).lineTo(cx - 18, cy - 33).stroke({ width: 1.4, color: 0x6f8aa6 });
+  g.ellipse(cx - 9, cy - 18, 3, 2).fill(0x3d79b0);
+  // cream carton (top shelf)
+  g.roundRect(cx + 2, cy - 34, 12, 16, 2).fill(0xfff8ee).stroke({ width: 1.2, color: 0xc49a6c });
+  g.rect(cx + 2, cy - 28, 12, 4).fill(0xf2c14e);
+  // spare carton (bottom)
+  g.roundRect(cx - 8, cy - 6, 10, 14, 2).fill(0xfdfdfb).stroke({ width: 1.2, color: 0x6f8aa6 });
+  g.poly([cx - 8, cy - 6, cx + 2, cy - 6, cx - 1, cy - 11, cx - 5, cy - 11]).fill(0x3d79b0);
+  plate(root, g, cx, cy + 10, 'MILK', 0x3d79b0, 1);
   return root;
 }
 

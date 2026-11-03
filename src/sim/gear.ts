@@ -29,11 +29,11 @@ import { ensureCounterSpots, slotSpots, stationsFromSlots, slotCount, wandOn } f
 import { buyFridgeCard, fridgeCards } from './fridge';
 import { FRIDGES } from '../data/fridges';
 import { CONDIMENTS } from './condiments';
-import { steepMorning } from './steep';
+import { steepMorning, tapCap } from './steep';
 import { keepStale } from './sink';
 import { BASE_DRINKS, DRINK_IDS, TAP_DRINKS, usesShot, type Recipe } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
-import { TICK_RATE } from './constants';
+import { TICK_RATE, secondsToTicks } from './constants';
 import type { Modifiers } from './effects';
 import { ACCURACY } from './accuracy';
 import { ownTile, placeMess } from './floor';
@@ -532,14 +532,44 @@ export function takeTapCup(s: Station): boolean {
   return true;
 }
 
+/** Round 5 block 4: mid-day refill of an empty Gear cold brew station lasts this many seconds. */
+export const COLD_BREW_REFILL_SEC = 4;
+
+/**
+ * Round 5 block 4: empty hands at an empty Gear cold brew, during the day (or closing), with concentrate in stock,
+ * can start a mid-day refill (about half the station's daily cap).
+ */
+export function canRefillColdBrew(state: GameState, s: Station, p: Player): boolean {
+  if (!isGearRun(state) || s.kind !== 'coldBrewTap' || !s.gear) return false;
+  if (state.phase !== 'day' && state.phase !== 'closing') return false;
+  if (p.holding !== null || p.tool !== null || s.busyTicksLeft !== 0 || s.output !== null) return false;
+  if ((s.batchLeft ?? 0) > 0) return false;
+  const cups = Math.min(Math.floor(tapCap(s) / 2), Math.floor(state.supplies.concentrate ?? 0));
+  return cups >= 1;
+}
+
 /**
  * Batch/pickup: a press at a Gear tap with empty hands pours a steeped cup at once. Returns whether the press
- * was handled (the tap pours, or is empty and pours nothing); false leaves the press to the normal rules.
+ * was handled (the tap pours, an empty press starts a mid-day refill, or is empty and pours nothing); false leaves
+ * the press to the normal rules.
  */
 export function gearTapPour(state: GameState, s: Station, p: Player): boolean {
   if (!isGearRun(state) || s.kind !== 'coldBrewTap' || !s.gear) return false;
   if (p.holding !== null || p.tool !== null || s.busyTicksLeft !== 0 || s.output !== null) return false;
-  if (!takeTapCup(s)) return true;
+  if (!takeTapCup(s)) {
+    // Round 5 block 4: empty → mid-day refill when concentrate is in stock (night: no-op).
+    if (!canRefillColdBrew(state, s, p)) return true;
+    const cups = Math.min(Math.floor(tapCap(s) / 2), Math.floor(state.supplies.concentrate ?? 0));
+    state.supplies.concentrate -= cups;
+    s.batchLeft = cups;
+    const ticks = secondsToTicks(COLD_BREW_REFILL_SEC);
+    s.busyTicksLeft = ticks;
+    s.busyTotal = ticks;
+    s.making = null; // stepStations must not spawn a cup when the lock ends
+    s.output = null;
+    emitLog(state, 'coldbrew.refill', { by: p.id, station: s.id, cups });
+    return true;
+  }
   p.holding = 'coldBrew';
   p.heldSince = state.tick; // A2: poured now (iced: never cools)
   const marks = gearMarks(s);

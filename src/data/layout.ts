@@ -52,6 +52,11 @@ export const SINK_ID = 'sink';
 /** FB2 B7: the tray table (Gear runs), a fixed counter-kind spot like the sink, where multi-drink tickets are batched. */
 export const TRAY_ID = 'trayTable';
 /**
+ * Round 5 block 4: the staff milk & cream shelf (Gear runs), a fixed counter-kind spot by the sink (one tile above it).
+ * A second fridge door for staff: take a milk carton here the same way as at the fridge. Fixtures never move (C10).
+ */
+export const SUPPLY_ID = 'supply';
+/**
  * FB2 B8: the syrup rack (Gear runs with a steam wand), a fixed counter-kind spot like the sink: at the left end of the
  * front counter on every tier (a stop on the way to setting a cup down), worked from the tile behind it (2,5), which no
  * other station claims. It takes nothing from the fridge's, the sink's or the counter spots' reach, and is out of reach
@@ -83,6 +88,11 @@ export interface TierLayout {
    */
   sink: Vec2;
   /**
+   * Round 5 block 4 (Gear runs): the milk & cream shelf, one tile above the sink on the right wall (`x = width - 1,
+   * y = 3`). Worked from the tile to its left (often a spawn); fixtures never move.
+   */
+  supply: Vec2;
+  /**
    * FB2 B7 (Gear runs): the tray table, against the left wall just below the fridge (1,4), the same on every tier. It is
    * worked from the tile to its right (2,4) (or from below); no tile in its reach is in reach of any other station, and
    * it keeps clear of the spawn points, the door, the mop's home, the box corner and the bots' idle tiles by the till.
@@ -110,6 +120,7 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
     ...SPOTS,
     boxCorner: { x: 1, y: 7 },
     sink: { x: 7, y: 4 },
+    supply: { x: 7, y: 3 },
   },
   cart: {
     width: 10,
@@ -126,8 +137,18 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
     ...SPOTS,
     boxCorner: { x: 7, y: 7 },
     sink: { x: 9, y: 4 },
+    supply: { x: 9, y: 3 },
   },
-  cafe: { width: LAYOUT.width, stations: LAYOUT.stations, queueSlots: LAYOUT.queueSlots, mopHome: LAYOUT.mopHome, ...SPOTS, boxCorner: { x: 9, y: 7 }, sink: { x: 11, y: 4 } },
+  cafe: {
+    width: LAYOUT.width,
+    stations: LAYOUT.stations,
+    queueSlots: LAYOUT.queueSlots,
+    mopHome: LAYOUT.mopHome,
+    ...SPOTS,
+    boxCorner: { x: 9, y: 7 },
+    sink: { x: 11, y: 4 },
+    supply: { x: 11, y: 3 },
+  },
 };
 
 /**

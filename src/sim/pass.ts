@@ -64,8 +64,8 @@ export function counterInteract(state: GameState, playerId: PlayerId, at?: Stati
  */
 function gearCounter(state: GameState, player: Player, at?: Station): GameState {
   const spot = spotOf(at);
-  // FB2 A3/B7/B8: the sink, the tray table and the syrup rack have their own rules, never the counter's.
-  if (spot === 'sink' || spot === 'trayTable' || spot === 'syrups') return state;
+  // FB2 A3/B7/B8 + Round 5 supply: the sink, the tray table, the syrup rack and the milk & cream shelf have their own rules, never the counter's.
+  if (spot === 'sink' || spot === 'trayTable' || spot === 'syrups' || spot === 'supply') return state;
   if (player.holding !== null) {
     if (player.holding !== 'grounds' && state.pass.length < passSlots(state)) {
       const drink = player.holding;

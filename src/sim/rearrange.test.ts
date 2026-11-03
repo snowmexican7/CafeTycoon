@@ -153,7 +153,7 @@ describe('FB2 C10: moving stations', () => {
   });
 
   it('fixed fixtures never move', () => {
-    for (const id of ['counter', 'pickup', 'condiments', 'sink', 'trayTable']) {
+    for (const id of ['counter', 'pickup', 'condiments', 'sink', 'supply', 'trayTable']) {
       let s = preOpen();
       const was = { ...at(s, id) };
       s = move(s, id, { x: 3, y: 3 });
@@ -212,11 +212,17 @@ describe('FB2 C10: moving stations', () => {
   });
 
   it("a one-twin machine on the floor's last column has its twin on the left", () => {
-    let s = open(night(['grinder', 'espresso', null, 'trash'], ['g1', 'e3', null, 'b0'], { wands: [null, 'weak', null, null] }));
+    // Cart: last column is x=9; stand's x=7 is next to Round 5's milk & cream shelf at (7,3).
+    let s = open(
+      night(['grinder', 'espresso', null, null, 'trash'], ['g1', 'e3', null, null, 'b0'], {
+        tier: 'cart',
+        wands: [null, 'weak', null, null, null],
+      }),
+    );
     expect(at(s, 'steamer')).toEqual({ x: 3.55, y: 1 });
-    s = move(s, 'espresso', { x: 7, y: 2 });
-    expect(at(s, 'espresso')).toEqual({ x: 7, y: 2 });
-    expect(at(s, 'steamer')).toEqual({ x: 6.45, y: 2 });
+    s = move(s, 'espresso', { x: 9, y: 5 });
+    expect(at(s, 'espresso')).toEqual({ x: 9, y: 5 });
+    expect(at(s, 'steamer')).toEqual({ x: 8.45, y: 5 });
   });
 
   it('validStationSpots lists where a machine may go; none for a fixture', () => {
@@ -229,6 +235,7 @@ describe('FB2 C10: moving stations', () => {
     expect(has(5, 5)).toBe(false); // the pickup counter's only working tile
     expect(has(2, 6)).toBe(false); // the counter row
     expect(has(7, 4)).toBe(false); // the sink
+    expect(has(7, 3)).toBe(false); // Round 5: milk & cream shelf
     expect(validStationSpots(s, 'sink')).toEqual([]);
     expect(validStationSpots(s, 'nope')).toEqual([]);
   });

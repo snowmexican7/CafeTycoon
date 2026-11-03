@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- Empty cold brew can be refilled mid-day (4 s, half a day's cups, pays concentrate), and a Milk & cream shelf by the sink lets staff grab a carton without the long walk to the fridge.
+
 ## 3.8.0 — 2026-10-31 · Hand-made lattes, a morning rearrange and the café feed
 
 Cursor's six-PR run (blocks 1–6 of `docs/CURSOR_PROMPT_NEXT.md`), reviewed, fixed up and merged by Grok.

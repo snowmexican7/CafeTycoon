@@ -176,6 +176,10 @@ describe('sink and pot hints (3.3.3, FB2 A3)', () => {
     expect(counterName({ id: 'sink' })).toBe('Back sink');
   });
 
+  it('names the milk & cream shelf', () => {
+    expect(counterName({ id: 'supply' })).toBe('Milk & cream');
+  });
+
   it('a stale pot says lift it with empty hands, and wait with full ones', () => {
     const s = drip();
     const d = s.stations.find((x) => x.id === 'drip')!;

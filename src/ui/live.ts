@@ -11,7 +11,7 @@ import { CONDIMENTS, canTakeBox } from '../sim/condiments';
 import { CONDIMENTS_ID } from '../data/layout';
 import { DRINK_INFO } from '../data/drinks';
 import { GEAR } from '../data/gear';
-import { podsOnly, tapCupRecipe } from '../sim/gear';
+import { COLD_BREW_REFILL_SEC, canRefillColdBrew, podsOnly, tapCupRecipe } from '../sim/gear';
 import { ACCURACY } from '../sim/accuracy';
 import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
 import { preOpenVM, type PreOpenVM } from './preOpen';
@@ -216,11 +216,13 @@ export function counterName(station: { id: string }): string {
         ? 'Back sink'
         : spot === 'fridge'
           ? 'Fridge'
-          : spot === 'trayTable'
-            ? 'Tray table'
-            : spot === 'syrups'
-              ? 'Syrup rack'
-              : 'Till';
+          : spot === 'supply'
+            ? 'Milk & cream'
+            : spot === 'trayTable'
+              ? 'Tray table'
+              : spot === 'syrups'
+                ? 'Syrup rack'
+                : 'Till';
 }
 
 /** 3.3.3: what the hand slot shows for a tool. */
@@ -284,7 +286,7 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   const held = player.holding;
   const spot = spotOf(station);
   if (spot === 'sink') return sinkHint(state, player);
-  if (spot === 'fridge') return fridgeHint(state, player);
+  if (spot === 'fridge' || spot === 'supply') return fridgeHint(state, player, spot === 'supply' ? 'Milk & cream' : undefined);
   // FB2 B7: the tray table — never "Set on the pickup counter" / Till copy (HANDOFF).
   if (spot === 'trayTable') {
     if (player.tool === 'tray') return { go: false, title: 'Carry the tray to pickup', detail: `${where} · E at pickup puts it down` };
@@ -353,11 +355,12 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   return { go: false, title: servings <= CONDIMENTS_LOW ? 'Bar is running low' : 'Cream & sugar', detail: `${where} · ${servings}/${CONDIMENTS.servings} servings` };
 }
 
-/** ui-3.4.1 (FB2 A4, mirrors sim/fridge.ts fridgeInteract): empty hands take a carton; a cup stays in hand. */
-function fridgeHint(state: GameState, player: GameState['players'][number]): HandHint {
+/** ui-3.4.1 (FB2 A4, mirrors sim/fridge.ts fridgeInteract): empty hands take a carton; a cup stays in hand. Round 5: the milk & cream shelf uses the same copy. */
+function fridgeHint(state: GameState, player: GameState['players'][number], label?: string): HandHint {
   const id = fridgeGear(state);
-  const where = id ? FRIDGES[id].name : 'Fridge';
+  const where = label ?? (id ? FRIDGES[id].name : 'Fridge');
   if (player.holding !== null) return { go: false, title: 'Hands full: set the cup down first', detail: `${where} · it only holds milk` };
+  if (!id) return { go: false, title: 'No milk: buy a fridge tonight', detail: where };
   const milk = Math.floor(state.supplies.milk ?? 0);
   if (milk < 1) return { go: false, title: 'No milk in the fridge', detail: `${where} · buy milk tonight` };
   if (autoMilk(state)) return { go: true, title: 'Grab milk', detail: `${where} · ${milk} inside · it pours its own, too` };
@@ -565,19 +568,32 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
     const r = recipeAt(state, station, held);
     if (r && r.consumes.includes('milk') && (state.milkOut ?? 0) < 1) {
       if (!state.stations.some(isFridge)) return idle('No milk: buy a fridge tonight', where);
-      return (state.supplies.milk ?? 0) >= 1 ? idle('Out of milk here: grab a carton', `${where} · from the fridge`) : idle('Out of milk', `${where} · the fridge is empty too`);
+      return (state.supplies.milk ?? 0) >= 1
+        ? idle('Out of milk here: grab a carton', `${where} · from the fridge or Milk & cream`)
+        : idle('Out of milk', `${where} · the fridge is empty too`);
     }
     if (r && !stocked(state, r)) {
       const miss = r.consumes.find((s) => state.supplies[s] < 1);
       if (miss) return idle(`Out of ${SUPPLY_NAME[miss].toLowerCase()}`, where);
     }
   } else if (supply && state.supplies[supply] < 1) return idle(`Out of ${SUPPLY_NAME[supply].toLowerCase()}`, where);
+  // Round 5 block 4: empty Gear cold brew — refill mid-day, or say to restock (never "Pour" when empty).
+  if (state.gear === true && kind === 'coldBrewTap' && station.gear && held === null && (station.batchLeft ?? 0) <= 0) {
+    if (canRefillColdBrew(state, station, player)) {
+      return go(`Press E to refill (${COLD_BREW_REFILL_SEC} s)`, where);
+    }
+    return idle('Out of cold brew. Buy more with 📦 Restock', where);
+  }
   // FB2 B8: at a wand with a shot, fill the jug first (then E puts it on and starts the steam meter).
   if (state.gear === true && !player.bot && kind === 'steamer' && held === 'espresso') {
     const r = recipeAt(state, station, held);
     if (r?.takes === 'espresso' && r.gives === 'latte' && !player.jug?.done) {
       return go('Fill the milk jug', `${where} · E starts it · E again stops on the ticket's line`);
     }
+  }
+  // Gear steeped pour: empty hands at a stocked cold brew, no wait.
+  if (state.gear === true && kind === 'coldBrewTap' && station.gear && held === null && (station.batchLeft ?? 0) > 0) {
+    return go(VERB[kind], where);
   }
   const secs = ECONOMY.stationSeconds[kind] / computeModifiers(state).stationSpeed[kind];
   return go(VERB[kind], `${where} · ${secs.toFixed(1)} s`);

@@ -6,7 +6,7 @@
  * No RNG here: the order is the pass (stalest first) and the customers (upset, ring time, id).
  */
 import { ECONOMY } from '../data/economy';
-import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, SYRUP_ID, TRAY_ID } from '../data/layout';
+import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, SUPPLY_ID, SYRUP_ID, TRAY_ID } from '../data/layout';
 import { CONDIMENTS, noteCondiments, wantsCondiments } from './condiments';
 import { loseCustomer, serveCustomer } from './customers';
 import { LUKEWARM, coolFraction, coolTicks, slotCool } from './cooling';
@@ -24,7 +24,7 @@ export const PICKUP = { slots: 4 } as const;
  * The counter-kind spots of a Gear shop (FB2 A3: the back sink is one too; FB2 A4: so is the fridge; FB2 B7: and the
  * tray table; FB2 B8: and the syrup rack, so none reads as the till).
  */
-export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge' | 'trayTable' | 'syrups';
+export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge' | 'supply' | 'trayTable' | 'syrups';
 
 /** Which counter spot `at` is: absent, or the counter's own id, is the till. */
 export function spotOf(at?: Station): CounterSpot {
@@ -32,6 +32,7 @@ export function spotOf(at?: Station): CounterSpot {
   if (at?.id === CONDIMENTS_ID) return 'condiments';
   if (at?.id === SINK_ID) return 'sink';
   if (at?.id === FRIDGE_ID) return 'fridge';
+  if (at?.id === SUPPLY_ID) return 'supply';
   if (at?.id === TRAY_ID) return 'trayTable';
   if (at?.id === SYRUP_ID) return 'syrups';
   return 'till';

@@ -127,9 +127,12 @@ describe('Gear Tree G2: the sim', () => {
     expect(batchOut(s)).toBe(true);
     expect(availableDrinks(s)).not.toContain('coldBrew');
     expect(reasonOff(s, 'coldBrew')).toBe('noStock');
+    // Round 5: empty + concentrate starts a mid-day refill; with none left, the press still pours nothing.
+    s.supplies.concentrate = 0;
     s.players[0].pos = { ...tap.pos, y: tap.pos.y + 1 };
     interact(s, 'p1');
-    expect([tap.busyTicksLeft, s.supplies.concentrate]).toEqual([0, 42]); // the morning steeped 8 of the 50; the empty tap pours nothing
+    expect([tap.busyTicksLeft, s.supplies.concentrate, s.players[0].holding]).toEqual([0, 0, null]);
+    s.supplies.concentrate = 42;
     gearMorning(s);
     expect(tap.batchLeft).toBe(8);
   });

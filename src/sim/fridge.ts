@@ -24,7 +24,7 @@
  */
 import { ECONOMY } from '../data/economy';
 import { FRIDGES, TIER_FRIDGE, isFridgeId, type FridgeId } from '../data/fridges';
-import { CONDIMENTS_ID, FRIDGE_ID, layoutFor } from '../data/layout';
+import { CONDIMENTS_ID, FRIDGE_ID, SUPPLY_ID, layoutFor } from '../data/layout';
 import { CONDIMENTS } from './condiments';
 import { secondsToTicks } from './constants';
 import { emitLog } from './log';
@@ -80,6 +80,8 @@ export function autoMilk(state: GameState): boolean {
 export const MILK_KINDS: StationKind[] = ['steamer', 'coldBrewTap'];
 export const isMilkStation = (st: Station | null | undefined): boolean => !!st && MILK_KINDS.includes(st.kind);
 export const isFridge = (st: Station | null | undefined): boolean => st?.id === FRIDGE_ID;
+/** Round 5 block 4: the staff milk & cream shelf by the sink (a second fridge door for cartons). */
+export const isSupply = (st: Station | null | undefined): boolean => st?.id === SUPPLY_ID;
 
 /** What a machine can draw right now: in a Gear run milk is the milk out at the bar, everything else (and classic) is `supplies`. */
 export function readyStock(state: GameState, s: SupplyId): number {
@@ -250,14 +252,15 @@ export function fridgeInteract(state: GameState, p: Player, st: Station | null, 
   if (!st) return false;
   // M1: the mop or a condiment box in hand: the press is theirs (mopping next to the fridge works).
   if (p.tool !== null) return false;
-  if (isFridge(st)) {
-    // Empty hands take a carton; anything else in hand stays there (the fridge is not a counter).
-    if (p.holding === null && (state.supplies.milk ?? 0) >= 1) {
+  if (isFridge(st) || isSupply(st)) {
+    // Empty hands take a carton; anything else in hand stays there (the fridge / supply shelf is not a counter).
+    // Round 5 block 4: the supply shelf needs a fridge in the shop (same "no fridge, no milk" rule); put-away stays fridge-only.
+    if (p.holding === null && fridgeGear(state) && (state.supplies.milk ?? 0) >= 1) {
       const n = Math.min(FRIDGE.carton, Math.floor(state.supplies.milk));
       state.supplies.milk -= n;
       p.tool = 'milk';
       p.carry = n;
-      emitLog(state, 'fridge.take', { by: p.id, item: 'milk', n });
+      emitLog(state, 'fridge.take', { by: p.id, item: 'milk', n, ...(isSupply(st) ? { station: st.id } : {}) });
     }
     return true;
   }
