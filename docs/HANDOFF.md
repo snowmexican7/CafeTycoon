@@ -23,6 +23,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-03: **The stand's drip machine stays by the door** at (1,5) when bought (cart (9,5), café unchanged), so it
+  never takes another fixture's working tile. Players can still move it on the night Layout map.
 - 2026-11-03: **Round 5 approved (Kennedy, Nov 2 playtest + Nov 3 refinements).** Cursor builds six blocks
   (`docs/CURSOR_PROMPT_NEXT.md`) and **may edit `src/sim` / `src/data` this round**, listing them per PR. Claude reviews
   those parts (`docs/CLAUDE_PROMPT_ROUND5.md`). Items: fix the hairline on every hairstyle; espresso speed rework (grinder +
@@ -97,7 +99,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 ### Needs from you (UI lane)
 - [x] **Round 5 merged and released as `v3.9.0` (2026-11-03, Claude, at Kennedy's request):** #21 → #23 → #22 → #24 → #25
   → #26, each with a review-fix commit; protocol 64, snapshot 33, 1914 tests. For you: the count over a hopper grinder
-  now shows the doses left, so #22's ×N chip repeats it (pick one). The stand drip seat is (1,5) by the door.
+  now shows the doses left, so #22's ×N chip repeats it (pick one). The stand drip seat is (1,5) by the door (Kennedy: keep it).
   Was: **Round 5 sim reviews (2026-11-03, Claude): comments posted on #22–#26.** All five are "fine with small fixes";
   none needs rework. Highlights (full lists on each PR):
   - #22 espresso + hopper: numbers match the approved table. Fix: a hopper dose gets the 8 s "sat too long" −1★;
