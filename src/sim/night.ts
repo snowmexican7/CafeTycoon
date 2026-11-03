@@ -6,7 +6,6 @@ import { computeModifiers, resolveGamble } from './effects';
 import { rngNext } from './rng';
 import { tuneRadio } from './events';
 import { startDay } from './run';
-import { beginPreOpen } from './rearrange';
 import { TICK_RATE, secondsToTicks } from './constants';
 import { unlockDrink } from './unlocks';
 import { packsThatFit } from './fridge';
@@ -179,10 +178,9 @@ function nudgeGrow(state: GameState): void {
   emitLog(state, 'grow.affordable', { tier });
 }
 
-/** The night ends: the doors open for the day (FB2 C10: on a Gear morning, after the pre-open). */
+/** The night ends: the doors open for the day (Round 5: no morning pre-open — rearrange at night). */
 function openShop(state: GameState): GameState {
   startDay(state);
-  beginPreOpen(state);
   return state;
 }
 

@@ -386,7 +386,6 @@ describe('FB2 B8: the syrup rack', () => {
   it('canAddSyrup is true exactly when the syrup input does something, gate by gate (Round 5)', () => {
     const ready = (): GameState => {
       const s = open();
-      delete s.preOpenUntil;
       atRack(s);
       p1(s).holding = 'latte';
       return s;
@@ -400,7 +399,6 @@ describe('FB2 B8: the syrup rack', () => {
       ['one per cup', (s) => { p1(s).made = { syrup: 'caramel' }; }],
       ['no stock', (s) => { s.supplies.flavour = 0; }],
       ['night', (s) => { s.phase = 'night'; }],
-      ['pre-open', (s) => { s.preOpenUntil = s.tick + 100; }],
       ['disconnected', (s) => { p1(s).connected = false; }],
     ];
     for (const [why, setup] of tries) {
