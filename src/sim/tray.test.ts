@@ -334,8 +334,9 @@ describe('FB2 B7: carrying the tray', () => {
         atTable(s, p1(s), null);
         interact(s, 'p1');
       } else p1(s).holding = 'latte';
+      // Round 5: bodyTiles is 0.5 — stand just inside so the bump still fires.
       p1(s).pos = { x: 4, y: 3 };
-      p2(s).pos = { x: 4.5, y: 3 };
+      p2(s).pos = { x: 4 + ECONOMY.bump.bodyTiles - 0.1, y: 3 };
       p1(s).moveDir = { x: 1, y: 0 };
       p2(s).moveDir = { x: -1, y: 0 };
       s.rng = rng;

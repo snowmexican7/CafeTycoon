@@ -62,7 +62,7 @@ describe('Gear Tree G4d: drip', () => {
     interact(s, 'p1');
     finish(s);
     delete st.potOff;
-    s.tick += 46 * TICK_RATE;
+    s.tick += 56 * TICK_RATE; // Round 5: d1 coldAfter 55 s
     s.players[0].holding = null;
     interact(s, 'p1');
     expect([s.players[0].holding, s.players[0].tool, st.potOut]).toEqual([null, 'pot', 'p1']);
