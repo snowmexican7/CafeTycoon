@@ -23,6 +23,16 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-03: **Round 5 approved (Kennedy, Nov 2 playtest + Nov 3 refinements).** Cursor builds six blocks
+  (`docs/CURSOR_PROMPT_NEXT.md`) and **may edit `src/sim` / `src/data` this round**, listing them per PR. Claude reviews
+  those parts (`docs/CLAUDE_PROMPT_ROUND5.md`). Items: fix the hairline on every hairstyle; espresso speed rework (grinder +
+  espresso beats two pods at every tier, walking included: base pull 3 s, grinder hopper, g2 much faster, g3 quality,
+  faster combos); collisions tighter, with more bounce and slowdown (customer bumps unchanged); drip pot hot longer
+  (d1 55 s, d2 75 s); refill an empty cold brew tap mid-day; a staff milk-and-cream station by the sink; **rearranging
+  moves to the night (inside the Gear shop tab), and the morning pre-open is removed**; the drip machine sits by the till
+  by default, so the cashier has work. **Parked:** the hand-made jug and steam meters (too chaotic by day 4–5; keep the
+  code, don't add to it). **Later:** co-op scaling (3 players get more rush orders; 4 players play 2v2 with a shared pool
+  or twin sims, see ROADMAP). The night still opens on Restock, with no new night tabs.
 - 2026-10-31: **Review follow-ups (Kennedy):** night always opens on Restock first; add a soft "Open anyway?" warning when opening with no makeable drinks (UI); Day-HUD declutter in stages he reviews; no save-compat work until saves are a real feature; the per-tick `structuredClone` speed fix is parked.
 - 2026-10-31: **New workflow (Kennedy, Oct 31 morning):** Grok becomes lead reviewer/merger and coordinator; Cursor
   (and Claude) do most of the coding. Cursor works through PRs; Grok reviews, merges, releases and writes the next

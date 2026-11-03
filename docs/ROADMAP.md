@@ -3,7 +3,11 @@
 > Agreed order with Kennedy (2026-10-28): **phases go from easiest and lowest risk to hardest and riskiest.** AI is the hardest, so it comes late (Phase 5), and a polish phase closes it out. The machine-readable copy the game reads is `public/roadmap.json`.
 > The design spec (`superpowers/specs/2026-10-28-cafetycoon-design.md`, §17) uses older numbering (P3 = AI, P4 = bigger games). This roadmap supersedes it.
 
-## Where we are now (updated 2026-10-31, ~11 AM Toronto)
+## Where we are now (updated 2026-11-03, ~8 AM Toronto)
+
+> **Latest (2026-11-03):** Round 5 is approved (Kennedy's Nov 2 playtest, refined Nov 3). Cursor builds it as six
+> PRs ([`CURSOR_PROMPT_NEXT.md`](CURSOR_PROMPT_NEXT.md)); Claude reviews the sim parts
+> ([`CLAUDE_PROMPT_ROUND5.md`](CLAUDE_PROMPT_ROUND5.md)). PRs #19 (3.8.0 polish) and #20 (B6 leftovers) are open for Grok's review.
 
 > **Latest (2026-10-31):** main is **v3.8.0**. It merged Cursor's six PRs (#13–#18): the morning rearrange (C10),
 > hand-made lattes with jug/steam meters and the syrup picker (B8), the rest of the tray table (B7), the café feed
@@ -51,7 +55,25 @@
   gained" card; "You can afford a cart!" nudge; first-run tips (snooze / off); forecast labelled "Rough guess".
 - **v3.5.0 (sim):** cups go cold, back sink and pot dumping, milk in a fridge, closing rush, solo bot count.
 
-### Now: Round 4 (Kennedy approved Oct 30, 2026, ~10:27 PM)
+### Now: Round 5 (Kennedy approved Nov 3, 2026)
+Cursor builds all six blocks (one PR each, sim edits allowed and listed per PR); Claude reviews the sim parts.
+
+| # | Item | Block | Notes |
+|---|------|-------|-------|
+| 1 | Hair sits on the hairline, all styles (male and female) | C1 | `src/render/layers/actors.ts` `backHair`/`frontHair` |
+| 2 | Espresso speed rework: grinder + espresso beats 2 pods at every tier, walking included | C2 | base pull 5 → 3 s, grinder hopper (`doses`), g2 much faster, g3 quality, faster combos |
+| 3 | Tighter collision box, stronger bounce, a bit more slowdown, no sticking | C3 | `baristaHalfWidth`, `ECONOMY.bump`; customer bumps unchanged |
+| 4 | Drip pot stays hot a bit longer | C3 | `pot.coldAfter` d1 45 → 55 s, d2 60 → 75 s |
+| 5 | Refill an empty cold brew tap mid-day | C4 | uses concentrate; no separate iced coffee dispenser exists |
+| 6 | Staff supply station (milk and cream) by the sink | C4 | a second fridge door for staff (`SUPPLY_ID`) |
+| 7 | Rearranging moves to the night (Gear shop tab "Layout"); morning pre-open removed | C5 | no new night tab; Restock still opens first |
+| 8 | Cashier has more to do: drip machine by the till by default | C6 | also the 3.9.0 release |
+
+**Parked (2026-11-03):** the hand-made jug and steam meters (FB2 B8, `src/sim/handmade.ts`). Kennedy: already too
+chaotic by day 4–5. They stay as built, but nothing gets added to them. Open question for Kennedy: should they be
+switched off for now with a one-line flag?
+
+### Done: Round 4 (Kennedy approved Oct 30, 2026, ~10:27 PM)
 Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
 
 | # | Item | Grok (UI) | Claude (sim) |
@@ -80,6 +102,14 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
   pushed further apart in look.
 
 ### Later (not scheduled)
+- **Co-op scaling (Kennedy, Nov 2; design only, not built):**
+  - **3 players:** more rush orders, e.g. likelier `rushHour` events (`effects.ts` `eventOdds`) or more combo and
+    office orders (`Customer.order`). There's no crew-size scaling of orders in the sim today (only `ECONOMY.maxHumans: 4`).
+  - **4 players, a 2v2 challenge.** Option A: **one shared customer pool**. Both teams serve the same line in one shop
+    (or two bars facing one queue), and whoever serves a customer scores them. It's direct and chaotic, but needs team
+    ownership of stations and tickets. Option B: **twin simulations**. Each team runs its own copy of the same day
+    (same seed, same customers), and the scores are compared at close. It's fair, and simpler to build on the
+    deterministic sim (two `GameState`s on the host), but less head-to-head. See also `docs/P4_B7_VERSUS_SPIKE.md`.
 - **Café add-ons first:** a seating nook that juts out as a trapezoid with a big window; an outside queue of
   shadow figures.
 - A cashier hire who entertains the line (so it can grow to 6+).
