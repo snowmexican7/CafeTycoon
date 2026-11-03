@@ -260,7 +260,8 @@ describe('Round 5: canSetDown mirrors moveStation', () => {
     expect(canSetDown(away, 'p1', 'drip', to)).toBe(false);
     const atNight = { ...s, phase: 'night' as const };
     expect(canSetDown(atNight, 'p1', 'drip', to)).toBe(false);
-    const classic = { ...s, gear: false };
+    const classic = { ...s };
+    delete classic.gear;
     expect(canSetDown(classic, 'p1', 'drip', to)).toBe(false);
     const withBot = open(night(STAND, STAND_GEAR, { standIns: 1 }));
     expect(canSetDown(withBot, 'sim-1', 'drip', to)).toBe(false);

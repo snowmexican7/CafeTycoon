@@ -981,6 +981,10 @@ export type PlayerInput =
   | { kind: 'closeEarly'; playerId: PlayerId; on: boolean }
   /** R4 a: host only, dev runs only, night or week-end only: stop (or restart) the night timer. */
   | { kind: 'devPause'; playerId: PlayerId; paused: boolean }
+  /** Round 5: host only, dev runs only (night, day, closing): fill every supply jar (and the condiment bar and boxes) to its cap. */
+  | { kind: 'devFill'; playerId: PlayerId }
+  /** Round 5: host only, dev runs only, the day or its closing: end the day now (closing, then night, with the normal settlement). */
+  | { kind: 'devSkip'; playerId: PlayerId }
   | { kind: 'call'; playerId: PlayerId; take: boolean }
   | { kind: 'join'; playerId: PlayerId; name: string; look?: PlayerLook }
   /** R4 e: set my own look (night or week end only; a bad look is refused). */
