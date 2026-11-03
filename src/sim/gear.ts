@@ -38,9 +38,10 @@ import type { Modifiers } from './effects';
 import { ACCURACY } from './accuracy';
 import { ownTile, placeMess } from './floor';
 import { emitLog } from './log';
-import { keepMovesOrReset } from './rearrange';
+import { keepMovesOrReset, seatSlotAt } from './rearrange';
+import { floorWidth } from './growth';
 import { rngInt, rngNext } from './rng';
-import type { DrinkId, GameState, GearVote, ItemKind, Player, PlayerInput, Station, StationKind, SupplyId, TierId } from './types';
+import type { DrinkId, GameState, GearVote, ItemKind, Player, PlayerInput, Station, StationKind, SupplyId, TierId, Vec2 } from './types';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -233,6 +234,8 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
   while (gear.length < slots.length) gear.push(null);
   while (wands.length < slots.length) wands.push(null);
   let wandAt = -1; // FB2 C9: the slot that got a machine with a wand, for `wand.add`
+  /** Round 5: slot index of a drip pot bought into an empty slot (seat by the till after rebuild). */
+  let seatDripAt = -1;
   if (input.action === 'sell') {
     const i = input.index;
     const id = gear[i];
@@ -266,7 +269,9 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
     const oldWand = at >= 0 && wandOn(gear[at]!, wands[at] ?? null) === wands[at] ? (wands[at] ?? null) : null;
     const tradeIn = at >= 0 ? GEAR[gear[at]!].sell + (oldWand ? WANDS[oldWand].sell : 0) : 0;
     if (state.cash + tradeIn < want.price + wandPrice) return state;
+    let intoEmpty = false;
     if (at < 0) {
+      intoEmpty = true;
       at = slots.findIndex((x, i) => x === null && i < slotCount(state.tier));
       if (at < 0) return state;
     } else {
@@ -283,6 +288,7 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
       const known = state.unlocked ?? [...BASE_DRINKS];
       if (!known.includes('drip')) state.unlocked = DRINK_IDS.filter((d) => d === 'drip' || known.includes(d));
       state.menu.drip = true;
+      if (intoEmpty) seatDripAt = at;
     }
     // G10a: the pour-over bar puts the Pour-over on the menu for good.
     if (want.pour) {
@@ -295,9 +301,31 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
   state.slotGear = gear;
   state.slotWand = wands;
   rebuild(state);
+  // Round 5 block 6: drip pots (not pour-over bars) sit by the till when bought into an empty slot.
+  if (seatDripAt >= 0) seatDripByTill(state, seatDripAt);
   const st = wandAt >= 0 ? state.stations.find((x) => x.kind === 'espresso' && !x.twin && slotOf(state, x) === wandAt) : undefined;
   if (st?.wand && st.wand !== 'built') emitLog(state, 'wand.add', { station: st.id, wand: st.wand, by: input.playerId });
   return state;
+}
+
+/**
+ * Round 5 block 6: seat a drip pot on the row above the till (nearest tile `layoutProblems` accepts).
+ * Falls back to the back-bar default when no till-side tile works. Night moves still override via `slotPos`.
+ */
+function seatDripByTill(state: GameState, slot: number): void {
+  const till = state.stations.find((s) => s.id === 'counter');
+  if (!till) return;
+  const y = Math.round(till.pos.y) - 1;
+  const w = floorWidth(state);
+  const ranked: Vec2[] = [];
+  for (let x = 1; x <= w - 1; x++) ranked.push({ x, y });
+  ranked.sort(
+    (a, b) =>
+      Math.hypot(a.x - till.pos.x, a.y - till.pos.y) - Math.hypot(b.x - till.pos.x, b.y - till.pos.y) || a.x - b.x,
+  );
+  for (const to of ranked) {
+    if (seatSlotAt(state, slot, to)) return;
+  }
 }
 
 // ---------------------------------------------------------------------------------------------- FB2 C9: steam wands
