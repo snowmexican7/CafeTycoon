@@ -49,14 +49,14 @@ import { putAwayPending, startClosingSoon, stepClosingSoon, stepFridge, storeInF
 import { returnPot } from './sink';
 import { freeSpot } from './spawn';
 import { stepRogue } from './rogue';
-import { applyDevPause, topUpDevCash } from './dev';
+import { applyDevFill, applyDevPause, canDevSkip, topUpDevCash } from './dev';
 import { emitLog, pruneLog } from './log';
 import { noteNight, tallyStats } from './stats';
 import { setLook } from './look';
 import { hasStrategist } from './hires';
 import { strategistNewDrinks } from './strategist';
 import { unlockedDrinks } from './unlocks';
-import { applyMoveStation, applyOpenDoors, inPreOpen, preOpenReady, stepPreOpen } from './rearrange';
+import { applyMoveStation, applyOpenDoors, endPreOpen, inPreOpen, preOpenReady, stepPreOpen } from './rearrange';
 
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
@@ -132,7 +132,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     }
     case 'syrup':
-      if (!inPreOpen(s)) applySyrupInput(s, input); // FB2 B8 (FB2 C10: nothing is used in the pre-open)
+      applySyrupInput(s, input); // FB2 B8 (canAddSyrup refuses it in the pre-open, FB2 C10)
       break;
     case 'secret':
       if (s.phase === 'day' || s.phase === 'closing' || s.phase === 'night') unlockSecret(s, input.playerId, input.code);
@@ -221,6 +221,18 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     case 'devPause':
       applyDevPause(s, input);
+      break;
+    case 'devFill':
+      applyDevFill(s, input);
+      break;
+    case 'devSkip':
+      // Round 5: as if the clock ran out. The doors lock (closing), the grace has one tick left, and this tick's
+      // stepClosing runs finishDay: the same settlement, rent, wages and review as a day that ended by itself.
+      if (canDevSkip(s, input.playerId)) {
+        endPreOpen(s);
+        if (s.phase === 'day') enterClosing(s);
+        s.phaseTicksLeft = 1;
+      }
       break;
     case 'weekEnd':
       if (isHost && s.phase === 'weekEnd') {

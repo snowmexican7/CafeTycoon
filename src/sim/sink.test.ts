@@ -12,7 +12,6 @@ import { addStandIns } from './bots/roster';
 import { findPath, targetNodes, walkableNodes } from './bots/path';
 import { SINK_ID, LAYOUT, layoutFor } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
-import { EQUIPMENT_KINDS } from '../data/equipment';
 import { ECONOMY } from '../data/economy';
 import { needsDump } from './sink';
 import type { GameState, Station, TierId } from './types';
@@ -93,7 +92,6 @@ describe('FB2 A3: the back sink fixture', () => {
 
   it('is not gear, not equipment and not a slot: nothing buys, sells or moves it', () => {
     expect(Object.values(GEAR).some((g) => (g.station as string) === 'sink' || (g.id as string) === SINK_ID)).toBe(false);
-    expect((EQUIPMENT_KINDS as string[]).includes('sink')).toBe(false);
     const s = gearRun('stand');
     expect(s.slots).not.toContain('sink');
     s.cash = 10_000;

@@ -942,8 +942,6 @@ export interface GameState {
 export type PlayerInput =
   | { kind: 'move'; playerId: PlayerId; x: number; y: number; interact: boolean }
   | { kind: 'buy'; playerId: PlayerId; itemId: string }
-  /** DEPRECATED (Round 4 f): card re-rolls are cut; validateInput refuses it. Kept until the UI stops sending it. */
-  | { kind: 'reroll'; playerId: PlayerId }
   | { kind: 'restock'; playerId: PlayerId; supply: SupplyId; packs: number }
   | { kind: 'ready'; playerId: PlayerId }
   | { kind: 'weekEnd'; playerId: PlayerId; choice: 'stop' | 'continue' }
@@ -959,9 +957,6 @@ export type PlayerInput =
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
   | { kind: 'grow'; playerId: PlayerId; tier: TierId }
-  /** DEPRECATED (Round 4 f): the classic Stations shop is cut; validateInput refuses both. Kept until the UI stops sending them. */
-  | { kind: 'slot'; playerId: PlayerId; index: number; station: StationKind | null }
-  | { kind: 'equip'; playerId: PlayerId; station: StationKind }
   /** Batch/pickup: tomorrow's cold brew steep target (sticky). Gear runs, night only, people only. */
   | { kind: 'steep'; playerId: PlayerId; cups: number }
   /** Batch/pickup: buy condiment stock boxes ($6 each). Gear runs, night only, people only. */
@@ -980,14 +975,16 @@ export type PlayerInput =
   | { kind: 'gear'; playerId: PlayerId; action: 'vote'; yes: boolean }
   | { kind: 'pitch'; playerId: PlayerId; pitchKind: PitchKind; text: string }
   | { kind: 'signature'; playerId: PlayerId; sig: { name: string; drink: DrinkId; twist: TwistId; premium: number } | null }
-  /** DEPRECATED (Round 4 f): crew roles are cut; validateInput refuses it. Kept until the UI stops sending it. */
-  | { kind: 'role'; playerId: PlayerId; role: string | null }
   | { kind: 'settings'; playerId: PlayerId; settings: Partial<Settings> }
   | { kind: 'espresso'; playerId: PlayerId }
   /** FB1 WP3: vote (on) or withdraw (off) to close the shop early; every connected human must agree. */
   | { kind: 'closeEarly'; playerId: PlayerId; on: boolean }
   /** R4 a: host only, dev runs only, night or week-end only: stop (or restart) the night timer. */
   | { kind: 'devPause'; playerId: PlayerId; paused: boolean }
+  /** Round 5: host only, dev runs only (night, day, closing): fill every supply jar (and the condiment bar and boxes) to its cap. */
+  | { kind: 'devFill'; playerId: PlayerId }
+  /** Round 5: host only, dev runs only, the day or its closing: end the day now (closing, then night, with the normal settlement). */
+  | { kind: 'devSkip'; playerId: PlayerId }
   | { kind: 'call'; playerId: PlayerId; take: boolean }
   | { kind: 'join'; playerId: PlayerId; name: string; look?: PlayerLook }
   /** R4 e: set my own look (night or week end only; a bad look is refused). */

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { GEAR_IDS } from '../data/gear';
-import { createRun } from './run';
-import { DEV_CASH } from './dev';
+import { createRun, startDay } from './run';
+import { DEV_CASH, DEV_JAR } from './dev';
+import { CONDIMENTS } from './condiments';
+import { fridgeCapacity } from './fridge';
 import { scoreRun, summarizeRun } from './score';
 import { step } from './step';
 import { validateInput } from './validate';
@@ -164,6 +166,97 @@ describe('R4 a: dev mode', () => {
       expect(validateInput({ kind: 'devPause', playerId: 'p1', paused: true })).toEqual({ kind: 'devPause', playerId: 'p1', paused: true });
       expect(validateInput({ kind: 'devPause', playerId: 'p1', paused: 'yes' } as never)).toBeNull();
       expect(validateInput({ kind: 'devPause', playerId: 'p1' } as never)).toBeNull();
+    });
+  });
+
+  describe('Round 5: devFill and devSkip', () => {
+    const fill: PlayerInput = { kind: 'devFill', playerId: 'p1' };
+    const skip: PlayerInput = { kind: 'devSkip', playerId: 'p1' };
+    const day = (dev = true) => {
+      const s = createRun(opts(dev));
+      s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
+      return startDay(s);
+    };
+
+    it('validateInput keeps just the kind and the id', () => {
+      expect(validateInput({ ...fill, extra: 1 } as never)).toEqual(fill);
+      expect(validateInput(skip)).toEqual(skip);
+      expect(validateInput({ kind: 'devFill' } as never)).toBeNull();
+      expect(validateInput({ kind: 'devSkip', playerId: 7 } as never)).toBeNull();
+    });
+
+    it('devFill fills every jar to its cap, never lowers one, and tops up the condiment bar and boxes', () => {
+      let s = createRun(opts(true));
+      s.fridge = 'f1';
+      s.supplies.beans = 500; // above the cap: left alone
+      s.supplies.pastry = 0;
+      s.condiments = { servings: 3 };
+      s = step(s, [fill]);
+      expect(s.supplies.beans).toBe(500);
+      for (const k of ['concentrate', 'flavour', 'pastry'] as const) expect(s.supplies[k], k).toBe(DEV_JAR);
+      expect(s.supplies.milk).toBe(fridgeCapacity(s));
+      expect(s.supplies.milk).toBeGreaterThan(0);
+      expect(s.condiments?.servings).toBe(CONDIMENTS.servings);
+      expect(s.condimentBoxes).toBe(CONDIMENTS.maxBoxes);
+    });
+
+    it('devFill: milk is left alone with no fridge; works in the day and closing; not at the week end', () => {
+      let s = createRun(opts(true));
+      s.supplies.milk = 4;
+      s = step(s, [fill]);
+      expect(s.supplies.milk).toBe(4);
+      const d = day();
+      d.supplies.beans = 1;
+      expect(step(d, [fill]).supplies.beans).toBe(DEV_JAR);
+      d.phase = 'closing';
+      expect(step(d, [fill]).supplies.beans).toBe(DEV_JAR);
+      d.phase = 'weekEnd';
+      expect(step(d, [fill]).supplies.beans).toBe(1);
+    });
+
+    it('both are refused for a non-host and in a run that is not a dev run', () => {
+      const s = createRun(opts(true));
+      s.supplies.beans = 1;
+      expect(step(s, [{ kind: 'devFill', playerId: 'p2' }]).supplies.beans).toBe(1);
+      const off = createRun(opts());
+      off.supplies.beans = 1;
+      expect(step(off, [fill]).supplies.beans).toBe(1);
+      const d = day();
+      expect(step(d, [{ kind: 'devSkip', playerId: 'p2' }]).phase).toBe('day');
+      const offDay = day(false);
+      expect(step(offDay, [skip]).phase).toBe('day');
+      const night = createRun(opts(true));
+      expect(step(night, [skip]).phase).toBe('night');
+      expect(night.day).toBe(step(night, [skip]).day);
+    });
+
+    it('devSkip ends the day now: closing then night, settled like a day the clock ended', () => {
+      const skipped = ticks(day(), 3, [skip]);
+      expect(skipped.phase).toBe('night');
+      expect(skipped.days).toHaveLength(1);
+      // The same day run out by its own clock.
+      let natural = day();
+      natural.phaseTicksLeft = 1;
+      natural = ticks(natural, 2000);
+      expect(natural.phase).toBe('night');
+      expect(skipped.days).toEqual(natural.days);
+      expect(skipped.cash).toBe(natural.cash);
+      expect(skipped.day).toBe(natural.day);
+    });
+
+    it('devSkip in the pre-open and in closing both end the day', () => {
+      const pre = createRun(opts(true));
+      pre.ready = ['p1', 'p2'];
+      let p = step(pre, [{ kind: 'ready', playerId: 'p1' }, { kind: 'ready', playerId: 'p2' }]);
+      expect(p.phase).toBe('day');
+      expect(p.preOpenUntil).toBeDefined();
+      p = step(p, [skip]);
+      expect(p.phase).toBe('night');
+      expect(p.preOpenUntil).toBeUndefined();
+      const closing = day();
+      closing.phase = 'closing';
+      closing.phaseTicksLeft = 900;
+      expect(step(closing, [skip]).phase).toBe('night');
     });
   });
 });

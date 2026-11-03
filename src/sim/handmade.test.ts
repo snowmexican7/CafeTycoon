@@ -16,6 +16,7 @@ import {
   HANDMADE,
   JUG_LINES,
   addCustomerAsks,
+  canAddSyrup,
   fillGrade,
   heldRecipe,
   judgeCup,
@@ -380,6 +381,46 @@ describe('FB2 B8: the syrup rack', () => {
       expect(p1(s).made?.syrup, why).toBeUndefined();
       expect(s.supplies.flavour, why).toBe(flavour);
     }
+  });
+
+  it('canAddSyrup is true exactly when the syrup input does something, gate by gate (Round 5)', () => {
+    const ready = (): GameState => {
+      const s = open();
+      delete s.preOpenUntil;
+      atRack(s);
+      p1(s).holding = 'latte';
+      return s;
+    };
+    expect(canAddSyrup(ready(), 'p1')).toBe(true);
+    const tries: [string, (s: GameState) => void][] = [
+      ['away', (s) => { p1(s).pos = { x: 6, y: 4 }; }],
+      ['empty', (s) => { p1(s).holding = null; }],
+      ['wrong cup', (s) => { p1(s).holding = 'grounds'; }],
+      ['tool in hand', (s) => { p1(s).tool = 'mop'; }],
+      ['one per cup', (s) => { p1(s).made = { syrup: 'caramel' }; }],
+      ['no stock', (s) => { s.supplies.flavour = 0; }],
+      ['night', (s) => { s.phase = 'night'; }],
+      ['pre-open', (s) => { s.preOpenUntil = s.tick + 100; }],
+      ['disconnected', (s) => { p1(s).connected = false; }],
+    ];
+    for (const [why, setup] of tries) {
+      const s = ready();
+      setup(s);
+      expect(canAddSyrup(s, 'p1'), why).toBe(false);
+      const flavour = s.supplies.flavour;
+      const t = step(s, [{ kind: 'syrup', playerId: 'p1', flavour: 'vanilla' }]);
+      expect(t.supplies.flavour, why).toBe(flavour); // and the input agrees: nothing used
+    }
+    expect(canAddSyrup(ready(), 'nobody')).toBe(false);
+    const bot = ready();
+    bot.players.push({ ...p1(bot), id: 'b1', bot: { ...(p1(bot).bot ?? ({} as never)) } as never });
+    expect(canAddSyrup(bot, 'b1')).toBe(false); // bots call addSyrup from their plan, never the input
+    const closing = ready();
+    closing.phase = 'closing';
+    expect(canAddSyrup(closing, 'p1')).toBe(true);
+    const ok = ready();
+    const t = step(ok, [{ kind: 'syrup', playerId: 'p1', flavour: 'vanilla' }]);
+    expect(t.supplies.flavour).toBe(ok.supplies.flavour - 1);
   });
 
   it('E at the rack with a cup does nothing (it is not the pickup counter)', () => {

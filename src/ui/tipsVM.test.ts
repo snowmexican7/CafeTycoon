@@ -18,7 +18,7 @@ describe('crew tips (FB1 WP6)', () => {
     expect(shortTip({ kind: 'restock', text: 'Out of beans: buy 2 packs ($16.00)', input: { kind: 'restock', supply: 'beans', packs: 2 } })).toBe('Buy 2 packs of beans');
     expect(shortTip({ kind: 'price', text: 'Cut the Latte to $4.50 (now $4.75)', input: { kind: 'price', drink: 'latte', step: -1 } })).toBe('Cut the Latte to $4.50');
     expect(shortTip({ kind: 'menu', text: "Take the Latte off the board: there's no steamer", input: { kind: 'menu', drink: 'latte', on: false } })).toBe('Take the Latte off the board');
-    expect(shortTip({ kind: 'equip', text: '6 walked out to 20 served: buy a second espresso machine ($45), then free a slot for it', input: { kind: 'equip', station: 'espresso' } })).toBe(
+    expect(shortTip({ kind: 'equip', text: '6 walked out to 20 served: buy a second espresso machine ($45), then free a slot for it', input: { kind: 'equip', station: 'espresso' } as never })).toBe(
       'Buy a second espresso machine ($45)',
     );
   });

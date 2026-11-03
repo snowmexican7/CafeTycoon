@@ -16,7 +16,6 @@ import { COOLING_SECONDS } from './cooling';
 import { TICK_RATE } from './constants';
 import { ECONOMY } from '../data/economy';
 import { GEAR, type GearId } from '../data/gear';
-import { EQUIPMENT_KINDS } from '../data/equipment';
 import { LAYOUT, TRAY_ID, layoutFor } from '../data/layout';
 import { TRAY, trayCool, trayComplete } from './tray';
 import type { Customer, DrinkId, GameState, Player, SupplyId, TierId } from './types';
@@ -117,7 +116,6 @@ describe('FB2 B7: the tray table fixture', () => {
       expect(createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 }, tier }).stations.some((x) => x.id === TRAY_ID)).toBe(false);
     }
     expect(Object.values(GEAR).some((g) => (g.station as string) === TRAY_ID)).toBe(false);
-    expect((EQUIPMENT_KINDS as string[]).includes(TRAY_ID)).toBe(false);
     const s = gearDay();
     expect(s.slots).not.toContain(TRAY_ID);
     s.stations = s.stations.filter((x) => x.id !== TRAY_ID);

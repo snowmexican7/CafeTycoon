@@ -38,8 +38,6 @@ export interface BranchVM {
   /** P4 B5: stock credit waiting at the branch and what can be sent. */
   credit?: number;
   supplies?: BranchSupplyVM[];
-  /** DEPRECATED (ui-3.7.1): the Manager role is cut and nothing sets this; kept only for src/sim/branch.test.ts (asked of Claude to drop). */
-  manager?: null;
 }
 
 function fitWord(fit: number): string {

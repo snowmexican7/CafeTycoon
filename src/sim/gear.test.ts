@@ -75,7 +75,7 @@ describe('Gear Tree G2: the sim', () => {
     s.phase = 'night';
     applyGearInput(s, { kind: 'gear', playerId: 'nobody', action: 'buy', gear: 'c1' });
     expect(s.cash).toBe(120);
-    const t = step(s, [{ kind: 'equip', playerId: 'p1', station: 'espresso' }, { kind: 'slot', playerId: 'p1', index: 3, station: null }]);
+    const t = step(s, [{ kind: 'equip', playerId: 'p1', station: 'espresso' }, { kind: 'slot', playerId: 'p1', index: 3, station: null }] as never);
     expect([t.cash, t.slots]).toEqual([120, [null, null, null, 'trash']]);
   });
 

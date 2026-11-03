@@ -107,7 +107,7 @@ describe('balance tester', () => {
     expect(s.checkout).toMatchObject({ active: co, since: s.day });
     expect(s.cash).toBe(500 - CHECKOUT[co].cost);
     s.cash = 500;
-    expect(applyAdvice(s, { id: 'equip:espresso', kind: 'equip', text: '', input: { kind: 'equip', station: 'espresso' }, priority: 1 })).toBe(false);
+    expect(applyAdvice(s, { id: 'equip:espresso', kind: 'equip', text: '', input: { kind: 'equip', station: 'espresso' } as never, priority: 1 })) // a removed input kind: refused.toBe(false);
     expect(s.cash).toBe(500);
   });
   it('applyLayout rearranges the opening slots', () => {

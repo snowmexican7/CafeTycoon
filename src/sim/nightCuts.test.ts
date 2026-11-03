@@ -7,18 +7,19 @@ import { defaultSlots } from './slots';
 import type { PlayerInput } from './types';
 
 /**
- * Round 4 f follow-up (Kennedy 2026-10-31): crew roles, card re-rolls and the classic Stations/slots are cut. Their
- * input kinds stay in `PlayerInput` only so the UI still compiles; `validateInput` refuses them, so they do nothing.
+ * Round 4 f follow-up (Kennedy 2026-10-31): crew roles, card re-rolls and the classic Stations/slots are cut. Round 5:
+ * their input kinds are gone from `PlayerInput`; a stale client can still send them, `validateInput` refuses them
+ * (unknown kind), so they do nothing. They are typed loosely here on purpose.
  */
 const gearNight = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
-const deprecated: PlayerInput[] = [
+const deprecated = [
   { kind: 'role', playerId: 'p1', role: 'manager' },
   { kind: 'role', playerId: 'p1', role: null },
   { kind: 'reroll', playerId: 'p1' },
   { kind: 'slot', playerId: 'p1', index: 0, station: 'grinder' },
   { kind: 'slot', playerId: 'p1', index: 0, station: null },
   { kind: 'equip', playerId: 'p1', station: 'grinder' },
-];
+] as unknown as PlayerInput[];
 const classicNight = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
 
 describe('cut night inputs: roles, re-roll, classic slot and equip', () => {
@@ -48,7 +49,7 @@ describe('cut night inputs: roles, re-roll, classic slot and equip', () => {
     const s = classicNight();
     s.cash = 500;
     const slots = [...s.slots!];
-    for (const input of deprecated.filter((i) => i.kind === 'slot' || i.kind === 'equip')) {
+    for (const input of deprecated.filter((i) => (i.kind as string) === 'slot' || (i.kind as string) === 'equip')) {
       const t = step(s, [input]);
       expect([t.cash, t.slots]).toEqual([500, slots]);
       expect('equipment' in t || 'equipLog' in t).toBe(false);

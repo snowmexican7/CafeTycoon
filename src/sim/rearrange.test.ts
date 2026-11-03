@@ -8,7 +8,7 @@ import { BASE_DRINKS } from '../data/drinks';
 import type { AddOnWand, GearId } from '../data/gear';
 import type { Customer, GameState, PlayerInput, SupplyId, TierId, Vec2 } from './types';
 import { addStandIns } from './bots/roster';
-import { validStationSpots } from './rearrange';
+import { canSetDown, validStationSpots } from './rearrange';
 import { targetNodes } from './bots/path';
 import { SYRUP_ID, SYRUP_SPOT } from '../data/layout';
 import { wandCards } from './gear';
@@ -231,6 +231,40 @@ describe('FB2 C10: moving stations', () => {
     expect(has(7, 4)).toBe(false); // the sink
     expect(validStationSpots(s, 'sink')).toEqual([]);
     expect(validStationSpots(s, 'nope')).toEqual([]);
+  });
+});
+
+describe('Round 5: canSetDown mirrors moveStation', () => {
+  it('true on exactly the tiles where moveStation places, for every movable machine and a few odd drops', () => {
+    const s = preOpen();
+    for (const id of ['grinder', 'espresso', 'drip', 'trash', 'sink', 'nope']) {
+      const tiles: Vec2[] = [{ x: 2.5, y: 2 }, { x: 0, y: 1 }, { x: 1, y: 0 }, { x: 19, y: 2 }, { x: 3, y: 99 }];
+      for (let y = 1; y <= 6; y++) for (let x = 0; x <= 8; x++) tiles.push({ x, y });
+      for (const to of tiles) {
+        const t = move(s, id, to);
+        const placed = events(t, 'station.place').length > events(s, 'station.place').length;
+        expect(canSetDown(s, 'p1', id, to), `${id} -> ${to.x},${to.y}`).toBe(placed);
+      }
+    }
+  });
+
+  it('agrees with validStationSpots for a person in the pre-open, and is false for the other gates', () => {
+    const s = preOpen();
+    const spots = validStationSpots(s, 'drip');
+    expect(spots.length).toBeGreaterThan(0);
+    for (const to of spots) expect(canSetDown(s, 'p1', 'drip', to)).toBe(true);
+    const to = spots[0]!;
+    expect(canSetDown(s, 'nobody', 'drip', to)).toBe(false);
+    const away = preOpen();
+    away.players[0]!.connected = false;
+    expect(canSetDown(away, 'p1', 'drip', to)).toBe(false);
+    const atNight = { ...s, phase: 'night' as const };
+    expect(canSetDown(atNight, 'p1', 'drip', to)).toBe(false);
+    const classic = { ...s };
+    delete classic.gear;
+    expect(canSetDown(classic, 'p1', 'drip', to)).toBe(false);
+    const withBot = open(night(STAND, STAND_GEAR, { standIns: 1 }));
+    expect(canSetDown(withBot, 'sim-1', 'drip', to)).toBe(false);
   });
 });
 

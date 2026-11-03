@@ -441,6 +441,6 @@ describe('planNight: Gear runs', () => {
   it('offers no equip input advice (Round 4 f: the classic shop is gone), even after a day that lost more than it served', () => {
     const s = gearRun();
     expect(s.stations.filter((st) => st.kind === 'espresso')).toHaveLength(1);
-    expect(planNight(s).filter((a) => a.input.kind === 'equip')).toEqual([]); // gear buys share the 'equip' advice kind but send `gear`
+    expect(planNight(s).filter((a) => (a.input.kind as string) === 'equip')).toEqual([]); // gear buys share the 'equip' advice kind but send `gear`
   });
 });
