@@ -9,11 +9,23 @@ import { LEVEL_UPS, levelUpGearOk } from '../sim/levelUp';
  * pressing it would do (buy, upgrade with a trade-in, owned, passed, too dear, no free slot).
  */
 import { GEAR, GEAR_TREES, WANDS, treeTiers, type AddOnWand, type GearId, type GearTree } from '../data/gear';
+import { ECONOMY } from '../data/economy';
 import { wandOn } from '../sim/slots';
 import { slotCount } from '../sim/slots';
 import { FRIDGES, type FridgeId } from '../data/fridges';
 import { fridgeCards, fridgeGear } from '../sim/fridge';
 import type { DrinkId, GameState, PlayerId } from '../sim/types';
+
+/** Round 5: plain seconds for a gear card (pods keep their own 5 s base). */
+function gearSec(id: GearId): number {
+  const g = GEAR[id];
+  const base = g.pods ? 5 : ECONOMY.stationSeconds[g.station as 'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'drip'];
+  return Math.round((base / g.speed) * 100) / 100;
+}
+
+function secLabel(n: number): string {
+  return Number.isInteger(n) ? `${n}` : n.toFixed(2).replace(/0$/, '');
+}
 
 export type GearTierState = 'owned' | 'another' | 'passed' | 'buy' | 'upgrade' | 'poor' | 'noSlot' | 'needs';
 
@@ -138,7 +150,18 @@ const ICON: Record<GearTree, string> = Object.fromEntries(GEAR_TREES.map((t) => 
 export function gearStats(id: GearId): string {
   const g = GEAR[id];
   const out: string[] = [];
-  out.push(g.pour ? (g.pour.seconds >= 6 ? `Slow: one cup, ${g.pour.seconds} s` : `3 cones: a cup every ${g.pour.seconds} s`) : g.speed < 1 ? 'Slow' : g.speed > 1 ? 'Fast' : 'Normal speed');
+  if (g.pour) {
+    out.push(g.pour.seconds >= 6 ? `Slow: one cup, ${g.pour.seconds} s` : `3 cones: a cup every ${g.pour.seconds} s`);
+  } else if (g.pods) {
+    out.push(`${secLabel(gearSec(id))} s pods`);
+  } else if (g.station === 'espresso') {
+    out.push(`${secLabel(gearSec(id))} s shots`);
+  } else if (g.station === 'grinder') {
+    out.push(`${secLabel(gearSec(id))} s grind`);
+  } else {
+    out.push(g.speed < 1 ? 'Slow' : g.speed > 1 ? 'Fast' : 'Normal speed');
+  }
+  if (g.doses) out.push(`Grinds ${g.doses} shots at once`);
   if (g.marks) out.push(`-${g.marks}★ per cup`);
   if (g.pods) out.push('Pods, no grinder');
   if (g.polish) out.push('Forgives 1 slip per cup (+1★)');

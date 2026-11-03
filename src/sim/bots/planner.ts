@@ -492,8 +492,11 @@ function checkoutAdvice(state: GameState, budget: Budget): Advice[] {
 export const GEAR_PATH: GearId[] = ['c1', 'e1', 'c2', 'g1', 'e3', 'c3', 'g2', 'd1', 'c4', 'e4', 'd2', 'd3', 'g3', 'e5', 'd4b', 'c5', 'd5b', 'e6'];
 /** FB2 C9: the add-on wand bought with a machine on the path. */
 export const PATH_WAND: Partial<Record<GearId, AddOnWand>> = { e3: 'weak', e4: 'strong' };
-/** Under this many stars on average, the polished machines (C5, E6) jump the path when they are affordable. */
+/** Under this many stars on average, the polished machines (C5, E5/E6) jump the path when they are affordable.
+ *  Round 5: g3 also has `polish`, but its forgiveness rides on grounds → shot (`Player.groundsPolish`), so it
+ *  stays on the normal path rather than jumping ahead of C5. */
 const POLISH_BELOW = 3;
+const polishJumps = (id: GearId): boolean => !!GEAR[id].polish && GEAR[id].tree !== 'grinder';
 
 /**
  * The next machine to buy in a Gear run (`{ kind: 'gear', action: 'buy', gear }`; with more than one human
@@ -558,11 +561,11 @@ function gearAdvice(state: GameState, budget: Budget): Advice[] {
     return { net: round2(want.price + (wand ? WANDS[wand].withMachine : 0) - back), old, wand };
   };
 
-  const order = polishFirst ? [...GEAR_PATH.filter((id) => GEAR[id].polish), ...GEAR_PATH.filter((id) => !GEAR[id].polish)] : GEAR_PATH;
+  const order = polishFirst ? [...GEAR_PATH.filter(polishJumps), ...GEAR_PATH.filter((id) => !polishJumps(id))] : GEAR_PATH;
   for (const id of order) {
     const d = deal(id);
     if (!d) continue;
-    const polished = polishFirst && !!GEAR[id].polish;
+    const polished = polishFirst && polishJumps(id);
     if (d.net > budget.left) {
       if (polished) continue; // too dear tonight: carry on down the normal path
       return []; // saving up for the next machine

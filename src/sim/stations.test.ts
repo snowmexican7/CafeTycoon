@@ -26,7 +26,7 @@ describe('stations', () => {
     let s = at(run2(), 'p1', 3, 2);
     s.players[0].holding = 'grounds';
     s = interact(s, 'p1');
-    expect(s.stations[1].busyTicksLeft).toBe(300);
+    expect(s.stations[1].busyTicksLeft).toBe(180); // Round 5: base espresso pull 3 s
     expect(s.players[0].holding).toBeNull();
     s.stations[1].busyTicksLeft = 1;
     s = stepStations(s);

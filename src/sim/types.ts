@@ -331,6 +331,11 @@ export interface Player {
   holding: ItemKind | null;
   /** P3 B5: sloppy marks on the cup in hand (absent = 0). */
   cupSlips?: number;
+  /**
+   * Round 5: grounds in hand came from a polish grinder (g3). The next espresso pull forgives one slip
+   * (polish only runs on the station that takes a cup in; the grinder never sees slips itself).
+   */
+  groundsPolish?: true;
   /** Gear G4h: the cup in hand came out too hot or too cold (half tip when served). */
   cupTemp?: boolean;
   /** Feedback 2 A2 (Gear): the made tick of the cup in hand (its clock keeps running); cleared when the hands empty. */
@@ -405,6 +410,8 @@ export interface Station {
   batchLeft?: number;
   /** Batch/pickup: how many of `batchLeft` were steeped the day before (poured first; absent = none). */
   batchOld?: number;
+  /** Round 5: grounds doses left in a grinder hopper after a grind (absent = none / classic one-dose). */
+  doses?: number;
   /** Gear G4d: cups left in a drip machine's pot (absent = no pot brewed). */
   potLeft?: number;
   /** Gear G4d: the tick the pot goes cold (absent = never, or no pot). */

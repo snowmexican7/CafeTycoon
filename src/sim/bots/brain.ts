@@ -272,9 +272,10 @@ function route(state: GameState, p: Player, needs: Need[]): { steps: BotStep[]; 
 /**
  * The machine visits for `drink` from `held` (null = from scratch), or null when the shop can't make it now.
  * A shot from scratch has two routes when the bar has both: grinder + a machine that takes grounds, or a pod
- * machine from empty hands. Same beans either way; the pod is quicker (one machine, no walk to the grinder)
- * but marks the cup (−1★), so it is the overflow: the grinder route when its grinder and machine are both
- * free right now, else the pod machine when it is free, else whichever route exists (grinder first).
+ * machine from empty hands. Same beans either way. Round 5: the grinder route is faster (and a hopper leaves
+ * leftover doses for instant takes), so it is preferred when its grinder and machine are both free right now;
+ * else the pod machine when it is free (overflow / marks the cup −1★); else whichever route exists (grinder first).
+ * Hopper leftovers (`output === 'grounds'`) are taken like any other leftover below.
  */
 function machineSteps(state: GameState, p: Player, drink: DrinkId, held: ItemKind | null): BotStep[] | null {
   const needs = needsFrom(drink, held);
@@ -345,6 +346,9 @@ function coveragePool(state: GameState): Coverage {
     // order is uncovered again. Not counting it would send claims to a machine it blocks.
     for (const item of [st.output, brewing]) {
       if (item === null) continue;
+      // Round 5: a hopper with doses left is a source of grounds (like a drip pot), not one shot in
+      // flight — counting it as pending left orders forever uncovered and stalled the bots.
+      if (item === st.output && st.kind === 'grinder' && st.doses !== undefined) continue;
       // Only the machine's own product is a shot-to-be: grounds dropped on the espresso machine are not.
       const own = isRecipeKind(st.kind) && item === STATION_RECIPES[st.kind].gives;
       if (own && (st.kind === 'grinder' || st.kind === 'espresso')) pending += 1;
@@ -441,8 +445,11 @@ const strayGrounds = (st: Station): boolean => st.kind !== 'grinder' && st.outpu
  * FB2 B6 (Gear): grounds left in a grinder whose chain was dropped (its customer was served by someone else's cup).
  * They count as a shot on its way (`coveragePool`), so once they have sat as long as any orphan they are collected
  * (and binned, or pulled), or the order they seem to cover would never be claimed.
+ * Round 5: a hopper with more than one dose left is stock, not an abandoned chain — bots take those via the
+ * normal leftover path when they need grounds. Only the last dose (or a classic one-dose grinder) is orphaned.
  */
-const leftGrounds = (state: GameState, st: Station): boolean => state.gear === true && st.kind === 'grinder' && st.output === 'grounds';
+const leftGrounds = (state: GameState, st: Station): boolean =>
+  state.gear === true && st.kind === 'grinder' && st.output === 'grounds' && !(st.doses !== undefined && st.doses > 1);
 
 /**
  * A drink left sitting in a machine, or stray grounds, that no other bot is already on its way to take;

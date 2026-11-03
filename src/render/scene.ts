@@ -224,6 +224,7 @@ export class Scene {
         pos: s.pos,
         progress,
         output: s.output,
+        ...(s.doses !== undefined && s.doses > 0 ? { doses: s.doses } : {}),
         cat: state.eggs?.cat?.stationId === s.id,
         smoke: state.eggs?.smoke?.stationId === s.id,
         ...(ring && isTill ? { ring: { progress: ring.progress, self: ring.self, label: ringBarLabel(ring.self) } } : {}),

@@ -11,7 +11,7 @@ import { CONDIMENTS, canTakeBox } from '../sim/condiments';
 import { CONDIMENTS_ID } from '../data/layout';
 import { DRINK_INFO } from '../data/drinks';
 import { GEAR } from '../data/gear';
-import { podsOnly, tapCupRecipe } from '../sim/gear';
+import { gearSpeed, podsOnly, tapCupRecipe } from '../sim/gear';
 import { ACCURACY } from '../sim/accuracy';
 import { closeEarlyVM, type CloseEarlyVM } from './closeEarly';
 import { preOpenVM, type PreOpenVM } from './preOpen';
@@ -533,7 +533,8 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
   }
   if (station.output !== null && held === null) {
     const sat = station.doneAt !== undefined && state.tick - station.doneAt > ACCURACY.sitSeconds * TICK_RATE;
-    return go(`Pick up ${ITEM_LABEL[station.output].toLowerCase()}`, sat ? `${where} · sat too long, −1★` : where);
+    const hop = station.doses !== undefined && station.doses > 0 ? ` · ×${station.doses} ready` : '';
+    return go(`Pick up ${ITEM_LABEL[station.output].toLowerCase()}`, sat ? `${where}${hop} · sat too long, −1★` : `${where}${hop}`);
   }
   // P3 B5: near the end of a run, empty hands can rush it.
   if (station.busyTicksLeft > 0 && held === null && station.making && station.busyTotal && station.busyTicksLeft <= station.busyTotal * ACCURACY.earlyShare)
@@ -579,7 +580,7 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
       return go('Fill the milk jug', `${where} · E starts it · E again stops on the ticket's line`);
     }
   }
-  const secs = ECONOMY.stationSeconds[kind] / computeModifiers(state).stationSpeed[kind];
+  const secs = ECONOMY.stationSeconds[kind] / (computeModifiers(state).stationSpeed[kind] * gearSpeed(station, state.tick));
   return go(VERB[kind], `${where} · ${secs.toFixed(1)} s`);
 }
 

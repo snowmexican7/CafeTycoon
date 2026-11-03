@@ -527,6 +527,8 @@ export interface StationOverlayState {
   /** 0..1 while working, null when idle. */
   progress: number | null;
   output: ItemKind | null;
+  /** Round 5: grinder hopper doses left (drawn as a small ×N chip). */
+  doses?: number;
   /** B8: shop cat napping on this station. */
   cat?: boolean;
   /** B8: soft smoke alarm puffing. */
@@ -547,6 +549,7 @@ export class StationOverlay {
   private readonly g = new Graphics();
   private readonly keycap: Text;
   private readonly ringLabel: Text;
+  private readonly doseChips: Text[] = [];
 
   constructor() {
     this.keycap = label('E', 13, PALETTE.espresso, '700');
@@ -559,6 +562,7 @@ export class StationOverlay {
     const g = this.g;
     g.clear();
     let ringDrawn: { cx: number; by: number; label: string } | null = null;
+    const doseDrawn: { cx: number; cy: number; text: string }[] = [];
     for (const s of stations) {
       const cx = sx(s.pos.x);
       const cy = sy(s.pos.y);
@@ -596,6 +600,13 @@ export class StationOverlay {
         const pulse = 1 + Math.sin(timeSec * 5) * 0.06;
         dashedEllipse(g, cx + 22, cy - 22, 15 * pulse, 15 * pulse, 3, 4, PALETTE.honey, 2.5, 0.95);
       }
+      // Round 5: hopper dose chip on a grinder with grounds left.
+      if (s.doses !== undefined && s.doses > 0 && s.kind === 'grinder') {
+        const tx = cx - 22;
+        const ty = top - 78;
+        g.roundRect(tx - 14, ty - 11, 28, 20, 8).fill({ color: 0x2d2a30, alpha: 0.92 }).stroke({ width: 1.5, color: PALETTE.honey });
+        doseDrawn.push({ cx: tx, cy: ty, text: `×${s.doses}` });
+      }
       // B8: soft smoke puff over a burnt espresso.
       if (s.smoke) {
         for (const [dx, dy, r, ph] of [[-6, -48, 7, 0], [4, -58, 9, 0.33], [-2, -68, 6, 0.66]] as const) {
@@ -620,6 +631,19 @@ export class StationOverlay {
     } else {
       this.ringLabel.visible = false;
     }
+    for (let i = 0; i < doseDrawn.length; i++) {
+      const d = doseDrawn[i]!;
+      let chip = this.doseChips[i];
+      if (!chip) {
+        chip = label(d.text, 12, 0xfff8ef, '800');
+        this.doseChips.push(chip);
+        this.root.addChild(chip);
+      }
+      if (chip.text !== d.text) chip.text = d.text;
+      chip.position.set(d.cx, d.cy);
+      chip.visible = true;
+    }
+    for (let i = doseDrawn.length; i < this.doseChips.length; i++) this.doseChips[i]!.visible = false;
     if (focus) {
       const cx = sx(focus.x);
       const cy = sy(focus.y);

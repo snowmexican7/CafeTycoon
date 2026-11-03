@@ -57,8 +57,9 @@ describe('FB2 C9: the espresso ladder and its wands (data)', () => {
       ['e5', 'The Annihilator', 450, 225],
       ['e6', 'Double Trouble', 800, 400],
     ]);
-    const secs = treeTiers('espresso').map((g) => Math.round((5 / g.speed) * 100) / 100);
-    expect(secs).toEqual([6, 5.56, 5, 4.5, 3.5, 3]);
+    // Round 5: pods keep a 5 s base; real machines use ECONOMY espresso 3 s.
+    const secs = treeTiers('espresso').map((g) => Math.round(((g.pods ? 5 : 3) / g.speed) * 100) / 100);
+    expect(secs).toEqual([6, 2.86, 2.5, 2.4, 2, 1.71]);
     // two groups from E4 up; +1★ cap and ×1.2 at the top two; E4 ×1.1
     expect(['e4', 'e5', 'e6'].map((id) => GEAR[id as GearId].twin?.includes('espresso'))).toEqual([true, true, true]);
     expect(['e3', 'e4', 'e5', 'e6'].map((id) => GEAR[id as GearId].priceMul ?? 1)).toEqual([1, 1.1, 1.2, 1.2]);
@@ -572,6 +573,6 @@ describe('FB2 C9: the planner and saves', () => {
     }
     createSnapshotStore(storage).save(s);
     expect(createSnapshotStore(storage).load()?.gear).toBe(true);
-    expect(SNAPSHOT_VERSION).toBe(31); // R4 night: roles/rerolls/equipment gone
+    expect(SNAPSHOT_VERSION).toBe(32); // Round 5: hopper doses + grounds polish
   });
 });
