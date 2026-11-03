@@ -8,7 +8,11 @@ import { layoutProblems } from './rearrange';
 import { FRIDGE, fridgeGear, isSupply } from './fridge';
 import { SUPPLY_ID, layoutFor } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
-import type { GameState, SupplyId, TierId } from './types';
+import { step } from './step';
+import { addStandIns } from './bots/roster';
+import { uncoveredOrders } from './bots/brain';
+import { TICK_RATE } from './constants';
+import type { DrinkId, GameState, SupplyId, TierId } from './types';
 
 /** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear. */
 type Kit = GearId | 'steamer';
@@ -128,6 +132,32 @@ describe('Round 5 block 4a: mid-day cold brew refill', () => {
     expect([tap.batchLeft, tap.busyTicksLeft > 0, tap.making, me(s).holding]).toEqual([3, true, 'icedLatte', null]);
   });
 
+  it('a dead tap (batteries died, dead until tonight) cannot be refilled', () => {
+    const s = gearDay(['c1'], { concentrate: 50 });
+    const tap = tapOf(s);
+    tap.batchLeft = 0;
+    tap.dead = true;
+    expect(canRefillColdBrew(s, tap, me(s))).toBe(false);
+    const concentrate = s.supplies.concentrate;
+    standAt(s, tap.id);
+    interact(s, 'p1');
+    expect([tap.busyTicksLeft, tap.batchLeft, s.supplies.concentrate]).toEqual([0, 0, concentrate]);
+  });
+
+  it('bots do not count a refill in progress as a cold brew on its way', () => {
+    let s = gearDay(['c1'], { concentrate: 50 });
+    addStandIns(s, 1);
+    const bot = s.players.find((p) => p.bot)!;
+    s.customers = [{ id: 1, drink: 'coldBrew', patienceLeft: 100_000, patienceMax: 100_000, stage: 'pickup', rungAt: 0 }];
+    const tap = tapOf(s);
+    tap.batchLeft = 0;
+    standAt(s, tap.id);
+    s = interact(s, 'p1');
+    expect(tap.busyTicksLeft).toBeGreaterThan(0);
+    expect(tap.making).toBeNull();
+    expect(uncoveredOrders(s, bot).map((c) => c.id)).toEqual([1]);
+  });
+
   it('pays only what concentrate can cover (short of half the cap)', () => {
     const s = gearDay(['c2'], { concentrate: 50 }); // c2 cap 16, half = 8
     const tap = tapOf(s);
@@ -178,6 +208,46 @@ describe('Round 5 block 4b: staff milk & cream by the sink', () => {
     interact(s, 'p1');
     expect(s.milkOut).toBe(FRIDGE.carton * 2);
     expect(me(s).tool).toBeNull();
+  });
+
+  it('R with a cup at the shelf does nothing (the shelf takes no cups, like the fridge)', () => {
+    let s = gearDay(['c1', 'steamer'], { milk: 20 });
+    standAt(s, SUPPLY_ID);
+    me(s).holding = 'latte';
+    s = step(s, [{ kind: 'drop', playerId: 'p1' }]);
+    expect(s.pass).toHaveLength(0);
+    expect(me(s).holding).toBe('latte');
+  });
+
+  it('a bots-only Gear day on the stand with milk drinks: milk never goes negative and no bot sits on a carton', () => {
+    let s = gearNight(['e1', 'steamer'], { milk: 30, beans: 40 }, 'stand');
+    s.settings.dayLengthSec = 120;
+    s.players[0].connected = false;
+    addStandIns(s, 2);
+    s.unlocked = [...new Set([...(s.unlocked ?? []), 'latte', 'espresso'] as DrinkId[])];
+    for (const d of Object.keys(s.menu) as DrinkId[]) s.menu[d] = d === 'latte' || d === 'espresso';
+    s = startDay(s);
+    s.milkOut = 0;
+    const since = new Map<string, number>();
+    let longest = 0;
+    let took = 0;
+    for (let i = 0; i < 150 * TICK_RATE && s.phase === 'day'; i++) {
+      s = step(s, []);
+      took += s.log.filter((e) => e.kind === 'fridge.take' && e.tick === s.tick).length;
+      expect(s.supplies.milk).toBeGreaterThanOrEqual(0);
+      expect(s.milkOut ?? 0).toBeGreaterThanOrEqual(0);
+      for (const p of s.players) {
+        if (!p.bot) continue;
+        expect(p.carry ?? 0).toBeGreaterThanOrEqual(0);
+        if (p.tool === 'milk') {
+          if (!since.has(p.id)) since.set(p.id, s.tick);
+          longest = Math.max(longest, s.tick - since.get(p.id)!);
+        } else since.delete(p.id);
+      }
+    }
+    expect(took).toBeGreaterThan(0);
+    expect(s.today.served).toBeGreaterThan(0);
+    expect(longest).toBeLessThanOrEqual(60 * TICK_RATE);
   });
 
   it('no fridge → no carton from the supply shelf', () => {

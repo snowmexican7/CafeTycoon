@@ -544,7 +544,7 @@ export const COLD_BREW_REFILL_SEC = 4;
  * can start a mid-day refill (about half the station's daily cap).
  */
 export function canRefillColdBrew(state: GameState, s: Station, p: Player): boolean {
-  if (!isGearRun(state) || s.kind !== 'coldBrewTap' || !s.gear) return false;
+  if (!isGearRun(state) || s.kind !== 'coldBrewTap' || !s.gear || s.dead) return false; // G5: dead until tonight
   if (state.phase !== 'day' && state.phase !== 'closing') return false;
   if (p.holding !== null || p.tool !== null || s.busyTicksLeft !== 0 || s.output !== null) return false;
   if ((s.batchLeft ?? 0) > 0) return false;

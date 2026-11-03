@@ -42,6 +42,9 @@ const dist = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);
 const isDrink = (item: ItemKind | null): item is DrinkId => item !== null && item !== 'grounds';
 const isRecipeKind = (kind: StationKind): kind is RecipeKind => kind in STATION_RECIPES;
 
+/** Round 5 block 4: a tap in its mid-day refill lock (busy with `making === null`): no cup is on its way. */
+const refilling = (st: Station): boolean => st.kind === 'coldBrewTap' && st.busyTicksLeft > 0 && st.making === null;
+
 const isIdle = (st: Station): boolean => st.busyTicksLeft === 0 && st.output === null && st.occupiedBy === null;
 
 /** Another bot's plan already has a step at `st` (it is on its way there, or will be). */
@@ -345,7 +348,7 @@ function coveragePool(state: GameState): Coverage {
     if (st.occupiedBy !== null) continue; // a rogue's drink is not for the queue
     if (hasPot(st)) continue; // G4d: a pot is a source of cups for whoever claims a drip, not one drink in flight
     if (claimedAtStation(state, st)) continue;
-    const brewing = st.busyTicksLeft > 0 && isRecipeKind(st.kind) ? (st.making ?? STATION_RECIPES[st.kind].gives) : null;
+    const brewing = st.busyTicksLeft > 0 && isRecipeKind(st.kind) && !refilling(st) ? (st.making ?? STATION_RECIPES[st.kind].gives) : null;
     // A2: a cold output still counts here: the orphan rule (think 0b) collects it and rule 0 bins it, then the
     // order is uncovered again. Not counting it would send claims to a machine it blocks.
     for (const item of [st.output, brewing]) {
@@ -437,7 +440,7 @@ function coldBrewsAhead(state: GameState): number {
   const onPass = state.pass.filter((i) => i.item === 'coldBrew' && !i.tray).length;
   const held = state.players.filter((p) => p.holding === 'coldBrew').length;
   const inTap = state.stations.filter(
-    (st) => st.kind === 'coldBrewTap' && ((st.busyTicksLeft > 0 && (st.making ?? 'coldBrew') === 'coldBrew') || st.output === 'coldBrew'),
+    (st) => st.kind === 'coldBrewTap' && ((st.busyTicksLeft > 0 && !refilling(st) && (st.making ?? 'coldBrew') === 'coldBrew') || st.output === 'coldBrew'),
   ).length;
   return onPass + held + inTap;
 }
