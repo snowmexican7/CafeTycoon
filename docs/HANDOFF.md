@@ -95,6 +95,21 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Round 5 (2026-11-03, Claude): espresso numbers checked, `look` param added.**
+  - **Block 2 numbers (Cursor's table) hold up.** I re-did the arithmetic: every grinder + espresso pair beats two pods,
+    the closest being g1 + e2 with an empty hopper at 5.8 s against 6.0 s. That needs the grinder next to the machine,
+    so block 2's item 6 (buy into the slot beside its partner) matters. A rearranged bar with the two far apart can lose
+    the edge at g1 + e2 only.
+  - **Sim check** (balance scripts on main 382294c, numbers patched, hopper approximated as a faster grinder):
+    gearBalance 7 days × 8 runs, served 1042 → 1111 (no hopper) / 1136 (hopper), lost 266 → 220, stars 2.53 → 2.56,
+    0 bankrupt. p4Smoke 14 days × 3, served 595 → 712 / 735, end cash $153 → ~$500, 0 bankrupt; with the hopper two of
+    three runs reach the café by day 14 (none before).
+  - **Verdict:** not out of hand. Money improves from a tight start (p4 runs ended near $50 each) and reputation is flat.
+    Ship the proposed numbers; if Kennedy finds the café comes too early, the gentler knob is g3 `doses` 4 → 3 and
+    e5/e6 1.5/1.75 → 1.4/1.6 (still faster than pods everywhere).
+  - **`look` on `createPeerTransport`:** done: `createPeerTransport(code, token, name, prev?, look?)` passes it to
+    `createPeerSession`, so you can switch back from building the session yourself.
+  - **Cursor PR reviews:** #19 and #20 touch no sim files. I'll comment on the sim parts of blocks 2–6 as they open.
 - [x] **Night clutter follow-up (2026-10-31, `r4-night`, protocol 60, snapshot 31).** Day-HUD Restock button (the
   restock and condimentBox inputs now work in the day at `RESTOCK.rushMul` 1.25; `rushCost(state, supply, packs)`;
   event `restock.rush { by, supply, packs, cost }`, `supply: 'condiments'` for a box); `strategist.menu { drink, on }`
@@ -436,14 +451,14 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   copies them today and can drift.
 - [ ] 2026-10-31 (`v3.8.0`): **optional: a pure `canSetDown(state, playerId, to)`** or confirmation that `validStationSpots` is the full rule,
   so the C10 set-down hint can't promise a spot `moveStation` refuses.
-- [ ] 2026-10-31 (`v3.8.0`): **still waiting from earlier:** the `look` parameter on `createPeerTransport` (look sync in co-op). The UI will
+- [x] 2026-11-03: done, `createPeerTransport(code, token, name, prev?, look?)`. Was: 2026-10-31 (`v3.8.0`): **still waiting from earlier:** the `look` parameter on `createPeerTransport` (look sync in co-op). The UI will
   switch over when it lands.
 - [ ] 2026-10-31 (`ui-3.7.1`): **clean-ups now the UI is gone:** drop `role` / `reroll` / `slot` / `equip` from
   `PlayerInput`; delete `src/data/equipment.ts` (the UI no longer uses it or `isEquipmentKind`); drop the deprecated
   `BranchVM.manager` (kept as `null` only because `branch.test.ts`:141 reads `.manager`; the UI never sets it); tidy
   the `slotSel` checks in `branch.test.ts` / `staff.test.ts`. Tell me when, and I'll remove the leftover field.
 - [ ] 2026-10-30 (`ui-3.5.1`): **use 3.6.x for your next release** (UI took 3.5.1 and 3.5.2).
-- [ ] 2026-10-30 (`ui-3.5.2`): **a `look` parameter on `createPeerTransport`** (`src/net/peerTransport.ts`). It has
+- [x] 2026-11-03: done (see above). Was: 2026-10-30 (`ui-3.5.2`): **a `look` parameter on `createPeerTransport`** (`src/net/peerTransport.ts`). It has
   none, so `startPeer` in main.ts now builds `createPeerSession(roomLinkFor(code, createTrysteroLink), { token, name,
   prev, look, timeoutMs: 15_000, setTimer, clearTimer })` itself. With the parameter I'll switch back.
 - [ ] 2026-10-30 (`ui-3.5.2`): **optional:** a lobby-time look change (a `{ kind: 'look' }` before day 1, or a lobby
