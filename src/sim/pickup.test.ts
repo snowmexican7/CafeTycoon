@@ -51,7 +51,7 @@ describe('the pickup counter (Task 7)', () => {
     expect(spotOf()).toBe('till');
     const s = gearDay(['c1', 'e1']);
     // FB2 A3 (fix round 1, I5): the back sink is counter-kind too, and says so (never the till's fallback); FB2 B7: the tray table too.
-    expect(s.stations.filter((x) => x.kind === 'counter').map((x) => spotOf(x))).toEqual(['till', 'pickup', 'condiments', 'sink', 'trayTable']);
+    expect(s.stations.filter((x) => x.kind === 'counter').map((x) => spotOf(x))).toEqual(['till', 'pickup', 'condiments', 'sink', 'supply', 'trayTable']);
     expect(passSlots(s)).toBe(4);
     expect(passSlots(classicDay())).toBe(ECONOMY.pass.slots);
     const g: Customer = { id: 1, drink: 'latte', extra: ['coldBrew'], patienceLeft: 1, patienceMax: 1 };

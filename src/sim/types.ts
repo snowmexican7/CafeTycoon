@@ -214,6 +214,8 @@ export type SimEventKind =
   | 'condiment.black'
   | 'condiment.refill'
   | 'steep'
+  /** Round 5 block 4: mid-day refill of an empty Gear cold brew (`{ by, station, cups }`). */
+  | 'coldbrew.refill'
   /** P4 B6: someone (a person or a bot) picked up the branch's phone. */
   | 'call.answer'
   /** FB2 A3 (Gear runs): the back sink, drip pots and messes. */

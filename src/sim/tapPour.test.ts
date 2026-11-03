@@ -74,9 +74,12 @@ describe('instant cold brew from the steeped tap (Task 3)', () => {
     const tap = tapOf(s);
     expect(availableDrinks(s)).toEqual(expect.arrayContaining(['coldBrew', 'icedLatte', 'sweetCream', 'special']));
     tap.batchLeft = 0;
+    // Round 5: with concentrate in stock, empty hands start a mid-day refill — clear it to keep the sold-out path.
+    s.supplies.concentrate = 0;
     stand(s, tap.id);
     interact(s, 'p1');
     expect(s.players[0].holding).toBeNull();
+    expect(tap.busyTicksLeft).toBe(0);
     const out = availableDrinks(s);
     for (const d of ['coldBrew', 'icedLatte', 'sweetCream', 'special'] as const) expect(out).not.toContain(d);
     expect(out).toContain('espresso');

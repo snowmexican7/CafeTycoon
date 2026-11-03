@@ -541,6 +541,58 @@ const FIXTURES: Record<string, Fixture> = {
       [1.2, (s) => emit(s, 'tray.add', { drink: 'mocha', by: 'ana', customer: 21 })],
     ],
   },
+  /**
+   * Round 5 block 4: café day with an empty Gear cold brew (refill hint), milk & cream shelf by the sink, and Ana
+   * standing at the empty cold brew with concentrate ready.
+   */
+  coldBrewEmpty: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 2);
+      // Put real cold-brew gear on the tap so mid-day refill / honest hints apply (atTier alone leaves classic stations).
+      const slots = [...(s.slots ?? defaultSlots('cafe'))];
+      const slotGear = slots.map((k) => (k === 'coldBrewTap' ? ('c1' as const) : k === 'trash' ? ('b0' as const) : null));
+      const ci = slots.findIndex((k) => k === 'coldBrewTap');
+      if (ci >= 0) slotGear[ci] = 'c1';
+      s.slots = slots;
+      s.slotGear = slotGear;
+      s.stations = stationsFromSlots(s.tier, slots, slotGear);
+      ensureCounterSpots(s);
+      s.supplies = { ...s.supplies, beans: 20, milk: 16, concentrate: 12, flavour: 6 };
+      s.milkOut = 0;
+      const tap = s.stations.find((x) => x.kind === 'coldBrewTap');
+      if (tap) {
+        tap.batchLeft = 0;
+        delete tap.batchOld;
+        s.players[0]!.pos = { x: tap.pos.x, y: tap.pos.y + 1 };
+      }
+      const supply = s.stations.find((x) => x.id === 'supply');
+      if (supply) s.players[1]!.pos = { x: supply.pos.x - 1, y: supply.pos.y };
+    },
+    timeline: [],
+  },
+  /** Round 5 block 4: milk & cream shelf highlighted — Ana at the supply with empty hands, fridge stocked. */
+  supplyStation: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 1);
+      const slots = [...(s.slots ?? defaultSlots('cafe'))];
+      const slotGear = slots.map((k) => (k === 'coldBrewTap' ? ('c1' as const) : k === 'trash' ? ('b0' as const) : null));
+      s.slots = slots;
+      s.slotGear = slotGear;
+      s.stations = stationsFromSlots(s.tier, slots, slotGear);
+      ensureCounterSpots(s);
+      s.supplies = { ...s.supplies, beans: 20, milk: 24, concentrate: 8 };
+      s.milkOut = 2;
+      const supply = s.stations.find((x) => x.id === 'supply');
+      if (supply) s.players[0]!.pos = { x: supply.pos.x - 1, y: supply.pos.y };
+      const tap = s.stations.find((x) => x.kind === 'coldBrewTap');
+      if (tap) tap.batchLeft = 0;
+    },
+    timeline: [],
+  },
   /** FB2 C10: Gear morning pre-open — countdown, Ready / Open doors, Ana near a movable machine. */
   preOpen: {
     setup(s) {

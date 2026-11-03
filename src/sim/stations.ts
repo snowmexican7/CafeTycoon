@@ -83,6 +83,9 @@ export function stepStations(state: GameState): GameState {
       s.busyTicksLeft -= 1;
       if (s.busyTicksLeft === 0 && s.occupiedBy !== null) s.occupiedBy = null; // a rogue's drink leaves with them
       else if (s.busyTicksLeft === 0 && isRecipeStation(s.kind)) {
+        // Round 5 block 4: mid-day cold brew refill sets `making` to null (not undefined) so no cup appears.
+        // Legacy busy-without-making (power flicker tests) still falls back to the station's default give.
+        if (s.making === null) continue;
         s.output = s.making ?? STATION_RECIPES[s.kind].gives;
         s.making = null;
         s.doneAt = state.tick;
