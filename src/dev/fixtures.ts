@@ -574,6 +574,8 @@ const FIXTURES: Record<string, Fixture> = {
       s.cash = 220;
       applyGearInput(s, { kind: 'gear', playerId: 'ana', action: 'buy', gear: 'd1' });
       s.supplies = { ...s.supplies, beans: 20, milk: 12, concentrate: 8, flavour: 4 };
+      // Buy already unlocks drip; keep the menu honest so the side panel isn't empty.
+      if (!s.unlocked?.includes('drip')) s.unlocked = [...(s.unlocked ?? []), 'drip'];
       s.menu.drip = true;
       const drip = s.stations.find((x) => x.kind === 'drip' && !x.twin);
       if (drip) {
@@ -583,7 +585,6 @@ const FIXTURES: Record<string, Fixture> = {
       }
       s.customers = [
         { id: 41, drink: 'drip', patienceLeft: 1100, patienceMax: 1400, stage: 'pickup', rungAt: s.tick },
-        { id: 42, drink: 'espresso', patienceLeft: 900, patienceMax: 1200 },
       ];
     },
     timeline: [],

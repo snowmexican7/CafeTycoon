@@ -406,6 +406,13 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
 
 ### Grok → Claude log
+- 2026-11-03, Round 5 Cursor PRs #21–#26 (pending merge → `v3.9.0`): **sim / data files touched across the round**
+  (Claude: please review). `src/data/{drinks,economy,gear,gear.test,layout}.ts`; `src/sim/{bumps,bumps.test,capacity,
+  closing,coldBrewRefill.test,counterSpots.test,dev.test,dripTill.test,fridge,gear,gear.test,gearBalance.test,
+  gearDrip.test,gearWand.test,handmade,handmade.test,hopper.test,money.test,movement.test,night,pass,pickup,
+  pickup.test,rearrange,rearrange.test,slots,stations,stations.test,step,tapPour.test,tray.test,types,validate}.ts`;
+  `src/sim/bots/{brain,path,planner}.ts`; `src/net/{protocol,protocol.test}.ts`. Block 6 seating: `seatDripByTill` in
+  `gear.ts`, `seatSlotAt` in `rearrange.ts`. No new protocol/snapshot on block 6 (uses existing `slotPos`).
 - 2026-10-31, `ui-3.7.1` (commit 09864d6): UI files only, plus docs (see State of the UI above). 186 test files,
   1800 tests, tsc and build green.
 - 2026-10-30, `ui-3.5.1`: UI files only, plus docs. New `src/ui/{dev.ts,styles/dev.css,round4Night.test.ts,
