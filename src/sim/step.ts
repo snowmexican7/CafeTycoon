@@ -132,7 +132,7 @@ function applyInput(s: GameState, input: PlayerInput): void {
       break;
     }
     case 'syrup':
-      if (!inPreOpen(s)) applySyrupInput(s, input); // FB2 B8 (FB2 C10: nothing is used in the pre-open)
+      applySyrupInput(s, input); // FB2 B8 (canAddSyrup refuses it in the pre-open, FB2 C10)
       break;
     case 'secret':
       if (s.phase === 'day' || s.phase === 'closing' || s.phase === 'night') unlockSecret(s, input.playerId, input.code);

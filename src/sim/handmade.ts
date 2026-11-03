@@ -29,6 +29,7 @@ import { ACCURACY } from './accuracy';
 import { secondsToTicks } from './constants';
 import { readyStock, useStock } from './fridge';
 import { emitLog } from './log';
+import { inPreOpen } from './rearrange';
 import { rngNext } from './rng';
 import type { Customer, DrinkId, FillGrade, Flavour, GameState, HandMade, ItemKind, OrderItem, PassItem, Player, PlayerInput, Station, SteamGrade } from './types';
 
@@ -347,24 +348,38 @@ export function ensureSyrupRack(state: GameState): void {
   if (!wand && has) state.stations = state.stations.filter((s) => !isSyrupRack(s));
 }
 
-/** One `flavour` syrup into the cup in hand at the rack: a shot, latte or cappuccino with none yet, and flavour in stock. */
-export function addSyrup(state: GameState, p: Player, flavour: Flavour): boolean {
+/** The cup gates of a syrup press: Gear, an empty tool, a syrup-able cup with none in it yet, flavour in stock, at the rack. */
+function syrupCupOk(state: GameState, p: Player): boolean {
   if (state.gear !== true || p.tool !== null || p.holding === null || !SYRUP_CUPS.includes(p.holding)) return false;
   if (p.made?.syrup || (state.supplies.flavour ?? 0) < 1) return false;
   const rack = state.stations.find(isSyrupRack);
-  if (!rack || dist(p.pos, rack.pos) > ECONOMY.interactRangeTiles) return false;
+  return !!rack && dist(p.pos, rack.pos) <= ECONOMY.interactRangeTiles;
+}
+
+/**
+ * Round 5: would the `syrup` input from `playerId` do anything right now? Every gate of the input in one place (the
+ * input uses it, so they cannot drift): day or closing but not the pre-open, a connected person (not a bot), then
+ * `syrupCupOk`. The flavour chosen is not a gate (any flavour is served from the one stock).
+ */
+export function canAddSyrup(state: GameState, playerId: string): boolean {
+  if ((state.phase !== 'day' && state.phase !== 'closing') || inPreOpen(state)) return false;
+  const p = state.players.find((x) => x.id === playerId);
+  return !!p && !p.bot && p.connected && syrupCupOk(state, p);
+}
+
+/** One `flavour` syrup into the cup in hand at the rack: a shot, latte or cappuccino with none yet, and flavour in stock. */
+export function addSyrup(state: GameState, p: Player, flavour: Flavour): boolean {
+  if (!syrupCupOk(state, p)) return false;
   state.supplies.flavour -= 1;
   p.made = { ...p.made, syrup: flavour };
   emitLog(state, 'syrup.add', { by: p.id, flavour });
   return true;
 }
 
-/** The `syrup` input (people; bots call addSyrup from their plan): day or closing only. */
+/** The `syrup` input (people; bots call addSyrup from their plan): everything is checked by `canAddSyrup`. */
 export function applySyrupInput(state: GameState, input: Extract<PlayerInput, { kind: 'syrup' }>): void {
-  if (state.phase !== 'day' && state.phase !== 'closing') return;
-  const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || p.bot || !p.connected) return;
-  addSyrup(state, p, input.flavour);
+  if (!canAddSyrup(state, input.playerId)) return;
+  addSyrup(state, state.players.find((x) => x.id === input.playerId)!, input.flavour);
 }
 
 // ---------------------------------------------------------------------------------------------- serving
