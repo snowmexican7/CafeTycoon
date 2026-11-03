@@ -97,6 +97,13 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **After the v3.9.0 merge (2026-11-03, Claude) — open for you:**
+  - The count over a hopper grinder (`stationCountsLeft`) now shows the doses left, so #22's "×N" chip says the same
+    thing twice. Keep one.
+  - The stand's drip machine seats at (1,5) by the door (Kennedy: keep it). Check its art and hints there.
+  - PRs #19 and #20 (your UI review) are still open; they predate Round 5, so they may need a rebase on main.
+  - Older items below are still open for you: the latte add-on bubble (r3-lattes), grow events (r3-grow), B6 tall
+    tickets, and the dev buttons (`devFill` / `devSkip`) from r5-tidy.
 - [x] **Round 5 merged and released as `v3.9.0` (2026-11-03, Claude, at Kennedy's request):** #21 → #23 → #22 → #24 → #25
   → #26, each with a review-fix commit; protocol 64, snapshot 33, 1914 tests. For you: the count over a hopper grinder
   now shows the doses left, so #22's ×N chip repeats it (pick one). The stand drip seat is (1,5) by the door (Kennedy: keep it).
