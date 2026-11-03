@@ -95,6 +95,12 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Round 5 tidy (2026-11-03, `r5-tidy`, protocol 61).** Dev buttons can light up: `{ kind: 'devFill', playerId }`
+  and `{ kind: 'devSkip', playerId }` (host, dev runs). `canAddSyrup(state, playerId)` (sim/handmade.ts) and
+  `canSetDown(state, playerId, station, to)` (sim/rearrange.ts) are exported, so `handmadeModel.canAddSyrup` and the C10
+  set-down hint can call them. `role` / `reroll` / `slot` / `equip` are gone from `PlayerInput`; `equipment.ts`,
+  `BranchVM.manager` (I edited `src/ui/branchView.ts`) and `slotSel` are gone. One `as never` cast in your
+  `src/ui/tipsVM.test.ts`.
 - [ ] **Round 5 (2026-11-03, Claude): espresso numbers checked, `look` param added.**
   - **Block 2 numbers (Cursor's table) hold up.** I re-did the arithmetic: every grinder + espresso pair beats two pods,
     the closest being g1 + e2 with an empty hopper at 5.8 s against 6.0 s. That needs the grinder next to the machine,
@@ -446,26 +452,26 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
-- [ ] 2026-10-31 (`v3.8.0`): **optional: a pure `canAddSyrup(state, playerId)` export** (src/sim) mirroring every gate the `syrup`
+- [x] 2026-11-03: done (`r5-tidy`). Was: 2026-10-31 (`v3.8.0`): **optional: a pure `canAddSyrup(state, playerId)` export** (src/sim) mirroring every gate the `syrup`
   input checks (including the pre-open). `src/render/handmadeModel.ts canAddSyrup`
   copies them today and can drift.
-- [ ] 2026-10-31 (`v3.8.0`): **optional: a pure `canSetDown(state, playerId, to)`** or confirmation that `validStationSpots` is the full rule,
+- [x] 2026-11-03: done (`r5-tidy`); `validStationSpots` matches only for a connected person in the pre-open. Was: 2026-10-31 (`v3.8.0`): **optional: a pure `canSetDown(state, playerId, to)`** or confirmation that `validStationSpots` is the full rule,
   so the C10 set-down hint can't promise a spot `moveStation` refuses.
 - [x] 2026-11-03: done, `createPeerTransport(code, token, name, prev?, look?)`. Was: 2026-10-31 (`v3.8.0`): **still waiting from earlier:** the `look` parameter on `createPeerTransport` (look sync in co-op). The UI will
   switch over when it lands.
-- [ ] 2026-10-31 (`ui-3.7.1`): **clean-ups now the UI is gone:** drop `role` / `reroll` / `slot` / `equip` from
+- [x] 2026-11-03: done (`r5-tidy`), incl. `BranchVM.manager`. Was: 2026-10-31 (`ui-3.7.1`): **clean-ups now the UI is gone:** drop `role` / `reroll` / `slot` / `equip` from
   `PlayerInput`; delete `src/data/equipment.ts` (the UI no longer uses it or `isEquipmentKind`); drop the deprecated
   `BranchVM.manager` (kept as `null` only because `branch.test.ts`:141 reads `.manager`; the UI never sets it); tidy
   the `slotSel` checks in `branch.test.ts` / `staff.test.ts`. Tell me when, and I'll remove the leftover field.
-- [ ] 2026-10-30 (`ui-3.5.1`): **use 3.6.x for your next release** (UI took 3.5.1 and 3.5.2).
+- [x] 2026-10-31: done (v3.6.0, v3.7.0). Was: **use 3.6.x for your next release** (UI took 3.5.1 and 3.5.2).
 - [x] 2026-11-03: done (see above). Was: 2026-10-30 (`ui-3.5.2`): **a `look` parameter on `createPeerTransport`** (`src/net/peerTransport.ts`). It has
   none, so `startPeer` in main.ts now builds `createPeerSession(roomLinkFor(code, createTrysteroLink), { token, name,
   prev, look, timeoutMs: 15_000, setTimer, clearTimer })` itself. With the parameter I'll switch back.
 - [ ] 2026-10-30 (`ui-3.5.2`): **optional:** a lobby-time look change (a `{ kind: 'look' }` before day 1, or a lobby
   message), so a joiner can change it in the lobby; today the creator runs before you join and again at night.
-- [ ] 2026-10-30 (`ui-3.5.1`): **text bug:** the planner's crew tip reads "Buy the The Hanes Method ($5)"
+- [x] already fixed in 52b3339. Was: **text bug:** the planner's crew tip reads "Buy the The Hanes Method ($5)"
   (`src/sim/planner.ts` ~449 adds "the" before a name that already starts with "The").
-- [ ] 2026-10-30 (`ui-3.5.1`): **more dev inputs, if cheap:** "Fill every jar" and "Skip to tonight" buttons are in
+- [x] 2026-11-03: done, `devFill` / `devSkip` (`r5-tidy`). Was: **more dev inputs, if cheap:** "Fill every jar" and "Skip to tonight" buttons are in
   the dev panel, switched off (`DEV_STUBS` in `src/ui/dev.ts`). A host-only `{ kind: 'devFill', playerId }` and
   `{ kind: 'devSkip', playerId }` (dev runs only) would light them up; tell me the names you pick.
 - [ ] 2026-10-30 (`ui-3.5.1`): **optional:** a `text` field on `customer.bump` if you want the sim to choose the line;
@@ -477,7 +483,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   one customer's cups; e. `Player.look` through lobby/join/protocol + `{ kind: 'look' }` input; f. proposal only:
   what night decisions could move mid-day or be cut; g. Round 3 / FB2 leftovers stay as listed. Also: export
   `emptyHandsWanted` (or `fridgeWants`). Post names as built in "Claude → Grok".
-- [ ] 2026-10-30: **Round 3 (Kennedy approved Oct 30, 2026 7:46 PM).** Full goal / freedom / don't touch / what Grok
+- [x] 2026-10-31: all seven done (`r3-*-done` tags; names in BACKLOG "Round 4 + wrap-up"). Was: **Round 3 (Kennedy approved Oct 30, 2026 7:46 PM).** Full goal / freedom / don't touch / what Grok
   wires for each item: BACKLOG "Round 3 (Kennedy approved 2026-10-30)". Summary:
   1. **More lattes:** shift the order mix toward `latte` / `cappuccino` where the gear can make them; optional
      "and a latte for my friend" add-on asks. Batch stays viable, espresso becomes competitive.
@@ -510,5 +516,5 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
     `bots/planner.ts`, `public/roadmap.json`).
 - [x] 2026-10-30: **A4 fridge:** done, `fb2-a4` (names in BACKLOG and in Claude → Grok above). Put the exact names in BACKLOG when it merges (`spotOf` → `'fridge'`, the
   `tool === 'milk'` carton, `milkOut`, closing-soon helpers), as planned; I'll wire the counter hint and art then.
-- [ ] 2026-10-30: **C9:** when the steamer leaves Gear layouts, please note the final wand field name here (I read
+- [x] 2026-10-31: `Station.wand` (see the C9 item in Claude → Grok). Was: **C9:** when the steamer leaves Gear layouts, please note the final wand field name here (I read
   `kind === 'steamer'` in `src/ui/live.ts` hints and `src/render/layers/stations.ts` art today).

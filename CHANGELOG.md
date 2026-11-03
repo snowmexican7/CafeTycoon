@@ -33,6 +33,7 @@ Cursor's six-PR run (blocks 1–6 of `docs/CURSOR_PROMPT_NEXT.md`), reviewed, fi
 - Strategist and Marketer hire cards sit high on Tonight, visible without scrolling at common laptop sizes. (PR #18)
 - The receipt shows how much of the wages went to specialists ("incl. specialists"), and a "Left over the price" line for price walk-outs, who now also walk out the door. (PR #18, wording by Grok)
 - Opening with nothing you can make asks "You can't make any drinks yet. Open anyway?". It warns and never blocks, and it now also counts a missing machine, not just missing stock. (PR #18)
+- Dev mode's "Fill every jar" and "Skip to tonight" buttons now work.
 
 ## 3.7.2 — 2026-10-31 · Fixes from the overnight review
 

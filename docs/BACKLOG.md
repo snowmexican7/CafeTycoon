@@ -2666,3 +2666,11 @@ Allow the existing `restock` input during `day` and `closing` (extend the one ph
 - Open after 3.8.0: B6 tall combo ticket, office phone card and receipt line; `order.addon` ask bubble; uncapped night
   headline; feed phone below the fold on Tonight; floaters overlapping at the wand; the syrup key chip reads "12".
   Screenshots: `/workspace/overnight/sprint/pr-review-2/` (Grok's box).
+- **Round 5 tidy (`r5-tidy`, protocol 61).** `PlayerInput` drops `role` / `reroll` / `slot` / `equip`;
+  src/data/equipment.ts is gone; `BranchVM.manager` and the `slotSel` test checks removed. New exports
+  `canAddSyrup(state, playerId)` (sim/handmade.ts; the `syrup` input uses it) and `canSetDown(state, playerId, station,
+  to)` (sim/rearrange.ts; `moveStation` uses it; `validStationSpots` agrees for a connected person in the pre-open but
+  ignores phase and who asks). Host-only dev-run inputs `{ kind: 'devFill', playerId }` (`applyDevFill`: beans,
+  concentrate, flavour, pastry to `DEV_JAR` 99; milk to fridge capacity; the bar and boxes to max) and
+  `{ kind: 'devSkip', playerId }` (`canDevSkip`; ends the day now, normal settlement). The planner "the The" bug was
+  already fixed (52b3339).
