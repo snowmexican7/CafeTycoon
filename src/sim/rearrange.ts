@@ -231,19 +231,41 @@ function storeSpots(state: GameState, spots: Vec2[]): void {
   else state.slotPos = kept;
 }
 
+/** The one who may rearrange: a connected person, in a Gear run's pre-open. (What `moveStation` checks before it judges the layout.) */
+function mover(state: GameState, playerId: string) {
+  if (!inPreOpen(state) || state.gear !== true) return undefined;
+  const p = state.players.find((x) => x.id === playerId);
+  return p && p.connected && !p.bot ? p : undefined;
+}
+
+/** What setting `station` down on `to` would do, or null when the layout (or the spot, or the id) refuses it. */
+function setDownPlan(state: GameState, station: string, to: Vec2): { slot: number; plan: Plan; stations: Station[] } | null {
+  const slot = slotOf(state, station);
+  if (slot < 0) return null;
+  const plan = planMove(state, slot, to);
+  if (!plan) return null;
+  const stations = judge(state, plan, layoutProblems(state));
+  return stations ? { slot, plan, stations } : null;
+}
+
+/**
+ * Round 5: would `moveStation` from `playerId` set `station` down on `to` right now? True exactly when it would take
+ * (pre-open of a Gear run, a connected person, a known station of a slot, a whole bar tile, the layout no worse). The
+ * input uses it, so they cannot drift. `validStationSpots` is the same test over every bar tile, without the
+ * pre-open and person gates (it ignores who and when; for a person in the pre-open the two agree on every tile).
+ */
+export function canSetDown(state: GameState, playerId: string, station: string, to: Vec2): boolean {
+  return mover(state, playerId) !== undefined && setDownPlan(state, station, to) !== null;
+}
+
 /** The `moveStation` input (pre-open, people only). */
 export function applyMoveStation(state: GameState, input: Extract<PlayerInput, { kind: 'moveStation' }>): void {
-  if (!inPreOpen(state) || state.gear !== true) return;
-  const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return;
-  const refuse = () => emitLog(state, 'station.refuse', { by: p.id, station: input.station });
-  const slot = slotOf(state, input.station);
-  if (slot < 0) return refuse();
+  const p = mover(state, input.playerId);
+  if (!p) return;
+  const found = setDownPlan(state, input.station, input.to);
+  if (!found) return emitLog(state, 'station.refuse', { by: p.id, station: input.station });
+  const { slot, plan, stations } = found;
   const machine = groups(state)[slot][0];
-  const plan = planMove(state, slot, input.to);
-  if (!plan) return refuse();
-  const stations = judge(state, plan, layoutProblems(state));
-  if (!stations) return refuse();
   state.stations = stations;
   storeSpots(state, plan.spots);
   for (const x of state.players) settle(state, x); // anyone standing where a machine landed steps off it
