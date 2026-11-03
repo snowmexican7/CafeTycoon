@@ -312,6 +312,17 @@ function gearDeal(state: GameState, by: string, input: Extract<PlayerInput, { ki
 }
 
 /**
+ * Round 5 block 6: after a grow rebuilt the bar, seat again by the till every drip slot in `seated` (slots that sat on
+ * the row above the till before the grow) that the rebuild put back on its default spot (a reset).
+ */
+export function reseatDrips(state: GameState, seated: number[]): void {
+  for (const i of seated) {
+    const id = state.slotGear?.[i];
+    if (id && GEAR[id].pot && !state.slotPos?.[i]) seatDripByTill(state, i);
+  }
+}
+
+/**
  * Round 5 block 6: seat a drip pot on the row above the till (nearest tile `layoutProblems` accepts).
  * Falls back to the back-bar default when no till-side tile works. Night moves still override via `slotPos`.
  */

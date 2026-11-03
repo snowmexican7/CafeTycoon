@@ -6,6 +6,8 @@ import { applyGearInput } from './gear';
 import { step } from './step';
 import { addStandIns } from './bots/roster';
 import { think } from './bots/brain';
+import { targetNodes } from './bots/path';
+import { groups } from './rearrange';
 import type { CreateRunOptions, Customer, GameState, TierId, Vec2 } from './types';
 
 const opts = (tier: TierId): CreateRunOptions => ({
@@ -90,5 +92,72 @@ describe('Round 5 block 6: drip sits by the till', () => {
     expect(plan.map((x) => (x.kind === 'use' ? `${x.station}:${x.action}` : x.kind))).toEqual(['drip:insert', 'drip:take', 'pickup:put']);
     for (let i = 0; i < 60 * 90 && s.customers.length > 0; i++) s = step(s, []);
     expect(s.today.drinks?.drip).toBe(1);
+  });
+
+  it('buying a drip never pushes a machine the crew placed off its tile', () => {
+    let s = createRun(opts('cafe'));
+    s.cash = 500;
+    buy(s, 'e2');
+    s = step(s, [{ kind: 'moveStation', playerId: 'p1', station: 'espresso', to: { x: 8, y: 5 } }]);
+    const esp = () => s.stations.find((x) => x.id === 'espresso')!.pos;
+    expect(esp()).toEqual({ x: 8, y: 5 });
+    buy(s, 'd1');
+    expect(esp()).toEqual({ x: 8, y: 5 });
+    expect(dripAt(s)).not.toEqual({ x: 8, y: 5 });
+  });
+
+  it('a second drip does not push the first one off its seat', () => {
+    const s = createRun(opts('cafe'));
+    s.cash = 500;
+    buy(s, 'd1');
+    const first = dripAt(s);
+    expect(first.y).toBe(Math.round(till(s).pos.y) - 1);
+    buy(s, 'd1');
+    const drips = s.stations.filter((x) => x.kind === 'drip' && !x.twin);
+    expect(drips).toHaveLength(2);
+    expect(drips.find((x) => x.id === 'drip')!.pos).toEqual(first);
+  });
+
+  it('the drip keeps a till-side seat when the shop grows from a stand (kept, or seated again after a reset)', () => {
+    let s = createRun(opts('stand'));
+    s.cash = 100_000;
+    buy(s, 'd1');
+    let kept = step(structuredClone(s), [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
+    expect(kept.tier).toBe('cart');
+    expect(dripAt(kept).y).toBe(Math.round(till(kept).pos.y) - 1);
+    // A move the cart can't keep (its fridge comes to (1,3)) resets the layout; the drip is seated by the till again.
+    buy(s, 'e2');
+    s = step(s, [{ kind: 'moveStation', playerId: 'p1', station: 'espresso', to: { x: 1, y: 3 } }]);
+    expect(s.stations.find((x) => x.id === 'espresso')!.pos).toEqual({ x: 1, y: 3 });
+    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
+    expect(s.tier).toBe('cart');
+    expect(s.log.filter((e) => e.kind === 'station.reset')).toHaveLength(1);
+    expect(dripAt(s).y).toBe(Math.round(till(s).pos.y) - 1);
+  });
+
+  /** How many working tiles each fixture (a station of no slot) has. */
+  const fixtureReach = (s: GameState): Record<string, number> => {
+    const inSlots = new Set(groups(s).flat().map((x) => x.id));
+    return Object.fromEntries(s.stations.filter((x) => !inSlots.has(x.id)).map((x) => [x.id, targetNodes(s, x, x.pos).length]));
+  };
+
+  for (const tier of ['stand', 'cart', 'cafe'] as const) {
+    it(`seating a drip on the ${tier} takes no fixture's working tile`, () => {
+      const s = createRun(opts(tier));
+      s.cash = 500;
+      const before = fixtureReach(s);
+      buy(s, 'd1');
+      expect(fixtureReach(s)).toEqual(before);
+    });
+  }
+
+  it('on the stand with a steam wand bought first, the drip leaves the syrup rack and the tray table their tiles', () => {
+    const s = createRun(opts('stand'));
+    s.cash = 2000;
+    applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'e3', wand: 'weak' });
+    expect(s.stations.some((x) => x.id === 'syrups')).toBe(true);
+    const before = fixtureReach(s);
+    buy(s, 'd1');
+    expect(fixtureReach(s)).toEqual(before);
   });
 });

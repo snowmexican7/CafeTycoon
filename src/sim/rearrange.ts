@@ -45,7 +45,7 @@ function replan(state: GameState): void {
 // ---------------------------------------------------------------------------------------------- the layout
 
 /** The stations of each slot, as they stand now (by id, from the slots); an empty slot has none. */
-function groups(state: GameState): Station[][] {
+export function groups(state: GameState): Station[][] {
   const ids = slotGroups(state.tier, state.slots ?? [], state.slotGear ?? [], state.slotWand ?? [], state.slotPos).map((g) => g.map((x) => x.id));
   return ids.map((g) => g.map((id) => state.stations.find((x) => x.id === id)).filter((x): x is Station => x !== undefined));
 }
@@ -227,11 +227,22 @@ export function applyMoveStation(state: GameState, input: Extract<PlayerInput, {
 export function seatSlotAt(state: GameState, slot: number, to: Vec2): boolean {
   if (state.gear !== true || slot < 0) return false;
   const plan = planMove(state, slot, to);
-  if (!plan) return false;
+  // Only a free tile: a tile of another slot would swap, pushing a machine the crew placed (or another drip) away.
+  if (!plan || plan.other >= 0) return false;
   const stations = judge(state, plan, layoutProblems(state));
   if (!stations) return false;
+  // Every fixture keeps all its working tiles (judge only asks for one each; a seat is a convenience, not a move).
+  const before = fixtureReach(state);
+  const after = fixtureReach({ ...state, stations, slotPos: plan.spots });
+  if ([...before].some(([id, n]) => (after.get(id) ?? 0) < n)) return false;
   applyPlan(state, plan, stations);
   return true;
+}
+
+/** How many working tiles each fixture (a station of no slot) has on the floor as it stands. */
+function fixtureReach(state: GameState): Map<string, number> {
+  const inSlots = new Set(groups(state).flat().map((x) => x.id));
+  return new Map(state.stations.filter((x) => !inSlots.has(x.id)).map((x) => [x.id, targetNodes(state, x, x.pos).length]));
 }
 
 /**

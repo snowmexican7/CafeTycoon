@@ -13,10 +13,11 @@
  */
 import { podsCoverGrinder, podsOnly } from './gear';
 import { ECONOMY } from '../data/economy';
+import { GEAR } from '../data/gear';
 import { layoutFor } from '../data/layout';
 import type { Modifiers } from './effects';
 import { defaultSlots, ensureCounterSpots, slotCount, stationsFromSlots } from './slots';
-import { growGearSlots, isGearRun, rebuildBar } from './gear';
+import { growGearSlots, isGearRun, rebuildBar, reseatDrips } from './gear';
 import { DRINK_IDS, DRINK_INFO, GEAR_ONLY_DRINKS } from '../data/drinks';
 import { emitLog } from './log';
 import type { DrinkId, GameState, GrowDiff, PlayerInput, Station, StationKind, TierId } from './types';
@@ -227,9 +228,16 @@ export function applyGrowInput(state: GameState, input: Extract<PlayerInput, { k
   if (isGearRun(state)) growGearSlots(state, input.tier);
   else classicGrowSlots(state, input.tier);
   const from = tierOf(state);
+  // Round 5 block 6: drips sitting on the row above the till before the grow, to seat there again after a reset
+  // (a drip the crew moved anywhere else goes back to its default spot like any machine).
+  const tillRow = (state.stations.find((x) => x.id === 'counter')?.pos.y ?? 0) - 1;
+  const seated = (state.slotGear ?? []).flatMap((id, i) => (id && GEAR[id].pot && state.slotPos?.[i]?.y === tillRow ? [i] : []));
   state.tier = input.tier;
   ensureCounterSpots(state); // FB2 A4: the bigger shop's fridge (Gear runs; no-op in classic)
-  if (isGearRun(state)) rebuildBar(state); // FB2 C10: moved machines stay where they still fit, else the defaults win
+  if (isGearRun(state)) {
+    rebuildBar(state); // FB2 C10: moved machines stay where they still fit, else the defaults win
+    reseatDrips(state, seated);
+  }
   state.tierLog = [...(state.tierLog ?? []), { tier: input.tier, day: state.day, by: p.name }];
   if (state.mop.heldBy === null) state.mop = { pos: { ...layoutFor(input.tier).mopHome }, heldBy: null };
   emitLog(state, 'grow.done', { from, to: input.tier, diff: growDiff(from, input.tier, state.gear === true) }); // R3 7
