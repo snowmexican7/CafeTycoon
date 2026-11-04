@@ -25,7 +25,7 @@ import { needsDump, potCold, potMachine } from '../sim/sink';
  */
 import { catalogueById } from '../data/catalogue';
 import { ECONOMY } from '../data/economy';
-import { TICK_RATE } from '../sim/constants';
+import { TICK_RATE, secondsToTicks } from '../sim/constants';
 import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
 import { canAddSyrup, syrupRackBlock } from '../render/handmadeModel';
@@ -88,8 +88,8 @@ export interface OrderTicket {
   tag?: { text: string; tone: 'regular' | 'impatient' | 'group' | 'influencer' | 'upset' };
   /** Batch/pickup (Gear): rung up at the till, now waiting at the pickup area. */
   pickup?: true;
-  /** ui-3.5.1 (from B6 `Customer.items`): every drink on a multi-drink ticket, in order, with the ones already taken ticked. */
-  items?: { drink: DrinkId; done: boolean; shots?: 2; syrup?: Flavour }[];
+  /** ui-3.5.1 / B6 leftovers: every drink on a multi-drink ticket, in order, with done ticks (cold crossed out). */
+  items?: { drink: DrinkId; done: boolean; shots?: 2; syrup?: Flavour; cold?: true }[];
   /** ui-3.5.1 (from B6 `Customer.order`): a combo or an office run (absent for a group or a one-drink order). */
   order?: 'combo' | 'office';
   /** FB2 B8: this latte or cappuccino wants a double shot. */
@@ -105,7 +105,7 @@ export interface HandHint {
   title: string;
   /** Where, and how long it takes. */
   detail: string;
-  /** Keycap shown on the hint (default E). Syrup rack uses 1·2. */
+  /** Keycap shown on the hint (default E). Syrup rack uses `1|2` (HUD splits into two chips). */
   key?: string;
 }
 
@@ -152,6 +152,8 @@ export interface HudLive {
   closeEarly?: CloseEarlyVM;
   /** P4 B6: the second shop is ringing. */
   call?: CallVM;
+  /** FB2 B6 leftovers: the office-run phone is ringing (countdown to walk-in). */
+  officePhone?: OfficePhoneVM;
   /** ui-3.4.1 (FB2 A4): the closing-soon checklist (last 30 s of the day, then the closing phase). */
   checklist?: ClosingListVM;
   /** FB2 B8: vanilla / caramel picker at the syrup rack (only when add would succeed). */
@@ -166,6 +168,9 @@ export interface ClosingListVM {
 
 export interface CallVM { kind: 'machine' | 'order'; where: string; title: string; detail: string; yes: string; no: string; secsLeft: number }
 
+/** FB2 B6: office-run phone card (ring-only notice; no Take / Refuse). */
+export interface OfficePhoneVM { secsLeft: number }
+
 export function callVM(state: GameState, me: PlayerId): CallVM | undefined {
   const c = callRinging(state);
   const p = state.players.find((x) => x.id === me);
@@ -177,6 +182,21 @@ export function callVM(state: GameState, me: PlayerId): CallVM | undefined {
 }
 
 export const callKey = (c: CallVM | undefined): string => (c ? `${c.kind}|${c.secsLeft}` : '');
+
+/**
+ * FB2 B6 leftovers: show while today's office run has rung (`office.called`) and not yet walked in.
+ * Countdown is whole seconds until `GameState.office.at` (ticks after open).
+ */
+export function officePhoneVM(state: GameState): OfficePhoneVM | undefined {
+  const o = state.office;
+  if (!o || o.day !== state.day || !o.called || o.came !== undefined) return undefined;
+  if (state.phase !== 'day') return undefined;
+  const elapsed = secondsToTicks(state.settings.dayLengthSec) - state.phaseTicksLeft;
+  const secsLeft = Math.max(0, Math.ceil((o.at - elapsed) / TICK_RATE));
+  return { secsLeft };
+}
+
+export const officePhoneKey = (c: OfficePhoneVM | undefined): string => (c ? `office|${c.secsLeft}` : '');
 
 export function crewOf(state: GameState, me: PlayerId): CrewMember[] {
   return state.players.map((p, i) => ({
@@ -304,10 +324,10 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   // FB2 B8: syrup rack — not a till; green only when 1/2 would add a syrup right now.
   if (spot === 'syrups') {
     if (canAddSyrup(state, player)) {
-      return { go: true, key: '1·2', title: 'Add a syrup', detail: `${where} · 1 vanilla · 2 caramel` };
+      return { go: true, key: '1|2', title: 'Add a syrup', detail: `${where} · 1 vanilla · 2 caramel` };
     }
     const why = syrupRackBlock(state, player) ?? 'Not ready';
-    return { go: false, key: '1·2', title: 'Syrup rack', detail: `${where} · ${why}` };
+    return { go: false, key: '1|2', title: 'Syrup rack', detail: `${where} · ${why}` };
   }
   if (player.tool === 'tray' && (spot === 'pickup' || spot === 'till')) {
     if (state.pass.length >= passSlots(state)) return { go: false, title: 'Pickup counter is full', detail: `${where} · ${state.pass.length}/${passSlots(state)} slots` };
@@ -503,7 +523,7 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
   }
   if (station.output !== null && held === null) {
     const sat = station.doneAt !== undefined && state.tick - station.doneAt > ACCURACY.sitSeconds * TICK_RATE;
-    const hop = station.doses !== undefined && station.doses > 0 ? ` · ×${station.doses} ready` : '';
+    const hop = station.doses !== undefined && station.doses > 0 ? ` · ${station.doses} ${station.doses === 1 ? 'dose' : 'doses'} left` : '';
     return go(`Pick up ${ITEM_LABEL[station.output].toLowerCase()}`, sat ? `${where}${hop} · sat too long, −1★` : `${where}${hop}`);
   }
   // P3 B5: near the end of a run, empty hands can rush it.
@@ -580,7 +600,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     orders: state.customers.map((c) => {
       const tag = ticketTag(c, snobs);
       return { id: c.id, drink: c.drink, patience: c.patienceMax > 0 ? c.patienceLeft / c.patienceMax : 0, ...(tag ? { tag } : {}), ...(c.stage === 'pickup' ? { pickup: true as const } : {}),
-        ...(c.items && c.items.length > 1 ? { items: c.items.map((it) => ({ drink: it.drink, done: it.done, ...(it.shots === 2 ? { shots: 2 as const } : {}), ...(it.syrup ? { syrup: it.syrup } : {}) })) } : {}),
+        ...(c.items && c.items.length > 1 ? { items: c.items.map((it) => ({ drink: it.drink, done: it.done, ...(it.shots === 2 ? { shots: 2 as const } : {}), ...(it.syrup ? { syrup: it.syrup } : {}), ...(it.cold ? { cold: true as const } : {}) })) } : {}),
         ...(c.order ? { order: c.order } : {}),
         ...(c.shots === 2 ? { shots: 2 as const } : {}),
         ...(c.syrup ? { syrup: c.syrup } : {}) };
@@ -595,6 +615,10 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     hint: handHint(state, me),
     closeEarly: closeEarlyVM(state, me),
     ...(state.branch ? { call: callVM(state, me) } : {}),
+    ...(() => {
+      const officePhone = officePhoneVM(state);
+      return officePhone ? { officePhone } : {};
+    })(),
     ...(closingSoon(state) ? { checklist: closingListVM(state) } : {}),
     ...(player && canAddSyrup(state, player) ? { syrupPicker: { flavours: ['vanilla', 'caramel'] as const } } : {}),
   };

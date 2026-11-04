@@ -18,6 +18,15 @@ when a build goes out, the line moves under its version with the date.
 
 _Nothing yet._
 
+## 3.9.1 — 2026-11-04 · Night board and office tickets
+
+Grok's UI review PRs #19 and #20, rebased onto the 3.9.0 layout and merged by Grok (`ui-3.9.1`).
+
+- Night board: the café phone sits beside Stock so the first posts clear the fold; overlapping milk / foam / syrup floaters stagger; syrup hints show "1" and "2" as separate chips; tomorrow's customer guess matches the brief cap; bot name tags keep a small robot mark.
+- Office runs and combos: tall tickets list every drink in a combo or office order, the office phone card says who is coming, the run shows on the night receipt, and a customer asking for an add-on shows a small ask bubble.
+- A hopper grinder shows its doses once, as the count over the grinder; the hint reads "3 doses left" instead of a second "×3" chip.
+- The syrup hint now asks the game itself whether a syrup can go in, so it can't disagree with what E does.
+
 ## 3.9.0 — 2026-11-03 · Faster espresso, a night layout
 
 Cursor's Round 5 (blocks 1–6), with the sim review fixes, merged by Claude.

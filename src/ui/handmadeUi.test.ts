@@ -91,7 +91,7 @@ describe('FB2 B8 handmade UI (jug, steam, syrup, tickets)', () => {
     p.holding = 'latte';
     expect(canAddSyrup(s, p)).toBe(true);
     expect(syrupRackBlock(s, p)).toBeNull();
-    expect(handHint(s, 'p1')).toMatchObject({ go: true, key: '1·2', title: 'Add a syrup' });
+    expect(handHint(s, 'p1')).toMatchObject({ go: true, key: '1|2', title: 'Add a syrup' });
     p.made = { syrup: 'caramel' };
     expect(canAddSyrup(s, p)).toBe(false);
     expect(syrupRackBlock(s, p)).toMatch(/Already has caramel/);

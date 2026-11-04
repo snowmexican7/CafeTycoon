@@ -627,7 +627,10 @@ const FIXTURES: Record<string, Fixture> = {
       atTier(s, 'cafe', 1);
       gearStart(s); // empty Gear slots after the size change
       s.cash = 220;
+      // ui-3.9.1: gear buys only land at night; buy there, then back to the day.
+      s.phase = 'night';
       applyGearInput(s, { kind: 'gear', playerId: 'ana', action: 'buy', gear: 'd1' });
+      s.phase = 'day';
       s.supplies = { ...s.supplies, beans: 20, milk: 12, concentrate: 8, flavour: 4 };
       // Buy already unlocks drip; keep the menu honest so the side panel isn't empty.
       if (!s.unlocked?.includes('drip')) s.unlocked = [...(s.unlocked ?? []), 'drip'];
@@ -637,6 +640,33 @@ const FIXTURES: Record<string, Fixture> = {
         drip.output = 'drip';
         drip.potLeft = 3;
         s.players[0]!.pos = { x: drip.pos.x, y: drip.pos.y + 1 };
+      }
+      s.customers = [
+        { id: 41, drink: 'drip', patienceLeft: 1100, patienceMax: 1400, stage: 'pickup', rungAt: s.tick },
+      ];
+    },
+    timeline: [],
+  },
+  /** ui-3.9.1: the stand's drip seat by the door at (1,5) (Kennedy, 2026-11-03), with a pot to pour. */
+  dripStand: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'stand', 1);
+      gearStart(s);
+      s.cash = 220;
+      // ui-3.9.1: gear buys only land at night; buy there, then back to the day.
+      s.phase = 'night';
+      applyGearInput(s, { kind: 'gear', playerId: 'ana', action: 'buy', gear: 'd1' });
+      s.phase = 'day';
+      s.supplies = { ...s.supplies, beans: 20, milk: 12, concentrate: 8, flavour: 4 };
+      if (!s.unlocked?.includes('drip')) s.unlocked = [...(s.unlocked ?? []), 'drip'];
+      s.menu.drip = true;
+      const drip = s.stations.find((x) => x.kind === 'drip' && !x.twin);
+      if (drip) {
+        drip.output = 'drip';
+        drip.potLeft = 3;
+        s.players[0]!.pos = { x: drip.pos.x + 1, y: drip.pos.y }; // beside it, so the tray's label stays in view
       }
       s.customers = [
         { id: 41, drink: 'drip', patienceLeft: 1100, patienceMax: 1400, stage: 'pickup', rungAt: s.tick },
@@ -1204,6 +1234,56 @@ const FIXTURES: Record<string, Fixture> = {
       [0.4, (s) => emit(s, 'review.post', { customer: 11, drink: 'latte', sentiment: 'bad', reason: 'cold', stars: 1, at: s.tick, name: '@latte_larry', text: 'This latte had the warmth of a handshake from a ghost.' })],
       [1.2, (s) => emit(s, 'review.post', { customer: 12, drink: 'espresso', sentiment: 'good', reason: 'great', stars: 5, at: s.tick, name: '@brewtus', text: 'Got my espresso before I finished my sentence. Wizardry.' })],
     ],
+  },
+  /** FB2 B6 leftovers: office phone ringing with a countdown (Gear café, day 3). */
+  officePhone: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 3);
+      s.day = 3;
+      const dayTicks = secondsToTicks(s.settings.dayLengthSec);
+      // mid-ring: ~6 s until they walk in
+      s.phaseTicksLeft = dayTicks - Math.round(0.08 * dayTicks);
+      const elapsed = dayTicks - s.phaseTicksLeft;
+      s.office = { day: 3, at: elapsed + secondsToTicks(6), called: true };
+      s.customers = [
+        {
+          id: 30,
+          drink: 'latte',
+          patienceLeft: 2000,
+          patienceMax: 2400,
+          order: 'combo',
+          items: [
+            { drink: 'latte', done: false, shots: 2, syrup: 'vanilla' },
+            { drink: 'cappuccino', done: true },
+            { drink: 'espresso', done: false, cold: true },
+          ],
+        },
+      ];
+    },
+    timeline: [
+      [0.5, (s) => emit(s, 'order.addon', { customer: 30, drink: 'latte' })],
+    ],
+  },
+  /** FB2 B6 leftovers: closing receipt with DayStats.office / officeExtra. */
+  officeReceipt: {
+    closing: true,
+    setup(s) {
+      s.gear = true;
+      s.today = {
+        ...s.today,
+        day: 3,
+        served: 26,
+        lost: 2,
+        sales: 132,
+        tips: 19,
+        rent: 40,
+        office: 'served',
+        officeExtra: 5,
+      };
+    },
+    timeline: [],
   },
   /** FB2 C11: week-end rating card from weekRating(state). */
   weekRating: {
