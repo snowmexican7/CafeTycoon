@@ -226,7 +226,7 @@ export class Scene {
         pos: s.pos,
         progress,
         output: s.output,
-        ...(s.doses !== undefined && s.doses > 0 ? { doses: s.doses } : {}),
+        // ui-3.9.1: hopper doses show once, as the count over the grinder (countsModel / stationCountsLeft).
         cat: state.eggs?.cat?.stationId === s.id,
         smoke: state.eggs?.smoke?.stationId === s.id,
         ...(ring && isTill ? { ring: { progress: ring.progress, self: ring.self, label: ringBarLabel(ring.self) } } : {}),

@@ -523,7 +523,7 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
   }
   if (station.output !== null && held === null) {
     const sat = station.doneAt !== undefined && state.tick - station.doneAt > ACCURACY.sitSeconds * TICK_RATE;
-    const hop = station.doses !== undefined && station.doses > 0 ? ` · ×${station.doses} ready` : '';
+    const hop = station.doses !== undefined && station.doses > 0 ? ` · ${station.doses} ${station.doses === 1 ? 'dose' : 'doses'} left` : '';
     return go(`Pick up ${ITEM_LABEL[station.output].toLowerCase()}`, sat ? `${where}${hop} · sat too long, −1★` : `${where}${hop}`);
   }
   // P3 B5: near the end of a run, empty hands can rush it.

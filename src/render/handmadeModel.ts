@@ -2,14 +2,13 @@
  * FB2 B8: the pure half of hand-made lattes — jug/steam meters, recipe icons over the cup, syrup-rack
  * gates, and toast lines. Reads `src/sim/handmade.ts` helpers; never mutates the sim.
  */
-import { ECONOMY } from '../data/economy';
 import { SYRUP_ID } from '../data/layout';
 import {
+  canAddSyrup as simCanAddSyrup,
   FLAVOURS,
   HANDMADE,
   JUG_LINES,
   heldRecipe as simHeldRecipe,
-  isSyrupRack,
   jugFill,
   steamPos,
   type HeldRecipe as SimHeldRecipe,
@@ -18,8 +17,6 @@ import {
 import type { FillGrade, Flavour, GameState, Player, SimEvent, SteamGrade } from '../sim/types';
 
 export { FLAVOURS, HANDMADE, JUG_LINES };
-
-const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 
 /** Cups that can take a syrup at the rack (mirrors handmade.ts SYRUP_CUPS). */
 const SYRUP_CUPS = ['espresso', 'latte', 'cappuccino'] as const;
@@ -130,12 +127,8 @@ export function handmadeHeldRecipe(state: GameState, p: Player): HandmadeRecipe 
  * cup with no syrup yet, flavour in stock, and in reach of the rack.
  */
 export function canAddSyrup(state: GameState, p: Player): boolean {
-  if (state.gear !== true || (state.phase !== 'day' && state.phase !== 'closing')) return false;
-  if (p.tool !== null || p.holding === null || !(SYRUP_CUPS as readonly string[]).includes(p.holding)) return false;
-  if (p.made?.syrup || (state.supplies.flavour ?? 0) < 1) return false;
-  const rack = state.stations.find(isSyrupRack);
-  if (!rack || dist(p.pos, rack.pos) > ECONOMY.interactRangeTiles) return false;
-  return true;
+  // ui-3.9.1: the sim's own gate (src/sim/handmade.ts), so the green hint can never promise a refused syrup.
+  return simCanAddSyrup(state, p.id);
 }
 
 /** Why the syrup rack is idle (for the grey hint), or null when add would succeed. */
