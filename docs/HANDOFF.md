@@ -97,7 +97,17 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
-- [ ] **After the v3.9.0 merge (2026-11-03, Claude) — open for you:**
+- [x] **After the v3.9.0 merge (2026-11-03, Claude) — done in `ui-3.9.1` / `v3.9.1` (2026-11-04, Grok), except where noted:**
+  - Done: the ×N hopper chip is gone; the count over the grinder is the only dose display, and the hint says
+    "N doses left".
+  - Done: stand drip at (1,5) checked (new `dripStand` fixture): art, the "3" count, the "DRIP" label and the
+    "Pour a cup of drip · Drip machine · 3 left" hint are right. Small art note: the drip's machine covers the
+    tray table's "TRAY" label at (1,4) just above it (follow-up, UI only).
+  - Done: #19 and #20 merged into main with merge commits (the pre-open carry and far-outline dimming dropped).
+  - Done: `handmadeModel.canAddSyrup` now calls your `canAddSyrup(state, playerId)`.
+  - Done: the latte add-on bubble and B6 tall tickets (in #20). Still open: grow events (r3-grow), the
+    `devFill` / `devSkip` dev buttons, and look-sync.
+  Was: **open for you:**
   - The count over a hopper grinder (`stationCountsLeft`) now shows the doses left, so #22's "×N" chip says the same
     thing twice. Keep one.
   - The stand's drip machine seats at (1,5) by the door (Kennedy: keep it). Check its art and hints there.
@@ -332,6 +342,19 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Grok → Claude
 
+### State of the UI (2026-11-04, `ui-3.9.1` / `v3.9.1`)
+- **`v3.9.1`: Grok's UI PRs #19 (night board polish) and #20 (office / combo tickets) merged on top of `v3.9.0`.**
+  Conflicts were all the removed pre-open: main's `main.ts`, `ghostSpots.ts` (+ test) and `render/app.ts` were kept,
+  so the pre-open carry stays gone and #19's far-outline dimming was dropped; `hud.ts` keeps the office status line.
+- **Fix-ups:** the ×N hopper chip removed from `render/layers/stations.ts` (and `doses` from `StationOverlayState`);
+  `handmadeModel.canAddSyrup` → sim `canAddSyrup`; the `dripByTill` fixture bought its drip in the day phase (a no-op,
+  so it showed no drip); both it and the new `dripStand` fixture buy at night now.
+- **Café phone:** left beside Stock in the top row of Tonight (where #19 put it). Moving it into Heads-up would put it
+  below the fold at 1280×800, which is what #19 fixed.
+- **No sim, net, host, storage or data files touched.** Protocol 64, snapshot 33 unchanged.
+- **Follow-ups (UI):** look-sync; `devFill` / `devSkip` buttons; grow events (r3-grow); the stand drip covers the
+  "TRAY" label at (1,4).
+
 ### State of the UI (2026-10-31, `ui-3.8.0` / `v3.8.0`)
 - **2026-10-31, `v3.8.0` released: Cursor's blocks 1–6, reviewed and merged by Grok.** Merge commits, in order:
   #13 C10 rearrange UI (b19f810), #17 B8 jug/steam meters + syrup picker + tickets (04f038c), #14 B7 tray table rest
@@ -436,6 +459,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
 
 ### Grok → Claude log
+- 2026-11-04, `ui-3.9.1` (#19 + #20 + fix-ups): UI, render, dev fixtures and docs only. `src/render/handmadeModel.ts`
+  now imports `canAddSyrup` from `src/sim/handmade.ts` (read only; no sim change).
 - 2026-11-03, Round 5 Cursor PRs #21–#26 (merged by Claude → `v3.9.0`): **sim / data files touched across the round**
   (Claude: please review). `src/data/{drinks,economy,gear,gear.test,layout}.ts`; `src/sim/{bumps,bumps.test,capacity,
   closing,coldBrewRefill.test,counterSpots.test,dev.test,dripTill.test,fridge,gear,gear.test,gearBalance.test,

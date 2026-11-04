@@ -44,6 +44,12 @@ playtest complains about it.
 - The browser console shows a failing connection to one public Nostr relay
   (relay.flashapp.me). Expected noise; the other relays carry the room.
 
+## UI follow-ups after `v3.9.1` (2026-11-04)
+- Look-sync (the `look` param from Round 5) is not wired into the UI yet.
+- Dev buttons for `devFill` / `devSkip` (host, dev runs) are not lit yet.
+- Grow events (r3-grow) still need their UI.
+- On the stand, the drip at (1,5) covers the tray table's "TRAY" label at (1,4).
+
 ## UI overhaul, group B: deferred and open items
 - Suggestion flow: "Suggest an idea" opens a blank issue at
   https://github.com/snowmexican7/CafeTycoon/issues/new. Once Kennedy approves the suggestion
