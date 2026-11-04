@@ -94,6 +94,11 @@ export const PRICE_LINES = ['Too pricey!', 'Not at that price.', 'I\'ll pass.', 
 export const WALKOUT_LINES = ['Sold out?!', 'Nothing left?', 'Aw, sold out.', 'Maybe tomorrow.'] as const;
 /** Round 3 item 4: the complaint line (one fixed phrase; HANDOFF). */
 export const COMPLAIN_LINE = "Line's too long!" as const;
+/** FB2 B6 leftovers / Round 3: add-on ask bubble from `order.addon { customer, drink }`. */
+export function addonAskLine(drink: string): string {
+  const name = drink === 'latte' ? 'a latte' : drink === 'cappuccino' ? 'a cappuccino' : drink === 'espresso' ? 'an espresso' : `a ${drink}`;
+  return `…and ${name} for my friend`;
+}
 
 /**
  * One-shot comic effects that happened between two snapshots, read from the sim log (by seq) and from
@@ -168,6 +173,10 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
     } else if (e.kind === 'line.complain') {
       const cid = typeof d.customer === 'number' ? d.customer : -1;
       bursts.push({ kind: 'complain', at: complainSpot(next, cid), text: COMPLAIN_LINE });
+    } else if (e.kind === 'order.addon') {
+      const cid = typeof d.customer === 'number' ? d.customer : -1;
+      const drink = typeof d.drink === 'string' ? d.drink : 'latte';
+      bursts.push({ kind: 'complain', at: complainSpot(next, cid), text: addonAskLine(drink) });
     } else if (e.kind === 'line.leave' && d.quiet === true) {
       bursts.push({ kind: 'tumbleweed', at: tumbleweedSpawn(next) });
     } else if (e.kind === 'till.start') {
