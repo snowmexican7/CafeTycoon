@@ -30,6 +30,7 @@ import { scenarioById } from '../data/scenarios';
 import { TICK_RATE, secondsToTicks } from '../sim/constants';
 import { botsFor } from '../sim/bots/roster';
 import { availableDrinks } from '../sim/customers';
+import { serveCapacity } from '../sim/capacity';
 import { challengePaperLine, describeEffects, radioLine, splitEffects } from '../sim/describe';
 import { CARD_SETS, FULL_SET } from '../data/cardSets';
 import { EVENT_LABELS } from '../sim/events';
@@ -405,7 +406,11 @@ export function forecastViewModel(state: GameState): ForecastVM {
     plan: f.plan,
     effects: describeEffects(f.effects.filter((e) => e.kind !== 'orderBias' || unlockedDrinks(state).includes(e.drink))),
     ...(f.eventNote ? { eventNote: f.eventNote } : {}),
-    customers: Math.round(ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic * priceTraffic(state, menu, m)),
+    // Cap like the brief (`serveCapacity`) so the headline and Heads-up numbers agree.
+    customers: Math.min(
+      Math.round(ECONOMY.baseArrivalsPerSecond * state.settings.dayLengthSec * m.traffic * priceTraffic(state, menu, m)),
+      serveCapacity(state, menu, m).day,
+    ),
     hotPct: Math.round((hot / total) * 100),
     later: { icon: next.icon, name: forecastName(next, state.day + 1) },
     ...(radioLine(state) ? { radio: radioLine(state) } : {}),

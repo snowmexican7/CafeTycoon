@@ -438,12 +438,17 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     ? `<div class="dy-part"><div class="tn-h">Tomorrow${extras ? ` · ${esc(extras.weekday)}` : ''}</div><div class="tm-row"><span class="tm-ic" aria-hidden="true">${h.icon}</span><b class="tm-head">${esc(h.text)}</b></div>
         <div class="tm-sub">${esc(h.sub)}</div><button class="btn mini ghost" data-action="drawer" data-d="paper">Read the paper ▸</button></div>`
     : '';
-  // FB2 C11: phone feed from dayReviews sits in the day card so it stays above the fold at 1280×800.
+  // ui-3.8.0 polish: café phone sits first in the day card, beside Stock, so two posts clear the fold.
   const phone = vm.feed ? nightPhoneHtml(vm.feed) : '';
-  const dayCard = ydPart || tmPart || phone ? `<div class="tn-card dy">${ydPart}${tmPart}${phone}</div>` : '';
+  const dayCard = phone || ydPart || tmPart ? `<div class="tn-card dy">${phone}${ydPart}${tmPart}</div>` : '';
   const listed = b.alerts.filter((a) => !onStockCard(a));
   const tips = vm.tips.length ? `<div class="tips" aria-label="Crew tips"><div class="tips-h">Crew tips</div>${vm.tips.map(tipChip).join('')}</div>` : '';
-  const alerts = `<div class="tn-card al-card">${listed.length || !tips ? '<div class="tn-h">Heads up</div>' : ''}${listed.length ? `<ul class="alerts">${listed.map(alertRow).join('')}</ul>` : tips ? '' : '<p class="al-none">✓ All set. Open when ready.</p>'}${tips}</div>`;
+  const headsBody = listed.length
+    ? `<ul class="alerts">${listed.map(alertRow).join('')}</ul>`
+    : tips
+      ? ''
+      : '<p class="al-none">✓ All set. Open when ready.</p>';
+  const alerts = `<div class="tn-card al-card">${listed.length || !tips ? '<div class="tn-h">Heads up</div>' : ''}${headsBody}${tips}</div>`;
   const warned = new Map(vm.warnings.filter((w) => w.supply).map((w) => [w.supply!, w.level]));
   const jarAlert = new Map(b.alerts.filter(onStockCard).map((a) => [a.id.split(':')[1] ?? a.id, a]));
   const stock = vm.restock

@@ -84,6 +84,12 @@ describe('FB2 C11 feed UI', () => {
     expect(html).toContain('♥ 5');
     expect(html).toContain('+5 fans');
     expect(nightPhoneHtml(nvm.feed!)).toContain('@mugshot_mo');
+    // ui-3.8.0 polish: phone leads the day card (beside Stock), not Heads up.
+    const day = html.split('tn-card dy')[1] ?? '';
+    const heads = html.split('al-card')[1]?.split('tn-card dy')[0] ?? '';
+    expect(day).toContain('feed-phone');
+    expect(day.indexOf('feed-phone')).toBeLessThan(day.indexOf('Tomorrow'));
+    expect(heads).not.toContain('feed-phone');
   });
 
   it('reviewPopVM reads name/text/sentiment/stars from review.post', () => {

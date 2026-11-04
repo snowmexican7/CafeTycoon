@@ -105,7 +105,7 @@ export interface HandHint {
   title: string;
   /** Where, and how long it takes. */
   detail: string;
-  /** Keycap shown on the hint (default E). Syrup rack uses 1·2. */
+  /** Keycap shown on the hint (default E). Syrup rack uses `1|2` (HUD splits into two chips). */
   key?: string;
 }
 
@@ -304,10 +304,10 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   // FB2 B8: syrup rack — not a till; green only when 1/2 would add a syrup right now.
   if (spot === 'syrups') {
     if (canAddSyrup(state, player)) {
-      return { go: true, key: '1·2', title: 'Add a syrup', detail: `${where} · 1 vanilla · 2 caramel` };
+      return { go: true, key: '1|2', title: 'Add a syrup', detail: `${where} · 1 vanilla · 2 caramel` };
     }
     const why = syrupRackBlock(state, player) ?? 'Not ready';
-    return { go: false, key: '1·2', title: 'Syrup rack', detail: `${where} · ${why}` };
+    return { go: false, key: '1|2', title: 'Syrup rack', detail: `${where} · ${why}` };
   }
   if (player.tool === 'tray' && (spot === 'pickup' || spot === 'till')) {
     if (state.pass.length >= passSlots(state)) return { go: false, title: 'Pickup counter is full', detail: `${where} · ${state.pass.length}/${passSlots(state)} slots` };

@@ -103,7 +103,7 @@ describe('Gear counter hints (3.3.1)', () => {
     at(s, 'syrups');
     expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Syrup rack' });
     s.players[0].holding = 'latte';
-    expect(handHint(s, 'p1')).toMatchObject({ go: true, key: '1·2', title: 'Add a syrup' });
+    expect(handHint(s, 'p1')).toMatchObject({ go: true, key: '1|2', title: 'Add a syrup' });
     expect(hudLive(s, 'p1').syrupPicker?.flavours).toEqual(['vanilla', 'caramel']);
     s.players[0].made = { syrup: 'vanilla' };
     expect(handHint(s, 'p1')).toMatchObject({ go: false, title: 'Syrup rack' });
