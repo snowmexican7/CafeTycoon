@@ -81,6 +81,8 @@ function cabinet(g: Graphics, cx: number, cy: number, w = 60): void {
 
 /** G9: a twin side shares its main side's name plate, so it draws none. */
 let plainArt = false;
+/** ui-3.9.2: a spot on the front serving run draws only what sits on it; the run draws the counter under it. */
+let onRun = false;
 
 function plate(root: Container, g: Graphics, cx: number, cy: number, text: string, color: number = PALETTE.espresso, alpha = 0.82): void {
   if (plainArt) return;
@@ -202,12 +204,13 @@ export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: n
  * `variant`: 'pour' draws the pour-over bar; 'pot' (FB2 A3, a Gear drip machine with a carafe) leaves the carafe
  * off the static art so the per-frame sink layer can draw it full, cold, stale or gone to the sink.
  */
-export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour' | 'pot', spot?: CounterSpot, fridge?: FridgeId | null): Container {
+export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour' | 'pot', spot?: CounterSpot, fridge?: FridgeId | null, run = false): Container {
   // ui-3.4.1 (FB2 A4): the fridge stands on its own (no counter under it), one look per fridge
   if (kind === 'counter' && spot === 'fridge') return buildFridge(pos, fridge ?? 'f1');
   // Round 5 block 4: milk & cream shelf by the sink
   if (kind === 'counter' && spot === 'supply') return buildSupplyShelf(pos);
   plainArt = twin;
+  onRun = run && !twin;
   let root: Container;
   try {
     root =
@@ -226,6 +229,7 @@ export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId 
                   : buildStationArt(kind, pos, checkout, spot === 'till' ? 'TILL' : undefined, variant === 'pot');
   } finally {
     plainArt = false;
+    onRun = false;
   }
   if (twin) {
     // Gear G9: the second side of a machine sharing a slot, drawn smaller and behind the main side so the
@@ -351,6 +355,7 @@ function buildSupplyShelf(pos: Vec2): Container {
 
 /** The shared counter cabinet (wood front, pale top) every counter spot stands on. */
 function counterBody(g: Graphics, cx: number, cy: number, top = 0xf3efe9): void {
+  if (onRun) return;
   const w = 58;
   if (skin === 'table') return foldingTable(g, cx, cy + 2, w, cy - 34, 30);
   if (skin === 'cart') return cartPanel(g, cx, cy + 2, w, cy - 34, 30, false);
@@ -360,6 +365,43 @@ function counterBody(g: Graphics, cx: number, cy: number, top = 0xf3efe9): void 
   for (let i = 0; i < 4; i++) g.roundRect(x + 5 + i * 13, cy - 4, 9, 32, 3).fill(0x8f5532);
   g.roundRect(x - 3, cy - 34, w + 6, 30, 8).fill(top);
   g.roundRect(x - 3, cy - 10, w + 6, 6, 3).fill(0xd8cdbf);
+}
+
+/**
+ * ui-3.9.2 (Kennedy): the front serving counter. One solid top and front panel under the till and the pickup and
+ * condiment spots beside it (`pickupModel.servingRun`), from tile edge `x0` to `x1` on row `y`, so the counter reads
+ * as the divide between staff and customers. The spots on it draw only what sits on top (`buildStation(…, run)`).
+ * Drawn just behind those spots in depth, with the shop size's skin (gingham table, cart panel, café counter).
+ */
+export function buildServingCounter(x0: number, x1: number, y: number, look: BarSkin): Container {
+  const root = new Container();
+  const g = new Graphics();
+  root.addChild(g);
+  const left = sx(x0) + 3;
+  const right = sx(x1) - 3;
+  const w = right - left;
+  const cx = (left + right) / 2;
+  const cy = sy(y);
+  root.zIndex = stationDepth({ x: x0, y }) - 0.5;
+  if (look === 'table') {
+    foldingTable(g, cx, cy + 2, w, cy - 34, 30);
+    return root;
+  }
+  if (look === 'cart') {
+    cartPanel(g, cx, cy + 2, w, cy - 34, 30, true);
+    return root;
+  }
+  shadow(g, cx, cy + 33, w / 2 + 10, 9);
+  // the customer-facing front: one wood panel with a kick plate and a run of vertical slats
+  g.roundRect(left, cy - 8, w, 41, 7).fill(0xa7653c);
+  for (let px = left + 6; px + 9 <= right - 5; px += 13) g.roundRect(px, cy - 3, 9, 30, 3).fill(0x8f5532);
+  g.roundRect(left, cy + 27, w, 6, 3).fill(0x6e3f22);
+  // one continuous counter top with a darker front lip
+  g.roundRect(left - 4, cy - 36, w + 8, 32, 8).fill(0xf3efe9).stroke({ width: 1.5, color: 0xd8cdbf });
+  for (let px = left + 20; px < right - 30; px += 58) g.moveTo(px, cy - 24).quadraticCurveTo(px + 14, cy - 18, px + 28, cy - 26).stroke({ width: 1.5, color: 0xe2dbd0 });
+  g.roundRect(left - 4, cy - 11, w + 8, 7, 3.5).fill(0xcbbca9);
+  g.rect(left - 4, cy - 5, w + 8, 2).fill({ color: 0x000000, alpha: 0.12 });
+  return root;
 }
 
 /** FB2 B7: tray table — a wood board with room for a multi-drink tray. */
@@ -477,13 +519,15 @@ function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId, cou
     // Same footprint as its collision square (the sim blocks exactly one tile).
     const w = 58;
     const x = cx - w / 2;
-    shadow(g, cx, cy + 32, 38, 9);
-    g.roundRect(x, cy - 8, w, 40, 7).fill(0xa7653c);
-    for (let i = 0; i < 4; i++) g.roundRect(x + 5 + i * 13, cy - 4, 9, 32, 3).fill(0x8f5532);
-    g.roundRect(x - 3, cy - 34, w + 6, 30, 8).fill(0xf3efe9);
-    g.moveTo(x + 6, cy - 24).quadraticCurveTo(x + 20, cy - 18, x + 34, cy - 26).stroke({ width: 1.5, color: 0xd9d1c6 });
-    g.moveTo(x + 26, cy - 14).quadraticCurveTo(x + 40, cy - 20, x + 54, cy - 12).stroke({ width: 1.5, color: 0xd9d1c6 });
-    g.roundRect(x - 3, cy - 10, w + 6, 6, 3).fill(0xd8cdbf);
+    if (!onRun) {
+      shadow(g, cx, cy + 32, 38, 9);
+      g.roundRect(x, cy - 8, w, 40, 7).fill(0xa7653c);
+      for (let i = 0; i < 4; i++) g.roundRect(x + 5 + i * 13, cy - 4, 9, 32, 3).fill(0x8f5532);
+      g.roundRect(x - 3, cy - 34, w + 6, 30, 8).fill(0xf3efe9);
+      g.moveTo(x + 6, cy - 24).quadraticCurveTo(x + 20, cy - 18, x + 34, cy - 26).stroke({ width: 1.5, color: 0xd9d1c6 });
+      g.moveTo(x + 26, cy - 14).quadraticCurveTo(x + 40, cy - 20, x + 54, cy - 12).stroke({ width: 1.5, color: 0xd9d1c6 });
+      g.roundRect(x - 3, cy - 10, w + 6, 6, 3).fill(0xd8cdbf);
+    }
     checkoutArt(root, g, cx, cy, checkout);
     // service bell
     g.ellipse(cx - 17, cy - 22, 8, 3).fill(0xb88a2a);

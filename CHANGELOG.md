@@ -18,6 +18,15 @@ when a build goes out, the line moves under its version with the date.
 
 _Nothing yet._
 
+## 3.9.2 — 2026-11-05 · A solid serving counter
+
+Kennedy's screenshot fix, by Grok (`ui-3.9.2`).
+
+- In Gear runs the till, the pickup counter and the condiment bar now share one solid serving counter, with one top and one front panel, between the crew and the customers. The register sits on it.
+- The office-run phone card is smaller and sits on the top edge of the play area, so it no longer covers the floor.
+- Dev fixtures (office phone, morning note, tray table, price walk-out, hair net) now set up the pickup and condiment counters the way a real Gear morning does.
+- Still to come (sim): a full-width counter that people can't walk around. See docs/CURSOR_PROMPT_COUNTER.md.
+
 ## 3.9.1 — 2026-11-04 · Night board and office tickets
 
 Grok's UI review PRs #19 and #20, rebased onto the 3.9.0 layout and merged by Grok (`ui-3.9.1`).

@@ -52,6 +52,9 @@ function atTier(s: GameState, tier: TierId, n: number): void {
   s.slots = defaultSlots(tier);
   s.stations = stationsFromSlots(tier, s.slots);
   s.mop = { pos: { ...layoutFor(tier).mopHome }, heldBy: null };
+  // ui-3.9.2: a Gear run's fixed spots (pickup, condiments, sink, fridge, tray table…) as every real morning has them;
+  // without this, a fixture that sets the tier after gearStart showed a till with no serving counter (no-op in classic).
+  ensureCounterSpots(s);
   const spots = tier === 'stand' ? [{ x: 1.4, y: 2.2 }, { x: 3, y: 2.3 }, { x: 5, y: 2.2 }, { x: 6.6, y: 4.6 }] : tier === 'cart' ? [{ x: 2, y: 2.3 }, { x: 4, y: 2.3 }, { x: 7, y: 2.4 }, { x: 6.5, y: 4.7 }] : [{ x: 2, y: 2.3 }, { x: 5, y: 2.3 }, { x: 8.5, y: 2.4 }, { x: 6.5, y: 4.7 }];
   s.players.forEach((p, i) => (p.pos = { ...spots[i] }));
   const drinks = tier === 'stand' ? (['espresso', 'coldBrew', 'icedLatte', 'espresso'] as const) : (['latte', 'espresso', 'coldBrew', 'mocha', 'latte', 'icedLatte', 'espresso'] as const);

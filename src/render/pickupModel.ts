@@ -112,3 +112,24 @@ export function pickupCups(state: Pick<GameState, 'pass' | 'gear' | 'customers' 
     return { item: i.item, stale: cools ? c >= COLD_BLINK : i.ticksLeft <= 5 * TICK_RATE, wanted: want.has(i.item as DrinkId), ...(cools && c >= 1 ? { cold: true as const } : {}) };
   });
 }
+
+/** ui-3.9.2: the counter spots that join the till into one front serving counter (same row, side by side). */
+const RUN_SPOTS: readonly CounterSpot[] = ['till', 'pickup', 'condiments'];
+
+/**
+ * ui-3.9.2 (Kennedy): the till and the pickup / condiment spots beside it read as one solid serving counter between
+ * staff and customers. Returns the ids in the run and its left / right tile edges (the run covers exactly the tiles
+ * the sim already blocks, so nobody seems to walk through it), or null with fewer than two spots (classic: the till alone).
+ */
+export function servingRun(list: readonly { id: string; kind: string; pos: Vec2; twin?: boolean }[]): { ids: string[]; y: number; x0: number; x1: number } | null {
+  const till = list.find((s) => s.id === 'counter' && !s.twin);
+  if (!till) return null;
+  const inRun = (x: number) =>
+    list.find((s) => !s.twin && s.pos.y === till.pos.y && Math.abs(s.pos.x - x) < 0.01 && RUN_SPOTS.includes(counterSpotOf(s, list) as CounterSpot));
+  const ids = [till.id];
+  let lo = till.pos.x;
+  let hi = till.pos.x;
+  for (let s = inRun(lo - 1); s; s = inRun(lo - 1)) (ids.unshift(s.id), (lo -= 1));
+  for (let s = inRun(hi + 1); s; s = inRun(hi + 1)) (ids.push(s.id), (hi += 1));
+  return ids.length < 2 ? null : { ids, y: till.pos.y, x0: lo - 0.5, x1: hi + 0.5 };
+}

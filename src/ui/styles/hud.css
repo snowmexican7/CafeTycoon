@@ -333,15 +333,16 @@
 #hud .ticket .stk-it.cold .stk-lab { color: #3d79b0; text-decoration: line-through; text-decoration-color: #3d79b088; }
 #hud .ticket.stack { padding-right: 34px; }
 
-/* FB2 B6 leftovers: office-run phone (countdown only; not the P4 branch Take/Refuse card). */
-#hud .hud-office { position: absolute; top: calc(var(--topbar) + 150px); left: 50%; transform: translateX(-50%); z-index: 4; pointer-events: none; display: flex; gap: 12px; align-items: center;
-  max-width: min(520px, 56vw); padding: 12px 16px; border-radius: 18px; background: #fffaf0; color: var(--ink); box-shadow: 0 0 0 3px #7cc49a, 0 12px 30px rgba(40,20,0,0.28); animation: hc-pop 0.3s ease-out; }
+/* FB2 B6 leftovers: office-run phone (countdown only; not the P4 branch Take/Refuse card).
+   ui-3.9.2: a compact card on the top edge of the play area (over the back wall, under the event chips), off the floor. */
+#hud .hud-office { position: absolute; top: calc(var(--topbar) + 42px); left: 50%; transform: translateX(-50%); z-index: 4; pointer-events: none; display: flex; gap: 10px; align-items: center;
+  max-width: min(440px, 46vw); padding: 7px 14px; border-radius: 14px; background: #fffaf0; color: var(--ink); box-shadow: 0 0 0 2.5px #7cc49a, 0 8px 20px rgba(40,20,0,0.24); animation: hc-pop 0.3s ease-out; }
 #hud .hud-office[hidden] { display: none; }
-#hud .hud-office .ho-ring { font-size: 36px; animation: hc-shake 0.6s ease-in-out infinite; }
-#hud .hud-office .ho-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-#hud .hud-office .ho-t small { font-size: 14px; font-weight: 700; color: #2f7a4c; }
-#hud .hud-office .ho-t b { font-size: 20px; }
-#hud .hud-office .ho-t span { font-size: 15px; opacity: 0.85; }
+#hud .hud-office .ho-ring { font-size: 24px; animation: hc-shake 0.6s ease-in-out infinite; }
+#hud .hud-office .ho-t { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+#hud .hud-office .ho-t small { font-size: 13px; font-weight: 700; color: #2f7a4c; }
+#hud .hud-office .ho-t b { font-size: 16px; }
+#hud .hud-office .ho-t span { font-size: 13px; opacity: 0.85; }
 @media (prefers-reduced-motion: reduce) { #hud .hud-office, #hud .hud-office .ho-ring { animation: none; } }
 
 /* ui-3.7.1: the day Restock button and its rush-delivery panel (non-modal: the floor keeps playing behind it). */
