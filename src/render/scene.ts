@@ -17,14 +17,14 @@ import { Effects } from './layers/fx';
 import { ESPRESSO } from '../sim/espresso';
 import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
-import { StationOverlay, buildEmptySlot, buildStation, setBarSkin, type StationOverlayState } from './layers/stations';
+import { StationOverlay, buildEmptySlot, buildServingCounter, buildStation, setBarSkin, type StationOverlayState } from './layers/stations';
 import { PickupVisuals } from './layers/pickup';
 import { CountsLayer } from './layers/counts';
 import { SinkVisuals } from './layers/sink';
 import { FridgeVisuals } from './layers/fridge';
 import { fridgeGear } from '../sim/fridge';
 import type { FridgeId } from '../data/fridges';
-import { counterSpotOf } from './pickupModel';
+import { counterSpotOf, servingRun } from './pickupModel';
 import { emptySlotPositions, stationBadges, wallMenuRows } from './slotModel';
 import { GhostSpots } from './ghostSpots';
 import { GEAR } from '../data/gear';
@@ -133,11 +133,14 @@ export class Scene {
     // 3.3.1: the pickup counter and the condiment bar are named counters, not a second and third till, so no number badge
     // (3.3.3: nor the back sink)
     const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: ('twin' in s && s.twin === true) || ['pickup', 'condiments', 'sink', 'fridge', 'supply', 'trayTable', 'syrups'].includes(counterSpotOf(s, list) ?? '') })));
+    // ui-3.9.2: the till and the pickup / condiment spots beside it share one solid serving counter.
+    const run = servingRun(list.map((s) => ({ id: s.id, kind: s.kind, pos: s.pos, twin: 'twin' in s && s.twin === true })));
     this.stationArt = list.map((s, i) => {
       const twin = 'twin' in s && s.twin === true;
       const g = gearOf(s);
-      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge);
+      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge, run?.ids.includes(s.id) === true);
     });
+    if (run) this.stationArt.push(buildServingCounter(run.x0, run.x1, run.y, barSkin(look)));
     for (const pos of emptySlotPositions(tier, list, slotPos)) this.stationArt.push(buildEmptySlot(pos));
     setBarSkin('cabinet');
     for (const c of this.stationArt) this.depth.addChild(c);
