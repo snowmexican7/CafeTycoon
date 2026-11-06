@@ -23,6 +23,23 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-05: **Round 6 approved (Kennedy, Nov 5 evening).** Docs: `docs/CURSOR_PROMPT_NEXT.md`,
+  `docs/CLAUDE_PROMPT_ROUND6.md`, ROADMAP "Round 6". Target **v3.10.0**.
+  - **Hair:** fully opaque (no head shape through hair) + add long wavy; hairline cover already shipped in R5 #21.
+  - **UI:** drink icons a bit larger; UI a bit larger; tip bubbles clearer. Full "I've played this before" tutorial
+    stays **Later**; **Soon** is the new-drink unlock replay after the nightly receipt (bot plays how-to).
+  - **Latte / B8 un-parked:** keep jug fill + steam meter; remove the end timer and the extra E — drink is instantly
+    done and in hand. Cursor builds; Claude reviews the sim edits.
+  - **Machines:** a pending `station.output` must not lock the machine (e.g. sitting shot + drip → red-eye still works);
+    same for all machines. Claude owns.
+  - **Patience:** less walk-in-order-leave; challenge via more multi / group orders, not stupider impatience. Claude.
+  - **Tray pressure:** dumping group cups one-by-one on the counter lets others take them; unfinished group loses the
+    whole ticket — pushes the serving tray. Claude.
+  - **Milk counter:** fridge holds milk; stock `SUPPLY_ID` from the fridge; iced latte / sweet cream fill at the milk
+    counter; empty hands there do not grab a carton. Claude sim + Cursor UI.
+  - **Open grace:** 5–10 s at café open with no regular customers; rare VIP / ultra fans in-window (super patient). Claude.
+  - **Later / notes only:** co-op night-menu scroll jump (+ locking menus together); co-op look-sync; `devFill` /
+    `devSkip`; grow-event UI; 4-player 2v2; solid `frontCounter` (`docs/CURSOR_PROMPT_COUNTER.md`, still open).
 - 2026-11-03: **The stand's drip machine stays by the door** at (1,5) when bought (cart (9,5), café unchanged), so it
   never takes another fixture's working tile. Players can still move it on the night Layout map.
 - 2026-11-03: **Round 5 approved (Kennedy, Nov 2 playtest + Nov 3 refinements).** Cursor builds six blocks
@@ -32,9 +49,9 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   faster combos); collisions tighter, with more bounce and slowdown (customer bumps unchanged); drip pot hot longer
   (d1 55 s, d2 75 s); refill an empty cold brew tap mid-day; a staff milk-and-cream station by the sink; **rearranging
   moves to the night (inside the Gear shop tab), and the morning pre-open is removed**; the drip machine sits by the till
-  by default, so the cashier has work. **Parked:** the hand-made jug and steam meters (too chaotic by day 4–5; keep the
-  code, don't add to it). **Later:** co-op scaling (3 players get more rush orders; 4 players play 2v2 with a shared pool
-  or twin sims, see ROADMAP). The night still opens on Restock, with no new night tabs.
+  by default, so the cashier has work. **Was parked:** the hand-made jug and steam meters — **un-parked 2026-11-05**
+  (Round 6: keep the meters, drop the end wait / extra pickup). **Later:** co-op scaling (3 players get more rush orders;
+  4 players play 2v2 with a shared pool or twin sims, see ROADMAP). The night still opens on Restock, with no new night tabs.
 - 2026-10-31: **Review follow-ups (Kennedy):** night always opens on Restock first; add a soft "Open anyway?" warning when opening with no makeable drinks (UI); Day-HUD declutter in stages he reviews; no save-compat work until saves are a real feature; the per-tick `structuredClone` speed fix is parked.
 - 2026-10-31: **New workflow (Kennedy, Oct 31 morning):** Grok becomes lead reviewer/merger and coordinator; Cursor
   (and Claude) do most of the coding. Cursor works through PRs; Grok reviews, merges, releases and writes the next
@@ -342,6 +359,15 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Grok → Claude
 
+### State of the UI (2026-11-05, `ui-3.9.2` / `v3.9.2` + Round 6 docs)
+- **`v3.9.2`:** one solid serving-counter draw (till + pickup + condiments) via `pickupModel.servingRun` /
+  `stations.buildServingCounter`; compact office phone card on the play area's top edge; fixtures call
+  `ensureCounterSpots`. Sim `frontCounter` still open — `docs/CURSOR_PROMPT_COUNTER.md`.
+- **Round 6 docs on main:** `docs/CURSOR_PROMPT_NEXT.md` (Cursor), `docs/CLAUDE_PROMPT_ROUND6.md` (Claude), ROADMAP
+  "Round 6", Decisions 2026-11-05. No game code in that docs commit. Protocol 64 / snapshot 33 unchanged.
+- **Follow-ups (UI, still open):** look-sync; `devFill` / `devSkip` buttons; grow events (r3-grow); stand drip covers
+  the "TRAY" label at (1,4); co-op night-menu scroll jump (note only).
+
 ### State of the UI (2026-11-04, `ui-3.9.1` / `v3.9.1`)
 - **`v3.9.1`: Grok's UI PRs #19 (night board polish) and #20 (office / combo tickets) merged on top of `v3.9.0`.**
   Conflicts were all the removed pre-open: main's `main.ts`, `ghostSpots.ts` (+ test) and `render/app.ts` were kept,
@@ -459,6 +485,11 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
 
 ### Grok → Claude log
+- 2026-11-05, Round 6 docs: `docs/CURSOR_PROMPT_NEXT.md`, `docs/CLAUDE_PROMPT_ROUND6.md`, ROADMAP, HANDOFF Decisions.
+  Docs only. Your Round 6 sim list is in `CLAUDE_PROMPT_ROUND6.md` (machines-not-locking, patience/multi-orders, tray
+  steal, milk-counter stocking, open grace + VIP fans, review Cursor's latte-in-hand PR).
+- 2026-11-05, `ui-3.9.2`: UI/render/dev fixtures/docs. Serving-counter draw + compact office phone; hand-off prompt
+  `docs/CURSOR_PROMPT_COUNTER.md` for the sim `frontCounter` line.
 - 2026-11-04, `ui-3.9.1` (#19 + #20 + fix-ups): UI, render, dev fixtures and docs only. `src/render/handmadeModel.ts`
   now imports `canAddSyrup` from `src/sim/handmade.ts` (read only; no sim change).
 - 2026-11-03, Round 5 Cursor PRs #21–#26 (merged by Claude → `v3.9.0`): **sim / data files touched across the round**
@@ -514,6 +545,9 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `needsDump` from `src/sim/sink.ts`, so please keep those names stable or tell me here.
 
 ### Needs from you (sim lane)
+- [ ] 2026-11-05 (**Round 6**, see `docs/CLAUDE_PROMPT_ROUND6.md`): machines stay usable with pending output; patience +
+  more multi/group orders; tray steal pressure; milk-counter stocking (`SUPPLY_ID` rework); open grace + VIP fans;
+  review Cursor's latte instant-in-hand sim PR. Log names as built here when each lands.
 - [x] 2026-11-03: done (`r5-tidy`). Was: 2026-10-31 (`v3.8.0`): **optional: a pure `canAddSyrup(state, playerId)` export** (src/sim) mirroring every gate the `syrup`
   input checks (including the pre-open). `src/render/handmadeModel.ts canAddSyrup`
   copies them today and can drift.

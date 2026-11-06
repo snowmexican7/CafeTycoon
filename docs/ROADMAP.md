@@ -3,22 +3,19 @@
 > Agreed order with Kennedy (2026-10-28): **phases go from easiest and lowest risk to hardest and riskiest.** AI is the hardest, so it comes late (Phase 5), and a polish phase closes it out. The machine-readable copy the game reads is `public/roadmap.json`.
 > The design spec (`superpowers/specs/2026-10-28-cafetycoon-design.md`, §17) uses older numbering (P3 = AI, P4 = bigger games). This roadmap supersedes it.
 
-## Where we are now (updated 2026-11-03, ~8 AM Toronto)
+## Where we are now (updated 2026-11-05, ~11 PM Toronto)
 
-> **Latest (2026-11-03):** Round 5 is approved (Kennedy's Nov 2 playtest, refined Nov 3). Cursor builds it as six
-> PRs ([`CURSOR_PROMPT_NEXT.md`](CURSOR_PROMPT_NEXT.md)); Claude reviews the sim parts
-> ([`CLAUDE_PROMPT_ROUND5.md`](CLAUDE_PROMPT_ROUND5.md)). PRs #19 (3.8.0 polish) and #20 (B6 leftovers) are open for Grok's review.
+> **Latest (2026-11-05):** Round 6 is approved (Kennedy's Nov 5 playtest notes). Cursor builds six UI/hand-off/unlock
+> PRs ([`CURSOR_PROMPT_NEXT.md`](CURSOR_PROMPT_NEXT.md)); Claude owns the sim pieces
+> ([`CLAUDE_PROMPT_ROUND6.md`](CLAUDE_PROMPT_ROUND6.md)). Target release **v3.10.0**. Solid `frontCounter` remains a
+> separate open prompt ([`CURSOR_PROMPT_COUNTER.md`](CURSOR_PROMPT_COUNTER.md)).
 
-> **Latest (2026-10-31):** main is **v3.8.0**. It merged Cursor's six PRs (#13–#18): the morning rearrange (C10),
-> hand-made lattes with jug/steam meters and the syrup picker (B8), the rest of the tray table (B7), the café feed
-> (C11), the ring-up bar and waiting area, and review fixes including the soft "Open anyway?" gate. Before that, 3.7.x
-> shipped the night-clutter answers and Cursor's first review fixes.
-> **Workflow now:** Cursor codes in PRs, Grok reviews/merges/releases, Claude keeps the sim lane (HANDOFF "Lanes").
-> **Kennedy's rulings:** the night always opens on Restock; Day-HUD declutter in small stages; no save compatibility;
-> the per-tick `structuredClone` speed fix is parked.
-> **Biggest gap:** the screen has nearly caught up with the sim. Left: B6 tall combo ticket and office phone card,
-> the add-on ask bubble, and polish (feed phone below the fold, overlapping floaters). Next Cursor run:
-> [`CURSOR_PROMPT_NEXT.md`](CURSOR_PROMPT_NEXT.md). Waiting on Claude: look sync in co-op. The tables below are from 2026-10-30.
+> **Latest (2026-11-05 earlier):** main is **v3.9.2** (solid serving-counter draw + compact office phone). Before that
+> **v3.9.1** (Cursor #19/#20 polish) and **v3.9.0** (Round 5: hairline, espresso speed, bumps, cold-brew refill, supply
+> shelf, night Layout, drip-by-till).
+> **Workflow:** Cursor codes in PRs; Grok reviews/merges/releases; Claude keeps the sim lane (HANDOFF "Lanes").
+> **Kennedy's rulings:** night always opens on Restock; Day-HUD declutter in small stages; no save compatibility;
+> per-tick `structuredClone` parked. Hand-made jug/steam **un-parked** for Round 6 (keep the meters; drop the end wait).
 
 > **Start here.** This section is the single, current picture for anyone new to the repo (including code
 > reviewers). The phase plan below is the long-range history. Details live in
@@ -27,10 +24,9 @@
 
 ### State
 - **Live:** https://snowmexican7.github.io/CafeTycoon/ deploys from `main` on every push.
-- **Versions:** newest release **v3.8.0** (`ui-3.8.0`, 2026-10-31, Cursor's PRs #13–#18). Earlier: **v3.5.2** (`ui-3.5.2`, 2026-10-30): the character creator plus everything Claude
-  had on `main` (lattes, café feed and fans, Strategist and Marketer hires; protocol 56). Before that **v3.5.1**:
-  Round 4 UI with B6 orders, bumps, dev mode, steam wands, pastries, cart $70 and ring-up time.
-- **Rule of thumb:** one shared version line. Grok's UI took 3.5.1 and 3.5.2; **Claude's next release is 3.6.x.**
+- **Versions:** newest release **v3.9.2** (2026-11-05). Earlier: **v3.9.1** (#19/#20), **v3.9.0** (Round 5), **v3.8.0**
+  (Cursor #13–#18). Protocol **64**, snapshot **33**.
+- **Rule of thumb:** one shared version line. Round 6 aims at **3.10.0**.
 - **Gear is the game** (no classic runs), no save compatibility for now, runs start at the stand, solo starts
   with 1 bot. All rulings: HANDOFF "Decisions".
 
@@ -55,23 +51,36 @@
   gained" card; "You can afford a cart!" nudge; first-run tips (snooze / off); forecast labelled "Rough guess".
 - **v3.5.0 (sim):** cups go cold, back sink and pot dumping, milk in a fridge, closing rush, solo bot count.
 
-### Now: Round 5 (Kennedy approved Nov 3, 2026)
-Cursor builds all six blocks (one PR each, sim edits allowed and listed per PR); Claude reviews the sim parts.
+### Now: Round 6 (Kennedy approved Nov 5, 2026)
+Cursor: six PRs in [`CURSOR_PROMPT_NEXT.md`](CURSOR_PROMPT_NEXT.md). Claude: sim blocks in
+[`CLAUDE_PROMPT_ROUND6.md`](CLAUDE_PROMPT_ROUND6.md). Release target **3.10.0**.
 
-| # | Item | Block | Notes |
-|---|------|-------|-------|
-| 1 | Hair sits on the hairline, all styles (male and female) | C1 | `src/render/layers/actors.ts` `backHair`/`frontHair` |
-| 2 | Espresso speed rework: grinder + espresso beats 2 pods at every tier, walking included | C2 | base pull 5 → 3 s, grinder hopper (`doses`), g2 much faster, g3 quality, faster combos |
-| 3 | Tighter collision box, stronger bounce, a bit more slowdown, no sticking | C3 | `baristaHalfWidth`, `ECONOMY.bump`; customer bumps unchanged |
-| 4 | Drip pot stays hot a bit longer | C3 | `pot.coldAfter` d1 45 → 55 s, d2 60 → 75 s |
-| 5 | Refill an empty cold brew tap mid-day | C4 | uses concentrate; no separate iced coffee dispenser exists |
-| 6 | Staff supply station (milk and cream) by the sink | C4 | a second fridge door for staff (`SUPPLY_ID`) |
-| 7 | Rearranging moves to the night (Gear shop tab "Layout"); morning pre-open removed | C5 | no new night tab; Restock still opens first |
-| 8 | Cashier has more to do: drip machine by the till by default | C6 | also the 3.9.0 release |
+| # | Item | Who | Notes |
+|---|------|-----|-------|
+| 1 | Opaque hair + long wavy style | Cursor C1 | Hairline already shipped in R5 #21; make every style fully opaque; add `wavy` |
+| 2 | Bigger drink icons + larger UI / clearer tip bubbles | Cursor C2 | `itemIcon` sizes, HUD/tip chrome; not a full tutorial |
+| 3 | Latte: keep jug + steam, instant drink in hand | Cursor C3 (Claude reviews sim) | Drop end steamer wait + extra E; FB2 B8 un-parked for this |
+| 4 | Milk counter UI | Cursor C4 | After Claude's milk-counter sim; no grab-carton from `SUPPLY_ID` |
+| 5 | New-drink unlock replay after nightly receipt | Cursor C5 | Soon; bot plays how-to; tiny sim pending list |
+| 6 | Release 3.10.0 | Cursor C6 | version, CHANGELOG, BACKLOG, HANDOFF |
+| 7 | Machines stay usable with pending `station.output` | Claude | e.g. sitting shot + drip → red-eye still works |
+| 8 | Patience up a notch; more multi / group orders | Claude | not stupider impatience; `ORDERS` / mix |
+| 9 | Tray steal pressure on dumped group cups | Claude | push `tray.ts`; lose whole ticket if unfinished |
+| 10 | Milk counter stocking (rework `SUPPLY_ID`) | Claude | fridge → stock counter; iced latte / sweet cream fill there |
+| 11 | Open grace 5–10 s + VIP / ultra fans | Claude | no regulars at open; rare super-patient fans |
 
-**Parked (2026-11-03):** the hand-made jug and steam meters (FB2 B8, `src/sim/handmade.ts`). Kennedy: already too
-chaotic by day 4–5. They stay as built, but nothing gets added to them. Open question for Kennedy: should they be
-switched off for now with a one-line flag?
+**Soon (Round 6):** new-drink unlock replay (Cursor block 5).
+
+**Later (not Round 6):** "I've played this before" / first-run tutorial; co-op night-menu scroll jump (+ locking menus
+together); co-op look-sync UI; `devFill` / `devSkip` buttons; grow-event UI; 4-player 2v2; solid `frontCounter`
+([`CURSOR_PROMPT_COUNTER.md`](CURSOR_PROMPT_COUNTER.md)).
+
+### Done: Round 5 (Kennedy approved Nov 3, 2026) — shipped v3.9.0
+Cursor six PRs (#21–#26) + Claude sim reviews. Hairline; espresso speed + hopper; harder bumps + longer drip pots;
+cold-brew refill; `SUPPLY_ID` shelf (carton grab — Round 6 reworks); night Layout (pre-open removed); drip by the till.
+
+**Was parked (2026-11-03), un-parked 2026-11-05:** hand-made jug and steam meters — Round 6 keeps the flow, drops the
+end wait / extra pickup.
 
 ### Done: Round 4 (Kennedy approved Oct 30, 2026, ~10:27 PM)
 Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
@@ -102,6 +111,10 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
   pushed further apart in look.
 
 ### Later (not scheduled)
+- **First-run tutorial (Kennedy, Nov 5; design only):** before host / solo, an "I've played this before" button; if
+  skipped, a short helpful first playthrough. Not Round 6 (unlock replay is the Soon piece instead).
+- **Co-op night-menu scroll jump (Kennedy, Nov 5; note only):** when one player clicks in the night menus, the other's
+  screen jumps to the top. Later idea: lock the menus together. Do not build yet.
 - **Co-op scaling (Kennedy, Nov 2; design only, not built):**
   - **3 players:** more rush orders, e.g. likelier `rushHour` events (`effects.ts` `eventOdds`) or more combo and
     office orders (`Customer.order`). There's no crew-size scaling of orders in the sim today (only `ECONOMY.maxHumans: 4`).
