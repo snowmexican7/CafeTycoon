@@ -150,6 +150,20 @@ describe('FB2 B8 handmade UI (jug, steam, syrup, tickets)', () => {
     wand.busyTicksLeft = 0;
     expect(handHint(s, 'p1').title).not.toMatch(/pick up latte/i);
   });
+
+  it('Round 6: latte at the wand for a cappuccino says Press E to steam (extra foam into hand)', () => {
+    const s = gearDay();
+    s.unlocked = [...(s.unlocked ?? []), 'cappuccino'];
+    s.menu.cappuccino = true;
+    s.customers = [{ id: 1, drink: 'cappuccino', patienceLeft: 1e5, patienceMax: 1e5, stage: 'ordering' }];
+    s.milkOut = 4;
+    const wand = s.stations.find((x) => x.kind === 'steamer')!;
+    const p = s.players[0];
+    p.holding = 'latte';
+    p.pos = { ...wand.pos };
+    expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Press E to steam' });
+    expect(handHint(s, 'p1').detail).toMatch(/extra foam|in your hand/i);
+  });
 });
 
 describe('FB2 B8 juice + sounds', () => {

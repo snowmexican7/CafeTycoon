@@ -544,7 +544,8 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
   // Smoke fix: a pod machine never wants grounds, so don't tell the player it does.
   const needText = station.gear && GEAR[station.gear].pods ? 'empty hands (it takes pods)' : need ? ITEM_LABEL[need].toLowerCase() : 'empty hands';
   if (held !== null && held !== 'grounds' && !recipeFor(state, kind, held)) return idle(`Wrong station: E fumbles it (−1★)`, `${where} needs ${needText}`);
-  if (held !== need) {
+  // Round 6: a latte at the wand for a cappuccino is a real recipe (held !== steamer's classic "espresso" take).
+  if (held !== need && !recipeAt(state, station, held)) {
     if (need === 'grounds') return idle('Needs grounds first', where);
     if (need === 'espresso') return idle('Needs a shot first', where);
     if (need) return idle(`Needs ${ITEM_LABEL[need].toLowerCase()} first`, where);
@@ -573,14 +574,17 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
     return idle('Out of cold brew. Buy more with 📦 Restock', where);
   }
   // FB2 B8 / Round 6: at a wand with a shot, fill the jug first; with a filled jug, E starts the foam meter
-  // (drink lands in hand when you stop — no steamer wait, no second pickup).
-  if (state.gear === true && !player.bot && kind === 'steamer' && held === 'espresso') {
+  // (drink lands in hand when you stop — no steamer wait, no second pickup). Cappuccino's second steam is the same.
+  if (state.gear === true && !player.bot && kind === 'steamer') {
     const r = recipeAt(state, station, held);
-    if (r?.takes === 'espresso' && r.gives === 'latte') {
+    if (held === 'espresso' && r?.takes === 'espresso' && r.gives === 'latte') {
       if (!player.jug?.done) {
         return go('Fill the milk jug', `${where} · E starts it · E again stops on the ticket's line`);
       }
       return go('Press E to steam', `${where} · foam meter · drink finishes in your hand`);
+    }
+    if (held === 'latte' && r?.takes === 'latte' && r.gives === 'cappuccino') {
+      return go('Press E to steam', `${where} · extra foam · finishes in your hand`);
     }
   }
   // Gear steeped pour: empty hands at a stocked cold brew, no wait.
