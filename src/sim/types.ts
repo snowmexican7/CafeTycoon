@@ -172,6 +172,8 @@ export interface BotState {
 export type SimEventKind =
   | 'cup.early'
   | 'cup.fumble'
+  | 'station.clear'
+  | 'station.clearFull'
   | 'pass.put'
   | 'pass.take'
   | 'pass.serve'
