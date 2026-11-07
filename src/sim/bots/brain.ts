@@ -22,13 +22,13 @@ import { rogueNear, rogueTiles } from '../rogue';
 import { passSlots } from '../pickup';
 import { heldCool, takeBackCold, slotCool, stationCool } from '../cooling';
 import { tillNext } from '../till';
-import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, layoutFor } from '../../data/layout';
+import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, TRAY_ID, layoutFor } from '../../data/layout';
 import { FRIDGE, autoMilk, closingSoon, isMilkStation, readyStock } from '../fridge';
 import { CONDIMENTS, canTakeBox, returnBox } from '../condiments';
 import { isSink, needsDump } from '../sink';
 import { answerPhone } from './phone';
 import { wantsItem } from '../orders';
-import { ticketOpen, trayCups } from '../tray';
+import { ticketOpen, trayComplete, trayCups } from '../tray';
 import { heldByPerson, heldForPeople, isPerson, ringsAtOnce } from './helper';
 import { addSyrup, askedSyrup } from '../handmade';
 import { SYRUP_ID } from '../../data/layout';
@@ -92,6 +92,22 @@ export function spotStep(state: GameState, id: string, action: BotAction): BotSt
  */
 function finishStep(state: GameState, p: Player, finish: 'serve' | 'put'): BotStep | null {
   return state.gear === true ? spotStep(state, PICKUP_ID, 'put') : use(state, p, 'counter', finish);
+}
+
+/**
+ * Round 6 block 3 (Gear): the tray table would take a `drink` set down now (the same test `setDown` in src/sim/tray.ts
+ * makes: the table's tray still has an open line of it, or the table is empty and a multi-drink ticket still needs it).
+ */
+function trayAccepts(state: GameState, drink: DrinkId): boolean {
+  if (state.gear !== true || !state.stations.some((st) => st.id === TRAY_ID)) return false;
+  const t = state.tray;
+  if (t) return t.items.some((x) => !x.done && x.drink === drink);
+  return state.customers.some((x) => x.items && x.egg !== 'camper' && ticketOpen(state, x).includes(drink));
+}
+
+/** A bot is already on its way to lift the table's tray. */
+function trayLiftPlanned(state: GameState, self: Player): boolean {
+  return state.players.some((o) => o !== self && (o.tool === 'tray' || o.bot?.plan.some((x) => x.kind === 'use' && x.station === TRAY_ID && x.action === 'take')));
 }
 
 /**
@@ -791,6 +807,8 @@ export function think(state: GameState, p: Player): BotStep[] {
   if (p.tool === 'pot') return [spotStep(state, SINK_ID, 'dump') ?? { kind: 'floor', node: nodeOf(state, p.pos), action: 'drop' }];
   // FB2 A4: a carton goes out at the bar (or into the fridge when putting away); the lifted bar goes in the fridge.
   if (p.tool === 'milk' || p.tool === 'bar') return carryPlan(state, p);
+  // Round 6 block 3: a carried tray goes down on the pickup counter.
+  if (p.tool === 'tray') return [spotStep(state, PICKUP_ID, 'put') ?? { kind: 'floor', node: nodeOf(state, p.pos), action: 'drop' }];
   if (p.holding === 'grounds') return groundsPlan(state, p);
   if (isDrink(p.holding)) {
     const drink = p.holding;
@@ -809,6 +827,12 @@ export function think(state: GameState, p: Player): BotStep[] {
     const take = spotStep(state, PICKUP_ID, 'take');
     const counter = state.stations.find((st) => st.id === PICKUP_ID);
     if (take && counter) return [take, binStep(state, p, true, counter.pos)]; // FB2 A3: the bin or the sink, whichever is nearer the counter
+  }
+  // 0d. Round 6 block 3: the table's tray holds everything its ticket needs: lift it and carry it to the pickup counter.
+  if (state.gear === true && state.tray && trayComplete(state.tray) && p.holding === null && !trayLiftPlanned(state, p)) {
+    const lift = spotStep(state, TRAY_ID, 'take');
+    const put = spotStep(state, PICKUP_ID, 'put');
+    if (lift && put) return [lift, put];
   }
   if (state.gear === true) {
     // 1. Gear (batch/pickup): ring up the queue when nobody else is on their way to the till. Only a thinking
@@ -836,7 +860,7 @@ export function think(state: GameState, p: Player): BotStep[] {
   if (job) {
     b.claim = job.order.id;
     b.claimDrink = job.order.drink;
-    return withSyrup(state, job.order, job.chain);
+    return toTray(state, job.order, withSyrup(state, job.order, job.chain));
   }
   // 3. Prep cold brew for the pass.
   const prep = shouldPrep(state, p) ? chainFor(state, p, 'coldBrew', 'put') : [];
@@ -857,6 +881,13 @@ export function think(state: GameState, p: Player): BotStep[] {
   if (dump) return dump;
   // 4. Wait near the counter.
   return [{ kind: 'idle', node: idleNode(state, p) }];
+}
+
+/** Round 6 block 3: a cup for a multi-drink ticket goes on the tray table (safe from singles) when it would take it. */
+function toTray(state: GameState, order: Customer, chain: BotStep[]): BotStep[] {
+  const last = chain[chain.length - 1];
+  if (!order.items || last?.kind !== 'use' || last.station !== PICKUP_ID || last.action !== 'put' || !trayAccepts(state, order.drink)) return chain;
+  return [...chain.slice(0, -1), { kind: 'use', station: TRAY_ID, action: 'put' }];
 }
 
 /**
@@ -1198,6 +1229,8 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       return abandon(state, p);
     }
     case 'take':
+      // Round 6 block 3: empty hands lift a full tray off the table.
+      if (st.id === TRAY_ID) return p.holding === null && p.tool === null && state.tray && trayComplete(state.tray) ? execute(p) : setPlan(b, []);
       // A2: empty hands at the pickup counter take back a cup, only while the one take-back grabs is cold (to bin it).
       if (st.id === PICKUP_ID) return p.holding === null && p.tool === null && takeBackCold(state) ? execute(p) : setPlan(b, []);
       // FB2 A3: never press at a pot that needs the sink (the press would lift it, not pour).
@@ -1222,6 +1255,13 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       return setPlan(b, dropPlan(state, p));
     }
     case 'put':
+      // Round 6 block 3: a carried tray goes down on the counter (waits while it is full).
+      if (p.tool === 'tray') return state.pass.length < passSlots(state) ? execute(p) : wait(state, p);
+      // On the tray table only while it would take the cup; else (it filled up meanwhile) the pickup counter.
+      if (st.id === TRAY_ID && isDrink(p.holding) && !trayAccepts(state, p.holding)) {
+        const put = spotStep(state, PICKUP_ID, 'put');
+        return put ? setPlan(b, [put]) : abandon(state, p);
+      }
       // Extras review I1: nothing in hand (a pour came up empty) must not lift a cup off the counter and re-put it.
       if (!isDrink(p.holding)) return abandon(state, p);
       if (b.noticeTicksLeft > 0) return wait(state, p);

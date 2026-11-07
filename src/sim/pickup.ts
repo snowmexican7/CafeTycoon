@@ -51,7 +51,7 @@ export function wantsDrink(c: Customer, d: DrinkId): boolean {
 
 /**
  * Who takes `drink` off the counter: rung up (stage pickup), not a camper, wants it (FB2 B7: and no tray covers it);
- * upset first, an office run last (FB2 B6), then (FB2 B8) one whose latte or cappuccino ask the cup fits exactly (its
+ * upset first, an office run last (FB2 B6), then (Round 6) a single before any multi-drink ticket, then (FB2 B8) one whose latte or cappuccino ask the cup fits exactly (its
  * syrup and shots, as `made`), then the longest wait, then the lowest id.
  */
 export function pickupTarget(state: GameState, drink: DrinkId, made?: HandMade): Customer | null {
@@ -67,6 +67,8 @@ function better(a: Customer, b: Customer, drink: DrinkId, made: HandMade | undef
   if (!!a.upset !== !!b.upset) return !!a.upset;
   // FB2 B6: an office run waits for the whole order anyway; it takes a cup only when nobody else wants it.
   if ((a.order === 'office') !== (b.order === 'office')) return b.order === 'office';
+  // Round 6 block 3: a single takes a cup a multi ticket also wants (the ticket stays open; see `noteSteal`).
+  if (!!a.items !== !!b.items) return !a.items;
   const fa = customerFits(a, drink, made);
   if (fa !== customerFits(b, drink, made)) return fa;
   const ra = a.rungAt ?? Infinity;
@@ -116,6 +118,7 @@ export function stepPickup(state: GameState): void {
     const i = takeIndex(state, hit.item.item);
     const item = state.pass[i];
     state.pass.splice(i, 1);
+    if (!c.items) noteSteal(state, c, item.item);
     if (c.items) {
       // FB2 B6: a multi-drink ticket marks the item done; it pays when the last one is taken.
       trayTakenOffCounter(state, c, item.item); // FB2 B7: the table's tray no longer waits for this one
@@ -146,6 +149,20 @@ export function stepPickup(state: GameState): void {
     serveCustomer(state, c, item.item, item.by, judgedSlips(item.slips ?? 0, judged.stars), item.temp === true || cool >= LUKEWARM, (black ? CONDIMENTS.blackTip : 1) * judged.tip);
     if (want && state.today.served > served) noteCondiments(state, c, black, item.item);
   }
+}
+
+/**
+ * Round 6 block 3: a single `thief` took a `drink` cup off the counter that a multi-drink ticket at pickup still needed
+ * (no tray covers it, and no spare cup is left for it): that ticket stays open, no patience refill, `tray.steal { customer, from, drink }`.
+ */
+function noteSteal(state: GameState, thief: Customer, drink: DrinkId): void {
+  const victims = state.customers.filter((x) => x !== thief && x.items && x.stage === 'pickup' && x.egg !== 'camper' && wantsItem(x, drink) && !trayCovers(state, x, drink));
+  if (victims.length === 0) return;
+  const needed = victims.reduce((n, x) => n + x.items!.filter((it) => !it.done && it.drink === drink).length, 0);
+  const spare = state.pass.filter((slot) => !slot.tray && slot.item === drink).length; // after the take
+  if (spare >= needed) return;
+  victims.sort((a, b) => (a.rungAt ?? Infinity) - (b.rungAt ?? Infinity) || a.id - b.id);
+  emitLog(state, 'tray.steal', { customer: thief.id, from: victims[0]!.id, drink });
 }
 
 /**
