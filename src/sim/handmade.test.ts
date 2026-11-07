@@ -7,7 +7,7 @@ import { stepPickup } from './pickup';
 import { validateInput } from './validate';
 import { nearestStation } from './movement';
 import { stationsFromSlots, type SlotContent } from './slots';
-import { addStandIns } from './bots/roster';
+import { addStandIns } from '../harness/crew';
 import { TICK_RATE } from './constants';
 import { BASE_DRINKS } from '../data/drinks';
 import { SYRUP_ID, SYRUP_SPOT, layoutFor } from '../data/layout';
@@ -29,7 +29,7 @@ import type { Customer, DrinkId, GameState, HandMade, PassItem, Player, SimEvent
 
 /** A stand with a grinder and `gear` (with `wand`), stocked, fridge bought, open for the day, plenty of milk out, no walk-ins. */
 function open(gear: GearId = 'e3', wand: AddOnWand | null = 'weak'): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], tier: 'stand', gear: true });
   s.cash = 1000;
   applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'g2' });
   applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear, ...(wand ? { wand } : {}) });
@@ -527,7 +527,7 @@ describe('FB2 B8: bots', () => {
   /** A Gear café with a grinder, E3 + a plain steamer (a wand), a tap and a bin; one stand-in bot, no walk-ins. */
   function shop(): GameState {
     const slots: SlotContent[] = ['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash', null];
-    let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, gear: true });
+    let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 }, gear: true });
     s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
     s.slots = [...slots];
     s.slotGear = ['g2', 'e3', null, 'c2', 'b0', null];

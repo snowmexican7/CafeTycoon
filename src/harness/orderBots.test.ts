@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from '../sim/run';
 import { step } from '../sim/step';
 import { think, uncoveredOrders } from './brain';
-import { addStandIns } from '../sim/bots/roster';
+import { addStandIns } from './crew';
 import { makeTicket } from '../sim/orders';
 import type { GearId } from '../data/gear';
 import type { Customer, DrinkId, GameState, Player } from '../sim/types';
 
 /** A stocked Gear stand (C1 tap + E1 pods) with `bots` stand-ins and no walk-ins. */
 function gearStand(bots = 1): GameState {
-  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 150 }, tier: 'stand', gear: true });
+  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'stand', gear: true });
   addStandIns(s, bots);
   for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
   s.supplies.beans = 40;
@@ -102,7 +102,7 @@ describe('bots and multi-drink tickets (FB2 B6)', () => {
   });
 
   it('grounds left in a grinder by a dropped chain are collected once they have sat (Gear)', () => {
-    let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, tier: 'stand', gear: true });
+    let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 }, tier: 'stand', gear: true });
     addStandIns(s, 1);
     for (const g of ['g2', 'e2'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
     s.supplies.beans = 40;

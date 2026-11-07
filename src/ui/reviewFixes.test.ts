@@ -21,7 +21,7 @@ const ui = (over: Partial<NightUiState> = {}): NightUiState => ({
 });
 
 function withGear(ids: GearId[], seed = 3): GameState {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true, tier: 'stand' });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true, tier: 'stand' });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   ids.forEach((id, i) => {
@@ -149,7 +149,7 @@ describe('Review Block 6: hires leftovers', () => {
 
 describe('Review Block 6: soft open + price door walker', () => {
   it('NightVM.makeable is false when nothing can be poured', () => {
-    const s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true });
+    const s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true });
     // First Gear night: no machines yet → no makeable drinks.
     s.slots = s.slots!.map(() => null);
     s.slotGear = s.slotGear!.map(() => null);
@@ -159,7 +159,7 @@ describe('Review Block 6: soft open + price door walker', () => {
   });
 
   it('NightVM.makeable needs a machine, not just stock (ui-3.8.0)', () => {
-    const s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true });
+    const s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true });
     s.slots = s.slots!.map(() => null);
     s.slotGear = s.slotGear!.map(() => null);
     s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
@@ -168,7 +168,7 @@ describe('Review Block 6: soft open + price door walker', () => {
   });
 
   it('price walkouts burst at the door with door: true', () => {
-    const a = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const a = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     a.phase = 'day';
     const b = structuredClone(a);
     b.log.push({ seq: b.nextLogSeq++, tick: b.tick, kind: 'walkout', data: { reason: 'price', drink: 'latte', customer: 9 } });

@@ -3,7 +3,7 @@ import { createRun } from '../sim/run';
 import { nightHtml, nightTabs, type NightUiState } from './night';
 import { nightViewModel } from './viewModels';
 
-const run = (gear: boolean) => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear });
+const run = (gear: boolean) => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear });
 const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, ...over });
 
 describe('G4f: one clear night order in Gear runs', () => {

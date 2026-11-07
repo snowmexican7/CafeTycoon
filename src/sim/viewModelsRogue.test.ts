@@ -3,7 +3,7 @@ import { hudViewModel, receiptViewModel } from '../ui/viewModels';
 import { createRun, startDay } from './run';
 import type { DayStats, GameState, Rogue } from './types';
 
-const cafe = (): GameState => startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+const cafe = (): GameState => startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
 const rogue = (extra: Partial<Rogue>): Rogue => ({
   customerId: 5, drink: 'latte', stage: 'walking', pos: { x: 6.5, y: 4 }, path: [], station: 'steamer', ticksLeft: 0, waitTicks: 0, ...extra,
 });

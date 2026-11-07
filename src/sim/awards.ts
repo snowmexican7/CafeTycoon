@@ -1,7 +1,7 @@
 /**
  * End-of-week awards (B10). Pure and deterministic: derived from `state.crew` (tallied from the log)
  * and the day stats. Ties go to whoever joined the stats table first. Every person on the crew gets
- * at least one award, so the ceremony screenshot has everyone in it.
+ * at least one award, so the ceremony screenshot has everyone in it. People only (bot cut).
  */
 import type { GameState } from './types';
 import { crewRows, type CountKey, type PlayerStats } from './stats';
@@ -12,7 +12,6 @@ export interface Award {
   /** A one-glyph badge for the card. */
   icon: string;
   winner: string;
-  bot: boolean;
   /** The number behind it, already worded ("14 serves"). */
   stat: string;
   /** A short deadpan line. */
@@ -84,34 +83,27 @@ function best(rows: PlayerStats[], key: (r: PlayerStats) => number): PlayerStats
 }
 
 export function awardsFor(state: GameState): Award[] {
-  const rows = crewRows(state);
-  const people = rows.filter((r) => !r.bot);
+  const people = crewRows(state);
   const out: Award[] = [];
-  const pool = people.length > 0 ? people : rows;
-  const mvp = best(pool, mvpScore);
+  const mvp = best(people, mvpScore);
   if (mvp && mvpScore(mvp) > 0) {
-    out.push({ id: 'mvp', title: 'Crew MVP', icon: '🏆', winner: mvp.name, bot: mvp.bot, stat: `${mvp.serves} served · ${mvp.perfect} perfect`, line: 'Carried the café. Possibly on their back.', tone: 'mvp' });
-  }
-  const bots = rows.filter((r) => r.bot);
-  const topBot = best(bots, mvpScore);
-  if (people.length > 0 && topBot && mvpScore(topBot) > 0) {
-    out.push({ id: 'bot', title: 'Best Supporting Bot', icon: '🤖', winner: topBot.name, bot: true, stat: `${topBot.serves} served`, line: 'Asked for nothing. Received nothing.', tone: 'hero' });
+    out.push({ id: 'mvp', title: 'Crew MVP', icon: '🏆', winner: mvp.name, stat: `${mvp.serves} served · ${mvp.perfect} perfect`, line: 'Carried the café. Possibly on their back.', tone: 'mvp' });
   }
   // At most two trophies each (MVP included), so the ceremony fits one screen and spreads the glory.
   const held = (name: string) => out.filter((a) => a.winner === name).length;
   for (const def of AWARD_DEFS) {
     if (out.length >= MAX_AWARDS) break;
-    const top = best(rows.filter((r) => held(r.name) < 2), (r) => r[def.key]);
+    const top = best(people.filter((r) => held(r.name) < 2), (r) => r[def.key]);
     if (!top || top[def.key] < def.min) continue;
-    out.push({ id: def.id, title: def.title, icon: def.icon, winner: top.name, bot: top.bot, stat: fmtStat(def, top[def.key]), line: def.line, tone: def.tone });
+    out.push({ id: def.id, title: def.title, icon: def.icon, winner: top.name, stat: fmtStat(def, top[def.key]), line: def.line, tone: def.tone });
   }
-  // Everyone on the crew (people) gets something.
+  // Everyone on the crew gets something.
   const named = new Set(out.map((a) => a.winner));
   let i = 0;
   for (const r of people) {
     if (named.has(r.name)) continue;
     const c = CONSOLATION[(hash(r.name) + i++) % CONSOLATION.length];
-    out.push({ id: `joke-${r.id}`, title: c.title, icon: c.icon, winner: r.name, bot: false, stat: r.serves > 0 ? `${r.serves} served` : 'no serves (yet)', line: c.line, tone: 'joke' });
+    out.push({ id: `joke-${r.id}`, title: c.title, icon: c.icon, winner: r.name, stat: r.serves > 0 ? `${r.serves} served` : 'no serves (yet)', line: c.line, tone: 'joke' });
   }
   return out;
 }
@@ -120,6 +112,6 @@ export function awardsFor(state: GameState): Award[] {
 export function awardsText(state: GameState, awards: Award[]): string {
   const served = state.days.reduce((n, d) => n + d.served, 0);
   const lines = [`☕ CafeTycoon week awards (seed ${state.seed}) · ${state.days.length} days · ${served} served`];
-  for (const a of awards) lines.push(`${a.icon} ${a.title}: ${a.winner}${a.bot ? ' (bot)' : ''} (${a.stat})`);
+  for (const a of awards) lines.push(`${a.icon} ${a.title}: ${a.winner} (${a.stat})`);
   return lines.join('\n');
 }

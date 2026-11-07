@@ -9,7 +9,7 @@ import type { GameState } from './types';
 import { validateInput } from './validate';
 import { menuLines } from '../ui/viewModels';
 
-const run2 = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
+const run2 = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 const price = (s: GameState, drink: 'espresso' | 'latte' | 'coldBrew', n: number) => step(s, [{ kind: 'price', playerId: 'p1', drink, step: n }]);
 
 describe('per-item pricing (P3 B2)', () => {

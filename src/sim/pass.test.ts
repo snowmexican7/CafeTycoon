@@ -6,7 +6,7 @@ import { step } from './step';
 import type { GameState } from './types';
 
 const fresh = (): GameState => {
-  const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
   const d = startDay(s);
   d.players[0].pos = { x: 6, y: 5 };
   return d;

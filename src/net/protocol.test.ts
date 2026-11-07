@@ -4,7 +4,7 @@ import { ACTIONS, parseHello, parseInput, parseJoin, parseLobby, parseSeat, pars
 
 describe('protocol parsers', () => {
   it('is on version 13 (seat reclaim, room cap, lobby bots, forecasts, re-roll, challenges, eggs, crew stats, B11 balance, 2.0.1 deltas, P3 roles, prices, regulars)', () => {
-    expect(PROTOCOL_VERSION).toBe(68);
+    expect(PROTOCOL_VERSION).toBe(69);
     expect(ACTIONS).toContain('snapd');
     expect(ACTIONS).toContain('resync');
     expect(ACTIONS).toContain('seat');
@@ -29,12 +29,10 @@ describe('protocol parsers', () => {
     expect(parseSeat({ t: 'seat' })).toBeNull();
   });
 
-  it('parses the lobby bots setting leniently', () => {
+  it('bot cut 4a: a lobby message has no bots setting (an old host’s is dropped)', () => {
     const base = { t: 'lobby', members: [], started: false };
-    expect(parseLobby({ ...base, bots: 2, botsPicked: true })).toEqual({ ...base, bots: 2, botsPicked: true });
-    expect(parseLobby({ ...base, bots: 'auto' })).toEqual({ ...base, bots: 'auto', botsPicked: false });
-    expect(parseLobby({ ...base, bots: 9 })).toEqual(base);
-    expect(parseLobby({ ...base, bots: 1.5 })).toEqual(base);
+    expect(parseLobby({ ...base, bots: 2, botsPicked: true })).toEqual(base);
+    expect(parseLobby({ ...base, bots: 'auto' })).toEqual(base);
     expect(parseLobby(base)).toEqual(base);
   });
 

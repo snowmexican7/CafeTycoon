@@ -20,7 +20,6 @@ export type Pace = 1 | 2 | 3 | 4 | 5;
 export type EventKind = 'rushHour' | 'powerFlicker' | 'influencerVisit' | 'healthInspector';
 export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer' | 'fan';
 export type Personality = 'rookie' | 'steady' | 'veteran' | 'hurried' | 'human'; // 'human' = tester stand-in
-export type BotSkill = 1 | 2 | 3 | 4 | 5;
 /** FB2 A3: `lift` a cold or stale drip pot off its machine, `dump` what is in hand (or the pot) at the back sink.
  *  FB2 A4: `fetch` a milk carton at the fridge, `stock` it at a milk station (or the lifted bar back on the bar),
  *  `stow` (lift) the milk or the bar during closing soon, `store` what is carried in the fridge. */
@@ -167,6 +166,8 @@ export interface BotState {
   retried?: number;
   /** Round 3 item 5: this bot pressed E at the till and is standing there until the ring-up finishes. */
   ringing?: true;
+  /** Bot cut 4a: the robot cashier's last tick a person counted as at the till (it waits `returnAfterSec` after it). */
+  personSeenTick?: number;
 }
 
 export type SimEventKind =
@@ -219,8 +220,8 @@ export type SimEventKind =
   | 'steep'
   /** Round 5 block 4: mid-day refill of an empty Gear cold brew (`{ by, station, cups }`). */
   | 'coldbrew.refill'
-  /** P4 B6: someone (a person or a bot) picked up the branch's phone. */
-  | 'call.answer'
+  /** P4 B6 (bot cut): the branch's call rang and the branch decided (`{ kind, take }`). */
+  | 'call.outcome'
   /** FB2 A3 (Gear runs): the back sink, drip pots and messes. */
   | 'sink.dump'
   | 'pot.lift'
@@ -584,8 +585,6 @@ export type Effect =
   | { kind: 'unlock'; drink: DrinkId }
   /** Upgrade cards (B6): stars added to (or taken off) the rating at each closing. */
   | { kind: 'quality'; add: number }
-  /** A temp barista (a rookie bot) clocks in for the day, if a spot is free. */
-  | { kind: 'temp' }
   /** Weather radio: tomorrow's events are drawn at night and shown on the paper. */
   | { kind: 'reveal' };
 
@@ -631,15 +630,12 @@ export interface Scenario {
   effects: Effect[];
 }
 
-/** Off (0), a fixed count, or 'auto' (fill empty seats). */
-export type BotsChoice = Settings['bots'];
-
 export interface Settings {
   dayLengthSec: number;
   nightLengthSec: number;
   pace: Pace;
-  bots: number | 'auto';
-  botSkill: BotSkill;
+  /** Bot cut step 3: a solo run's robot cashier (src/sim/cashier.ts) rings customers up at the till. Absent/false = none. */
+  cashier?: boolean;
 }
 
 /** One optional daily challenge and its live progress (B7). */
@@ -712,7 +708,7 @@ export interface DayStats {
   ad?: { id: AdId; outcome: AdOutcome };
   /** P3 B12: what the checkout cost today (card fees plus the kiosk licence). */
   checkoutFees?: number;
-  /** P3 B15: wages paid to the hired bot baristas at closing (Gear runs; absent = none). */
+  /** Wages paid at closing: the Strategist, the Marketer and the robot cashier (Gear runs; absent = none). */
   wages?: number;
   /** Round 3 item 3: the part of `wages` that went to the Strategist and Marketer (absent = none). */
   hireWages?: number;
@@ -733,7 +729,7 @@ export interface DayStats {
   /** P4 B3: who handed off what today: serves and takings per player (bots included). */
   byPlayer?: Record<PlayerId, { serves: number; takings: number }>;
   /** P4 B4: the second shop's day (its profit is already in the till). */
-  branch?: { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number; /** P4 B6: today's phone call and how it ended. */ call?: { kind: 'machine' | 'order'; took: boolean; by?: string } };
+  branch?: { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number; /** P4 B6: today's phone call and how it ended. */ call?: { kind: 'machine' | 'order'; took: boolean } };
   /** FB1 WP4: seconds into the day when the board first sold out. */
   soldOutAt?: number;
   /** Batch/pickup: drip and cold brew customers who found the condiment bar empty and took it black. */
@@ -815,10 +811,11 @@ export interface GameState {
   morningNotes: string[];
   /** FB1 WP3: connected humans who have voted to close early (absent = nobody; cleared each phase). */
   closeVotes?: PlayerId[];
-  /** P4 B6: who answered the branch's phone call, and whether they fixed it / took the order. */
-  callAnswer?: { day: number; take: boolean; by: string };
-  /** Review I2: the day today's branch call first rang (absent = it hasn't, so closing doesn't count it as missed). */
-  callRang?: number;
+  /**
+   * P4 B6 (bot cut): what the branch decided about today's phone call (fix it / take the order), set when the call
+   * first rings (absent, or another day = it hasn't rung, so closing records no call).
+   */
+  callDecision?: { day: number; take: boolean };
   /**
    * FB2 B6: today's office run (Gear, cart and café, from day 3), drawn at day start: it walks in `at` ticks after
    * opening (the phone rings `ORDERS.office.callSeconds` before); `called` once it rang, `came` its customer id.
@@ -962,8 +959,8 @@ export type PlayerInput =
   | { kind: 'scout'; playerId: PlayerId }
   | { kind: 'rivalCounter'; playerId: PlayerId; on?: boolean }
   | { kind: 'stampCard'; playerId: PlayerId }
-  /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
-  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire'; /** Round 3 item 3: absent = a barista. */ role?: 'strategist' | 'marketer' }
+  /** Round 3 item 3: hire or let go the Strategist or the Marketer (bot cut 4a: no bot baristas). Gear runs, night only. */
+  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire'; /** Round 3 item 3; bot cut 4a: always named (no barista hires). */ role: 'strategist' | 'marketer' }
   | { kind: 'branch'; playerId: PlayerId; action: 'open' | 'staff' | 'send' | 'close'; area?: AreaId; staff?: number; supply?: SupplyId }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }
@@ -994,7 +991,6 @@ export type PlayerInput =
   | { kind: 'devFill'; playerId: PlayerId }
   /** Round 5: host only, dev runs only, the day or its closing: end the day now (closing, then night, with the normal settlement). */
   | { kind: 'devSkip'; playerId: PlayerId }
-  | { kind: 'call'; playerId: PlayerId; take: boolean }
   | { kind: 'join'; playerId: PlayerId; name: string; look?: PlayerLook }
   /** R4 e: set my own look (night or week end only; a bad look is refused). */
   | { kind: 'look'; playerId: PlayerId; look: PlayerLook }

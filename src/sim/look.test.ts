@@ -4,9 +4,10 @@ import { createRun, startDay } from './run';
 import { step } from './step';
 import { validateInput } from './validate';
 import type { GameState, PlayerInput, PlayerLook } from './types';
+import { addBots } from '../harness/crew';
 
 const LOOK: PlayerLook = { hair: 'bob', hairColor: '#aa5500', skin: 'tan2', outfit: 'dress_a', shirtColor: '#3366cc' };
-const opts = { seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K', look: LOOK }, { id: 'p2', name: 'S' }], settings: { bots: 0 } };
+const opts = { seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K', look: LOOK }, { id: 'p2', name: 'S' }] };
 const look = (p: string, l: unknown) => ({ kind: 'look', playerId: p, look: l }) as unknown as PlayerInput;
 
 describe('cleanLook', () => {
@@ -78,7 +79,7 @@ describe('look in the sim', () => {
 
   it('only a person that is seated can edit; a bot or a stranger changes nothing', () => {
     let s = createRun(opts);
-    s = step(s, [{ kind: 'settings', playerId: 'p1', settings: { bots: 1 } }]); // a night change shows up at once
+    addBots(s, 1); // a test-only bot body
     const bot = s.players.find((p) => p.bot);
     expect(bot).toBeDefined();
     s = step(s, [look(bot!.id, LOOK), look('ghost', LOOK)]);

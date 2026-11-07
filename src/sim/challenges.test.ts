@@ -6,7 +6,7 @@ import { computeModifiers } from './effects';
 import { step } from './step';
 import type { GameState } from './types';
 
-const opts = { seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }], settings: { bots: 0, dayLengthSec: 60 } as const };
+const opts = { seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }], settings: { dayLengthSec: 60 } as const };
 
 function nightOf(day: number, seed = 11): GameState {
   const s = createRun({ ...opts, seed });

@@ -7,7 +7,7 @@ import { createRun, startDay } from './run';
 import type { GameState, Regular } from './types';
 import { menuLines } from '../ui/viewModels';
 
-const run2 = () => createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
+const run2 = () => createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 const withAda = (s: GameState, loyalty?: number): Regular => {
   const r: Regular = { name: 'Ada', drink: 'latte', visits: 0, lost: 0, ...(loyalty ? { loyalty } : {}) };
   s.regulars = [r];

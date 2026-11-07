@@ -9,7 +9,7 @@ import { nightExtras } from '../ui/live';
 import type { GameState } from './types';
 
 const run = (gear = true): GameState => {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
   if (gear) s.gear = true;
   else delete s.gear;
   return s;

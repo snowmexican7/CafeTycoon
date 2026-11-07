@@ -9,7 +9,7 @@ import type { GameState } from './types';
 import { nightViewModel } from '../ui/viewModels';
 import { computeModifiers } from './effects';
 
-const run = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
+const run = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 
 describe('supplies that spoil (P3 B4)', () => {
   it('throws out a fixed share of leftover milk and pastries at closing, never shelf-stable stock', () => {

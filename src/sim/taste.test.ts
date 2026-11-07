@@ -9,7 +9,7 @@ import { applyTwistInput, comboRating, comboStars, knownStars, TASTE, TWISTS } f
 import { menuLines, nightViewModel } from '../ui/viewModels';
 import type { GameState, PlayerInput } from './types';
 
-const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 const night = (seed = 1) => {
   const s = run(seed);
   s.phase = 'night';

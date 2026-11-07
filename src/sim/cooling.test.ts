@@ -15,7 +15,7 @@ import type { Customer, DrinkId, GameState, PassItem, PlayerInput, SimEvent, Sup
 type Kit = GearId | 'steamer';
 
 function gearDay(gear: Kit[] = ['c1', 'e1'], supplies: Partial<Record<SupplyId, number>> = {}): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
@@ -82,7 +82,7 @@ describe('coolFraction (A2: cups go cold)', () => {
   it('an unknown made tick is fresh, and classic runs never cool', () => {
     const s = gearDay();
     expect(coolFraction(s, undefined, 'latte')).toBe(0);
-    const c = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    const c = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
     expect(coolFraction(c, c.tick - secs(600), 'latte')).toBe(0);
   });
 });
@@ -351,7 +351,7 @@ describe('cup.cold', () => {
   });
 
   it('stepCooling does nothing in a classic run', () => {
-    const c = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    const c = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
     c.pass = [{ item: 'latte', ticksLeft: 999, madeAt: c.tick - secs(60) }];
     c.players[0].heldSince = 5;
     const before = structuredClone(c);

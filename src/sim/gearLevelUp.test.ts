@@ -10,7 +10,7 @@ import { recipeChain, DRINK_IDS } from '../data/drinks';
 import { levelUpVM } from '../ui/gearVM';
 import type { CreateRunOptions, GameState } from './types';
 
-const opts = (gear: boolean): CreateRunOptions => ({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'P1' }], settings: { bots: 0 }, tier: 'stand', gear });
+const opts = (gear: boolean): CreateRunOptions => ({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'P1' }], tier: 'stand', gear });
 const gearRun = (): GameState => createRun(opts(true));
 const classicRun = (): GameState => createRun(opts(false));
 
@@ -73,7 +73,7 @@ describe('G6 drinks level up with use', () => {
 
 describe('Gear G6b: level-ups replace the day-3/day-5 unlocks', () => {
   const mk = (gear: boolean) =>
-    createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', ...(gear ? { gear: true } : {}) });
+    createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', ...(gear ? { gear: true } : {}) });
   it('Gear runs get nothing from the calendar; classic runs still do', () => {
     const g = mk(true); g.day = 5;
     expect(unlockForDay(g)).toEqual([]);

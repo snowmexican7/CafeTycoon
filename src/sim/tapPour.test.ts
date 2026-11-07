@@ -12,7 +12,7 @@ type Kit = GearId | 'steamer';
 
 /** A Gear stand at night with `gear` in the first slots (the free bin stays in the last). */
 function gearNight(gear: Kit[], supplies: Partial<Record<SupplyId, number>> = {}): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
@@ -116,7 +116,7 @@ describe('instant cold brew from the steeped tap (Task 3)', () => {
   });
 
   it('classic taps still brew for 1.5 s and use concentrate', () => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     s.supplies.concentrate = 5;
     startDay(s);
     const tap = tapOf(s);
@@ -126,7 +126,7 @@ describe('instant cold brew from the steeped tap (Task 3)', () => {
   });
 
   it('a drip pot pours a cup on every press, no waiting', () => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
     s.cash = 500;
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'd1' });
     startDay(s);

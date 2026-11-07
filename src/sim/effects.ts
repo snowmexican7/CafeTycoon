@@ -38,8 +38,6 @@ export interface Modifiers {
   queueRoom: number;
   /** Stars added to the rating at closing (upgrade cards, B6). */
   quality: number;
-  /** Temp baristas hired for today. */
-  temps: number;
   /** Whether the weather radio is on the shelf. */
   reveal: boolean;
 }
@@ -69,7 +67,6 @@ export function baseModifiers(): Modifiers {
     queue: 0,
     queueRoom: 0,
     quality: 0,
-    temps: 0,
     reveal: false,
   };
 }
@@ -120,9 +117,6 @@ export function itemModifiers(effects: Effect[]): Modifiers {
         break;
       case 'quality':
         m.quality += e.add;
-        break;
-      case 'temp':
-        m.temps += 1;
         break;
       case 'reveal':
         m.reveal = true;

@@ -1,156 +1,99 @@
 import { describe, it, expect } from 'vitest';
-import { createRun } from './run';
+import { ECONOMY } from '../data/economy';
+import { createRun, startDay } from './run';
 import { step } from './step';
 import { finishDay } from './closing';
 import { validateInput } from './validate';
 import { profitOf } from './profit';
 import { rentForDay } from './effects';
-import { syncBots } from './bots/roster';
-import { billsForDay, crewCount, staff, wageEach, wagesForDay, WAGE_BY_TIER } from './staff';
+import { hireWage } from './hires';
+import { billsForDay, wageEach, wagesForDay, WAGE_BY_TIER } from './staff';
 import { nightWarnings } from '../ui/nightWarnings';
-import { nightExtras } from '../ui/live';
 import { nightHtml, type NightUiState } from '../ui/night';
-import { closingViewModel, nightViewModel, staffViewModel } from '../ui/viewModels';
+import { nightExtras } from '../ui/live';
+import { nightViewModel } from '../ui/viewModels';
 import type { DayStats, GameState, PlayerInput } from './types';
 
-const gearRun = (players = 1, gear = true): GameState =>
+const gearRun = (players = 1, gear = true, cashier = false): GameState =>
   createRun({
     seed: 7, hostId: 'p1', players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` })),
-    settings: { dayLengthSec: 150, nightLengthSec: 30 }, tier: 'stand', ...(gear ? { gear: true as const } : {}),
-  });
-const hire = (s: GameState, by = 'p1'): GameState => step(s, [{ kind: 'staff', playerId: by, action: 'hire' }]);
-const fire = (s: GameState, by = 'p1'): GameState => step(s, [{ kind: 'staff', playerId: by, action: 'fire' }]);
-
-describe('P3 B15: hired staff and wages', () => {
-  it('a solo Gear run opens with the auto crew on the books at the stand wage', () => {
-    const s = gearRun();
-    expect(s.phase).toBe('night');
-    expect(staff(s).length).toBe(0); // bots clock in at the morning
-    expect(crewCount(s)).toBe(2);
-    expect(staffViewModel(s)!.crew.map((c) => c.name)).toEqual(['Bo', 'Lu']);
-    expect(wageEach(s)).toBe(WAGE_BY_TIER.stand);
-    expect(wagesForDay(s)).toBe(2 * WAGE_BY_TIER.stand);
-    expect(billsForDay(s)).toBe(rentForDay(s) + 2 * WAGE_BY_TIER.stand);
+    settings: { dayLengthSec: 150, nightLengthSec: 30, ...(cashier ? { cashier } : {}) }, tier: 'stand', ...(gear ? { gear: true as const } : {}),
   });
 
-  it('classic runs pay no wages and show no staff row', () => {
-    const s = gearRun(1, false);
-    expect(crewCount(s)).toBe(2);
+describe('staff (bot cut 4a: no bot baristas, no crew wages)', () => {
+  it('a people-only Gear run owes no wages: bills are the rent', () => {
+    const s = gearRun(2);
     expect(wagesForDay(s)).toBe(0);
     expect(billsForDay(s)).toBe(rentForDay(s));
-    expect(staffViewModel(s)).toBeUndefined();
-    expect(nightViewModel(s, 'p1').staff).toBeUndefined();
-    const before = s.players.length;
-    expect(hire(s).players.length).toBe(before);
+    const day = startDay(s);
+    expect(day.players.some((p) => p.bot)).toBe(false);
+    day.phase = 'closing';
+    day.challenges = [];
+    const night = finishDay(day);
+    expect(night.days.at(-1)!.wages).toBeUndefined();
   });
 
-  it('wages scale with the shop', () => {
+  it('wages are the Strategist, the Marketer and the robot cashier', () => {
+    const s = gearRun(1, true, true);
+    s.staff = { strategist: true, marketer: true };
+    expect(wagesForDay(s)).toBeCloseTo(hireWage(s, 'strategist') + hireWage(s, 'marketer') + ECONOMY.cashier.dailyCost);
+  });
+
+  it('a staff input must name its role: a bare hire or fire is refused', () => {
+    expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'hire' } as unknown as PlayerInput)).toBeNull();
+    expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'fire' } as unknown as PlayerInput)).toBeNull();
+    expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'promote', role: 'marketer' } as unknown as PlayerInput)).toBeNull();
+    expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'hire', role: 'marketer' })).toEqual({ kind: 'staff', playerId: 'p1', action: 'hire', role: 'marketer' });
+    const after = step(gearRun(2), [{ kind: 'staff', playerId: 'p1', action: 'hire' } as unknown as PlayerInput]);
+    expect(after.players.map((p) => p.id)).toEqual(['p1', 'p2']);
+    expect(after.staff).toBeUndefined();
+  });
+
+  it('wageEach (a second-shop barista, src/sim/branch.ts) scales with the shop and is paid by the hour (B17)', () => {
     const s = gearRun();
+    expect(wageEach(s)).toBe(WAGE_BY_TIER.stand);
     s.tier = 'cart';
-    expect(wagesForDay(s)).toBe(2 * WAGE_BY_TIER.cart);
+    expect(wageEach(s)).toBe(WAGE_BY_TIER.cart);
     s.tier = 'cafe';
-    expect(wagesForDay(s)).toBe(2 * WAGE_BY_TIER.cafe);
-  });
-
-  it('wages are paid by the hour: quick days pay less, long days more (B17)', () => {
-    const s = gearRun();
+    expect(wageEach(s)).toBe(WAGE_BY_TIER.cafe);
+    s.tier = 'stand';
     s.settings.dayLengthSec = 60;
     expect(wageEach(s)).toBe(0.4);
-    expect(wagesForDay(s)).toBe(0.8);
     s.tier = 'cafe';
     expect(wageEach(s)).toBe(2);
     s.settings.dayLengthSec = 300;
     expect(wageEach(s)).toBe(2 * WAGE_BY_TIER.cafe);
+    expect(wageEach(gearRun(1, false))).toBe(0); // classic runs pay none
   });
 
-  it('hire adds a bot up to the four spots; fire lets the newest go', () => {
-    let s = gearRun();
-    s = hire(s);
-    expect(staff(s).length).toBe(3);
-    expect(s.settings.bots).toBe(3);
-    expect(staffViewModel(s)!.canHire).toBe(false);
-    s = hire(s);
-    expect(staff(s).length).toBe(3); // 1 person + 3 bots fills the bar
-    s = fire(s);
-    expect(staff(s).map((p) => p.id)).toEqual(['bot-1', 'bot-2']);
-    s = fire(fire(s));
-    expect(staff(s).length).toBe(0);
-    expect(s.settings.bots).toBe(0);
-    s = fire(s);
-    expect(staff(s).length).toBe(0);
-    expect(wagesForDay(s)).toBe(0);
-    expect(staffViewModel(s)).toMatchObject({ crew: [], canHire: true, total: '$0.00' });
-  });
-
-  it('hiring is for people at night only', () => {
-    let s = gearRun(2);
-    expect(crewCount(s)).toBe(1);
-    syncBots(s);
-    s = hire(s, 'bot-1');
-    expect(crewCount(s)).toBe(1);
-    s = hire(s, 'nobody');
-    expect(crewCount(s)).toBe(1);
-    s.phase = 'day';
-    s = hire(s, 'p2');
-    expect(s.settings.bots).toBe('auto');
-    expect(staff(s).length).toBe(1);
-  });
-
-  it('validateInput keeps only hire and fire', () => {
-    expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'hire' })).toEqual({ kind: 'staff', playerId: 'p1', action: 'hire' });
-    expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'promote' } as unknown as PlayerInput)).toBeNull();
-  });
-
-  it('closing pays the crew and the day records it', () => {
+  it('wages can bankrupt a shop that cannot cover them (a hired Strategist)', () => {
     const s = gearRun();
-    syncBots(s);
+    s.staff = { strategist: true };
+    expect(wagesForDay(s)).toBeGreaterThan(0);
     s.challenges = []; // no challenge tip muddying the till
     s.phase = 'closing';
-    s.cash = 100;
-    const rent = rentForDay(s);
-    const before = structuredClone(s);
-    const after = finishDay(s);
-    const d = after.days.at(-1)!;
-    expect(d.wages).toBe(2 * WAGE_BY_TIER.stand);
-    expect(after.cash).toBe(100 - rent - 2 * WAGE_BY_TIER.stand);
-    expect(profitOf(d)).toBe(Math.round((d.sales + d.tips - rent - d.wages!) * 100) / 100);
-    const vm = closingViewModel(before, after);
-    expect(vm.wages).toBe('$2.00');
-  });
-
-  it('review M6: a cover bot (someone dropped) is not hired, so it draws no wage', () => {
-    const s = gearRun(2);
-    syncBots(s);
-    expect(staff(s).length).toBe(1); // auto crew of 3: two people + one hired bot
-    s.players.find((p) => p.id === 'p2')!.connected = false;
-    syncBots(s); // a second bot covers the empty spot
-    expect(staff(s).length).toBe(2);
-    expect(wagesForDay(s)).toBe(WAGE_BY_TIER.stand); // only the hired one is on the books
-    s.challenges = [];
-    s.phase = 'closing';
-    const after = finishDay(s);
-    expect(after.days.at(-1)!.wages).toBe(WAGE_BY_TIER.stand);
-  });
-
-  it('review M6: a bot the crew did hire is still paid when people are away', () => {
-    const s = gearRun(2);
-    s.settings.bots = 2; // hired two bots for two people
-    syncBots(s);
-    expect(staff(s).length).toBe(2);
-    s.players.find((p) => p.id === 'p2')!.connected = false;
-    syncBots(s);
-    s.challenges = [];
-    s.phase = 'closing';
-    expect(finishDay(s).days.at(-1)!.wages).toBe(2 * WAGE_BY_TIER.stand);
-  });
-
-  it('wages can bankrupt a shop that cannot cover them', () => {
-    const s = gearRun();
-    syncBots(s);
-    s.challenges = []; // no challenge tip muddying the till
-    s.phase = 'closing';
-    s.cash = rentForDay(s) + 1;
+    s.cash = rentForDay(s) + wagesForDay(s) / 2; // the rent, not the wage
     expect(finishDay(s).bankrupt).toBe(true);
+    const ok = gearRun();
+    ok.staff = { strategist: true };
+    ok.challenges = [];
+    ok.phase = 'closing';
+    ok.cash = billsForDay(ok) + 1;
+    expect(finishDay(ok).bankrupt).toBe(false);
+  });
+
+  it('the night warns about rent and wages together (the Strategist, the Marketer and the robot cashier)', () => {
+    const s = gearRun(1, true, true);
+    s.staff = { strategist: true, marketer: true };
+    const bills = billsForDay(s);
+    expect(bills).toBe(rentForDay(s) + hireWage(s, 'strategist') + hireWage(s, 'marketer') + ECONOMY.cashier.dailyCost);
+    s.cash = rentForDay(s) + 1; // enough for rent, not the wages
+    const w = nightWarnings(s).find((x) => x.kind === 'cash');
+    expect(w?.title).toMatch(/short on rent and wages/);
+    expect(w?.detail).toContain('Rent and wages are $' + bills);
+    const plain = gearRun();
+    plain.cash = rentForDay(plain) - 1; // no wages: rent alone
+    expect(nightWarnings(plain).find((x) => x.kind === 'cash')?.title).not.toMatch(/wages/);
   });
 
   it('old days without wages keep their profit (old saves)', () => {
@@ -158,23 +101,12 @@ describe('P3 B15: hired staff and wages', () => {
     expect(profitOf(d)).toBe(12);
   });
 
-  it('the night warns about rent and wages together', () => {
-    const s = gearRun();
-    s.cash = rentForDay(s) + 1; // enough for rent, not the wages
-    const w = nightWarnings(s).find((x) => x.kind === 'cash');
-    expect(w?.title).toMatch(/short on rent and wages/);
-    expect(w?.detail).toMatch(/Rent and wages are \$12/);
-  });
-
-  it('the night board shows the staff row with hire and let-go buttons (Gear only)', () => {
+  it('the night board has no barista hire row, only the specialists (Gear only)', () => {
     const ui = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' } } as NightUiState;
     const s = gearRun();
     const html = nightHtml(nightViewModel(s, 'p1'), nightExtras(s, 'p1'), null, ui);
-    expect(html).toContain('Hired staff');
-    expect(html).toContain('🤖 Bo');
-    expect(html).toContain('data-staff="hire"');
-    expect(html).toContain('Let Lu go');
-    const c = gearRun(1, false);
-    expect(nightHtml(nightViewModel(c, 'p1'), nightExtras(c, 'p1'), null, ui)).not.toContain('Hired staff');
+    expect(html).not.toContain('Hired staff');
+    expect(html).not.toMatch(/data-staff="(hire|fire)"(?![^>]*data-role)/);
+    expect(html).toContain('data-role="strategist"');
   });
 });

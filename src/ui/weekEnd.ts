@@ -9,7 +9,7 @@ const avatar = (name: string) => esc(name.trim().charAt(0).toUpperCase() || '?')
 function awardCard(a: Award, i: number): string {
   return `<li class="award ${a.tone}" style="--i:${i}">
     <span class="aw-ic" aria-hidden="true">${a.icon}</span>
-    <span class="aw-t"><b>${esc(a.title)}</b><span class="aw-who">${esc(a.winner)}${a.bot ? ' <em>bot</em>' : ''}</span><small>${esc(a.stat)}</small></span>
+    <span class="aw-t"><b>${esc(a.title)}</b><span class="aw-who">${esc(a.winner)}</span><small>${esc(a.stat)}</small></span>
     <span class="aw-line">${esc(a.line)}</span></li>`;
 }
 

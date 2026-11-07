@@ -3,18 +3,19 @@ import { createRun, startDay, startNight } from './run';
 import { finishDay } from './closing';
 import { step } from './step';
 import { branchAreas, branchDay } from './branch';
-import { CALL, callFor, callRinging, type CallKind } from './call';
+import { CALL, branchTakesCall, callFor, callOutcome, callRinging, type CallKind } from './call';
 import { secondsToTicks } from './constants';
 import { validateInput } from './validate';
 import { callVM } from '../ui/live';
 import { callHtml } from '../ui/hud';
 import { callLine } from '../ui/branchView';
-import type { GameState } from './types';
+import type { DayStats, GameState } from './types';
 import { diffCues, logCursor, RING_EVERY_SEC } from '../audio/cues';
+import { addBots } from '../harness/crew';
 
 /** A Gear run at night with a branch open since day 1, then rolled to the first day of `kind` call. */
 function dayWithCall(kind: CallKind): GameState {
-  const s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], settings: { bots: 1 } });
+  const s = addBots(createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }] }), 1);
   s.gear = true;
   s.tier = 'cafe';
   s.cash = 1000;
@@ -29,15 +30,20 @@ function dayWithCall(kind: CallKind): GameState {
   throw new Error('no call found');
 }
 const dayTicks = (s: GameState) => secondsToTicks(s.settings.dayLengthSec);
-const botId = (s: GameState) => s.players.find((p) => p.bot)!.id;
 const at = (s: GameState, ticksIn: number) => { s.phaseTicksLeft = dayTicks(s) - ticksIn; return s; };
+/** Yesterday's branch day, with `walked` people lost. */
+const yesterday = (s: GameState, walked: number) => {
+  s.days = [...s.days, { ...s.today, day: s.day - 1, branch: { served: 10, walked, takings: 0, costs: 0, profit: 0 } } as DayStats];
+};
+/** Step once at the first ringing tick, so the branch decides. */
+const ring = (s: GameState) => step(at(structuredClone(s), callFor(s)!.ringAt), []);
 
-describe('phone calls from the second shop (P4 B6)', () => {
+describe('phone calls from the second shop (P4 B6; bot cut: the branch handles them itself)', () => {
   it('rings on some days only, never in classic runs, without a branch or on its opening day, and is deterministic', () => {
     const s = dayWithCall('machine');
-    const ring = Array.from({ length: 100 }, (_, i) => callFor(s, i + 1)).filter(Boolean).length;
-    expect(ring).toBeGreaterThan(25);
-    expect(ring).toBeLessThan(65);
+    const rang = Array.from({ length: 100 }, (_, i) => callFor(s, i + 1)).filter(Boolean).length;
+    expect(rang).toBeGreaterThan(25);
+    expect(rang).toBeLessThan(65);
     expect(callFor(s)).toEqual(callFor(structuredClone(s)));
     expect(callFor({ ...s, gear: undefined })).toBeNull();
     expect(callFor({ ...s, branch: undefined })).toBeNull();
@@ -47,89 +53,126 @@ describe('phone calls from the second shop (P4 B6)', () => {
     expect(c.until - c.ringAt).toBeLessThanOrEqual(secondsToTicks(CALL.answerSec));
   });
 
-  it('rings only inside its window and only a person can pick up', () => {
+  it('an office order is taken when yesterday lost nobody at the branch, and refused otherwise', () => {
+    const calm = dayWithCall('order');
+    yesterday(calm, 0);
+    expect(branchTakesCall(calm, 'order')).toBe(true);
+    expect(ring(calm).callDecision).toEqual({ day: calm.day, take: true });
+    const rough = dayWithCall('order');
+    yesterday(rough, 3);
+    expect(branchTakesCall(rough, 'order')).toBe(false);
+    expect(ring(rough).callDecision).toEqual({ day: rough.day, take: false });
+  });
+
+  it('a broken machine is fixed with two branch staff, not with one', () => {
+    const staffed = dayWithCall('machine');
+    staffed.branch!.staff = 2;
+    expect(branchTakesCall(staffed, 'machine')).toBe(true);
+    expect(ring(staffed).callDecision).toEqual({ day: staffed.day, take: true });
+    const thin = dayWithCall('machine');
+    thin.branch!.staff = 1;
+    expect(branchTakesCall(thin, 'machine')).toBe(false);
+    expect(ring(thin).callDecision).toEqual({ day: thin.day, take: false });
+  });
+
+  it('decides once when it first rings, logs call.outcome, and keeps ringing for its whole window', () => {
     const s = dayWithCall('order');
+    yesterday(s, 0);
     const c = callFor(s)!;
-    expect(callRinging(at(s, c.ringAt - 1))).toBeNull();
-    expect(callRinging(at(s, c.until))).toBeNull();
-    at(s, c.ringAt);
-    expect(callRinging(s)?.secsLeft).toBe(CALL.answerSec);
-    let t = step(s, [{ kind: 'call', playerId: botId(s), take: true }]);
-    expect(t.callAnswer).toBeUndefined();
-    t = step(at(s, c.ringAt + 5), [{ kind: 'call', playerId: 'p1', take: true }]);
-    expect(t.callAnswer).toEqual({ day: s.day, take: true, by: 'Kay' });
+    const before = step(at(structuredClone(s), c.ringAt - 2), []);
+    expect(before.callDecision).toBeUndefined();
+    expect(callRinging(at(structuredClone(s), c.ringAt - 1))).toBeNull();
+    let t = ring(s);
+    expect(t.log.filter((e) => e.kind === 'call.outcome').map((e) => e.data)).toEqual([{ kind: 'order', take: true }]);
+    // it keeps ringing after the decision, to the end of its window
+    at(t, c.ringAt + 5);
+    expect(callRinging(t)).toMatchObject({ kind: 'order', take: true });
+    at(t, c.until - 1);
+    expect(callRinging(t)?.secsLeft).toBeGreaterThan(0);
+    at(t, c.until);
     expect(callRinging(t)).toBeNull();
-    expect(step(at(s, c.ringAt - 5), [{ kind: 'call', playerId: 'p1', take: true }]).callAnswer).toBeUndefined();
-    expect(validateInput({ kind: 'call', playerId: 'p1', take: 'yes' } as never)).toBeNull();
-    expect(validateInput({ kind: 'call', playerId: 'p1', take: false })).toEqual({ kind: 'call', playerId: 'p1', take: false });
-  });
-
-  it('a fixed machine costs the repair; a missed call halves the cups', () => {
-    const s = dayWithCall('machine');
-    s.branch!.staff = 3;
-    const plain = branchDay(s)!;
-    s.callRang = s.day; // it rang and nobody picked up (a call that never rang doesn't count; review I2)
-    const missed = branchDay(s, s.day, true)!;
-    expect(missed.call).toEqual({ kind: 'machine', took: false });
-    expect(missed.served).toBe(Math.min(plain.served + plain.walked, Math.floor((3 * 12) / 2)));
-    s.callAnswer = { day: s.day, take: true, by: 'Kay' };
-    const fixed = branchDay(s, s.day, true)!;
-    expect(fixed.served).toBe(plain.served);
-    expect(fixed.costs).toBeCloseTo(plain.costs + CALL.repair, 2);
-    expect(callLine(fixed.call)).toMatch(/Kay sent a fix/);
-  });
-
-  it('review I2: a call that never rang (shop closed early) is not counted as missed', () => {
-    const s = dayWithCall('machine');
-    s.branch!.staff = 3;
-    const c = callFor(s)!;
-    const plain = branchDay(s)!;
-    // Closing before the phone rings: no call outcome, full cups, nothing in the record.
-    at(s, c.ringAt - 40);
-    expect(branchDay(s, s.day, true)!.call).toBeUndefined();
-    expect(branchDay(s, s.day, true)!.served).toBe(plain.served);
-    const early = finishDay(structuredClone(s));
-    expect(early.days.at(-1)!.branch?.call).toBeUndefined();
-    expect(early.days.at(-1)!.branch?.served).toBe(plain.served);
-    // Once it has rung (even if nobody answered), it counts as missed.
-    let t = at(structuredClone(s), c.ringAt);
+    // later ticks don't re-decide or re-log, even if the branch's numbers change
+    at(t, c.ringAt + 5);
+    t.days.at(-1)!.branch!.walked = 9;
     t = step(t, []);
-    expect(t.callRang).toBe(t.day);
-    const missed = finishDay(at(t, c.until + 5));
-    expect(missed.days.at(-1)!.branch?.call).toEqual({ kind: 'machine', took: false });
-    expect(missed.callRang).toBeUndefined();
+    expect(t.callDecision).toEqual({ day: s.day, take: true });
+    expect(t.log.filter((e) => e.kind === 'call.outcome').length).toBe(1);
+    // nobody answers it: the input is gone
+    expect(validateInput({ kind: 'call', playerId: 'p1', take: true } as never)).toBeNull();
+  });
+
+  it('closing applies the decision: a fixed machine costs the repair, a refused one halves the cups', () => {
+    const s = dayWithCall('machine');
+    s.branch!.staff = 3;
+    const plain = branchDay(s)!;
+    const fixed = ring(s);
+    expect(callOutcome(fixed)).toEqual({ kind: 'machine', took: true });
+    const f = branchDay(fixed, fixed.day, true)!;
+    expect(f.served).toBe(plain.served);
+    expect(f.costs).toBeCloseTo(plain.costs + CALL.repair, 2);
+    expect(callLine(f.call)).toMatch(/got the machine fixed/);
+    const thin = dayWithCall('machine');
+    thin.branch!.staff = 1;
+    const plainThin = branchDay(thin)!;
+    const broke = finishDay(at(ring(thin), callFor(thin)!.until + 5));
+    expect(broke.days.at(-1)!.branch?.call).toEqual({ kind: 'machine', took: false });
+    expect(broke.days.at(-1)!.branch?.served).toBe(Math.min(plainThin.served + plainThin.walked, Math.floor(12 / 2)));
+    expect(broke.callDecision).toBeUndefined();
   });
 
   it('a taken order adds its profit but uses branch cups, and closing records and clears it', () => {
     const s = dayWithCall('order');
     s.branch!.staff = 1;
+    yesterday(s, 0);
     const plain = branchDay(s)!;
-    s.callAnswer = { day: s.day, take: true, by: 'Kay' };
-    const took = branchDay(s, s.day, true)!;
+    const t = ring(s);
+    const took = branchDay(t, t.day, true)!;
     expect(took.served).toBe(Math.min(plain.served + plain.walked, 12 - CALL.orderCups));
-    const after = finishDay(s);
-    expect(after.callAnswer).toBeUndefined();
-    expect(after.days[after.days.length - 1]!.branch?.call).toEqual({ kind: 'order', took: true, by: 'Kay' });
-    expect(after.days[after.days.length - 1]!.branch?.takings).toBeCloseTo(took.takings, 2);
     expect(took.takings).toBeGreaterThan(CALL.orderProfit - 0.01);
+    const after = finishDay(t);
+    expect(after.callDecision).toBeUndefined();
+    expect(after.days.at(-1)!.branch?.call).toEqual({ kind: 'order', took: true });
+    expect(after.days.at(-1)!.branch?.takings).toBeCloseTo(took.takings, 2);
   });
 
-  it('shows a big card with both choices while it rings (not to bots), and old saves close a day', () => {
+  it('a day that closed before the call rang is no call', () => {
+    const s = dayWithCall('machine');
+    s.branch!.staff = 3;
+    const c = callFor(s)!;
+    const plain = branchDay(s)!;
+    const t = step(at(structuredClone(s), c.ringAt - 40), []);
+    expect(t.callDecision).toBeUndefined();
+    expect(callOutcome(t)).toBeNull();
+    expect(branchDay(t, t.day, true)!.call).toBeUndefined();
+    const early = finishDay(t);
+    expect(early.days.at(-1)!.branch?.call).toBeUndefined();
+    expect(early.days.at(-1)!.branch?.served).toBe(plain.served);
+    // a decision left from another day is not today's
+    expect(callOutcome({ ...t, callDecision: { day: t.day - 1, take: true } })).toBeNull();
+  });
+
+  it('is deterministic: the same state rings to the same decision', () => {
+    const s = dayWithCall('order');
+    yesterday(s, 1);
+    const a = ring(s);
+    const b = ring(structuredClone(s));
+    expect(a.callDecision).toEqual(b.callDecision);
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+
+  it('shows a heads-up card while it rings, with no answer buttons (not to bots)', () => {
     const s = dayWithCall('machine');
     at(s, callFor(s)!.ringAt);
     const vm = callVM(s, 'p1')!;
     expect(vm.title).toMatch(/machine/);
     const html = callHtml(vm);
-    expect(html).toMatch(/data-take="1"/);
-    expect(html).toMatch(/data-take="0"/);
+    expect(html).not.toMatch(/data-take/);
     expect(html).toMatch(/is calling/);
-    expect(callVM(s, botId(s))).toBeUndefined();
-    const old = dayWithCall('order');
-    delete old.callAnswer;
-    expect(() => finishDay(old)).not.toThrow();
+    const bot = s.players.find((p) => p.bot);
+    if (bot) expect(callVM(s, bot.id)).toBeUndefined();
   });
 
-  it('rings the phone when the call starts and every few seconds until someone picks up (P6 sound)', () => {
+  it('rings the phone when the call starts and every few seconds for its whole window (P6 sound)', () => {
     const s = dayWithCall('machine');
     const c = callFor(s)!;
     const rings = (prev: GameState, next: GameState) => diffCues(prev, next, 'p1', logCursor(prev)).cues.filter((q) => q.id === 'phoneRing').length;
@@ -141,7 +184,8 @@ describe('phone calls from the second shop (P4 B6)', () => {
     let total = 0;
     for (let i = 0; i < c.until - c.ringAt + 5; i++) total += rings(tick(i), tick(i + 1));
     expect(total).toBe(Math.ceil(CALL.answerSec / RING_EVERY_SEC) - 1);
-    const answered = { ...tick(5), callAnswer: { day: s.day, take: true } } as GameState;
-    expect(rings(tick(4), answered)).toBe(0);
+    const decided = { ...tick(5), callDecision: { day: s.day, take: true } };
+    expect(rings(tick(4), decided)).toBe(0);
+    expect(callRinging(decided)).not.toBeNull();
   });
 });

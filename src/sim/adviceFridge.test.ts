@@ -10,7 +10,7 @@ import type { GameState } from './types';
 
 /** A Gear stand at night with `gears` bought, $`cash`, `dayLengthSec` long days, the cube when `cube`, and an empty pantry. */
 function night(gears: GearId[], cash = 300, dayLengthSec = 150, cube = true): GameState {
-  let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec }, gear: true, tier: 'stand' });
+  let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec }, gear: true, tier: 'stand' });
   s.cash = 5000;
   for (const gear of gears) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear }]);
   if (cube) s = step(s, [{ kind: 'fridge', playerId: 'p1', fridge: 'f1' }]);

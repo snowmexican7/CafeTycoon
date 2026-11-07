@@ -14,7 +14,7 @@ import { eventActive, judgeInspection } from './events';
 import { emitLog } from './log';
 import { startNight } from './run';
 import { layoutFor } from '../data/layout';
-import { resetBotsForNight } from './bots/roster';
+import { resetBotsForNight } from './botBody';
 import { clearFloorFields } from './tiles';
 import { returnBox } from './condiments';
 import { fridgeClose } from './fridge';

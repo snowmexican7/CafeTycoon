@@ -12,7 +12,7 @@ import { planNight } from './advice';
 import type { GameState, Station } from './types';
 
 const run = (gear = true): GameState => {
-  const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], settings: { bots: 0 }, tier: 'stand', gear });
+  const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], tier: 'stand', gear });
   s.phase = 'night';
   s.cash = 1000;
   return s;

@@ -11,7 +11,7 @@ import { GEAR, type GearId } from '../data/gear';
 import type { Customer, GameState, PlayerInput } from './types';
 
 function gearNight(gear: GearId[]): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
@@ -30,7 +30,7 @@ function gearDay(gear: GearId[]): GameState {
   return startDay(s);
 }
 
-const classicRun = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const classicRun = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 describe('the condiment bar and its stock boxes (Task 1 shapes)', () => {

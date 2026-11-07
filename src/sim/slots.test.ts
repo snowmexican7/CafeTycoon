@@ -6,6 +6,7 @@ import { applyGrowInput, canMake, hasStation, stationsFor } from './growth';
 import { defaultSlots, reasonOff, slotCount, stationsFromSlots } from './slots';
 import { unlockedDrinks } from './unlocks';
 import type { GameState, Station, TierId } from './types';
+import { addBots } from '../harness/crew';
 
 const TIERS: TierId[] = ['stand', 'cart', 'cafe'];
 
@@ -14,7 +15,7 @@ const legacyStations = (tier: TierId): Station[] =>
   TIER_LAYOUTS[tier].stations.map((s) => ({ id: s.id, kind: s.kind, pos: { ...s.pos }, busyTicksLeft: 0, output: null, occupiedBy: null }));
 
 const run = (tier?: TierId, bots = 2, seed = 7) =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots }, tier });
+  addBots(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier }), bots);
 
 const night = (tier?: TierId) => {
   const s = run(tier, 0);
@@ -127,7 +128,7 @@ describe('station slots (FB1 WP5)', () => {
 describe('slots determinism', () => {
   /** createRun, scenario forced to 'normal' (after createRun, before startDay), then exactly 900 day ticks. */
   const play = (seed: number, bots: number) => {
-    const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots } });
+    const s = addBots(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }), bots);
     s.scenario = 'normal';
     let x = startDay(s);
     for (let i = 0; i < 900; i++) x = step(x, []);

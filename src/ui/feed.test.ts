@@ -19,7 +19,7 @@ import { nightHtml, type NightUiState } from './night';
 import { createClosing } from './closing';
 import { ceremonyHtml } from './weekEnd';
 
-const run = (seed = 3) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true });
+const run = (seed = 3) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true });
 
 const ui = (): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' } });
 

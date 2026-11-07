@@ -8,7 +8,7 @@ import { complainSpot, tumbleweedSpawn, WAITING_SPOTS, waitingArtRoom, waitingSp
 import { LAYOUT, layoutFor } from '../data/layout';
 
 function shop(tier: TierId): GameState {
-  let s = createRun({ seed: 4, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }], settings: { bots: 0 } });
+  let s = createRun({ seed: 4, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
   s = startDay(s);
   s.phase = 'day';
   s.gear = true;

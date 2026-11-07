@@ -4,7 +4,7 @@ import { step } from './step';
 import type { GameState, PlayerInput, Vec2 } from './types';
 
 function chaosCafe(): GameState {
-  const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 } });
+  const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 } });
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
   return startDay(s);
 }
@@ -160,7 +160,7 @@ describe('the mop', () => {
       seed: 1,
       hostId: 'p1',
       players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'L' }],
-      settings: { bots: 0, dayLengthSec: 600 },
+      settings: { dayLengthSec: 600 },
     });
     t.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
     t = startDay(t);

@@ -16,7 +16,7 @@ function withGear(ids: GearId[]) {
   return s;
 }
 
-const run = (gear = true) => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear });
+const run = (gear = true) => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear });
 const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, ...over });
 
 describe('ui-3.5.1: condiment box card on the Restock tab', () => {

@@ -15,13 +15,13 @@ import { PRICING } from '../src/sim/pricing';
 import { RIVAL } from '../src/sim/rival';
 import { cleanDraft } from '../src/sim/signature';
 /**
- * Headless balance tester: plays whole weeks with stand-ins and bots, no browser.
+ * Headless balance tester: plays whole weeks with stand-ins (src/harness/crew.ts), no browser.
  * No Node APIs here, so tsc checks it through src/balance.test.ts; scripts/balance.ts is the CLI shell.
  */
 import { CATALOGUE } from '../src/data/catalogue';
 import { ECONOMY } from '../src/data/economy';
 import { SCENARIOS } from '../src/data/scenarios';
-import { addStandIns } from '../src/sim/bots/roster';
+import { addStandIns } from '../src/harness/crew';
 import { secondsToTicks } from '../src/sim/constants';
 import { restockCost } from '../src/sim/night';
 import { CARD_SETS } from '../src/data/cardSets';
@@ -33,7 +33,7 @@ import { createRun } from '../src/sim/run';
 import { step } from '../src/sim/step';
 import { installHarness } from '../src/harness';
 import { scoreRun } from '../src/sim/score';
-import type { BotSkill, DrinkId, EventKind, GameState, Pace, PlayerInput, ScenarioId, StationKind, SupplyId } from '../src/sim/types';
+import type { DrinkId, EventKind, GameState, Pace, PlayerInput, ScenarioId, StationKind, SupplyId } from '../src/sim/types';
 
 installHarness(); // bot cut: stand-ins are played by the test-only player
 
@@ -46,7 +46,7 @@ export type Layout = 'default' | 'twinEspresso' | 'noColdBrew' | 'noTrash';
 export const LAYOUTS: Layout[] = ['default', 'twinEspresso', 'noColdBrew', 'noTrash'];
 
 export interface BalanceOptions {
-  weeks: number; seed: number; humans: number; bots: number; skill: BotSkill; pace: Pace;
+  weeks: number; seed: number; humans: number; pace: Pace;
   scenario: ScenarioId | 'random'; menus: DrinkId[][]; compare: boolean; json: boolean; daySeconds: number;
   policies: Policy[];
   /** FB1 WP5: the opening back-bar layout (default = the tier's own). */
@@ -82,8 +82,6 @@ export const USAGE = `Usage: npm run balance -- [options]
   --weeks N          weeks to play, each an independent run (1-1000, default 10)
   --seed N           seed of the first week; week i uses seed+i (default 1)
   --humans N         stand-in human baristas (0-4, default 2)
-  --bots N           ordinary bots (0-4, default 1); humans + bots <= 4
-  --skill N          bot skill 1-5 (default 3)
   --pace N           pace 1-5 (default 3)
   --scenario ID      random | ${SCENARIO_IDS.join(' | ')} (default random)
   --menu M           all | a drink | comma list of ${DRINKS.join(',')} (default all)
@@ -99,7 +97,7 @@ export const USAGE = `Usage: npm run balance -- [options]
 
 export function defaultOptions(): BalanceOptions {
   return {
-    weeks: 10, seed: 1, humans: 2, bots: 1, skill: 3, pace: 3, scenario: 'random',
+    weeks: 10, seed: 1, humans: 2, pace: 3, scenario: 'random',
     menus: [[...DRINKS]], compare: false, json: false, daySeconds: 150, policies: ['smart'], layout: 'default', summary: false,
   };
 }
@@ -129,8 +127,6 @@ export function parseArgs(argv: string[]): BalanceOptions {
       case '--weeks': o.weeks = intArg(flag, next(), 1, 1000); break;
       case '--seed': o.seed = intArg(flag, next(), 0, 0xffffffff); break;
       case '--humans': o.humans = intArg(flag, next(), 0, 4); break;
-      case '--bots': o.bots = intArg(flag, next(), 0, ECONOMY.bots.names.length); break;
-      case '--skill': o.skill = intArg(flag, next(), 1, 5) as BotSkill; break;
       case '--pace': o.pace = intArg(flag, next(), 1, 5) as Pace; break;
       case '--day': o.daySeconds = intArg(flag, next(), 30, 600); break;
       case '--json': o.json = true; break;
@@ -166,7 +162,6 @@ export function parseArgs(argv: string[]): BalanceOptions {
       default: throw new UsageError(`unknown option '${flag}'`);
     }
   }
-  if (o.humans + o.bots > 4) throw new UsageError('humans + bots must be at most 4');
   if (o.compare) o.menus = [[...DRINKS], ['espresso'], ['latte'], ['coldBrew']];
   return o;
 }
@@ -215,7 +210,6 @@ function reserve(state: GameState): number {
 /** How much a crew would want this card tonight (0 = not interested). Pure; no RNG. */
 export function cardValue(state: GameState, c: CatalogueItem, policy: Policy): number {
   const path = focusPath(state, policy);
-  if (c.effects.some((e) => e.kind === 'temp')) return state.day >= 4 ? 3 : 1.5; // late-week rush help
   if (c.effects.some((e) => e.kind === 'reveal')) return state.day <= 3 ? 1.5 : 0.5;
   if (!isPermanent(c)) return 0.8;
   let v = c.path === path ? 2.5 : 1.2;
@@ -455,7 +449,7 @@ export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[], pol
   let state = createRun({
     seed, hostId: TESTER, players: [],
     ...(policy === 'stand' || policy === 'grow' || policy === 'planner' ? { tier: 'stand' as const } : {}),
-    settings: { bots: opts.bots, botSkill: opts.skill, pace: opts.pace, dayLengthSec: opts.daySeconds, nightLengthSec: NIGHT_SECONDS },
+    settings: { pace: opts.pace, dayLengthSec: opts.daySeconds, nightLengthSec: NIGHT_SECONDS },
   });
   addStandIns(state, opts.humans);
   applyLayout(state, opts.layout);
@@ -513,7 +507,7 @@ export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[], pol
 
 /** Every week for every menu, on seeds seed .. seed+weeks-1. */
 export function runBalance(opts: BalanceOptions): BalanceReport {
-  const warnings = opts.humans === 0 && opts.bots === 0 ? [NO_BARISTAS] : [];
+  const warnings = opts.humans === 0 ? [NO_BARISTAS] : [];
   const weeks: WeekResult[] = [];
   for (const policy of opts.policies) for (const menu of opts.menus) for (let i = 0; i < opts.weeks; i++) weeks.push(runWeek(opts, opts.seed + i, menu, policy));
   return { options: opts, weeks, warnings };
@@ -626,7 +620,7 @@ export function formatReport(report: BalanceReport): string {
   const o = report.options;
   const out: string[] = report.warnings.map((w) => `Warning: ${w}`);
   out.push(
-    `Balance: ${o.weeks} week(s) from seed ${o.seed}, humans ${o.humans}, bots ${o.bots}, skill ${o.skill}, pace ${o.pace}, ` +
+    `Balance: ${o.weeks} week(s) from seed ${o.seed}, humans ${o.humans}, pace ${o.pace}, ` +
       `scenario ${o.scenario}, day ${o.daySeconds}s`,
   );
   if (o.compare) {

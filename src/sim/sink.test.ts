@@ -8,7 +8,7 @@ import { ensureCounterSpots, stationsFromSlots } from './slots';
 import { interact } from './stations';
 import { drinkEspresso } from './espresso';
 import { blocked, nearestStation } from './movement';
-import { addStandIns } from './bots/roster';
+import { addStandIns } from '../harness/crew';
 import { findPath, targetNodes, walkableNodes } from './path';
 import { SINK_ID, LAYOUT, layoutFor } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
@@ -20,7 +20,7 @@ import type { GameState, Station, TierId } from './types';
 type Kit = GearId | 'steamer';
 
 const gearRun = (tier: TierId = 'stand'): GameState =>
-  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'L' }], settings: { bots: 0 }, tier, gear: true });
+  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'L' }], tier, gear: true });
 
 /** A stand with a drip machine, a steamer, a grinder and the bin, open for the day. */
 function stand(gear: Kit[] = ['d1', 'steamer', 'g2', 'b0']): GameState {
@@ -77,13 +77,13 @@ describe('FB2 A3: the back sink fixture', () => {
         expect(FRIDGE.some((f) => f.x === n.x && f.y === n.y), `${tier} fridge tile`).toBe(false);
         for (const o of s.stations) if (o !== sink) expect(near(n, o.pos), `${tier} ${o.id} shares ${n.x},${n.y}`).toBe(false);
       }
-      const classic = createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 }, tier });
+      const classic = createRun({ seed: 7, hostId: 'p1', players: [], tier });
       expect(classic.stations.some((x) => x.id === SINK_ID)).toBe(false);
     }
   });
 
   it('nobody starts the day inside the sink (spawn index 2 is the stand\'s sink tile)', () => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 }, tier: 'stand', gear: true });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [], tier: 'stand', gear: true });
     addStandIns(s, 4);
     for (const p of s.players) expect(blocked(p.pos, s.stations, layoutFor('stand').width), p.id).toBe(false);
     startDay(s);
@@ -337,7 +337,7 @@ describe('FB2 A3: stale pots', () => {
 
 describe('FB2 A3: classic runs', () => {
   it('no sink and no stale flags in a classic run', () => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     startDay(s);
     expect(s.stations.some((x) => x.id === SINK_ID)).toBe(false);
     finishDay(s);

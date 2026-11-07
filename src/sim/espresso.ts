@@ -2,7 +2,6 @@ import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
 import { secondsToTicks } from './constants';
 import { emitLog } from './log';
-import { syncBots } from './bots/roster';
 import { returnTool } from './mop';
 import type { GameState, Player, PlayerId, Vec2 } from './types';
 
@@ -104,9 +103,7 @@ function collapse(state: GameState, p: Player): void {
   p.heldDir = { x: 0, y: 0 };
   p.interactQueued = false;
   state.today.ambulance = round2((state.today.ambulance ?? 0) + ESPRESSO.ambulanceBill);
-  emitLog(state, 'espresso.collapse', { by: p.id, name: p.name });
-  // A bot covers the empty spot if the crew has room for one (humanCount skips people who are out).
-  syncBots(state);
+  emitLog(state, 'espresso.collapse', { by: p.id, name: p.name }); // bot cut: nobody covers; they're back tomorrow
 }
 
 /** Hook: start of every day/closing tick. Counts the boost down and keeps the collapsed still. */
@@ -163,15 +160,12 @@ export function settleEspresso(state: GameState): void {
 
 /** Hook: the doors open on a new day. Anyone who collapsed is back (sheepish), counters reset. */
 export function espressoMorning(state: GameState): void {
-  let back = false;
   for (const p of state.players) {
     const e = p.espresso;
     if (!e) continue;
     if (e.out) {
-      back = true;
       state.morningNotes.push(`${p.name} is back from the ER. The $${ESPRESSO.ambulanceBill} ambulance ride is on the tab. Maybe switch to decaf.`);
     }
     p.espresso = undefined;
   }
-  if (back) syncBots(state); // the cover bot goes home
 }

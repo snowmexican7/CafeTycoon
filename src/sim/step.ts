@@ -7,7 +7,7 @@ import { applyCheckoutInput } from './checkout';
 import { applyRivalCounterInput, applyScoutInput, applyStampCardInput } from './rival';
 import { beginSeason } from './season';
 import { applyTwistInput } from './taste';
-import { applyCall, noteCallRang } from './call';
+import { noteCallRang } from './call';
 import { applyCloseEarly, closeVoteUnanimous, dropCloseVote } from './closeEarly';
 import { applyPriceInput } from './pricing';
 import { ECONOMY } from '../data/economy';
@@ -29,7 +29,8 @@ import { interact, stepStations } from './stations';
 import { applySyrupInput, stepHandmade } from './handmade';
 import type { GameState, ItemKind, Player, PlayerInput } from './types';
 import { validateInput } from './validate';
-import { isBotId, syncBots } from './bots/roster';
+import { isBotId } from './botBody';
+import { stepCashier } from './cashier';
 import { applyStaffInput } from './staff';
 import { drinkEspresso, stepEspresso } from './espresso';
 import { stepEggs, unlockSecret } from './eggs';
@@ -60,6 +61,7 @@ import { applyMoveStation } from './rearrange';
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
   const existing = s.players.find((p) => p.id === input.playerId);
+  // Bot cut: nobody plays as (or joins as) a bot body: the robot cashier, or a test-only crew bot or stand-in.
   if (existing?.bot || (input.kind === 'join' && isBotId(input.playerId))) return;
   switch (input.kind) {
     case 'join': {
@@ -112,8 +114,6 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'settings':
       if (isHost) {
         Object.assign(s.settings, input.settings); // already cleaned by validateInput (sanitizeSettings)
-        // Between days a new bots choice shows up now; during the day it waits for the next startDay.
-        if (input.settings.bots !== undefined && (s.phase === 'night' || s.phase === 'weekEnd')) syncBots(s);
       }
       break;
     case 'move': {
@@ -208,9 +208,6 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'espresso':
       drinkEspresso(s, input.playerId);
       break;
-    case 'call':
-      applyCall(s, input);
-      break;
     case 'closeEarly':
       applyCloseEarly(s, input);
       break;
@@ -270,6 +267,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepEvents(s, doorsOpen);
   const m = computeModifiers(s);
   stepStuns(s);
+  stepCashier(s); // bot cut step 3: the solo robot cashier walks to the till and rings
   botDriver?.step(s, m);
   applyMovement(s, m.moveSpeed);
   stepBumps(s);

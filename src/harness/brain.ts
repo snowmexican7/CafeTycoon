@@ -26,12 +26,12 @@ import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, SUPPLY_ID, TRAY_ID, layou
 import { FRIDGE, autoMilk, canLiftSupply, closingSoon, coldMilkDrink, isMilkStation, isSupply, readyStock, supplyRecipe } from '../sim/fridge';
 import { CONDIMENTS, canTakeBox, returnBox } from '../sim/condiments';
 import { isSink, needsDump } from '../sim/sink';
-import { answerPhone } from './phone';
 import { wantsItem } from '../sim/orders';
 import { ticketOpen, trayComplete, trayCups } from '../sim/tray';
 import { heldByPerson, heldForPeople, isPerson, ringsAtOnce } from './helper';
 import { addSyrup, askedSyrup } from '../sim/handmade';
 import { SYRUP_ID } from '../data/layout';
+import { CASHIER_ID } from '../sim/cashier';
 
 const BOTS = ECONOMY.bots;
 const MESS = ECONOMY.mess;
@@ -975,11 +975,6 @@ export function underPressure(state: GameState): boolean {
   return state.customers.length >= BOTS.pressureQueue || eventActive(state, 'rushHour');
 }
 
-/** Skill-dial multiplier for the bot's personality; stand-ins ('human') ignore the dial. */
-function skillFactor(state: GameState, bot: BotState, dial: readonly number[]): number {
-  return bot.personality === 'human' ? 1 : dial[state.settings.botSkill - 1];
-}
-
 /**
  * Ticks a bot hesitates before starting a newly adopted job. Always draws from the rng, even for a
  * stand-in (whose reaction is 0), so the stream does not depend on the crew's personalities.
@@ -988,9 +983,8 @@ export function reactionDelay(state: GameState, bot: BotState): number {
   const [lo, hi] = BOTS.reactionTicks;
   const base = lo + rngInt(state, hi - lo + 1);
   const personality = BOTS.personalities[bot.personality].reaction;
-  const skill = skillFactor(state, bot, BOTS.skill.reaction);
   const pressure = underPressure(state) ? BOTS.pressure.reaction : 1;
-  return Math.round(base * personality * skill * pressure);
+  return Math.round(base * personality * pressure);
 }
 
 /**
@@ -999,6 +993,7 @@ export function reactionDelay(state: GameState, bot: BotState): number {
  * The bot does not know yet; it notices after a while (see stepBot) and bins it.
  */
 export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKind | null): void {
+  if (p.id === CASHIER_ID) return; // bot cut step 3: the robot cashier drives itself (src/sim/cashier.ts)
   const b = p.bot;
   if (b && heldBefore === null && p.holding === null) {
     // Extras review I1: an empty-handed press at a Gear tap that poured nothing (a cat on it, the last cup gone
@@ -1024,7 +1019,6 @@ export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKi
   if (isTakeAt(b.plan[0], st) && st.output === null && st.busyTicksLeft === 0) pop(b);
   const chance =
     BOTS.personalities[b.personality].mistake *
-    skillFactor(state, b, BOTS.skill.mistake) *
     (underPressure(state) ? BOTS.pressure.mistake : 1);
   if (rngNext(state) >= chance) return;
   b.mistakes += 1;
@@ -1619,9 +1613,9 @@ function stepBot(state: GameState, p: Player): void {
 
 /** Every connected bot, in players order, picks its moveDir and whether to press "use" this tick. */
 export function stepBots(state: GameState, _m: Modifiers): GameState {
-  answerPhone(state);
   for (const p of state.players) {
-    if (p.bot && p.connected && p.stunTicksLeft === 0) stepBot(state, p);
+    // Bot cut step 3: the robot cashier drives itself (src/sim/cashier.ts); the brain leaves it alone.
+    if (p.bot && p.connected && p.stunTicksLeft === 0 && p.id !== CASHIER_ID) stepBot(state, p);
   }
   return state;
 }

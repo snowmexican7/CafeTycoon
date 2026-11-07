@@ -7,15 +7,16 @@ import { step } from '../sim/step';
 import type { GameState, Personality, Player, Vec2 } from '../sim/types';
 import { chainFor, dropPlan, reactionDelay, think, uncoveredOrder } from './brain';
 import { findPath, floorDropNode, isWalkable, nodeOf, targetNodes, walkableNodes } from '../sim/path';
-import { addStandIns, botSpeed, makeBotState } from '../sim/bots/roster';
+import { botSpeed, makeBotState } from '../sim/botBody';
 import { floorFields } from '../sim/tiles';
 import { stationsFromSlots, type SlotContent } from '../sim/slots';
 import { tierOf } from '../sim/growth';
 import { spillTiles } from '../sim/floor';
+import { addBots, addStandIns } from './crew';
 
 /** One human p1 who never moves, `bots` bot baristas, no arrivals, and a long day. */
 function cafe(bots: number): GameState {
-  const s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots, dayLengthSec: 600 } });
+  const s = addBots(createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 } }), bots);
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
   return startDay(s);
 }
@@ -209,7 +210,7 @@ describe('bot brain', () => {
 
   it('a day with bots is deterministic and JSON-safe', () => {
     const script = () => {
-      let s = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 2 } }));
+      let s = startDay(addBots(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }), 2));
       for (let i = 0; i < 1200; i++) s = step(s, []);
       return s;
     };
@@ -227,11 +228,10 @@ describe('bot brain', () => {
   });
 });
 
-describe('bot feel: reaction delay, personalities, pressure and the skill dial', () => {
-  /** 200 adoptions' worth of delays for a personality at a skill level, drawn from the seeded rng. */
-  function delays(personality: Personality, skill: GameState['settings']['botSkill'], queued: number): number[] {
+describe('bot feel: reaction delay, personalities and pressure (bot cut 4a: no skill dial)', () => {
+  /** 200 adoptions' worth of delays for a personality, drawn from the seeded rng. */
+  function delays(personality: Personality, queued: number): number[] {
     const s = cafe(0);
-    s.settings.botSkill = skill;
     s.customers = Array.from({ length: queued }, (_, i) => ({ id: 800 + i, drink: 'espresso' as const, ...huge }));
     const b = makeBotState(personality);
     return Array.from({ length: 200 }, () => reactionDelay(s, b));
@@ -239,19 +239,19 @@ describe('bot feel: reaction delay, personalities, pressure and the skill dial',
   const range = (xs: number[]) => [Math.min(...xs), Math.max(...xs)];
   const [lo, hi] = ECONOMY.bots.reactionTicks;
 
-  it('waits 0.5–2 s scaled by personality, skill and pressure before acting', () => {
-    const steady = delays('steady', 3, 0);
+  it('waits 0.5–2 s scaled by personality and pressure before acting', () => {
+    const steady = delays('steady', 0);
     expect(steady.every((d) => Number.isInteger(d) && d >= lo && d <= hi)).toBe(true);
     expect(range(steady)[0]).toBeLessThan(lo + 10);
     expect(range(steady)[1]).toBeGreaterThan(hi - 10);
 
-    const veteran = delays('veteran', 1, 0);
-    expect(veteran.every((d) => d >= Math.round(lo * 1.3 * 1.6) && d <= Math.round(hi * 1.3 * 1.6))).toBe(true);
-    expect(range(veteran)[1]).toBeGreaterThan(Math.round(hi * 1.3 * 1.6) - 25);
+    const veteran = delays('veteran', 0);
+    expect(veteran.every((d) => d >= Math.round(lo * 1.3) && d <= Math.round(hi * 1.3))).toBe(true);
+    expect(range(veteran)[1]).toBeGreaterThan(Math.round(hi * 1.3) - 15);
 
-    const rookie = delays('rookie', 5, ECONOMY.bots.pressureQueue);
-    expect(rookie.every((d) => d >= Math.round(lo * 0.8 * 0.6 * 0.8) && d <= Math.round(hi * 0.8 * 0.6 * 0.8))).toBe(true);
-    expect(range(rookie)[1]).toBeGreaterThan(Math.round(hi * 0.8 * 0.6 * 0.8) - 6);
+    const rookie = delays('rookie', ECONOMY.bots.pressureQueue);
+    expect(rookie.every((d) => d >= Math.round(lo * 0.8 * 0.8) && d <= Math.round(hi * 0.8 * 0.8))).toBe(true);
+    expect(range(rookie)[1]).toBeGreaterThan(Math.round(hi * 0.8 * 0.8) - 10);
   });
 
   it('a bot stands still while it reacts to a new job, then gets going', () => {
@@ -271,22 +271,13 @@ describe('bot feel: reaction delay, personalities, pressure and the skill dial',
     expect(bot(s).pos).not.toEqual(pos);
   });
 
-  it('stand-ins react instantly and move at speed 1 whatever the skill', () => {
+  it('stand-ins react instantly and move at speed 1', () => {
     const s = addStandIns(cafe(0), 1);
-    s.settings.botSkill = 1;
     const standIn = s.players.find((p) => p.id === 'sim-1')!.bot!;
     const rng = s.rng;
     expect(reactionDelay(s, standIn)).toBe(0);
     expect(s.rng).not.toBe(rng); // the draw still happens, so the stream does not depend on the crew
-    expect(botSpeed(s, standIn)).toBe(1);
-  });
-
-  it('the skill dial scales speed', () => {
-    const s = cafe(0);
-    s.settings.botSkill = 1;
-    expect(botSpeed(s, makeBotState('steady'))).toBeCloseTo(0.85);
-    s.settings.botSkill = 5;
-    expect(botSpeed(s, makeBotState('rookie'))).toBeCloseTo(1.1 * 1.1);
+    expect(botSpeed(standIn)).toBe(1);
   });
 });
 
@@ -306,7 +297,6 @@ describe('bot feel: mistakes, noticing and remaking', () => {
   it('a botched drink is noticed, binned, counted and remade', () => {
     let s = cafe(1);
     bot(s).bot!.personality = 'rookie';
-    s.settings.botSkill = 1;
     const served = s.today.served;
     const run = busyEspressoDay(s, 60 * 120);
     // let any botch still in hand be noticed and binned (a spilled botch leaves no trash step)
@@ -367,7 +357,6 @@ describe('bot feel: mistakes, noticing and remaking', () => {
 
   it('stand-ins never botch', () => {
     let s = addStandIns(cafe(0), 1);
-    s.settings.botSkill = 1;
     s = busyEspressoDay(s, 60 * 120).s;
     expect(s.today.served).toBeGreaterThan(0);
     expect(s.today.botMistakes ?? 0).toBe(0);
@@ -597,7 +586,7 @@ describe('bots on a messy floor', () => {
   it('a forced bot can slip and keeps its plan', () => {
     /** bot-1 boxed in by spills at (6,3) with a latte for the pass; p1 parked out of the way. */
     function forced(seed: number): GameState {
-      const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 600 } });
+      const s = addBots(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 } }), 1);
       s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
       startDay(s);
       parkHuman(s);
@@ -738,7 +727,7 @@ describe('bots on a messy floor', () => {
 
 /** A café with its slots edited (stations rebuilt from them), `bots` bots, one parked human, no arrivals. */
 function cafeSlots(bots: number, edit: (slots: SlotContent[]) => void): GameState {
-  const s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots, dayLengthSec: 600 } });
+  const s = addBots(createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 } }), bots);
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
   edit(s.slots!);
   s.stations = stationsFromSlots(tierOf(s), s.slots!);
@@ -921,7 +910,7 @@ describe('default café determinism (station resolution must not change the defa
   ];
   for (const [bots, rng] of golden) {
     it(`seed 5, ${bots} bot(s), 900 ticks: the base RNG stream`, () => {
-      let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots } });
+      let s = addBots(createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }), bots);
       s.scenario = 'normal';
       s = startDay(s);
       for (let i = 0; i < 900; i++) s = step(s, []);
@@ -989,8 +978,7 @@ describe('hurried bots pull cups early under a queue', () => {
     const s = cafe(0);
     expect(makeBotState('hurried').personality).toBe('hurried');
     expect(ECONOMY.bots.personalities.hurried).toEqual({ speed: 1.15, reaction: 0.85, mistake: 0.08, preps: false });
-    s.settings.botSkill = 3;
-    expect(botSpeed(s, makeBotState('hurried'))).toBeCloseTo(1.15);
+    expect(botSpeed(makeBotState('hurried'))).toBeCloseTo(1.15);
   });
 });
 

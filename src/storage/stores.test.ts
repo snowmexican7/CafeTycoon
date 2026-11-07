@@ -33,53 +33,44 @@ describe('stores', () => {
     const st = memoryStorage();
     let n = 0;
     const s = createSettingsStore(st, () => `tok${++n}`);
-    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120, bots: 'auto', soloBots: 1 });
+    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120, soloCashier: true });
     expect(createSettingsStore(st, () => 'other').get().playerToken).toBe('tok1');
     expect(s.set({ playerName: 'Ken' }).playerName).toBe('Ken');
     expect(s.get().pace).toBe(3);
   });
 
-  it('bots defaults to auto, persists a choice, and ignores garbage', () => {
+  it('bot cut 4a: keys it no longer knows (the old bots choices) are dropped from stored settings', () => {
     const st = memoryStorage();
     const s = createSettingsStore(st, () => 'tok');
-    expect(s.get().bots).toBe('auto');
-    expect(s.set({ bots: 0 }).bots).toBe(0);
-    expect(createSettingsStore(st, () => 'x').get().bots).toBe(0);
-    for (const bad of ['lots', -1, 7, 1.5, null]) {
-      st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', bots: bad }));
-      expect(s.get().bots).toBe('auto');
-    }
-    st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', bots: 2 }));
-    expect(s.get().bots).toBe(2);
+    st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', playerName: 'K', bots: 2, legacy: 'auto' }));
+    const got = s.get() as unknown as Record<string, unknown>;
+    expect('bots' in got || 'legacy' in got).toBe(false);
+    expect(got.playerName).toBe('K');
+    expect(got.soloCashier).toBe(true);
   });
 
-  it('soloBots defaults to 1, even for saved settings that predate it, and round-trips 0', () => {
+  it('soloCashier defaults to on, even for saved settings that predate it, and round-trips off', () => {
     const st = memoryStorage();
     const s = createSettingsStore(st, () => 'tok');
-    expect(s.get().soloBots).toBe(1);
-    st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', playerName: 'K', bots: 'auto' }));
-    expect(s.get().soloBots).toBe(1);
-    expect(s.get().bots).toBe('auto');
-    for (const bad of ['lots', -1, 7, 1.5, null]) {
-      st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', soloBots: bad }));
-      expect(s.get().soloBots).toBe(1);
-    }
-    expect(s.set({ soloBots: 0 }).soloBots).toBe(0);
-    expect(createSettingsStore(st, () => 'x').get().soloBots).toBe(0);
-    expect(s.set({ soloBots: 'auto' }).soloBots).toBe('auto');
-    expect(s.get().soloBots).toBe('auto');
+    expect(s.get().soloCashier).toBe(true);
+    st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', playerName: 'K' }));
+    expect(s.get().soloCashier).toBe(true);
+    expect(s.set({ soloCashier: false }).soloCashier).toBe(false);
+    expect(createSettingsStore(st, () => 'x').get().soloCashier).toBe(false);
+    st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', soloCashier: 'yes' }));
+    expect(s.get().soloCashier).toBe(true);
   });
 });
 
 describe('snapshot versioning', () => {
   it('pins the snapshot version', () => {
-    expect(SNAPSHOT_VERSION).toBe(34);
+    expect(SNAPSHOT_VERSION).toBe(35);
   });
 
   it('FB2 C9 (no save compatibility): every older save is turned away, a current one loads with its fixed spots', () => {
     const st = memoryStorage();
     const store = createSnapshotStore(st);
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
     for (const v of [3, 22, 27, 28]) {
       st.setItem('cafetycoon.run', JSON.stringify({ version: v, state: s }));
       expect(store.load(), `v${v}`).toBeNull();

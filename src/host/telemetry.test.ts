@@ -3,13 +3,13 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { parseTele } from '../net/protocol';
 import type { HostToClient, Transport } from '../net/transport';
 import { createRun, freshDayStats, startDay } from '../sim/run';
-import { makeBotState } from '../sim/bots/roster';
+import { makeBotState } from '../sim/botBody';
 import type { GameState, PlayerInput, SimEvent } from '../sim/types';
 import { createTelemetry, RESERVED_TELE_KINDS, createUiBuffer, setUiTelemetrySink, uiTelemetry, withTelemetry } from './telemetry';
 
 const META = { host: 'p1', build: 'test', protocol: 3 };
 const run = (): GameState =>
-  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }, { id: 'p2', name: 'Lu' }], settings: { bots: 0 } });
+  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }, { id: 'p2', name: 'Lu' }] });
 
 function setup() {
   const clock = { t: 0 };
@@ -151,8 +151,8 @@ describe('telemetry', () => {
     const sum = tele.summary(s);
     expect(rows[rows.length - 1].data).toEqual(sum);
     expect(sum.pass).toEqual({ put: 2, take: 0, serve: 0, stale: 1 });
-    expect(sum.botMistakes).toEqual({ Bo: 2 });
-    expect(sum.idleTicks).toEqual({ Kay: 0, Lu: 30, Bo: 0 });
+    expect(sum).not.toHaveProperty('botMistakes');
+    expect(sum.idleTicks).toEqual({ Kay: 0, Lu: 30 }); // people only
     expect(sum.days).toEqual([d1, d2]);
     expect(sum.drinks).toEqual({ ...zeroDrinks(), espresso: 1, latte: 3, coldBrew: 2 });
     expect(sum.cards).toEqual([{ day: 1, offered: ['a', 'b', 'c'], bought: ['c'] }]);

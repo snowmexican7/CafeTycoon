@@ -7,7 +7,7 @@ import { ringBar, ringBarLabel, tillPos } from './ringUpModel';
 import type { GameState } from '../sim/types';
 
 function gearDay(): GameState {
-  let s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }], settings: { bots: 0 } });
+  let s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }] });
   s = startDay(s);
   s.phase = 'day';
   s.gear = true;

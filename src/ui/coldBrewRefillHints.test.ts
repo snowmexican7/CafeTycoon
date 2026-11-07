@@ -6,7 +6,7 @@ import { handHint } from './live';
 import type { GameState } from '../sim/types';
 
 function gearDay(): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
   s.fridge = 'f1';
   s.slots = ['coldBrewTap', 'espresso', null, 'trash'];
   s.slotGear = ['c1', 'e1', null, 'b0'];

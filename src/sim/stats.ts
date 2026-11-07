@@ -2,13 +2,13 @@
  * Crew stats for the week (B10): per-player counters tallied from the sim log every tick, before the
  * log is pruned. Plain data in GameState (`state.crew`), so peers get it in the snapshot and the
  * end-of-week awards (src/sim/awards.ts) are derived from it, deterministic for a seed and inputs.
+ * People only (bot cut): bots, the robot cashier and stand-ins get no row.
  */
 import type { GameState, PlayerId, SimEvent } from './types';
 
 export interface PlayerStats {
   id: PlayerId;
   name: string;
-  bot: boolean;
   /** Customers paid (by this player's hand, at the pass or straight to the counter). */
   serves: number;
   /** Served with lots of patience left. */
@@ -18,7 +18,7 @@ export interface PlayerStats {
   /** Drinks put on the pass for someone else to hand over. */
   handoffs: number;
   slips: number;
-  /** Floor messes they caused: dropped on the floor, spilled in a slip or a bot fumble. */
+  /** Floor messes they caused: dropped on the floor or spilled in a slip. */
   messes: number;
   /** Messes they mopped up. */
   mopped: number;
@@ -41,15 +41,15 @@ export interface CrewStats {
   players: PlayerStats[];
 }
 
-export type CountKey = Exclude<keyof PlayerStats, 'id' | 'name' | 'bot'>;
+export type CountKey = Exclude<keyof PlayerStats, 'id' | 'name'>;
 
 export const COUNT_KEYS: CountKey[] = [
   'serves', 'perfect', 'earned', 'handoffs', 'slips', 'messes', 'mopped', 'espressos', 'collapses',
   'rescues', 'catPets', 'campersShooed', 'alarmsStopped', 'binned', 'cardsBought', 'idle',
 ];
 
-export function blank(id: PlayerId, name: string, bot: boolean): PlayerStats {
-  const s = { id, name, bot } as PlayerStats;
+export function blank(id: PlayerId, name: string): PlayerStats {
+  const s = { id, name } as PlayerStats;
   for (const k of COUNT_KEYS) s[k] = 0;
   return s;
 }
@@ -58,15 +58,15 @@ export function crewOf(state: GameState): CrewStats {
   return (state.crew ??= { seen: 0, players: [] });
 }
 
-/** The stats row for a player, created on first use (players order of first appearance). */
+/** The stats row for a person, created on first use (players order of first appearance); null for bots. */
 export function statsFor(state: GameState, id: PlayerId): PlayerStats | null {
   if (!id) return null;
   const crew = crewOf(state);
   let row = crew.players.find((r) => r.id === id);
   if (!row) {
     const p = state.players.find((x) => x.id === id);
-    if (!p) return null;
-    row = blank(id, p.name, !!p.bot);
+    if (!p || p.bot) return null;
+    row = blank(id, p.name);
     crew.players.push(row);
   }
   return row;
@@ -148,10 +148,14 @@ export function noteNight(state: GameState, id: PlayerId, key: 'cardsBought'): v
   bump(state, id, key);
 }
 
-/** Read-only stats rows for the awards: everyone at the table now (zeros if they never did anything) plus anyone who left after serving. */
+/**
+ * Read-only stats rows for the awards: every person at the table now (zeros if they never did anything) plus
+ * anyone who left after serving. Bots are never rows.
+ */
 export function crewRows(state: GameState): PlayerStats[] {
   const rows = state.crew?.players ?? [];
-  const out = state.players.map((p) => rows.find((r) => r.id === p.id) ?? blank(p.id, p.name, !!p.bot));
-  for (const r of rows) if (r.serves > 0 && !out.includes(r)) out.push(r);
+  const bot = new Set(state.players.filter((p) => p.bot).map((p) => p.id));
+  const out = state.players.filter((p) => !p.bot).map((p) => rows.find((r) => r.id === p.id) ?? blank(p.id, p.name));
+  for (const r of rows) if (r.serves > 0 && !bot.has(r.id) && !out.includes(r)) out.push(r);
   return out;
 }

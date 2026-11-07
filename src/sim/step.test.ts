@@ -10,8 +10,9 @@ import { scoreRun, summarizeRun } from './score';
 import { step } from './step';
 import { validateInput } from './validate';
 import type { GameState, PlayerInput } from './types';
+import { addBots } from '../harness/crew';
 
-const opts = { seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } };
+const opts = { seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] };
 const ticks = (s: GameState, n: number, inputs: PlayerInput[] = []) => {
   for (let i = 0; i < n; i++) s = step(s, i === 0 ? inputs : []);
   return s;
@@ -45,7 +46,7 @@ describe('step', () => {
   });
 
   it('idle ticks are a running total: still, move, still adds both still stretches; bots stay at 0', () => {
-    let s = createRun({ ...opts, settings: { bots: 1 } });
+    let s = addBots(createRun({ ...opts }), 1);
     s = ticks(s, ECONOMY.nightLengthSec * 60);
     expect(s.phase).toBe('day');
     const p1 = (x: GameState) => x.players.find((p) => p.id === 'p1')!;
@@ -95,7 +96,7 @@ describe('step', () => {
 
   it('reaches weekEnd after day 7 and continues into unlimited mode', () => {
     // Short phases keep the whole week cheap; tick counts derive from the settings.
-    const settings = { dayLengthSec: 30, nightLengthSec: 30, bots: 0 };
+    const settings = { dayLengthSec: 30, nightLengthSec: 30 };
     const nightTicks = settings.nightLengthSec * 60;
     const dayTicks = (settings.dayLengthSec + ECONOMY.closingGraceSeconds) * 60;
     let s = createRun({ ...opts, settings });
@@ -121,7 +122,7 @@ describe('step', () => {
 
   it('is deterministic and JSON-safe mid-run', () => {
     // Review Focus 4
-    const settings = { dayLengthSec: 30, nightLengthSec: 30, bots: 0 };
+    const settings = { dayLengthSec: 30, nightLengthSec: 30 };
     const script = (s: GameState) => {
       s = ticks(s, settings.nightLengthSec * 60);
       s = ticks(s, 30, [{ kind: 'move', playerId: 'p1', x: 1, y: 0, interact: false }]);
@@ -233,7 +234,7 @@ describe('drop input', () => {
   });
 
   it('a drop naming a bot is ignored', () => {
-    const s = startDay(createRun({ ...opts, settings: { bots: 1 } }));
+    const s = startDay(addBots(createRun({ ...opts }), 1));
     const before = s.players.find((p) => p.id === 'bot-1')!;
     const withDrop = step(s, [{ kind: 'drop', playerId: 'bot-1' }]).players.find((p) => p.id === 'bot-1')!;
     const without = step(s, []).players.find((p) => p.id === 'bot-1')!;
@@ -264,7 +265,7 @@ describe('floor day', () => {
   it('a floor day with drops, a slip and a mop plan is deterministic and JSON-safe', () => {
     /** 1 human + 1 bot, traffic on: p1 drops a latte, paces a row of spills for 600 ticks pressing R now and then, then stands. */
     const floorDay = (seed: number) => {
-      let s = startDay(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 600 } }));
+      let s = startDay(addBots(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 } }), 1));
       const p1 = s.players.find((p) => p.id === 'p1')!;
       p1.pos = { x: 3, y: 4 };
       p1.tile = { x: 3, y: 4 };
@@ -306,7 +307,7 @@ describe('chaos pack', () => {
   it('a day with messes, a mop plan and a rogue is deterministic and JSON-safe', () => {
     /** Day 2, 1 human + 1 bot, traffic on; three messes, a dirty café and one customer already upset. */
     const makeDay = () => {
-      const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 600 } });
+      const s = addBots(createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 } }), 1);
       s.day = 2;
       const day = startDay(s);
       for (const tile of [{ x: 4, y: 4 }, { x: 6, y: 5 }, { x: 8, y: 4 }]) placeMess(day, 'grounds', tile);

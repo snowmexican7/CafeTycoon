@@ -9,9 +9,8 @@ import { computeModifiers } from './effects';
 import { forecastIsRough } from './forecast';
 import { priceForecast } from './pricing';
 import { menuDrinks } from './unlocks';
-import { syncBots } from './bots/roster';
 import { crewTips } from './advice';
-import { wagesForDay, wageEach, billsForDay } from './staff';
+import { wagesForDay, billsForDay } from './staff';
 import { HIRE_WAGE, MARKETER_TRAFFIC, hasMarketer, hasStrategist, hireWagesForDay } from './hires';
 import { bestStep } from './strategist';
 import type { GameState, PlayerInput } from './types';
@@ -110,16 +109,16 @@ describe('Round 3 item 3: Strategist and Marketer hires', () => {
     expect(hireRole(classic, 'marketer').staff).toBeUndefined();
   });
 
-  it('a role-less staff input is still the barista hire', () => {
-    const s = step(gearRun(), [{ kind: 'staff', playerId: 'p1', action: 'hire' }]);
+  it('bot cut 4a: a role-less staff input does nothing (no barista hires)', () => {
+    const s = step(gearRun(), [{ kind: 'staff', playerId: 'p1', action: 'hire' } as unknown as PlayerInput]);
     expect(s.staff).toBeUndefined();
-    expect(s.settings.bots).toBe(3);
+    expect(s.players.some((p) => p.bot)).toBe(false);
   });
 
   it('validateInput keeps the role and drops junk', () => {
     expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'hire', role: 'strategist' })).toEqual({ kind: 'staff', playerId: 'p1', action: 'hire', role: 'strategist' });
     expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'fire', role: 'marketer' })).toEqual({ kind: 'staff', playerId: 'p1', action: 'fire', role: 'marketer' });
-    expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'hire' })).toEqual({ kind: 'staff', playerId: 'p1', action: 'hire' });
+    expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'hire' } as unknown as PlayerInput)).toBeNull();
     expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'hire', role: 'janitor' } as unknown as PlayerInput)).toBeNull();
     expect(validateInput({ kind: 'staff', playerId: 'p1', action: 'hire', role: 3 } as unknown as PlayerInput)).toBeNull();
   });
@@ -137,7 +136,6 @@ describe('Round 3 item 3: Strategist and Marketer hires', () => {
     expect(s.log.some((e) => e.kind === 'strategist.set')).toBe(true);
     // next night: reset to the peak for the new crowd, whatever the crew did by hand
     s.priceSteps = { ...(s.priceSteps ?? {}), [menu[0]]: 7 };
-    syncBots(s);
     s.challenges = [];
     s.phase = 'closing';
     s.cash = 500;
@@ -161,7 +159,6 @@ describe('Round 3 item 3: Strategist and Marketer hires', () => {
   it('without a strategist nobody touches the prices at night start', () => {
     const s = gearRun();
     s.priceSteps = { latte: 2 };
-    syncBots(s);
     s.challenges = [];
     s.phase = 'closing';
     s.cash = 500;
@@ -182,13 +179,12 @@ describe('Round 3 item 3: Strategist and Marketer hires', () => {
     expect(computeModifiers(m).price).toEqual(computeModifiers(s).price);
   });
 
-  it('wages: $1 a day for the strategist, $2 for the marketer, paid at closing with the crew', () => {
+  it('wages: $1 a day for the strategist, $2 for the marketer, paid at closing (no crew wages since the bot cut)', () => {
     const s = hireRole(hireRole(gearRun(), 'strategist'), 'marketer');
     expect(hireWagesForDay(s)).toBe(HIRE_WAGE.strategist + HIRE_WAGE.marketer);
-    const crew = 2 * wageEach(s);
+    const crew = 0;
     expect(wagesForDay(s)).toBe(crew + 3);
     expect(billsForDay(s)).toBeGreaterThan(crew + 3);
-    syncBots(s);
     s.challenges = [];
     s.phase = 'closing';
     s.cash = 100;
@@ -219,7 +215,6 @@ describe('Round 3 item 3: Strategist and Marketer hires', () => {
     expect(hireWagesForDay(s)).toBe(0);
     expect(forecastIsRough(s)).toBe(true);
     s.priceSteps = { latte: 2 };
-    syncBots(s);
     s.challenges = [];
     s.phase = 'closing';
     s.cash = 500;

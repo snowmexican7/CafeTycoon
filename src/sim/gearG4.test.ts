@@ -9,7 +9,7 @@ import { GEAR, type GearId } from '../data/gear';
 import { TICK_RATE } from './constants';
 import type { CreateRunOptions, GameState } from './types';
 
-const opts = (gear?: boolean): CreateRunOptions => ({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear });
+const opts = (gear?: boolean): CreateRunOptions => ({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear });
 const buy = (s: GameState, gear: GearId) => applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear });
 const at = (s: GameState, kind: string) => {
   const st = s.stations.find((x) => x.kind === kind)!;

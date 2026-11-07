@@ -9,7 +9,7 @@ import { comboStars, TASTE, TWISTS } from './taste';
 import { nightViewModel } from '../ui/viewModels';
 import type { GameState, PlayerInput } from './types';
 
-const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 type SigInput = Extract<PlayerInput, { kind: 'signature' }>;
 const input = (sig: SigInput['sig']): SigInput => ({ kind: 'signature', playerId: 'p1', sig });
 const serve = (s: GameState, sig: boolean) => {

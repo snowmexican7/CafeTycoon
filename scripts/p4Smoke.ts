@@ -2,7 +2,7 @@
  * P4 B8 integration smoke: plays Gear runs headless for four weeks with stand-ins and a scripted crew
  * that uses every Phase 4 system: Keep going into the season (real week-end input), Match it on the
  * rival's happy hours, the stamp card against the loyalty card, the second shop once there's a cushion,
- * stock sent over, and every phone call answered. Checks invariants (finite cash, season recorded and
+ * stock sent over, and the branch's phone calls counted (the branch handles them itself). Checks invariants (finite cash, season recorded and
  * medalled, saves round-trip through JSON, the same seed replays identically) and prints one row per run.
  * Usage: npx tsx scripts/p4Smoke.ts [days=28] [seeds=3]   (CAFE=1 starts at the café tier with $500)
  */
@@ -19,11 +19,12 @@ declare const process: { env: Record<string, string | undefined>; argv: string[]
 export interface P4Trace { counters: number; stamps: number | null; branchDay: number | null; calls: number; sends: number }
 
 export function crew(trace: P4Trace): ExtraMoves {
+  let rangDay = -1;
   return (s: GameState, ids: string[]): PlayerInput[] => {
     const by = ids[0]!;
     if (s.phase === 'day') {
-      const c = callRinging(s);
-      if (c) { trace.calls++; return [{ kind: 'call', playerId: by, take: c.kind === 'order' || s.cash > 60 }]; }
+      // Each day a call rings counts once (nobody answers it: the branch decides).
+      if (rangDay !== s.day && callRinging(s)) { rangDay = s.day; trace.calls++; }
       return [];
     }
     if (isPromoDay(s) && s.rival?.counter !== s.day) { trace.counters++; return [{ kind: 'rivalCounter', playerId: by }]; }

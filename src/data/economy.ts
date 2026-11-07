@@ -122,16 +122,8 @@ export const ECONOMY = {
       hurried: { speed: 1.15, reaction: 0.85, mistake: 0.08, preps: false },
       human: { speed: 1, reaction: 0, mistake: 0, preps: true },
     },
-    skill: {
-      reaction: [1.6, 1.3, 1.0, 0.8, 0.6],
-      mistake: [2.0, 1.5, 1.0, 0.7, 0.4],
-      speed: [0.85, 0.92, 1.0, 1.05, 1.1],
-    },
     names: ['Bo', 'Lu', 'Mo', 'Zip'],
-    autoCrew: 3, // 'auto' tops the café up to this many baristas (the roster has a fourth for explicit requests)
     hurriedQueue: 3, // a hurried bot pulls a nearly-done cup early once this many customers wait
-    /** The agency temp from the hire-temp card (B6). */
-    tempName: 'Robin (temp)',
     /** FB2 A4: extra seconds a bot waits at a milk station for a carton someone is bringing. */
     milkWaitSeconds: 10,
     maxWaitTicks: 900, // above a rogue's make (10 s) plus a power flicker (4 s)
@@ -146,6 +138,19 @@ export const ECONOMY = {
     helperTicketSeconds: 3,
     // ...and an idle machine next to an empty-handed person stays theirs only until the orders needing it have waited this long.
     helperGuardSeconds: 8,
+  },
+  /** Bot cut step 3: the solo robot cashier (src/sim/cashier.ts). It only rings customers up at the till. */
+  cashier: {
+    name: 'Robot cashier',
+    // Kennedy 2026-11-06: "free or a very low daily charge"; $1 a day chosen (on the night receipt's wages line).
+    // Set to 0 to make it free.
+    dailyCost: 1,
+    // A person whose tile is within this many tiles of the till spot's, counted along the grid (|dx| + |dy|), has the
+    // till: the cashier doesn't press and steps aside until they move off. Bot cut 4a: 1 = the spot's tile or one straight
+    // beside it, never a diagonal one (a 1.5-tile straight-line radius kept it dithering on the small stand).
+    deferTiles: 1,
+    // Once aside, it walks back only this long after the last tick a person counted as at the till.
+    returnAfterSec: 2,
   },
   mess: {
     max: 12,

@@ -1,6 +1,5 @@
 import { zeroDrinks } from '../sim/tally';
 import type { HostToClient, Transport } from '../net/transport';
-import { isBot } from '../sim/bots/roster';
 import { validateInput } from '../sim/validate';
 import type { DayStats, DrinkId, EventKind, GameState, Phase, PlayerInput } from '../sim/types';
 import type { ForecastId } from '../data/forecasts';
@@ -27,7 +26,7 @@ export interface TelemetrySummary {
   /** Award ids and winners at the time of the summary, and the run's score. */
   awards: { id: string; winner: string }[];
   score: number;
-  idleTicks: Record<string, number>; botMistakes: Record<string, number>;
+  idleTicks: Record<string, number>;
   events: { day: number; events: EventKind[] }[];
   pass: { put: number; take: number; serve: number; stale: number };
 }
@@ -87,7 +86,7 @@ function saveInBrowser(filename: string, text: string): void {
 }
 
 function metaRow(state: GameState, meta: TelemetryMeta): TelemetryRow {
-  const players = state.players.filter((p) => !isBot(p)).map((p) => p.name);
+  const players = state.players.filter((p) => !p.bot).map((p) => p.name);
   return { kind: 'meta', at: 0, data: { seed: state.seed, scenario: state.scenario, host: meta.host, players, build: meta.build, protocol: meta.protocol } };
 }
 
@@ -120,11 +119,7 @@ function buildSummary(state: GameState, rows: TelemetryRow[], cards: Map<number,
   const drinks: Record<DrinkId, number> = zeroDrinks();
   for (const d of days) for (const k of Object.keys(drinks) as DrinkId[]) drinks[k] += d.drinks?.[k] ?? 0;
   const idleTicks: Record<string, number> = {};
-  const botMistakes: Record<string, number> = {};
-  for (const p of state.players) {
-    idleTicks[p.name] = p.idleTicks;
-    if (p.bot) botMistakes[p.name] = p.bot.mistakes;
-  }
+  for (const p of state.players) if (!p.bot) idleTicks[p.name] = p.idleTicks;
   const pass = { put: 0, take: 0, serve: 0, stale: 0 };
   const eggs: Record<string, number> = {};
   for (const r of rows) {
@@ -146,7 +141,6 @@ function buildSummary(state: GameState, rows: TelemetryRow[], cards: Map<number,
     awards: state.days.length ? awardsFor(state).map((a) => ({ id: a.id, winner: a.winner })) : [],
     score: scoreRun(state),
     idleTicks,
-    botMistakes,
     events: days.map((d) => ({ day: d.day, events: [...(d.events ?? [])] })),
     pass,
   };
