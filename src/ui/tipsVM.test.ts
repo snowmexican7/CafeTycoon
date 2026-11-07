@@ -23,11 +23,11 @@ describe('crew tips (FB1 WP6)', () => {
     );
   });
 
-  it('skips advice the Heads up list already covers and names the bot that says it', () => {
+  it('skips advice the Heads up list already covers, and names nobody (bot cut)', () => {
     const tips = tipsVM(opening());
     expect(tips.length).toBe(2);
     expect(tips.some((t) => t.id === 'restock:beans')).toBe(false); // "Beans stock is out" has its own buy button
-    expect(tips.map((t) => [t.by, t.personality])).toEqual([['Lu', 'hurried'], ['Bo', 'steady']]);
+    expect(tips.every((t) => !('by' in t) && !('personality' in t))).toBe(true);
     expect(tips.every((t) => t.text.length <= 44)).toBe(true);
   });
 
@@ -51,10 +51,11 @@ describe('crew tips (FB1 WP6)', () => {
     expect(nightViewModel(s, 'p1').tips.map((t) => t.id)).not.toContain(tip.id);
   });
 
-  it('shows nothing without a bot crew', () => {
+  it('shows the same chips without a bot crew', () => {
     const s = opening();
+    const withBots = tipsVM(s);
     s.settings = { ...s.settings, bots: 0 };
-    expect(tipsVM(s)).toEqual([]);
+    expect(tipsVM(s)).toEqual(withBots);
   });
 });
 
