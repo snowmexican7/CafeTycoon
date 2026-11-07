@@ -1,4 +1,5 @@
 import { growOffer, type GrowOffer } from './growOffer';
+import { wageRows, type WageRow } from './wagesLine';
 import { FRIDGES } from '../data/fridges';
 import { GEAR_VOTE_MIN } from '../sim/gear';
 import type { PerkId } from '../data/perks';
@@ -283,7 +284,7 @@ export interface NightVM {
   branch?: BranchVM;
   clock: string;
   cash: string;
-  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; wages?: string; hireWages?: string; priceWalkouts?: number; office?: 'served' | 'lost'; officeExtra?: number; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
+  takings: { sales: string; tips: string; rent: string; profit: string; ambulance?: string; tabPaid?: string; fines?: string; bonus?: string; spoiled?: string; spoiledWhat?: string; pastries?: number; cupStars?: string; cupsPerfect?: number; cupsRating?: string; sigSold?: number; sigBonus?: string; ad?: string; checkoutFees?: string; wages?: string; hireWages?: string; wageRows?: WageRow[]; priceWalkouts?: number; office?: 'served' | 'lost'; officeExtra?: number; twists?: string; combos?: { drink: DrinkId; twist: TwistId; stars: number }[]; familyTips?: { label: string; amount: string }[] } | null;
   /** Espresso Easter egg: unpaid hospital tab, if any. */
   tab?: string;
   hand: HandCardVM[];
@@ -729,6 +730,7 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
           ...(last.checkoutFees ? { checkoutFees: money(last.checkoutFees) } : {}),
           ...(last.wages ? { wages: money(last.wages) } : {}),
           ...(last.hireWages ? { hireWages: money(last.hireWages) } : {}),
+          ...(last.wages ? { wageRows: wageRows(last.wages, last.hireWages, state.staff, money) } : {}),
           ...(last.priceWalkouts ? { priceWalkouts: last.priceWalkouts } : {}),
           ...(last.office ? { office: last.office } : {}),
           ...(last.officeExtra ? { officeExtra: last.officeExtra } : {}),
@@ -838,6 +840,8 @@ export interface ClosingVM {
   wages?: string;
   /** Round 3 / review: specialists' share of wages (`DayStats.hireWages`). */
   hireWages?: string;
+  /** ui-3.10.0: who the wages went to (robot cashier, Strategist / Marketer). */
+  wageRows?: WageRow[];
   /** Round 3 / review: walk-outs that left over price (`DayStats.priceWalkouts`). */
   priceWalkouts?: number;
   /** FB2 B6 leftovers: how today's office run ended (`DayStats.office`). */
@@ -890,6 +894,7 @@ export function closingViewModel(before: GameState, after: GameState): ClosingVM
     rent: money(d.rent),
     ...(d.wages ? { wages: money(d.wages) } : {}),
     ...(d.hireWages ? { hireWages: money(d.hireWages) } : {}),
+    ...(d.wages ? { wageRows: wageRows(d.wages, d.hireWages, after.staff ?? before.staff, money) } : {}),
     ...(d.priceWalkouts ? { priceWalkouts: d.priceWalkouts } : {}),
     ...(d.office ? { office: d.office } : {}),
     ...(d.officeExtra ? { officeExtra: d.officeExtra } : {}),

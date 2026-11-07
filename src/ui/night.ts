@@ -27,6 +27,7 @@ import { nightPhoneHtml } from './feed';
 import type { TipVM } from './tipsVM';
 import type { GrowNudge } from './growModel';
 import type { NightFix } from '../sim/brief';
+import { wandEaseChip } from './wandEase';
 
 /*
  * FB1 WP1: the night board, redesigned. Three tabs instead of seven:
@@ -164,15 +165,15 @@ export function gearBoard(
   const rule = g.voteRule && !v ? `<div class="gr-vote-rule">🗳️ ${esc(g.voteRule)}</div>` : '';
   const slots = g.slots
     .map((s) => `<div class="st-slot gr-slot ${s.id ? '' : 'empty'}" aria-label="Slot ${s.index + 1}: ${esc(s.name)}">
-        <span class="st-ic" aria-hidden="true">${s.icon}</span><b>${esc(s.name)}</b>${s.wand ? `<small class="gr-wand-on">🥛 ${esc(s.wand)}</small>` : ''}<small>Slot ${s.index + 1}</small>
+        <span class="st-ic" aria-hidden="true">${s.icon}</span><b>${esc(s.name)}</b>${s.wand ? `<small class="gr-wand-on">🥛 ${esc(s.wand)}${s.wandEase ? ` ${wandEaseChip(s.wandEase)}` : ''}</small>` : ''}<small>Slot ${s.index + 1}</small>
         ${s.id && s.id !== 'b0' ? ((l) => `<button class="btn mini ghost" data-action="gear-sell" data-index="${s.index}" title="${esc(l.title)}">${esc(l.text)}</button>`)(sellLabel(s.id, s.sell)) : ''}</div>`)
     .join('');
   const trees = g.trees
     .map((t) => `<div class="gr-tree"><div class="gr-tree-h"><span aria-hidden="true">${t.icon}</span> ${esc(t.name)}</div><div class="gr-tiers">${t.tiers
       .map((x) => `<div class="gr-tier ${x.state === 'another' ? 'owned another' : x.state}" title="${esc(`${x.blurb} Real-life sticker: ${x.sticker}. Sells back for $${x.sell}.`)}">
-          <b>${esc(x.name)}</b><span class="gr-stats">${esc(x.stats)}</span>
+          <b>${esc(x.name)}</b><span class="gr-stats">${esc(x.stats)}</span>${x.wandEase ? wandEaseChip(x.wandEase) : ''}
           <button class="btn ${x.state === 'buy' || x.state === 'upgrade' || x.state === 'another' ? '' : 'ghost'}" data-action="gear-buy" data-gear="${x.id}" ${x.state === 'buy' || x.state === 'upgrade' || x.state === 'another' ? '' : 'disabled'}>${g.voteRule && x.price >= GEAR_VOTE_MIN && x.state !== 'owned' && x.state !== 'passed' ? '🗳️ ' : ''}${esc(GEAR_BTN[x.state](x))}</button>${(x.wandBuys ?? [])
-          .map((w) => `<button class="btn ghost gr-wand-buy" data-action="gear-buy" data-gear="${x.id}" data-wand="${w.wand}" title="${esc(`Buy it with the ${w.name.toLowerCase()} fitted, so milk drinks work from tomorrow.`)}" ${w.ok ? '' : 'disabled'}>${g.voteRule && w.price >= GEAR_VOTE_MIN ? '🗳️ ' : ''}+ ${esc(w.name.toLowerCase())} · $${w.price}</button>`)
+          .map((w) => `<button class="btn ghost gr-wand-buy" data-action="gear-buy" data-gear="${x.id}" data-wand="${w.wand}" title="${esc(`Buy it with the ${w.name.toLowerCase()} fitted, so milk drinks work from tomorrow.`)}" ${w.ok ? '' : 'disabled'}>${g.voteRule && w.price >= GEAR_VOTE_MIN ? '🗳️ ' : ''}+ ${esc(w.name.toLowerCase())} · $${w.price} ${wandEaseChip(w.ease)}</button>`)
           .join('')}
         </div>`).join('')}</div></div>`)
     .join('');
@@ -192,7 +193,7 @@ export function wandPanel(g: GearVM): string {
   if (!g.wands.length && !g.wandNote) return '';
   const cards = g.wands
     .map((w) => `<div class="gr-tier gr-wand ${w.ok ? 'buy' : 'poor'}" title="${esc(w.blurb)}">
-        <span class="gr-fr-ic" aria-hidden="true">🥛</span><b>${esc(w.name)}</b><span class="gr-stats">${esc(`For your ${w.machine} (slot ${w.index + 1}). ${w.blurb}`)}</span>
+        <span class="gr-fr-ic" aria-hidden="true">🥛</span><b>${esc(w.name)}</b>${wandEaseChip(w.ease)}<span class="gr-stats">${esc(`For your ${w.machine} (slot ${w.index + 1}). ${w.blurb}`)}</span>
         <button class="btn ${w.ok ? '' : 'ghost'}" data-action="wand-buy" data-station="${esc(w.station)}" data-wand="${w.wand}" ${w.ok ? '' : 'disabled'}>${w.ok ? `${w.upgrade ? 'Swap up' : 'Add it'} · $${w.price}` : `Need $${w.price}`}</button></div>`)
     .join('');
   return `<div class="gr-fridge gr-wands" aria-label="Steam wand"><div class="gr-tree-h"><span aria-hidden="true">🥛</span> Steam wand</div><div class="gr-fr-row">${cards}${g.wandNote ? `<p class="gr-fr-note">${esc(g.wandNote)}</p>` : ''}</div></div>`;
@@ -479,8 +480,8 @@ function receiptBody(vm: NightVM, day: number): string {
   if (!t) return `<p>No sales yet.</p>${growOfferHtml(vm.grow)}`;
   const line = (a: string, b: string, cls = '') => `<div class="line ${cls}"><span>${a}</span><span>${b}</span></div>`;
   return `<div class="rc-paper"><h3>DAY ${day - 1}</h3>
-    ${line('Sales', esc(t.sales))}${line('Tips', esc(t.tips))}${t.familyTips ? t.familyTips.map((f) => line(`&nbsp;&nbsp;${esc(f.label)}`, esc(f.amount), 'sub fam-tip')).join('') : ''}${line('Rent', `<span class="neg">−${esc(t.rent)}</span>`)}${t.wages ? line('Crew wages', `<span class="neg">−${esc(t.wages)}</span>`) : ''}
-    ${t.hireWages ? line('&nbsp;&nbsp;incl. specialists', esc(t.hireWages), 'sub') : ''}
+    ${line('Sales', esc(t.sales))}${line('Tips', esc(t.tips))}${t.familyTips ? t.familyTips.map((f) => line(`&nbsp;&nbsp;${esc(f.label)}`, esc(f.amount), 'sub fam-tip')).join('') : ''}${line('Rent', `<span class="neg">−${esc(t.rent)}</span>`)}${t.wages ? line('Wages', `<span class="neg">−${esc(t.wages)}</span>`, 'wages') : ''}
+    ${(t.wageRows ?? []).map((w) => line(`&nbsp;&nbsp;${esc(w.label)}`, esc(w.amount), 'sub wage-row')).join('')}
     ${t.priceWalkouts ? line('Left over the price', String(t.priceWalkouts)) : ''}
     ${t.office === 'served' ? line('Office run', t.officeExtra ? `served · ${t.officeExtra} extra cups` : 'served') : ''}
     ${t.office === 'lost' ? line('Office run', 'lost') : ''}

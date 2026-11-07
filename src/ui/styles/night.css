@@ -476,3 +476,8 @@ body:has(#night:not([hidden])) #hud { visibility: hidden; }
   #night .ff-fans { padding: 4px 8px; }
 }
 @media (prefers-reduced-motion: reduce) { #night .fp { animation: none; } }
+
+/* ui-3.10.0: steam wand ease on gear cards (WandEase 0–3: easier meters, not faster) */
+#night .wand-ease { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 99px; background: #e9f4ee; color: #2f6f4e; font: 700 13px var(--font-display); white-space: nowrap; vertical-align: middle; }
+#night .wand-ease .we-p { letter-spacing: 1px; color: #3f9a69; }
+#night .wand-ease[data-ease="3"] { background: #fdf1d6; color: #8a5a10; } #night .wand-ease[data-ease="3"] .we-p { color: #d79a1e; }

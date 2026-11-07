@@ -130,8 +130,11 @@ describe('Review Block 6: hires leftovers', () => {
     expect(night.takings?.hireWages).toBe('$3.00');
     expect(night.takings?.priceWalkouts).toBe(4);
     const receipt = nightHtml(night, { day: 2, weekday: 'Tuesday', left: 1, served: 30, lost: 0, reputation: 3.2, crew: [], bought: [] }, null, ui({ drawer: 'receipt' }));
-    expect(receipt).toContain('incl. specialists');
-    expect(receipt).not.toContain('Specialist wages'); // already inside crew wages: a note, not a second cost
+    // ui-3.10.0: one Wages total, split into the robot cashier's part and the specialists' (no crew wages)
+    expect(receipt).toContain('>Wages<');
+    expect(receipt).not.toContain('Crew wages');
+    expect(night.takings?.wageRows).toEqual([{ label: 'Robot cashier', amount: '$3.00' }, { label: 'Strategist / Marketer', amount: '$3.00' }]);
+    expect(closing.wageRows?.map((w) => w.label)).toEqual(['Robot cashier', 'Strategist / Marketer']);
     expect(receipt).toContain('Left over the price');
   });
 
