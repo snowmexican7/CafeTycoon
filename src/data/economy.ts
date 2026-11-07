@@ -44,6 +44,10 @@ export const ECONOMY = {
   },
   /** Doors lock at 0:00; whoever is inside can still be served for up to this long. */
   closingGraceSeconds: 30,
+  /** Round 6 block 5: for this long after the doors open nobody normal arrives (time to dump old coffee and stock milk);
+   *  only a rare early-bird fan may: `chance` per day, never more than one, who waits `patience` x as long. */
+  openGraceSeconds: 8,
+  fan: { patience: 2.5, chance: 0.35 },
   /** FB2 A4 (Gear runs): the last seconds of the day are "closing soon" (put the milk and the bar away). */
   closingSoonSeconds: 30,
   /** The closing beat lasts at least this long, even when the shop is already empty. */

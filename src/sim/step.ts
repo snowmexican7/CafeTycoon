@@ -16,7 +16,7 @@ import { applyGrowInput } from './growth';
 import { finishDay } from './closing';
 import { markBeforeGrace, tickChallenges } from './challenges';
 import { TICK_RATE, secondsToTicks } from './constants';
-import { spawnCustomers, stepCustomers } from './customers';
+import { openGraceLeft, spawnCustomers, spawnFan, stepCustomers } from './customers';
 import { stepLine, stepWaiting } from './line';
 import { stepEvents } from './events';
 import { computeModifiers } from './effects';
@@ -287,7 +287,10 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepPass(s);
   stepCooling(s); // A2: cups go cold (Gear only)
   stepCleanliness(s);
-  if (doorsOpen) spawnCustomers(s);
+  if (doorsOpen) {
+    if (openGraceLeft(s) > 0) spawnFan(s); // Round 6 block 5: the doors-open grace window
+    else spawnCustomers(s);
+  }
   if (doorsOpen) stepOffice(s); // FB2 B6: the office run's phone call, then the office run
   stepCustomers(s);
   stepWaiting(s); // Round 3 item 4: browsers lose patience slowly and move up into the line

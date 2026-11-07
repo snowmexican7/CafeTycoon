@@ -18,7 +18,7 @@ export type ScenarioId = 'normal' | 'campusTown' | 'rainyWeek' | 'touristSeason'
 export type Rarity = 'common' | 'uncommon' | 'rare';
 export type Pace = 1 | 2 | 3 | 4 | 5;
 export type EventKind = 'rushHour' | 'powerFlicker' | 'influencerVisit' | 'healthInspector';
-export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer';
+export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer' | 'fan';
 export type Personality = 'rookie' | 'steady' | 'veteran' | 'hurried' | 'human'; // 'human' = tester stand-in
 export type BotSkill = 1 | 2 | 3 | 4 | 5;
 /** FB2 A3: `lift` a cold or stale drip pot off its machine, `dump` what is in hand (or the pot) at the back sink.
@@ -198,6 +198,7 @@ export type SimEventKind =
   | 'challenge.won'
   | 'egg.cat'
   | 'egg.camper'
+  | 'fan'
   | 'egg.nameMix'
   | 'egg.smoke'
   | 'egg.latteArt'
@@ -676,6 +677,8 @@ export interface DayStats {
   /** Gear G7: tips per drink family today (Gear runs only; the receipt's per-family lines). */
   tipsByFamily?: Partial<Record<'espresso' | 'milky' | 'iced' | 'filter', number>>;
   influencer?: 'served' | 'lost' | null;
+  /** Round 6 block 5: an early-bird fan came in during the open grace window today. */
+  fan?: boolean;
   /** Espresso Easter egg: ambulance bill run up today, and hospital tab paid off from today's profit. */
   ambulance?: number;
   debtPaid?: number;
