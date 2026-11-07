@@ -127,6 +127,26 @@ export function spawnCustomers(state: GameState): GameState {
   return state;
 }
 
+/** Round 6 block 5: ticks of the open grace window still to go (0 once normal spawning has resumed). */
+export function openGraceLeft(state: GameState): number {
+  const elapsed = secondsToTicks(state.settings.dayLengthSec) - state.phaseTicksLeft;
+  return Math.max(0, secondsToTicks(ECONOMY.openGraceSeconds) - elapsed);
+}
+
+/** Round 6 block 5: the grace window's only arrival: one trial per tick (one rngNext) tuned so a day sees a fan
+ *  with `ECONOMY.fan.chance`, never more than one; the fan is a single order that waits out the setup. */
+export function spawnFan(state: GameState): Customer | null {
+  if (state.today.fan === true) return null;
+  const n = secondsToTicks(ECONOMY.openGraceSeconds);
+  if (rngNext(state) >= 1 - Math.pow(1 - ECONOMY.fan.chance, 1 / n)) return null;
+  const c = addCustomer(state, 'fan');
+  if (c) {
+    state.today.fan = true;
+    emitLog(state, 'fan', { customer: c.id });
+  }
+  return c;
+}
+
 /** Weighted drink draw over the menu, biased by the café's order modifiers (one rngNext). */
 export function drawDrink(state: GameState, menu: DrinkId[], m: Modifiers): DrinkId {
   const push = milkPush(state, menu, m); // Round 3 item 1: lean toward lattes when the bar can make them
@@ -216,12 +236,12 @@ export function addCustomer(state: GameState, kind: Exclude<CustomerKind, 'influ
   // Round 3 item 1: "and a latte for my friend": a single walk-in who did not roll a combo may add a latte to the ticket.
   const addon = single && !pair && latteAddon(state, menu, drinks);
   const combo = pair || addon;
-  const mul = (kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : 1) * (combo ? ORDERS.combo.patience : 1);
+  const mul = (kind === 'impatient' ? ECONOMY.customers.impatient.patience : kind === 'group' ? g.patience : kind === 'fan' ? ECONOMY.fan.patience : 1) * (combo ? ORDERS.combo.patience : 1);
   // Gear runs: poured drinks wait less, made-to-order ones more (GEAR_WAIT); a group waits as long as its slowest order
   const wait = Math.max(...drinks.map((d) => drinkWait(state, d) * pricePatience(state, d)));
   const patienceMax = patienceFor(m, mul * wait * areaPatienceMul(state, drinks));
   const customer: Customer = { id: state.nextCustomerId++, drink: drinks[0], patienceLeft: patienceMax, patienceMax };
-  if (kind === 'impatient' || kind === 'group') customer.kind = kind;
+  if (kind === 'impatient' || kind === 'group' || kind === 'fan') customer.kind = kind;
   // FB2 B6: a Gear group is one multi-drink ticket; a classic group keeps its queue of extra drinks.
   if (kind === 'group') {
     if (state.gear === true) makeTicket(customer, drinks);
