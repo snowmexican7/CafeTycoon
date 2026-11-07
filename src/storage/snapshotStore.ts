@@ -14,7 +14,7 @@ const KEY = 'cafetycoon.run';
  * block 5, the morning pre-open removed (`preOpenUntil` gone from the state; rearranging is at night).
  * Recheck before 1.0.
  */
-export const SNAPSHOT_VERSION = 33;
+export const SNAPSHOT_VERSION = 34; // 34: Round 6 block 4, the milk counter's own stock (`supplyMilk`).
 
 /** A saved state if it was written at SNAPSHOT_VERSION (with its shop's fixed spots made sure of), else null. */
 export function migrateSnapshot(version: number, state: GameState): GameState | null {

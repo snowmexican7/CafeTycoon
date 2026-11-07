@@ -114,6 +114,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Round 6 block 4, milk counter (2026-11-06, `r6-milk`, protocol 68, snapshot 34).** Draw the counter's stock
+  from `state.supplyMilk` and hints from `supplyWants(state, player)` (src/sim/fridge.ts); cue on `supply.fill { by,
+  drink }`. In `live.ts` the iced latte and sweet cream steps should point to the milk counter, not the cold brew tap.
+  The dev fixture `supplyStation` (src/dev/fixtures.ts) still describes "empty hands take a carton".
 - [ ] **Round 6 block 1, machines don't lock (2026-11-06, `r6-machines`, protocol 67).** A small cue on
   `station.clear { by, station, drink, to }` (the cup slides to pickup) and a "Pickup counter is full" hint on
   `station.clearFull { …, reason: 'counterFull' }`. Station hints that said "Take the cup first" with a matching cup in

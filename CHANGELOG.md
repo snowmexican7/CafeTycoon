@@ -25,6 +25,9 @@ when a build goes out, the line moves under its version with the date.
 - A cup waiting on a machine no longer locks it: walk up holding the next cup (drip for a red-eye, a shot for an iced
   latte) and the waiting cup moves to the pickup counter while the new drink starts. If the counter is full, you're
   told why.
+- The milk counter by the sink is stocked from the fridge: carry a carton over and put it out, then bring a shot or a
+  cold brew to the counter to make an iced latte or a sweet cream on the spot. Milk is never picked up from the counter
+  itself, and the cold brew machine just pours cold brew now.
 
 ## 3.9.2 — 2026-11-05 · A solid serving counter
 
