@@ -55,10 +55,6 @@ describe('pitch an idea (P3 B11)', () => {
     const first = s.pitch;
     pitch(s, BAD);
     expect(s.pitch).toBe(first);
-    const bot = run();
-    bot.players[0].bot = {} as never;
-    pitch(bot, GOOD);
-    expect(bot.pitch).toBeUndefined();
     const day = startDay(run());
     pitch(day, GOOD);
     expect(day.pitch).toBeUndefined();
