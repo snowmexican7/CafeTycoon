@@ -20,7 +20,7 @@
 .seg span { font-size: 12.5px; padding: 7px 0 5px; }
 /* 3.3.3 (FB2 A1): Pace and the Play solo helper picker share a row */
 #title .row-pace { display: grid; grid-template-columns: 5fr 2fr; gap: 12px; margin-bottom: 14px; align-items: end; }
-#title .solo-bots span { padding: 12px 2px; white-space: nowrap; }
+#title .solo-cashier span { padding: 12px 2px; white-space: nowrap; }
 #title .row-pace .lbl small { font-weight: 600; opacity: .75; }
 @media (max-width: 640px) { #title .row-pace { grid-template-columns: 1fr; } }
 #title .btns { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }

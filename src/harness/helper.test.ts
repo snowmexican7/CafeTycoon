@@ -1,18 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { secondsToTicks } from '../constants';
-import { stationsFromSlots } from '../slots';
-import { ECONOMY } from '../../data/economy';
-import type { GearId } from '../../data/gear';
-import type { BotStep, Customer, GameState, Player, Station, SupplyId } from '../types';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { secondsToTicks } from '../sim/constants';
+import { stationsFromSlots } from '../sim/slots';
+import { ECONOMY } from '../data/economy';
+import type { GearId } from '../data/gear';
+import type { BotStep, Customer, GameState, Player, Station, SupplyId } from '../sim/types';
 import { think } from './brain';
-import { addStandIns } from './roster';
+import { addBots, addStandIns } from './crew';
 import { helping, ticketFresh } from './helper';
 
 /** FB2 A1: a stocked Gear stand (C1 tap + E1 pods) with one person (p1) and `bots` crew bots, no walk-ins, no events. */
 function helperStand(bots = 1): GameState {
-  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots, dayLengthSec: 150 }, tier: 'stand', gear: true });
+  let s = addBots(createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'stand', gear: true }), bots);
   for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
   for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
@@ -37,7 +37,7 @@ describe('FB2 A1: crew bots help a person instead of playing for them', () => {
     expect(helping(s, bot(s))).toBe(true);
     addStandIns(s, 1);
     expect(helping(s, s.players.find((p) => p.id === 'sim-1')!)).toBe(false);
-    let c = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1 } });
+    let c = addBots(createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }), 1);
     c = startDay(c);
     expect(helping(c, bot(c))).toBe(false);
   });
@@ -100,7 +100,7 @@ describe('FB2 A1: crew bots help a person instead of playing for them', () => {
     const mainLost = 3; // was 2 before Round 3 item 5: a ring-up takes 1.5 s now, so one more walk-out in these three days is noise
     let lost = 0;
     for (const seed of [3, 4, 5]) {
-      let s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 150 }, tier: 'stand', gear: true });
+      let s = addBots(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'stand', gear: true }), 1);
       for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
       for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
       s = startDay(s);
@@ -142,7 +142,7 @@ describe('FB2 A1: crew bots help a person instead of playing for them', () => {
   });
 
   it('a planned insert moves to the free twin group when a person steps up to the other (M2)', () => {
-    let s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1 }, tier: 'stand', gear: true });
+    let s = addBots(createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true }), 1);
     s.slots = ['grinder', 'espresso', 'steamer', 'trash'];
     s.slotGear = ['g1', 'e5', null, 'b0'];
     s.stations = [...stationsFromSlots('stand', s.slots, s.slotGear), ...s.stations.filter((x) => x.id === 'counter' || x.id === 'pickup' || x.id === 'condiments')];
@@ -228,7 +228,7 @@ describe('FB2 A1: crew bots help a person instead of playing for them', () => {
 
 describe('FB2 A1: a solo Gear run with no bots', () => {
   it('one stand-in and bots: 0 plays two whole days: no bots clock in, drinks get served', () => {
-    let s = createRun({ seed: 7, hostId: 'tester', players: [], settings: { bots: 0, dayLengthSec: 60, nightLengthSec: 4 }, tier: 'stand', gear: true });
+    let s = createRun({ seed: 7, hostId: 'tester', players: [], settings: { dayLengthSec: 60, nightLengthSec: 4 }, tier: 'stand', gear: true });
     s.slotGear = ['c1', 'e1', null, 'b0'];
     s.slots = ['coldBrewTap', 'espresso', null, 'trash'];
     s.stations = [...stationsFromSlots('stand', s.slots, s.slotGear), ...s.stations.filter((x) => x.kind === 'counter')];

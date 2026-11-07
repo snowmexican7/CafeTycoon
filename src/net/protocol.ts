@@ -2,12 +2,12 @@ import type { Patch } from './delta';
 import { RESERVED_TELE_KINDS, type TeleEvent } from '../host/telemetry';
 import { isReservedId } from '../sim/constants';
 import { cleanLook } from '../sim/look';
-import type { BotsChoice, GameState, PlayerInput, PlayerLook } from '../sim/types';
+import type { GameState, PlayerInput, PlayerLook } from '../sim/types';
 
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
 export const APP_ID = 'cafetycoon-v1';
 /** Bump when any message below changes shape; mismatched builds refuse each other politely. */
-export const PROTOCOL_VERSION = 68; // 68: Round 6 block 4 GameState.supplyMilk, supply.fill event; snapshot 34. 67: Round 6 block 1 station.clear/station.clearFull events. 66: Round 6 block 5 CustomerKind fan, fan event, DayStats.fan. 65: Round 6 block 3 tray.steal event. 64: Round 5 block 5: rearrange at night; openDoors/pre-open removed, preOpenUntil and preopen.* events gone; snapshot 33. 63: Round 5 block 4: coldbrew.refill event; SUPPLY_ID milk & cream fixture. 62: Round 5 espresso rework: Station.doses hopper, Player.groundsPolish, GearInfo.doses; snapshot 32. 61: Round 5 tidy: devFill/devSkip inputs; role/reroll/slot/equip removed. 60: Round 4 night: restock/condimentBox in the day (rush), restock.rush/strategist.menu, role/reroll/slot/equip refused; snapshot 31. 59: FB2 C10 rearranging: moveStation/openDoors inputs, preOpenUntil, slotPos, preopen.*/station.* events; snapshot 30. 58: FB2 B8 hand-made: syrup input, Player.jug/steam/made, Customer.shots/syrup, PassItem.made, milk.fill/steam.result/syrup.* events. 57: FB2 B7 tray table: GameState.tray, Player.tool tray, PassItem.tray, tray.* events. 56: Round 3 hires: staff role input, GameState.staff, DayStats.hireWages, staff.hire/fire, strategist.set. 55: FB2 C11 feed: GameState.fans, DayStats feed fields, review.post/week.rating. 54: Round 3 lattes: order.addon event, milk-share order draw. 53: Round 3 line: GameState.waiting/line, line.complain/line.leave, DayStats.lineLeft. 52: Round 3 money: walkout reason price, DayStats.priceWalkouts. 51: Round 3 ring-up: GameState.ringUp, till.start/till.cancel. 50: Round 3 grow.affordable/grow.done events, GameState.growNudged. 49: FB2 C9 wand input and gear-buy wand, Station.wand/wandOf, slotWand, GearVote.wand, wand events; snapshot 29. 48: Round 4 e look input, Player.look, JoinMsg/Member/PeerSessionOptions look. 47: Round 4 a devPause input, GameState.dev/devPaused. 46: Round 4 c customer.bump event, Customer.bumpedAt, DayStats.customerBumps. 45: FB2 B6 multi-drink orders: Customer.items/order, GameState.office, DayStats.office/officeExtra, order.* and office.call events. 44: FB2 A4 fridge: fridge input + fridgeVote, milkOut/closingSoonAt/barAway, Player.tool 'milk'|'bar', CounterSpot 'fridge'. 43: FB2 A3 back sink: Station.potOut/stale, Player.tool 'pot', sink/pot/mess events. 42: FB2 A2 cups go cold: PassItem.madeAt, Player.heldSince, cup.cold/pickup.cold/pickup.takeBack/review.bad events. 41: batch coffee / pickup / condiments: steep + condimentBox inputs, Customer.stage, pickup counter, condiment bar, Player.tool 'box'. 40: P4 F2 stampCard input + Rival.stamps (rival loyalty card). 39: P4 B6 call input + GameState.callAnswer + DayStats.branch.call (phone calls). 38: P4 B5 branch 'send' (stock to the second shop) + Branch.stockCredit + DayStats.branch.fromStock. 37: P4 B4 branch input + GameState.branch + DayStats.branch (second shop). 36: P4 B3 DayStats.waitTicks/takingsByDrink/byPlayer (manager report). 35: P4 B2 GameState.season (week-end checkpoints after week 1 of a Gear run). 34: P4 B1 rivalCounter input + Rival.counter. 33: P3 B15 staff input + DayStats.wages. 32: G11 v3.0.0 flip (every new run is Gear; v2 tabs must reload). 31: Gear G8 vote input + gearVote state
+export const PROTOCOL_VERSION = 69; // 69: bot cut step 4b: call input removed (the branch decides its own calls), GameState.callDecision replaces callAnswer/callRang, call.answer event becomes call.outcome; snapshot 35. 68: Round 6 block 4 GameState.supplyMilk, supply.fill event; snapshot 34. 67: Round 6 block 1 station.clear/station.clearFull events. 66: Round 6 block 5 CustomerKind fan, fan event, DayStats.fan. 65: Round 6 block 3 tray.steal event. 64: Round 5 block 5: rearrange at night; openDoors/pre-open removed, preOpenUntil and preopen.* events gone; snapshot 33. 63: Round 5 block 4: coldbrew.refill event; SUPPLY_ID milk & cream fixture. 62: Round 5 espresso rework: Station.doses hopper, Player.groundsPolish, GearInfo.doses; snapshot 32. 61: Round 5 tidy: devFill/devSkip inputs; role/reroll/slot/equip removed. 60: Round 4 night: restock/condimentBox in the day (rush), restock.rush/strategist.menu, role/reroll/slot/equip refused; snapshot 31. 59: FB2 C10 rearranging: moveStation/openDoors inputs, preOpenUntil, slotPos, preopen.*/station.* events; snapshot 30. 58: FB2 B8 hand-made: syrup input, Player.jug/steam/made, Customer.shots/syrup, PassItem.made, milk.fill/steam.result/syrup.* events. 57: FB2 B7 tray table: GameState.tray, Player.tool tray, PassItem.tray, tray.* events. 56: Round 3 hires: staff role input, GameState.staff, DayStats.hireWages, staff.hire/fire, strategist.set. 55: FB2 C11 feed: GameState.fans, DayStats feed fields, review.post/week.rating. 54: Round 3 lattes: order.addon event, milk-share order draw. 53: Round 3 line: GameState.waiting/line, line.complain/line.leave, DayStats.lineLeft. 52: Round 3 money: walkout reason price, DayStats.priceWalkouts. 51: Round 3 ring-up: GameState.ringUp, till.start/till.cancel. 50: Round 3 grow.affordable/grow.done events, GameState.growNudged. 49: FB2 C9 wand input and gear-buy wand, Station.wand/wandOf, slotWand, GearVote.wand, wand events; snapshot 29. 48: Round 4 e look input, Player.look, JoinMsg/Member/PeerSessionOptions look. 47: Round 4 a devPause input, GameState.dev/devPaused. 46: Round 4 c customer.bump event, Customer.bumpedAt, DayStats.customerBumps. 45: FB2 B6 multi-drink orders: Customer.items/order, GameState.office, DayStats.office/officeExtra, order.* and office.call events. 44: FB2 A4 fridge: fridge input + fridgeVote, milkOut/closingSoonAt/barAway, Player.tool 'milk'|'bar', CounterSpot 'fridge'. 43: FB2 A3 back sink: Station.potOut/stale, Player.tool 'pot', sink/pot/mess events. 42: FB2 A2 cups go cold: PassItem.madeAt, Player.heldSince, cup.cold/pickup.cold/pickup.takeBack/review.bad events. 41: batch coffee / pickup / condiments: steep + condimentBox inputs, Customer.stage, pickup counter, condiment bar, Player.tool 'box'. 40: P4 F2 stampCard input + Rival.stamps (rival loyalty card). 39: P4 B6 call input + GameState.callAnswer + DayStats.branch.call (phone calls). 38: P4 B5 branch 'send' (stock to the second shop) + Branch.stockCredit + DayStats.branch.fromStock. 37: P4 B4 branch input + GameState.branch + DayStats.branch (second shop). 36: P4 B3 DayStats.waitTicks/takingsByDrink/byPlayer (manager report). 35: P4 B2 GameState.season (week-end checkpoints after week 1 of a Gear run). 34: P4 B1 rivalCounter input + Rival.counter. 33: P3 B15 staff input + DayStats.wages. 32: G11 v3.0.0 flip (every new run is Gear; v2 tabs must reload). 31: Gear G8 vote input + gearVote state
 export const ACTIONS = ['hello', 'join', 'input', 'snap', 'lobby', 'tele', 'seat', 'snapd', 'resync'] as const;
 export type ActionKind = (typeof ACTIONS)[number];
 
@@ -39,7 +39,6 @@ export interface SeatMsg {
   t: 'seat';
   token: string;
 }
-export type { BotsChoice };
 export interface InputMsg {
   t: 'input';
   input: PlayerInput;
@@ -66,10 +65,6 @@ export interface LobbyMsg {
   t: 'lobby';
   members: Member[];
   started: boolean;
-  /** The bots run setting the host will start with (absent from older hosts). */
-  bots?: BotsChoice;
-  /** True when the host picked it; false while it follows the default. */
-  botsPicked?: boolean;
 }
 export interface TeleMsg {
   t: 'tele';
@@ -117,13 +112,6 @@ export function parseSeat(data: unknown): SeatMsg | null {
   return { t: 'seat', token: data.token };
 }
 
-const MAX_BOTS = 3;
-export function parseBots(v: unknown): BotsChoice | undefined {
-  if (v === 'auto') return 'auto';
-  if (finite(v) && Number.isInteger(v) && v >= 0 && v <= MAX_BOTS) return v;
-  return undefined;
-}
-
 export function parseInput(data: unknown): InputMsg | null {
   if (!isObj(data) || data.t !== 'input' || !isObj(data.input)) return null;
   if (!str(data.input.kind) || !str(data.input.playerId)) return null;
@@ -154,13 +142,7 @@ export function parseLobby(data: unknown): LobbyMsg | null {
     const look = cleanLook(m.look);
     members.push({ token: m.token, name: m.name, ...(look ? { look } : {}) });
   }
-  const msg: LobbyMsg = { t: 'lobby', members, started: data.started };
-  const bots = parseBots(data.bots);
-  if (bots !== undefined) {
-    msg.bots = bots;
-    msg.botsPicked = data.botsPicked === true;
-  }
-  return msg;
+  return { t: 'lobby', members, started: data.started };
 }
 
 export function parseTele(data: unknown): TeleMsg | null {

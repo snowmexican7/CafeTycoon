@@ -30,7 +30,7 @@ export function applyCondimentBoxInput(state: GameState, input: Extract<PlayerIn
   const rush = state.phase === 'day' || state.phase === 'closing';
   if (state.gear !== true || (state.phase !== 'night' && !rush)) return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   const cost = round2(input.boxes * CONDIMENTS.boxCost * (rush ? RESTOCK.rushMul : 1));
   if (state.cash < cost) return state;
   state.cash = round2(state.cash - cost);

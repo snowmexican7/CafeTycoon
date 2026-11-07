@@ -34,7 +34,7 @@ const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a
 /** Review Block 6: morning note fades after this many ms, or sooner on the first move. */
 export const NOTE_DISMISS_MS = 8000;
 
-export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onCall?(take: boolean): void; onRestock?(id: SupplyId | 'condiments'): void; onSyrup?(flavour: 'vanilla' | 'caramel'): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
+export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onRestock?(id: SupplyId | 'condiments'): void; onSyrup?(flavour: 'vanilla' | 'caramel'): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
   render(vm: HudVM, live?: HudLive): void;
   /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
   setRecipeHints(mode: RecipeHints): void;
@@ -182,12 +182,6 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   // FB2 B6 leftovers: office-run phone (countdown only).
   const officeEl = $<HTMLElement>('.hud-office');
   let lastOffice = '';
-  callEl.addEventListener('pointerdown', (ev) => {
-    const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-take]');
-    if (!b) return;
-    ev.preventDefault();
-    handlers.onCall?.(b.dataset.take === '1');
-  });
   // ui-3.4.1 (FB2 A4): the closing-soon checklist, ticked off as things get put away
   const listEl = $<HTMLElement>('.hud-checklist');
   let lastList = '';
@@ -699,7 +693,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
 
 /** P4 B6: the ringing phone card (pure, for tests). */
 export function callHtml(c: CallVM): string {
-  return `<div class="hc-ring" aria-hidden="true">📞</div><div class="hc-t"><small>🏪 ${esc(c.where)} is calling · ${c.secsLeft}s</small><b>${esc(c.title)}</b><span>${esc(c.detail)}</span></div><div class="hc-b"><button class="btn primary" type="button" tabindex="-1" data-take="1">${esc(c.yes)}</button><button class="btn ghost" type="button" tabindex="-1" data-take="0">${esc(c.no)}</button></div>`;
+  return `<div class="hc-ring" aria-hidden="true">📞</div><div class="hc-t"><small>🏪 ${esc(c.where)} is calling · ${c.secsLeft}s</small><b>${esc(c.title)}</b><span>${esc(c.detail)}</span></div>`;
 }
 
 /** FB2 B6 leftovers: office-run phone card (pure, for tests). */

@@ -1,18 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step, enterClosing } from '../step';
-import { stationsFromSlots, type SlotContent } from '../slots';
-import { BASE_DRINKS } from '../../data/drinks';
-import { FRIDGE_ID } from '../../data/layout';
-import type { GearId } from '../../data/gear';
-import type { BotStep, Customer, DrinkId, GameState, Player, SimEvent, SupplyId } from '../types';
+import { createRun, startDay } from '../sim/run';
+import { step, enterClosing } from '../sim/step';
+import { stationsFromSlots, type SlotContent } from '../sim/slots';
+import { BASE_DRINKS } from '../data/drinks';
+import { FRIDGE_ID } from '../data/layout';
+import type { GearId } from '../data/gear';
+import type { BotStep, Customer, DrinkId, GameState, Player, SimEvent, SupplyId } from '../sim/types';
 import { MILK_LOW, think } from './brain';
-import { addStandIns } from './roster';
-import { FRIDGE } from '../fridge';
+import { addStandIns } from './crew';
+import { FRIDGE } from '../sim/fridge';
 
 /** A Gear café: grinder, E3, steamer, C2 tap, bin; `standIns` bots, no walk-ins, stocked but with no milk out. */
 function shop(standIns = 1, slots: SlotContent[] = ['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash', null], gear: (GearId | null)[] = ['g2', 'e3', null, 'c2', 'b0', null]): GameState {
-  let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, gear: true });
+  let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 }, gear: true });
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
   s.slots = [...slots];
   s.slotGear = [...gear];

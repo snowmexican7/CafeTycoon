@@ -83,7 +83,6 @@ function base(): GameState {
       { id: 'cleo', name: 'Cleo' },
       { id: 'dev', name: 'Dev' },
     ],
-    settings: { bots: 0 },
   });
   s = startDay(s);
   s.phase = 'day';
@@ -106,7 +105,7 @@ function weekPlayed(s: GameState): void {
   s.day = 7;
   s.phase = 'weekEnd';
   s.owned = [{ itemId: 'streetSign', effects: [] }];
-  const row = (id: string, name: string, v: Partial<ReturnType<typeof blank>>, bot = false) => ({ ...blank(id, name, bot), ...v });
+  const row = (id: string, name: string, v: Partial<ReturnType<typeof blank>>) => ({ ...blank(id, name), ...v });
   s.players.push({ ...s.players[3], id: 'bot1', name: 'Bo', bot: { personality: 'steady' } } as GameState['players'][number]);
   s.crew = {
     seen: 0,
@@ -115,7 +114,6 @@ function weekPlayed(s: GameState): void {
       row('ben', 'Ben', { serves: 34, perfect: 11, earned: 171, handoffs: 21, slips: 9, messes: 7, catPets: 6, cardsBought: 4 }),
       row('cleo', 'Cleo', { serves: 28, perfect: 9, earned: 140, mopped: 17, alarmsStopped: 2, campersShooed: 3, binned: 5 }),
       row('dev', 'Dev', { serves: 21, perfect: 8, earned: 104, espressos: 11, collapses: 2 }),
-      row('bot1', 'Bo', { serves: 20, perfect: 6, earned: 93 }, true),
     ],
   };
 }

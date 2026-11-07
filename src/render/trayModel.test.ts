@@ -26,7 +26,6 @@ function gearDay(): GameState {
       { id: 'p1', name: 'Ana' },
       { id: 'p2', name: 'Ben' },
     ],
-    settings: { bots: 0 },
     tier: 'cart',
     gear: true,
   });

@@ -16,8 +16,17 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-- Hand-made lattes: fill the jug, stop the steam meter for foam, and the drink is already in your hand — no waiting on
-  the wand and no second E to pick it up.
+- **Bots are gone.** No more bot crewmates in solo or co-op, no hired bot baristas or bot wages, no temp-barista card,
+  and nobody covers for someone who collapses from espresso. It's a game for people now.
+- **Robot cashier (solo).** Playing solo, a robot cashier rings customers up at the till for $1 a day (on the night
+  receipt). It steps aside when you walk up to the till with empty hands, and does nothing at the self-order kiosk
+  tier. Switch it off on the title screen ("Robot cashier").
+- **The branch phone just rings.** Nobody answers calls from the second shop anymore: the branch deals with it
+  (takes an office order if it lost nobody yesterday, fixes a broken machine if it has 2+ staff), and the call shows
+  you what it did.
+- Night tips are plain tips now, not voiced by a bot. Awards and "who served" list people only.
+- Hand-made lattes and cappuccinos: fill the jug, stop the steam meter for foam, and the drink is already in your
+  hand — no waiting on the wand and no second E to pick it up (a cappuccino's second steam too).
 - Dropping a group's cups on the pickup counter is risky now: other customers can grab them, and a group that never
   gets its drink walks out and you lose the whole order. Use the serving tray.
 - Early birds: the first 8 seconds of each day are quiet (time to dump old coffee and stock milk), and sometimes a very

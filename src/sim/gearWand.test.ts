@@ -11,9 +11,9 @@ import { LEVEL_UPS, levelUpGearOk } from './levelUp';
 import { eligibleChallenges } from './challenges';
 import { TICK_RATE } from './constants';
 import { nearestStation } from './movement';
-import { targetNodes } from './bots/path';
-import { planNight, wandFirst } from './bots/planner';
-import { addStandIns } from './bots/roster';
+import { targetNodes } from './path';
+import { planNight, wandFirst } from './advice';
+import { addStandIns } from '../harness/crew';
 import { createSnapshotStore, SNAPSHOT_VERSION } from '../storage/snapshotStore';
 import { memoryStorage } from '../storage/storageLike';
 import { GEAR, GEAR_IDS, GEAR_TREES, WANDS, WAND_SECONDS, WAND_UPGRADE, treeTiers, type AddOnWand, type GearId } from '../data/gear';
@@ -26,7 +26,6 @@ const gearRun = (tier: TierId = 'stand', players = 1): GameState =>
     seed: 7,
     hostId: 'p1',
     players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: ['Kay', 'Mo', 'Ari'][i]! })),
-    settings: { bots: 0 },
     tier,
     gear: true,
   });
@@ -120,7 +119,7 @@ describe('FB2 C9: buying a wand', () => {
     expect(wandCards(s)).toEqual([]);
   });
 
-  it('refused: a strong wand on E3, any wand on E1/E2, built-in E5/E6 (nothing offered), by day, by a bot, short of cash', () => {
+  it('refused: a strong wand on E3, any wand on E1/E2, built-in E5/E6 (nothing offered), by day, short of cash', () => {
     const e3 = stand('e3');
     const cash = e3.cash;
     addWand(e3, 'espresso', 'strong');
@@ -147,10 +146,6 @@ describe('FB2 C9: buying a wand', () => {
     const day = startDay(stand('e3'));
     addWand(day, 'espresso', 'weak');
     expect(st(day, 'espresso').wand).toBeUndefined();
-    const bot = stand('e3');
-    bot.players[0]!.bot = { personality: 'human' } as never;
-    addWand(bot, 'espresso', 'weak');
-    expect(st(bot, 'espresso').wand).toBeUndefined();
     const poor = stand('e3', undefined, 30 + 150 + 29);
     addWand(poor, 'espresso', 'weak');
     expect([poor.cash, st(poor, 'espresso').wand]).toEqual([29, undefined]);
@@ -577,6 +572,6 @@ describe('FB2 C9: the planner and saves', () => {
     }
     createSnapshotStore(storage).save(s);
     expect(createSnapshotStore(storage).load()?.gear).toBe(true);
-    expect(SNAPSHOT_VERSION).toBe(34); // Round 6: milk counter stock
+    expect(SNAPSHOT_VERSION).toBe(35); // bot cut step 4b: callDecision, people-only crew stats
   });
 });

@@ -126,7 +126,7 @@ export function checkoutSpent(state: GameState): number {
 export function applyCheckoutInput(state: GameState, input: Extract<PlayerInput, { kind: 'checkout' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   const cur = checkoutOf(state);
   if (cur.owned.includes(input.checkout)) {
     if (cur.active !== input.checkout) state.checkout = { ...cur, owned: [...cur.owned], active: input.checkout };

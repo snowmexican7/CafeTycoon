@@ -1,15 +1,18 @@
 // B12 perf probe: a whole week with 4 stand-in baristas; times step() and measures snapshot size.
-import { addStandIns } from '../src/sim/bots/roster';
+import { addStandIns } from '../src/harness/crew';
 import { createRun } from '../src/sim/run';
 import { step } from '../src/sim/step';
+import { installHarness } from '../src/harness';
 import { nightInputs } from './balanceCore';
 import type { GameState } from '../src/sim/types';
 import { applyPatch, diff, roundFloats } from '../src/net/delta';
 import { KEYFRAME_EVERY } from '../src/net/hostRoom';
+
+installHarness(); // bot cut: stand-ins are played by the test-only player
 // Wire size per snapshot at 20 Hz (every 3rd 60 Hz tick): full JSON vs a delta against the last one sent.
 let wirePrev: unknown = null; let wireTicks = 0; let diffMs = 0; let fullSum = 0, deltaSum = 0, deltaMax = 0, wireN = 0, mismatches = 0;
 let last = '';
-let s: GameState = createRun({ seed: 7, hostId: 'tester', players: [], settings: { bots: 0, botSkill: 3, pace: 3, dayLengthSec: 120, nightLengthSec: 5 } as never });
+let s: GameState = createRun({ seed: 7, hostId: 'tester', players: [], settings: { pace: 3, dayLengthSec: 120, nightLengthSec: 5 } as never });
 addStandIns(s, 4);
 const times: number[] = []; let maxBytes = 0, sumBytes = 0, n = 0, maxCust = 0;
 while (s.phase !== 'weekEnd' && s.phase !== 'ended') {

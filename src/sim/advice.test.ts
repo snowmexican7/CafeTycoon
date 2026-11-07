@@ -1,22 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { createRun } from '../run';
-import { step } from '../step';
-import { expectedUse } from '../brief';
-import { computeModifiers, rentForDay } from '../effects';
-import { restockCost } from '../night';
-import { priceForecast } from '../pricing';
-import { sigPrice } from '../rival';
-import { addStandIns, BOT_IDS, syncBots } from './roster';
-import { crewTips, planNight, PLAN_PRIORITY, RESTOCK_MARGIN } from './planner';
-import type { Advice } from './planner';
-import { CHECKOUT } from '../checkout';
-import { TIERS } from '../growth';
-import { ECONOMY } from '../../data/economy';
-import { RIVAL } from '../rival';
-import type { DayStats, DrinkId, GameState, TierId } from '../types';
+import { createRun } from './run';
+import { step } from './step';
+import { expectedUse } from './brief';
+import { computeModifiers, rentForDay } from './effects';
+import { restockCost } from './night';
+import { priceForecast } from './pricing';
+import { sigPrice } from './rival';
+import { addBots } from '../harness/crew';
+import { crewTips, planNight, PLAN_PRIORITY, RESTOCK_MARGIN } from './advice';
+import type { Advice } from './advice';
+import { CHECKOUT } from './checkout';
+import { TIERS } from './growth';
+import { ECONOMY } from '../data/economy';
+import { RIVAL } from './rival';
+import type { DayStats, DrinkId, GameState, TierId } from './types';
 
 const run = (tier?: TierId): GameState =>
-  createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, ...(tier ? { tier } : {}) });
+  createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], ...(tier ? { tier } : {}) });
 
 const dayStats = (over: Partial<DayStats> = {}): DayStats => ({ day: 1, served: 23, lost: 2, turnedAway: 0, sales: 40.84, tips: 3, rent: 25, ...over });
 
@@ -381,48 +381,26 @@ describe('planNight: order, purity, money', () => {
   });
 });
 
-describe('crewTips', () => {
-  it('returns nothing without a bot crewmate (stand-ins do not count)', () => {
-    const s = run();
+describe('crewTips (bot cut: unvoiced)', () => {
+  it('is the top `max` of planNight, with nobody named, with or without bots', () => {
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     s.supplies.beans = 0;
     s.cash = 200;
-    expect(crewTips(s)).toEqual([]);
-    addStandIns(s, 2);
-    expect(crewTips(s)).toEqual([]);
-  });
-
-  it('on the opening night (no bot clocked in yet) voices the tips as the bots the roster will spawn', () => {
-    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 'auto' } });
-    expect(s.players.some((p) => p.bot)).toBe(false);
-    s.supplies.beans = 0;
-    s.cash = 200;
-    expect(planNight(s).length).toBeGreaterThan(0);
-    const tips = crewTips(s);
-    expect(tips.length).toBe(2);
-    expect(tips.map((t) => t.by)).toEqual(['bot-1', 'bot-2']);
-    for (const t of tips) expect(BOT_IDS).toContain(t.by);
-    s.settings = { ...s.settings, bots: 0 };
-    expect(crewTips(s)).toEqual([]);
-  });
-
-  it('attributes the top advice round-robin to bots, at most max', () => {
-    const s = run();
-    s.settings = { ...s.settings, bots: 2 };
-    syncBots(s);
-    s.supplies.beans = 0;
-    s.supplies.milk = 0;
-    s.supplies.concentrate = 0;
-    s.cash = 200;
-    const bots = s.players.filter((p) => p.bot && p.bot.personality !== 'human').map((p) => p.id);
-    expect(bots.length).toBe(2);
     const plan = planNight(s);
-    const tips = crewTips(s, 3);
-    expect(tips.length).toBe(3);
-    expect(tips.map((t) => t.by)).toEqual([bots[0], bots[1], bots[0]]);
-    expect(tips.map(({ by: _by, ...a }) => a)).toEqual(plan.slice(0, 3));
-    expect(crewTips(s).length).toBe(2);
-    s.players.find((p) => p.id === bots[0])!.connected = false;
-    expect(crewTips(s, 2).map((t) => t.by)).toEqual([bots[1], bots[1]]);
+    expect(plan.length).toBeGreaterThan(2);
+    expect(crewTips(s)).toEqual(plan.slice(0, 2));
+    expect(crewTips(s, 3)).toEqual(plan.slice(0, 3));
+    expect(crewTips(s).every((t) => !('by' in t))).toBe(true);
+    addBots(s, 2);
+    expect(crewTips(s, 3)).toEqual(planNight(s).slice(0, 3));
+  });
+
+  it('returns nothing for max <= 0 or an empty plan', () => {
+    const s = run();
+    s.supplies.beans = 0;
+    s.cash = 200;
+    expect(crewTips(s, 0)).toEqual([]);
+    expect(crewTips(s, -1)).toEqual([]);
   });
 });
 
@@ -430,7 +408,7 @@ describe('planNight: Gear runs', () => {
   // A Gear run replaces the classic stations shop: the `equip` and `slot` inputs do nothing there, so the planner
   // must not offer them as crew tips.
   const gearRun = (): GameState => {
-    let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true, tier: 'stand' });
+    let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true, tier: 'stand' });
     for (const gear of ['g1', 'e2'] as const) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear }]);
     s.days.push(dayStats({ served: 3, lost: 9 }));
     s.cash = 300;

@@ -22,7 +22,6 @@ function gearRun(gear: GearId[], players = 1, tier: 'stand' | 'cart' | 'cafe' = 
     seed: 5,
     hostId: 'p1',
     players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` })),
-    settings: { bots: 0 },
     tier,
     gear: true,
   });

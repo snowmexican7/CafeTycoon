@@ -1,18 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { secondsToTicks } from '../constants';
-import { ECONOMY } from '../../data/economy';
-import type { GearId } from '../../data/gear';
-import type { Customer, DrinkId, GameState, Player, Station, SupplyId } from '../types';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { secondsToTicks } from '../sim/constants';
+import { ECONOMY } from '../data/economy';
+import type { GearId } from '../data/gear';
+import type { Customer, DrinkId, GameState, Player, Station, SupplyId } from '../sim/types';
 import { uncoveredOrders } from './brain';
-import { addStandIns } from './roster';
+import { addBots, addStandIns } from './crew';
 import { heldByPerson, heldForPeople } from './helper';
-import { makeTicket } from '../orders';
+import { makeTicket } from '../sim/orders';
 
 /** FB2 B6 fix round 1: a stocked Gear stand (C1 tap + E1 pods) with one person (p1) and one crew bot. */
 function helperStand(): GameState {
-  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 150 }, tier: 'stand', gear: true });
+  let s = addBots(createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'stand', gear: true }), 1);
   for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
   for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });

@@ -58,7 +58,7 @@ export type CrewBurst =
   /** Gear morning: the taps were filled (`paid` of `cups` fresh tonight, the rest yesterday's). */
   | { kind: 'steep'; cups: number; paid: number }
   /** The branch phone was picked up (`by` is a name) or left to ring. */
-  | { kind: 'call'; by: string; take: boolean; call: 'order' | 'machine' }
+  | { kind: 'call'; take: boolean; call: 'order' | 'machine' }
   /** 3.3.3 (FB2 A2/A3): a sink, pot, leak or cold-cup line, toasted over `at` (a station id; absent = mid-floor). */
   | { kind: 'note'; text: string; tone: 'good' | 'warn' | 'bad'; at?: string }
   /**
@@ -242,8 +242,8 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       }
     } else if (e.kind === 'steep') {
       bursts.push({ kind: 'steep', cups: Number(e.data.cups) || 0, paid: Number(e.data.paid) || 0 });
-    } else if (e.kind === 'call.answer') {
-      bursts.push({ kind: 'call', by: String(e.data.by ?? 'Someone'), take: e.data.take === true, call: e.data.kind === 'machine' ? 'machine' : 'order' });
+    } else if (e.kind === 'call.outcome') {
+      bursts.push({ kind: 'call', take: e.data.take === true, call: e.data.kind === 'machine' ? 'machine' : 'order' });
     } else if (e.kind === CUSTOMER_BUMP) {
       const x = Number(e.data.x);
       const y = Number(e.data.y);

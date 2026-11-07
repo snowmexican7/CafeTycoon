@@ -15,11 +15,11 @@ const signed = (n: number) => `${n < 0 ? '−' : '+'}$${Math.abs(n).toFixed(2)}`
 export interface BranchAreaVM { id: AreaId; name: string; crowd: string; fit: number; fitWord: string }
 export interface BranchDayVM { served: number; walked: number; profit: number; fromStock?: number; call?: string }
 
-/** P4 B6: one line for how the branch's phone call went. */
-export function callLine(c: { kind: 'machine' | 'order'; took: boolean; by?: string } | undefined): string | undefined {
+/** P4 B6: one line for how the branch's phone call went (bot cut: the branch decides its own calls). */
+export function callLine(c: { kind: 'machine' | 'order'; took: boolean } | undefined): string | undefined {
   if (!c) return undefined;
-  if (c.kind === 'machine') return c.took ? `📞 ${c.by ?? 'We'} sent a fix for the machine` : '📞 Machine broke, nobody fixed it: half the cups';
-  return c.took ? `📞 ${c.by ?? 'We'} took a big office order` : '📞 Turned down an office order';
+  if (c.kind === 'machine') return c.took ? '📞 The branch got the machine fixed' : '📞 Machine broke, too few staff to fix it: half the cups';
+  return c.took ? '📞 The branch took a big office order' : '📞 The branch turned down an office order';
 }
 export interface BranchSupplyVM { id: SupplyId; name: string; have: number; send: number; worth: number }
 export interface BranchVM {

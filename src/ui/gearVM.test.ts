@@ -3,7 +3,7 @@ import { createRun } from '../sim/run';
 import { applyGearInput } from '../sim/gear';
 import { gearVM } from './gearVM';
 
-const run = () => createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+const run = () => createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
 
 describe('gearVM (Gear Tree G3)', () => {
   it('Pick your gear: four slots, the box in the last, every tier priced against $120', () => {
@@ -55,7 +55,7 @@ describe('Gear UI wiring (G3)', () => {
     expect(gearFlag('?link=local')).toBe(true);
   });
   it('the night VM carries gear only in a Gear run', () => {
-    const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
+    const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand' });
     expect('gear' in nightViewModel(classic, 'p1')).toBe(false);
     expect(nightViewModel(run(), 'p1').gear?.pickNight).toBe(true);
   });
@@ -90,7 +90,7 @@ describe('Gear G5: the day HUD gear card', () => {
     s.stations.find((x) => x.kind === 'drip')!.dead = true;
     expect(hudGearVM(s).map((g) => g.status)).toEqual(['8/8 left', 'dead']);
     expect(hudViewModel(s).gear?.length).toBe(2);
-    const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
+    const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand' });
     expect('gear' in hudViewModel(classic)).toBe(false);
   });
 });
@@ -107,7 +107,7 @@ describe('Gear G7b: the street notebook', () => {
     const nb = notebookVM(rainy);
     expect(nb.map((r) => [r.family, r.served, r.stars])).toEqual([['espresso', 2, null], ['milky', 11, 5], ['iced', 11, 2], ['filter', 0, null]]);
     expect(nb[0].left).toBe(8);
-    const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
+    const classic = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand' });
     expect(notebookVM(classic)).toEqual([]);
   });
 });

@@ -9,6 +9,7 @@ import { createHostRoom } from './hostRoom';
 import { PROTOCOL_VERSION } from './protocol';
 import { createFakeLink } from './testing/fakeLink';
 import type { HostToClient, Transport } from './transport';
+import { addBots } from '../harness/crew';
 
 function fakeLocal() {
   const inputs: unknown[] = [];
@@ -86,7 +87,7 @@ describe('HostRoom', () => {
         hostLink.receive(m.kind, JSON.parse(JSON.stringify(m.data)), 'peer');
       }
     };
-    let state = createRun({ seed: 3, hostId: 'H', players: [{ id: 'H', name: 'Host' }], settings: { bots: 2 } });
+    let state = addBots(createRun({ seed: 3, hostId: 'H', players: [{ id: 'H', name: 'Host' }] }), 2);
     local.emit({ t: 'snapshot', state, sentAt: 0 });
     hostLink.peerJoins('peer');
     pump(); pump();
@@ -213,7 +214,7 @@ describe('HostRoom', () => {
   describe('seats', () => {
     const started = (players: { id: string; name: string }[]): HostToClient => ({
       t: 'snapshot',
-      state: createRun({ seed: 1, hostId: 'H', players, settings: { bots: 0 } }),
+      state: createRun({ seed: 1, hostId: 'H', players }),
       sentAt: 1,
     });
     const crew = [
@@ -283,35 +284,14 @@ describe('HostRoom', () => {
     });
   });
 
-  describe('bots setting', () => {
-    const lobbyMsgs = (link: ReturnType<typeof createFakeLink>) => link.sent.filter((x) => x.kind === 'lobby').map((x) => x.data as Record<string, unknown>);
-
-    it('defaults to auto for a lone host and Off once a friend joins, until the host picks', () => {
-      const link = createFakeLink();
-      const local = fakeLocal();
-      const room = createHostRoom(link, local.t, { token: 'H', name: 'Host' });
-      expect(room.bots()).toEqual({ bots: 'auto', picked: false });
-      link.peerJoins('p1');
-      link.receive('join', join('T1', 'Sam'), 'p1');
-      expect(room.bots()).toEqual({ bots: 0, picked: false });
-      expect(lobbyMsgs(link).at(-1)).toMatchObject({ bots: 0, botsPicked: false });
-      room.setBots(2);
-      expect(room.bots()).toEqual({ bots: 2, picked: true });
-      expect(lobbyMsgs(link).at(-1)).toMatchObject({ bots: 2, botsPicked: true });
-      room.setBots(7 as never);
-      expect(room.bots()).toEqual({ bots: 0, picked: false });
-    });
-
-    it('after the start it reports the run setting and ignores lobby edits', () => {
-      const link = createFakeLink();
-      const local = fakeLocal();
-      const room = createHostRoom(link, local.t, { token: 'H', name: 'Host' });
-      room.setBots(1);
-      local.emit({ t: 'snapshot', state: createRun({ seed: 1, hostId: 'H', players: [{ id: 'H', name: 'Host' }], settings: { bots: 1 } }), sentAt: 1 });
-      expect(room.bots()).toEqual({ bots: 1, picked: true });
-      room.setBots(3);
-      expect(room.bots()).toEqual({ bots: 1, picked: true });
-      expect(lobbyMsgs(link).at(-1)).toMatchObject({ started: true, bots: 1 });
-    });
+  it('bot cut 4a: lobby messages carry no bots setting', () => {
+    const link = createFakeLink();
+    const local = fakeLocal();
+    createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+    link.peerJoins('p1');
+    link.receive('join', join('T1', 'Sam'), 'p1');
+    const lobby = link.sent.filter((x) => x.kind === 'lobby').map((x) => x.data as Record<string, unknown>);
+    expect(lobby.length).toBeGreaterThan(0);
+    for (const m of lobby) expect(Object.keys(m).sort()).toEqual(['members', 'started', 't']);
   });
 });

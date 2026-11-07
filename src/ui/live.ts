@@ -166,7 +166,7 @@ export interface ClosingListVM {
   rows: { icon: string; text: string; done: boolean; warn?: true }[];
 }
 
-export interface CallVM { kind: 'machine' | 'order'; where: string; title: string; detail: string; yes: string; no: string; secsLeft: number }
+export interface CallVM { kind: 'machine' | 'order'; where: string; title: string; detail: string; secsLeft: number }
 
 /** FB2 B6: office-run phone card (ring-only notice; no Take / Refuse). */
 export interface OfficePhoneVM { secsLeft: number }
@@ -177,8 +177,8 @@ export function callVM(state: GameState, me: PlayerId): CallVM | undefined {
   if (!c || !state.branch || !p || p.bot) return undefined;
   const where = AREAS[state.branch.area]?.name ?? 'the other shop';
   return c.kind === 'machine'
-    ? { kind: c.kind, where, title: 'Their espresso machine just died!', detail: `Fix it now for $${CALL.repair}, or it serves half its cups today.`, yes: `🔧 Send a fix · $${CALL.repair}`, no: 'Let it ring', secsLeft: c.secsLeft }
-    : { kind: c.kind, where, title: `An office wants ${CALL.orderCups} coffees delivered!`, detail: `+$${CALL.orderProfit} for the order, but it uses ${CALL.orderCups} of the shop's cups today.`, yes: `☕ Take the order · +$${CALL.orderProfit}`, no: 'Turn it down', secsLeft: c.secsLeft };
+    ? { kind: c.kind, where, title: 'Their espresso machine just died!', detail: c.take ? `They're sending a fix ($${CALL.repair}).` : 'Too few hands to fix it: it serves half its cups today.', secsLeft: c.secsLeft }
+    : { kind: c.kind, where, title: `An office wants ${CALL.orderCups} coffees delivered!`, detail: c.take ? `They're taking it: +$${CALL.orderProfit}, but it uses ${CALL.orderCups} of the shop's cups today.` : "They're turning it down (they lost customers yesterday).", secsLeft: c.secsLeft };
 }
 
 export const callKey = (c: CallVM | undefined): string => (c ? `${c.kind}|${c.secsLeft}` : '');

@@ -27,7 +27,7 @@ import { emitLog } from './log';
 import { blocked } from './movement';
 import { slotGroups, slotSpots, twinPos } from './slots';
 import { settle } from './spawn';
-import { isWalkable, targetNodes, walkableNodes } from './bots/path';
+import { isWalkable, targetNodes, walkableNodes } from './path';
 import type { GameState, PlayerInput, Station, Vec2 } from './types';
 
 const key = (v: Vec2) => `${v.x},${v.y}`;

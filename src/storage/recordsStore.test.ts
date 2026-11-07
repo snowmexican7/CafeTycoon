@@ -8,11 +8,11 @@ import type { Award } from '../sim/awards';
 import type { GameState } from '../sim/types';
 
 const day = (n: number, served: number, lost = 2) => ({ day: n, served, lost, turnedAway: 0, sales: served * 5, tips: 3, rent: 25 });
-const mvp: Award = { id: 'mvp', title: 'Crew MVP', icon: '🏆', winner: 'K', bot: false, stat: '', line: '', tone: 'mvp' };
-const slip: Award = { id: 'slip', title: 'Slip King', icon: '🍌', winner: 'S', bot: false, stat: '', line: '', tone: 'chaos' };
+const mvp: Award = { id: 'mvp', title: 'Crew MVP', icon: '🏆', winner: 'K', stat: '', line: '', tone: 'mvp' };
+const slip: Award = { id: 'slip', title: 'Slip King', icon: '🍌', winner: 'S', stat: '', line: '', tone: 'chaos' };
 
 function week(seed: number, days: number[], gear = true): GameState {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 }, ...(gear ? { gear: true } : {}) });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], ...(gear ? { gear: true } : {}) });
   s.days = days.map((served, i) => day(i + 1, served));
   return s;
 }

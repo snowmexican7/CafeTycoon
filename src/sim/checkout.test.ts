@@ -11,7 +11,7 @@ import { nightViewModel, profitOf } from '../ui/viewModels';
 import type { CheckoutId, GameState } from './types';
 
 const run = (seed = 1) => {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
   s.phase = 'night';
   return s;
 };
@@ -38,10 +38,6 @@ describe('checkout path (P3 B12)', () => {
     poor.cash = 10;
     pick(poor, 'kiosk');
     expect(poor.checkout).toBeUndefined();
-    const bot = run();
-    bot.players[0].bot = {} as never;
-    pick(bot, 'kiosk');
-    expect(bot.checkout).toBeUndefined();
     expect(pick(startDay(run()), 'kiosk').checkout).toBeUndefined(); // not by day
     expect(validateInput({ kind: 'checkout', playerId: 'p1', checkout: 'abacus' as CheckoutId })).toBeNull();
     expect(validateInput({ kind: 'checkout', playerId: 'p1', checkout: 'kiosk' })).toEqual({ kind: 'checkout', playerId: 'p1', checkout: 'kiosk' });

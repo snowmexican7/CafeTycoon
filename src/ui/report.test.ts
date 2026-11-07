@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from '../sim/run';
+import { addBots } from '../harness/crew';
 import { serveCustomer } from '../sim/customers';
 import { reportViewModel } from './report';
 import { nightViewModel } from './viewModels';
 import { nightHtml } from './night';
 import type { DayStats, GameState } from '../sim/types';
 
-const run = (): GameState => createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }, { id: 'p2', name: 'Lou' }], settings: { bots: 0 } });
+const run = (): GameState => createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }, { id: 'p2', name: 'Lou' }] });
 const day = (v: Partial<DayStats>): DayStats => ({ day: 1, served: 0, lost: 0, turnedAway: 0, sales: 0, tips: 0, rent: 25, ...v });
 
 describe('manager report (P4 B3)', () => {
@@ -19,6 +20,15 @@ describe('manager report (P4 B3)', () => {
     expect(s.today.byPlayer?.p2?.serves).toBe(2);
     expect(s.today.takingsByDrink?.latte).toBeCloseTo(s.today.sales + s.today.tips, 2);
     expect(s.today.byPlayer?.p2?.takings).toBeCloseTo(s.today.sales + s.today.tips, 2);
+  });
+
+  it('bot cut 4a: who-served-what is people only (a bot body serving gets no row)', () => {
+    const s = startDay(addBots(run(), 1));
+    const c = { id: 1, drink: 'latte' as const, patienceLeft: 600, patienceMax: 1200 };
+    serveCustomer(s, c, 'latte', 'bot-1');
+    serveCustomer(s, { ...c, id: 2 }, 'latte', 'p1');
+    expect(s.today.served).toBe(2);
+    expect(Object.keys(s.today.byPlayer ?? {})).toEqual(['p1']);
   });
 
   it('builds the report from the last day, with a wait trend, ranked drinks and crew, and notes', () => {

@@ -13,7 +13,7 @@ import { COOLING_SECONDS } from './cooling';
 import type { Customer, DayStats, GameState } from './types';
 
 function gearDay(day = 2, seed = 7): GameState {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
   s.day = day;
   return startDay(s);
 }
@@ -191,7 +191,7 @@ describe('end of day feed (FB2 C11)', () => {
   });
 
   it('a new run starts with 0 fans, and dayReviews on a fresh run is empty', () => {
-    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true });
+    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true });
     expect(s.fans).toBe(0);
     expect(dayReviews(s)).toEqual({ posts: [], fans: 0, fansDelta: 0 });
   });

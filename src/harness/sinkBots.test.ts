@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { stationsFromSlots, type SlotContent } from '../slots';
-import { BASE_DRINKS } from '../../data/drinks';
-import type { GearId } from '../../data/gear';
-import type { BotStep, Customer, DrinkId, GameState, Player, Station, SupplyId } from '../types';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { stationsFromSlots, type SlotContent } from '../sim/slots';
+import { BASE_DRINKS } from '../data/drinks';
+import type { GearId } from '../data/gear';
+import type { BotStep, Customer, DrinkId, GameState, Player, Station, SupplyId } from '../sim/types';
 import { think } from './brain';
-import { addStandIns } from './roster';
+import { addBots, addStandIns } from './crew';
 
 /** A café-tier Gear run with the bar set by hand, `standIns` stand-in bots, p1 parked, no walk-ins, drip on the menu. */
 function gearShop(slots: SlotContent[], gear: (GearId | null)[], standIns = 1): GameState {
-  let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, gear: true });
+  let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 }, gear: true });
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
   s.slots = [...slots];
   s.slotGear = [...gear];
@@ -27,7 +27,7 @@ function gearShop(slots: SlotContent[], gear: (GearId | null)[], standIns = 1): 
 
 /** A café Gear run with one person (p1) and one crew bot (bot-1, an A1 helper): drip, espresso, bin. */
 function crewShop(): GameState {
-  let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 600 }, gear: true });
+  let s = addBots(createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 }, gear: true }), 1);
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
   s.slots = ['drip', 'espresso', 'trash', null, null, null];
   s.slotGear = ['d2', 'e1', 'b0', null, null, null];
@@ -153,7 +153,7 @@ describe('FB2 A3: bots and the sink', () => {
     s.messes = [{ id: s.nextMessId++, kind: 'spill', x: 6, y: 4, amount: 1 }];
     expect(ids(think(s, sim(s)))[0]).toBe('floor');
     expect(think(s, sim(s))[0]).toMatchObject({ kind: 'floor', action: 'takeMop' });
-    const c = startDay(createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    const c = startDay(createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
     addStandIns(c, 1);
     c.messes = [{ id: c.nextMessId++, kind: 'spill', x: 6, y: 4, amount: 1 }];
     expect(think(c, sim(c)).some((x) => x.kind === 'floor')).toBe(false);

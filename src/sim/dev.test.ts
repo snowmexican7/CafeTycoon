@@ -18,7 +18,6 @@ const opts = (dev?: boolean): CreateRunOptions => ({
   seed: 7,
   hostId: 'p1',
   players: [{ id: 'p1', name: 'P1' }, { id: 'p2', name: 'P2' }],
-  settings: { bots: 0 },
   tier: 'stand',
   gear: true,
   ...(dev === undefined ? {} : { dev }),
@@ -138,7 +137,7 @@ describe('R4 a: dev mode', () => {
     });
 
     it('a paused relaxed night stays put too (last call does not run)', () => {
-      let s = createRun({ ...opts(true), settings: { bots: 0, nightLengthSec: 0 } });
+      let s = createRun({ ...opts(true), settings: { nightLengthSec: 0 } });
       s = step(s, [pause(true), { kind: 'ready', playerId: 'p1' }]);
       s = ticks(s, 60 * 40);
       expect(s.phase).toBe('night');

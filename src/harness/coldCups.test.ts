@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { addStandIns } from './roster';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { addBots, addStandIns } from './crew';
 import { afterBotInteract, dropPlan, think } from './brain';
-import { TICK_RATE } from '../constants';
-import type { GearId } from '../../data/gear';
-import type { BotStep, Customer, DrinkId, GameState, PassItem, SupplyId } from '../types';
-import { stationsFromSlots } from '../slots';
+import { TICK_RATE } from '../sim/constants';
+import type { GearId } from '../data/gear';
+import type { BotStep, Customer, DrinkId, GameState, PassItem, SupplyId } from '../sim/types';
+import { stationsFromSlots } from '../sim/slots';
 
 // Feedback 2 A2: bots and cold cups (src/sim/cooling.ts).
 const secs = (n: number) => Math.round(n * TICK_RATE);
@@ -25,7 +25,7 @@ function quiet(s: GameState): GameState {
 
 describe('bots and cold cups', () => {
   function botStand(): GameState {
-    let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 150 }, tier: 'stand', gear: true });
+    let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'stand', gear: true });
     addStandIns(s, 1);
     for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
     s.supplies.beans = 40;
@@ -139,7 +139,7 @@ describe('bots and cold cups', () => {
 describe('cold cups with FB2 A1 helper bots', () => {
   /** A Gear stand with one person (p1) at the till and one crew bot (a helper). */
   function helperStand(): GameState {
-    let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, dayLengthSec: 150 }, tier: 'stand', gear: true });
+    let s = addBots(createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'stand', gear: true }), 1);
     for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
     s.supplies.beans = 40;
     s.supplies.milk = 40;
@@ -172,7 +172,7 @@ describe('cold cups with FB2 A1 helper bots', () => {
 describe('A2 fix round 2: a cold or orphaned machine output never makes a bot wait', () => {
   /** A café bar set by hand (grinder, Brevelle E2, steamer, bin), `n` stand-ins, no walk-ins, p1 parked out of the way. */
   function bar(n = 1): GameState {
-    let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, gear: true });
+    let s = createRun({ seed: 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 }, gear: true });
     s.slots = ['grinder', 'espresso', 'steamer', 'trash', null, null];
     s.slotGear = ['g2', 'e2', null, 'b0', null, null];
     s.stations = stationsFromSlots('cafe', s.slots, s.slotGear);

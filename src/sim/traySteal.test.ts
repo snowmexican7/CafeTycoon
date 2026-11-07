@@ -8,7 +8,7 @@ import { GEAR } from '../data/gear';
 import type { Customer, DrinkId, GameState } from './types';
 
 function gearDay(): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'cart', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cart', gear: true });
   const gear = ['c1', 'e1', 'd1'] as const;
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];

@@ -77,7 +77,7 @@ function noiseFor(seed: number, day: number): number {
   return 1 - BRANCH.noise + ((h >>> 0) / 4294967296) * 2 * BRANCH.noise;
 }
 
-export interface BranchDay { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number; call?: { kind: CallKind; took: boolean; by?: string } }
+export interface BranchDay { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number; call?: { kind: CallKind; took: boolean } }
 
 /** What the branch would do today (pure: the night forecast and closing both use it). */
 export function branchDay(state: GameState, day = state.day, withCall = false): BranchDay | null {
@@ -116,8 +116,7 @@ export function branchExpectedLoss(state: GameState): number {
 /** Closing: run the branch's day and bank its profit (or loss). */
 export function settleBranch(state: GameState): void {
   const d = branchDay(state, state.day, true);
-  delete state.callAnswer;
-  delete state.callRang;
+  delete state.callDecision;
   if (!d) return;
   state.cash = r2(state.cash + d.profit);
   state.today.branch = d;
@@ -133,7 +132,7 @@ export function settleBranch(state: GameState): void {
 export function applyBranchInput(state: GameState, input: Extract<PlayerInput, { kind: 'branch' }>): GameState {
   if (!state.gear || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || p.bot) return state;
+  if (!p) return state;
   if (input.action === 'open') {
     if (!canOpenBranch(state) || !input.area || !branchAreas(state).includes(input.area)) return state;
     state.cash = r2(state.cash - BRANCH.cost);

@@ -5,7 +5,7 @@ import { GEAR, type AddOnWand, type GearId } from '../data/gear';
 import { gearVM } from './gearVM';
 import { gearBoard } from './night';
 
-const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'cafe', gear: true });
+const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cafe', gear: true });
 function withGear(ids: GearId[], wands: (AddOnWand | null)[] = []) {
   const s = run();
   const slots = [...s.slots!];

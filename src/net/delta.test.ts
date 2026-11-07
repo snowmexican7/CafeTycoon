@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addStandIns } from '../sim/bots/roster';
+import { addStandIns } from '../harness/crew';
 import { createRun } from '../sim/run';
 import { step } from '../sim/step';
 import { applyPatch, diff, roundFloats, type Patch } from './delta';
@@ -43,7 +43,7 @@ describe('snapshot deltas', () => {
   });
 
   it('rebuilds a whole 4-barista day exactly, at a fraction of the full size', () => {
-    let s = createRun({ seed: 11, hostId: 'h', players: [], settings: { bots: 0, botSkill: 3, pace: 3, dayLengthSec: 30, nightLengthSec: 5 } as never });
+    let s = createRun({ seed: 11, hostId: 'h', players: [], settings: { pace: 3, dayLengthSec: 30, nightLengthSec: 5 } });
     addStandIns(s, 4);
     let held: unknown = roundFloats(s);
     let full = 0, delta = 0;

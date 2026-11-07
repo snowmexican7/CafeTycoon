@@ -362,10 +362,10 @@ function alertRow(a: BriefAlert): string {
     ${a.fix ? `<button class="btn mini" data-action="${a.fix.action}" ${data}>${esc(a.fix.label)}</button>` : ''}</li>`;
 }
 
-/** FB1 WP6: a bot's tip as one big tap-to-apply chip ("💬 Bo · hurried: Raise the latte to $5.50 ✓"). */
+/** FB1 WP6: a tip as one big tap-to-apply chip ("🏷️ Raise the latte to $5.50 · Try it"; unvoiced since the bot cut). */
 function tipChip(t: TipVM): string {
-  return `<button class="tip p-${t.personality}" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.by}: ${t.full}. Click to try it.`)}">
-    <span class="tip-by"><span aria-hidden="true">💬</span> ${esc(t.by)}</span><span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Try it</span></button>`;
+  return `<button class="tip" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.full}. Click to try it.`)}">
+    <span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Try it</span></button>`;
 }
 
 /** Round 3 item 3: a Strategist or Marketer hire / fire card. */
@@ -377,16 +377,6 @@ function hireCard(role: 'strategist' | 'marketer', h: { hired: boolean; wage: st
   }
   return `<div class="hire" data-hire="${role}"><div class="hire-lab"><b>${title}</b><span>${esc(h.blurb)}</span></div>
     <button class="btn mini" data-action="staff" data-staff="hire" data-role="${role}">Hire · ${esc(h.wage)}/day</button></div>`;
-}
-
-/** P3 B15: the hired bot baristas, their wage, and hire / let go (specialists sit higher — see hireCardsRow). */
-function staffRow(s: StaffVM | undefined): string {
-  if (!s) return '';
-  const who = s.crew.length ? s.crew.map((c) => `<span class="sf-who" title="${esc(c.trait)}">🤖 ${esc(c.name)}</span>`).join('') : '<span class="sf-none">No hired help. You run the bar.</span>';
-  return `<div class="staff" aria-label="Hired staff"><div class="sf-h"><b>Hired staff</b><span>${esc(s.wage)}/day each${s.crew.length ? ` · ${esc(s.total)} at closing` : ''}</span></div>
-    <div class="sf-row">${who}</div>
-    <div class="sf-btns"><button class="btn mini" data-action="staff" data-staff="hire" ${s.canHire ? '' : 'disabled'} title="${s.canHire ? 'A bot barista clocks in tomorrow' : 'All four spots behind the bar are taken'}">＋ Hire · ${esc(s.wage)}/day</button>
-    <button class="btn mini ghost" data-action="staff" data-staff="fire" ${s.crew.length ? '' : 'disabled'}>Let ${s.crew.length ? esc(s.crew[s.crew.length - 1].name) : 'one'} go</button></div></div>`;
 }
 
 /** Review Block 6: Strategist / Marketer cards high on Tonight (visible at 1512×982 and 1280×800 without scrolling). */
@@ -467,14 +457,14 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
     })
     .join('') + (vm.condiments ? condimentCard(vm.condiments, jarAlert.get('condiments')) : '');
   const n = (vm.restock?.length || 1) + (vm.condiments ? 1 : 0);
-  // ui-3.5.1 declutter: hired help, regulars and the scout sit in one "More" row.
+  // ui-3.5.1 declutter: regulars and the scout sit in one "More" row.
   const regs = vm.regulars ?? [];
   const regWarn = regs.filter((r) => r.status !== 'ok').length;
   const r = vm.rival;
   const moreRow = `<div class="tn-more" aria-label="More"><span class="tn-h">More</span>
     <button class="chip" data-action="edit-look">👕 Edit my barista ▸</button>
     ${regs.length ? `<button class="chip ${regWarn ? 'warn' : ''}" data-action="drawer" data-d="regulars">♥ ${regs.length} regulars${regWarn ? ` · ${regWarn} !` : ''} ▸</button>` : ''}
-    ${r.scouted ? `<button class="chip" data-action="drawer" data-d="paper">🔭 Scouted ▸</button>` : `<button class="chip" data-action="scout" ${r.affordable ? '' : 'disabled'} title="See ${esc(r.name)}'s menu and prices for tomorrow">🔭 Scout ${esc(r.name)} · ${esc(short$(r.cost))}</button>`}${staffRow(vm.staff)}</div>`;
+    ${r.scouted ? `<button class="chip" data-action="drawer" data-d="paper">🔭 Scouted ▸</button>` : `<button class="chip" data-action="scout" ${r.affordable ? '' : 'disabled'} title="See ${esc(r.name)}'s menu and prices for tomorrow">🔭 Scout ${esc(r.name)} · ${esc(short$(r.cost))}</button>`}</div>`;
   // Review Block 6: specialists first so hire cards are on-screen at 1512×982 / 1280×800 (not under Stock).
   return `${banner}${pick}<div class="tn-grid ${vm.gear ? 'flow' : ''}">
     ${hireCardsRow(vm.staff)}
@@ -739,7 +729,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire', role?: 'strategist' | 'marketer'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void; onMoveStation?(station: string, to: Vec2): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire', role: 'strategist' | 'marketer'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void; onMoveStation?(station: string, to: Vec2): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; toast(lines: string[]): void; show(): void; hide(): void } {
   // ui-3.7.1: a bubble for news like the Strategist's menu changes; it sits outside the board, which rebuilds.
   const bubble = document.createElement('div');
@@ -842,7 +832,7 @@ export function createNight(
       else if (op === 'close') handlers.onBranch?.('close', {});
     } else if (action === 'staff') {
       const role = el.dataset.role === 'strategist' || el.dataset.role === 'marketer' ? el.dataset.role : undefined;
-      handlers.onStaff?.(el.dataset.staff === 'fire' ? 'fire' : 'hire', role);
+      if (role) handlers.onStaff?.(el.dataset.staff === 'fire' ? 'fire' : 'hire', role);
     }
     else if (action === 'ad') handlers.onAd?.((el.dataset.ad || null) as AdId | null);
     else if (action === 'checkout' && el.dataset.checkout) handlers.onCheckout?.(el.dataset.checkout as CheckoutId);

@@ -4,9 +4,9 @@ import { BASE_DRINKS } from '../data/drinks';
 import { createRun, startDay } from './run';
 import { applyGearInput } from './gear';
 import { step } from './step';
-import { addStandIns } from './bots/roster';
-import { think } from './bots/brain';
-import { targetNodes } from './bots/path';
+import { addStandIns } from '../harness/crew';
+import { think } from '../harness/brain';
+import { targetNodes } from './path';
 import { groups } from './rearrange';
 import type { CreateRunOptions, Customer, GameState, TierId, Vec2 } from './types';
 
@@ -14,7 +14,6 @@ const opts = (tier: TierId): CreateRunOptions => ({
   seed: 11,
   hostId: 'p1',
   players: [{ id: 'p1', name: 'K' }],
-  settings: { bots: 0 },
   tier,
   gear: true,
 });
@@ -74,7 +73,7 @@ describe('Round 5 block 6: drip sits by the till', () => {
   });
 
   it('bots still brew and pour drip from a till-side pot', () => {
-    let s = createRun({ ...opts('cafe'), settings: { bots: 0, dayLengthSec: 600 } });
+    let s = createRun({ ...opts('cafe'), settings: { dayLengthSec: 600 } });
     s.cash = 200;
     buy(s, 'd1');
     expect(dripAt(s).y).toBe(Math.round(till(s).pos.y) - 1);

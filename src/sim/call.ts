@@ -1,14 +1,14 @@
 /**
  * P4 B6 (lite): phone calls from the second shop. On some days, partway through opening hours, the
  * branch rings with a problem: a broken machine (pay to fix it, or it serves half today) or a big
- * office order (take it for a flat profit, but it eats some of the branch's cups). Any person on the
- * floor can answer from the HUD while it rings; a missed call counts as "let it ring".
+ * office order (take it for a flat profit, but it eats some of the branch's cups). Bot cut: nobody answers;
+ * the branch decides itself when the call first rings (`branchTakesCall`), and the HUD shows it as a heads-up.
  * Which days ring, what about and when come from a hash of the seed and day: no RNG draw, so
  * replays and guests agree. Travelling to the branch is deferred (two live floors).
  */
 import { secondsToTicks } from './constants';
 import { emitLog } from './log';
-import type { GameState, PlayerInput } from './types';
+import type { GameState } from './types';
 
 export const CALL = {
   /** Chance a given day rings, once the branch has been open a full day. */
@@ -16,7 +16,7 @@ export const CALL = {
   /** It rings somewhere between 25% and 55% of the way through opening hours. */
   ringFrom: 0.25,
   ringSpan: 0.3,
-  /** Seconds it rings before it counts as missed. */
+  /** Seconds it rings (the heads-up's window). */
   answerSec: 25,
   repair: 25,
   orderProfit: 30,
@@ -47,49 +47,43 @@ export function callFor(state: GameState, day = state.day): BranchCall | null {
 
 export const elapsed = (state: GameState): number => secondsToTicks(state.settings.dayLengthSec) - state.phaseTicksLeft;
 
-/** The call that is ringing right now (day phase, inside its window, not yet answered), with seconds left. */
-export function callRinging(state: GameState): (BranchCall & { secsLeft: number }) | null {
-  if (state.phase !== 'day') return null;
-  const c = callFor(state);
-  if (!c || state.callAnswer?.day === state.day) return null;
-  const t = elapsed(state);
-  if (t < c.ringAt || t >= c.until) return null;
-  return { ...c, secsLeft: Math.ceil((c.until - t) / secondsToTicks(1)) };
+/**
+ * Bot cut: the branch handles its own calls. An office order is taken unless yesterday's branch day lost
+ * people (`walked === 0`); a broken machine is fixed when the branch has two or more staff. Pure.
+ */
+export function branchTakesCall(state: GameState, kind: CallKind): boolean {
+  if (kind === 'order') return (state.days.at(-1)?.branch?.walked ?? 0) === 0;
+  return (state.branch?.staff ?? 0) >= 2;
 }
 
-/** Mark today's call as having rung, once it first does (the day's tick calls this; review I2). */
-export function noteCallRang(state: GameState): void {
-  if (state.callRang !== state.day && callRinging(state)) state.callRang = state.day;
-}
-
-/** A person picks up (take = fix it / take the order) or lets it ring, while it rings. */
-export function applyCall(state: GameState, input: Extract<PlayerInput, { kind: 'call' }>): void {
-  const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || p.bot || !callRinging(state)) return;
-  answerCall(state, p.name, input.take);
-}
+/** Today's decision, once the call has rung (else undefined). */
+const decided = (state: GameState): { day: number; take: boolean } | undefined => (state.callDecision?.day === state.day ? state.callDecision : undefined);
 
 /**
- * A bot picks up (the sim's own decision, see bots/phone.ts). Network inputs from bot ids stay refused in
- * applyCall; only the bot brain calls this, and only while the phone rings.
+ * The call that is ringing right now (day phase, inside its window), with seconds left and what the branch does
+ * about it. It rings for its whole window: a heads-up, nobody answers it.
  */
-export function applyBotCall(state: GameState, botId: string, take: boolean): void {
-  const p = state.players.find((x) => x.id === botId);
-  if (!p || !p.bot || !callRinging(state)) return;
-  answerCall(state, p.name, take);
+export function callRinging(state: GameState): (BranchCall & { secsLeft: number; take: boolean }) | null {
+  if (state.phase !== 'day') return null;
+  const c = callFor(state);
+  if (!c) return null;
+  const t = elapsed(state);
+  if (t < c.ringAt || t >= c.until) return null;
+  return { ...c, secsLeft: Math.ceil((c.until - t) / secondsToTicks(1)), take: decided(state)?.take ?? branchTakesCall(state, c.kind) };
 }
 
-function answerCall(state: GameState, by: string, take: boolean): void {
-  const c = callFor(state);
-  state.callAnswer = { day: state.day, take, by };
-  emitLog(state, 'call.answer', { by, take, kind: c?.kind ?? 'order' });
+/** The day's tick calls this: when today's call first rings, the branch decides and logs `call.outcome`. */
+export function noteCallRang(state: GameState): void {
+  if (decided(state)) return;
+  const c = callRinging(state);
+  if (!c) return;
+  state.callDecision = { day: state.day, take: c.take };
+  emitLog(state, 'call.outcome', { kind: c.kind, take: c.take });
 }
 
 /** How today's call ended, for closing: null when there was no call, or the shop closed before it rang. */
-export function callOutcome(state: GameState): { kind: CallKind; took: boolean; by?: string } | null {
+export function callOutcome(state: GameState): { kind: CallKind; took: boolean } | null {
   const c = callFor(state);
-  if (!c) return null;
-  const a = state.callAnswer?.day === state.day ? state.callAnswer : undefined;
-  if (!a && state.callRang !== state.day) return null; // never rang (closed early): not a missed call
-  return { kind: c.kind, took: !!a?.take, ...(a ? { by: a.by } : {}) };
+  const d = decided(state);
+  return c && d ? { kind: c.kind, took: d.take } : null;
 }

@@ -8,7 +8,7 @@ import { familyTips, nightViewModel } from '../ui/viewModels';
 import type { GameState } from './types';
 
 const run = (gear: boolean, seed = 7) =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', ...(gear ? { gear: true } : {}) });
+  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', ...(gear ? { gear: true } : {}) });
 const withGear = (s: GameState, kind: string, gear: string) => {
   const st = s.stations.find((x) => x.kind === kind);
   if (st) (st as { gear?: string }).gear = gear;

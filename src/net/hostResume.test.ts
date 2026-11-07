@@ -21,20 +21,20 @@ describe('markPeersAway', () => {
   });
 });
 
-describe('host resume with bots', () => {
-  it('Review Focus 4: resume keeps bots connected', () => {
-    const day = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] }));
-    expect(day.players.map((p) => p.id)).toEqual(['p1', 'p2', 'bot-1']);
+describe('host resume with bot bodies', () => {
+  it('Review Focus 4: resume keeps the robot cashier connected, and nobody covers an away person (bot cut 4a)', () => {
+    const day = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { cashier: true } }));
+    expect(day.players.map((p) => p.id)).toEqual(['p1', 'p2', 'cashier']);
     const t = markPeersAway(day, 'p1');
     expect(t.players.map((p) => [p.id, p.connected])).toEqual([
       ['p1', true],
       ['p2', false],
-      ['bot-1', true],
+      ['cashier', true],
     ]);
     let night = startNight(t);
     night = applyNightInput(night, { kind: 'ready', playerId: 'p1' });
     const morning = stepNight(night);
     expect(morning.phase).toBe('day');
-    expect(morning.players.filter((p) => p.bot).map((p) => p.id)).toEqual(['bot-1', 'bot-2']);
+    expect(morning.players.filter((p) => p.bot).map((p) => p.id)).toEqual(['cashier']);
   });
 });

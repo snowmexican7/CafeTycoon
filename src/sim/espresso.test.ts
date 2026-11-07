@@ -7,9 +7,10 @@ import { createRun } from './run';
 import { stationsFromSlots } from './slots';
 import { tierOf } from './growth';
 import { step } from './step';
+import { addBots } from '../harness/crew';
 import type { GameState, PlayerInput } from './types';
 
-const opts = { seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 as const } };
+const opts = { seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], };
 const ticks = (s: GameState, n: number, inputs: PlayerInput[] = []) => {
   for (let i = 0; i < n; i++) s = step(s, i === 0 ? inputs : []);
   return s;
@@ -18,8 +19,8 @@ const shot: PlayerInput = { kind: 'espresso', playerId: 'p1' };
 const p1 = (s: GameState) => s.players.find((p) => p.id === 'p1')!;
 
 /** Day 1, doors just opened, K standing in front of the espresso machine. */
-function atMachine(settings: Record<string, unknown> = { bots: 0 }): GameState {
-  let s = createRun({ ...opts, settings });
+function atMachine(bots = 0): GameState {
+  let s = addBots(createRun(opts), bots);
   s = ticks(s, s.phaseTicksLeft);
   expect(s.phase).toBe('day');
   s = structuredClone(s);
@@ -50,7 +51,7 @@ describe('espresso easter egg', () => {
     const away = structuredClone(s);
     p1(away).pos = { ...LAYOUT.spawnPoints[0] };
     expect(step(away, [shot]).players[0].espresso).toBeUndefined();
-    const bot = atMachine({ bots: 1 });
+    const bot = atMachine(1);
     const b = bot.players.find((p) => p.bot)!;
     b.pos = { x: 3, y: 2 };
     expect(canDrinkEspresso(bot, b)).toBe(false);
@@ -125,16 +126,12 @@ describe('espresso easter egg', () => {
     expect(p1(s).espresso!.out).toBe(true);
   });
 
-  it('a bot covers the station when the crew has room', () => {
-    let s = drinks(atMachine({ bots: 'auto' }), 6);
-    const bots = s.players.filter((p) => p.bot).length;
-    expect(bots).toBe(ECONOMY.bots.autoCrew - 1); // two humans, one out
-    s = ticks(s, s.phaseTicksLeft + ECONOMY.closingGraceSeconds * TICK_RATE + 2);
-    expect(s.phase).toBe('night');
-    s = ticks(s, s.phaseTicksLeft);
-    expect(s.phase).toBe('day');
-    expect(s.players.filter((p) => p.bot).length).toBe(bots - 1); // the cover bot went home
-  }, 15_000); // simulates most of a day
+  it('bot cut 4a: nobody covers a collapsed barista; they just stop until tomorrow', () => {
+    const s = drinks(atMachine(), 6);
+    expect(p1(s).espresso!.out).toBe(true);
+    expect(s.players.map((p) => p.id)).toEqual(['p1', 'p2']);
+    expect(s.players.some((p) => p.bot)).toBe(false);
+  });
 
   it('next morning they are back with $150 on the tab, paid from profits, never bankrupting', () => {
     let s = drinks(atMachine(), 6);
@@ -180,7 +177,7 @@ describe('espresso easter egg', () => {
 
   it('is deterministic: same seed and inputs give the same state', () => {
     const run = () => {
-      let s = atMachine({ bots: 'auto' });
+      let s = atMachine(1);
       for (let i = 0; i < 8; i++) s = ticks(s, 30, [shot, { kind: 'move', playerId: 'p2', x: 1, y: 0, interact: i % 2 === 0 }]);
       return ticks(s, 900);
     };

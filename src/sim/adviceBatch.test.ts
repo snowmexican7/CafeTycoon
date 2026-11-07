@@ -1,22 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { createRun } from '../run';
-import { step } from '../step';
-import { computeModifiers } from '../effects';
-import { ECONOMY } from '../../data/economy';
-import { DRINK_INFO, TAP_DRINKS } from '../../data/drinks';
-import { menuDrinks, unlockDrink } from '../unlocks';
-import { billsForDay } from '../staff';
-import { steepTarget } from '../steep';
-import { PLAN_PRIORITY, planNight, STEEP_MARGIN } from './planner';
-import type { Advice } from './planner';
-import type { GearId } from '../../data/gear';
-import type { DrinkId, GameState, PlayerInput } from '../types';
+import { createRun } from './run';
+import { step } from './step';
+import { computeModifiers } from './effects';
+import { ECONOMY } from '../data/economy';
+import { DRINK_INFO, TAP_DRINKS } from '../data/drinks';
+import { menuDrinks, unlockDrink } from './unlocks';
+import { billsForDay } from './staff';
+import { steepTarget } from './steep';
+import { PLAN_PRIORITY, planNight, STEEP_MARGIN } from './advice';
+import type { Advice } from './advice';
+import type { GearId } from '../data/gear';
+import type { DrinkId, GameState, PlayerInput } from './types';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** A Gear stand at night with the given machines bought, cash after the buying set to `cash`. */
 function gearNight(gears: GearId[], cash: number, dayLengthSec = 150): GameState {
-  let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec }, gear: true, tier: 'stand' });
+  let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec }, gear: true, tier: 'stand' });
   s.cash = 5000;
   for (const gear of gears) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear }]);
   s.cash = cash;
@@ -134,7 +134,7 @@ describe('Task 12: the planner suggests the steep number', () => {
   });
 
   it('a classic run has neither steep nor condiment advice', () => {
-    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand' });
     s.cash = 300;
     const ids = planNight(s).map((a) => a.id);
     expect(ids).not.toContain('steep');

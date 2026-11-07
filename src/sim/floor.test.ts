@@ -3,12 +3,12 @@ import { createRun, startDay } from './run';
 import { step } from './step';
 import { onTileEntry } from './floor';
 import { trackTiles } from './tiles';
-import { isWalkable } from './bots/path';
+import { isWalkable } from './path';
 import { seedRng } from './rng';
 import type { GameState, Mess, Vec2 } from './types';
 
 function chaosCafe(): GameState {
-  const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 } });
+  const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 } });
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
   return startDay(s);
 }

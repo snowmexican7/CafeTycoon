@@ -9,8 +9,8 @@ import { stepBumps } from './bumps';
 import { finishDay } from './closing';
 import { makeTicket } from './orders';
 import { blocked, nearestStation } from './movement';
-import { findPath, targetNodes, walkableNodes } from './bots/path';
-import { uncoveredOrders } from './bots/brain';
+import { findPath, targetNodes, walkableNodes } from './path';
+import { uncoveredOrders } from '../harness/brain';
 import { rngNext } from './rng';
 import { COOLING_SECONDS } from './cooling';
 import { TICK_RATE } from './constants';
@@ -19,11 +19,12 @@ import { GEAR, type GearId } from '../data/gear';
 import { LAYOUT, TRAY_ID, layoutFor } from '../data/layout';
 import { TRAY, trayCool, trayComplete } from './tray';
 import type { Customer, DrinkId, GameState, Player, SupplyId, TierId } from './types';
+import { addBots } from '../harness/crew';
 
 type Kit = GearId | 'steamer';
 
 function gearDay(tier: TierId = 'cart', gear: Kit[] = ['c1', 'e1', 'steamer', 'd1'], bots = 0): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'L' }], settings: { bots }, tier, gear: true });
+  const s = addBots(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'L' }], tier, gear: true }), bots);
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
@@ -85,7 +86,7 @@ describe('FB2 B7: the tray table fixture', () => {
     };
     expect(TRAY_ID).toBe('trayTable');
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
-      const s = createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 }, tier, gear: true });
+      const s = createRun({ seed: 7, hostId: 'p1', players: [], tier, gear: true });
       s.slotGear = FULL[tier].map((id) => (id === 'steamer' ? null : id));
       s.slots = FULL[tier].map((id) => (id === 'steamer' ? 'steamer' : GEAR[id].station));
       s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
@@ -113,7 +114,7 @@ describe('FB2 B7: the tray table fixture', () => {
 
   it('classic runs have none; it is not gear, equipment or a slot; old saves get it once', () => {
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
-      expect(createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 }, tier }).stations.some((x) => x.id === TRAY_ID)).toBe(false);
+      expect(createRun({ seed: 7, hostId: 'p1', players: [], tier }).stations.some((x) => x.id === TRAY_ID)).toBe(false);
     }
     expect(Object.values(GEAR).some((g) => (g.station as string) === TRAY_ID)).toBe(false);
     const s = gearDay();
@@ -468,7 +469,7 @@ describe('FB2 B7: bots', () => {
   });
 
   it('a bot-only Gear day never touches a tray and keeps serving', () => {
-    const s0 = createRun({ seed: 11, hostId: 'p1', players: [], settings: { bots: 2 }, tier: 'cart', gear: true });
+    const s0 = addBots(createRun({ seed: 11, hostId: 'p1', players: [], tier: 'cart', gear: true }), 2);
     s0.day = 3;
     let s = startDay(s0);
     for (const k of ['beans', 'milk', 'concentrate'] as SupplyId[]) s.supplies[k] = 99;

@@ -7,7 +7,7 @@ import { step } from './step';
 import type { GameState } from './types';
 
 const make = (seed = 1): GameState =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 
 /** A fresh run whose next startDay is day 2 (no need to play night 1). */
 const dayTwo = (seed: number): GameState => {

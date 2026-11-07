@@ -6,7 +6,7 @@ import { TICK_RATE, secondsToTicks } from './constants';
 import type { GameState } from './types';
 
 const day = (seed: number): GameState => {
-  let s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  let s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
   s.scenario = 'normal';
   s = startDay(s);
   return s;

@@ -4,14 +4,14 @@ import { step } from './step';
 import { stationsFromSlots } from './slots';
 import { applyGearPrices, gearAfterUse, gearArea, gearMorning, gearPolish, gearPullMul, gearSpeed } from './gear';
 import { computeModifiers } from './effects';
-import { addStandIns } from './bots/roster';
+import { addStandIns } from '../harness/crew';
 import { type GearId } from '../data/gear';
 import { gearStats } from '../ui/gearVM';
 import type { AreaId } from '../data/areas';
 import type { GameState, StationKind } from './types';
 
 const run = (gear: boolean, seed = 5): GameState =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', ...(gear ? { gear: true } : {}) });
+  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', ...(gear ? { gear: true } : {}) });
 const kit = (s: GameState, slots: (StationKind | null)[], gear: (GearId | null)[]) => {
   s.slotGear = gear;
   s.stations = stationsFromSlots('stand', slots as never, gear);
@@ -109,7 +109,7 @@ describe('G10: top-tier perks', () => {
 
 describe('G10: bots and the pod machine', () => {
   it('a stand-in pulls pod shots with no grinder in the shop', () => {
-    let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 150 }, tier: 'stand', gear: true });
+    let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'stand', gear: true });
     addStandIns(s, 1);
     for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
     expect(s.stations.some((x) => x.kind === 'grinder')).toBe(false);

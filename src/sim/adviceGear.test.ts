@@ -1,33 +1,34 @@
 import { describe, expect, it } from 'vitest';
-import { createRun } from '../run';
-import { step } from '../step';
-import { menuDrinks, unlockedDrinks } from '../unlocks';
-import { expectedUse } from '../brief';
-import { countered, hasStamps, isPromoDay, RIVAL } from '../rival';
-import { ECONOMY } from '../../data/economy';
-import { BRANCH, branchAreas, branchDay, branchExpectedLoss } from '../branch';
-import { profitOf } from '../profit';
-import { TIERS } from '../growth';
-import { CHECKOUT } from '../checkout';
-import { rentForDay } from '../effects';
-import { restockCost } from '../night';
-import { billsForDay, wagesForDay } from '../staff';
-import { crewTips, planNight, PLAN_PRIORITY } from './planner';
-import type { Advice } from './planner';
-import { GEAR, WANDS, type GearId } from '../../data/gear';
-import { stationsFromSlots } from '../slots';
-import type { DayStats, GameState, TierId } from '../types';
+import { createRun } from './run';
+import { step } from './step';
+import { menuDrinks, unlockedDrinks } from './unlocks';
+import { expectedUse } from './brief';
+import { countered, hasStamps, isPromoDay, RIVAL } from './rival';
+import { ECONOMY } from '../data/economy';
+import { BRANCH, branchAreas, branchDay, branchExpectedLoss } from './branch';
+import { profitOf } from './profit';
+import { TIERS } from './growth';
+import { CHECKOUT } from './checkout';
+import { rentForDay } from './effects';
+import { restockCost } from './night';
+import { billsForDay, wagesForDay } from './staff';
+import { crewTips, planNight, PLAN_PRIORITY } from './advice';
+import type { Advice } from './advice';
+import { GEAR, WANDS, type GearId } from '../data/gear';
+import { stationsFromSlots } from './slots';
+import type { DayStats, GameState, TierId } from './types';
+import { addBots } from '../harness/crew';
 
 const dayStats = (over: Partial<DayStats> = {}): DayStats => ({ day: 1, served: 23, lost: 2, turnedAway: 0, sales: 40.84, tips: 3, rent: 25, ...over });
 const FULL = { beans: 500, milk: 500, concentrate: 500, flavour: 500, pastry: 500 };
 
-/** A Gear run at night with `bots` hired baristas. */
+/** A Gear run at night with `bots` test-only crew bots (src/harness/crew.ts). */
 const gearRun = (opts: { bots?: number; tier?: TierId; dayLengthSec?: number; seed?: number } = {}): GameState =>
-  createRun({
+  addBots(createRun({
     seed: opts.seed ?? 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }],
-    settings: { bots: opts.bots ?? 0, ...(opts.dayLengthSec ? { dayLengthSec: opts.dayLengthSec } : {}) },
+    settings: { ...(opts.dayLengthSec ? { dayLengthSec: opts.dayLengthSec } : {}) },
     gear: true, tier: opts.tier ?? 'stand',
-  });
+  }), opts.bots ?? 0);
 /** A Gear run with some machines bought (cash set to `cash` afterwards), at night. */
 function equipped(gears: GearId[], opts: Parameters<typeof gearRun>[0] = {}, cash = 300): GameState {
   let s = gearRun(opts);
@@ -38,7 +39,7 @@ function equipped(gears: GearId[], opts: Parameters<typeof gearRun>[0] = {}, cas
   return s;
 }
 const classicRun = (bots = 0, tier: TierId = 'stand'): GameState =>
-  createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots }, tier });
+  addBots(createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier }), bots);
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const find = (s: GameState, id: string): Advice | undefined => planNight(s).find((a) => a.id === id);
@@ -78,7 +79,8 @@ describe('item 1: the planner budgets bills (rent + wages), not rent', () => {
 
   it('a Gear run also holds back the wages, by the hour (a 60 s day pays 40%)', () => {
     for (const dayLengthSec of [150, 60]) {
-      const s = equipped(['e1'], { bots: 2, dayLengthSec });
+      const s = equipped(['e1'], { dayLengthSec });
+      s.staff = { marketer: true }; // bot cut 4a: the specialists are the wages left
       s.supplies = { ...FULL, beans: 0 };
       const wages = wagesForDay(s);
       expect(wages).toBeGreaterThan(0);
@@ -134,7 +136,7 @@ describe('item 3: Gear buying hints', () => {
     // Names that already start with "The" must not become "the The …".
     expect(ads[0]!.text).toMatch(/buy the Hanes Method/i);
     expect(ads[0]!.text).not.toMatch(/the The /);
-    expect(PLAN_PRIORITY.gear).toBeGreaterThan(PLAN_PRIORITY.staff);
+    expect(PLAN_PRIORITY.gear).toBeGreaterThan(PLAN_PRIORITY.staffHire);
     expect(PLAN_PRIORITY.gear).toBeLessThan(PLAN_PRIORITY.checkout);
   });
 
@@ -208,47 +210,6 @@ describe('item 3: Gear buying hints', () => {
     expect(ad.text).toContain('vote');
     const solo = gearAd(withYesterday(equipped(['e1', 'c4', 'g1'], {}, 300), 20, 40))[0]!;
     expect(solo.text).not.toContain('vote');
-  });
-});
-
-describe('item 4: let a barista go when the wages beat what the crew adds', () => {
-  const staffAd = (s: GameState) => planNight(s).filter((a) => a.input.kind === 'staff');
-  const afterDay = (bots: number, wages: number, botTakings: number | null): GameState => {
-    const s = gearRun({ bots });
-    s.cash = 300;
-    s.supplies = { ...FULL };
-    s.days.push(dayStats({
-      wages,
-      ...(botTakings === null ? {} : { byPlayer: { p1: { serves: 12, takings: 30 }, 'bot-1': { serves: 1, takings: botTakings / 2 }, 'bot-2': { serves: 1, takings: botTakings / 2 } } }),
-    }));
-    return s;
-  };
-
-  it('suggests letting the newest one go, naming them, when yesterday’s wages beat the bots’ takings', () => {
-    const s = afterDay(2, 2, 1.5);
-    expect(wagesForDay(s)).toBe(2);
-    const [a, ...rest] = staffAd(s);
-    expect(rest).toEqual([]);
-    expect(a).toMatchObject({ id: 'staff:fire', input: { kind: 'staff', action: 'fire' }, priority: PLAN_PRIORITY.staff });
-    expect(a!.text).toContain('Lu costs more than they bring in at the stand');
-  });
-
-  it('is quiet when the bots earned their keep, with no bots, with no tally, or with no wages', () => {
-    expect(staffAd(afterDay(2, 2, 2))).toEqual([]);
-    expect(staffAd(afterDay(2, 2, 40))).toEqual([]);
-    expect(staffAd(afterDay(0, 0, 0))).toEqual([]);
-    expect(staffAd(afterDay(2, 2, null))).toEqual([]);
-    expect(staffAd(afterDay(2, 0, 0))).toEqual([]);
-  });
-
-  it('stops once someone has been let go tonight, and never suggests hiring', () => {
-    let s = afterDay(2, 2, 0);
-    expect(staffAd(s)).toHaveLength(1);
-    s = step(s, [{ kind: 'staff', playerId: 'p1', action: 'fire' }]);
-    expect(staffAd(s)).toEqual([]);
-    for (const x of [afterDay(2, 2, 0), afterDay(1, 1, 5), afterDay(0, 0, 0), s]) {
-      expect(planNight(x).some((a) => a.input.kind === 'staff' && a.input.action === 'hire')).toBe(false);
-    }
   });
 });
 
@@ -455,7 +416,8 @@ describe('item 6: sorted and pure with every new kind in play', () => {
 
   it('covers the new kinds in one plan, sorted by priority then id', () => {
     const closed = planNight(rich(false)).map((a) => a.id);
-    for (const id of ['rival:promo', 'rival:loyalty', 'branch:open', 'staff:fire']) expect(closed).toContain(id);
+    for (const id of ['rival:promo', 'rival:loyalty', 'branch:open']) expect(closed).toContain(id);
+    expect(closed).not.toContain('staff:fire'); // bot cut 4a
     expect(closed.some((id) => id.startsWith('gear:'))).toBe(true);
     const open = planNight(rich(true)).map((a) => a.id);
     for (const id of ['branch:staff', 'branch:send:beans', 'branch:send:milk']) expect(open).toContain(id);

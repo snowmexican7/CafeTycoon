@@ -4,7 +4,7 @@ import { LAYOUT } from '../data/layout';
 import { finishDay } from './closing';
 import { serveCustomer, stepCustomers } from './customers';
 import { ROGUE_REVIEW } from './describe';
-import { findPath, nodeOf, targetNodes } from './bots/path';
+import { findPath, nodeOf, targetNodes } from './path';
 import { isFreeForRogue, pickStation } from './rogue';
 import { stationsFromSlots } from './slots';
 import { tierOf } from './growth';
@@ -12,9 +12,10 @@ import { secondsToTicks } from './constants';
 import { createRun, startDay } from './run';
 import { step } from './step';
 import type { Customer, DrinkId, GameState, Player, Vec2 } from './types';
+import { addBots } from '../harness/crew';
 
 const rogueCafe = (dayNo = 2, bots = 0): GameState => {
-  const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots } });
+  const s = addBots(createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }), bots);
   s.scenario = 'normal';
   startDay(s);
   s.day = dayNo;
@@ -545,7 +546,7 @@ describe('bots and the rogue', () => {
   it('a day with a rogue is deterministic and JSON-safe', () => {
     const kinds = new Set<string>();
     const script = (): GameState => {
-      let s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1 } });
+      let s = addBots(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }), 1);
       s.scenario = 'normal';
       startDay(s);
       s.day = 2; // traffic on, rogues allowed

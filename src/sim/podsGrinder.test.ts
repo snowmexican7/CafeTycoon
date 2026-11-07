@@ -3,8 +3,8 @@ import { createRun } from './run';
 import { step } from './step';
 import { stationsFromSlots } from './slots';
 import { applyGearInput, podsOnly } from './gear';
-import { addStandIns } from './bots/roster';
-import { chainFor } from './bots/brain';
+import { addStandIns } from '../harness/crew';
+import { chainFor } from '../harness/brain';
 import { gearVM } from '../ui/gearVM';
 import { handHint, hudLive } from '../ui/live';
 import { nextStepIndex, ticketSteps, ticketsHtml, ticketsKey, type TicketOpts } from '../ui/tickets';
@@ -14,7 +14,7 @@ import type { GameState, StationKind } from './types';
 // Integration smoke (2026-10-30): a Spice grinder bought next to the Pod-o-Matic made the bots grind
 // beans the pod machine refuses, so espresso sales dropped to zero. These pin the fix.
 const run = (seed = 3): GameState =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 150, nightLengthSec: 4 }, tier: 'stand', gear: true });
+  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150, nightLengthSec: 4 }, tier: 'stand', gear: true });
 const kit = (s: GameState, gear: (GearId | null)[]) => {
   const kinds = gear.map((g) => (g === null ? null : g[0] === 'c' ? 'coldBrewTap' : g[0] === 'e' ? 'espresso' : g[0] === 'g' ? 'grinder' : 'trash')) as (StationKind | null)[];
   s.slotGear = gear;

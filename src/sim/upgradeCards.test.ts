@@ -9,12 +9,11 @@ import { applyNightInput, dealHand } from './night';
 import { createRun, startDay, startNight } from './run';
 import { finishDay } from './closing';
 import { isDownside, splitEffects } from './describe';
-import { TEMP_ID, isBotId, resetBotsForNight } from './bots/roster';
 import { nightViewModel, forecastViewModel } from '../ui/viewModels';
 import type { CardSetId, GameState } from './types';
 
-const solo = (seed = 4, bots: number | 'auto' = 0) =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots, dayLengthSec: 600 } });
+const solo = (seed = 4) =>
+  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 } });
 const own = (s: GameState, ...ids: string[]) => {
   for (const id of ids) s.owned.push({ itemId: id, effects: catalogueById[id].effects });
   return s;
@@ -173,40 +172,6 @@ describe('upgrade cards: the weather radio', () => {
   });
 });
 
-describe('upgrade cards: the temp barista', () => {
-  const hired = (bots: number | 'auto') => {
-    const s = solo(3, bots);
-    s.activeTomorrow.push({ itemId: 'hireTemp', effects: catalogueById.hireTemp.effects });
-    return startDay(s);
-  };
-
-  it('clocks in for the day as a rookie bot when a spot is free, and leaves at closing', () => {
-    const s = hired('auto');
-    const temp = s.players.find((p) => p.id === TEMP_ID)!;
-    expect(temp).toBeDefined();
-    expect(temp.bot?.personality).toBe('rookie');
-    expect(s.players.length).toBe(4);
-    expect(isBotId(TEMP_ID)).toBe(true);
-    resetBotsForNight(s);
-    expect(s.players.some((p) => p.id === TEMP_ID)).toBe(false);
-  });
-
-  it('does not take a fourth spot that is already filled, and is gone after finishDay', () => {
-    const s = createRun({ seed: 3, hostId: 'p1', players: ['p1', 'p2', 'p3', 'p4'].map((id) => ({ id, name: id })), settings: { bots: 0, dayLengthSec: 600 } });
-    s.activeTomorrow.push({ itemId: 'hireTemp', effects: catalogueById.hireTemp.effects });
-    expect(startDay(s).players.some((p) => p.id === TEMP_ID)).toBe(false);
-    const t = hired(0);
-    expect(t.players.some((p) => p.id === TEMP_ID)).toBe(true);
-    finishDay(t);
-    expect(t.players.some((p) => p.id === TEMP_ID)).toBe(false);
-  });
-
-  it('a person cannot join as the temp', () => {
-    expect(isBotId('temp-1')).toBe(true);
-  });
-});
-
-
 describe('upgrade cards: B11 balance', () => {
   it('every set has at least three cards and a third-card bonus on top of the pair', () => {
     for (const set of Object.values(CARD_SETS)) {
@@ -233,9 +198,5 @@ describe('upgrade cards: B11 balance', () => {
     expect(fittingsValue(s)).toBe(perm.cost * ECONOMY.fittingsResale);
     s.cash = s.startingCash - 10;
     expect(scoreRun(s)).toBeCloseTo(-10 + perm.cost * ECONOMY.fittingsResale);
-  });
-
-  it('the hire-a-temp card costs $30 (B6 note)', () => {
-    expect(CATALOGUE.find((c) => c.effects.some((e) => e.kind === 'temp'))!.cost).toBe(30);
   });
 });

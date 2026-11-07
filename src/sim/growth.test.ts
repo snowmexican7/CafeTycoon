@@ -4,7 +4,7 @@ import { step } from './step';
 import { validateInput } from './validate';
 import { TIERS, applyGrowInput, canMake, floorWidth, growDiff, growthMorning, nextTier, nextTierAffordable, stationsFor, tierSpent } from './growth';
 import { blocked } from './movement';
-import { isWalkable, walkableNodes } from './bots/path';
+import { isWalkable, walkableNodes } from './path';
 import { unlockedDrinks } from './unlocks';
 import { queueCapacity } from './customers';
 import { computeModifiers, rentForDay } from './effects';
@@ -12,8 +12,9 @@ import { fittingsValue } from './score';
 import { ECONOMY } from '../data/economy';
 import { growthVM, nightViewModel } from '../ui/viewModels';
 import type { GameState, TierId } from './types';
+import { addBots } from '../harness/crew';
 
-const run = (tier?: TierId, seed = 3) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier });
+const run = (tier?: TierId, seed = 3) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier });
 const night = (tier?: TierId) => {
   const s = run(tier);
   s.phase = 'night';
@@ -60,7 +61,7 @@ describe('growth path (P3 B13)', () => {
   });
 
   it('a whole stand day with bots serves customers, only stand drinks, and never more than 3 in line', () => {
-    let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 2 }, tier: 'stand' });
+    let s = addBots(createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand' }), 2);
     s.players[0].connected = false;
     s = startDay(s);
     let maxLine = 0;
@@ -112,11 +113,6 @@ describe('growth path (P3 B13)', () => {
     poor.cash = 10;
     grow(poor, 'cart');
     expect(poor.tier).toBe('stand');
-    const botty = night('stand');
-    botty.cash = 500;
-    botty.players.push({ ...botty.players[0], id: 'b1', name: 'Bo', bot: { personality: 'steady' } } as GameState['players'][number]);
-    grow(botty, 'cart', 'b1');
-    expect(botty.tier).toBe('stand');
   });
 
   it('validates the grow input shape', () => {
@@ -204,7 +200,7 @@ describe('R3 6: the early growth nudge', () => {
     let c = nightAt(9999, 'cafe');
     c = step(c, []);
     expect(nudges(c)).toHaveLength(0);
-    const g = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+    const g = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
     g.cash = 500;
     const g1 = step(g, []);
     expect(g1.phase).toBe('night');
@@ -255,7 +251,7 @@ describe('R3 7: the grow diff', () => {
   });
 
   it('a Gear run\'s grow.done diff lists back-bar slots', () => {
-    const g = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+    const g = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
     g.phase = 'night';
     g.cash = 500;
     grow(g, 'cart');

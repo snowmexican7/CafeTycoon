@@ -12,7 +12,7 @@ const at = (s: GameState, x: number, y: number) => {
   return s;
 };
 const day = () => {
-  const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
   s.scenario = 'normal';
   return startDay(s);
 };

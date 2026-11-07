@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { catalogueById } from '../data/catalogue';
 import { DRINK_IDS, dayUnlocks, recipeChain, suppliesFor } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
-import { chainFor } from './bots/brain';
+import { chainFor } from '../harness/brain';
 import { availableDrinks } from './customers';
 import { eligibleItems, applyNightInput } from './night';
 import { createRun, startDay, startNight } from './run';
@@ -11,9 +11,10 @@ import { step } from './step';
 import type { GameState } from './types';
 import { menuDrinks, neededSupplies, unlockDrink } from './unlocks';
 import { nightViewModel } from '../ui/viewModels';
+import { addBots } from '../harness/crew';
 
 const solo = (bots = 0, seed = 3) =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots, dayLengthSec: 600 } });
+  addBots(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 } }), bots);
 const at = (s: GameState, x: number, y: number) => {
   s.players[0].pos = { x, y };
   return s;
@@ -156,7 +157,7 @@ describe('menu variety: bots and determinism', () => {
 
   it('a full week with the new menu is deterministic', () => {
     const play = () => {
-      let s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 2, dayLengthSec: 60, nightLengthSec: 2 } });
+      let s = addBots(createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 60, nightLengthSec: 2 } }), 2);
       s.players[0].connected = false;
       for (let i = 0; i < 60 * 60 * 6 && s.phase !== 'weekEnd' && s.phase !== 'ended'; i++) s = step(s, []);
       return s;

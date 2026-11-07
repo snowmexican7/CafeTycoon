@@ -15,7 +15,7 @@ type Kit = GearId | 'steamer';
 
 /** A Gear stand on `day` whose slots hold `gear` ('steamer' = a plain steam station, the wand), stocked up. */
 function gearDay(day: number, gear: Kit[], seed = 7, tier: TierId = 'cafe'): GameState {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
@@ -85,7 +85,7 @@ describe('Round 3 item 1: more lattes (order mix)', () => {
   });
 
   it('classic runs are never reweighted', () => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand' });
     expect(milkPush(s, ['espresso', 'latte', 'coldBrew'], computeModifiers(s))).toBe(1);
   });
 

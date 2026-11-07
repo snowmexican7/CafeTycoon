@@ -1,20 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { TICK_RATE } from '../constants';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { TICK_RATE } from '../sim/constants';
 import { BOX_LOW, afterBotInteract, boxNode, chainFor, dropPlan, think } from './brain';
-import { layoutFor } from '../../data/layout';
-import { ECONOMY } from '../../data/economy';
-import { nearestStation } from '../movement';
-import { addStandIns } from './roster';
-import { ensureCounterSpots, stationsFromSlots } from '../slots';
-import type { GearId } from '../../data/gear';
-import { BASE_DRINKS } from '../../data/drinks';
-import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId } from '../types';
+import { layoutFor } from '../data/layout';
+import { ECONOMY } from '../data/economy';
+import { nearestStation } from '../sim/movement';
+import { addStandIns } from './crew';
+import { ensureCounterSpots, stationsFromSlots } from '../sim/slots';
+import type { GearId } from '../data/gear';
+import { BASE_DRINKS } from '../data/drinks';
+import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId } from '../sim/types';
 
 /** A stocked Gear stand (C1 tap + E1 pods) with `bots` stand-ins and no walk-ins. */
 function gearStand(bots = 1): GameState {
-  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 150 }, tier: 'stand', gear: true });
+  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'stand', gear: true });
   addStandIns(s, bots);
   for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
   s.supplies.beans = 40;
@@ -40,7 +40,7 @@ describe('bots ring up and set drinks on the pickup counter (Task 13)', () => {
     const s = quiet(gearStand());
     expect(last(chainFor(s, sim(s), 'espresso', 'serve'))).toEqual({ kind: 'use', station: 'pickup', action: 'put' });
     expect(last(chainFor(s, sim(s), 'coldBrew', 'put'))).toEqual({ kind: 'use', station: 'pickup', action: 'put' });
-    let c = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    let c = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     addStandIns(c, 1);
     c = startDay(c);
     expect(last(chainFor(c, sim(c), 'espresso', 'serve'))).toEqual({ kind: 'use', station: 'counter', action: 'serve' });
@@ -140,7 +140,7 @@ describe('pickup review fixes (M1, M3)', () => {
   });
 
   it('M1: an idle bot does not park on a counter spot a carrier needs', async () => {
-    const { targetNodes, idleNode } = await import('./path');
+    const { targetNodes, idleNode } = await import('../sim/path');
     const s = quiet(gearStand());
     sim(s).pos = { x: 5, y: 5 }; // standing right where a carrier sets drinks down
     const spots = s.stations.filter((st) => st.kind === 'counter');
@@ -155,7 +155,7 @@ describe('pickup review fixes (M1, M3)', () => {
  * a wand; the station works the same), every tap drink on the menu, plenty of supplies, no walk-ins.
  */
 function tapStand(bots = 1): GameState {
-  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, tier: 'stand', gear: true });
+  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 }, tier: 'stand', gear: true });
   addStandIns(s, bots);
   for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
   s.slots = s.slots!.map((k, i) => (i === 2 ? 'steamer' : k));
@@ -322,7 +322,7 @@ describe('bots carry the condiment box (Task 15)', () => {
 
   it('on every tier, "use" at the box node takes the box (not the mop, not a station)', () => {
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
-      const s = startDay(createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true, ...(tier !== 'cafe' ? { tier } : {}) }));
+      const s = startDay(createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true, ...(tier !== 'cafe' ? { tier } : {}) }));
       const n = boxNode(s);
       const corner = layoutFor(s.tier).boxCorner;
       expect(Math.hypot(n.x - corner.x, n.y - corner.y)).toBeLessThanOrEqual(ECONOMY.interactRangeTiles);

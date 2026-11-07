@@ -7,7 +7,7 @@ import { ECONOMY } from '../data/economy';
 import { nightViewModel } from '../ui/viewModels';
 import type { GameState } from './types';
 
-const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 const withSig = (s: GameState, premium = 2, since = 1) => {
   s.signature = { name: 'Honey Haze', drink: 'latte', twist: 'honey', premium, since };
   return s;
@@ -34,11 +34,6 @@ describe('rival Starbuck$ (P3 B9)', () => {
     applyScoutInput(d, { kind: 'scout', playerId: 'p1' });
     expect(d.rival).toBeUndefined(); // day: no
     expect(validateInput({ kind: 'scout', playerId: 'p1' })).toEqual({ kind: 'scout', playerId: 'p1' });
-    const b = run();
-    b.phase = 'night';
-    b.players[0].bot = {} as never; // a bot seat
-    applyScoutInput(b, { kind: 'scout', playerId: 'p1' });
-    expect(b.rival).toBeUndefined(); // bots can't scout
   });
 
   it('copies a signature after a few days, undercuts, and halves the asks', () => {

@@ -20,7 +20,7 @@ import { markPeersAway } from './net/hostResume';
 import { createLocalTransport } from './net/localTransport';
 import type { PeerStatus } from './net/peerSession';
 import { createPeerSession } from './net/peerSession';
-import { PROTOCOL_VERSION, type BotsChoice, type Member } from './net/protocol';
+import { PROTOCOL_VERSION, type Member } from './net/protocol';
 import { makeRoomCode, normalizeRoomCode } from './net/roomCode';
 import { createTrysteroLink } from './net/roomLink';
 import { roomLinkFor } from './net/localLink';
@@ -155,8 +155,6 @@ interface Session {
   peerStatus: PeerStatus | 'hosting';
   started: boolean;
   pendingStart: StartChoice | null;
-  /** The bots setting as the host last announced it (peers), for the lobby card. */
-  lobbyBots: { bots: BotsChoice; picked: boolean } | null;
 }
 
 async function main(): Promise<void> {
@@ -237,7 +235,6 @@ async function main(): Promise<void> {
     // FB2 B8: syrup rack picker (1 vanilla · 2 caramel).
     onSyrup: (flavour) => send({ kind: 'syrup', playerId: me(), flavour }),
     onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }),
-    onCall: (take) => send({ kind: 'call', playerId: me(), take }),
   }, { recipeHints });
   const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook() });
   // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).
@@ -283,12 +280,6 @@ async function main(): Promise<void> {
   }
   const lobby = createLobby($('#lobby'), {
     onStart: () => startHostedRun(),
-    onBots: (count) => {
-      const s = session;
-      if (s?.role !== 'host' || !s.room || s.started) return;
-      s.room.setBots(count);
-      renderLobby(s);
-    },
     onLeave: () => {
       if (session?.role === 'host') stores.hostRoom.clear();
       else {
@@ -324,13 +315,14 @@ async function main(): Promise<void> {
     }
   }
 
-  function runOptions(choice: StartChoice, hostId: PlayerId, players: Member[], bots: BotsChoice = 'auto'): CreateRunOptions {
+  function runOptions(choice: StartChoice, hostId: PlayerId, players: Member[], cashier = false): CreateRunOptions {
     const settings = stores.settings.get();
     return {
       seed: choice.seed ?? Math.floor(Math.random() * 2 ** 31),
       hostId,
       players: players.map((m) => ({ id: m.token, name: m.name, ...(m.look ? { look: m.look } : {}) })),
-      settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec, bots },
+      // Bot cut step 3: only a solo start passes `cashier` (the robot cashier); a co-op room never has one.
+      settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec, ...(cashier ? { cashier } : {}) },
       // P3 B13: every new run opens as a kerbside stand and grows from there.
       tier: 'stand',
       // G11 (v3.0.0): every new run is a Gear run; ?gear=0 is a hidden classic escape hatch.
@@ -367,7 +359,6 @@ async function main(): Promise<void> {
       peerStatus: 'hosting',
       started: false,
       pendingStart: null,
-      lobbyBots: null,
     };
     s.unsubscribers.push(transport.onSnapshot((snap) => onSnapshot(s, snap)));
     s.unsubscribers.push(
@@ -394,14 +385,11 @@ async function main(): Promise<void> {
 
   function renderLobby(s: Session): void {
     if (!s.code) return;
-    const bots = s.role === 'host' ? (s.room?.bots() ?? null) : s.lobbyBots;
-    lobby.render(
-      lobbyViewModel({ code: s.code, members: s.members, isHost: s.role === 'host', status: s.peerStatus, started: s.started, ...(bots ? { bots } : {}) }),
-    );
+    lobby.render(lobbyViewModel({ code: s.code, members: s.members, isHost: s.role === 'host', status: s.peerStatus, started: s.started }));
   }
 
   function startSolo(choice: StartChoice, look: PlayerLook | null = null): void {
-    const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: nightLengthForSim(choice.nightLengthSec), ...(choice.soloBots !== undefined ? { soloBots: choice.soloBots } : {}) });
+    const settings = stores.settings.set({ playerName: choice.name, pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: nightLengthForSim(choice.nightLengthSec), ...(choice.soloCashier !== undefined ? { soloCashier: choice.soloCashier } : {}) });
     stores.hostRoom.clear(); // a solo run never reopens an old room
     const tele = newTelemetry(settings.playerName);
     const local = withTelemetry(createLocalTransport(), tele);
@@ -410,7 +398,7 @@ async function main(): Promise<void> {
     attachTelemetry(s, tele);
     armWatchdog(s);
     rememberPerk(choice);
-    local.start(runOptions(choice, id, [{ token: id, name: settings.playerName, ...(look ? { look } : {}) }], settings.soloBots));
+    local.start(runOptions(choice, id, [{ token: id, name: settings.playerName, ...(look ? { look } : {}) }], settings.soloCashier));
   }
 
   function openHostRoom(s: Session, local: Transport, code: string, hostMember: Member): void {
@@ -443,7 +431,7 @@ async function main(): Promise<void> {
     if (!s || s.role !== 'host' || s.started || !s.pendingStart || !s.room) return;
     armWatchdog(s);
     rememberPerk(s.pendingStart);
-    s.transport.start(runOptions(s.pendingStart, s.me, s.room.members(), s.room.bots().bots));
+    s.transport.start(runOptions(s.pendingStart, s.me, s.room.members()));
     s.pendingStart = null;
   }
 
@@ -505,7 +493,6 @@ async function main(): Promise<void> {
       transport.onLobby((msg) => {
         s.members = msg.members;
         s.started = msg.started;
-        s.lobbyBots = msg.bots !== undefined ? { bots: msg.bots, picked: msg.botsPicked === true } : null;
         renderLobby(s);
       }),
     );

@@ -20,7 +20,7 @@ import { crewBursts, newCrewMemory } from '../render/crewModel';
 import { diffCues, logCursor, type CueId } from '../audio/cues';
 
 function gearDay(gear: GearId[] = ['e5', 'c1']): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'cafe', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cafe', gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => { slots[i] = GEAR[id].station; slotGear[i] = id; });

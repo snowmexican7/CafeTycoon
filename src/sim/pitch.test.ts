@@ -8,7 +8,7 @@ import { nightViewModel } from '../ui/viewModels';
 import type { GameState, PitchKind } from './types';
 
 const run = (seed = 1) => {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
   s.phase = 'night';
   return s;
 };
@@ -55,10 +55,6 @@ describe('pitch an idea (P3 B11)', () => {
     const first = s.pitch;
     pitch(s, BAD);
     expect(s.pitch).toBe(first);
-    const bot = run();
-    bot.players[0].bot = {} as never;
-    pitch(bot, GOOD);
-    expect(bot.pitch).toBeUndefined();
     const day = startDay(run());
     pitch(day, GOOD);
     expect(day.pitch).toBeUndefined();

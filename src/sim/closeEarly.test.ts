@@ -6,6 +6,7 @@ import { step } from './step';
 import { validateInput } from './validate';
 import { ECONOMY } from '../data/economy';
 import type { GameState, PlayerInput } from './types';
+import { addBots } from '../harness/crew';
 
 const two = () => {
   const s = createRun({
@@ -15,13 +16,12 @@ const two = () => {
       { id: 'p1', name: 'A' },
       { id: 'p2', name: 'B' },
     ],
-    settings: { bots: 0 },
   });
   s.scenario = 'normal';
   return startDay(s);
 };
 const solo = () => {
-  const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'A' }], settings: { bots: 0 } });
+  const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'A' }] });
   s.scenario = 'normal';
   return startDay(s);
 };
@@ -54,7 +54,7 @@ describe('closeEarly input', () => {
   });
 
   it('never counts a bot', () => {
-    const b = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'A' }], settings: { bots: 1 } });
+    const b = addBots(createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'A' }] }), 1);
     b.scenario = 'normal';
     let s = advance(startDay(b), 16);
     const botId = s.players.find((p) => p.bot)!.id;
@@ -216,7 +216,7 @@ describe('closeEarly determinism', () => {
   });
 
   it('keeps the base RNG stream with a bot on the floor', () => {
-    const b = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'A' }], settings: { bots: 1 } });
+    const b = addBots(createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'A' }] }), 1);
     b.scenario = 'normal';
     // golden measured on e503518: seed 5, p1 + one bot, scenario normal, 900 ticks after startDay
     expect(run900(startDay(b)).rng).toBe(-1928183945);

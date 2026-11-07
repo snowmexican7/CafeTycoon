@@ -10,7 +10,7 @@ import { validateInput } from './validate';
 import { GEAR } from '../data/gear';
 import type { CreateRunOptions, GameState } from './types';
 
-const opts = (gear?: boolean): CreateRunOptions => ({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear });
+const opts = (gear?: boolean): CreateRunOptions => ({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear });
 const gearRun = () => createRun(opts(true));
 const buy = (s: GameState, gear: keyof typeof GEAR) => applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear });
 const sell = (s: GameState, index: number) => applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'sell', index });

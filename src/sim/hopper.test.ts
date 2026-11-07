@@ -7,8 +7,8 @@ import { finishDay } from './closing';
 import { GEAR, type GearId } from '../data/gear';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
-import { addStandIns } from './bots/roster';
-import { chainFor } from './bots/brain';
+import { addStandIns } from '../harness/crew';
+import { chainFor } from '../harness/brain';
 import { stationsFromSlots } from './slots';
 import type { GameState, StationKind } from './types';
 import { gearStats } from '../ui/gearVM';
@@ -16,7 +16,7 @@ import { ACCURACY } from './accuracy';
 import { stationLeft } from './counts';
 
 const gearRun = (seed = 9): GameState =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 200 }, tier: 'stand', gear: true });
+  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 200 }, tier: 'stand', gear: true });
 
 const buy = (s: GameState, ...ids: GearId[]): GameState => {
   let out = s;
@@ -109,7 +109,7 @@ describe('Round 5: grinder hopper', () => {
   });
 
   it('bots take from the hopper when making a shot', () => {
-    let s = createRun({ seed: 44, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 240 }, tier: 'stand', gear: true });
+    let s = createRun({ seed: 44, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 240 }, tier: 'stand', gear: true });
     s = buy(s, 'g1', 'e2');
     addStandIns(s, 1);
     for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 40;
@@ -167,7 +167,7 @@ describe('Round 5: grinder hopper', () => {
   });
 
   it('idle bots leave the last hopper dose alone (it waits to be used or clears at closing)', () => {
-    let s = createRun({ seed: 44, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 240 }, tier: 'stand', gear: true });
+    let s = createRun({ seed: 44, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 240 }, tier: 'stand', gear: true });
     s = buy(s, 'g1', 'e2');
     addStandIns(s, 1);
     for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 40;

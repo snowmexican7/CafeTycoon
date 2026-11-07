@@ -9,8 +9,8 @@ import { FRIDGE, fridgeGear, isSupply } from './fridge';
 import { SUPPLY_ID, layoutFor } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
 import { step } from './step';
-import { addStandIns } from './bots/roster';
-import { uncoveredOrders } from './bots/brain';
+import { addStandIns } from '../harness/crew';
+import { uncoveredOrders } from '../harness/brain';
 import { TICK_RATE } from './constants';
 import type { DrinkId, GameState, SupplyId, TierId } from './types';
 
@@ -18,7 +18,7 @@ import type { DrinkId, GameState, SupplyId, TierId } from './types';
 type Kit = GearId | 'steamer';
 
 function gearNight(gear: Kit[], supplies: Partial<Record<SupplyId, number>> = {}, tier: TierId = 'stand'): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {

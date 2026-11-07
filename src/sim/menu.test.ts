@@ -12,7 +12,6 @@ const opts = {
     { id: 'p1', name: 'K' },
     { id: 'p2', name: 'J' },
   ],
-  settings: { bots: 0 as const },
 };
 const menu = (playerId: string, drink: string, on: boolean) => ({ kind: 'menu', playerId, drink, on }) as PlayerInput;
 
