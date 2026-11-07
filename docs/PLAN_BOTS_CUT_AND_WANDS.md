@@ -1,6 +1,7 @@
 # Plan: cut the bots, keep a robot cashier, and make wand upgrades ease the meters
 
-Status: **approved by Kennedy 2026-11-06** (answers below). Nothing below is built yet. Decisions are logged in
+Status: **approved by Kennedy 2026-11-06** (answers below). **Phase 1 steps 1–5 are on main (2026-11-07, protocol 69,
+snapshot 35);** step 6 (dead guards) is in progress. See "As built" at the end. Decisions are logged in
 `docs/HANDOFF.md` (2026-11-06). The facts come from a survey of `main` at caf1cce.
 
 ## Why
@@ -129,3 +130,14 @@ outcomes), keeping the office-run heads-up.
 4. **Hired bot baristas and the temp card:** remove entirely, along with the bot wage economy?
 5. **Tests:** keep the old bot brain as a test-only player (recommended: cheapest, and keeps the safety net), or
    write a new, simpler scripted player?
+
+## As built (Phase 1, 2026-11-07)
+
+- Step 2 used a hook instead of a "harnessStep before step": `step.ts` exposes `setBotDriver`, and `installHarness()`
+  plugs the old brain in at the same point in the tick, so every bot-driven test plays exactly as before.
+- Robot cashier: `src/sim/cashier.ts`. It steps aside for a person with empty hands standing on or straight beside the
+  till spot (not diagonal, not someone collapsed), comes back 2 s after they leave, and keeps ringing through the closing
+  grace. $1 a day goes on the wages line.
+- Branch phone: the branch decides its own call when it first rings (takes an office order if nobody walked out of the
+  branch yesterday; fixes a broken machine with 2+ staff). The ring still shows for its whole window.
+- `DayStats.byPlayer` ("who served what") is people-only. Removing the temp card changes which cards can be dealt.
