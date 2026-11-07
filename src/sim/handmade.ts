@@ -294,6 +294,7 @@ function stopSteam(state: GameState, p: Player, grade: SteamGrade): void {
       st.making = null;
       st.doneAt = state.tick;
       st.outputSince = state.tick;
+      onStationFinished(state, st, drink, p.id); // the eggs roll for a parked cup too
     }
     // Round 6: steam always clears the wand busy — the meter was the only timer.
     st.busyTicksLeft = 0;
