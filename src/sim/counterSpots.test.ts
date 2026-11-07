@@ -5,7 +5,7 @@ import { applyGrowInput } from './growth';
 import { ensureCounterSpots, stationsFromSlots } from './slots';
 import { returnBox } from './condiments';
 import { nearestStation } from './movement';
-import { findPath, targetNodes } from './bots/path';
+import { findPath, targetNodes } from './path';
 import { CONDIMENTS_ID, LAYOUT, PICKUP_ID, layoutFor } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
 import type { GameState, TierId } from './types';

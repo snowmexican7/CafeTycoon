@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { createRun } from '../run';
-import { step } from '../step';
-import { expectedUse } from '../brief';
-import { computeModifiers, rentForDay } from '../effects';
-import { restockCost } from '../night';
-import { priceForecast } from '../pricing';
-import { sigPrice } from '../rival';
-import { addStandIns, BOT_IDS, syncBots } from './roster';
-import { crewTips, planNight, PLAN_PRIORITY, RESTOCK_MARGIN } from './planner';
-import type { Advice } from './planner';
-import { CHECKOUT } from '../checkout';
-import { TIERS } from '../growth';
-import { ECONOMY } from '../../data/economy';
-import { RIVAL } from '../rival';
-import type { DayStats, DrinkId, GameState, TierId } from '../types';
+import { createRun } from './run';
+import { step } from './step';
+import { expectedUse } from './brief';
+import { computeModifiers, rentForDay } from './effects';
+import { restockCost } from './night';
+import { priceForecast } from './pricing';
+import { sigPrice } from './rival';
+import { addStandIns, BOT_IDS, syncBots } from './bots/roster';
+import { crewTips, planNight, PLAN_PRIORITY, RESTOCK_MARGIN } from './advice';
+import type { Advice } from './advice';
+import { CHECKOUT } from './checkout';
+import { TIERS } from './growth';
+import { ECONOMY } from '../data/economy';
+import { RIVAL } from './rival';
+import type { DayStats, DrinkId, GameState, TierId } from './types';
 
 const run = (tier?: TierId): GameState =>
   createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, ...(tier ? { tier } : {}) });

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { createRun } from '../run';
-import { step } from '../step';
-import { expectedUse, nightBrief } from '../brief';
-import { applyGrowInput } from '../growth';
-import { fridgeCapacity } from '../fridge';
-import { planNight, PLAN_PRIORITY } from './planner';
-import type { GearId } from '../../data/gear';
-import type { GameState } from '../types';
+import { createRun } from './run';
+import { step } from './step';
+import { expectedUse, nightBrief } from './brief';
+import { applyGrowInput } from './growth';
+import { fridgeCapacity } from './fridge';
+import { planNight, PLAN_PRIORITY } from './advice';
+import type { GearId } from '../data/gear';
+import type { GameState } from './types';
 
 /** A Gear stand at night with `gears` bought, $`cash`, `dayLengthSec` long days, the cube when `cube`, and an empty pantry. */
 function night(gears: GearId[], cash = 300, dayLengthSec = 150, cube = true): GameState {

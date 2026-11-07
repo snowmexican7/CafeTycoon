@@ -11,7 +11,7 @@
  *    kind ('spill' | 'grounds'); `at` is the station it came from, when there is one.
  *  - `GEAR_FLOOR` (floor.ts): how fast the floor meter drops per mess and recovers with none, in Gear runs (`stepCleanliness`).
  */
-import { nodeOf } from './bots/path';
+import { nodeOf } from './path';
 import { emitLog } from './log';
 import { ownTile, placeMess } from './floor';
 import { rngNext } from './rng';

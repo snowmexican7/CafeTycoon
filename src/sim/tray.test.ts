@@ -9,7 +9,7 @@ import { stepBumps } from './bumps';
 import { finishDay } from './closing';
 import { makeTicket } from './orders';
 import { blocked, nearestStation } from './movement';
-import { findPath, targetNodes, walkableNodes } from './bots/path';
+import { findPath, targetNodes, walkableNodes } from './path';
 import { uncoveredOrders } from './bots/brain';
 import { rngNext } from './rng';
 import { COOLING_SECONDS } from './cooling';

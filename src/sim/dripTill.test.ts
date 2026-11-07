@@ -6,7 +6,7 @@ import { applyGearInput } from './gear';
 import { step } from './step';
 import { addStandIns } from './bots/roster';
 import { think } from './bots/brain';
-import { targetNodes } from './bots/path';
+import { targetNodes } from './path';
 import { groups } from './rearrange';
 import type { CreateRunOptions, Customer, GameState, TierId, Vec2 } from './types';
 

@@ -4,7 +4,7 @@ import { emitLog } from './log';
 import { rngInt, rngNext } from './rng';
 import { tally } from './tally';
 import { tileAhead, tileOf } from './tiles';
-import { isWalkable, nodeOf } from './bots/path';
+import { isWalkable, nodeOf } from './path';
 import type { GameState, Mess, MessKind, Player, Vec2 } from './types';
 
 const M = ECONOMY.mess;

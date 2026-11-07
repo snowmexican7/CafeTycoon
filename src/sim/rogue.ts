@@ -2,7 +2,7 @@ import { ECONOMY } from '../data/economy';
 import { TAP_DRINKS } from '../data/drinks';
 import { drinkSuppliesFor, takeTapCup } from './gear';
 import { LAYOUT } from '../data/layout';
-import { findPath, nodeOf, targetNodes } from './bots/path';
+import { findPath, nodeOf, targetNodes } from './path';
 import { TICK_RATE, secondsToTicks } from './constants';
 import { emitLog } from './log';
 import { STATION_RECIPES } from './stations';

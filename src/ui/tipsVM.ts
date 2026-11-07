@@ -9,7 +9,7 @@
 import { ECONOMY } from '../data/economy';
 import { CONDIMENTS } from '../sim/condiments';
 import { BOT_IDS, BOT_PERSONALITIES } from '../sim/bots/roster';
-import { crewTips, type Advice, type AdviceKind } from '../sim/bots/planner';
+import { crewTips, type Advice, type AdviceKind } from '../sim/advice';
 import { nightBrief, type NightFix } from '../sim/brief';
 import type { GameState, Personality, SupplyId } from '../sim/types';
 

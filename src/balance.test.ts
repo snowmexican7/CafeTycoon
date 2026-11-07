@@ -9,7 +9,7 @@ import { nextTier } from './sim/growth';
 import { PRICING } from './sim/pricing';
 import { RIVAL } from './sim/rival';
 import { CHECKOUT, nextCheckout } from './sim/checkout';
-import type { Advice } from './sim/bots/planner';
+import type { Advice } from './sim/advice';
 import { restockCost } from './sim/night';
 
 describe('balance tester', () => {

@@ -3,7 +3,7 @@
  * stand's back sink; old saves gain the sink on load) moves to the nearest walkable tile; any other spot is kept as
  * it is. Used everywhere a barista is placed: createRun, startDay, newBarista (bots, temps, stand-ins) and join.
  */
-import { nodeOf } from './bots/path';
+import { nodeOf } from './path';
 import { floorWidth } from './growth';
 import { blocked } from './movement';
 import { tileOf } from './tiles';

@@ -10,7 +10,7 @@ import { knownStars, TWISTS, type TwistId } from '../src/sim/taste';
 import { BASE_DRINKS, DRINK_IDS } from '../src/data/drinks';
 import { zeroDrinks } from '../src/sim/tally';
 import { SUPPLY_IDS, menuDrinks } from '../src/sim/unlocks';
-import { planNight, type Advice } from '../src/sim/bots/planner';
+import { planNight, type Advice } from '../src/sim/advice';
 import { PRICING } from '../src/sim/pricing';
 import { RIVAL } from '../src/sim/rival';
 import { cleanDraft } from '../src/sim/signature';

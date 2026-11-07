@@ -5,7 +5,7 @@ import { validateInput } from './validate';
 import { applyNightInput, restockCost } from './night';
 import { expectedOrders, expectedUse, nightBrief, runOutFraction } from './brief';
 import { addCustomer, serveCustomer } from './customers';
-import { planNight } from './bots/planner';
+import { planNight } from './advice';
 import { rentForDay } from './effects';
 import { ECONOMY } from '../data/economy';
 import type { GameState, PlayerInput } from './types';

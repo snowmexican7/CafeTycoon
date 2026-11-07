@@ -4,7 +4,7 @@ import { step } from './step';
 import { validateInput } from './validate';
 import { TIERS, applyGrowInput, canMake, floorWidth, growDiff, growthMorning, nextTier, nextTierAffordable, stationsFor, tierSpent } from './growth';
 import { blocked } from './movement';
-import { isWalkable, walkableNodes } from './bots/path';
+import { isWalkable, walkableNodes } from './path';
 import { unlockedDrinks } from './unlocks';
 import { queueCapacity } from './customers';
 import { computeModifiers, rentForDay } from './effects';
