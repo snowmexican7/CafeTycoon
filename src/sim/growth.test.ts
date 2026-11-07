@@ -113,11 +113,6 @@ describe('growth path (P3 B13)', () => {
     poor.cash = 10;
     grow(poor, 'cart');
     expect(poor.tier).toBe('stand');
-    const botty = night('stand');
-    botty.cash = 500;
-    botty.players.push({ ...botty.players[0], id: 'b1', name: 'Bo', bot: { personality: 'steady' } } as GameState['players'][number]);
-    grow(botty, 'cart', 'b1');
-    expect(botty.tier).toBe('stand');
   });
 
   it('validates the grow input shape', () => {

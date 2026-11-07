@@ -11,6 +11,8 @@ import { step } from './step';
 import { validateInput } from './validate';
 import type { GameState, PlayerInput } from './types';
 import { addBots } from '../harness/crew';
+import { CASHIER_ID, syncCashier } from './cashier';
+import { nextCheckout } from './checkout';
 
 const opts = { seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] };
 const ticks = (s: GameState, n: number, inputs: PlayerInput[] = []) => {
@@ -240,6 +242,22 @@ describe('drop input', () => {
     const without = step(s, []).players.find((p) => p.id === 'bot-1')!;
     expect(before.dropQueued).toBe(false);
     expect(withDrop).toEqual(without);
+  });
+});
+
+describe('inputs from a bot body', () => {
+  it('applyInput refuses an input in the robot cashier\'s name (the handlers no longer check)', () => {
+    const s = syncCashier(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { cashier: true }, tier: 'stand', gear: true }));
+    expect(s.players.some((p) => p.id === CASHIER_ID)).toBe(true);
+    s.cash = 500;
+    const next = nextCheckout(s)!;
+    const refused = step(s, [{ kind: 'checkout', playerId: CASHIER_ID, checkout: next }]);
+    expect(refused.cash).toBe(500);
+    expect(refused.checkout?.active ?? 'register').toBe('register');
+    // The same input from a person goes through.
+    const taken = step(s, [{ kind: 'checkout', playerId: 'p1', checkout: next }]);
+    expect(taken.checkout?.active).toBe(next);
+    expect(taken.cash).toBeLessThan(500);
   });
 });
 

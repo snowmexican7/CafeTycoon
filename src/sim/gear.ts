@@ -92,7 +92,7 @@ const rebuild = rebuildBar;
 export function applyGearInput(state: GameState, input: Extract<PlayerInput, { kind: 'gear' }>): GameState {
   if (!isGearRun(state) || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   // FB2 A4: an open fridge-card proposal takes the votes (one proposal at a time, gear or fridge).
   if (input.action === 'vote' && state.fridgeVote) return fridgeCastVote(state, p, input.yes);
   // The proposer's Withdraw comes first, so a vote that only passes because the others left can't buy on the way out.
@@ -154,7 +154,7 @@ function gearCastVote(state: GameState, p: Player, yes: boolean): GameState {
 export function applyFridgeInput(state: GameState, input: Extract<PlayerInput, { kind: 'fridge' }>): GameState {
   if (!isGearRun(state) || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   settleVote(state);
   const card = fridgeCards(state).find((c) => c.id === input.fridge);
   if (!card) return state;
@@ -395,7 +395,7 @@ export function wandCards(state: GameState): WandCard[] {
 export function applyWandInput(state: GameState, input: Extract<PlayerInput, { kind: 'wand' }>): GameState {
   if (!isGearRun(state) || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   settleVote(state);
   const card = wandCards(state).find((c) => c.station === input.station && c.wand === input.wand);
   if (!card || state.cash < card.price) return state;

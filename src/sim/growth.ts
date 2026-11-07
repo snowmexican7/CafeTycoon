@@ -220,7 +220,7 @@ export function classicGrowSlots(state: GameState, to: TierId): void {
 export function applyGrowInput(state: GameState, input: Extract<PlayerInput, { kind: 'grow' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   if (nextTier(state) !== input.tier) return state;
   const cost = TIERS[input.tier].cost;
   if (state.cash < cost) return state;

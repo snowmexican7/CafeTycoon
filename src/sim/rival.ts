@@ -174,7 +174,7 @@ export function promoMorning(state: GameState): string | null {
 export function applyRivalCounterInput(state: GameState, input: Extract<PlayerInput, { kind: 'rivalCounter' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   if (!isPromoDay(state)) return state;
   const on = input.on !== false;
   if (on) state.rival = { ...(state.rival ?? {}), counter: state.day };
@@ -189,7 +189,7 @@ export function applyRivalCounterInput(state: GameState, input: Extract<PlayerIn
 export function applyScoutInput(state: GameState, input: Extract<PlayerInput, { kind: 'scout' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   if (state.rival?.scouted === state.day || state.cash < RIVAL.scoutCost) return state;
   state.cash = round2(state.cash - RIVAL.scoutCost);
   state.rival = { ...(state.rival ?? {}), scouted: state.day } as Rival;
@@ -228,7 +228,7 @@ export function loyaltyMorning(state: GameState): string | null {
 export function applyStampCardInput(state: GameState, input: Extract<PlayerInput, { kind: 'stampCard' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   if (!loyaltyLive(state) || state.rival?.stamps !== undefined || state.cash < RIVAL.stampCost) return state;
   state.cash = round2(state.cash - RIVAL.stampCost);
   state.rival = { ...(state.rival ?? {}), stamps: state.day };

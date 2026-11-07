@@ -160,7 +160,7 @@ export function adMorning(state: GameState): string | null {
 export function applyAdInput(state: GameState, input: Extract<PlayerInput, { kind: 'ad' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   const booked = state.ad && state.ad.day === state.day ? state.ad : null;
   if (booked && booked.id === input.ad) return state;
   const refund = booked ? ADS[booked.id].cost : 0;

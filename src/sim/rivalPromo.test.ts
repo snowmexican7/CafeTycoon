@@ -65,12 +65,6 @@ describe('rival escalation (P4 B1)', () => {
     n.day = notPromo;
     applyRivalCounterInput(n, { kind: 'rivalCounter', playerId: 'p1' });
     expect(n.rival).toBeUndefined();
-    const b = run();
-    b.phase = 'night';
-    b.day = s.day;
-    b.players[0].bot = {} as never;
-    applyRivalCounterInput(b, { kind: 'rivalCounter', playerId: 'p1' });
-    expect(b.rival).toBeUndefined();
     const d = run();
     d.phase = 'day';
     d.day = s.day;

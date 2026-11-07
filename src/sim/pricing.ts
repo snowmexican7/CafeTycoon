@@ -78,7 +78,7 @@ export function priceTraffic(state: GameState, menu: DrinkId[], m: Modifiers): n
 export function applyPriceInput(state: GameState, input: Extract<PlayerInput, { kind: 'price' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   const unlocked = state.unlocked ?? DRINK_IDS;
   if (!unlocked.includes(input.drink)) return state;
   const next = clamp(Math.round(input.step), PRICING.minStep, PRICING.maxStep);

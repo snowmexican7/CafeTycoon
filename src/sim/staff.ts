@@ -53,7 +53,7 @@ export function billsForDay(state: GameState): number {
 export function applyStaffInput(state: GameState, input: Extract<PlayerInput, { kind: 'staff' }>): GameState {
   if (!state.gear || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot || !input.role) return state;
+  if (!p || !p.connected || !input.role) return state;
   return applyHireRole(state, input.role, input.action, input.playerId);
 }
 

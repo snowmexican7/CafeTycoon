@@ -43,10 +43,6 @@ describe('parody ads (P3 B10)', () => {
     poor.cash = 5;
     book(poor, 'glimpse');
     expect(poor.ad).toBeUndefined();
-    const bot = run();
-    bot.players[0].bot = {} as never;
-    book(bot, 'palmbook');
-    expect(bot.ad).toBeUndefined();
     expect(book(startDay(run()), 'palmbook').ad).toBeUndefined(); // not by day
     expect(validateInput({ kind: 'ad', playerId: 'p1', ad: 'myspace' as AdId })).toBeNull();
     expect(validateInput({ kind: 'ad', playerId: 'p1', ad: null })).toEqual({ kind: 'ad', playerId: 'p1', ad: null });
