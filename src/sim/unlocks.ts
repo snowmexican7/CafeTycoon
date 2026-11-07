@@ -1,7 +1,7 @@
 import { BASE_DRINKS, DRINK_IDS, dayUnlocks } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
 import { canMake } from './growth';
-import type { DrinkId, GameState, SupplyId } from './types';
+import type { DrinkId, GameState, ItemKind, SupplyId } from './types';
 
 export const SUPPLY_IDS: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour', 'pastry'];
 
@@ -18,6 +18,12 @@ export function unlockDrink(state: GameState, drink: DrinkId): boolean {
   state.unlocked = DRINK_IDS.filter((d) => d === drink || known.includes(d));
   state.menu[drink] = true;
   return true;
+}
+
+/** A drink the café can make right now: a classic, or unlocked and on tonight's menu. Grounds always. (Round 6: here so sim/fridge.ts can read it.) */
+export function recipeAllowed(state: GameState, gives: ItemKind): boolean {
+  if (gives === 'grounds' || BASE_DRINKS.includes(gives)) return true;
+  return (state.unlocked ?? BASE_DRINKS).includes(gives) && state.menu[gives] !== false;
 }
 
 /** Drinks whose unlock day is `state.day` and that were not already known: they join tonight. */

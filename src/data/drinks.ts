@@ -1,4 +1,5 @@
 import type { DrinkId, ItemKind, StationKind, SupplyId } from '../sim/types';
+import { SUPPLY_ID } from './layout';
 
 /** Every drink, in menu order. Hot or iced decides how weather and forecasts tilt orders. */
 export const DRINK_IDS: DrinkId[] = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'mocha', 'matcha', 'special', 'drip', 'americano', 'cappuccino', 'doppio', 'sweetCream', 'cafeAuLait', 'redEye', 'pourOver'];
@@ -71,7 +72,7 @@ export const DRINK_INFO: Record<DrinkId, DrinkInfo> = {
   cappuccino: { name: 'Cappuccino', short: 'Cappuccino', icon: '☁️', bias: 0.8, wait: 1.1, ticket: ['Grind', 'Pull', 'Steam', 'Steam again (extra foam)'], blurb: 'A latte with a tall cap of foam. Learned after 12 lattes.' },
   // G6c: more level-ups (Gear runs only).
   doppio: { name: 'Doppio', short: 'Doppio', icon: '⚡', bias: 0.6, ticket: ['Grind', 'Pull', 'Espresso machine again (second shot)'], blurb: 'A double shot. Learned after 30 espressos on a Sylvia or better.' },
-  sweetCream: { name: 'Sweet-cream cold brew', short: 'Sweet cream', icon: '🧋', bias: 0.8, wait: 1.1, ticket: ['Pour cold brew', 'Cold brew again (sweet cream)'], blurb: 'Cold brew under a float of sweet cream. Learned after 15 cold brews.' },
+  sweetCream: { name: 'Sweet-cream cold brew', short: 'Sweet cream', icon: '🧋', bias: 0.8, wait: 1.1, ticket: ['Pour cold brew', 'Milk counter (sweet cream)'], blurb: 'Cold brew under a float of sweet cream. Learned after 15 cold brews.' },
   cafeAuLait: { name: 'Café au lait', short: 'Au lait', icon: '🫗', bias: 0.8, ticket: ['Drip', 'Wand (hot milk)'], blurb: 'Drip coffee and hot milk, half and half. Learned after 12 drips.' },
   redEye: { name: 'Red-eye', short: 'Red-eye', icon: '👁️', bias: 0.6, ticket: ['Drip', 'Espresso machine (shot on top)'], blurb: 'Drip coffee with a shot dropped in. Learned after 20 drips with a real espresso machine.' },
   // G10a: comes with the Pour-Over Bar (Gear runs).
@@ -126,14 +127,24 @@ export const RECIPES: Record<RecipeStation, Recipe[]> = {
     { takes: 'drip', gives: 'cafeAuLait', consumes: ['milk'], seconds: 2 },
     { takes: null, gives: 'matcha', consumes: ['milk', 'flavour'], seconds: 4 },
   ],
-  coldBrewTap: [
-    { takes: null, gives: 'coldBrew', consumes: ['concentrate'] },
-    { takes: 'espresso', gives: 'icedLatte', consumes: ['milk'], seconds: 2.5 },
-    { takes: 'coldBrew', gives: 'sweetCream', consumes: ['milk'], seconds: 2 },
-  ],
+  // Round 6 block 4: the tap only pours; the iced latte and sweet cream finish at the milk counter (MILK_COUNTER_RECIPES).
+  coldBrewTap: [{ takes: null, gives: 'coldBrew', consumes: ['concentrate'] }],
   // G4d: a pot of filter coffee (one unit of beans, no grinder); the pot then pours cups (sim/gear.ts gearPotPour).
   drip: [{ takes: null, gives: 'drip', consumes: ['beans'] }],
 };
+
+/**
+ * Round 6 block 4 (Kennedy): the cold milk drinks finish at the milk counter (`SUPPLY_ID`, a counter-kind spot by the
+ * sink): a shot or a cold brew in hand, E there, and the cup fills at once from the counter's cold milk
+ * (`GameState.supplyMilk`, stocked from a fridge carton; sim/fridge.ts `supplyRecipe`). `milk` here is that pool.
+ */
+export const MILK_COUNTER_RECIPES: Recipe[] = [
+  { takes: 'espresso', gives: 'icedLatte', consumes: ['milk'] },
+  { takes: 'coldBrew', gives: 'sweetCream', consumes: ['milk'] },
+];
+
+/** Where a recipe step happens: a machine kind, or the milk counter (its station id, `SUPPLY_ID`). */
+export type ChainStation = RecipeStation | typeof SUPPLY_ID;
 
 /** Drinks that start with a shot (grounds or an espresso in flight can still become one). */
 export function usesShot(drink: DrinkId): boolean {
@@ -144,15 +155,17 @@ export function usesShot(drink: DrinkId): boolean {
 /** G10a: the pour-over bar's own recipe (seconds vary by gear; this is the bar's). */
 export const POUR_OVER_RECIPE: Recipe = { takes: null, gives: 'pourOver', consumes: ['beans'], seconds: 8 };
 
-export function recipeChain(drink: DrinkId): { station: RecipeStation; recipe: Recipe }[] {
-  const out: { station: RecipeStation; recipe: Recipe }[] = [];
+export function recipeChain(drink: DrinkId): { station: ChainStation; recipe: Recipe }[] {
+  const out: { station: ChainStation; recipe: Recipe }[] = [];
   let want: ItemKind | null = drink;
   while (want !== null) {
-    let found: { station: RecipeStation; recipe: Recipe } | null = null;
+    let found: { station: ChainStation; recipe: Recipe } | null = null;
     for (const station of Object.keys(RECIPES) as RecipeStation[]) {
       const r = RECIPES[station].find((x) => x.gives === want);
       if (r) found = { station, recipe: r };
     }
+    const cold = MILK_COUNTER_RECIPES.find((x) => x.gives === want);
+    if (cold) found = { station: SUPPLY_ID, recipe: cold };
     // G10a: the pour-over is made only on pour-over gear (sim/gear.ts gearRecipe), not from RECIPES,
     // so a drip pot never makes one; its one step still shows on tickets and in bot plans.
     if (!found && want === 'pourOver') found = { station: 'drip', recipe: POUR_OVER_RECIPE };

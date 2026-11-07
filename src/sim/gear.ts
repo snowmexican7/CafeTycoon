@@ -559,9 +559,9 @@ export function batchOut(state: GameState): boolean {
   return taps.length > 0 && taps.every((s) => s.batchLeft === 0);
 }
 
-/** Batch/pickup: recipes that draw a steeped cup from the tap (the plain pour, and the iced latte step). */
+/** Batch/pickup: recipes that draw a steeped cup from the tap (the plain pour; Round 6: the iced latte left the tap). */
 export function tapCupRecipe(r: Recipe): boolean {
-  return r.gives === 'coldBrew' || r.gives === 'icedLatte';
+  return r.gives === 'coldBrew';
 }
 
 /** Batch/pickup: take one steeped cup off a tap, yesterday's first. False when the tap is empty (or has no batch). */

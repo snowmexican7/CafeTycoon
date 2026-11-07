@@ -19,17 +19,25 @@
  *    today's `spoiled` / `spoiledBar` / `spoiledValue`). The fridge's own overnight spoil is spoilage.ts's (× the
  *    fridge's `spoil`).
  *  - Morning (`fridgeMorning`): nothing is out; the bar starts with what was put away.
+ *  - Round 6 block 4 (Kennedy): the milk counter (`SUPPLY_ID`, by the sink) holds its own cold milk,
+ *    `state.supplyMilk`. A carton in hand, E there, stocks it (`milk.out { station: SUPPLY_ID }`); a shot or a cold
+ *    brew in hand, E there, fills at once into an iced latte / a sweet cream from it (`supply.fill { by, drink }`,
+ *    data/drinks.ts MILK_COUNTER_RECIPES). Empty hands there take nothing (cartons only come out of the fridge); in
+ *    closing soon they lift the counter's milk to put away, as at a milk station. The steamer / steam wand keep
+ *    `milkOut` (the tap no longer takes milk). The Udder-Matic tops up both pools (the counter while a cold milk drink
+ *    is on the menu), takes both back at close; otherwise both go bad. `supplyWants` says what a press there would do.
  *
  * Must not import ./gear, ./stations or ./spoilage (they import this). Pure, no RNG.
  */
 import { ECONOMY } from '../data/economy';
 import { FRIDGES, TIER_FRIDGE, isFridgeId, type FridgeId } from '../data/fridges';
 import { CONDIMENTS_ID, FRIDGE_ID, SUPPLY_ID, layoutFor } from '../data/layout';
+import { MILK_COUNTER_RECIPES, recipeChain, type Recipe } from '../data/drinks';
 import { CONDIMENTS } from './condiments';
 import { secondsToTicks } from './constants';
 import { emitLog } from './log';
-import { menuDrinks } from './unlocks';
-import type { GameState, Player, Station, StationKind, SupplyId } from './types';
+import { menuDrinks, recipeAllowed } from './unlocks';
+import type { DrinkId, GameState, ItemKind, Player, Station, StationKind, SupplyId } from './types';
 
 export const FRIDGE = {
   /** Servings in a milk carton taken from the fridge. */
@@ -76,12 +84,84 @@ export function autoMilk(state: GameState): boolean {
   return spec(state)?.auto === true;
 }
 
-/** Stations that draw milk out at the bar, where a carton can be put out (and lifted back at closing soon). */
-export const MILK_KINDS: StationKind[] = ['steamer', 'coldBrewTap'];
+/** Stations that draw milk out at the bar, where a carton can be put out (and lifted back at closing soon). Round 6: the
+ *  cold brew tap no longer takes milk (its milk drinks finish at the milk counter). */
+export const MILK_KINDS: StationKind[] = ['steamer'];
 export const isMilkStation = (st: Station | null | undefined): boolean => !!st && MILK_KINDS.includes(st.kind);
 export const isFridge = (st: Station | null | undefined): boolean => st?.id === FRIDGE_ID;
-/** Round 5 block 4: the staff milk & cream shelf by the sink (a second fridge door for cartons). */
+/** Round 5 block 4 / Round 6 block 4: the milk counter by the sink (stocked from a fridge carton; cold milk drinks finish there). */
 export const isSupply = (st: Station | null | undefined): boolean => st?.id === SUPPLY_ID;
+
+/** Round 6 block 4: the drink a cup in hand becomes at the milk counter (on tonight's menu), or null. */
+export function supplyRecipe(state: GameState, held: ItemKind | null): Recipe | null {
+  if (held === null) return null;
+  return MILK_COUNTER_RECIPES.find((r) => r.takes === held && recipeAllowed(state, r.gives)) ?? null;
+}
+
+/** Round 6 block 4: a drink whose last step is at the milk counter (it draws the counter's cold milk). */
+export const coldMilkDrink = (d: DrinkId): boolean => recipeChain(d).some((x) => x.station === SUPPLY_ID);
+
+/** Round 6 block 4: someone in the shop is waiting on a cold milk drink (closing soon then leaves the counter milk out). */
+const coldMilkWanted = (state: GameState): boolean =>
+  state.customers.some((c) => coldMilkDrink(c.drink) || (c.extra?.some(coldMilkDrink) ?? false) || (c.items?.some((i) => coldMilkDrink(i.drink)) ?? false));
+
+/**
+ * Round 6 block 4, for hints: what E at the milk counter would do for `p` (Gear runs; null otherwise).
+ *  - `stock`: a carton in hand goes onto the counter (`n` servings).
+ *  - `fill`: the cup in hand becomes `gives` from the counter's `milk`.
+ *  - `empty`: the cup in hand would become `gives`, but the counter has no milk (bring a carton from the fridge).
+ *  - `lift`: closing soon, empty hands lift the counter's `n` servings to put away.
+ *  - `idle`: nothing the counter takes (empty hands, or a cup it has no step for); `milk` is what it holds.
+ */
+export type SupplyWant =
+  | { kind: 'stock'; n: number }
+  | { kind: 'fill'; gives: DrinkId; milk: number }
+  | { kind: 'empty'; gives: DrinkId }
+  | { kind: 'lift'; n: number }
+  | { kind: 'idle'; milk: number };
+
+export function supplyWants(state: GameState, p: Player): SupplyWant | null {
+  if (!isGear(state)) return null;
+  const milk = state.supplyMilk ?? 0;
+  if (p.tool === 'milk') return { kind: 'stock', n: p.carry ?? 0 };
+  if (p.tool !== null) return { kind: 'idle', milk };
+  const r = supplyRecipe(state, p.holding);
+  if (r) return milk >= 1 ? { kind: 'fill', gives: r.gives as DrinkId, milk } : { kind: 'empty', gives: r.gives as DrinkId };
+  if (p.holding === null && canLiftSupply(state)) return { kind: 'lift', n: milk };
+  return { kind: 'idle', milk };
+}
+
+/** Closing soon, the counter has milk, a fridge to put it in, no Udder-Matic, and nobody waiting on a cold milk drink. */
+export function canLiftSupply(state: GameState): boolean {
+  return closingSoon(state) && (state.supplyMilk ?? 0) > 0 && !autoMilk(state) && state.stations.some(isFridge) && !coldMilkWanted(state);
+}
+
+/** Round 6 block 4: E at the milk counter (Gear, a Gear-run press there is always used up here). */
+function supplyPress(state: GameState, p: Player, st: Station): void {
+  if (p.tool === 'milk') {
+    const n = p.carry ?? 0;
+    state.supplyMilk = (state.supplyMilk ?? 0) + n;
+    clearTool(p);
+    emitLog(state, 'milk.out', { by: p.id, n, station: st.id });
+    return;
+  }
+  if (p.tool !== null) return;
+  const r = supplyRecipe(state, p.holding);
+  if (r && (state.supplyMilk ?? 0) >= 1) {
+    state.supplyMilk! -= 1;
+    p.holding = r.gives;
+    p.heldSince = state.tick; // a fresh cup (iced drinks don't go cold; the clock is for the record)
+    delete p.cupTemp; // the shot's temperature mark goes; its slips (and how it was made) stay with the cup
+    emitLog(state, 'supply.fill', { by: p.id, drink: r.gives });
+    return;
+  }
+  if (p.holding === null && canLiftSupply(state)) {
+    p.tool = 'milk';
+    p.carry = state.supplyMilk!;
+    state.supplyMilk = 0;
+    emitLog(state, 'milk.lift', { by: p.id, n: p.carry, station: st.id });
+  }
+}
 
 /** What a machine can draw right now: in a Gear run milk is the milk out at the bar, everything else (and classic) is `supplies`. */
 export function readyStock(state: GameState, s: SupplyId): number {
@@ -94,12 +174,12 @@ export function useStock(state: GameState, s: SupplyId): void {
   else state.supplies[s] -= 1;
 }
 
-/** All the shop has of a supply (what the board and the menu go by): Gear milk counts the fridge, the bar and cartons in hand. */
+/** All the shop has of a supply (what the board and the menu go by): Gear milk counts the fridge, the bar, the milk counter and cartons in hand. */
 export function stockOf(state: GameState, s: SupplyId): number {
   const have = state.supplies[s] ?? 0;
   if (!isGear(state) || s !== 'milk') return have;
   // Re-review M-1: milk in the pantry with no fridge to take a carton from can't reach a machine.
-  return (fridgeGear(state) ? have : 0) + (state.milkOut ?? 0) + state.players.reduce((n, p) => n + (p.tool === 'milk' ? (p.carry ?? 0) : 0), 0);
+  return (fridgeGear(state) ? have : 0) + (state.milkOut ?? 0) + (state.supplyMilk ?? 0) + state.players.reduce((n, p) => n + (p.tool === 'milk' ? (p.carry ?? 0) : 0), 0);
 }
 
 /** The most packs of `supply` that fit tonight: milk packs only while they fit in the fridge (whole packs, nothing lost). */
@@ -176,7 +256,7 @@ export function stepClosingSoon(state: GameState): void {
 }
 
 export interface ClosingChecklist {
-  /** No milk out at the bar, and no carton on its way to the fridge (always true with the Udder-Matic). */
+  /** No milk out at the bar or on the milk counter, and no carton on its way to the fridge (always true with the Udder-Matic). */
   milkAway: boolean;
   /** The condiment bar is empty and its box is not still in someone's hands. */
   barAway: boolean;
@@ -191,7 +271,7 @@ export interface ClosingChecklist {
 export function closingChecklist(state: GameState): ClosingChecklist {
   const carrying = (tool: Player['tool']) => state.players.some((p) => p.tool === tool);
   return {
-    milkAway: autoMilk(state) || ((state.milkOut ?? 0) <= 0 && !carrying('milk')),
+    milkAway: autoMilk(state) || ((state.milkOut ?? 0) <= 0 && (state.supplyMilk ?? 0) <= 0 && !carrying('milk')),
     barAway: (state.condiments?.servings ?? 0) <= 0 && !carrying('bar'),
     potsEmpty: !state.stations.some((s) => (s.potLeft ?? 0) > 0),
     floorClean: state.messes.length === 0,
@@ -236,6 +316,11 @@ export function storeInFridge(state: GameState, p: Player, by: string = p.id): v
  */
 export function fridgeInteract(state: GameState, p: Player, st: Station | null, wanted: () => boolean): boolean {
   if (!isGear(state)) return false;
+  // Round 6 block 4: the milk counter takes every Gear press there (a carton, a cup to fill, a closing-soon lift).
+  if (isSupply(st) && (p.tool === null || p.tool === 'milk')) {
+    supplyPress(state, p, st!);
+    return true;
+  }
   if (p.tool === 'milk' || p.tool === 'bar') {
     if (isFridge(st)) storeInFridge(state, p);
     else if (p.tool === 'milk' && isMilkStation(st)) {
@@ -252,15 +337,14 @@ export function fridgeInteract(state: GameState, p: Player, st: Station | null, 
   if (!st) return false;
   // M1: the mop or a condiment box in hand: the press is theirs (mopping next to the fridge works).
   if (p.tool !== null) return false;
-  if (isFridge(st) || isSupply(st)) {
-    // Empty hands take a carton; anything else in hand stays there (the fridge / supply shelf is not a counter).
-    // Round 5 block 4: the supply shelf needs a fridge in the shop (same "no fridge, no milk" rule); put-away stays fridge-only.
+  if (isFridge(st)) {
+    // Empty hands take a carton; anything else in hand stays there (the fridge is not a counter).
     if (p.holding === null && fridgeGear(state) && (state.supplies.milk ?? 0) >= 1) {
       const n = Math.min(FRIDGE.carton, Math.floor(state.supplies.milk));
       state.supplies.milk -= n;
       p.tool = 'milk';
       p.carry = n;
-      emitLog(state, 'fridge.take', { by: p.id, item: 'milk', n, ...(isSupply(st) ? { station: st.id } : {}) });
+      emitLog(state, 'fridge.take', { by: p.id, item: 'milk', n });
     }
     return true;
   }
@@ -285,13 +369,27 @@ export function fridgeInteract(state: GameState, p: Player, st: Station | null, 
 
 // ---------------------------------------------------------------------------------------------- the day
 
-/** Each day tick: the Udder-Matic pours a carton's worth out when the milk out runs below the mark. */
+/**
+ * Each day tick: the Udder-Matic pours a carton's worth out when the milk out runs below the mark; Round 6 block 4: then
+ * the same for the milk counter, while a cold milk drink is on the menu (`fridge.auto { n, station: SUPPLY_ID }`).
+ */
 export function stepFridge(state: GameState): void {
-  if (!autoMilk(state) || (state.milkOut ?? 0) >= FRIDGE.autoBelow || (state.supplies.milk ?? 0) < 1) return;
-  const n = Math.min(FRIDGE.carton, Math.floor(state.supplies.milk));
-  state.supplies.milk -= n;
-  state.milkOut = (state.milkOut ?? 0) + n;
-  emitLog(state, 'fridge.auto', { n });
+  if (!autoMilk(state)) return;
+  const pour = (): number => {
+    const n = Math.min(FRIDGE.carton, Math.floor(state.supplies.milk ?? 0));
+    state.supplies.milk -= n;
+    return n;
+  };
+  if ((state.milkOut ?? 0) < FRIDGE.autoBelow && (state.supplies.milk ?? 0) >= 1) {
+    const n = pour();
+    state.milkOut = (state.milkOut ?? 0) + n;
+    emitLog(state, 'fridge.auto', { n });
+  }
+  if ((state.supplyMilk ?? 0) < FRIDGE.autoBelow && (state.supplies.milk ?? 0) >= 1 && state.stations.some(isSupply) && menuDrinks(state).some(coldMilkDrink)) {
+    const n = pour();
+    state.supplyMilk = (state.supplyMilk ?? 0) + n;
+    emitLog(state, 'fridge.auto', { n, station: SUPPLY_ID });
+  }
 }
 
 /** At close, before the overnight spoil: carried things go in the fridge, the dispenser takes its milk back, the rest goes bad. */
@@ -299,8 +397,10 @@ export function fridgeClose(state: GameState): void {
   if (!isGear(state)) return;
   delete state.closingSoonAt;
   for (const p of state.players) storeInFridge(state, p);
-  const out = state.milkOut ?? 0;
+  // Round 6 block 4: the milk counter's milk goes the same way as the milk out at the bar.
+  const out = (state.milkOut ?? 0) + (state.supplyMilk ?? 0);
   delete state.milkOut;
+  delete state.supplyMilk;
   if (out > 0 && autoMilk(state)) {
     state.supplies.milk = (state.supplies.milk ?? 0) + out;
     emitLog(state, 'fridge.put', { by: 'auto', item: 'milk', n: out });
@@ -324,6 +424,7 @@ export function fridgeMorning(state: GameState): void {
   if (!isGear(state)) return;
   delete state.fridgeVote; // an open Udder-Matic proposal lapses when the shop opens (as gear votes do)
   delete state.milkOut;
+  delete state.supplyMilk;
   delete state.closingSoonAt;
   const away = state.barAway ?? 0;
   delete state.barAway;

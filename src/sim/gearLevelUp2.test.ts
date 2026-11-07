@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRun } from './run';
 import { levelUpOnServe } from './levelUp';
 import { recipeFor } from './stations';
+import { supplyRecipe } from './fridge';
 import { gearRecipe } from './gear';
 import { stationsFromSlots } from './slots';
 import { recipeChain, DRINK_IDS, DRINK_INFO } from '../data/drinks';
@@ -50,12 +51,13 @@ describe('G6c: the rest of the level-up drinks', () => {
     expect(serve(t, 'drip', 20)).toEqual([]);
   });
 
-  it('recipes: drip at the steamer → au lait, drip at the machine → red-eye, cold brew at the tap → sweet cream', () => {
+  it('recipes: drip at the steamer → au lait, drip at the machine → red-eye, cold brew at the milk counter → sweet cream', () => {
     const s = run();
     s.unlocked = [...(s.unlocked ?? []), 'drip', 'cafeAuLait', 'redEye', 'sweetCream'];
     expect(recipeFor(s, 'steamer', 'drip')?.gives).toBe('cafeAuLait');
     expect(recipeFor(s, 'espresso', 'drip')?.gives).toBe('redEye');
-    expect(recipeFor(s, 'coldBrewTap', 'coldBrew')?.gives).toBe('sweetCream');
+    expect(recipeFor(s, 'coldBrewTap', 'coldBrew')).toBeNull(); // Round 6 block 4: not at the tap any more
+    expect(supplyRecipe(s, 'coldBrew')?.gives).toBe('sweetCream');
     expect(recipeChain('redEye').map((x) => x.station)).toEqual(['drip', 'espresso']);
     expect(recipeChain('doppio').map((x) => x.station)).toEqual(['grinder', 'espresso', 'espresso']);
   });
