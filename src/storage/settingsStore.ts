@@ -1,6 +1,5 @@
 import { ECONOMY } from '../data/economy';
-import { parseBots } from '../net/protocol';
-import type { BotsChoice, Pace } from '../sim/types';
+import type { Pace } from '../sim/types';
 import { readJson, type StorageLike } from './storageLike';
 
 const KEY = 'cafetycoon.settings';
@@ -12,14 +11,6 @@ export interface LocalSettings {
   pace: Pace;
   dayLengthSec: number;
   nightLengthSec: number;
-  /** Bots in a co-op room you host: 'auto' (fill the café), or 0..3. Kept for old stored JSON; solo reads soloBots. */
-  bots: BotsChoice;
-  /**
-   * Bots in a solo run: 0..3 or 'auto', default 1 (a helper, not a crew). A separate key from `bots` so every
-   * player who already has `bots: 'auto'` stored still gets the new solo default. main.ts passes it to the run
-   * as `CreateRunOptions.settings.bots`.
-   */
-  soloBots: BotsChoice;
   /**
    * Bot cut step 3: a solo run's robot cashier (src/sim/cashier.ts), on by default (also for stored settings that
    * predate it). main.ts passes it to a solo run as `CreateRunOptions.settings.cashier`; a co-op room never has one.
@@ -37,15 +28,14 @@ export function createSettingsStore(
     pace: 3,
     dayLengthSec: ECONOMY.dayLengthSec,
     nightLengthSec: ECONOMY.nightLengthSec,
-    bots: 'auto',
-    soloBots: 1,
     soloCashier: true,
   });
   const get = (): LocalSettings => {
     const stored = readJson<Partial<LocalSettings>>(storage, KEY);
-    const merged = { ...defaults(), ...stored };
-    merged.bots = parseBots(merged.bots) ?? 'auto';
-    merged.soloBots = parseBots(merged.soloBots) ?? 1;
+    // Only the keys LocalSettings knows (bot cut 4a: the old bots choices in stored JSON are dropped).
+    const merged = defaults();
+    const known = merged as unknown as Record<string, unknown>;
+    for (const k of Object.keys(known)) if (stored && k in stored) known[k] = (stored as Record<string, unknown>)[k];
     merged.soloCashier = merged.soloCashier !== false; // only an explicit false switches it off
     if (!stored || !stored.playerToken) storage.setItem(KEY, JSON.stringify(merged));
     return merged;

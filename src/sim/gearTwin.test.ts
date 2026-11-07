@@ -9,9 +9,10 @@ import { emptySlotPositions } from '../render/slotModel';
 import { GEAR } from '../data/gear';
 import { ECONOMY } from '../data/economy';
 import type { GameState } from './types';
+import { addBots } from '../harness/crew';
 
 const run = (gear: boolean): GameState =>
-  createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', ...(gear ? { gear: true } : {}) });
+  createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', ...(gear ? { gear: true } : {}) });
 
 describe('G9: dual boiler (two sides in one slot)', () => {
   const slots = ['grinder', 'espresso', null, 'trash'] as const;
@@ -115,7 +116,7 @@ describe('G9: a bot crew works a day with a two-group machine', () => {
   it('runs a day without errors and uses the twin sides', async () => {
     const { startDay } = await import('./run');
     const { step } = await import('./step');
-    let s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 2 }, tier: 'stand', gear: true });
+    let s = addBots(createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true }), 2);
     s.slots = ['grinder', 'espresso', null, 'trash'];
     s.slotGear = ['g1', 'e5', null, 'b0'];
     s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
@@ -137,7 +138,7 @@ describe('G9: a bot crew works a day with a two-group machine', () => {
   it('with a person in the café (bots as helpers) the crew still works the day on both groups', async () => {
     const { startDay } = await import('./run');
     const { step } = await import('./step');
-    let s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 2 }, tier: 'stand', gear: true });
+    let s = addBots(createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true }), 2);
     s.slots = ['grinder', 'espresso', null, 'trash'];
     s.slotGear = ['g1', 'e5', null, 'b0'];
     s.stations = stationsFromSlots('stand', s.slots, s.slotGear);

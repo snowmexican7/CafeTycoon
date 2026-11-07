@@ -3,13 +3,13 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { parseTele } from '../net/protocol';
 import type { HostToClient, Transport } from '../net/transport';
 import { createRun, freshDayStats, startDay } from '../sim/run';
-import { makeBotState } from '../sim/bots/roster';
+import { makeBotState } from '../sim/botBody';
 import type { GameState, PlayerInput, SimEvent } from '../sim/types';
 import { createTelemetry, RESERVED_TELE_KINDS, createUiBuffer, setUiTelemetrySink, uiTelemetry, withTelemetry } from './telemetry';
 
 const META = { host: 'p1', build: 'test', protocol: 3 };
 const run = (): GameState =>
-  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }, { id: 'p2', name: 'Lu' }], settings: { bots: 0 } });
+  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }, { id: 'p2', name: 'Lu' }] });
 
 function setup() {
   const clock = { t: 0 };

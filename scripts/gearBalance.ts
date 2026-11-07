@@ -8,7 +8,7 @@ import { createRun, startNight } from '../src/sim/run';
 import { beginSeason } from '../src/sim/season';
 import { step } from '../src/sim/step';
 import { installHarness } from '../src/harness';
-import { addStandIns, syncBots } from '../src/sim/bots/roster';
+import { addBots, addStandIns } from '../src/harness/crew';
 import { restockCost } from '../src/sim/night';
 import { expectedUse } from '../src/sim/brief';
 import { GEAR_PATH, PATH_WAND, pathWandCard, planNight, wandFirst } from '../src/sim/advice';
@@ -91,11 +91,11 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
 export type ExtraMoves = (state: GameState, ids: string[]) => PlayerInput[];
 
 export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0, extra?: ExtraMoves, onState?: (s: GameState) => void, start?: { tier: TierId; cash: number }) {
-  let s = createRun({ seed, hostId: 'tester', players: [], tier: start?.tier ?? 'stand', gear: true, settings: { bots, dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4 } });
+  let s = createRun({ seed, hostId: 'tester', players: [], tier: start?.tier ?? 'stand', gear: true, settings: { dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4 } });
   // P6-6: start further along (e.g. the café tier with cash) so later systems get exercised. createRun builds the tier's floor.
   if (start) s.cash = s.startingCash = start.cash;
   addStandIns(s, humans);
-  if (bots) syncBots(s);
+  if (bots) addBots(s, bots);
   if (scenario) s.scenario = scenario;
   const ids = s.players.filter((p) => p.id.startsWith('sim-')).map((p) => p.id);
   let stage = 0;

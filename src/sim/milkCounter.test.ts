@@ -9,7 +9,7 @@ import { FRIDGE, closingChecklist, startClosingSoon, stockOf, supplyWants } from
 import { recipeChain, TAP_DRINKS } from '../data/drinks';
 import { FRIDGE_ID, SUPPLY_ID } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
-import { addStandIns } from './bots/roster';
+import { addStandIns } from '../harness/crew';
 import { TICK_RATE } from './constants';
 import type { DrinkId, GameState, SimEvent, TierId } from './types';
 
@@ -18,7 +18,7 @@ import type { DrinkId, GameState, SimEvent, TierId } from './types';
 type Kit = GearId | 'steamer';
 
 function gearNight(gear: Kit[], tier: TierId = 'stand'): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {

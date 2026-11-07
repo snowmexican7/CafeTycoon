@@ -15,6 +15,6 @@ describe('upgrade cards UI', () => {
 
   it('a card with no set has no set line, a tomorrow-only card never counts toward one', () => {
     expect(handCardViewModel(solo(), catalogueById.weatherRadio).set).toBeUndefined();
-    expect(handCardViewModel(solo(), catalogueById.hireTemp).set).toBeUndefined();
+    expect(handCardViewModel(solo(), catalogueById.twoForOne).set).toBeUndefined();
   });
 });

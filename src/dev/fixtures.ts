@@ -83,7 +83,6 @@ function base(): GameState {
       { id: 'cleo', name: 'Cleo' },
       { id: 'dev', name: 'Dev' },
     ],
-    settings: { bots: 0 },
   });
   s = startDay(s);
   s.phase = 'day';

@@ -11,7 +11,7 @@
  *   interface Advice {
  *     id: string;   // restock:<supply> | price:<drink> | twist:<drink> | signature | scout | rival |
  *                   // grow:<tier> | checkout:<id> | menu:<drink>
- *                   // Gear runs: gear:<gearId> | staff:fire | staff:hire:strategist | staff:hire:marketer | rival:promo | rival:loyalty |
+ *                   // Gear runs: gear:<gearId> | staff:hire:strategist | staff:hire:marketer | rival:promo | rival:loyalty |
  *                   // branch:open | branch:staff | branch:send:<supply> | steep | condimentBox | fridge:f1 | fridge:f4 (FB2 A4)
  *     kind: AdviceKind;  // restock | price | twist | signature | scout | rival | grow | checkout | equip (Gear rows) | menu
  *     text: string;
@@ -24,7 +24,7 @@
  * Priorities (PLAN_PRIORITY); Gear-only rows marked G:
  *
  *   100 restock, out of stock          54 staff:hire:* (G, kind equip)  40 twist
- *    90 restock, low                   53 staff:fire (G, kind equip)   35 signature
+ *    90 restock, low                                                    35 signature
  *    86 steep (G, kind restock)        52 branch:staff (G, kind grow)  20 scout
  *    84 condimentBox (G, restock)      50 price
  *    80 rival (knock-off)              48 branch:send:* (G, restock)   10 menu
@@ -37,7 +37,7 @@
  *    58 gear:<id> (G, kind equip)
  *
  * Gear rows reuse the existing AdviceKind values (the UI keeps a `Record<AdviceKind, ...>` of icons), so
- * tell them apart by `id` or `input.kind`: `steep` and `condimentBox` (batch coffee, below), `gear` buys, `staff` (fire only, never hire), `rivalCounter`,
+ * tell them apart by `id` or `input.kind`: `steep` and `condimentBox` (batch coffee, below), `gear` buys, `staff` (the Strategist or the Marketer), `rivalCounter`,
  * `stampCard` and `branch` (open / staff / send).
  *
  * Round 4 f: the classic stations shop and its `slot` / `equip` advice are deleted (Gear runs are the game). The gear
@@ -47,8 +47,7 @@
  * needs a wand, so E3 is bought with the little wand and E4 with the proper one (`PATH_WAND`), and an E3/E4 that has
  * none (or E4's little one) gets the add-on first (`wand` input, `gear:wand:<station>` advice), and at the cart there
  * is no `grow:cafe` advice until a wand is on the floor (`wandFirst`: milk drinks used to come with the cart). A $50+
- * buy in a co-op crew becomes a proposal; the input is the same. `staff:fire` appears when yesterday's wages
- * beat the bots' takings in `DayStats.byPlayer`. Phase 4: match the rival's happy hour on a promo night,
+ * buy in a co-op crew becomes a proposal; the input is the same. Bot cut 4a: no barista hire/fire rows. Phase 4: match the rival's happy hour on a promo night,
  * print the stamp card once the rival's loyalty card is live (cash after bills >= $30 + a day's restock),
  * open the second shop at the café tier (cash after bills >= lease + a day's restock, a profitable day, the area
  * with the best `branchDay` estimate), add or cut a branch barista from yesterday's branch day (only if
@@ -85,7 +84,7 @@ import { CHECKOUT, nextCheckout } from './checkout';
 import { CONDIMENTS } from './condiments';
 import { fridgeCapacity, fridgeWanted, packsThatFit } from './fridge';
 import { FRIDGES } from '../data/fridges';
-import { billsForDay, crewCount, crewNames, wageEach } from './staff';
+import { billsForDay } from './staff';
 import { averageStars } from './accuracy';
 import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun, wandCards, type WandCard } from './gear';
 import { DRINK_STATIONS, nextTier, TIERS } from './growth';
@@ -102,7 +101,6 @@ import { reasonOff, slotCount } from './slots';
 import { knownStars, TWIST_INFO, TWISTS, twistFor } from './taste';
 import type { TwistId } from './taste';
 import { menuDrinks, SUPPLY_IDS, unlockedDrinks } from './unlocks';
-import { BOT_IDS } from './bots/roster';
 import type { CheckoutId, DrinkId, GameState, StationKind, SupplyId, TierId } from './types';
 
 /** `equip` is only reused by Gear rows (gear, fridge, staff, hires); Round 4 f deleted the classic slot/equip advice. */
@@ -129,7 +127,6 @@ export const PLAN_PRIORITY = {
   checkout: 60,
   fridge: 59,
   gear: 58,
-  staff: 53,
   staffHire: 54,
   branchStaff: 52,
   price: 50,
@@ -607,32 +604,6 @@ function fridgeAdvice(state: GameState, budget: Budget): Advice[] {
   ];
 }
 
-/**
- * Gear runs: when yesterday's wages beat what the hired baristas rang up (the bots' share of
- * `DayStats.byPlayer`), suggest letting the newest one go. Never hiring. Quiet once a firing tonight
- * has already taken the crew below the count that was paid yesterday.
- */
-function staffAdvice(state: GameState): Advice[] {
-  if (!isGearRun(state)) return [];
-  const last = state.days.at(-1);
-  const each = wageEach(state);
-  if (!last?.wages || !last.byPlayer || each <= 0 || crewCount(state) <= 0) return [];
-  const paid = Math.max(1, Math.round(last.wages / each));
-  if (crewCount(state) < paid) return [];
-  const takings = round2(BOT_IDS.reduce((n, id) => n + (last.byPlayer![id]?.takings ?? 0), 0));
-  if (last.wages <= takings) return [];
-  const name = crewNames(state).at(-1) ?? 'The newest barista';
-  return [
-    {
-      id: 'staff:fire',
-      kind: 'equip',
-      text: `${name} costs more than they bring in at the ${TIERS[state.tier ?? 'cafe'].short} (wages ${dollars(last.wages)}, crew rang up ${dollars(takings)})`,
-      input: { kind: 'staff', action: 'fire' },
-      priority: PLAN_PRIORITY.staff,
-    },
-  ];
-}
-
 const HIRE_NAME: Record<HireRole, string> = { strategist: 'a Strategist', marketer: 'a Marketer' };
 
 /**
@@ -840,7 +811,6 @@ export function planNight(state: GameState): Advice[] {
     ...checkout,
     ...fridge,
     ...gear,
-    ...staffAdvice(state),
     ...hireAdvice(state),
     ...branchStaffAdvice(state),
     ...priceAdvice(state),

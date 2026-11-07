@@ -15,7 +15,7 @@ import { nightHtml } from '../ui/night';
 import type { GameState, PlayerInput } from './types';
 
 const night = (cash = 1000, tier: GameState['tier'] = 'cafe'): GameState => {
-  const s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], settings: { bots: 0 } });
+  const s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }] });
   s.gear = true;
   s.tier = tier;
   s.cash = cash;
@@ -38,7 +38,7 @@ describe('second shop (P4 B4)', () => {
   });
 
   it('review M1: a café made by createRun (tier absent) can open a branch', () => {
-    const s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], settings: { bots: 0 }, tier: 'cafe', gear: true });
+    const s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], tier: 'cafe', gear: true });
     expect(s.tier).toBeUndefined();
     s.cash = 1000;
     expect(canOpenBranch(s)).toBe(true);

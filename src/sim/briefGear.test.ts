@@ -7,7 +7,7 @@ import { GEAR, type GearId } from '../data/gear';
 import type { GameState } from './types';
 
 function gearNight(gear: GearId[]): GameState {
-  const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
@@ -24,7 +24,7 @@ const find = (s: GameState, id: string) => nightBrief(s).alerts.find((a) => a.id
 
 describe('expectedUse / expectedOrders', () => {
   it('expectedUse for a classic run, one player: the forecast is capped by what one person can pour (Round 3 money)', () => {
-    const c = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const c = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     // Before Round 3 money this was 14 beans, 7 milk, 11 concentrate, 9 pastries (24 arrivals, no cap): one person
     // can pour about 21 cups a day, and the forecast no longer promises more.
     // R4 b: the pastry case sells 35% of the day's cups on the side, so it has a use too (ceil of 0.35 × the day's cups)
@@ -32,7 +32,7 @@ describe('expectedUse / expectedOrders', () => {
   });
 
   it('expectedOrders is 0 off the menu and sums to the day\'s arrivals on it', () => {
-    const c = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const c = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     c.menu.drip = false;
     const o = expectedOrders(c);
     expect(o.drip).toBe(0);
@@ -79,7 +79,7 @@ describe('night brief: steep', () => {
   });
 
   it('a classic run still gets the per-supply concentrate alerts and no steep alert', () => {
-    const c = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const c = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     c.supplies.concentrate = 0;
     expect(find(c, 'stock:concentrate:out')).toBeDefined();
     expect(find(c, 'steep')).toBeUndefined();

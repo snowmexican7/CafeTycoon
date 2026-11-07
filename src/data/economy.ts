@@ -122,16 +122,8 @@ export const ECONOMY = {
       hurried: { speed: 1.15, reaction: 0.85, mistake: 0.08, preps: false },
       human: { speed: 1, reaction: 0, mistake: 0, preps: true },
     },
-    skill: {
-      reaction: [1.6, 1.3, 1.0, 0.8, 0.6],
-      mistake: [2.0, 1.5, 1.0, 0.7, 0.4],
-      speed: [0.85, 0.92, 1.0, 1.05, 1.1],
-    },
     names: ['Bo', 'Lu', 'Mo', 'Zip'],
-    autoCrew: 3, // 'auto' tops the café up to this many baristas (the roster has a fourth for explicit requests)
     hurriedQueue: 3, // a hurried bot pulls a nearly-done cup early once this many customers wait
-    /** The agency temp from the hire-temp card (B6). */
-    tempName: 'Robin (temp)',
     /** FB2 A4: extra seconds a bot waits at a milk station for a carton someone is bringing. */
     milkWaitSeconds: 10,
     maxWaitTicks: 900, // above a rogue's make (10 s) plus a power flicker (4 s)
@@ -154,7 +146,10 @@ export const ECONOMY = {
     // Set to 0 to make it free.
     dailyCost: 1,
     // A person this close to the till spot (tiles) has the till: the cashier doesn't press and steps aside until they move off.
-    deferTiles: 1.5,
+    // Bot cut 4a: 1.1 = on the spot or a tile straight next to it, not diagonal (1.5 kept it dithering on the small stand).
+    deferTiles: 1.1,
+    // Once aside, it walks back only this long after the last tick a person counted as at the till.
+    returnAfterSec: 2,
   },
   mess: {
     max: 12,

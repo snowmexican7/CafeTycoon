@@ -11,7 +11,7 @@ import { nightHtml, type NightUiState } from './night';
 import { closingViewModel, nightViewModel } from './viewModels';
 
 const run = (tier: 'stand' | 'cart' | 'cafe', gear = true): GameState =>
-  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'Kennedy' }, { id: 'p2', name: 'Ana' }], settings: { bots: 0 }, tier, gear });
+  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'Kennedy' }, { id: 'p2', name: 'Ana' }], tier, gear });
 const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, ...over });
 const ev = (seq: number, kind: SimEvent['kind'], data: SimEvent['data']): SimEvent => ({ seq, tick: 0, kind, data });
 const names = (id: string) => ({ p1: 'Kennedy', p2: 'Ana' })[id] ?? id;

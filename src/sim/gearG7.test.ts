@@ -6,7 +6,7 @@ import { DRINK_IDS } from '../data/drinks';
 import type { GameState } from './types';
 
 const run = (gear: boolean, seed: number) =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', ...(gear ? { gear: true } : {}) });
+  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', ...(gear ? { gear: true } : {}) });
 
 describe('Gear Tree G7a: hidden area tips', () => {
   it('classic runs have no area and every tip multiplier is exactly 1', () => {

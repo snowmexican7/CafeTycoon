@@ -10,7 +10,7 @@ import { counterName, handHint, hudLive, ordersKey } from './live';
 import { ticketSteps, ticketsHtml } from './tickets';
 
 function gearDay(gear: GearId[] = ['c1', 'e1']): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => { slots[i] = GEAR[id].station; slotGear[i] = id; });
@@ -138,7 +138,7 @@ describe('Gear counter hints (3.3.1)', () => {
   });
 
   it('classic keeps its hand-off hint', () => {
-    const s = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    const s = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
     at(s, 'counter');
     s.players[0].holding = 'espresso';
     expect(handHint(s, 'p1').title).toBe('Hand off espresso');
@@ -241,19 +241,19 @@ describe('sink and pot hints (3.3.3, FB2 A3)', () => {
   });
 });
 
-describe('Play solo helper picker (3.3.3, FB2 A1)', () => {
-  it('draws Off / 1 / 2 with the stored choice checked, and reads it back', async () => {
-    const { readSoloBots, soloBotsSeg } = await import('./title');
-    const html = soloBotsSeg(1);
-    expect(html).toMatch(/value="0"[^>]*><span>Off/);
-    expect(html).toMatch(/value="1" checked/);
-    expect(html).toMatch(/2 bots/);
-    expect(soloBotsSeg('auto')).not.toMatch(/checked/);
-    expect(readSoloBots('0')).toBe(0);
-    expect(readSoloBots('2')).toBe(2);
-    expect(readSoloBots('3')).toBeUndefined();
-    expect(readSoloBots(undefined)).toBeUndefined();
-    expect(readSoloBots('')).toBeUndefined();
+describe('Play solo robot cashier picker (bot cut 4a)', () => {
+  it('draws On / Off with the stored choice checked, and reads it back', async () => {
+    const { readSoloCashier, soloCashierSeg } = await import('./title');
+    const on = soloCashierSeg(true);
+    expect(on).toMatch(/aria-label="Robot cashier"/);
+    expect(on).toMatch(/value="on" checked[^>]*><span>On/);
+    expect(on).toMatch(/value="off" ><span>Off/);
+    expect(soloCashierSeg(false)).toMatch(/value="off" checked/);
+    expect(readSoloCashier('on')).toBe(true);
+    expect(readSoloCashier('off')).toBe(false);
+    expect(readSoloCashier('1')).toBeUndefined();
+    expect(readSoloCashier(undefined)).toBeUndefined();
+    expect(readSoloCashier('')).toBeUndefined();
   });
 });
 

@@ -14,7 +14,7 @@ import type { GameState, TierId } from './types';
 type Kit = GearId | 'steamer';
 
 const gearRun = (tier: TierId): GameState =>
-  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
+  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
 
 /** Every slot of the tier filled with gear (the bin stays in the last slot). */
 const FULL: Record<TierId, Kit[]> = {
@@ -53,9 +53,9 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
       const spot = s.stations.find((x) => x.id === 'pickup')!;
       expect(spot).toEqual({ id: 'pickup', kind: 'counter', pos: { x: 5, y: 6 }, busyTicksLeft: 0, output: null, occupiedBy: null });
     }
-    expect(createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 } }).stations.filter((x) => x.kind === 'counter')).toHaveLength(1);
+    expect(createRun({ seed: 7, hostId: 'p1', players: [] }).stations.filter((x) => x.kind === 'counter')).toHaveLength(1);
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
-      expect(createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 }, tier }).stations.filter((x) => x.kind === 'counter')).toHaveLength(1);
+      expect(createRun({ seed: 7, hostId: 'p1', players: [], tier }).stations.filter((x) => x.kind === 'counter')).toHaveLength(1);
     }
   });
 
@@ -102,7 +102,7 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
     ensureCounterSpots(s);
     expect(ids()).toEqual(['counter', 'pickup', 'sink', 'supply', 'trayTable', 'fridge', 'condiments']);
 
-    const classic = createRun({ seed: 7, hostId: 'p1', players: [], settings: { bots: 0 } });
+    const classic = createRun({ seed: 7, hostId: 'p1', players: [] });
     ensureCounterSpots(classic);
     expect(classic.stations.filter((x) => x.kind === 'counter')).toHaveLength(1);
   });

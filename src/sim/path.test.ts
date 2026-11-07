@@ -4,7 +4,7 @@ import { createRun, startDay } from './run';
 import type { Vec2 } from './types';
 import { findPath, idleNode, isWalkable, nodeOf, targetNodes } from './path';
 
-const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
 const pairs = (xs: Vec2[]): [Vec2, Vec2][] => xs.slice(1).map((b, i) => [xs[i], b]);
 
 describe('bot pathfinding', () => {

@@ -12,7 +12,7 @@ import type { AreaId } from '../data/areas';
 import type { DrinkId, GameState } from './types';
 
 const run = (gear: boolean, seed = 5): GameState =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', ...(gear ? { gear: true } : {}) });
+  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', ...(gear ? { gear: true } : {}) });
 /** A Gear run in the given area (scenario for the forced three, else a seed that lands there). */
 const inArea = (area: AreaId): GameState => {
   const forced: Partial<Record<AreaId, GameState['scenario']>> = { campus: 'campusTown', drizzleton: 'rainyWeek', tourist: 'touristSeason' };

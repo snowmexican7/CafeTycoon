@@ -1,7 +1,7 @@
 /**
  * FB2 A1: helper bots. CafeTycoon is a game for people; bots on the crew help instead of playing it for them.
  * Whenever a person is in a Gear café (`humanCount >= 1`, which also counts the scripts' 'human' stand-ins),
- * crew bots (any bot that is not a stand-in, temps included):
+ * crew bots (any bot that is not a stand-in):
  *
  * - leave the person's station alone: the station nearest each person, while they are within
  *   `helperGuardTiles` of it, can be theirs. Only machines and the till count (the pickup counter, the
@@ -29,7 +29,7 @@ import { STATION_RECIPES, recipeAt } from '../sim/stations';
 import { recipeChain } from '../data/drinks';
 import { tillNext } from '../sim/till';
 import type { BotStep, Customer, GameState, Player, Station } from '../sim/types';
-import { humanCount } from '../sim/bots/roster';
+import { humanCount } from './crew';
 import { undoneDrinks } from '../sim/orders';
 
 const BOTS = ECONOMY.bots;

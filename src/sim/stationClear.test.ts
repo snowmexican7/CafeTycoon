@@ -6,7 +6,7 @@ import type { DrinkId, GameState } from './types';
 
 const run = (): GameState => {
   // Classic layout has every machine; flip the Gear flag so the pickup counter has its 4 Gear slots.
-  const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
   s.gear = true;
   s.milkOut = 5;
   s.unlocked = [...BASE_DRINKS, 'redEye', 'cafeAuLait', 'icedLatte', 'sweetCream', 'mocha', 'americano'] as DrinkId[];

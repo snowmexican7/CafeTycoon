@@ -97,8 +97,6 @@ function describeOne(e: Effect): string {
       return `adds ${DRINK_NAMES[e.drink]} to the menu`;
     case 'quality':
       return `${e.add >= 0 ? '+' : '−'}${Math.abs(e.add).toFixed(2)}★ rating a day`;
-    case 'temp':
-      return 'a temp barista for the day';
     case 'reveal':
       return "hear tomorrow's events each night";
   }

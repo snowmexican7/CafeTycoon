@@ -3,7 +3,7 @@ import { createRun } from '../sim/run';
 import { nightBrief } from '../sim/brief';
 import { nightViewModel } from './viewModels';
 
-const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 
 describe('Tonight alerts come from the sim brief (FB1)', () => {
   it('shows the sim alerts by id, with the restock fix the sim worked out', () => {
@@ -40,7 +40,7 @@ describe('Tonight alerts come from the sim brief (FB1)', () => {
 describe('night clock pill ready count (FB1)', () => {
   it('reports readied humans against those needed', async () => {
     const { nightTimerVM } = await import('./viewModels');
-    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'J' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'J' }] });
     s.ready = ['p1'];
     expect(nightTimerVM(s)).toMatchObject({ ready: 1, needed: 2 });
   });

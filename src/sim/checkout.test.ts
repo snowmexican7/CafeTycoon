@@ -11,7 +11,7 @@ import { nightViewModel, profitOf } from '../ui/viewModels';
 import type { CheckoutId, GameState } from './types';
 
 const run = (seed = 1) => {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
   s.phase = 'night';
   return s;
 };

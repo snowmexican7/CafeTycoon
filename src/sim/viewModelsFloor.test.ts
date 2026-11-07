@@ -4,7 +4,7 @@ import { createRun, startDay } from './run';
 
 describe('hud floor', () => {
   it('hud shows messes, mop, cleanliness, stuns and cleaning', () => {
-    const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } }));
+    const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] }));
     s.messes = [
       { id: 4, kind: 'spill', x: 3, y: 4, amount: 1 },
       { id: 7, kind: 'grounds', x: 8, y: 2, amount: 0.5 },

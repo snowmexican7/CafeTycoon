@@ -8,7 +8,7 @@ import { nightViewModel } from '../ui/viewModels';
 import type { GameState } from './types';
 
 const run = (seed = 1, gear = true): GameState => {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
   if (gear) s.gear = true;
   return s;
 };

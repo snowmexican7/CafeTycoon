@@ -8,7 +8,7 @@ import { BASE_DRINKS } from '../data/drinks';
 import type { GearId } from '../data/gear';
 import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId, TierId } from '../sim/types';
 import { chainFor, think } from './brain';
-import { addStandIns } from '../sim/bots/roster';
+import { addStandIns } from './crew';
 
 /**
  * A Gear run with the back bar set by hand: `slots`/`gear` per slot, `standIns` stand-in bots (no reaction,
@@ -18,7 +18,7 @@ import { addStandIns } from '../sim/bots/roster';
  */
 function gearShop(slots: SlotContent[], gear: (GearId | null)[], o: { standIns?: number; tier?: TierId; drinks?: DrinkId[]; seed?: number } = {}): GameState {
   const tier = o.tier ?? 'cafe';
-  let s = createRun({ seed: o.seed ?? 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, gear: true, ...(tier !== 'cafe' ? { tier } : {}) });
+  let s = createRun({ seed: o.seed ?? 2, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 }, gear: true, ...(tier !== 'cafe' ? { tier } : {}) });
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
   s.slots = [...slots];
   s.slotGear = [...gear];

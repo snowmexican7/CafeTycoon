@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRun } from './run';
 import { secondsToTicks } from './constants';
-import { addStandIns } from './bots/roster';
+import { addStandIns } from '../harness/crew';
 import { step } from './step';
 import { ensureCounterSpots, stationsFromSlots, type SlotContent } from './slots';
 import { BASE_DRINKS } from '../data/drinks';
@@ -16,7 +16,7 @@ import { validateInput } from './validate';
 function night(slots: SlotContent[], gear: (GearId | null)[], o: { tier?: TierId; people?: number; wands?: (AddOnWand | null)[]; standIns?: number } = {}): GameState {
   const tier = o.tier ?? 'stand';
   const people = Array.from({ length: o.people ?? 1 }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` }));
-  const s = createRun({ seed: 4, hostId: 'p1', players: people, settings: { bots: 0, dayLengthSec: 600 }, gear: true, tier });
+  const s = createRun({ seed: 4, hostId: 'p1', players: people, settings: { dayLengthSec: 600 }, gear: true, tier });
   s.slots = [...slots];
   s.slotGear = [...gear];
   s.slotWand = o.wands ? [...o.wands] : slots.map(() => null);

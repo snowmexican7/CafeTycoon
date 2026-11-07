@@ -18,7 +18,7 @@ import { diffCues, type CueId } from '../audio/cues';
 type Kit = GearId | 'steamer';
 
 function stand(gear: Kit[] = ['d1', 'steamer', 'g2', 'b0']): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'Lu' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'Lu' }], tier: 'stand', gear: true });
   s.slotGear = gear.map((id) => (id === 'steamer' ? null : id));
   s.slots = gear.map((id) => (id === 'steamer' ? 'steamer' : GEAR[id].station));
   s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);

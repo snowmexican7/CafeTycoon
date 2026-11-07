@@ -15,7 +15,6 @@ function cafe(gear = true, players = 1): GameState {
     seed: 3,
     hostId: 'p1',
     players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'J' }].slice(0, players),
-    settings: { bots: 0 },
     tier: 'cart',
     gear,
   });

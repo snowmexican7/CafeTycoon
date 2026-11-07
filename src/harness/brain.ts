@@ -975,11 +975,6 @@ export function underPressure(state: GameState): boolean {
   return state.customers.length >= BOTS.pressureQueue || eventActive(state, 'rushHour');
 }
 
-/** Skill-dial multiplier for the bot's personality; stand-ins ('human') ignore the dial. */
-function skillFactor(state: GameState, bot: BotState, dial: readonly number[]): number {
-  return bot.personality === 'human' ? 1 : dial[state.settings.botSkill - 1];
-}
-
 /**
  * Ticks a bot hesitates before starting a newly adopted job. Always draws from the rng, even for a
  * stand-in (whose reaction is 0), so the stream does not depend on the crew's personalities.
@@ -988,9 +983,8 @@ export function reactionDelay(state: GameState, bot: BotState): number {
   const [lo, hi] = BOTS.reactionTicks;
   const base = lo + rngInt(state, hi - lo + 1);
   const personality = BOTS.personalities[bot.personality].reaction;
-  const skill = skillFactor(state, bot, BOTS.skill.reaction);
   const pressure = underPressure(state) ? BOTS.pressure.reaction : 1;
-  return Math.round(base * personality * skill * pressure);
+  return Math.round(base * personality * pressure);
 }
 
 /**
@@ -1025,7 +1019,6 @@ export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKi
   if (isTakeAt(b.plan[0], st) && st.output === null && st.busyTicksLeft === 0) pop(b);
   const chance =
     BOTS.personalities[b.personality].mistake *
-    skillFactor(state, b, BOTS.skill.mistake) *
     (underPressure(state) ? BOTS.pressure.mistake : 1);
   if (rngNext(state) >= chance) return;
   b.mistakes += 1;

@@ -8,7 +8,7 @@ import { step } from './step';
 import { ECONOMY } from '../data/economy';
 
 const day = () => {
-  const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+  const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
   s.scenario = 'normal';
   return startDay(s);
 };

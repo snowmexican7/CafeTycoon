@@ -12,7 +12,7 @@ const mvp: Award = { id: 'mvp', title: 'Crew MVP', icon: '🏆', winner: 'K', st
 const slip: Award = { id: 'slip', title: 'Slip King', icon: '🍌', winner: 'S', stat: '', line: '', tone: 'chaos' };
 
 function week(seed: number, days: number[], gear = true): GameState {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 }, ...(gear ? { gear: true } : {}) });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], ...(gear ? { gear: true } : {}) });
   s.days = days.map((served, i) => day(i + 1, served));
   return s;
 }

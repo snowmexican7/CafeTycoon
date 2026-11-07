@@ -15,7 +15,7 @@ import { isReservedId } from './constants';
 import { STEEP } from './steep';
 import { CONDIMENTS } from './condiments';
 import { isFlavour } from './handmade';
-import type { BotSkill, Pace, PlayerInput, Settings, SupplyId } from './types';
+import type { Pace, PlayerInput, Settings, SupplyId } from './types';
 
 const SUPPLIES: SupplyId[] = ['beans', 'milk', 'concentrate', 'flavour', 'pastry'];
 const MIN_PHASE_SEC = 30;
@@ -24,7 +24,6 @@ const MAX_PACKS = 100;
 const MAX_NAME = 16;
 /** FB2 C9: station ids are short ('espresso', 'espresso-2'). */
 const MAX_STATION_ID = 32;
-const MAX_BOTS = LAYOUT.spawnPoints.length - 1; // four baristas in all, at least one of them a person
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -39,9 +38,6 @@ export function sanitizeSettings(raw: Partial<Settings>): Partial<Settings> {
   if (finite(raw.nightLengthSec)) {
     out.nightLengthSec = raw.nightLengthSec === 0 ? 0 : clamp(Math.round(raw.nightLengthSec), MIN_PHASE_SEC, MAX_PHASE_SEC);
   }
-  if (raw.bots === 'auto') out.bots = 'auto';
-  else if (finite(raw.bots)) out.bots = clamp(Math.round(raw.bots), 0, MAX_BOTS);
-  if (finite(raw.botSkill)) out.botSkill = clamp(Math.round(raw.botSkill), 1, 5) as BotSkill;
   return out;
 }
 
@@ -111,7 +107,6 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
     }
     case 'staff':
       if (input.action !== 'hire' && input.action !== 'fire') return null;
-      if (input.role === undefined) return { kind: 'staff', playerId: input.playerId, action: input.action };
       return input.role === 'strategist' || input.role === 'marketer' ? { kind: 'staff', playerId: input.playerId, action: input.action, role: input.role } : null;
     case 'steep':
       return Number.isInteger(input.cups) && input.cups >= 0 && input.cups <= STEEP.maxInput

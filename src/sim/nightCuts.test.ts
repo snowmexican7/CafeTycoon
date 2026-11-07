@@ -11,7 +11,7 @@ import type { PlayerInput } from './types';
  * their input kinds are gone from `PlayerInput`; a stale client can still send them, `validateInput` refuses them
  * (unknown kind), so they do nothing. They are typed loosely here on purpose.
  */
-const gearNight = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+const gearNight = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
 const deprecated = [
   { kind: 'role', playerId: 'p1', role: 'manager' },
   { kind: 'role', playerId: 'p1', role: null },
@@ -20,7 +20,7 @@ const deprecated = [
   { kind: 'slot', playerId: 'p1', index: 0, station: null },
   { kind: 'equip', playerId: 'p1', station: 'grinder' },
 ] as unknown as PlayerInput[];
-const classicNight = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const classicNight = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 
 describe('cut night inputs: roles, re-roll, classic slot and equip', () => {
   it('validateInput refuses every one of them', () => {
@@ -57,7 +57,7 @@ describe('cut night inputs: roles, re-roll, classic slot and equip', () => {
   });
 
   it('growing a classic run lays out the bigger shop with its default stations', () => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand' });
     s.cash = 5000;
     const t = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
     expect(t.tier).toBe('cart');
@@ -69,7 +69,7 @@ describe('cut night inputs: roles, re-roll, classic slot and equip', () => {
 
 describe('Round 4 f item 4: growing from the end-of-day receipt', () => {
   it('the grow input works on the very first tick of the night (the receipt shows at night start)', () => {
-    let s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+    let s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
     s = startDay(s);
     s.challenges = [];
     s.phase = 'closing';

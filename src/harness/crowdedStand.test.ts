@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from '../sim/run';
 import { step } from '../sim/step';
-import { addStandIns } from '../sim/bots/roster';
+import { addStandIns } from './crew';
 import { ensureCounterSpots, stationsFromSlots } from '../sim/slots';
 import type { GearId } from '../data/gear';
 import type { GameState } from '../sim/types';
@@ -11,7 +11,7 @@ import type { GameState } from '../sim/types';
  * Gear shop only gets one as a wand, which works the same) worked by `n` stand-ins for one day of `secs` seconds.
  */
 function standDay(n: number, seed: number, secs = 420): GameState {
-  let s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: secs }, tier: 'stand', gear: true });
+  let s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: secs }, tier: 'stand', gear: true });
   s.owned.push({ itemId: 'test-busy', effects: [{ kind: 'traffic', mul: 2.5 }] }); // a busy day: the bar, not the door, is the limit
   addStandIns(s, n);
   for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);

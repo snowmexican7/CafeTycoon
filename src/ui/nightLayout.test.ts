@@ -23,7 +23,7 @@ function gearNight() {
     seed: 3,
     hostId: 'p1',
     players: [{ id: 'p1', name: 'Kim' }],
-    settings: { bots: 0, dayLengthSec: 600 },
+    settings: { dayLengthSec: 600 },
     gear: true,
     tier: 'stand',
   });

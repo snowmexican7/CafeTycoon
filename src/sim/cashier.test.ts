@@ -6,7 +6,7 @@ import { applyGearInput } from './gear';
 import { applyCheckoutInput } from './checkout';
 import { finishDay } from './closing';
 import { billsForDay, wagesForDay } from './staff';
-import { humanCount } from './bots/roster';
+import { addBots, humanCount } from '../harness/crew';
 import { ringSeconds } from './till';
 import { findPath } from './path';
 import { TICK_RATE, secondsToTicks } from './constants';
@@ -15,7 +15,7 @@ import { CASHIER, CASHIER_ID, cashierHome, syncCashier } from './cashier';
 import type { CheckoutId, Customer, GameState, Player, PlayerInput, Settings, Vec2 } from './types';
 
 /** A quiet Gear stand day (no walk-ins) with `checkout` installed; p1 stands far from the till. */
-function cashierDay(settings: Partial<Settings> = { bots: 0, cashier: true }, checkout: CheckoutId = 'register', seed = 7): GameState {
+function cashierDay(settings: Partial<Settings> = { cashier: true }, checkout: CheckoutId = 'register', seed = 7): GameState {
   let s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings, tier: 'stand', gear: true });
   applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
@@ -60,7 +60,7 @@ const dist = (a: Vec2, b: Vec2) => Math.hypot(a.x - b.x, a.y - b.y);
 
 describe('bot cut step 3: the solo robot cashier', () => {
   it('no cashier without the setting; exactly one with it once the day starts; a bot, never a person', () => {
-    const off = cashierDay({ bots: 0 });
+    const off = cashierDay({});
     expect(bot(off)).toBeUndefined();
     const on = cashierDay();
     expect(on.players.filter((p) => p.id === CASHIER_ID)).toHaveLength(1);
@@ -102,7 +102,7 @@ describe('bot cut step 3: the solo robot cashier', () => {
     expect(dist(me(s).pos, home)).toBeGreaterThan(ECONOMY.cashier.deferTiles);
     cust(s, 901);
     const path = findPath(s, cashier(s).pos, home)!;
-    const perTick = (ECONOMY.moveSpeedTilesPerSecond * ECONOMY.bots.personalities.steady.speed * ECONOMY.bots.skill.speed[s.settings.botSkill - 1]) / TICK_RATE;
+    const perTick = (ECONOMY.moveSpeedTilesPerSecond * ECONOMY.bots.personalities.steady.speed) / TICK_RATE; // ×1.0: no skill dial
     const walkTicks = Math.ceil((path.length + 1) / perTick);
     const bound = walkTicks + secondsToTicks(ringSeconds('register') as number) + secondsToTicks(1);
     let done = -1;
@@ -146,6 +146,68 @@ describe('bot cut step 3: the solo robot cashier', () => {
     expect(byId(s, 901).stage).toBe('pickup');
   });
 
+  it('a person diagonal to the till spot does not make it leave: it stays and rings (deferTiles 1.1)', () => {
+    expect(ECONOMY.cashier.deferTiles).toBe(1.1);
+    let s = cashierDay();
+    const home = cashierHome(s)!;
+    cashier(s).pos = { ...home };
+    const diagonal = { x: home.x - 1, y: home.y + 1 };
+    expect(dist(diagonal, home)).toBeGreaterThan(ECONOMY.cashier.deferTiles);
+    me(s).pos = { ...diagonal };
+    cust(s, 901);
+    for (let i = 0; i < secondsToTicks(3); i++) {
+      s = tick(s, []);
+      me(s).pos = { ...diagonal };
+      expect(dist(cashier(s).pos, home)).toBeLessThan(0.5); // never walks off
+    }
+    expect(rungBy(s, CASHIER_ID)).toHaveLength(1);
+    expect(byId(s, 901).stage).toBe('pickup');
+  });
+
+  it('once aside, it waits returnAfterSec (2 s) after the person last counted before walking back', () => {
+    expect(ECONOMY.cashier.returnAfterSec).toBe(2);
+    let s = cashierDay();
+    const home = cashierHome(s)!;
+    cashier(s).pos = { ...home };
+    const beside = { x: home.x - 1, y: home.y };
+    me(s).pos = { ...beside };
+    cust(s, 901);
+    for (let i = 0; i < secondsToTicks(3); i++) {
+      s = tick(s, []);
+      me(s).pos = { ...beside };
+    }
+    expect(dist(cashier(s).pos, home)).toBeGreaterThan(0.5); // stepped aside
+    const aside = { ...cashier(s).pos };
+    // the person walks off; for the next 2 s (less a tick) the cashier stays put on its idle tile
+    me(s).pos = { ...FAR };
+    for (let i = 0; i < secondsToTicks(ECONOMY.cashier.returnAfterSec) - 1; i++) {
+      s = tick(s, []);
+      expect(cashier(s).pos).toEqual(aside);
+      expect(cashier(s).bot!.target).not.toEqual(home);
+    }
+    expect(starts(s, CASHIER_ID)).toHaveLength(0);
+    // then it walks back and rings
+    s = run(s, secondsToTicks(5));
+    expect(rungBy(s, CASHIER_ID)).toHaveLength(1);
+    expect(byId(s, 901).stage).toBe('pickup');
+  });
+
+  it('the wait is deterministic: two runs of the same leave-and-return give the same state', () => {
+    const play = () => {
+      let s = cashierDay();
+      const home = cashierHome(s)!;
+      cashier(s).pos = { ...home };
+      cust(s, 901);
+      for (let i = 0; i < secondsToTicks(2); i++) {
+        s = tick(s, []);
+        me(s).pos = { x: home.x - 1, y: home.y };
+      }
+      me(s).pos = { ...FAR };
+      return JSON.stringify(run(s, secondsToTicks(4)));
+    };
+    expect(play()).toBe(play());
+  });
+
   it('a person ringing up: it does not press over them', () => {
     let s = cashierDay();
     const home = cashierHome(s)!;
@@ -162,7 +224,7 @@ describe('bot cut step 3: the solo robot cashier', () => {
   });
 
   it('self-order tier: customers ring themselves and the cashier never presses', () => {
-    let s = cashierDay({ bots: 0, cashier: true }, 'squarely');
+    let s = cashierDay({ cashier: true }, 'squarely');
     expect(s.checkout?.active ?? 'register').toBe('squarely');
     cust(s, 901);
     cust(s, 902);
@@ -234,7 +296,7 @@ describe('bot cut step 3: the solo robot cashier', () => {
   it('the day’s wages include exactly the daily charge with the cashier, and none without', () => {
     const on = cashierDay();
     expect(wagesForDay(on)).toBe(ECONOMY.cashier.dailyCost);
-    const off = cashierDay({ bots: 0 });
+    const off = cashierDay({});
     expect(wagesForDay(off)).toBe(0);
     expect(billsForDay(on)).toBeCloseTo(billsForDay(off) + ECONOMY.cashier.dailyCost, 5);
     const after = finishDay(on);
@@ -254,7 +316,7 @@ describe('bot cut step 3: the solo robot cashier', () => {
     const still = step(s, []);
     expect(moved).toEqual(still);
     // nobody can join as the cashier either, in a run without one
-    const off = cashierDay({ bots: 0 });
+    const off = cashierDay({});
     const joined = step(off, [{ kind: 'join', playerId: CASHIER_ID, name: 'imposter' }]);
     expect(joined.players.some((p) => p.id === CASHIER_ID)).toBe(false);
   });
@@ -272,7 +334,7 @@ describe('bot cut step 3: the solo robot cashier', () => {
   });
 
   it('the harness brain leaves the cashier alone: a bot and the cashier share a short day', () => {
-    let s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 1, cashier: true }, tier: 'stand', gear: true });
+    let s = addBots(createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { cashier: true }, tier: 'stand', gear: true }), 1);
     s.cash = 500;
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
     s = startDay(s);

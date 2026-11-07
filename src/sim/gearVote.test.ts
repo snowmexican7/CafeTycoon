@@ -9,7 +9,7 @@ import type { GameState, PlayerId } from './types';
 
 const run = (n: number): GameState => {
   const players = Array.from({ length: n }, (_, i) => ({ id: `p${i + 1}`, name: ['Kay', 'Mo', 'Ari', 'Jo'][i] }));
-  const s = createRun({ seed: 3, hostId: 'p1', players, settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 3, hostId: 'p1', players, tier: 'stand', gear: true });
   s.phase = 'night';
   s.cash = 500;
   return s;

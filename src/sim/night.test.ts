@@ -7,8 +7,9 @@ import { secondsToTicks } from './constants';
 import { sanitizeSettings } from './validate';
 import { step } from './step';
 import type { GameState } from './types';
+import { addBots } from '../harness/crew';
 
-const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
+const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
 
 describe('night phase', () => {
   it('deals four distinct eligible ids with a cheap option and two paths', () => {
@@ -99,7 +100,7 @@ const relaxed = (humans = 3): GameState =>
     seed: 3,
     hostId: 'p1',
     players: Array.from({ length: humans }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` })),
-    settings: { bots: 0, nightLengthSec: 0 },
+    settings: { nightLengthSec: 0 },
   });
 const ready = (s: GameState, ...ids: string[]) => {
   for (const id of ids) applyNightInput(s, { kind: 'ready', playerId: id });
@@ -200,7 +201,7 @@ describe('relaxed night', () => {
 
   it('a timed night is unchanged: counts down, no last call, identical across runs', () => {
     const play = () => {
-      let s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, nightLengthSec: 30, dayLengthSec: 30 } });
+      let s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { nightLengthSec: 30, dayLengthSec: 30 } });
       for (let i = 0; i < 30 * 60 + 900; i++) s = step(s, []);
       return s;
     };
@@ -214,7 +215,7 @@ describe('relaxed night', () => {
 
 describe('nightClock', () => {
   it('timed shape', () => {
-    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
     ready(s, 'p2');
     expect(nightClock(s)).toEqual({ mode: 'timed', secondsLeft: 120, lastCallSecondsLeft: null, ready: ['p2'], needed: 2 });
     s.phaseTicksLeft = 61;
@@ -222,12 +223,12 @@ describe('nightClock', () => {
   });
 
   it('relaxed shape, before and during a last call; bots are not counted', () => {
-    let s = createRun({
+    let s = addBots(createRun({
       seed: 1,
       hostId: 'p1',
       players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }, { id: 'p3', name: 'T' }],
-      settings: { bots: 1, nightLengthSec: 0 },
-    });
+      settings: { nightLengthSec: 0 },
+    }), 1);
     expect(nightClock(s)).toEqual({ mode: 'relaxed', secondsLeft: null, lastCallSecondsLeft: null, ready: [], needed: 3 });
     ready(s, 'p1', 'p2');
     s = stepNight(s);
