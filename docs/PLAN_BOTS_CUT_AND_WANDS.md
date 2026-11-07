@@ -1,7 +1,7 @@
 # Plan: cut the bots, keep a robot cashier, and make wand upgrades ease the meters
 
-Status: **approved by Kennedy 2026-11-06** (answers below). **Phase 1 steps 1–5 are on main (2026-11-07, protocol 69,
-snapshot 35);** step 6 (dead guards) is in progress. See "As built" at the end. Decisions are logged in
+Status: **approved by Kennedy 2026-11-06** (answers below). **Phase 1 is done and on main (2026-11-07, protocol 69,
+snapshot 35).** Phase 2 is Grok's (HANDOFF); Phase 3 waits on #29. See "As built" at the end. Decisions are logged in
 `docs/HANDOFF.md` (2026-11-06). The facts come from a survey of `main` at caf1cce.
 
 ## Why
