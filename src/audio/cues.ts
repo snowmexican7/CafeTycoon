@@ -19,7 +19,6 @@ export type CueId =
   | 'stormOut'
   | 'turnedAway'
   | 'trash'
-  | 'botOops'
   | 'buy'
   | 'restock'
   | 'dayStart'
@@ -188,7 +187,6 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'review.bad': cues.push({ id: 'coldCup' }); break;
       // FB2 C11: a live social post — soft ding when good, cold cup when bad
       case 'review.post': cues.push({ id: e.data.sentiment === 'good' ? 'serve' : 'coldCup' }); break;
-      case 'bot.mistake': cues.push({ id: 'botOops' }); break;
       case 'event.start': {
         const cue = EVENT_CUE[e.data.kind as EventKind];
         if (cue) cues.push({ id: cue });

@@ -1194,18 +1194,15 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
-  /** Block 3: serve toasts stacking up, a perfect serve, a regular's heart, a bot's oops, the group photo. */
+  /** Block 3: serve toasts stacking up, a perfect serve, a regular's heart, the group photo. */
   serves: {
     setup(s) {
-      s.players[1].name = 'Bo';
-      s.players[1].bot = { personality: 'rookie' } as GameState['players'][number]['bot'];
       s.customers = [{ id: 61, drink: 'latte', patienceLeft: 1100, patienceMax: 1200, kind: 'regular', name: 'Ada' }, { id: 64, drink: 'latte', patienceLeft: 900, patienceMax: 1200 }];
     },
     timeline: [
       [0.3, (s) => emit(s, 'served', { by: 'dev', item: 'latte', amount: 6.1, kind: 'normal', cid: 70, perfect: true, left: 0 })],
       [0.7, (s) => emit(s, 'served', { by: 'ben', item: 'espresso', amount: 3.3, kind: 'impatient', cid: 71, perfect: false, left: 0 })],
       [1.1, (s) => { emit(s, 'served', { by: 'ana', item: 'latte', amount: 6.4, kind: 'regular', name: 'Ada', cid: 61, perfect: true, left: 0 }); s.customers.shift(); }],
-      [1.3, (s) => emit(s, 'bot.mistake', { bot: 'Bo', drink: 'latte' })],
       [3.2, (s) => emit(s, 'influencer', { result: 'served' })],
     ],
   },

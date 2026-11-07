@@ -75,8 +75,6 @@ export interface CrewMember {
   color: string;
   me: boolean;
   connected: boolean;
-  /** A bot barista (and its personality), shown with a gear badge. */
-  bot?: string;
 }
 
 export interface OrderTicket {
@@ -199,15 +197,15 @@ export function officePhoneVM(state: GameState): OfficePhoneVM | undefined {
 export const officePhoneKey = (c: OfficePhoneVM | undefined): string => (c ? `office|${c.secsLeft}` : '');
 
 export function crewOf(state: GameState, me: PlayerId): CrewMember[] {
-  return state.players.map((p, i) => ({
+  // Bot cut Phase 2: people only (the solo robot cashier draws on the floor, not in the crew strip).
+  return state.players.flatMap((p, i) => (p.bot ? [] : [{
     id: p.id,
     name: p.name,
     initial: (p.name.trim()[0] ?? '?').toUpperCase(),
     color: PLAYER_HEX[i % PLAYER_HEX.length],
     me: p.id === me,
     connected: p.connected,
-    ...(p.bot ? { bot: p.bot.personality } : {}),
-  }));
+  }]));
 }
 
 const VERB: Record<'grinder' | 'espresso' | 'steamer' | 'coldBrewTap' | 'drip', string> = {
@@ -634,7 +632,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
 
 /** Keys for the HUD's independently rebuilt blocks (everything except per-tick values). */
 export const ordersKey = (l: HudLive) => l.orders.map((o) => `${o.id}${o.drink}${o.patience < 0.28 ? '!' : ''}${o.tag ? `#${o.tag.text}` : ''}${o.pickup ? '^' : ''}${o.items ? `[${o.items.map((it) => `${it.done ? '+' : '-'}${it.shots === 2 ? '2' : ''}${it.syrup ? it.syrup[0] : ''}`).join('')}${o.order ?? ''}]` : ''}${o.shots === 2 ? '×2' : ''}${o.syrup ? `~${o.syrup[0]}` : ''}`).join(',');
-export const crewKey = (l: HudLive) => l.crew.map((c) => `${c.id}:${c.name}:${c.connected ? 1 : 0}:${c.me ? 1 : 0}:${c.bot ?? ''}`).join(',');
+export const crewKey = (l: HudLive) => l.crew.map((c) => `${c.id}:${c.name}:${c.connected ? 1 : 0}:${c.me ? 1 : 0}`).join(',');
 export const handKey = (l: HudLive) => `${l.holding}|${l.tool?.label ?? ''}|${l.heldCold ? 'c' : ''}|${l.meName}|${l.hint.go}|${l.hint.key ?? 'E'}|${l.hint.title}|${l.hint.detail}`;
 
 export interface NightExtras {

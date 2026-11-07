@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 import { GEAR, type GearId } from '../data/gear';
 import { LAYOUT } from '../data/layout';
 import { chaosBursts } from '../render/chaosModel';
-import { botTag } from '../render/crewModel';
 import { createRun, startNight } from '../sim/run';
 import { stationsFromSlots } from '../sim/slots';
 import type { GameState } from '../sim/types';
@@ -39,11 +38,6 @@ function withGear(ids: GearId[], seed = 3): GameState {
 describe('Review Block 6: morning note + idle hints + tags', () => {
   it('exports an 8s morning-note dismiss window', () => {
     expect(NOTE_DISMISS_MS).toBe(8000);
-  });
-
-  it('bot tags drop the debug "· bot" suffix and keep a small robot mark', () => {
-    expect(botTag('Bo')).toBe('Bo 🤖');
-    expect(botTag('Bo')).not.toContain('· bot');
   });
 
   it('busy machines and missing cups get specific idle copy', () => {

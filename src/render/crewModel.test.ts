@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRun } from '../sim/run';
 import type { GameState, SimEvent } from '../sim/types';
-import { botLook, botTag, BUMP_LINES, bumpLine, crewBursts, tillText, emotePhase, newCrewMemory, toastText, vibeLabel, VIBE_START } from './crewModel';
+import { BUMP_LINES, bumpLine, crewBursts, tillText, newCrewMemory, toastText, vibeLabel, VIBE_START } from './crewModel';
 
 const run = () => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }, { id: 'p2', name: 'Dev' }] });
 const clone = (s: GameState): GameState => structuredClone(s);
@@ -18,42 +18,23 @@ describe('crew visuals model', () => {
     expect(toastText('Bo', 'coldBrew', 4.5)).toBe('Bo served a cold brew +$4.50');
   });
 
-  it('turns served, bot-mistake and influencer entries into bursts, once', () => {
+  it('turns served and influencer entries into bursts, once', () => {
     const a = run();
-    a.players.push({ ...structuredClone(a.players[0]), id: 'bot1', name: 'Bo', bot: { personality: 'rookie' } as never });
     const b = withLog(
       a,
       { kind: 'served', data: { by: 'p2', item: 'latte', amount: 6.1, kind: 'regular', name: 'Ada', cid: 4, perfect: true, left: 0 } },
-      { kind: 'bot.mistake', data: { bot: 'Bo', drink: 'latte' } },
       { kind: 'influencer', data: { result: 'served' } },
       { kind: 'pass.serve', data: { by: 'p1', item: 'latte' } },
     );
     const r = crewBursts(a, b, a.nextLogSeq - 1);
     expect(r.bursts.filter((x) => x.kind !== 'teamwork')).toEqual([
       { kind: 'serve', text: 'Dev served a latte +$6.10', by: 'p2', playerIndex: 1, perfect: true, customerKind: 'regular', regular: 'Ada', cid: 4 },
-      { kind: 'oops', playerIndex: 2, by: 'bot1' },
       { kind: 'selfie' },
     ]);
     expect(crewBursts(b, clone(b), r.lastSeq).bursts).toEqual([]);
     expect(crewBursts(null, b, -1).bursts).toEqual([]);
   });
 
-  it('dresses each bot personality differently', () => {
-    expect(botLook('rookie')).toMatchObject({ badge: true, emote: 'sweat' });
-    expect(botLook('veteran')).toMatchObject({ shades: true, emote: 'steam' });
-    expect(botLook('steady')).toMatchObject({ headphones: true, emote: 'note' });
-    expect(botLook('hurried')).toMatchObject({ headband: true, headphones: false, emote: 'clock' });
-    expect(botLook('hurried').every).toBeLessThan(botLook('steady').every);
-    expect(botTag('Bo')).toBe('Bo 🤖');
-  });
-
-  it('pops emotes briefly and staggers bots', () => {
-    expect(emotePhase(0, 0, 4)).toBe(0);
-    expect(emotePhase(2, 0, 4)).toBeNull();
-    const shown = Array.from({ length: 400 }, (_, i) => emotePhase(i / 20, 0, 4) !== null).filter(Boolean).length;
-    expect(shown / 400).toBeCloseTo(1.3 / 4, 1);
-    expect(emotePhase(0.5, 1, 4)).not.toBe(emotePhase(0.5, 0, 4));
-  });
 });
 
 describe('co-op cheers', () => {

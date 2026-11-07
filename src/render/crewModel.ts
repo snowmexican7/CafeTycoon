@@ -45,7 +45,6 @@ export function sigText(d: Record<string, unknown>): string {
 
 export type CrewBurst =
   | { kind: 'serve'; text: string; by: string; playerIndex: number; perfect: boolean; customerKind: string; regular?: string; cid: number }
-  | { kind: 'oops'; playerIndex: number; by: string }
   | { kind: 'selfie' }
   | { kind: 'teamwork'; from: string; to: string }
   | { kind: 'streak'; count: number }
@@ -155,11 +154,6 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
         resetCombo(mem);
         bumpVibe(mem, 1);
       }
-    } else if (e.kind === 'bot.mistake') {
-      const playerIndex = next.players.findIndex((p) => p.bot && p.name === e.data.bot);
-      if (playerIndex >= 0) bursts.push({ kind: 'oops', playerIndex, by: next.players[playerIndex].id });
-      resetCombo(mem);
-      bumpVibe(mem, -5);
     } else if (e.kind === 'pass.put' || (e.kind === 'drop' && isCounterDrop(e.data))) {
       // An R-drop on the till or pickup counter puts the cup down just like E.
       const item = e.data.item as DrinkId;
@@ -282,43 +276,6 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
 
   return { bursts, lastSeq: Math.max(lastSeq, cursor) };
 }
-
-export interface BotLook {
-  /** A green "NEW" sticker on the apron (rookie). */
-  badge: boolean;
-  /** Cool shades (veteran). */
-  shades: boolean;
-  /** Headphones (steady: in the zone). */
-  headphones: boolean;
-  /** A red sweatband instead of a cap (hurried: always mid-sprint). */
-  headband: boolean;
-  /** The little emote that pops up now and then, and how often (s). */
-  emote: 'sweat' | 'note' | 'steam' | 'clock';
-  every: number;
-}
-
-export function botLook(p: Personality): BotLook {
-  switch (p) {
-    case 'rookie':
-      return { badge: true, shades: false, headphones: false, headband: false, emote: 'sweat', every: 4 };
-    case 'veteran':
-      return { badge: false, shades: true, headphones: false, headband: false, emote: 'steam', every: 7 };
-    case 'hurried':
-      // FB1: the hurried bot pulls cups early when the line backs up; dress it like a sprinter with a stopwatch
-      return { badge: false, shades: false, headphones: false, headband: true, emote: 'clock', every: 3 };
-    default:
-      return { badge: false, shades: false, headphones: true, headband: false, emote: 'note', every: 6 };
-  }
-}
-
-/** 0..1 progress of the emote bubble if one is showing at time t (each bot offset by its index), else null. */
-export function emotePhase(t: number, index: number, every: number, length = 1.3): number | null {
-  const local = (t + index * 1.7) % every;
-  return local < length ? local / length : null;
-}
-
-/** ui-3.8.0 polish: a small robot mark in co-op (no debug "· bot" text). */
-export const botTag = (name: string) => `${name} \u{1F916}`;
 
 /** Label + tone for the HUD vibe chip. */
 export function vibeLabel(vibe: number): { text: string; tone: 'high' | 'mid' | 'low' } {

@@ -398,7 +398,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     el.crew.innerHTML = live.crew
       .map(
         (c) =>
-          `<span class="av ${c.me ? 'me' : ''} ${c.connected ? '' : 'away'} ${c.bot ? 'bot' : ''}" style="background:${c.color}" title="${esc(c.name)}${c.me ? ' (you)' : ''}${c.bot ? ` · ${c.bot} bot` : ''}${c.connected ? '' : ' · away'}">${esc(c.initial)}</span>`,
+          `<span class="av ${c.me ? 'me' : ''} ${c.connected ? '' : 'away'}" style="background:${c.color}" title="${esc(c.name)}${c.me ? ' (you)' : ''}${c.connected ? '' : ' · away'}">${esc(c.initial)}</span>`,
       )
       .join('');
   }

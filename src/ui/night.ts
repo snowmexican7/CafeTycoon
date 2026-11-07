@@ -520,7 +520,7 @@ function reportBody(r: ReportVM | undefined, br?: BranchVM): string {
     ? `<div class="mr-sec"><div class="sec-h">Money drinks</div>${r.drinks.map((x) => `<div class="mr-row"><span>${x.icon} ${esc(x.name)} <small>×${x.cups}</small></span>${bar(x.pct)}<b>${$(x.takings)}</b></div>`).join('')}</div>`
     : '';
   const crew = r.crew.length
-    ? `<div class="mr-sec"><div class="sec-h">Who served</div>${r.crew.map((c) => `<div class="mr-row"><span>${c.bot ? '🤖' : '🧑'} ${esc(c.name)} <small>${c.serves} cups</small></span>${bar(c.pct)}<b>${$(c.takings)}</b></div>`).join('')}</div>`
+    ? `<div class="mr-sec"><div class="sec-h">Who served</div>${r.crew.map((c) => `<div class="mr-row"><span>🧑 ${esc(c.name)} <small>${c.serves} cups</small></span>${bar(c.pct)}<b>${$(c.takings)}</b></div>`).join('')}</div>`
     : '';
   const notes = `<div class="mr-notes">${r.notes.map((n) => `<p>📝 ${esc(n)}</p>`).join('')}</div>`;
   const y = br?.yesterday;
