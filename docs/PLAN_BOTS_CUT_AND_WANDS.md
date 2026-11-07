@@ -1,7 +1,8 @@
 # Plan: cut the bots, keep a robot cashier, and make wand upgrades ease the meters
 
 Status: **approved by Kennedy 2026-11-06** (answers below). **Phase 1 is done and on main (2026-11-07, protocol 69,
-snapshot 35).** Phase 2 is Grok's (HANDOFF); Phase 3 waits on #29. See "As built" at the end. Decisions are logged in
+snapshot 35).** Phase 2 is Grok's (HANDOFF). **Phase 3 is done (2026-11-07, protocol 70)**: as planned,
+with the ok band widening by as much as the perfect band. See "As built" at the end. Decisions are logged in
 `docs/HANDOFF.md` (2026-11-06). The facts come from a survey of `main` at caf1cce.
 
 ## Why
