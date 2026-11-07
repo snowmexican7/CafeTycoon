@@ -14,8 +14,8 @@ const opening = () => {
 };
 
 describe('crew tips (FB1 WP6)', () => {
-  it('shortens the advice to fit a chip', () => {
-    expect(shortTip({ kind: 'restock', text: 'Out of beans: buy 2 packs ($16.00)', input: { kind: 'restock', supply: 'beans', packs: 2 } })).toBe('Buy 2 packs of beans');
+  it('shortens the advice to a short actionable chip', () => {
+    expect(shortTip({ kind: 'restock', text: 'Out of beans: buy 2 packs ($16.00)', input: { kind: 'restock', supply: 'beans', packs: 2 } })).toBe('Restock beans (×2)');
     expect(shortTip({ kind: 'price', text: 'Cut the Latte to $4.50 (now $4.75)', input: { kind: 'price', drink: 'latte', step: -1 } })).toBe('Cut the Latte to $4.50');
     expect(shortTip({ kind: 'menu', text: "Take the Latte off the board: there's no steamer", input: { kind: 'menu', drink: 'latte', on: false } })).toBe('Take the Latte off the board');
     expect(shortTip({ kind: 'equip', text: '6 walked out to 20 served: buy a second espresso machine ($45), then free a slot for it', input: { kind: 'equip', station: 'espresso' } as never })).toBe(
@@ -28,7 +28,7 @@ describe('crew tips (FB1 WP6)', () => {
     expect(tips.length).toBe(2);
     expect(tips.some((t) => t.id === 'restock:beans')).toBe(false); // "Beans stock is out" has its own buy button
     expect(tips.map((t) => [t.by, t.personality])).toEqual([['Lu', 'hurried'], ['Bo', 'steady']]);
-    expect(tips.every((t) => t.text.length <= 44)).toBe(true);
+    expect(tips.every((t) => t.text.length <= 40)).toBe(true);
   });
 
   it('dedupes grow and checkout against the brief by id', () => {
@@ -69,9 +69,9 @@ describe('reused AdviceKind rows (3.3.1)', () => {
     expect(tipIcon({ kind: 'rival', input: { kind: 'stampCard' } })).toBe('🎟️');
     expect(tipIcon({ kind: 'equip', input: { kind: 'staff', action: 'fire' } })).toBe('👋');
     expect(tipIcon({ kind: 'equip', input: { kind: 'gear', action: 'buy', gear: 'grinder' } as never })).toBe('⚙️');
-    expect(shortTip({ kind: 'restock', text: 'Steep 12 cold brews for tomorrow (about 10 cold brew orders expected)', input: { kind: 'steep', cups: 12 } })).toBe('Steep 12 cold brews for tomorrow');
-    expect(shortTip({ kind: 'restock', text: 'x', input: { kind: 'condimentBox', boxes: 1 } })).toMatch(/^Buy 1 condiment box \(\$\d+\)$/);
-    expect(shortTip({ kind: 'restock', text: 'x', input: { kind: 'branch', action: 'send', supply: 'milk' } })).toBe('Send a pack of milk to the branch');
+    expect(shortTip({ kind: 'restock', text: 'Steep 12 cold brews for tomorrow (about 10 cold brew orders expected)', input: { kind: 'steep', cups: 12 } })).toBe('Steep 12 cold brew tonight');
+    expect(shortTip({ kind: 'restock', text: 'x', input: { kind: 'condimentBox', boxes: 1 } })).toMatch(/^Buy condiment box \(\$\d+\)$/);
+    expect(shortTip({ kind: 'restock', text: 'x', input: { kind: 'branch', action: 'send', supply: 'milk' } })).toBe('Send milk to the branch');
     expect(shortTip({ kind: 'rival', text: "Match Bean Barn's happy hour", input: { kind: 'rivalCounter' } })).toBe('Match the happy hour');
   });
 
