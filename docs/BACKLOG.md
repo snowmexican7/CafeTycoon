@@ -2727,3 +2727,10 @@ Spec: `docs/CLAUDE_PROMPT_ROUND6.md`. One branch per block; names as built.
   Group size (2–3), office and day 1 unchanged (day 1 stays gentler via `DAY_CURVE` 1.12 and no groups). Balance,
   before → after: gearBalance 7×4 served 1429 → 1458, lost 443 → 417, cash 2232 → 1832, 0 bankrupt; p4Smoke 14×3
   served 690 → 711, lost 276 → 285, cash 528 → 744, 0 bankrupt. The two cash readings disagree: Kennedy to judge in play.
+- **Block 1, machines don't lock (`r6-machines`, protocol 67).** With a cup sitting as `station.output`, a person
+  holding a cup that has a recipe there starts it anyway: the sitting cup moves to the pickup counter first, keeping
+  its marks, clock and hand-made grade (`canClearOutput`, `clearOutputToPass` in src/sim/stationClear.ts). Events
+  `station.clear { by, station, drink, to }`; `station.clearFull { by, station, drink, reason: 'counterFull' }` when
+  the counter is full (press refused, cup stays). Empty hands still take the output first; busy machines stay busy.
+  Not cleared: drip pots, grinder hoppers, loose grounds, gear-blocked machines, a recipe missing its supply, and the
+  steamer while its jug fills. Bots are unchanged (they still collect outputs with empty hands).

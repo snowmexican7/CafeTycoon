@@ -22,6 +22,9 @@ when a build goes out, the line moves under its version with the date.
   patient fan shows up early.
 - Customers are a little more patient (impatient ones too), and more of them order for friends: a few more combos and
   group orders instead of quick walk-outs.
+- A cup waiting on a machine no longer locks it: walk up holding the next cup (drip for a red-eye, a shot for an iced
+  latte) and the waiting cup moves to the pickup counter while the new drink starts. If the counter is full, you're
+  told why.
 
 ## 3.9.2 — 2026-11-05 · A solid serving counter
 

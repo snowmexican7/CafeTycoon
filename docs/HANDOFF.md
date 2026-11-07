@@ -114,6 +114,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Round 6 block 1, machines don't lock (2026-11-06, `r6-machines`, protocol 67).** A small cue on
+  `station.clear { by, station, drink, to }` (the cup slides to pickup) and a "Pickup counter is full" hint on
+  `station.clearFull { …, reason: 'counterFull' }`. Station hints that said "Take the cup first" with a matching cup in
+  hand should now offer the new drink.
 - [ ] **Round 6 block 2, patience and groups (2026-11-06, `r6-patience`).** Constants only; nothing to draw. Balance
   notes in BACKLOG "Round 6 (sim lane, Claude)".
 - [ ] **Round 6 block 5, open grace + fans (2026-11-06, `r6-grace`, protocol 66).** A doors-open countdown from
