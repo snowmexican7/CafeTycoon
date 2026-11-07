@@ -284,6 +284,7 @@ export type SimEventKind =
   | 'tray.take'
   | 'tray.spill'
   | 'tray.void'
+  | 'tray.steal'
   /**
    * FB2 C10 / Round 5 (src/sim/rearrange.ts): a station set down at night (`{ by, station, to: Vec2, swapped }`) or
    * refused (`{ by, station }`); `station.reset` when a rebuild at night left the moved layout blocked.

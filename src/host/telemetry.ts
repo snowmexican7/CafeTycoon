@@ -65,7 +65,7 @@ export const RESERVED_TELE_KINDS: readonly string[] = [
   'order.combo', 'order.addon', 'order.office', 'order.done', 'order.lost', 'office.call',
   'line.complain', 'line.leave',
   'milk.fill', 'steam.result', 'syrup.add', 'syrup.miss',
-  'tray.claim', 'tray.add', 'tray.refuse', 'tray.pick', 'tray.put', 'tray.take', 'tray.spill', 'tray.void',
+  'tray.claim', 'tray.add', 'tray.refuse', 'tray.pick', 'tray.put', 'tray.take', 'tray.spill', 'tray.void', 'tray.steal',
 ];
 
 const MASH_COUNT = 4;
