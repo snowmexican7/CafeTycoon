@@ -110,7 +110,7 @@ describe('phone calls from the second shop (P4 B6; bot cut: the branch handles t
     const f = branchDay(fixed, fixed.day, true)!;
     expect(f.served).toBe(plain.served);
     expect(f.costs).toBeCloseTo(plain.costs + CALL.repair, 2);
-    expect(callLine(f.call)).toMatch(/sent a fix/);
+    expect(callLine(f.call)).toMatch(/got the machine fixed/);
     const thin = dayWithCall('machine');
     thin.branch!.staff = 1;
     const plainThin = branchDay(thin)!;
