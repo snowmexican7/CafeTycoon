@@ -23,6 +23,12 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-06: **Bots are being cut almost entirely.** Design for human play only; at most a single-player robot cashier
+  that just rings up. No new bot logic, bot tests or bot review asks (beyond "nothing crashes"). How and when bots come
+  out is still to be planned.
+- 2026-11-06: **Steam wand upgrades make the meters easier, not faster:** a better wand makes the jug fill fast at the
+  start, very slow in the middle and fast at the end (a quick run almost always hits the line), and gives a much wider
+  green band on the steam meter.
 - 2026-11-06: **Cappuccino's second steam also finishes straight into your hand**, the same as a latte (Round 6 block 3,
   PR #29): no second wait or second E at the wand.
 - 2026-11-05: **Round 6 approved (Kennedy, Nov 5 evening).** Docs: `docs/CURSOR_PROMPT_NEXT.md`,
