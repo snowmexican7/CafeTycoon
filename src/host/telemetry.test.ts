@@ -151,8 +151,8 @@ describe('telemetry', () => {
     const sum = tele.summary(s);
     expect(rows[rows.length - 1].data).toEqual(sum);
     expect(sum.pass).toEqual({ put: 2, take: 0, serve: 0, stale: 1 });
-    expect(sum.botMistakes).toEqual({ Bo: 2 });
-    expect(sum.idleTicks).toEqual({ Kay: 0, Lu: 30, Bo: 0 });
+    expect(sum).not.toHaveProperty('botMistakes');
+    expect(sum.idleTicks).toEqual({ Kay: 0, Lu: 30 }); // people only
     expect(sum.days).toEqual([d1, d2]);
     expect(sum.drinks).toEqual({ ...zeroDrinks(), espresso: 1, latte: 3, coldBrew: 2 });
     expect(sum.cards).toEqual([{ day: 1, offered: ['a', 'b', 'c'], bought: ['c'] }]);
