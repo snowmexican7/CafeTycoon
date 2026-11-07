@@ -5,14 +5,16 @@
  * the renderer handle it, every `!p.bot` guard leaves it out of person-only things, and inputs in its name are refused.
  * It costs `ECONOMY.cashier.dailyCost` a day at closing (src/sim/staff.ts).
  *
- * Each day tick (`stepCashier`, just before the test-only bot driver):
+ * Each day and closing tick (`stepCashier`, just before the test-only bot driver):
  * - home is the till's interaction spot (the tile a person stands on to ring); it walks there along `findPath`;
  * - at home, with a customer to ring (`tillNext`) and nobody else ringing, it presses once, then stays put until the
  *   ring finishes (`stepRingUp` cancels a ring whose ringer walks off);
- * - it defers to people: while a person is within `ECONOMY.cashier.deferTiles` of the till spot, or someone else's
+ * - it defers to people: while an empty-handed person (ringing up needs empty hands, so someone carrying a drink to
+ *   the pickup counter isn't coming to ring) is within `ECONOMY.cashier.deferTiles` of the till spot, or someone else's
  *   ring-up runs, it never presses and waits on an idle tile next to the till (`idleNode`), coming back when they've gone;
  * - at the self-order tier (Squarely) customers ring themselves, so it just waits on its idle tile;
- * - at night, closing and the week's end it stands still.
+ * - during the closing grace it keeps ringing the customers still in line (same rules);
+ * - at night and the week's end it stands still.
  * No RNG and no wall clock: the same state gives the same moves.
  */
 import { ECONOMY } from '../data/economy';
@@ -79,9 +81,12 @@ export function cashierHome(state: GameState): Vec2 | null {
   return targetNodes(state, till, till.pos)[0] ?? null;
 }
 
-/** A person (connected, not a bot) has the till: they stand within `deferTiles` of the till spot. */
+/**
+ * A person (connected, not a bot) has the till: they stand within `deferTiles` of the till spot with empty hands and no
+ * tool (only empty hands can ring, so someone carrying a drink to the pickup counter isn't coming for the till).
+ */
 function personAtTill(state: GameState, home: Vec2): boolean {
-  return state.players.some((o) => !o.bot && o.connected && dist(o.pos, home) <= ECONOMY.cashier.deferTiles);
+  return state.players.some((o) => !o.bot && o.connected && o.holding === null && !o.tool && dist(o.pos, home) <= ECONOMY.cashier.deferTiles);
 }
 
 /** Another body stands on (or next to) `node`. */
@@ -122,14 +127,15 @@ function walk(state: GameState, p: Player): boolean {
 }
 
 /**
- * The cashier's tick (stepDay, before the bot driver and the movement). Decides its moveDir and whether it presses
+ * The cashier's tick (stepDay, day and closing, before the bot driver and the movement). Decides its moveDir and whether it presses
  * "use" at the till this tick; the normal interact → tillRingUp path does the ringing.
  */
 export function stepCashier(state: GameState): void {
   const p = cashierOf(state);
   if (!p || !p.bot) return;
   p.moveDir = { x: 0, y: 0 };
-  if (state.phase !== 'day' || !p.connected || p.stunTicksLeft > 0) return;
+  // Day and the closing grace (customers still in line get rung); night and the week's end: stand still.
+  if ((state.phase !== 'day' && state.phase !== 'closing') || !p.connected || p.stunTicksLeft > 0) return;
   const home = cashierHome(state);
   if (!home) return;
   if (state.ringUp?.by === p.id) return; // mid-ring: stay put until it finishes

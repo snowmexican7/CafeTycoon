@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ECONOMY } from '../data/economy';
 import { createRun, startDay } from './run';
-import { step } from './step';
+import { enterClosing, step } from './step';
 import { applyGearInput } from './gear';
 import { applyCheckoutInput } from './checkout';
 import { finishDay } from './closing';
@@ -169,6 +169,56 @@ describe('bot cut step 3: the solo robot cashier', () => {
     s = run(s, secondsToTicks(6));
     expect(starts(s, CASHIER_ID)).toHaveLength(0);
     expect(rungBy(s, '').length).toBeGreaterThan(0);
+  });
+
+  it('only an empty-handed person near the till holds it: one carrying a drink does not stop the cashier ringing', () => {
+    const near = (holding: Player['holding']) => {
+      let s = cashierDay();
+      const home = cashierHome(s)!;
+      cashier(s).pos = { ...home };
+      const spot = { x: home.x - 1, y: home.y }; // within deferTiles of the till spot
+      expect(dist(spot, home)).toBeLessThanOrEqual(ECONOMY.cashier.deferTiles);
+      me(s).pos = { ...spot };
+      me(s).holding = holding;
+      cust(s, 901);
+      for (let i = 0; i < secondsToTicks(3); i++) {
+        s = tick(s, []);
+        me(s).pos = { ...spot };
+        me(s).holding = holding;
+      }
+      return s;
+    };
+    const carrying = near('coldBrew');
+    expect(rungBy(carrying, CASHIER_ID)).toHaveLength(1);
+    expect(byId(carrying, 901).stage).toBe('pickup');
+    const empty = near(null);
+    expect(starts(empty, CASHIER_ID)).toHaveLength(0);
+    expect(byId(empty, 901).stage).toBe('order');
+  });
+
+  it('closing: it keeps ringing the customers still in line, with the same deferral', () => {
+    let s = cashierDay();
+    cust(s, 901);
+    cust(s, 902);
+    enterClosing(s);
+    expect(s.phase).toBe('closing');
+    s = run(s, secondsToTicks(6));
+    expect(s.phase).toBe('closing');
+    expect(rungBy(s, CASHIER_ID)).toHaveLength(2);
+    expect(byId(s, 901).stage).toBe('pickup');
+    expect(byId(s, 902).stage).toBe('pickup');
+
+    // an empty-handed person by the till during closing: the cashier leaves the ringing to them
+    let t = cashierDay();
+    const home = cashierHome(t)!;
+    cust(t, 903);
+    enterClosing(t);
+    me(t).pos = { x: home.x - 1, y: home.y };
+    for (let i = 0; i < secondsToTicks(3); i++) {
+      t = tick(t, []);
+      me(t).pos = { x: home.x - 1, y: home.y };
+    }
+    expect(starts(t, CASHIER_ID)).toHaveLength(0);
   });
 
   it('night: it stands still', () => {
