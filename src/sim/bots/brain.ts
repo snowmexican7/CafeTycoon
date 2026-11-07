@@ -45,7 +45,8 @@ const isRecipeKind = (kind: StationKind): kind is RecipeKind => kind in STATION_
 /** Round 5 block 4: a tap in its mid-day refill lock (busy with `making === null`): no cup is on its way. */
 const refilling = (st: Station): boolean => st.kind === 'coldBrewTap' && st.busyTicksLeft > 0 && st.making === null;
 
-const isIdle = (st: Station): boolean => st.busyTicksLeft === 0 && st.output === null && st.occupiedBy === null;
+const isIdle = (st: Station, state?: GameState): boolean =>
+  st.busyTicksLeft === 0 && st.output === null && st.occupiedBy === null && !(state && state.players.some((p) => p.steam?.station === st.id));
 
 /** Another bot's plan already has a step at `st` (it is on its way there, or will be). */
 function plannedByOther(state: GameState, self: Player, st: Station): boolean {
@@ -59,7 +60,7 @@ function plannedByOther(state: GameState, self: Player, st: Station): boolean {
 function idleOfKind(state: GameState, p: Player, kind: StationKind, skip: Station | null = null): Station | null {
   let best: Station | null = null;
   for (const st of state.stations) {
-    if (st.kind !== kind || st === skip || !isIdle(st) || plannedByOther(state, p, st)) continue;
+    if (st.kind !== kind || st === skip || !isIdle(st, state) || plannedByOther(state, p, st)) continue;
     if (best === null || dist(st.pos, p.pos) < dist(best.pos, p.pos)) best = st;
   }
   return best;
@@ -237,7 +238,7 @@ function canMake(state: GameState, p: Player, st: Station, need: Need): boolean 
 function stationScore(state: GameState, p: Player, st: Station, need: Need): number {
   if (hasPot(st) && need.held === null && need.gives === 'drip') return potScore(state, p, st, need);
   if (st.kind === 'grinder' && st.doses !== undefined && st.output === 'grounds' && need.held === null) return plannersAt(state, p, st) < st.doses ? 0 : 1;
-  return isIdle(st) && !plannedByOther(state, p, st) ? 0 : 1;
+  return isIdle(st, state) && !plannedByOther(state, p, st) ? 0 : 1;
 }
 
 /**
@@ -1288,7 +1289,7 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
     case 'stow': {
       // Closing soon: lift what is still out (the milk at an idle milk station, or the bar).
       const bar = st.id === CONDIMENTS_ID;
-      const has = bar ? (state.condiments?.servings ?? 0) > 0 : (state.milkOut ?? 0) > 0 && isIdle(st);
+      const has = bar ? (state.condiments?.servings ?? 0) > 0 : (state.milkOut ?? 0) > 0 && isIdle(st, state);
       if (closingSoon(state) && p.tool === null && p.holding === null && has) return execute(p);
       return setPlan(b, []);
     }

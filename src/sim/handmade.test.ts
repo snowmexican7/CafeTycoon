@@ -191,31 +191,32 @@ describe('FB2 B8: the steam meter', () => {
   });
 
   for (const [k, grade] of [[18, 'perfect'], [10, 'ok'], [1, 'miss']] as const) {
-    it(`stopped after ${k} ticks: ${grade}; the drink is made either way`, () => {
+    it(`stopped after ${k} ticks: ${grade}; drink is instantly in hand (no second E)`, () => {
       const s = open();
       fillAndInsert(s, 0.6 * FILL);
+      expect(wandOf(s).busyTicksLeft).toBe(0); // Round 6: meter is the only timer
       tick(s, k);
       interact(s, 'p1');
       expect(p1(s).steam).toBeUndefined();
       expect(logs(s, 'steam.result')).toEqual([{ by: 'p1', grade }]);
-      expect(wandOf(s).made).toEqual({ milk: 'right', foam: grade });
-      tick(s, 4.5 * TICK_RATE);
-      expect(wandOf(s).output).toBe('latte');
-      // Taking it carries the marks into the hands.
-      interact(s, 'p1');
+      // Round 6: finished latte is already in hand; wand is clear.
       expect(p1(s).holding).toBe('latte');
       expect(p1(s).made).toEqual({ milk: 'right', foam: grade });
+      expect(wandOf(s).output).toBeNull();
+      expect(wandOf(s).making).toBeNull();
+      expect(wandOf(s).making).toBeNull();
     });
   }
 
-  it('never stopped: the wand finishes and the milk is scalded (miss)', () => {
+  it('never stopped: after steamMissAfter the milk is scalded (miss) and still lands in hand', () => {
     const s = open();
     fillAndInsert(s, 0.6 * FILL);
-    tick(s, 4.5 * TICK_RATE);
-    expect(wandOf(s).output).toBe('latte');
+    tick(s, Math.ceil(HANDMADE.steamMissAfter * TICK_RATE));
     expect(p1(s).steam).toBeUndefined();
     expect(logs(s, 'steam.result')).toEqual([{ by: 'p1', grade: 'miss' }]);
-    expect(wandOf(s).made).toEqual({ milk: 'right', foam: 'miss' });
+    expect(p1(s).holding).toBe('latte');
+    expect(p1(s).made).toEqual({ milk: 'right', foam: 'miss' });
+    expect(wandOf(s).output).toBeNull();
   });
 
   it('a press out of the wand\'s reach does what it always does and leaves the meter running', () => {

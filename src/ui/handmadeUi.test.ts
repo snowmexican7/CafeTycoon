@@ -129,6 +129,27 @@ describe('FB2 B8 handmade UI (jug, steam, syrup, tickets)', () => {
     p.pos = { ...wand.pos };
     expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Stop the steam' });
   });
+
+  it('Round 6: filled jug at the wand says Press E to steam (no steamer wait / no pick-up)', () => {
+    const s = gearDay();
+    const wand = s.stations.find((x) => x.kind === 'steamer')!;
+    const p = s.players[0];
+    p.holding = 'espresso';
+    p.pos = { ...wand.pos };
+    p.jug = { fill: 0.6, startedAt: s.tick, line: JUG_LINES.latte, done: true };
+    s.milkOut = 4;
+    expect(handHint(s, 'p1')).toMatchObject({ go: true, title: 'Press E to steam' });
+    expect(handHint(s, 'p1').detail).toMatch(/in your hand/i);
+    // After steam resolves, the latte is already held — never "Pick up latte" on the wand.
+    delete p.jug;
+    delete p.steam;
+    p.holding = 'latte';
+    p.made = { milk: 'right', foam: 'perfect' };
+    wand.making = null;
+    wand.output = null;
+    wand.busyTicksLeft = 0;
+    expect(handHint(s, 'p1').title).not.toMatch(/pick up latte/i);
+  });
 });
 
 describe('FB2 B8 juice + sounds', () => {

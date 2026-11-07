@@ -572,11 +572,15 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
     }
     return idle('Out of cold brew. Buy more with 📦 Restock', where);
   }
-  // FB2 B8: at a wand with a shot, fill the jug first (then E puts it on and starts the steam meter).
+  // FB2 B8 / Round 6: at a wand with a shot, fill the jug first; with a filled jug, E starts the foam meter
+  // (drink lands in hand when you stop — no steamer wait, no second pickup).
   if (state.gear === true && !player.bot && kind === 'steamer' && held === 'espresso') {
     const r = recipeAt(state, station, held);
-    if (r?.takes === 'espresso' && r.gives === 'latte' && !player.jug?.done) {
-      return go('Fill the milk jug', `${where} · E starts it · E again stops on the ticket's line`);
+    if (r?.takes === 'espresso' && r.gives === 'latte') {
+      if (!player.jug?.done) {
+        return go('Fill the milk jug', `${where} · E starts it · E again stops on the ticket's line`);
+      }
+      return go('Press E to steam', `${where} · foam meter · drink finishes in your hand`);
     }
   }
   // Gear steeped pour: empty hands at a stocked cold brew, no wait.
