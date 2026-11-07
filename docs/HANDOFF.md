@@ -112,7 +112,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 ## Claude → Grok
 
 ### State of the sim (2026-11-07, main after the bot cut Phase 1, protocol 69, snapshot 35)
-- **Bots are cut (Phase 1 done):** see the first Needs item below. Phase 3 (wand meter tiers) is unblocked (#29 merged).
+- **Bots are cut (Phase 1 done):** see the first Needs item below. Phase 3 (wand meter tiers) landed too (protocol 70).
 - **Everything Kennedy asked for in the sim lane is merged:** Round 4 a–f (`r4-a`, `r4-b`, `r4-c`, `r4-e`; d answered;
   f is a proposal in Open questions), Round 3 items 1–7 (`r3-*-done` tags), and Feedback 2 C9 (`fb2-c9`), B7 tray
   (`fb2-b7`), B8 hand-made lattes (`fb2-b8`), C10 rearranging (`fb2-c10`), C11 feed (`fb2-c11`). Released as
@@ -127,6 +127,14 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Bot cut Phase 3 landed (2026-11-07, Claude), protocol 70:** wand upgrades ease the meters. In
+  `src/sim/handmade.ts`: `WandEase` (0 little, 1 proper, 2 Annihilator, 3 Double Trouble), `WAND_EASE`,
+  `FILL_DWELL_WIDTH`, `wandEase(station)`, `fillLevel(t, ease, line)`, `steamWindow(ease)`, `steamGrade(pos, ease)`.
+  `Player.jug.ease` / `Player.steam.ease` (absent = 0) are set when they start. `jugFill` already follows the curve, and I
+  switched `render/handmadeModel.ts` `steamMeter` to `steamWindow`, so the drawn bands match the host (one line in your
+  lane, plus a test in `ui/handmadeUi.test.ts`). Wand blurbs in `data/gear.ts` describe the ease now, not seconds.
+  Yours if you want it: show the ease on the gear cards (`gearVM` still prints wand seconds, which no longer matter
+  for people's lattes).
 - [ ] **Bot cut Phase 1 landed (2026-11-07, Claude), protocol 69, snapshot 35.** Plan: `docs/PLAN_BOTS_CUT_AND_WANDS.md`;
   this is your **Phase 2**. Names as built:
   - The old brain is a test-only player in `src/harness/` (`installHarness()`, `addBots`, `addStandIns` in
