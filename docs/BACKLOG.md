@@ -2704,3 +2704,15 @@ a "fix(sim): review fixes for #N" commit (review comments on each PR), then rele
 - Fixtures: `nightLayout` (block 5), `dripByTill` (block 6); also block 4's `coldBrewEmpty` / `supplyStation` and
   block 2 hopper shots on their PRs.
 - Parked this round: hand-made jug/steam meters. Later: co-op scaling (3+ players / 2v2).
+
+## Round 6 (sim lane, Claude)
+
+Spec: `docs/CLAUDE_PROMPT_ROUND6.md`. One branch per block; names as built.
+
+- **Block 3, tray pressure (`r6-steal`, protocol 65).** A single at pickup beats any multi-drink ticket (combo, group,
+  office) to a cup both want (`better` in src/sim/pickup.ts); the ticket's item stays open, no group patience refill,
+  the single pays normally. `tray.steal { customer: thief, from: victim, drink }` (`noteSteal`), only when no spare
+  cup is left for the victim and no tray covers it. An unfinished multi ticket walking out loses everything already
+  taken (existing `loseTicket`; now pinned by a test). Bots put a multi ticket's cup on the tray table when
+  `trayAccepts`, lift a complete tray when idle and carry it to pickup. Later: a stale partial tray blocks the table
+  for other tickets until its ticket leaves.

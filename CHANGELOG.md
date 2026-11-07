@@ -16,7 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- Dropping a group's cups on the pickup counter is risky now: other customers can grab them, and a group that never
+  gets its drink walks out and you lose the whole order. Use the serving tray.
 
 ## 3.9.2 — 2026-11-05 · A solid serving counter
 
