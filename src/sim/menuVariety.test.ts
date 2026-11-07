@@ -23,7 +23,7 @@ const huge = { patienceLeft: 10_000, patienceMax: 10_000 };
 describe('menu variety: recipes', () => {
   it('builds every drink from the existing stations', () => {
     const chain = (d: Parameters<typeof recipeChain>[0]) => recipeChain(d).map((c) => c.station);
-    expect(chain('icedLatte')).toEqual(['grinder', 'espresso', 'coldBrewTap']);
+    expect(chain('icedLatte')).toEqual(['grinder', 'espresso', 'supply']); // Round 6 block 4: finished at the milk counter
     expect(chain('mocha')).toEqual(['grinder', 'espresso', 'steamer', 'steamer']);
     expect(chain('matcha')).toEqual(['steamer']);
     expect(chain('special')).toEqual(['coldBrewTap', 'steamer']);
@@ -56,25 +56,6 @@ describe('menu variety: recipes', () => {
     expect(s.players[0].holding).toBe('latte');
   });
 
-  it('a shot at the tap makes an iced latte', () => {
-    const s = startDay(solo());
-    unlockDrink(s, 'icedLatte');
-    s.players[0].holding = 'espresso';
-    const tap = s.stations.find((x) => x.kind === 'coldBrewTap')!;
-    s.players[0].pos = { ...s.players[0].pos };
-    const milk = s.supplies.milk;
-    // stand at the tap
-    for (let x = 0; x < 12; x++) for (let y = 0; y < 8; y++) {
-      at(s, x, y);
-      if (interact(structuredClone(s), 'p1').stations.find((q) => q.kind === 'coldBrewTap')!.making === 'icedLatte') {
-        interact(s, 'p1');
-        expect(tap.making).toBe('icedLatte');
-        expect(s.supplies.milk).toBe(milk - 1);
-        return;
-      }
-    }
-    throw new Error('never reached the tap');
-  });
 });
 
 describe('menu variety: fancy drinks buy patience', () => {
@@ -161,19 +142,16 @@ describe('menu variety: bots and determinism', () => {
     ]);
   });
 
-  it('a bot makes and serves every new drink', () => {
+  it('a bot makes and serves every new drink (classic: no iced latte, it needs the Gear milk counter)', () => {
     let s = solo(1, 2);
     s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
-    for (const d of ['icedLatte', 'mocha', 'matcha', 'special'] as const) unlockDrink(s, d);
+    for (const d of ['mocha', 'matcha', 'special'] as const) unlockDrink(s, d);
     s.supplies.flavour = 20;
     s = startDay(s);
-    s.customers = [
-      { id: 901, drink: 'mocha', ...huge }, { id: 902, drink: 'icedLatte', ...huge },
-      { id: 903, drink: 'matcha', ...huge }, { id: 904, drink: 'special', ...huge },
-    ];
+    s.customers = [{ id: 901, drink: 'mocha', ...huge }, { id: 903, drink: 'matcha', ...huge }, { id: 904, drink: 'special', ...huge }];
     for (let i = 0; i < 60 * 150 && s.customers.length > 0; i++) s = step(s, []);
     expect(s.customers).toEqual([]);
-    expect(s.today.drinks).toMatchObject({ mocha: 1, icedLatte: 1, matcha: 1, special: 1 });
+    expect(s.today.drinks).toMatchObject({ mocha: 1, matcha: 1, special: 1 });
   });
 
   it('a full week with the new menu is deterministic', () => {

@@ -109,7 +109,7 @@ describe('Round 5 block 4a: mid-day cold brew refill', () => {
     expect([nTap.busyTicksLeft, nTap.batchLeft, night.supplies.concentrate]).toEqual([0, 0, 20]);
   });
 
-  it('after a refill, iced latte can draw a cup', () => {
+  it('after a refill, the tap pours again (Round 6 block 4: the iced latte no longer draws a cup)', () => {
     // Cold brew in slot 2 so the press isn't swallowed by the fridge (same tile column as slot 0).
     const s = gearDay(['e1', 'steamer', 'c1'], { concentrate: 50, beans: 20, milk: 20 });
     s.unlocked = ['espresso', 'latte', 'coldBrew', 'icedLatte'];
@@ -124,12 +124,9 @@ describe('Round 5 block 4a: mid-day cold brew refill', () => {
     expect(tap.busyTicksLeft).toBe(0);
     expect(tap.batchLeft).toBe(4);
     expect(tap.output).toBeNull();
-    // iced latte: espresso in hand at the cold brew draws one steeped cup (same shape as tapPour.test.ts)
-    s.milkOut = 8;
-    me(s).holding = 'espresso';
     standAt(s, tap.id);
     interact(s, 'p1');
-    expect([tap.batchLeft, tap.busyTicksLeft > 0, tap.making, me(s).holding]).toEqual([3, true, 'icedLatte', null]);
+    expect([tap.batchLeft, me(s).holding]).toEqual([3, 'coldBrew']);
   });
 
   it('a dead tap (batteries died, dead until tonight) cannot be refilled', () => {
@@ -182,32 +179,28 @@ describe('Round 5 block 4b: staff milk & cream by the sink', () => {
     }
   });
 
-  it('a carton from the supply shelf goes out at the steamer and the cold brew', () => {
+  it('Round 6 block 4: the shelf is the milk counter: empty hands take nothing; a fridge carton goes out at the steamer or onto the counter', () => {
     const s = gearDay(['c1', 'steamer'], { milk: 20, concentrate: 10 });
     expect(fridgeGear(s)).toBe('f1');
-    const supply = s.stations.find((x) => x.id === SUPPLY_ID)!;
     standAt(s, SUPPLY_ID);
     interact(s, 'p1');
-    expect(me(s).tool).toBe('milk');
-    expect(me(s).carry).toBe(FRIDGE.carton);
-    expect(s.supplies.milk).toBe(20 - FRIDGE.carton);
-    expect(s.log.some((e) => e.kind === 'fridge.take' && e.data.station === SUPPLY_ID)).toBe(true);
+    expect(me(s).tool).toBeNull();
+    expect(s.supplies.milk).toBe(20);
 
+    standAt(s, 'fridge');
+    interact(s, 'p1');
+    expect([me(s).tool, me(s).carry]).toEqual(['milk', FRIDGE.carton]);
     standAt(s, 'steamer');
     interact(s, 'p1');
     expect(me(s).tool).toBeNull();
     expect(s.milkOut).toBe(FRIDGE.carton);
-    expect(s.log.some((e) => e.kind === 'milk.out' && e.data.station === 'steamer')).toBe(true);
 
-    // another carton → cold brew
-    s.supplies.milk = 10;
+    standAt(s, 'fridge');
+    interact(s, 'p1');
     standAt(s, SUPPLY_ID);
     interact(s, 'p1');
-    const tap = tapOf(s);
-    standAt(s, tap.id);
-    interact(s, 'p1');
-    expect(s.milkOut).toBe(FRIDGE.carton * 2);
     expect(me(s).tool).toBeNull();
+    expect([s.milkOut, s.supplyMilk, s.supplies.milk]).toEqual([FRIDGE.carton, FRIDGE.carton, 20 - 2 * FRIDGE.carton]);
   });
 
   it('R with a cup at the shelf does nothing (the shelf takes no cups, like the fridge)', () => {

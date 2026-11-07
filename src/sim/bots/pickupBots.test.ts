@@ -28,6 +28,7 @@ const quiet = (s: GameState): GameState => {
   s.eventSchedule = [];
   s.players[0].pos = { x: 10, y: 5 };
   s.milkOut = s.supplies.milk; // FB2 A4: the milk is out at the bar
+  s.supplyMilk = s.supplies.milk; // Round 6 block 4: and on the milk counter
   return s;
 };
 const sim = (s: GameState, n = 1): Player => s.players.find((p) => p.id === `sim-${n}`)!;
@@ -176,12 +177,11 @@ describe('bots at the steeped tap (Task 14)', () => {
       { kind: 'use', station: tap.id, action: 'insert', makes: 'coldBrew' },
       { kind: 'use', station: 'pickup', action: 'put' },
     ]);
-    // The tap drinks built on a pour: sweet cream at the tap, maple cold foam at the steamer; iced latte needs a shot first.
-    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve'))).toEqual([
-      `${tap.id}:insert>coldBrew`, `${tap.id}:insert>sweetCream`, `${tap.id}:take`, 'pickup:put',
-    ]);
+    // The tap drinks built on a pour: sweet cream at the milk counter (Round 6 block 4, one instant fill), maple cold
+    // foam at the steamer; iced latte needs a shot first, then the milk counter.
+    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve'))).toEqual([`${tap.id}:insert>coldBrew`, 'supply:insert>sweetCream', 'pickup:put']);
     expect(ids(chainFor(s, sim(s), 'special', 'serve'))).toEqual([`${tap.id}:insert>coldBrew`, 'steamer:insert>special', 'steamer:take', 'pickup:put']);
-    expect(ids(chainFor(s, sim(s), 'icedLatte', 'serve')).slice(-3)).toEqual([`${tap.id}:insert>icedLatte`, `${tap.id}:take`, 'pickup:put']);
+    expect(ids(chainFor(s, sim(s), 'icedLatte', 'serve')).slice(-2)).toEqual(['supply:insert>icedLatte', 'pickup:put']);
   });
 
   it('a bot pours with no concentrate while steeped cups are left', () => {
@@ -199,16 +199,17 @@ describe('bots at the steeped tap (Task 14)', () => {
     expect(sim(s).bot!.plan).toEqual([{ kind: 'use', station: 'pickup', action: 'put' }]);
   });
 
-  it('an empty tap still makes sweet cream from a cup in hand; it pours nothing and makes no iced latte', () => {
+  it('an empty tap pours nothing; sweet cream from a cup in hand and the iced latte finish at the milk counter regardless', () => {
     const s = tapStand();
     tapOf(s).batchLeft = 0;
-    const tap = tapOf(s);
-    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve', 'coldBrew'))).toEqual([`${tap.id}:insert>sweetCream`, `${tap.id}:take`, 'pickup:put']);
+    expect(ids(chainFor(s, sim(s), 'sweetCream', 'serve', 'coldBrew'))).toEqual(['supply:insert>sweetCream', 'pickup:put']);
     expect(chainFor(s, sim(s), 'coldBrew', 'serve')).toEqual([]);
+    expect(ids(chainFor(s, sim(s), 'icedLatte', 'serve', 'espresso'))).toEqual(['supply:insert>icedLatte', 'pickup:put']);
+    s.supplyMilk = 0; // Round 6 block 4: no cold milk on the counter and no carton coming: no plan
     expect(chainFor(s, sim(s), 'icedLatte', 'serve', 'espresso')).toEqual([]);
   });
 
-  it('a bot holding cold brew finishes sweet cream at an empty tap', () => {
+  it('a bot holding cold brew finishes sweet cream at the milk counter with the tap empty', () => {
     let s = tapStand();
     const p = sim(s);
     const tap = tapOf(s);
@@ -240,7 +241,8 @@ describe('bots at the steeped tap (Task 14)', () => {
       expect(s.today.served).toBe(1);
       expect(s.today.wasted ?? 0).toBe(0);
       expect(s.log.find((e) => e.kind === 'pickup.take')?.data.drink).toBe(drink);
-      expect(tapOf(s).batchLeft).toBe(before - 1); // exactly one steeped cup per drink
+      // exactly one steeped cup per drink built on a pour (Round 6 block 4: the iced latte uses none)
+      expect(tapOf(s).batchLeft).toBe(drink === 'icedLatte' ? before : before - 1);
       expect(s.pass).toEqual([]);
     });
   }

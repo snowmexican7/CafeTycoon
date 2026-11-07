@@ -49,15 +49,16 @@ describe('Round 6 block 1: a waiting cup does not lock a machine', () => {
     expect(s.pass.map((p) => p.item)).toEqual(['latte']);
   });
 
-  it('tap: a sitting cold brew + a held espresso starts an iced latte', () => {
+  it('tap: a held espresso no longer clears a sitting cold brew (iced latte is made at the milk counter now)', () => {
     const s = run();
     const tap = stand(s, 'coldBrewTap');
     tap.output = 'coldBrew';
     tap.batchLeft = undefined;
     s.players[0].holding = 'espresso';
     interact(s, 'p1');
-    expect(tap.making).toBe('icedLatte');
-    expect(s.pass.map((p) => p.item)).toEqual(['coldBrew']);
+    expect(tap.output).toBe('coldBrew'); // Round 6 block 4: the tap only pours cold brew, so nothing to start here
+    expect(s.players[0].holding).toBe('espresso');
+    expect(s.pass).toHaveLength(0);
   });
 
   it('empty hands still take the output first', () => {

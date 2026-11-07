@@ -94,7 +94,7 @@ export const DRINK_STATIONS: Record<DrinkId, StationKind[]> = {
   espresso: ['grinder', 'espresso'],
   latte: ['grinder', 'espresso', 'steamer'],
   coldBrew: ['coldBrewTap'],
-  icedLatte: ['grinder', 'espresso', 'coldBrewTap'],
+  icedLatte: ['grinder', 'espresso'], // Round 6 block 4: finished at the milk counter (every Gear shop has one)
   mocha: ['grinder', 'espresso', 'steamer'],
   matcha: ['steamer'],
   special: ['coldBrewTap', 'steamer'],

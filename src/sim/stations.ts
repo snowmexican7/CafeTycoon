@@ -12,12 +12,13 @@ import { nearestStation } from './movement';
 import { mopInteract } from './mop';
 import { dumpDrink, dumpPot, isSink, potPress } from './sink';
 import { rollBinLeak, rollStationMess } from './messes';
-import { BASE_DRINKS, RECIPES, recipeChain, type Recipe, type RecipeStation } from '../data/drinks';
+import { RECIPES, recipeChain, type Recipe, type RecipeStation } from '../data/drinks';
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
 import { fridgeInteract, readyStock, useStock } from './fridge';
 import { afterInsert, handmadePress, jugFirst } from './handmade';
 import { trayInteract } from './tray';
 import { canClearOutput, clearOutputToPass } from './stationClear';
+import { recipeAllowed } from './unlocks';
 import type { DrinkId, GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from './types';
 
 /** Each working station's first (classic) recipe: what it takes, gives back and uses up. See RECIPES for all of them. */
@@ -33,11 +34,7 @@ function isRecipeStation(kind: StationKind): kind is RecipeStation {
   return kind in STATION_RECIPES;
 }
 
-/** A drink the café can make right now: a classic, or unlocked and on tonight's menu. Grounds always. */
-export function recipeAllowed(state: GameState, gives: ItemKind): boolean {
-  if (gives === 'grounds' || BASE_DRINKS.includes(gives)) return true;
-  return (state.unlocked ?? BASE_DRINKS).includes(gives) && state.menu[gives] !== false;
-}
+export { recipeAllowed };
 
 /** The recipe a station runs for what is in hand (null = empty hands), or null when there is none. */
 export function recipeFor(state: GameState, kind: StationKind, held: ItemKind | null): Recipe | null {
