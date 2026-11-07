@@ -8,7 +8,7 @@ import type { PlayerLook } from '../sim/types';
 export interface LookOption<T> { id: string; name: string; value: T }
 
 export type BodyStyle = 'slim' | 'broad';
-export type HairStyle = 'short' | 'buzz' | 'spiky' | 'curly' | 'bob' | 'long' | 'ponytail' | 'bun';
+export type HairStyle = 'short' | 'buzz' | 'spiky' | 'curly' | 'bob' | 'long' | 'wavy' | 'ponytail' | 'bun';
 export type OutfitStyle = 'apron' | 'dress' | 'skirt' | 'overalls' | 'hoodie' | 'vest';
 
 export const BODIES: LookOption<BodyStyle>[] = [
@@ -22,7 +22,8 @@ export const HAIR_STYLES: LookOption<HairStyle>[] = [
   { id: 'spiky', name: 'Spiky', value: 'spiky' },
   { id: 'curly', name: 'Curly', value: 'curly' },
   { id: 'bob', name: 'Bob', value: 'bob' },
-  { id: 'long', name: 'Long', value: 'long' },
+  { id: 'long', name: 'Long straight', value: 'long' },
+  { id: 'wavy', name: 'Long wavy', value: 'wavy' },
   { id: 'ponytail', name: 'Ponytail', value: 'ponytail' },
   { id: 'bun', name: 'Top bun', value: 'bun' },
 ];

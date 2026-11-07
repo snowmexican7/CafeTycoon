@@ -8,9 +8,12 @@ import type { ClosingVM } from './viewModels';
 const rep = (s: string) => Number.parseFloat(s) || 0;
 
 /** End-of-day results: a receipt for the day, then on to the night shop. */
-export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: TierId): void } = {}): { render(vm: ClosingVM): void; show(): void; hide(): void } {
+export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: TierId): void; onContinue?(): void } = {}): { render(vm: ClosingVM): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
-    if (action === 'continue') hide(container);
+    if (action === 'continue') {
+      hide(container);
+      handlers.onContinue?.(); // ui-3.10.0: the new-drink unlock replay plays after the receipt
+    }
     // ui-3.7.1: grow from the receipt; the dialog steps aside so the re-opening wipe and "What you gained" card play.
     else if (action === 'grow' && el.dataset.tier) {
       handlers.onGrow?.(el.dataset.tier as TierId);
@@ -36,8 +39,8 @@ export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: 
             <div class="line"><span>Sales</span><span>${esc(vm.sales)}</span></div>
             <div class="line"><span>Tips</span><span>${esc(vm.tips)}</span></div>
             <div class="line"><span>Rent</span><span class="neg">−${esc(vm.rent)}</span></div>
-            ${vm.wages ? `<div class="line wages"><span>Crew wages</span><span class="neg">−${esc(vm.wages)}</span></div>` : ''}
-            ${vm.hireWages ? `<div class="line wages sub"><span>&nbsp;&nbsp;incl. specialists</span><span>${esc(vm.hireWages)}</span></div>` : ''}
+            ${vm.wages ? `<div class="line wages"><span>Wages</span><span class="neg">−${esc(vm.wages)}</span></div>` : ''}
+            ${(vm.wageRows ?? []).map((w) => `<div class="line wages sub wage-row"><span>&nbsp;&nbsp;${esc(w.label)}</span><span>${esc(w.amount)}</span></div>`).join('')}
             ${vm.priceWalkouts ? `<div class="line chaos"><span>Left over the price</span><span>${vm.priceWalkouts}</span></div>` : ''}
             ${vm.office === 'served' ? `<div class="line"><span>Office run</span><span>${vm.officeExtra ? `served · ${vm.officeExtra} extra cups` : 'served'}</span></div>` : ''}
             ${vm.office === 'lost' ? `<div class="line chaos"><span>Office run</span><span>lost</span></div>` : ''}

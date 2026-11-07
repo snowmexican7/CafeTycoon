@@ -25,7 +25,6 @@ export const CUE_RULES: Partial<Record<CueId, CueRule>> = {
   stormOut: { cooldownMs: 900, maxVoices: 1, priority: 3 },
   turnedAway: { cooldownMs: 1500, maxVoices: 1, priority: 1 },
   trash: { cooldownMs: 150, maxVoices: 1, priority: 1 },
-  botOops: { cooldownMs: 600, maxVoices: 1, priority: 1 },
   buy: { cooldownMs: 120, maxVoices: 2, priority: 2 },
   restock: { cooldownMs: 120, maxVoices: 2, priority: 2 },
   click: { cooldownMs: 40, maxVoices: 2, priority: 0 },

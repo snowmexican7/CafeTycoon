@@ -23,7 +23,7 @@ export interface ReportVM {
   rent: number;
   profit: number;
   drinks: { drink: DrinkId; name: string; icon: string; cups: number; takings: number; pct: number }[];
-  crew: { id: string; name: string; bot: boolean; serves: number; takings: number; pct: number }[];
+  crew: { id: string; name: string; serves: number; takings: number; pct: number }[];
   notes: string[];
 }
 
@@ -53,7 +53,7 @@ export function reportViewModel(state: GameState): ReportVM | null {
   const crew = Object.entries(d.byPlayer ?? {})
     .map(([id, b]) => {
       const p = state.players.find((x) => x.id === id);
-      return { id, name: p?.name ?? 'Someone', bot: !!p?.bot, serves: b.serves, takings: r2(b.takings), pct: d.served ? Math.round((100 * b.serves) / d.served) : 0 };
+      return { id, name: p?.name ?? 'Someone', serves: b.serves, takings: r2(b.takings), pct: d.served ? Math.round((100 * b.serves) / d.served) : 0 };
     })
     .sort((a, b) => b.serves - a.serves || a.name.localeCompare(b.name));
   const vm: ReportVM = {

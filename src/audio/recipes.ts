@@ -55,10 +55,6 @@ export const RECIPES: Record<CueId, Layer[]> = {
   ],
   turnedAway: [{ sample: 'doorOpen', gain: 0.35, rate: [0.9, 1] }],
   trash: [{ sample: 'trash', gain: 0.45, rate: [0.9, 1.05] }],
-  botOops: [
-    { sample: 'clink', gain: 0.35, rate: [0.7, 0.75] },
-    { synth: 'oops', gain: 1, delay: 0.05 },
-  ],
   buy: [{ sample: 'coins2', gain: 0.45, rate: [0.97, 1.05] }],
   restock: [{ sample: 'box', gain: 0.55, rate: [0.95, 1.05] }],
   dayStart: [

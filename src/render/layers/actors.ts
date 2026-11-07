@@ -6,7 +6,6 @@ import { TICK_RATE } from '../../sim/constants';
 import { type Facing, PALETTE, TILE, baristaLook, customerLook, nextFacing, patienceColor, sx, sy } from '../theme';
 import { dashedEllipse, drawHeart, drawItem, drawMop, drawStar, halfDome, label } from './draw';
 import { flashOn } from '../eventsModel';
-import { botLook, botTag, emotePhase, type BotLook } from '../crewModel';
 import { jitterPx, type CollapsePose } from '../espressoPose';
 import { customerSpots, type SpotsLayout } from '../pickupModel';
 import { drawBox, drawTrayBoard } from './pickup';
@@ -34,11 +33,6 @@ interface PersonOpts {
   /** Chaos pack: swirly eyes after a slip, furrowed brows and red cheeks when cross. */
   dizzy?: boolean;
   angry?: boolean;
-  /** Bot personality accessories (Block 3). */
-  shades?: boolean;
-  headphones?: boolean;
-  badge?: boolean;
-  headband?: boolean;
   /** ui-3.5.2 (R4 e): a player-made look's body, hairstyle and outfit (absent = the classic capped barista). */
   style?: { body: BodyStyle; hairStyle: HairStyle; outfit: OutfitStyle };
 }
@@ -51,26 +45,73 @@ const TROUSERS = 0x4a3a33;
 const SKIRT = 0x3d4a6b;
 const WHITE_SHIRT = 0xf4efe6;
 
-/** ui-3.5.2 / Round 5: hair that hangs behind the head and body (drawn first). */
-function backHair(g: Graphics, style: HairStyle, hair: number, facing: Facing): void {
-  if (facing !== 'down') return;
-  // Long hair and ponytail hang behind; crown coverage is drawn in frontHair.
-  if (style === 'long') g.roundRect(-20, HEAD.hairline, 40, 48, 14).fill(hair);
-  else if (style === 'ponytail') g.ellipse(20, HEAD.hairline + 10, 5.5, 12).fill(hair);
+/** Soft S-curve lobes for long wavy (opaque overlapping ellipses — not translucent). */
+function wavyLobes(g: Graphics, hair: number, facing: Facing): void {
+  if (facing === 'down') {
+    for (const [cx, cy, rx, ry] of [
+      [-18, HEAD.hairline + 10, 7, 14],
+      [-16, HEAD.hairline + 26, 8, 12],
+      [-14, HEAD.hairline + 40, 7, 10],
+      [18, HEAD.hairline + 10, 7, 14],
+      [16, HEAD.hairline + 26, 8, 12],
+      [14, HEAD.hairline + 40, 7, 10],
+      [-6, HEAD.hairline + 2, 6, 5],
+      [6, HEAD.hairline + 2, 6, 5],
+    ] as const) {
+      g.ellipse(cx, cy, rx, ry).fill(hair);
+    }
+  } else {
+    for (const [cx, cy, rx, ry] of [
+      [-10, HEAD.hairline + 14, 9, 12],
+      [10, HEAD.hairline + 14, 9, 12],
+      [-8, HEAD.hairline + 30, 10, 12],
+      [8, HEAD.hairline + 30, 10, 12],
+      [0, HEAD.hairline + 44, 11, 10],
+    ] as const) {
+      g.ellipse(cx, cy, rx, ry).fill(hair);
+    }
+  }
 }
 
-/** ui-3.5.2 / Round 5: hair on top of the head (after the face). Crown always covers HEAD.top → hairline. */
+/** ui-3.5.2 / Round 5–6: hair that hangs behind the head and body (drawn first). Fully opaque. */
+function backHair(g: Graphics, style: HairStyle, hair: number, facing: Facing): void {
+  if (facing !== 'down') return;
+  // Long / wavy / ponytail hang behind; crown coverage is drawn in frontHair.
+  if (style === 'long') g.roundRect(-20, HEAD.hairline, 40, 48, 14).fill(hair);
+  else if (style === 'wavy') {
+    g.roundRect(-20, HEAD.hairline, 40, 44, 14).fill(hair);
+    wavyLobes(g, hair, 'down');
+  } else if (style === 'ponytail') g.ellipse(20, HEAD.hairline + 10, 5.5, 12).fill(hair);
+}
+
+/**
+ * Round 6: opaque under-cap over the full head disk, then style details.
+ * Gaps between spikes/curls/waves never show skin. No `alpha < 1` on hair fills.
+ */
 function frontHair(g: Graphics, style: HairStyle, hair: number, skin: number, facing: Facing): void {
   const geom = frontHairGeom(style, facing);
+  const cap = geom.underCap;
+  // 1) Solid under-cap: seals the entire head disk in hair colour (opaque).
+  g.circle(cap.cx, cap.cy, cap.r).fill(hair);
+  if (facing === 'down') {
+    // Restore the open face below the hairline so cheeks/chin stay skin (eyes draw later).
+    const pts: number[] = [HEAD.cx - HEAD.r, HEAD.hairline, HEAD.cx + HEAD.r, HEAD.hairline];
+    for (let i = 0; i <= 16; i++) {
+      const a = (Math.PI * i) / 16;
+      pts.push(HEAD.cx + Math.cos(a) * HEAD.r, HEAD.cy + Math.sin(a) * HEAD.r);
+    }
+    g.poly(pts).fill(skin);
+    // Crown half-dome again so the hairline edge is a clean opaque seal after the face plate.
+    halfDome(g, HEAD.cx, geom.hairline, geom.rx, CROWN_RY).fill(hair);
+  }
   const spikes = () => g.poly([-14, HEAD.hairline - 1, -11, HEAD_TOP - 4, -5, HEAD.hairline - 6, 0, HEAD_TOP - 6, 5, HEAD.hairline - 6, 11, HEAD_TOP - 4, 14, HEAD.hairline - 1]).fill(hair);
   const curls = () => {
     for (const [cx, cy] of [[-15, HEAD.hairline + 1], [-10, HEAD_TOP + 4], [0, HEAD_TOP], [10, HEAD_TOP + 4], [15, HEAD.hairline + 1]] as const) {
       g.circle(cx, cy, 6.5).fill(hair);
     }
   };
+  // 2) Style details on top of the under-cap (still opaque).
   if (facing === 'down') {
-    // Shared crown: half-dome from the hairline up to the skull top (no bald strip).
-    halfDome(g, HEAD.cx, geom.hairline, geom.rx, CROWN_RY).fill(hair);
     if (style === 'spiky') spikes();
     if (style === 'curly') curls();
     if (style === 'bob') {
@@ -81,14 +122,14 @@ function frontHair(g: Graphics, style: HairStyle, hair: number, skin: number, fa
       g.roundRect(-20, HEAD.hairline - 2, 7, 34, 3.5).fill(hair);
       g.roundRect(13, HEAD.hairline - 2, 7, 34, 3.5).fill(hair);
     }
+    if (style === 'wavy') wavyLobes(g, hair, 'down');
     if (style === 'ponytail') g.roundRect(14, HEAD.hairline, 5, 5, 2).fill(darker(hair, 0.7));
   } else {
-    // Back of head: full disk covering the skull crown (same top as HEAD_TOP).
-    g.circle(HEAD.cx, HEAD.cy, HEAD.r).fill(hair);
     if (style === 'spiky') spikes();
     if (style === 'curly') curls();
     if (style === 'bob') g.roundRect(-19, HEAD.hairline, 38, 20, 8).fill(hair);
     else if (style === 'long') g.roundRect(-18, HEAD.hairline - 2, 36, 40, 12).fill(hair);
+    else if (style === 'wavy') wavyLobes(g, hair, 'up');
     else if (style === 'ponytail') {
       g.ellipse(0, HEAD.hairline + 22, 5.5, 12).fill(hair);
       g.roundRect(-3, HEAD.hairline + 12, 6, 4, 2).fill(darker(hair, 0.7));
@@ -189,32 +230,56 @@ export function drawPerson(g: Graphics, o: PersonOpts): void {
     else g.roundRect(-16, -66, 32, 5, 2.5).fill(darker(o.cap));
     g.circle(0, -77, 3).fill(o.cap);
   }
-  if (o.shades && o.facing === 'down' && !o.dizzy) {
-    g.roundRect(-11, -57, 9, 6, 2.5).fill(0x1f1a24);
-    g.roundRect(2, -57, 9, 6, 2.5).fill(0x1f1a24);
-    g.moveTo(-2, -55).lineTo(2, -55).stroke({ width: 1.5, color: 0x1f1a24 });
-    g.moveTo(-9, -56).lineTo(-6, -53).stroke({ width: 1, color: 0xffffff, alpha: 0.6 });
+  if (o.holding) drawItem(g, o.holding, 20, -24, 0.95);
+}
+
+/**
+ * ui-3.10.0 (bot cut Phase 2): the solo robot cashier's own look. A boxy steel body on a single wheel, a screen face
+ * with two friendly eyes, an antenna with a little light and a till-roll badge, so nobody mistakes it for a crewmate.
+ */
+export const ROBOT = { body: 0xb9c3cc, dark: 0x6f7c88, screen: 0x24323d, eye: 0x7ee0c3, light: 0xf6c35b } as const;
+
+export function drawRobot(g: Graphics, o: { facing: Facing; holding?: ItemKind | null; ring?: number | null; blink?: boolean }): void {
+  g.ellipse(0, 1, 15, 5).fill({ color: 0x2a1608, alpha: 0.25 });
+  if (o.ring != null) dashedEllipse(g, 0, 1, 22, 8, 6, 5, o.ring, 3);
+  // wheel + stem
+  g.circle(0, -5, 6).fill(ROBOT.dark);
+  g.circle(0, -5, 2.2).fill(ROBOT.body);
+  g.roundRect(-3, -14, 6, 8, 2).fill(ROBOT.dark);
+  // body
+  g.roundRect(-15, -42, 30, 30, 7).fill(ROBOT.body).stroke({ width: 2, color: ROBOT.dark });
+  // arms
+  g.roundRect(-20, -36, 6, 16, 3).fill(ROBOT.dark);
+  g.roundRect(14, -36, 6, 16, 3).fill(ROBOT.dark);
+  if (o.facing === 'down') {
+    // till-roll badge on the chest
+    g.roundRect(-7, -32, 14, 12, 2).fill(0xfffdf6).stroke({ width: 1.2, color: ROBOT.dark });
+    g.rect(-4, -29, 8, 1.6).fill(0xb9ad99);
+    g.rect(-4, -25.5, 6, 1.6).fill(0xb9ad99);
+  } else {
+    g.roundRect(-9, -36, 18, 18, 3).fill(darker(ROBOT.body, 0.88));
   }
-  if (o.headphones) {
-    g.moveTo(-17, -58).arc(0, -58, 17, Math.PI, 0).stroke({ width: 3.5, color: 0x2b2b30 });
-    g.roundRect(-21, -62, 7, 12, 3).fill(0x2b2b30);
-    g.roundRect(14, -62, 7, 12, 3).fill(0x2b2b30);
-    g.roundRect(-20, -60, 3, 8, 1.5).fill(PALETTE.mint);
-    g.roundRect(17, -60, 3, 8, 1.5).fill(PALETTE.mint);
-  }
-  if (o.headband) {
-    g.roundRect(-17, -67, 34, 6, 3).fill(0xe0564a);
-    g.roundRect(-17, -65, 34, 1.6, 0.8).fill(0xffffff);
-    if (o.facing === 'up') {
-      // the knot's tails flap at the back
-      g.moveTo(0, -64).lineTo(-6, -54).stroke({ width: 3, color: 0xe0564a, cap: 'round' });
-      g.moveTo(0, -64).lineTo(5, -55).stroke({ width: 3, color: 0xe0564a, cap: 'round' });
+  // neck + head
+  g.rect(-4, -46, 8, 5).fill(ROBOT.dark);
+  g.roundRect(-16, -70, 32, 25, 8).fill(ROBOT.body).stroke({ width: 2, color: ROBOT.dark });
+  if (o.facing === 'down') {
+    g.roundRect(-12, -66, 24, 17, 5).fill(ROBOT.screen);
+    if (o.blink) {
+      g.rect(-8, -58.5, 5, 1.6).fill(ROBOT.eye);
+      g.rect(3, -58.5, 5, 1.6).fill(ROBOT.eye);
+    } else {
+      g.roundRect(-8, -62, 5, 6, 2).fill(ROBOT.eye);
+      g.roundRect(3, -62, 5, 6, 2).fill(ROBOT.eye);
     }
+    g.moveTo(-4, -53).quadraticCurveTo(0, -50.5, 4, -53).stroke({ width: 1.4, color: ROBOT.eye, cap: 'round' });
+  } else {
+    g.roundRect(-10, -66, 20, 6, 2).fill(darker(ROBOT.body, 0.85));
   }
-  if (o.badge && o.facing === 'down') {
-    g.circle(9, -33, 5.5).fill(0x4fae7b).stroke({ width: 1.5, color: 0xffffff });
-    drawStar(g, 9, -33, 3.2, 0xffffff);
-  }
+  // ear bolts + antenna
+  g.circle(-16, -58, 2.6).fill(ROBOT.dark);
+  g.circle(16, -58, 2.6).fill(ROBOT.dark);
+  g.moveTo(0, -70).lineTo(0, -79).stroke({ width: 2, color: ROBOT.dark });
+  g.circle(0, -81, 3.2).fill(ROBOT.light);
   if (o.holding) drawItem(g, o.holding, 20, -24, 0.95);
 }
 
@@ -287,8 +352,7 @@ interface PlayerSprite {
   /** The mop in hand (drawn once, rotated while scrubbing) and the dizzy stars after a slip. */
   tool: Graphics;
   stars: Graphics;
-  /** Bot emote bubble and the away "z z z". */
-  emote: Graphics;
+  /** The away "z z z". */
   zzz: Text;
 }
 
@@ -346,20 +410,22 @@ export class Actors {
       const look = baristaLook(index);
       const me = p.id === localId;
       const stunned = p.stunTicksLeft > 0;
-      const bl = p.bot ? botLook(p.bot.personality) : null;
-      // ui-3.5.2 (R4 e): a person's own look (bots keep theirs); the ring and tag keep the player colour
-      const art = p.look && !p.bot ? lookArt(p.look) : null;
+      // ui-3.10.0: the only bot body in a real run is the solo robot cashier; it draws as a robot, not a barista
+      const robot = !!p.bot;
+      const blink = robot && timeSec % 4 < 0.15;
+      // ui-3.5.2 (R4 e): a person's own look; the ring and tag keep the player colour
+      const art = p.look && !robot ? lookArt(p.look) : null;
       const trayKey = p.tool === 'tray' && p.tray ? `${p.tray.customer}:${p.tray.items.map((x) => x.drink).join(',')}` : '';
-      const key = `${sprite.facing}|${p.holding}|${me}|${index}|${stunned}|${p.bot?.personality ?? ''}|${p.tool}|${trayKey}|${art ? JSON.stringify(p.look) : ''}`;
+      const key = `${sprite.facing}|${p.holding}|${me}|${index}|${stunned}|${robot ? (blink ? 'rb' : 'r') : ''}|${p.tool}|${trayKey}|${art ? JSON.stringify(p.look) : ''}`;
       if (key !== sprite.key) {
         sprite.body.clear();
-        drawPerson(sprite.body, {
+        if (robot) drawRobot(sprite.body, { facing: sprite.facing, holding: p.tool !== null ? null : p.holding, ring: me ? look.cap : null, blink });
+        else drawPerson(sprite.body, {
           ...(art
             ? { shirt: art.shirt, skin: art.skin, hair: art.hair, style: { body: art.body, hairStyle: art.hairStyle, outfit: art.outfit } }
-            : { shirt: look.cap, cap: bl?.headphones || bl?.headband ? undefined : look.cap, skin: look.skin, hair: look.hair }),
+            : { shirt: look.cap, cap: look.cap, skin: look.skin, hair: look.hair }),
           apron: true, facing: sprite.facing,
           holding: p.tool !== null ? null : p.holding, ring: me ? look.cap : null, dizzy: stunned,
-          shades: bl?.shades, headphones: bl?.headphones, badge: bl?.badge, headband: bl?.headband,
         });
         // 3.3.1: a condiment stock box carried in both hands, in front of the apron
         if (p.tool === 'box') drawBox(sprite.body, 0, -24, 1.15);
@@ -403,16 +469,16 @@ export class Actors {
       // on mop duty: the tag says so, so the crew knows who to shout for
       const toolTag = p.tool === 'mop' ? ' · mop' : p.tool === 'box' ? ' · box' : p.tool === 'pot' ? ' · pot' : p.tool === 'milk' ? ' · milk' : p.tool === 'bar' ? ' · condiments' : p.tool === 'tray' ? ' · tray' : '';
       const name = `${p.name}${toolTag}`;
-      // bots: name in their colour (Review Block 6: no "· bot" debug tag); away humans: grey "· away" and z z z
-      const text = p.bot ? `${botTag(p.name)}${toolTag}` : p.connected ? name : `${p.name} · away`;
-      const tagKey = `${text}|${index}|${!!p.bot}|${p.connected}`;
+      // the robot cashier: its name on a steel tag (no robot emoji, bot cut Phase 2); away humans: grey "· away" and z z z
+      const text = robot ? name : p.connected ? name : `${p.name} · away`;
+      const tagKey = `${text}|${index}|${robot}|${p.connected}`;
       if (tagKey !== sprite.tagKey) {
         sprite.tagText.text = text;
         const w = Math.max(40, sprite.tagText.width + 18);
         sprite.tagBg.clear();
-        if (p.bot) {
-          sprite.tagBg.roundRect(-w / 2, -9, w, 18, 9).fill(0xfffaf2).stroke({ width: 2, color: look.cap });
-          sprite.tagText.style.fill = look.cap;
+        if (robot) {
+          sprite.tagBg.roundRect(-w / 2, -9, w, 18, 9).fill(ROBOT.screen).stroke({ width: 2, color: ROBOT.body });
+          sprite.tagText.style.fill = ROBOT.eye;
         } else {
           sprite.tagBg.roundRect(-w / 2, -9, w, 18, 9).fill(p.connected ? look.cap : 0x9a8a7a).stroke({ width: 2, color: 0xffffff });
           sprite.tagText.style.fill = 0xffffff;
@@ -428,7 +494,6 @@ export class Actors {
         sprite.zzz.position.set(x + 34 + k * 12, feet - 116 - k * 16);
         sprite.zzz.alpha = 1 - k * 0.7;
       }
-      this.drawEmote(sprite, bl, index, timeSec, stunned || out);
     });
     for (const [id, sprite] of this.players) {
       if (!seen.has(id)) {
@@ -481,6 +546,12 @@ export class Actors {
       }
       sprite.extra.clear();
       if (c.kind === 'influencer') drawInfluencer(sprite.extra, timeSec);
+      // ui-3.10.0 (Round 6 block 5): an early-bird fan wears a gold star badge (super patient, came in before the doors)
+      if (c.kind === 'fan') {
+        const pulse = 1 + Math.sin(timeSec * 4) * 0.08;
+        sprite.extra.circle(-24, -118, 11 * pulse).fill(0xf6c35b).stroke({ width: 2, color: 0xffffff });
+        drawStar(sprite.extra, -24, -118, 7 * pulse, 0xffffff);
+      }
       if (c.rungAt !== undefined && !c.upset) drawReceipt(sprite.extra, -42, -128);
       const frac = c.patienceLeft / c.patienceMax;
       if (c.kind === 'impatient' && !c.upset) {
@@ -576,37 +647,6 @@ export class Actors {
     sprite.tool.x = 18 + (p.cleaningTicksLeft > 0 ? Math.sin(timeSec * 14) * 6 : 0);
   }
 
-  /** A bot's personality emote now and then: a rookie's sweat drop, a steady hum, a veteran's coffee, a hurried stopwatch. */
-  private drawEmote(sprite: PlayerSprite, look: BotLook | null, index: number, timeSec: number, hidden: boolean): void {
-    const g = sprite.emote;
-    const k = look && !hidden ? emotePhase(timeSec, index, look.every) : null;
-    if (k === null) {
-      if (g.visible) g.clear();
-      g.visible = false;
-      return;
-    }
-    g.visible = true;
-    g.clear();
-    const pop = k < 0.15 ? k / 0.15 : k > 0.85 ? (1 - k) / 0.15 : 1;
-    const x = 30;
-    const y = -64 - k * 6;
-    g.circle(x, y, 11 * pop).fill({ color: 0xffffff, alpha: 0.95 }).stroke({ width: 1.5, color: 0x3a2418, alpha: 0.4 });
-    if (pop < 0.6) return;
-    if (look!.emote === 'sweat') {
-      g.moveTo(x, y - 7).quadraticCurveTo(x + 6, y + 1, x, y + 5).quadraticCurveTo(x - 6, y + 1, x, y - 7).fill(0x6fb6e6);
-      g.circle(x - 1.5, y + 1, 1.3).fill(0xffffff);
-    } else if (look!.emote === 'clock') {
-      drawStopwatch(g, x, y + 1, timeSec * 2);
-    } else if (look!.emote === 'note') {
-      g.circle(x - 3, y + 4, 3).fill(0x3a2418);
-      g.moveTo(x - 0.5, y + 4).lineTo(x - 0.5, y - 6).lineTo(x + 5, y - 4).stroke({ width: 1.8, color: 0x3a2418, cap: 'round', join: 'round' });
-    } else {
-      drawItem(g, 'espresso', x, y + 2, 0.6);
-      g.moveTo(x - 2, y - 4).quadraticCurveTo(x - 4, y - 7, x - 2, y - 10).stroke({ width: 1.3, color: 0x9a8a7a });
-      g.moveTo(x + 2, y - 4).quadraticCurveTo(x, y - 7, x + 2, y - 10).stroke({ width: 1.3, color: 0x9a8a7a });
-    }
-  }
-
   /** Three stars circling the head after a slip (only redrawn while stunned). */
   private drawStars(sprite: PlayerSprite, on: boolean, timeSec: number, bob: number): void {
     const g = sprite.stars;
@@ -677,13 +717,12 @@ export class Actors {
     tool.position.set(18, -20);
     tool.visible = false;
     const stars = new Graphics();
-    const emote = new Graphics();
-    root.addChild(tool, stars, emote);
+    root.addChild(tool, stars);
     const zzz = label('z z z', 13, 0xfffaf2, '700');
     zzz.style.stroke = { color: 0x3a2418, width: 3 };
     zzz.visible = false;
     this.tagLayer.addChild(zzz);
-    const sprite: PlayerSprite = { root, body, key: '', tag, tagBg, tagText, tagKey: '', facing: 'down', trail, history: [], tool, stars, emote, zzz };
+    const sprite: PlayerSprite = { root, body, key: '', tag, tagBg, tagText, tagKey: '', facing: 'down', trail, history: [], tool, stars, zzz };
     this.players.set(id, sprite);
     return sprite;
   }

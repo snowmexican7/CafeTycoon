@@ -3,7 +3,16 @@
 > Agreed order with Kennedy (2026-10-28): **phases go from easiest and lowest risk to hardest and riskiest.** AI is the hardest, so it comes late (Phase 5), and a polish phase closes it out. The machine-readable copy the game reads is `public/roadmap.json`.
 > The design spec (`superpowers/specs/2026-10-28-cafetycoon-design.md`, §17) uses older numbering (P3 = AI, P4 = bigger games). This roadmap supersedes it.
 
-## Where we are now (updated 2026-11-05, ~11 PM Toronto)
+## Where we are now (updated 2026-11-07, ~noon Toronto)
+
+> **Latest (2026-11-07): v3.10.0 shipped** (`ui-3.10.0`). Round 6 is done: opaque hair + long wavy (#27), bigger drink
+> icons and short tips (#28, merged bot-free), latte-in-hand (#29), machines that don't lock, patience + more group
+> orders, tray steals, the milk counter, the quiet open with early-bird fans, and a scripted new-drink unlock replay.
+> **Bot cut (Kennedy + Claude, 2026-11-06/07):** design for human play only. Bot crewmates, hired bot baristas, temp
+> card, bot wages, bot phone answering, bot tips/personalities and the bot name tags are gone; the old brain is a
+> test-only player in `src/harness/`. Solo keeps one **robot cashier** (on by default, $1/day, its own robot look);
+> co-op has no bots. Plan: [`PLAN_BOTS_CUT_AND_WANDS.md`](PLAN_BOTS_CUT_AND_WANDS.md). Wand upgrades now make the
+> latte meters easier, not faster (ease pips on the gear cards).
 
 > **Latest (2026-11-05):** Round 6 is approved (Kennedy's Nov 5 playtest notes). Cursor builds six UI/hand-off/unlock
 > PRs ([`CURSOR_PROMPT_NEXT.md`](CURSOR_PROMPT_NEXT.md)); Claude owns the sim pieces
@@ -24,14 +33,14 @@
 
 ### State
 - **Live:** https://snowmexican7.github.io/CafeTycoon/ deploys from `main` on every push.
-- **Versions:** newest release **v3.9.2** (2026-11-05). Earlier: **v3.9.1** (#19/#20), **v3.9.0** (Round 5), **v3.8.0**
-  (Cursor #13–#18). Protocol **64**, snapshot **33**.
-- **Rule of thumb:** one shared version line. Round 6 aims at **3.10.0**.
+- **Versions:** newest release **v3.10.0** (2026-11-07, Round 6 + bot cut). Earlier: **v3.9.2** (serving counter),
+  **v3.9.1** (#19/#20), **v3.9.0** (Round 5). Protocol **70**, snapshot **35**.
+- **Rule of thumb:** one shared version line.
 - **Gear is the game** (no classic runs), no save compatibility for now, runs start at the stand, solo starts
-  with 1 bot. All rulings: HANDOFF "Decisions".
+  with the robot cashier (no bot crew since the bot cut). All rulings: HANDOFF "Decisions".
 
 ### Lanes
-- **Claude (sim lane):** `src/sim/**` (bots too), `src/net/**`, `src/host/**`, `src/storage/**`, `src/data/**`,
+- **Claude (sim lane):** `src/sim/**` (incl. the robot cashier and the test-only `src/harness/`), `src/net/**`, `src/host/**`, `src/storage/**`, `src/data/**`,
   `scripts/**`.
 - **Grok (UI lane):** `src/ui/**`, `src/render/**`, `src/audio/**`, styles, `src/main.ts`, docs like this one.
 - They coordinate through `docs/HANDOFF.md` on `main`. Each change is a dash-named branch merged `--no-ff` and
@@ -51,7 +60,16 @@
   gained" card; "You can afford a cart!" nudge; first-run tips (snooze / off); forecast labelled "Rough guess".
 - **v3.5.0 (sim):** cups go cold, back sink and pot dumping, milk in a fridge, closing rush, solo bot count.
 
-### Now: Round 6 (Kennedy approved Nov 5, 2026)
+### Done: bot cut (Kennedy, Nov 6, 2026) — shipped v3.10.0
+| Phase | What | Who | Status |
+|---|---|---|---|
+| 1 | Brain → test-only `src/harness/`; robot cashier (`src/sim/cashier.ts`); bot features, settings and phone answering removed | Claude | ✅ protocol 69, snapshot 35 |
+| 2 | Screens: dead bot CSS, 🤖 tags, `botOops`, bot "who served" rows gone; robot cashier look; wages line = cashier + Strategist/Marketer | Grok | ✅ `ui-3.10.0` |
+| 3 | Wand upgrades ease the meters (`WandEase` 0–3); gear cards show ease pips | Claude + Grok | ✅ protocol 70 / `ui-3.10.0` |
+
+Standing rule: no new bot logic, no bot imports in the game, co-op has no bots, the cashier only rings up.
+
+### Done: Round 6 (Kennedy approved Nov 5, 2026) — shipped v3.10.0
 Cursor: six PRs in [`CURSOR_PROMPT_NEXT.md`](CURSOR_PROMPT_NEXT.md). Claude: sim blocks in
 [`CLAUDE_PROMPT_ROUND6.md`](CLAUDE_PROMPT_ROUND6.md). Release target **3.10.0**.
 
@@ -60,20 +78,20 @@ Cursor: six PRs in [`CURSOR_PROMPT_NEXT.md`](CURSOR_PROMPT_NEXT.md). Claude: sim
 | 1 | Opaque hair + long wavy style | Cursor C1 | Hairline already shipped in R5 #21; make every style fully opaque; add `wavy` |
 | 2 | Bigger drink icons + larger UI / clearer tip bubbles | Cursor C2 | `itemIcon` sizes, HUD/tip chrome; not a full tutorial |
 | 3 | Latte: keep jug + steam, instant drink in hand | Cursor C3 (Claude reviews sim) | Drop end steamer wait + extra E; FB2 B8 un-parked for this |
-| 4 | Milk counter UI | Cursor C4 | After Claude's milk-counter sim; no grab-carton from `SUPPLY_ID` |
-| 5 | New-drink unlock replay after nightly receipt | Cursor C5 | Soon; bot plays how-to; tiny sim pending list |
-| 6 | Release 3.10.0 | Cursor C6 | version, CHANGELOG, BACKLOG, HANDOFF |
+| 4 | Milk counter UI | Grok (`ui-3.10.0`) | ✅ hints from `supplyWants`, stock count, `supply.fill` cue |
+| 5 | New-drink unlock replay after nightly receipt | Grok (`ui-3.10.0`) | ✅ scripted ghost barista from `recipeChain` (no bot brain) |
+| 6 | Release 3.10.0 | Grok | ✅ 2026-11-07 |
 | 7 | Machines stay usable with pending `station.output` | Claude | e.g. sitting shot + drip → red-eye still works |
 | 8 | Patience up a notch; more multi / group orders | Claude | not stupider impatience; `ORDERS` / mix |
 | 9 | Tray steal pressure on dumped group cups | Claude | push `tray.ts`; lose whole ticket if unfinished |
 | 10 | Milk counter stocking (rework `SUPPLY_ID`) | Claude | fridge → stock counter; iced latte / sweet cream fill there |
 | 11 | Open grace 5–10 s + VIP / ultra fans | Claude | no regulars at open; rare super-patient fans |
 
-**Soon (Round 6):** new-drink unlock replay (Cursor block 5).
+**Shipped with Round 6:** new-drink unlock replay (scripted, after "On to the night shop").
 
 **Later (not Round 6):** "I've played this before" / first-run tutorial; co-op night-menu scroll jump (+ locking menus
 together); co-op look-sync UI; `devFill` / `devSkip` buttons; grow-event UI; 4-player 2v2; solid `frontCounter`
-([`CURSOR_PROMPT_COUNTER.md`](CURSOR_PROMPT_COUNTER.md)).
+([`CURSOR_PROMPT_COUNTER.md`](CURSOR_PROMPT_COUNTER.md)); the stand's drip machine covering the TRAY label.
 
 ### Done: Round 5 (Kennedy approved Nov 3, 2026) — shipped v3.9.0
 Cursor six PRs (#21–#26) + Claude sim reviews. Hairline; espresso speed + hopper; harder bumps + longer drip pots;

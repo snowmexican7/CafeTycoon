@@ -2,11 +2,13 @@ import { sinkToast, SINK_ID } from './sinkModel';
 import { fridgeLabel, fridgeToast, isFridgeEvent } from './fridgeModel';
 import { handmadeToast, isHandmadeEvent } from './handmadeModel';
 import { TWIST_INFO, type TwistId } from '../sim/taste';
-import type { DrinkId, GameState, Personality } from '../sim/types';
+import type { DrinkId, GameState } from '../sim/types';
+import { DRINK_INFO } from '../data/drinks';
+import { SUPPLY_ID } from '../data/layout';
 
 /**
  * Pure helpers for customer and crew personality visuals: serve toasts, perfect-serve celebrations,
- * bot looks and emotes, combo streaks, fail feedback, and the crew vibe meter. No Pixi here.
+ * combo streaks, fail feedback, and the crew vibe meter. No Pixi here.
  */
 
 const DRINK_PHRASE: Record<DrinkId, string> = {
@@ -45,7 +47,6 @@ export function sigText(d: Record<string, unknown>): string {
 
 export type CrewBurst =
   | { kind: 'serve'; text: string; by: string; playerIndex: number; perfect: boolean; customerKind: string; regular?: string; cid: number }
-  | { kind: 'oops'; playerIndex: number; by: string }
   | { kind: 'selfie' }
   | { kind: 'teamwork'; from: string; to: string }
   | { kind: 'streak'; count: number }
@@ -155,11 +156,6 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
         resetCombo(mem);
         bumpVibe(mem, 1);
       }
-    } else if (e.kind === 'bot.mistake') {
-      const playerIndex = next.players.findIndex((p) => p.bot && p.name === e.data.bot);
-      if (playerIndex >= 0) bursts.push({ kind: 'oops', playerIndex, by: next.players[playerIndex].id });
-      resetCombo(mem);
-      bumpVibe(mem, -5);
     } else if (e.kind === 'pass.put' || (e.kind === 'drop' && isCounterDrop(e.data))) {
       // An R-drop on the till or pickup counter puts the cup down just like E.
       const item = e.data.item as DrinkId;
@@ -252,6 +248,9 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       bursts.push({ kind: 'storm', count: 1 });
       resetCombo(mem);
       bumpVibe(mem, -8);
+    } else if (e.kind === 'station.clear' || e.kind === 'station.clearFull' || e.kind === 'supply.fill' || e.kind === 'fan') {
+      const t = round6Note(e, next);
+      if (t) bursts.push({ kind: 'note', ...t });
     } else if (e.kind === 'station.reset') {
       // FB2 C10: layout snapped back after a grow or gear change.
       bursts.push({ kind: 'note', text: 'Bar layout went back to the default', tone: 'warn' });
@@ -283,42 +282,30 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
   return { bursts, lastSeq: Math.max(lastSeq, cursor) };
 }
 
-export interface BotLook {
-  /** A green "NEW" sticker on the apron (rookie). */
-  badge: boolean;
-  /** Cool shades (veteran). */
-  shades: boolean;
-  /** Headphones (steady: in the zone). */
-  headphones: boolean;
-  /** A red sweatband instead of a cap (hurried: always mid-sprint). */
-  headband: boolean;
-  /** The little emote that pops up now and then, and how often (s). */
-  emote: 'sweat' | 'note' | 'steam' | 'clock';
-  every: number;
-}
+/** Short drink name for a floating note ("Latte", "Iced latte"). */
+const short = (d: unknown): string => (typeof d === 'string' && d in DRINK_INFO ? DRINK_INFO[d as DrinkId].short : 'Cup');
 
-export function botLook(p: Personality): BotLook {
-  switch (p) {
-    case 'rookie':
-      return { badge: true, shades: false, headphones: false, headband: false, emote: 'sweat', every: 4 };
-    case 'veteran':
-      return { badge: false, shades: true, headphones: false, headband: false, emote: 'steam', every: 7 };
-    case 'hurried':
-      // FB1: the hurried bot pulls cups early when the line backs up; dress it like a sprinter with a stopwatch
-      return { badge: false, shades: false, headphones: false, headband: true, emote: 'clock', every: 3 };
+/**
+ * ui-3.10.0 Round 6 cues (pure, testable): a waiting cup sliding to pickup (`station.clear`), the counter being full
+ * (`station.clearFull`), a cold milk drink made at the milk counter (`supply.fill`) and an early-bird fan (`fan`).
+ */
+export function round6Note(e: { kind: string; data: Record<string, unknown> }, state: Pick<GameState, 'customers'>): { text: string; tone: 'good' | 'warn' | 'bad'; at?: string } | null {
+  const st = typeof e.data.station === 'string' ? e.data.station : undefined;
+  switch (e.kind) {
+    case 'station.clear':
+      return { text: `${short(e.data.drink)} → pickup`, tone: 'good', ...(st ? { at: st } : {}) };
+    case 'station.clearFull':
+      return { text: 'Pickup counter is full!', tone: 'warn', ...(st ? { at: st } : {}) };
+    case 'supply.fill':
+      return { text: `${short(e.data.drink)} made`, tone: 'good', at: SUPPLY_ID };
+    case 'fan': {
+      const c = state.customers.find((x) => x.id === Number(e.data.customer));
+      return { text: `⭐ Early bird! ${c?.name ? `${c.name}, a fan,` : 'A fan'} is happy to wait`, tone: 'good' };
+    }
     default:
-      return { badge: false, shades: false, headphones: true, headband: false, emote: 'note', every: 6 };
+      return null;
   }
 }
-
-/** 0..1 progress of the emote bubble if one is showing at time t (each bot offset by its index), else null. */
-export function emotePhase(t: number, index: number, every: number, length = 1.3): number | null {
-  const local = (t + index * 1.7) % every;
-  return local < length ? local / length : null;
-}
-
-/** ui-3.8.0 polish: a small robot mark in co-op (no debug "· bot" text). */
-export const botTag = (name: string) => `${name} \u{1F916}`;
 
 /** Label + tone for the HUD vibe chip. */
 export function vibeLabel(vibe: number): { text: string; tone: 'high' | 'mid' | 'low' } {

@@ -22,12 +22,12 @@ export interface Hint {
 }
 
 export const HINTS: Record<HintId, Hint> = {
-  till: { icon: '🧾', title: 'Someone wants to order', text: 'Walk to the TILL and press E to take the order. Then make it.', where: 'day' },
-  pickup: { icon: '☕', title: 'Drink ready?', text: 'Carry it to the PICKUP counter and press E. The customer grabs it from there.', where: 'day' },
-  sink: { icon: '🫖', title: 'That pot has gone cold', text: 'Press E at the drip machine to lift the pot, dump it at the SINK, then brew fresh.', where: 'day' },
-  standPrice: { icon: '⛱️', title: 'Stand prices are lower', text: `Commuters pay ${Math.round((1 - TIERS.stand.price) * 100)}% less at a stand. A cart charges more, and more people walk by.`, where: 'day' },
-  restock: { icon: '📦', title: 'Restock at night', text: 'Beans, milk and cups run out. Top them up on the Restock tab before you open.', where: 'night' },
-  shopfront: { icon: '🏪', title: 'Ready to grow?', text: 'Extras ▸ Shopfront moves you to a bigger spot: a longer line and better prices.', where: 'night' },
+  till: { icon: '🧾', title: 'Take the order', text: 'Walk to the till and press E, then make the drink.', where: 'day' },
+  pickup: { icon: '☕', title: 'Hand it off', text: 'Carry the drink to PICKUP and press E.', where: 'day' },
+  sink: { icon: '🫖', title: 'Dump the cold pot', text: 'Press E on the drip machine, then E at the sink.', where: 'day' },
+  standPrice: { icon: '⛱️', title: 'Stand prices are lower', text: `Commuters pay ${Math.round((1 - TIERS.stand.price) * 100)}% less here. Grow to a cart for better pay.`, where: 'day' },
+  restock: { icon: '📦', title: 'Restock before open', text: 'Open the Restock tab and top up beans and milk.', where: 'night' },
+  shopfront: { icon: '🏪', title: 'Ready to grow?', text: 'Extras → Shopfront unlocks a bigger shop and better prices.', where: 'night' },
 };
 
 /** Day hints, most urgent first; then night hints. */

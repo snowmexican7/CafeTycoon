@@ -116,7 +116,7 @@ function stackStrip(t: OrderTicket): string {
     .map((it) => {
       const asks = ticketAsks(it);
       const cls = ['stk-it', it.done ? 'done' : '', it.cold ? 'cold' : ''].filter(Boolean).join(' ');
-      return `<div class="${cls}" title="${esc(itemAskTitle(it))}"><span class="stk-ic">${itemIcon(it.drink, 22)}</span><span class="stk-lab">${esc(DRINK_LABEL[it.drink])}${asks ? ` <small>${esc(asks)}</small>` : ''}</span><span class="stk-tick" aria-hidden="true">${it.done ? '✓' : ''}</span></div>`;
+      return `<div class="${cls}" title="${esc(itemAskTitle(it))}"><span class="stk-ic">${itemIcon(it.drink, 28)}</span><span class="stk-lab">${esc(DRINK_LABEL[it.drink])}${asks ? ` <small>${esc(asks)}</small>` : ''}</span><span class="stk-tick" aria-hidden="true">${it.done ? '✓' : ''}</span></div>`;
     })
     .join('')}</div>`;
 }
@@ -142,7 +142,7 @@ export function ticketsHtml(orders: readonly OrderTicket[], o: TicketOpts): stri
         const aria = clickable ? ` role="button" aria-expanded="${open}" aria-label="${DRINK_LABEL[t.drink]}: ${open ? 'hide' : 'show'} steps"` : '';
         return `<div class="${cls}" data-id="${t.id}"${aria} style="--r:${tilt(t.id)}deg">
           ${t.tag ? `<div class="ktag">${esc(t.tag.text)}</div>` : ''}${t.pickup ? '<div class="rungtag">🧾 At pickup</div>' : ''}
-          ${n > 1 ? `<div class="stk-badge" aria-label="${n} drinks still to make">×${n}</div>` : ''}<div class="ic">${itemIcon(t.drink, 38)}</div><div class="nm">${DRINK_LABEL[t.drink]}</div>
+          ${n > 1 ? `<div class="stk-badge" aria-label="${n} drinks still to make">×${n}</div>` : ''}<div class="ic">${itemIcon(t.drink, 46)}</div><div class="nm">${DRINK_LABEL[t.drink]}</div>
           <div class="pr">${esc(o.prices[t.drink] ?? '')}</div>
           ${asks ? `<div class="asks">${esc(asks)}</div>` : ''}
           ${t.items && t.items.length > 1 ? stackStrip(t) : ''}${steps}

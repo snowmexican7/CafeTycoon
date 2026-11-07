@@ -16,6 +16,13 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+_Nothing yet._
+
+## 3.10.0 — 2026-11-07 · Round 6 and the bot cut
+
+Round 6 (Kennedy's Nov 5 playtest) and the bot cut (Kennedy + Claude, Nov 6), released by Grok (`ui-3.10.0`), with
+Cursor's #27 and #28 and Claude's sim work.
+
 - **Better steam wands make lattes easier, not faster.** With the proper wand the milk slows right at the line on the
   jug, so a quick stop lands on it, and the foam meter's perfect band is about twice as wide. The Annihilator and
   Double Trouble go further: on Double Trouble the milk all but stops at the line and the foam is nearly always
@@ -31,6 +38,7 @@ when a build goes out, the line moves under its version with the date.
 - Night tips are plain tips now, not voiced by a bot. Awards and "who served" list people only.
 - Hand-made lattes and cappuccinos: fill the jug, stop the steam meter for foam, and the drink is already in your
   hand — no waiting on the wand and no second E to pick it up (a cappuccino's second steam too).
+- Drink icons and day HUD type are a notch larger, and tip / hint bubbles use shorter, more actionable wording ("Restock beans (×2)", "Steep 12 cold brew tonight").
 - Dropping a group's cups on the pickup counter is risky now: other customers can grab them, and a group that never
   gets its drink walks out and you lose the whole order. Use the serving tray.
 - Early birds: the first 8 seconds of each day are quiet (time to dump old coffee and stock milk), and sometimes a very
@@ -43,6 +51,23 @@ when a build goes out, the line moves under its version with the date.
 - The milk counter by the sink is stocked from the fridge: carry a carton over and put it out, then bring a shot or a
   cold brew to the counter to make an iced latte or a sweet cream on the spot. Milk is never picked up from the counter
   itself, and the cold brew machine just pours cold brew now.
+- Hairstyles are fully opaque (no head shape showing through), and the creator gains a **Long wavy** look beside Long straight.
+- **The robot cashier looks like a robot:** a little steel till-bot on one wheel with a screen face, not a barista.
+  Bot name tags, robot emoji, the "Oops!" pop and the robot rows in "who served" are gone.
+- **Wages on the receipt** read as one line, split into the robot cashier's $1 and your Strategist / Marketer.
+- **Steam wand cards show how easy they make lattes** (ease pips ●○○○ to ●●●●) instead of seconds.
+- **Machines that don't lock, said out loud:** walk up holding the next cup and the hint says "Make red-eye · the
+  waiting espresso slides to pickup"; the cup's slide pops up over the machine, and "Pickup counter is full!" when it
+  can't.
+- **Tray steals are called out:** "😬 Sam grabbed Ada's latte! Use the tray".
+- **The quiet open:** a "Doors open in 8s" sign while you dump old coffee and get the milk out; an early fan gets an
+  "⭐ Early bird!" ticket and a gold star over their head.
+- **The milk counter tells you what it does:** stock it with a carton from the fridge, then bring a shot or a cold
+  brew to make an iced latte or a sweet cream right there ("Make iced latte here · 6 milk left"). Iced latte and sweet
+  cream recipe steps point at it.
+- **New drink unlocked? Watch how to make it.** After "On to the night shop", each drink you learned that day gets a
+  short replay: a ghost barista walks the steps (an Americano: grind, pull, step back, E again, set it out), with the
+  steps listed under it. "Watch again" or "Got it".
 
 ## 3.9.2 — 2026-11-05 · A solid serving counter
 

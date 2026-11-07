@@ -329,10 +329,6 @@ export class Scene {
       this.fx.confetti(cx + 120, cy - 60, 22);
       this.fx.sparkles(cx, cy - 80, 10);
       this.chaos.punch(hat ? 0.32 : 0.26);
-    } else if (b.kind === 'oops') {
-      const p = state.players[b.playerIndex];
-      const pos = positions[p.id] ?? p.pos;
-      this.fx.spawn('Oops!', sx(pos.x), sy(pos.y) - 122, 0xf0a63a, 17);
     } else if (b.kind === 'storm') {
       this.fx.spawn(b.count > 1 ? `${b.count} stormed out!` : 'Stormed out!', cx, cy - 140, 0xe0564a, 17);
       this.chaos.punch(0.28);

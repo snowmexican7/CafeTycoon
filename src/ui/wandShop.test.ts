@@ -46,7 +46,7 @@ describe('ui-3.5.1 (FB2 C9): steam wands in the Gear shop', () => {
     const s = withGear(['e2', 'g1']);
     s.cash = 1000;
     const e3 = gearVM(s, 'p1').trees.find((t) => t.id === 'espresso')!.tiers.find((t) => t.id === 'e3')!;
-    expect(e3.wandBuys).toEqual([{ wand: 'weak', name: 'Little steam wand', price: e3.net + 25, ok: true }]);
+    expect(e3.wandBuys).toEqual([{ wand: 'weak', name: 'Little steam wand', price: e3.net + 25, ok: true, ease: expect.objectContaining({ ease: 0, pips: '●○○○' }) }]);
     expect(gearBoard(gearVM(s, 'p1'))).toMatch(/data-gear="e3" data-wand="weak"/);
   });
   it('buttons are off when the cash is short', () => {

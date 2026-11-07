@@ -5,6 +5,7 @@
 import { DRINK_INFO } from '../data/drinks';
 import type { DrinkId, GameState, PlayerId, SimEvent } from '../sim/types';
 import { rushToast } from './dayRestock';
+import { trayStealLine } from '../render/trayModel';
 
 /** Events after `seen` of the given kinds, and the new `seen` (a fresh run restarts the log, so `seen` resets). */
 export function freshEvents(state: Pick<GameState, 'log' | 'nextLogSeq'>, seen: number, kinds: readonly SimEvent['kind'][]): { events: SimEvent[]; seen: number } {
@@ -43,17 +44,19 @@ export function stationPlaceLine(e: Pick<SimEvent, 'data'>, nameOf: (id: PlayerI
 }
 
 /** The toast lines for the fresh toast kinds (at most four, then "and N more"). */
-export function logToastLines(events: readonly SimEvent[], nameOf: (id: PlayerId) => string, me?: PlayerId): string[] {
+export function logToastLines(events: readonly SimEvent[], nameOf: (id: PlayerId) => string, me?: PlayerId, state?: Pick<GameState, 'customers'>): string[] {
   const lines = events.flatMap((e) => {
     if (e.kind === 'restock.rush') return [rushToast(e, nameOf, me)];
     if (e.kind === 'strategist.menu') return [strategistMenuLine(e)];
     if (e.kind === 'strategist.set') return [strategistSetLine(e)];
     if (e.kind === 'station.reset') return [stationResetLine()];
     if (e.kind === 'station.place') return [stationPlaceLine(e, nameOf)];
+    // ui-3.10.0 (Round 6 block 3): group cups left loose on the counter can be taken; push the serving tray
+    if (e.kind === 'tray.steal') return [`😬 ${trayStealLine(state ?? { customers: [] }, e.data)}`];
     return [];
   });
   if (lines.length <= MAX_LINES) return lines;
   return [...lines.slice(0, MAX_LINES - 1), `…and ${lines.length - (MAX_LINES - 1)} more changes`];
 }
 
-export const TOAST_KINDS = ['restock.rush', 'strategist.menu', 'strategist.set', 'station.reset', 'station.place'] as const satisfies readonly SimEvent['kind'][];
+export const TOAST_KINDS = ['restock.rush', 'strategist.menu', 'strategist.set', 'station.reset', 'station.place', 'tray.steal'] as const satisfies readonly SimEvent['kind'][];

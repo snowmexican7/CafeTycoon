@@ -15,7 +15,10 @@ import { createRenderer } from '../render/app';
 import { EVENT_FORESHADOW } from '../sim/describe';
 import { createRun, startDay, startNight } from '../sim/run';
 import { createNight } from '../ui/night';
-import type { GameState, SimEvent, StationKind, TierId } from '../sim/types';
+import type { DrinkId, GameState, SimEvent, StationKind, TierId } from '../sim/types';
+import { CASHIER_ID } from '../sim/botBody';
+import { cashierHome, syncCashier } from '../sim/cashier';
+import { createUnlockReplay } from '../ui/unlockReplay';
 import type { GearId } from '../data/gear';
 import { defaultSlots, ensureCounterSpots, stationsFromSlots } from '../sim/slots';
 import { createClosing } from '../ui/closing';
@@ -35,7 +38,7 @@ import { emptyRecords, foldRecords } from '../storage/recordsStore';
 import { HAIR_STYLES } from '../render/lookModel';
 import { floorFields } from '../sim/tiles';
 
-type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean };
+type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean; replay?: DrinkId[] };
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
@@ -87,6 +90,8 @@ function base(): GameState {
   s = startDay(s);
   s.phase = 'day';
   s.day = 3;
+  // ui-3.10.0: past the quiet open (Round 6 block 5) unless a fixture rewinds the clock (quietOpen)
+  s.phaseTicksLeft = secondsToTicks(s.settings.dayLengthSec) - secondsToTicks(10);
   const spots = [{ x: 2, y: 3 }, { x: 4, y: 4 }, { x: 8, y: 3 }, { x: 9, y: 5 }];
   s.players.forEach((p, i) => (p.pos = { ...spots[i] }));
   s.customers = [
@@ -106,7 +111,6 @@ function weekPlayed(s: GameState): void {
   s.phase = 'weekEnd';
   s.owned = [{ itemId: 'streetSign', effects: [] }];
   const row = (id: string, name: string, v: Partial<ReturnType<typeof blank>>) => ({ ...blank(id, name), ...v });
-  s.players.push({ ...s.players[3], id: 'bot1', name: 'Bo', bot: { personality: 'steady' } } as GameState['players'][number]);
   s.crew = {
     seen: 0,
     players: [
@@ -336,6 +340,36 @@ const FIXTURES: Record<string, Fixture> = {
       atTier(s, 'cafe', 2);
       s.morningNotes = ['Flyers are up (+10% walk-ins today).', 'A Strategist would tighten tomorrow\'s prices.'];
       s.today = { ...s.today, day: 3, served: 41, lost: 2, turnedAway: 1, sales: 188.4, tips: 21.5, rent: 25 };
+    },
+    timeline: [],
+  },
+  /**
+   * Round 6 block 2: night Restock first with crew tip chips (short actionable copy) visible under Heads up.
+   */
+  crewTips: {
+    night: true,
+    extras: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      s.cash = 200;
+      // Enough stock that Heads up stays short; the unvoiced tips (Restock/Scout) still show. No bots (bot cut).
+      s.supplies = { ...s.supplies, beans: 8, milk: 10, pastry: 6, concentrate: 4, flavour: 6 };
+      s.today = { ...s.today, day: 3, served: 28, lost: 4, turnedAway: 1, sales: 132, tips: 18, rent: 25 };
+    },
+    timeline: [],
+  },
+  /** Round 6 block 2: a single latte ticket with the larger drink icon. */
+  bigTicket: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 1);
+      s.customers = [
+        { id: 71, drink: 'latte', patienceLeft: 1200, patienceMax: 1500, name: 'Ada', stage: 'pickup', rungAt: s.tick },
+      ];
+      s.players[0]!.holding = 'latte';
+      s.players[0]!.pos = { x: 6, y: 5 };
     },
     timeline: [],
   },
@@ -572,7 +606,10 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
-  /** Round 5 block 4: milk & cream shelf highlighted — Ana at the supply with empty hands, fridge stocked. */
+  /**
+   * Round 6 block 4 (ui-3.10.0): the milk counter by the sink, stocked from a fridge carton (`supplyMilk`). Ana holds
+   * a shot at the counter ("Make iced latte here"); empty hands there never take a carton.
+   */
   supplyStation: {
     setup(s) {
       s.gear = true;
@@ -585,11 +622,104 @@ const FIXTURES: Record<string, Fixture> = {
       s.stations = stationsFromSlots(s.tier, slots, slotGear);
       ensureCounterSpots(s);
       s.supplies = { ...s.supplies, beans: 20, milk: 24, concentrate: 8 };
-      s.milkOut = 2;
+      s.unlocked = [...new Set([...(s.unlocked ?? []), 'icedLatte' as const, 'sweetCream' as const])];
+      s.menu = { ...s.menu, icedLatte: true, sweetCream: true };
+      s.supplyMilk = 6;
+      s.customers = [{ id: 71, drink: 'icedLatte', patienceLeft: 1300, patienceMax: 1600, name: 'Ada', stage: 'pickup', rungAt: s.tick }];
       const supply = s.stations.find((x) => x.id === 'supply');
-      if (supply) s.players[0]!.pos = { x: supply.pos.x - 1, y: supply.pos.y };
-      const tap = s.stations.find((x) => x.kind === 'coldBrewTap');
-      if (tap) tap.batchLeft = 0;
+      if (supply) {
+        s.players[0]!.pos = { x: supply.pos.x - 1, y: supply.pos.y };
+        s.players[0]!.holding = 'espresso';
+        s.players[1]!.pos = { x: supply.pos.x + 1, y: supply.pos.y + 1 };
+        s.players[1]!.tool = 'milk';
+        s.players[1]!.carry = 8;
+      }
+    },
+    timeline: [[1.2, (s) => emit(s, 'supply.fill', { by: 'ana', drink: 'icedLatte' })]],
+  },
+  /** ui-3.10.0 (bot cut Phase 2): solo café with the robot cashier at the till, drawn as a robot (not a barista). */
+  robotCashier: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 3);
+      s.players = [s.players[0]!];
+      s.settings = { ...s.settings, cashier: true };
+      syncCashier(s);
+      const home = cashierHome(s);
+      const bot = s.players.find((p) => p.id === CASHIER_ID);
+      if (bot && home) bot.pos = { ...home };
+      s.players[0]!.pos = { x: 4, y: 3 };
+    },
+    timeline: [],
+  },
+  /** ui-3.10.0 (Round 6 block 5): the quiet open — doors-open countdown and an early-bird fan at the till. */
+  quietOpen: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
+      s.phaseTicksLeft = secondsToTicks(s.settings.dayLengthSec) - secondsToTicks(2);
+      s.customers = [{ id: 81, drink: 'latte', patienceLeft: 3800, patienceMax: 4000, name: 'Maya', kind: 'fan' }];
+    },
+    timeline: [[0.6, (s) => emit(s, 'fan', { customer: 81 })]],
+  },
+  /** ui-3.10.0 (Round 6 blocks 1 + 3): a waiting shot slides to pickup, the counter-full refusal, and a tray steal toast. */
+  round6Cues: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 2);
+      const slotGear = (s.slots ?? []).map((k) => (k === 'espresso' ? ('e2' as const) : k === 'grinder' ? ('g1' as const) : k === 'drip' ? ('d1' as const) : null));
+      s.slotGear = slotGear;
+      s.stations = stationsFromSlots(s.tier, s.slots!, slotGear);
+      ensureCounterSpots(s);
+      s.supplies = { ...s.supplies, beans: 20 };
+      const esp = s.stations.find((x) => x.kind === 'espresso');
+      if (esp) {
+        esp.output = 'espresso';
+        s.players[0]!.pos = { x: esp.pos.x, y: esp.pos.y + 1 };
+        s.players[0]!.holding = 'drip';
+      }
+      s.unlocked = [...new Set([...(s.unlocked ?? []), 'redEye' as const])];
+      s.menu = { ...s.menu, redEye: true };
+    },
+    timeline: [
+      [0.6, (s) => { const esp = s.stations.find((x) => x.kind === 'espresso'); emit(s, 'station.clear', { by: 'ana', station: esp?.id ?? '', drink: 'espresso', to: 'pickup' }); }],
+      [1.4, (s) => { const esp = s.stations.find((x) => x.kind === 'espresso'); emit(s, 'station.clearFull', { by: 'ben', station: esp?.id ?? '', drink: 'latte', reason: 'counterFull' }); }],
+      [2.0, (s) => emit(s, 'tray.steal', { customer: 71, from: 70, drink: 'latte' })],
+    ],
+  },
+  /** ui-3.10.0 (bot cut Phase 2): the receipt's wages read as the robot cashier's $1 plus the Strategist. */
+  wagesReceipt: {
+    closing: true,
+    setup(s) {
+      s.gear = true;
+      s.staff = { strategist: true };
+      s.today = { ...s.today, day: 3, served: 31, lost: 2, turnedAway: 0, sales: 148, tips: 21, rent: 25, wages: 13, hireWages: 12 };
+    },
+    timeline: [],
+  },
+  /** ui-3.10.0: steam wand ease pips on the night Gear cards (E3–E6 and the add-on wands). */
+  wandEase: {
+    night: true,
+    extras: true,
+    nightTab: 'gear',
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
+      s.cash = 2000;
+    },
+    timeline: [],
+  },
+  /** ui-3.10.0: the new-drink unlock replay (Americano) as it plays after "On to the night shop". */
+  unlockReplay: {
+    replay: ['americano'],
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
     },
     timeline: [],
   },
@@ -1164,18 +1294,15 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
-  /** Block 3: serve toasts stacking up, a perfect serve, a regular's heart, a bot's oops, the group photo. */
+  /** Block 3: serve toasts stacking up, a perfect serve, a regular's heart, the group photo. */
   serves: {
     setup(s) {
-      s.players[1].name = 'Bo';
-      s.players[1].bot = { personality: 'rookie' } as GameState['players'][number]['bot'];
       s.customers = [{ id: 61, drink: 'latte', patienceLeft: 1100, patienceMax: 1200, kind: 'regular', name: 'Ada' }, { id: 64, drink: 'latte', patienceLeft: 900, patienceMax: 1200 }];
     },
     timeline: [
       [0.3, (s) => emit(s, 'served', { by: 'dev', item: 'latte', amount: 6.1, kind: 'normal', cid: 70, perfect: true, left: 0 })],
       [0.7, (s) => emit(s, 'served', { by: 'ben', item: 'espresso', amount: 3.3, kind: 'impatient', cid: 71, perfect: false, left: 0 })],
       [1.1, (s) => { emit(s, 'served', { by: 'ana', item: 'latte', amount: 6.4, kind: 'regular', name: 'Ada', cid: 61, perfect: true, left: 0 }); s.customers.shift(); }],
-      [1.3, (s) => emit(s, 'bot.mistake', { bot: 'Bo', drink: 'latte' })],
       [3.2, (s) => emit(s, 'influencer', { result: 'served' })],
     ],
   },
@@ -1355,8 +1482,8 @@ const FIXTURES: Record<string, Fixture> = {
     timeline: [],
   },
   /**
-   * Round 5 block 1: all 8 hairstyles × both facings on the floor (front row faces the camera,
-   * back row faces away) so the hairline fix is easy to screenshot.
+   * Round 5/6 hair: every hairstyle × both facings on the floor (front row faces the camera,
+   * back row faces away) — opaque crowns + long wavy. Two rows of styles when there are more than 5.
    */
   hairGrid: {
     setup(s) {
@@ -1364,15 +1491,18 @@ const FIXTURES: Record<string, Fixture> = {
       gearStart(s);
       atTier(s, 'cafe', 0);
       s.customers = [];
-      const colours = ['brown', 'black', 'blonde', 'red', 'dark', 'blue', 'pink', 'grey'] as const;
-      const shirts = ['red', 'blue', 'green', 'purple', 'yellow', 'pink', 'teal', 'black'] as const;
+      const colours = ['brown', 'black', 'blonde', 'red', 'dark', 'blue', 'pink', 'grey', 'brown'] as const;
+      const shirts = ['red', 'blue', 'green', 'purple', 'yellow', 'pink', 'teal', 'black', 'green'] as const;
       const template = s.players[0]!;
       s.players = [];
+      const cols = 5;
       HAIR_STYLES.forEach((hs, i) => {
-        const x = 1.5 + (i % 8) * 1.35;
-        // Front row: facing down (toward camera). Back row: facing up.
-        for (const [row, facingY, suffix] of [[0, 1, ''], [1, -1, ' · back']] as const) {
-          const pos = { x, y: 2.2 + row * 2.2 };
+        const col = i % cols;
+        const styleRow = Math.floor(i / cols);
+        const x = 1.8 + col * 2.0;
+        // Per style: facing-down (toward camera) then facing-up behind it.
+        for (const [faceRow, facingY, suffix] of [[0, 1, ''], [1, -1, ' · back']] as const) {
+          const pos = { x, y: 1.6 + styleRow * 3.4 + faceRow * 1.5 };
           const id = `h${i}${facingY > 0 ? 'f' : 'b'}`;
           s.players.push({
             ...structuredClone(template),
@@ -1458,6 +1588,7 @@ async function main(): Promise<void> {
     }
     createRecordsDialog(() => r).open();
   }
+  if (fx.replay) createUnlockReplay($('#unlockReplay')).play(fx.replay);
   const renderer = await createRenderer($('#game'));
   const me = fx.me ?? 'ana';
   renderer.setLocalPlayer(me);
@@ -1470,6 +1601,7 @@ async function main(): Promise<void> {
     hud.toast(logToastLines(freshEvents(state, -1, TOAST_KINDS).events, names, me));
   }
   let feedSeen = -1;
+  let toastSeen = state.nextLogSeq - 1;
   const t0 = performance.now();
   const pending = [...fx.timeline];
   const frame = () => {
@@ -1487,6 +1619,14 @@ async function main(): Promise<void> {
       feedSeen = fresh.seen;
       const posts = fresh.events.map(reviewPopVM).filter((p): p is NonNullable<typeof p> => !!p);
       if (posts.length) hud.feedPop(posts);
+    }
+    // ui-3.10.0: fixture timelines toast like main.ts does (tray.steal and friends)
+    {
+      const fresh = freshEvents(state, toastSeen, TOAST_KINDS);
+      toastSeen = fresh.seen;
+      const names = (id: string) => state.players.find((p) => p.id === id)?.name ?? id;
+      const lines = logToastLines(fresh.events, names, me, state);
+      if (lines.length && !fx.restock) hud.toast(lines);
     }
     const positions = Object.fromEntries(state.players.map((p) => [p.id, p.pos]));
     const c0 = performance.now();

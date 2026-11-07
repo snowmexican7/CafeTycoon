@@ -96,6 +96,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <div class="hud-office" role="status" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
     <div class="hud-checklist" role="status" hidden></div>
+    <div class="hud-opengrace" role="timer" aria-live="polite" hidden></div>
     <section class="hud-restock-panel" id="hud-restock-panel" aria-label="Rush delivery" hidden></section>
     <div class="hud-syrup" role="group" aria-label="Syrup picker" hidden></div>
     <div class="toast" role="status" hidden></div>
@@ -182,6 +183,16 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   // FB2 B6 leftovers: office-run phone (countdown only).
   const officeEl = $<HTMLElement>('.hud-office');
   let lastOffice = '';
+  // ui-3.10.0 (Round 6 block 5): the quiet open — a doors-open countdown while only early fans may walk in
+  const graceEl = $<HTMLElement>('.hud-opengrace');
+  let lastGrace = -1;
+  function renderGrace(secs: number | undefined): void {
+    const n = secs ?? 0;
+    if (n === lastGrace) return;
+    lastGrace = n;
+    graceEl.hidden = n <= 0;
+    if (n > 0) graceEl.innerHTML = `<b>Doors open in <i class="n">${n}</i>s</b><span>Dump old coffee, get the milk out. Only early birds now.</span>`;
+  }
   // ui-3.4.1 (FB2 A4): the closing-soon checklist, ticked off as things get put away
   const listEl = $<HTMLElement>('.hud-checklist');
   let lastList = '';
@@ -297,7 +308,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       .join('');
     el.menu.classList.toggle('sold-out', !!vm.soldOut);
     el.menu.innerHTML = (vm.soldOut ? `<div class="soldout-sign" role="status"><b>SOLD OUT</b><small>Nothing left to make today</small></div>` : '') + vm.menu
-      .map((m) => `<div class="row ${m.available ? '' : 'off'}"><span class="d">${itemIcon(m.id, 24)}${DRINK_LABEL[m.id]}</span><b>${m.available ? esc(m.price) : m.offMenu ? 'off menu' : 'sold out'}</b></div>`)
+      .map((m) => `<div class="row ${m.available ? '' : 'off'}"><span class="d">${itemIcon(m.id, 28)}${DRINK_LABEL[m.id]}</span><b>${m.available ? esc(m.price) : m.offMenu ? 'off menu' : 'sold out'}</b></div>`)
       .join('') + (vm.menu.length === 0 ? `<div class="row off empty"><span class="d">Nothing on the menu yet</span></div><small class="menu-hint">Your machines can't make a drink. Check the Gear tab tonight.</small>` : '');
     notes = vm.notes;
     prices = Object.fromEntries(vm.menu.map((m) => [m.id, m.price]));
@@ -398,7 +409,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     el.crew.innerHTML = live.crew
       .map(
         (c) =>
-          `<span class="av ${c.me ? 'me' : ''} ${c.connected ? '' : 'away'} ${c.bot ? 'bot' : ''}" style="background:${c.color}" title="${esc(c.name)}${c.me ? ' (you)' : ''}${c.bot ? ` · ${c.bot} bot` : ''}${c.connected ? '' : ' · away'}">${esc(c.initial)}</span>`,
+          `<span class="av ${c.me ? 'me' : ''} ${c.connected ? '' : 'away'}" style="background:${c.color}" title="${esc(c.name)}${c.me ? ' (you)' : ''}${c.connected ? '' : ' · away'}">${esc(c.initial)}</span>`,
       )
       .join('');
   }
@@ -410,7 +421,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     const h = live.holding;
     const t = live.tool;
     const name = h ? `${ITEM_LABEL[h]}${live.heldCold ? ' <b class="cold">· cold</b>' : ''}` : t ? esc(t.label) : 'Empty hands';
-    el.hand.innerHTML = `<div class="slot ${h || t ? 'full' : ''}">${h ? itemIcon(h, 36) : t ? `<span class="tool">${t.icon}</span>` : '∅'}</div><div class="t">${name}<small>${esc(live.meName)} · you</small></div>`;
+    el.hand.innerHTML = `<div class="slot ${h || t ? 'full' : ''}">${h ? itemIcon(h, 40) : t ? `<span class="tool">${t.icon}</span>` : '∅'}</div><div class="t">${name}<small>${esc(live.meName)} · you</small></div>`;
     const { go, title, detail, key: hintKey } = live.hint;
     el.hint.classList.toggle('idle', !go);
     el.hint.hidden = !title;
@@ -605,6 +616,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       renderCall(live?.call);
       renderOfficePhone(live?.officePhone);
       renderChecklist(live?.checklist);
+      renderGrace(live?.openGrace);
     },
     toast(lines) {
       if (lines.length === 0) return;

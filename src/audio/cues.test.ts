@@ -33,7 +33,6 @@ describe('diffCues', () => {
       { kind: 'pass.take', data: { by: 'p2', item: 'shot' } },
       { kind: 'pass.serve', data: { by: 'p1', item: 'latte' } },
       { kind: 'trash', data: { by: 'p2', item: 'milk' } },
-      { kind: 'bot.mistake', data: { bot: 'b1' } },
       { kind: 'event.start', data: { kind: 'rushHour' } },
       { kind: 'event.start', data: { kind: 'powerFlicker' } },
       { kind: 'event.start', data: { kind: 'healthInspector' } },
@@ -47,7 +46,7 @@ describe('diffCues', () => {
     );
     const r = diffCues(a, b, 'p1', logCursor(a));
     expect(ids(r)).toEqual([
-      'cupDown', 'pickUp', 'serve', 'trash', 'botOops',
+      'cupDown', 'pickUp', 'serve', 'trash',
       'rushHour', 'powerFlicker', 'inspector', 'influencer',
       'inspectPass', 'inspectFail', 'influencerServed',
     ]);

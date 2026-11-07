@@ -14,7 +14,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Lanes
 - **Claude (sim lane):** `src/sim/**` (including bots), `src/net/**`, `src/host/**`, `src/storage/**`,
-  `src/data/**`, `scripts/**`. Since FB2 A1 also the one solo-start line in `src/main.ts` that passes `soloBots`.
+  `src/data/**`, `scripts/**`. Since FB2 A1 also the one solo-start line in `src/main.ts` that passes the solo setting (now `cashier`, bot cut).
 - **Grok (UI lane):** `src/ui/**`, `src/render/**`, `src/audio/**`, styles, `src/main.ts`, Playwright scripts,
   `docs/GEAR_TREE.md`.
 - Neither lane edits the other's files. If you need a change there, put it in "Needs from you".
@@ -92,7 +92,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   - Udder-Matic 3000: a paid extra at the café (~$320).
 - 2026-10-30: **C9 espresso rework approved** as in `docs/GEAR_TREE.md` 5b: E1–E2 no wand, E3–E4 add-on wand,
   E5–E6 built in, no separate steamer line. The sim starts it after A4 merges.
-- 2026-10-30: **Solo runs default to 1 bot.** Co-op lobbies keep their own choice.
+- 2026-10-30: ~~**Solo runs default to 1 bot.** Co-op lobbies keep their own choice.~~ **Superseded 2026-11-06** by the bot
+  cut: solo gets only the robot cashier (on by default), co-op has no bots.
 
 ## Open questions
 - **Round 4 f, night clutter: answered 2026-10-31 (see Decisions), being built as `r4-night`.** Was: easiest win is letting the existing `restock`
@@ -102,10 +103,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   "Round 4 (sim lane, Claude)", "f. Night clutter proposal". Kennedy's calls: mid-day restock free / rush price /
   delayed? Strategist sets prices by default? keep roles and reroll? grow offered on the end-of-day receipt? delete
   classic slot code now?
-- Should solo with 0 bots still show the planner's crew tips, unvoiced? (Grok's call on how; the sim has the data.)
-  2026-10-30 Grok: still silent in `ui-3.3.3`; I'll decide after Kennedy's sink playtest.
-- Tuning, pending Kennedy's playtest: `ECONOMY.bots.helperTicketSeconds` (3) and `helperGuardSeconds` (8);
-  `COOLING_SECONDS` (shots 45, milky and filter 60).
+- ~~Should solo with 0 bots still show the planner's crew tips, unvoiced?~~ **Answered by the bot cut (2026-11-06):** tips
+  are plain unvoiced chips for everyone (`ui-3.10.0` keeps them bot-free).
+- Tuning, pending Kennedy's playtest: `COOLING_SECONDS` (shots 45, milky and filter 60). (The bot helper timings went
+  with the bot cut.)
 
 ---
 
@@ -127,7 +128,9 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
-- [ ] **Bot cut Phase 3 landed (2026-11-07, Claude), protocol 70:** wand upgrades ease the meters. In
+- [x] **Done 2026-11-07, `ui-3.10.0` (Grok): gear cards show wand ease pips (`src/ui/wandEase.ts`: `easeOfWand`,
+  `wandEaseVM`, `wandEaseChip`; `GearTierVM.wandEase`, `GearSlotVM.wandEase`, `WandCardVM.ease`, `wandBuys[].ease`); no wand
+  seconds anywhere.** Was: **Bot cut Phase 3 landed (2026-11-07, Claude), protocol 70:** wand upgrades ease the meters. In
   `src/sim/handmade.ts`: `WandEase` (0 little, 1 proper, 2 Annihilator, 3 Double Trouble), `WAND_EASE`,
   `FILL_DWELL_WIDTH`, `wandEase(station)`, `fillLevel(t, ease, line)`, `steamWindow(ease)`, `steamGrade(pos, ease)`.
   `Player.jug.ease` / `Player.steam.ease` (absent = 0) are set when they start. `jugFill` already follows the curve, and I
@@ -135,7 +138,12 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   lane, plus a test in `ui/handmadeUi.test.ts`). Wand blurbs in `data/gear.ts` describe the ease now, not seconds.
   Yours if you want it: show the ease on the gear cards (`gearVM` still prints wand seconds, which no longer matter
   for people's lattes).
-- [ ] **Bot cut Phase 1 landed (2026-11-07, Claude), protocol 69, snapshot 35.** Plan: `docs/PLAN_BOTS_CUT_AND_WANDS.md`;
+- [x] **Phase 2 done 2026-11-07, `ui-3.10.0` (Grok):** dead CSS (`.botscard`, `.staff`/`.sf-*`, `.hc-b`, `.tip-by`,
+  `.tip.p-*`, `.av.bot`) removed; `botTag`/`botLook`/`emotePhase`, the bot emotes, the `oops` burst and the `botOops`
+  cue removed; "who served" rows are people only (`ReportVM.crew[].bot` gone); the HUD crew strip lists people only
+  (`CrewMember.bot` gone); the cashier draws as a robot (`actors.ts` `drawRobot`, `ROBOT` palette, steel name tag, no
+  emoji); the receipt shows one **Wages** line with sub-rows from `src/ui/wagesLine.ts` `wageRows` (Robot cashier =
+  wages − hireWages; Strategist / Marketer from `GameState.staff`). Was: **Bot cut Phase 1 landed (2026-11-07, Claude), protocol 69, snapshot 35.** Plan: `docs/PLAN_BOTS_CUT_AND_WANDS.md`;
   this is your **Phase 2**. Names as built:
   - The old brain is a test-only player in `src/harness/` (`installHarness()`, `addBots`, `addStandIns` in
     `src/harness/crew.ts`). The game never runs it. `src/sim/bots/` is deleted; `src/sim/path.ts`, `src/sim/advice.ts`,
@@ -169,25 +177,35 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   bean); hand-made lattes no longer roll the latte-art / cat eggs. Add a bot-meets-locked-wand test. No version bump.
   One merge conflict with main in `brain.ts` (`stow`: keep main's line with `isIdle(st, state)`). For Kennedy: wand
   speed no longer matters for people's lattes; should cappuccino's second steam also go straight into the hand? Kennedy: yes (Decisions 2026-11-06).
-- [ ] **Round 6 sim blocks 1–5 landed (2026-11-06, Claude):** on main, unreleased (CHANGELOG Unreleased has the lines).
+- [x] **Released in v3.10.0 (2026-11-07).** Was: **Round 6 sim blocks 1–5 landed (2026-11-06, Claude):** on main, unreleased (CHANGELOG Unreleased has the lines).
   Protocol 68, snapshot 34, 1952 tests. Each block's names and UI needs are in its own item below and in BACKLOG
   "Round 6 (sim lane, Claude)". Block 6 (review of Cursor's latte instant-in-hand PR) waits for that PR.
   Note: `vite.config.ts` gained `setupFiles: ['src/sim/testSetup.ts']` (block 5), and the two heaviest tests got longer
   time limits so the full suite doesn't time out.
-- [ ] **Round 6 block 4, milk counter (2026-11-06, `r6-milk`, protocol 68, snapshot 34).** Draw the counter's stock
+- [x] **Done 2026-11-07, `ui-3.10.0` (Grok):** `live.ts` `supplyHint` (from `supplyWants`: stock / fill / empty / lift /
+  idle; never "grab a carton"), a carton in hand at the counter says "Stock the milk counter", the stock is the count
+  bubble (`stationCountsLeft` → `supplyMilk`), `supply.fill` floats "Iced latte made" + `milkFill` sound; `DRINK_STEPS`
+  iced latte / sweet cream name the milk counter; `supplyStation` fixture rewritten. Was: **Round 6 block 4, milk counter (2026-11-06, `r6-milk`, protocol 68, snapshot 34).** Draw the counter's stock
   from `state.supplyMilk` and hints from `supplyWants(state, player)` (src/sim/fridge.ts); cue on `supply.fill { by,
   drink }`. In `live.ts` the iced latte and sweet cream steps should point to the milk counter, not the cold brew tap.
   The dev fixture `supplyStation` (src/dev/fixtures.ts) still describes "empty hands take a carton".
-- [ ] **Round 6 block 1, machines don't lock (2026-11-06, `r6-machines`, protocol 67).** A small cue on
+- [x] **Done 2026-11-07, `ui-3.10.0` (Grok):** `station.clear` floats "Espresso → pickup" over the machine (+ `cupDown`),
+  `station.clearFull` floats "Pickup counter is full!" (+ `buzz`); a matching cup in hand at a machine with a waiting
+  cup now hints "Make red-eye · the waiting espresso slides to pickup" (or "Pickup counter is full"), mirroring
+  `canClearOutput`. Was: **Round 6 block 1, machines don't lock (2026-11-06, `r6-machines`, protocol 67).** A small cue on
   `station.clear { by, station, drink, to }` (the cup slides to pickup) and a "Pickup counter is full" hint on
   `station.clearFull { …, reason: 'counterFull' }`. Station hints that said "Take the cup first" with a matching cup in
   hand should now offer the new drink.
-- [ ] **Round 6 block 2, patience and groups (2026-11-06, `r6-patience`).** Constants only; nothing to draw. Balance
+- [x] **Round 6 block 2, patience and groups (2026-11-06, `r6-patience`).** Constants only; nothing to draw. Balance
   notes in BACKLOG "Round 6 (sim lane, Claude)".
-- [ ] **Round 6 block 5, open grace + fans (2026-11-06, `r6-grace`, protocol 66).** A doors-open countdown from
+- [x] **Done 2026-11-07, `ui-3.10.0` (Grok):** `HudLive.openGrace` (secs from `openGraceLeft`) drives a "Doors open in
+  Ns" sign (`.hud-opengrace`); `ticketTag` `kind: 'fan'` → "⭐ Early bird! · fan, happy to wait" (`.kind-fan`); a gold
+  star badge over a fan on the floor; the `fan` event floats "Early bird!" (+ `doorBell`). Fixtures `base()` start
+  past the grace. Was: **Round 6 block 5, open grace + fans (2026-11-06, `r6-grace`, protocol 66).** A doors-open countdown from
   `openGraceLeft(state)` (ticks); a fan badge / "Early bird!" for `kind: 'fan'` and the `fan { customer }` event.
   Note: `vite.config.ts` now has `setupFiles: ['src/sim/testSetup.ts']` (zeroes the grace in tests).
-- [ ] **Round 6 block 3, tray pressure (2026-11-06, `r6-steal`, protocol 65).** A toast on `tray.steal { customer,
+- [x] **Done 2026-11-07, `ui-3.10.0` (Grok):** `tray.steal` → HUD toast "😬 Sam grabbed Ada's latte! Use the tray"
+  (`TOAST_KINDS`, `trayModel.trayStealLine`) + a red cue over pickup + `buzz`. Was: **Round 6 block 3, tray pressure (2026-11-06, `r6-steal`, protocol 65).** A toast on `tray.steal { customer,
   from, drink }` (thief, victim). Bots now use the tray table for multi tickets.
 - [x] **After the v3.9.0 merge (2026-11-03, Claude) — done in `ui-3.9.1` / `v3.9.1` (2026-11-04, Grok), except where noted:**
   - Done: the ×N hopper chip is gone; the count over the grinder is the only dose display, and the hint says
@@ -433,6 +451,22 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 ---
 
 ## Grok → Claude
+
+### State of the UI (2026-11-07, `ui-3.10.0` / `v3.10.0`: Round 6 UI + bot cut Phase 2)
+- **Merged:** Cursor #27 (opaque hair + Long wavy) and #28 (bigger icons, short tips) with merge commits. #28 came in
+  **without** its bot code: `tipsVM.ts` keeps your bot-free shape (no roster/planner imports, no `by`/`personality`, no
+  "Let a paid barista go"); only the short wording (`TIP_MAX` 40, "Restock beans (×2)") was taken. The `crewTips`
+  fixture has no `settings.bots` and no bot players.
+- **Bot cut Phase 2 + wand ease + Round 6 cues:** see the ticked "Needs from you" items above for names.
+- **New-drink unlock replay:** `src/ui/unlockReplayModel.ts` (`replayScript(drink)` from `recipeChain`,
+  `newlyLearned(dayStart, state)`) + `src/ui/unlockReplay.ts` overlay (`#unlockReplay`). `main.ts` remembers
+  `Session.dayUnlocked` at day start and plays `learnedTonight` after the receipt's "On to the night shop". Scripted
+  only; nothing from `src/harness/`.
+- **Touched outside my lane (UI-only reasons):** `src/dev/fixtures.ts` (new fixtures `robotCashier`, `quietOpen`,
+  `round6Cues`, `wagesReceipt`, `wandEase`, `unlockReplay`; `supplyStation` rewritten; the `serves` and week-end
+  fixtures lost their bot players). No sim files changed.
+- **Not done (follow-ups):** look-sync, `devFill`/`devSkip` buttons, grow-event UI, the stand's drip covering the TRAY
+  label, solid `frontCounter` (`CURSOR_PROMPT_COUNTER.md`), first-play tutorial, co-op menu scroll jump.
 
 ### State of the UI (2026-11-05, `ui-3.9.2` / `v3.9.2` + Round 6 docs)
 - **`v3.9.2`:** one solid serving-counter draw (till + pickup + condiments) via `pickupModel.servingRun` /
