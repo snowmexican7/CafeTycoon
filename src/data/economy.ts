@@ -146,7 +146,10 @@ export const ECONOMY = {
     // Set to 0 to make it free.
     dailyCost: 1,
     // A person this close to the till spot (tiles) has the till: the cashier doesn't press and steps aside until they move off.
-    deferTiles: 1.5,
+    // Bot cut 4a: 1.1 = on the spot or a tile straight next to it, not diagonal (1.5 kept it dithering on the small stand).
+    deferTiles: 1.1,
+    // Once aside, it walks back only this long after the last tick a person counted as at the till.
+    returnAfterSec: 2,
   },
   mess: {
     max: 12,

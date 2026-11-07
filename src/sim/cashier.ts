@@ -10,8 +10,10 @@
  * - at home, with a customer to ring (`tillNext`) and nobody else ringing, it presses once, then stays put until the
  *   ring finishes (`stepRingUp` cancels a ring whose ringer walks off);
  * - it defers to people: while an empty-handed person (ringing up needs empty hands, so someone carrying a drink to
- *   the pickup counter isn't coming to ring) is within `ECONOMY.cashier.deferTiles` of the till spot, or someone else's
- *   ring-up runs, it never presses and waits on an idle tile next to the till (`idleNode`), coming back when they've gone;
+ *   the pickup counter isn't coming to ring) is within `ECONOMY.cashier.deferTiles` of the till spot (on it or a tile
+ *   straight beside it, not diagonal), or someone else's ring-up runs, it never presses and waits on an idle tile next
+ *   to the till (`idleNode`); it walks back only `ECONOMY.cashier.returnAfterSec` after the last tick a person counted
+ *   (`BotState.personSeenTick`), so it doesn't dither back and forth on the small stand;
  * - at the self-order tier (Squarely) customers ring themselves, so it just waits on its idle tile;
  * - during the closing grace it keeps ringing the customers still in line (same rules);
  * - at night and the week's end it stands still.
@@ -25,6 +27,7 @@ import { freeSpot } from './spawn';
 import { floorFields } from './tiles';
 import { nearestStation } from './movement';
 import { selfOrder, tillNext } from './till';
+import { secondsToTicks } from './constants';
 import type { GameState, Player, Vec2 } from './types';
 
 export { CASHIER_ID };
@@ -139,7 +142,12 @@ export function stepCashier(state: GameState): void {
   const home = cashierHome(state);
   if (!home) return;
   if (state.ringUp?.by === p.id) return; // mid-ring: stay put until it finishes
-  const defer = selfOrder(state) || personAtTill(state, home) || state.ringUp !== undefined;
+  const b0 = p.bot;
+  const here = personAtTill(state, home);
+  if (here) b0.personSeenTick = state.tick;
+  const waiting = here || (b0.personSeenTick !== undefined && state.tick - b0.personSeenTick < secondsToTicks(ECONOMY.cashier.returnAfterSec));
+  if (!waiting) delete b0.personSeenTick;
+  const defer = selfOrder(state) || waiting || state.ringUp !== undefined;
   if (defer) {
     // Step aside (or stay aside): a free tile next to the till, picked once and kept while waiting.
     const b = p.bot;

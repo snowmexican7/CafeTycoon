@@ -166,6 +166,8 @@ export interface BotState {
   retried?: number;
   /** Round 3 item 5: this bot pressed E at the till and is standing there until the ring-up finishes. */
   ringing?: true;
+  /** Bot cut 4a: the robot cashier's last tick a person counted as at the till (it waits `returnAfterSec` after it). */
+  personSeenTick?: number;
 }
 
 export type SimEventKind =

@@ -146,6 +146,68 @@ describe('bot cut step 3: the solo robot cashier', () => {
     expect(byId(s, 901).stage).toBe('pickup');
   });
 
+  it('a person diagonal to the till spot does not make it leave: it stays and rings (deferTiles 1.1)', () => {
+    expect(ECONOMY.cashier.deferTiles).toBe(1.1);
+    let s = cashierDay();
+    const home = cashierHome(s)!;
+    cashier(s).pos = { ...home };
+    const diagonal = { x: home.x - 1, y: home.y + 1 };
+    expect(dist(diagonal, home)).toBeGreaterThan(ECONOMY.cashier.deferTiles);
+    me(s).pos = { ...diagonal };
+    cust(s, 901);
+    for (let i = 0; i < secondsToTicks(3); i++) {
+      s = tick(s, []);
+      me(s).pos = { ...diagonal };
+      expect(dist(cashier(s).pos, home)).toBeLessThan(0.5); // never walks off
+    }
+    expect(rungBy(s, CASHIER_ID)).toHaveLength(1);
+    expect(byId(s, 901).stage).toBe('pickup');
+  });
+
+  it('once aside, it waits returnAfterSec (2 s) after the person last counted before walking back', () => {
+    expect(ECONOMY.cashier.returnAfterSec).toBe(2);
+    let s = cashierDay();
+    const home = cashierHome(s)!;
+    cashier(s).pos = { ...home };
+    const beside = { x: home.x - 1, y: home.y };
+    me(s).pos = { ...beside };
+    cust(s, 901);
+    for (let i = 0; i < secondsToTicks(3); i++) {
+      s = tick(s, []);
+      me(s).pos = { ...beside };
+    }
+    expect(dist(cashier(s).pos, home)).toBeGreaterThan(0.5); // stepped aside
+    const aside = { ...cashier(s).pos };
+    // the person walks off; for the next 2 s (less a tick) the cashier stays put on its idle tile
+    me(s).pos = { ...FAR };
+    for (let i = 0; i < secondsToTicks(ECONOMY.cashier.returnAfterSec) - 1; i++) {
+      s = tick(s, []);
+      expect(cashier(s).pos).toEqual(aside);
+      expect(cashier(s).bot!.target).not.toEqual(home);
+    }
+    expect(starts(s, CASHIER_ID)).toHaveLength(0);
+    // then it walks back and rings
+    s = run(s, secondsToTicks(5));
+    expect(rungBy(s, CASHIER_ID)).toHaveLength(1);
+    expect(byId(s, 901).stage).toBe('pickup');
+  });
+
+  it('the wait is deterministic: two runs of the same leave-and-return give the same state', () => {
+    const play = () => {
+      let s = cashierDay();
+      const home = cashierHome(s)!;
+      cashier(s).pos = { ...home };
+      cust(s, 901);
+      for (let i = 0; i < secondsToTicks(2); i++) {
+        s = tick(s, []);
+        me(s).pos = { x: home.x - 1, y: home.y };
+      }
+      me(s).pos = { ...FAR };
+      return JSON.stringify(run(s, secondsToTicks(4)));
+    };
+    expect(play()).toBe(play());
+  });
+
   it('a person ringing up: it does not press over them', () => {
     let s = cashierDay();
     const home = cashierHome(s)!;
