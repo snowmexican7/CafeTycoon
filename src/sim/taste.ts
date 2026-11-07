@@ -141,7 +141,7 @@ export function comboRating(today: DayStats): number {
 export function applyTwistInput(state: GameState, input: Extract<PlayerInput, { kind: 'twist' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   if (!DRINK_IDS.includes(input.drink)) return state;
   const next = { ...(state.twists ?? {}) };
   if (input.twist === null) delete next[input.drink];

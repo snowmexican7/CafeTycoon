@@ -68,11 +68,6 @@ describe('rival loyalty card and our stamp card (P4 F2)', () => {
     poor.cash = 29;
     applyStampCardInput(poor, { kind: 'stampCard', playerId: 'p1' });
     expect(poor.rival?.stamps).toBeUndefined();
-    const bot = run();
-    bot.day = 16;
-    bot.players[0].bot = {} as never;
-    applyStampCardInput(bot, { kind: 'stampCard', playerId: 'p1' });
-    expect(bot.rival?.stamps).toBeUndefined();
     expect(validateInput({ kind: 'stampCard', playerId: 'p1' })).toEqual({ kind: 'stampCard', playerId: 'p1' });
     const viaStep = run();
     viaStep.day = 16;

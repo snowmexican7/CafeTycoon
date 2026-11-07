@@ -177,7 +177,7 @@ export function pitchMorning(state: GameState): string | null {
 export function applyPitchInput(state: GameState, input: Extract<PlayerInput, { kind: 'pitch' }>): GameState {
   if (state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   if (state.pitch && state.pitch.day === state.day) return state;
   const text = cleanPitch(input.text);
   if (!text) return state;

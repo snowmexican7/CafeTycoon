@@ -68,7 +68,7 @@ export function steepPlan(state: GameState): SteepPlan {
 export function applySteepInput(state: GameState, input: Extract<PlayerInput, { kind: 'steep' }>): GameState {
   if (state.gear !== true || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   const cap = steepCap(state);
   if (cap === 0) return state;
   state.steep = Math.min(input.cups, cap);

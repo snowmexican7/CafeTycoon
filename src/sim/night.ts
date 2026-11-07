@@ -135,7 +135,7 @@ export function applyRestockInput(state: GameState, input: Extract<PlayerInput, 
   if (state.phase === 'night') return applyNightInput(state, input);
   if (state.phase !== 'day' && state.phase !== 'closing') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || !p.connected || p.bot) return state;
+  if (!p || !p.connected) return state;
   const got = restock(state, input.supply, input.packs, rushCost);
   if (got) emitLog(state, 'restock.rush', { by: p.id, supply: input.supply, packs: got.packs, cost: got.cost });
   return state;

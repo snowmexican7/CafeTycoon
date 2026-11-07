@@ -132,7 +132,7 @@ export function settleBranch(state: GameState): void {
 export function applyBranchInput(state: GameState, input: Extract<PlayerInput, { kind: 'branch' }>): GameState {
   if (!state.gear || state.phase !== 'night') return state;
   const p = state.players.find((x) => x.id === input.playerId);
-  if (!p || p.bot) return state;
+  if (!p) return state;
   if (input.action === 'open') {
     if (!canOpenBranch(state) || !input.area || !branchAreas(state).includes(input.area)) return state;
     state.cash = r2(state.cash - BRANCH.cost);
