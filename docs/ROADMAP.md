@@ -129,6 +129,9 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
   pushed further apart in look.
 
 ### Later (not scheduled)
+- **Co-op guest lag (Kennedy, Nov 7; investigate first):** the host plays smoothly; a joined player can become
+  almost unplayable. Claude measures host/guest sync before any small reversible fix
+  ([`CLAUDE_PROMPT_COOP_LAG.md`](CLAUDE_PROMPT_COOP_LAG.md)). Large changes need approval. The bot cut stands.
 - **First-run tutorial (Kennedy, Nov 5; design only):** before host / solo, an "I've played this before" button; if
   skipped, a short helpful first playthrough. Not Round 6 (unlock replay is the Soon piece instead).
 - **Co-op night-menu scroll jump (Kennedy, Nov 5; note only):** when one player clicks in the night menus, the other's

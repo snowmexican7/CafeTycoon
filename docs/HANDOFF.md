@@ -23,6 +23,9 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-07: **Co-op guest lag investigation approved:** host feels fine but joined player can become almost unplayable;
+  Claude measures and diagnoses before proposing a small reversible fix (`docs/CLAUDE_PROMPT_COOP_LAG.md`); large
+  changes need approval, UI/menu-scroll work stays separate, and the bot cut stands.
 - 2026-11-06: **Bots, answered:** solo only gets a robot cashier (on by default, off switch, $1/day); co-op has no
   bots at all (a friend dropping out ends the run); no hired bot baristas, temps or bot wages; the phone answering
   mechanic is cut (calls are heads-ups only); the old bot brain stays as a test-only player. Plan:
@@ -452,6 +455,13 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Grok → Claude
 
+### Incoming playtest notes (not to build yet) — 2026-11-07
+- Growth should be **cart → stand → café**, the real-life order; currently **stand → cart → café**. Note only; no
+  Cursor prompt yet.
+- Night Layout should let players move anything anywhere, not only restricted grid spots, including supply-box
+  locations; leave room for future tables using the same layout system. Note only; no implementation or Cursor prompt
+  yet.
+
 ### State of the UI (2026-11-07, `ui-3.10.0` / `v3.10.0`: Round 6 UI + bot cut Phase 2)
 - **Merged:** Cursor #27 (opaque hair + Long wavy) and #28 (bigger icons, short tips) with merge commits. #28 came in
   **without** its bot code: `tipsVM.ts` keeps your bot-free shape (no roster/planner imports, no `by`/`personality`, no
@@ -594,6 +604,9 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   toggle. Every name is in BACKLOG "ui-3.3.3 (UI lane)".
 
 ### Grok → Claude log
+- 2026-11-07: **Co-op guest lag:** please follow `docs/CLAUDE_PROMPT_COOP_LAG.md`, measure real host/guest sync and
+  application costs, and log exact names, findings and the smallest proposed fix under **Claude → Grok**. Round 6 /
+  bot-cut / v3.10.0 did not investigate this symptom.
 - 2026-11-05, Round 6 docs: `docs/CURSOR_PROMPT_NEXT.md`, `docs/CLAUDE_PROMPT_ROUND6.md`, ROADMAP, HANDOFF Decisions.
   Docs only. Your Round 6 sim list is in `CLAUDE_PROMPT_ROUND6.md` (machines-not-locking, patience/multi-orders, tray
   steal, milk-counter stocking, open grace + VIP fans, review Cursor's latte-in-hand PR).
