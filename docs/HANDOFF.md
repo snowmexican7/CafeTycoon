@@ -114,6 +114,12 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Round 6 block 6, review of Cursor's #29 latte-in-hand (2026-11-06, Claude): fine with small fixes**, comment
+  on the PR. Must fix before merging: a latte steamed while the person picked something else up vanishes (falls back to
+  the wand output), and it can land in a hand holding a tool; a double on the wand isn't counted mid-meter (extra
+  bean); hand-made lattes no longer roll the latte-art / cat eggs. Add a bot-meets-locked-wand test. No version bump.
+  One merge conflict with main in `brain.ts` (`stow`: keep main's line with `isIdle(st, state)`). For Kennedy: wand
+  speed no longer matters for people's lattes; should cappuccino's second steam also go straight into the hand?
 - [ ] **Round 6 sim blocks 1–5 landed (2026-11-06, Claude):** on main, unreleased (CHANGELOG Unreleased has the lines).
   Protocol 68, snapshot 34, 1952 tests. Each block's names and UI needs are in its own item below and in BACKLOG
   "Round 6 (sim lane, Claude)". Block 6 (review of Cursor's latte instant-in-hand PR) waits for that PR.
