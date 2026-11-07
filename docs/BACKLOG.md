@@ -2716,3 +2716,9 @@ Spec: `docs/CLAUDE_PROMPT_ROUND6.md`. One branch per block; names as built.
   taken (existing `loseTicket`; now pinned by a test). Bots put a multi ticket's cup on the tray table when
   `trayAccepts`, lift a complete tray when idle and carry it to pickup. Later: a stale partial tray blocks the table
   for other tickets until its ticket leaves.
+- **Block 5, open grace + fans (`r6-grace`, protocol 66).** For `ECONOMY.openGraceSeconds` (8) after the day starts,
+  no normal arrivals (gated in `stepDay`, so direct `spawnCustomers` callers are unaffected); only a rare fan:
+  `CustomerKind 'fan'`, patience ×2.5, ~35% of days (`ECONOMY.fan { patience, chance }`; one `rngNext` per grace
+  tick), at most one; `spawnFan(state)`, event `fan { customer }`, `DayStats.fan?`. Helper `openGraceLeft(state)`
+  (ticks left). Tests: `src/sim/testSetup.ts` (via `vite.config.ts` `setupFiles`) sets `openGraceSeconds` to 0 for
+  every other test file so they keep customers right after `startDay`; `openGrace.test.ts` restores 8. Smoke runs use 8.

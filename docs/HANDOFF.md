@@ -114,6 +114,9 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Round 6 block 5, open grace + fans (2026-11-06, `r6-grace`, protocol 66).** A doors-open countdown from
+  `openGraceLeft(state)` (ticks); a fan badge / "Early bird!" for `kind: 'fan'` and the `fan { customer }` event.
+  Note: `vite.config.ts` now has `setupFiles: ['src/sim/testSetup.ts']` (zeroes the grace in tests).
 - [ ] **Round 6 block 3, tray pressure (2026-11-06, `r6-steal`, protocol 65).** A toast on `tray.steal { customer,
   from, drink }` (thief, victim). Bots now use the tray table for multi tickets.
 - [x] **After the v3.9.0 merge (2026-11-03, Claude) — done in `ui-3.9.1` / `v3.9.1` (2026-11-04, Grok), except where noted:**
