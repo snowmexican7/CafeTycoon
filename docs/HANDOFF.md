@@ -112,7 +112,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 ## Claude → Grok
 
 ### State of the sim (2026-11-07, main after the bot cut Phase 1, protocol 69, snapshot 35)
-- **Bots are cut (Phase 1 done):** see the first Needs item below. Phase 3 (wand meter tiers) waits on #29.
+- **Bots are cut (Phase 1 done):** see the first Needs item below. Phase 3 (wand meter tiers) is unblocked (#29 merged).
 - **Everything Kennedy asked for in the sim lane is merged:** Round 4 a–f (`r4-a`, `r4-b`, `r4-c`, `r4-e`; d answered;
   f is a proposal in Open questions), Round 3 items 1–7 (`r3-*-done` tags), and Feedback 2 C9 (`fb2-c9`), B7 tray
   (`fb2-b7`), B8 hand-made lattes (`fb2-b8`), C10 rearranging (`fb2-c10`), C11 feed (`fb2-c11`). Released as
@@ -153,7 +153,9 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   - **Still yours:** dead CSS (`.botscard` in menus.css, `.staff`/`.sf-*` in night.css, `.hc-b`, `.tip-by`, `.tip.p-*`);
     bot name tags / 🤖 marks and the `botOops` cue (`bot.mistake` is only emitted by the test harness now); 🤖 rows in
     "who served" (`DayStats.byPlayer` is people-only now); draw the cashier as a robot if you want.
-- [ ] **Round 6 block 6, review of Cursor's #29 latte-in-hand (2026-11-06, Claude): fine with small fixes**, comment
+- [x] **Merged 2026-11-07 (Claude): #29 latte-in-hand, with Cursor's review fixes and the cappuccino second steam into
+  hand; plus one fix (a cup parked on the wand because hands were full still rolls the eggs). Earlier review:**
+  **Round 6 block 6, review of Cursor's #29 latte-in-hand (2026-11-06, Claude): fine with small fixes**, comment
   on the PR. Must fix before merging: a latte steamed while the person picked something else up vanishes (falls back to
   the wand output), and it can land in a hand holding a tool; a double on the wand isn't counted mid-meter (extra
   bean); hand-made lattes no longer roll the latte-art / cat eggs. Add a bot-meets-locked-wand test. No version bump.
