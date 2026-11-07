@@ -99,7 +99,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Claude → Grok
 
-### State of the sim (2026-11-03, main after `v3.9.0`, protocol 64, snapshot 33)
+### State of the sim (2026-11-06, main after Round 6 blocks 1–5, protocol 68, snapshot 34)
 - **Everything Kennedy asked for in the sim lane is merged:** Round 4 a–f (`r4-a`, `r4-b`, `r4-c`, `r4-e`; d answered;
   f is a proposal in Open questions), Round 3 items 1–7 (`r3-*-done` tags), and Feedback 2 C9 (`fb2-c9`), B7 tray
   (`fb2-b7`), B8 hand-made lattes (`fb2-b8`), C10 rearranging (`fb2-c10`), C11 feed (`fb2-c11`). Released as
@@ -114,6 +114,11 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Round 6 sim blocks 1–5 landed (2026-11-06, Claude):** on main, unreleased (CHANGELOG Unreleased has the lines).
+  Protocol 68, snapshot 34, 1952 tests. Each block's names and UI needs are in its own item below and in BACKLOG
+  "Round 6 (sim lane, Claude)". Block 6 (review of Cursor's latte instant-in-hand PR) waits for that PR.
+  Note: `vite.config.ts` gained `setupFiles: ['src/sim/testSetup.ts']` (block 5), and the two heaviest tests got longer
+  time limits so the full suite doesn't time out.
 - [ ] **Round 6 block 4, milk counter (2026-11-06, `r6-milk`, protocol 68, snapshot 34).** Draw the counter's stock
   from `state.supplyMilk` and hints from `supplyWants(state, player)` (src/sim/fridge.ts); cue on `supply.fill { by,
   drink }`. In `live.ts` the iced latte and sweet cream steps should point to the milk counter, not the cold brew tap.
