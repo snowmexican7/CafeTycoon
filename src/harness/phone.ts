@@ -3,9 +3,9 @@
  * call has rung for BOT_ANSWER_SEC and no person has picked up, the first idle bot (players order, no
  * claim, plan empty or idle) answers. Pure of RNG: same state, same answer.
  */
-import { applyBotCall, callFor, callRinging, elapsed } from '../call';
-import { secondsToTicks } from '../constants';
-import type { GameState, Player } from '../types';
+import { applyBotCall, callFor, callRinging, elapsed } from '../sim/call';
+import { secondsToTicks } from '../sim/constants';
+import type { GameState, Player } from '../sim/types';
 
 /** How long a call rings before a bot steps in. */
 export const BOT_ANSWER_SEC = 10;

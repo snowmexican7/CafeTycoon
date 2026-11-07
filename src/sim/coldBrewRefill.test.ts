@@ -10,7 +10,7 @@ import { SUPPLY_ID, layoutFor } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
 import { step } from './step';
 import { addStandIns } from './bots/roster';
-import { uncoveredOrders } from './bots/brain';
+import { uncoveredOrders } from '../harness/brain';
 import { TICK_RATE } from './constants';
 import type { DrinkId, GameState, SupplyId, TierId } from './types';
 

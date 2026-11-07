@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { stationsFromSlots, type SlotContent } from '../slots';
-import { recipeAt, interact } from '../stations';
-import { gearArea } from '../gear';
-import { BASE_DRINKS } from '../../data/drinks';
-import type { GearId } from '../../data/gear';
-import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId, TierId } from '../types';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { stationsFromSlots, type SlotContent } from '../sim/slots';
+import { recipeAt, interact } from '../sim/stations';
+import { gearArea } from '../sim/gear';
+import { BASE_DRINKS } from '../data/drinks';
+import type { GearId } from '../data/gear';
+import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId, TierId } from '../sim/types';
 import { chainFor, think } from './brain';
-import { addStandIns } from './roster';
+import { addStandIns } from '../sim/bots/roster';
 
 /**
  * A Gear run with the back bar set by hand: `slots`/`gear` per slot, `standIns` stand-in bots (no reaction,

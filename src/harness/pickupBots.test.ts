@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { TICK_RATE } from '../constants';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { TICK_RATE } from '../sim/constants';
 import { BOX_LOW, afterBotInteract, boxNode, chainFor, dropPlan, think } from './brain';
-import { layoutFor } from '../../data/layout';
-import { ECONOMY } from '../../data/economy';
-import { nearestStation } from '../movement';
-import { addStandIns } from './roster';
-import { ensureCounterSpots, stationsFromSlots } from '../slots';
-import type { GearId } from '../../data/gear';
-import { BASE_DRINKS } from '../../data/drinks';
-import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId } from '../types';
+import { layoutFor } from '../data/layout';
+import { ECONOMY } from '../data/economy';
+import { nearestStation } from '../sim/movement';
+import { addStandIns } from '../sim/bots/roster';
+import { ensureCounterSpots, stationsFromSlots } from '../sim/slots';
+import type { GearId } from '../data/gear';
+import { BASE_DRINKS } from '../data/drinks';
+import type { BotStep, Customer, DrinkId, GameState, Player, SupplyId } from '../sim/types';
 
 /** A stocked Gear stand (C1 tap + E1 pods) with `bots` stand-ins and no walk-ins. */
 function gearStand(bots = 1): GameState {
@@ -140,7 +140,7 @@ describe('pickup review fixes (M1, M3)', () => {
   });
 
   it('M1: an idle bot does not park on a counter spot a carrier needs', async () => {
-    const { targetNodes, idleNode } = await import('../path');
+    const { targetNodes, idleNode } = await import('../sim/path');
     const s = quiet(gearStand());
     sim(s).pos = { x: 5, y: 5 }; // standing right where a carrier sets drinks down
     const spots = s.stations.filter((st) => st.kind === 'counter');

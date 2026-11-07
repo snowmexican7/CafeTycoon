@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { catalogueById } from '../data/catalogue';
 import { DRINK_IDS, dayUnlocks, recipeChain, suppliesFor } from '../data/drinks';
 import { ECONOMY } from '../data/economy';
-import { chainFor } from './bots/brain';
+import { chainFor } from '../harness/brain';
 import { availableDrinks } from './customers';
 import { eligibleItems, applyNightInput } from './night';
 import { createRun, startDay, startNight } from './run';

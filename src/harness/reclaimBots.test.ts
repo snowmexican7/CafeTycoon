@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
 import { think } from './brain';
-import { addStandIns } from './roster';
-import { ensureCounterSpots, stationsFromSlots } from '../slots';
-import type { GearId } from '../../data/gear';
-import type { Customer, GameState, Player } from '../types';
+import { addStandIns } from '../sim/bots/roster';
+import { ensureCounterSpots, stationsFromSlots } from '../sim/slots';
+import type { GearId } from '../data/gear';
+import type { Customer, GameState, Player } from '../sim/types';
 
 // FB2 balance pass (ported from B6, commit 46055b2 on fb2-b6-orders): two Gear bot fixes for the chain-drop stall.
 // In p4 traces on main a dropped chain left a shot in the espresso machine for 20-90 s on 9 of 335 days, and those

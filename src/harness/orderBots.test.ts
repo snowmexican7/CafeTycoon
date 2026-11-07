@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
 import { think, uncoveredOrders } from './brain';
-import { addStandIns } from './roster';
-import { makeTicket } from '../orders';
-import type { GearId } from '../../data/gear';
-import type { Customer, DrinkId, GameState, Player } from '../types';
+import { addStandIns } from '../sim/bots/roster';
+import { makeTicket } from '../sim/orders';
+import type { GearId } from '../data/gear';
+import type { Customer, DrinkId, GameState, Player } from '../sim/types';
 
 /** A stocked Gear stand (C1 tap + E1 pods) with `bots` stand-ins and no walk-ins. */
 function gearStand(bots = 1): GameState {

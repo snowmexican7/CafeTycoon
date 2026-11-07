@@ -31,8 +31,11 @@ import { isDownside } from '../src/sim/describe';
 import type { CardPath, CatalogueItem, Rival } from '../src/sim/types';
 import { createRun } from '../src/sim/run';
 import { step } from '../src/sim/step';
+import { installHarness } from '../src/harness';
 import { scoreRun } from '../src/sim/score';
 import type { BotSkill, DrinkId, EventKind, GameState, Pace, PlayerInput, ScenarioId, StationKind, SupplyId } from '../src/sim/types';
+
+installHarness(); // bot cut: stand-ins are played by the test-only player
 
 /** How the tester shops at night: `simple` is the spec's original rule; `smart` plays like a sensible crew (B11). */
 export type Policy = 'simple' | 'smart' | 'speed' | 'quality' | 'reach' | 'none' | 'taste' | 'promo' | 'kiosk' | 'squarely' | 'stand' | 'grow' | 'planner';

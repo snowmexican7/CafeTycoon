@@ -8,7 +8,7 @@ import { GEAR, type GearId } from '../data/gear';
 import { ECONOMY } from '../data/economy';
 import { TICK_RATE } from './constants';
 import { addStandIns } from './bots/roster';
-import { chainFor } from './bots/brain';
+import { chainFor } from '../harness/brain';
 import { stationsFromSlots } from './slots';
 import type { GameState, StationKind } from './types';
 import { gearStats } from '../ui/gearVM';
