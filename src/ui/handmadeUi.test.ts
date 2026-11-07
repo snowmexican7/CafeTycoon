@@ -155,7 +155,7 @@ describe('FB2 B8 handmade UI (jug, steam, syrup, tickets)', () => {
     const s = gearDay();
     s.unlocked = [...(s.unlocked ?? []), 'cappuccino'];
     s.menu.cappuccino = true;
-    s.customers = [{ id: 1, drink: 'cappuccino', patienceLeft: 1e5, patienceMax: 1e5, stage: 'ordering' }];
+    s.customers = [{ id: 1, drink: 'cappuccino', patienceLeft: 1e5, patienceMax: 1e5, stage: 'order' }];
     s.milkOut = 4;
     const wand = s.stations.find((x) => x.kind === 'steamer')!;
     const p = s.players[0];
