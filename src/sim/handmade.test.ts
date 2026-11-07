@@ -191,31 +191,104 @@ describe('FB2 B8: the steam meter', () => {
   });
 
   for (const [k, grade] of [[18, 'perfect'], [10, 'ok'], [1, 'miss']] as const) {
-    it(`stopped after ${k} ticks: ${grade}; the drink is made either way`, () => {
+    it(`stopped after ${k} ticks: ${grade}; drink is instantly in hand (no second E)`, () => {
       const s = open();
       fillAndInsert(s, 0.6 * FILL);
+      expect(wandOf(s).busyTicksLeft).toBe(0); // Round 6: meter is the only timer
       tick(s, k);
       interact(s, 'p1');
       expect(p1(s).steam).toBeUndefined();
       expect(logs(s, 'steam.result')).toEqual([{ by: 'p1', grade }]);
-      expect(wandOf(s).made).toEqual({ milk: 'right', foam: grade });
-      tick(s, 4.5 * TICK_RATE);
-      expect(wandOf(s).output).toBe('latte');
-      // Taking it carries the marks into the hands.
-      interact(s, 'p1');
+      // Round 6: finished latte is already in hand; wand is clear.
       expect(p1(s).holding).toBe('latte');
       expect(p1(s).made).toEqual({ milk: 'right', foam: grade });
+      expect(wandOf(s).output).toBeNull();
+      expect(wandOf(s).making).toBeNull();
+      expect(wandOf(s).busyTicksLeft).toBe(0);
     });
   }
 
-  it('never stopped: the wand finishes and the milk is scalded (miss)', () => {
+  it('never stopped: after steamMissAfter the milk is scalded (miss) and still lands in hand', () => {
     const s = open();
     fillAndInsert(s, 0.6 * FILL);
-    tick(s, 4.5 * TICK_RATE);
-    expect(wandOf(s).output).toBe('latte');
+    tick(s, Math.ceil(HANDMADE.steamMissAfter * TICK_RATE));
     expect(p1(s).steam).toBeUndefined();
     expect(logs(s, 'steam.result')).toEqual([{ by: 'p1', grade: 'miss' }]);
+    expect(p1(s).holding).toBe('latte');
+    expect(p1(s).made).toEqual({ milk: 'right', foam: 'miss' });
+    expect(wandOf(s).output).toBeNull();
+  });
+
+  it('hands full when the meter stops: latte waits on the wand as output (foam kept), then a second E takes it', () => {
+    const s = open();
+    fillAndInsert(s, 0.6 * FILL);
+    // Pick something else up while the meter runs (press out of reach still works).
+    p1(s).holding = 'espresso';
+    tick(s, 18);
+    interact(s, 'p1'); // stop steam with espresso still in hand
+    expect(p1(s).steam).toBeUndefined();
+    expect(logs(s, 'steam.result')).toEqual([{ by: 'p1', grade: 'perfect' }]);
+    expect(p1(s).holding).toBe('espresso');
+    expect(wandOf(s).output).toBe('latte');
+    expect(wandOf(s).making).toBeNull();
+    expect(wandOf(s).made).toEqual({ milk: 'right', foam: 'perfect' });
+    // Empty hands and pick it up.
+    p1(s).holding = null;
+    interact(s, 'p1');
+    expect(p1(s).holding).toBe('latte');
+    expect(p1(s).made).toEqual({ milk: 'right', foam: 'perfect' });
+    expect(wandOf(s).output).toBeNull();
+  });
+
+  it('a tool in hand when the meter scalds: latte waits on the wand (not in hand with the mop)', () => {
+    const s = open();
+    fillAndInsert(s, 0.6 * FILL);
+    p1(s).tool = 'mop';
+    tick(s, Math.ceil(HANDMADE.steamMissAfter * TICK_RATE));
+    expect(p1(s).steam).toBeUndefined();
+    expect(p1(s).holding).toBeNull();
+    expect(p1(s).tool).toBe('mop');
+    expect(wandOf(s).output).toBe('latte');
     expect(wandOf(s).made).toEqual({ milk: 'right', foam: 'miss' });
+  });
+
+  it('a double on the wand mid-meter counts as in flight (no spurious second double pull)', () => {
+    const s = open();
+    s.customers = [pickupCustomer(1, 'latte', { shots: 2 })];
+    expect(wantsDouble(s)).toBe(true);
+    atWand(s);
+    p1(s).holding = 'espresso';
+    p1(s).made = { shots: 2 };
+    p1(s).jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true };
+    interact(s, 'p1');
+    expect(wandOf(s).making).toBe('latte');
+    expect(wandOf(s).busyTicksLeft).toBe(0);
+    expect(wandOf(s).made?.shots).toBe(2);
+    expect(p1(s).steam).toBeDefined();
+    // Without counting steamLocked making, wantsDouble would still be true and the next pull would double again.
+    expect(wantsDouble(s)).toBe(false);
+  });
+
+  it('cappuccino second steam: latte on the wand starts the foam meter and finishes into hand', () => {
+    const s = open();
+    s.unlocked = [...(s.unlocked ?? BASE_DRINKS), 'cappuccino'];
+    s.menu.cappuccino = true;
+    s.customers = [pickupCustomer(1, 'cappuccino')];
+    atWand(s);
+    p1(s).holding = 'latte';
+    p1(s).made = { milk: 'right', foam: 'ok' };
+    interact(s, 'p1');
+    expect(wandOf(s).making).toBe('cappuccino');
+    expect(wandOf(s).busyTicksLeft).toBe(0);
+    expect(p1(s).steam?.station).toBe(wandOf(s).id);
+    expect(p1(s).holding).toBeNull();
+    tick(s, 18);
+    interact(s, 'p1');
+    expect(p1(s).holding).toBe('cappuccino');
+    expect(p1(s).made?.foam).toBe('perfect');
+    expect(wandOf(s).output).toBeNull();
+    expect(wandOf(s).making).toBeNull();
+    expect(p1(s).steam).toBeUndefined();
   });
 
   it('a press out of the wand\'s reach does what it always does and leaves the meter running', () => {

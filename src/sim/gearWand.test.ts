@@ -263,16 +263,17 @@ describe('FB2 C9: steaming at the wand', () => {
     expect(BASE_DRINKS).toContain('latte');
   });
 
-  it('a shot at the wand makes a latte, at the wand\'s speed (little 4.5 s, proper 3.5 s, E5 3.5 s, E6 3 s)', () => {
-    const cases: [GearId, AddOnWand | undefined, number][] = [['e3', 'weak', 4.5], ['e4', 'strong', 3.5], ['e5', undefined, 3.5], ['e6', undefined, 3]];
-    for (const [gear, wand, secs] of cases) {
+  it('a shot at the wand starts the foam meter (Round 6: no steamer wait — drink finishes in hand on stop)', () => {
+    const cases: [GearId, AddOnWand | undefined][] = [['e3', 'weak'], ['e4', 'strong'], ['e5', undefined], ['e6', undefined]];
+    for (const [gear, wand] of cases) {
       const s = open(gear, wand);
       atWand(s);
       s.players[0]!.holding = 'espresso';
       s.players[0]!.jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
       interact(s, 'p1');
       const w = wandOf(s)!;
-      expect([gear, w.making, w.busyTicksLeft]).toEqual([gear, 'latte', Math.round(secs * TICK_RATE)]);
+      // Round 6: meter is the only timer (busyTicksLeft = 0); shot is on the wand until steam stops.
+      expect([gear, w.making, w.busyTicksLeft, s.players[0]!.steam?.station]).toEqual([gear, 'latte', 0, w.id]);
       expect(s.milkOut).toBe(998);
     }
   });
@@ -285,9 +286,11 @@ describe('FB2 C9: steaming at the wand', () => {
     const w = wandOf(s)!;
     let uses = 0;
     while (!w.jammed && uses < 500) {
+      // Round 6: clear mid-steam leftover so each press is a fresh start (and can roll a clog).
       w.busyTicksLeft = 0;
       w.output = null;
       w.making = null;
+      delete s.players[0]!.steam;
       s.players[0]!.holding = 'espresso';
       s.players[0]!.jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
       interact(s, 'p1');
@@ -298,6 +301,7 @@ describe('FB2 C9: steaming at the wand', () => {
     w.busyTicksLeft = 0;
     w.output = null;
     w.making = null;
+    delete s.players[0]!.steam;
     s.players[0]!.holding = 'espresso';
     s.players[0]!.jug = { fill: 0.6, startedAt: 0, line: 0.6, done: true }; // FB2 B8: a person fills the milk jug first
     interact(s, 'p1');

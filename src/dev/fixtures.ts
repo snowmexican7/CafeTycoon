@@ -716,13 +716,63 @@ const FIXTURES: Record<string, Fixture> = {
       [1.0, (s) => {
         const ana = s.players[0]!;
         const wand = s.stations.find((st) => st.kind === 'steamer');
-        if (wand) ana.steam = { startedAt: s.tick, speed: 1, station: wand.id };
+        if (wand) {
+          ana.steam = { startedAt: s.tick, speed: 1, station: wand.id };
+          wand.making = 'latte';
+          wand.made = { ...(ana.made ?? {}), milk: 'right' };
+          wand.busyTicksLeft = 0;
+          ana.holding = null;
+        }
         delete ana.jug;
       }],
-      [1.4, (s) => emit(s, 'steam.result', { by: 'ana', grade: 'perfect' })],
+      // Round 6: steam stop finishes the latte into Ana's hand (no second E / no wand output).
+      [1.4, (s) => {
+        const ana = s.players[0]!;
+        const wand = s.stations.find((st) => st.kind === 'steamer');
+        emit(s, 'steam.result', { by: 'ana', grade: 'perfect' });
+        ana.holding = 'latte';
+        ana.made = { shots: 2, milk: 'right', foam: 'perfect' };
+        delete ana.steam;
+        if (wand) {
+          wand.making = null;
+          wand.output = null;
+          wand.busyTicksLeft = 0;
+          delete wand.made;
+        }
+      }],
       [2.0, (s) => emit(s, 'syrup.add', { by: 'ben', flavour: 'caramel' })],
       [2.6, (s) => emit(s, 'syrup.miss', { customer: 23 })],
     ],
+  },
+  /** Round 6 block 3: jug filled, about to press E — foam meter starts, drink will land in hand. */
+  latteJug: {
+    setup(s) {
+      FIXTURES.handmade!.setup(s);
+      const ana = s.players[0]!;
+      const wand = s.stations.find((st) => st.kind === 'steamer')!;
+      ana.pos = { ...wand.pos };
+      ana.holding = 'espresso';
+      ana.made = { shots: 2 };
+      ana.jug = { fill: 0.6, startedAt: s.tick - 80, line: 0.6, done: true };
+      delete ana.steam;
+    },
+    timeline: [],
+  },
+  /** Round 6 block 3: steam meter running — stop for foam; finished latte goes straight into the hand. */
+  latteSteam: {
+    setup(s) {
+      FIXTURES.handmade!.setup(s);
+      const ana = s.players[0]!;
+      const wand = s.stations.find((st) => st.kind === 'steamer')!;
+      ana.pos = { ...wand.pos };
+      ana.holding = null;
+      delete ana.jug;
+      ana.steam = { startedAt: s.tick - 18, speed: 1, station: wand.id };
+      wand.making = 'latte';
+      wand.made = { shots: 2, milk: 'right' };
+      wand.busyTicksLeft = 0;
+    },
+    timeline: [],
   },
   /** ui-3.8.0 review: Ana at the syrup rack with a latte, so the 1 / 2 syrup picker is up. */
   syrupPick: {
