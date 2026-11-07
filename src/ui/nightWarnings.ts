@@ -30,7 +30,7 @@ const dollars = (n: number) => `$${Math.abs(n).toFixed(2).replace(/\.00$/, '')}`
 const listJoin = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
 
 /**
- * Bills due at tomorrow's closing: rent plus the hired crew's wages (P3 B15), plus what a losing second shop is
+ * Bills due at tomorrow's closing: rent plus wages (the Strategist, the Marketer and the robot cashier), plus what a losing second shop is
  * expected to take (3.3.1, matching the sim brief's review M4). At night `state.day` is already tomorrow.
  */
 export function rentTomorrow(state: GameState): number {

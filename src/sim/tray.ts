@@ -19,7 +19,7 @@
  *    `tray.spill { by, customer, cups }`, every cup wasted, a puddle; the ticket still waits for its drinks.
  *  - A ticket that leaves unfinished voids its trays wherever they are: `tray.void { customer, cups }`, the cups wasted
  *    (an office run's are not, as for B6). Closing clears every tray.
- * Bots never use the table; they count cups on a tray as covering their ticket (src/sim/bots/brain.ts).
+ * Bots never use the table; they count cups on a tray as covering their ticket (the test-only player, src/harness/brain.ts).
  * RNG: one rngNext per bump for a tray carrier only (bots never carry one).
  */
 import { ECONOMY } from '../data/economy';

@@ -145,9 +145,10 @@ export const ECONOMY = {
     // Kennedy 2026-11-06: "free or a very low daily charge"; $1 a day chosen (on the night receipt's wages line).
     // Set to 0 to make it free.
     dailyCost: 1,
-    // A person this close to the till spot (tiles) has the till: the cashier doesn't press and steps aside until they move off.
-    // Bot cut 4a: 1.1 = on the spot or a tile straight next to it, not diagonal (1.5 kept it dithering on the small stand).
-    deferTiles: 1.1,
+    // A person whose tile is within this many tiles of the till spot's, counted along the grid (|dx| + |dy|), has the
+    // till: the cashier doesn't press and steps aside until they move off. Bot cut 4a: 1 = the spot's tile or one straight
+    // beside it, never a diagonal one (a 1.5-tile straight-line radius kept it dithering on the small stand).
+    deferTiles: 1,
     // Once aside, it walks back only this long after the last tick a person counted as at the till.
     returnAfterSec: 2,
   },
