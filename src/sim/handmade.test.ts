@@ -710,3 +710,44 @@ describe('FB2 B8 with B7: a hand-made cup on a tray', () => {
     expect(plain.s.today.tips).toBeLessThan(good.s.today.tips);
   });
 });
+
+describe('Phase 3: the wand eases the meters in play', () => {
+  it('a jug and a steam meter started at a proper wand carry its ease; the little wand leaves them as before', () => {
+    const little = open('e3', 'weak');
+    fillAndInsert(little, FILL / 2);
+    expect(p1(little).steam!.ease).toBeUndefined();
+    const proper = open('e4', 'strong');
+    atWand(proper);
+    p1(proper).holding = 'espresso';
+    interact(proper, 'p1');
+    expect(p1(proper).jug!.ease).toBe(1);
+    tick(proper, FILL / 4);
+    interact(proper, 'p1');
+    interact(proper, 'p1');
+    expect(p1(proper).steam!.ease).toBe(1);
+  });
+
+  it('the proper wand slows the jug on the line: a stop a beat early that is under on the little wand is right', () => {
+    // On the little wand the jug is at the latte line (0.6) after 60% of the fill time; stop at 48% (0.48: under).
+    const early = Math.round(FILL * 0.48);
+    const little = open('e3', 'weak');
+    fillAndInsert(little, early);
+    expect(logs(little, 'milk.fill').at(-1)).toMatchObject({ grade: 'under' });
+    const proper = open('e4', 'strong');
+    fillAndInsert(proper, early);
+    expect(logs(proper, 'milk.fill').at(-1)).toMatchObject({ grade: 'right' });
+  });
+
+  it("The Annihilator's built-in wand grades a stop 0.2 off the middle perfect (ok on the little wand)", () => {
+    const run = (s: GameState) => {
+      fillAndInsert(s, Math.round(FILL * 0.6));
+      const m = p1(s).steam!;
+      m.startedAt = s.tick - Math.round(0.35 * HANDMADE.steamSeconds * TICK_RATE); // phase 0.35: position 0.7
+      expect(steamPos(s, p1(s))).toBeCloseTo(0.7, 1);
+      interact(s, 'p1');
+      return logs(s, 'steam.result').at(-1);
+    };
+    expect(run(open('e3', 'weak'))).toEqual({ by: 'p1', grade: 'ok' });
+    expect(run(open('e5', null))).toEqual({ by: 'p1', grade: 'perfect' });
+  });
+});

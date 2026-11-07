@@ -10,6 +10,7 @@ import {
   JUG_LINES,
   heldRecipe as simHeldRecipe,
   jugFill,
+  steamWindow,
   steamPos,
   type HeldRecipe as SimHeldRecipe,
   type RecipeStep,
@@ -63,8 +64,8 @@ export function steamMeter(state: GameState, p: Player): SteamMeter | null {
     pos,
     station: p.steam.station,
     middle: 0.5,
-    perfect: HANDMADE.perfect,
-    ok: HANDMADE.ok,
+    // Phase 3: the bands come from the wand the meter started at, the same rule the host grades by.
+    ...steamWindow(p.steam.ease ?? 0),
   };
 }
 

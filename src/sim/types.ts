@@ -47,12 +47,16 @@ export interface Jug {
   startedAt: number;
   line: number;
   done?: true;
+  /** Bot cut Phase 3: the wand's ease (handmade.ts WandEase) when this jug started filling; absent = 0, the little wand. */
+  ease?: 1 | 2 | 3;
 }
 /** FB2 B8: a person's running steam meter on the wand `station` (position: handmade.ts steamPos). */
 export interface SteamMeter {
   startedAt: number;
   speed: number;
   station: string;
+  /** Bot cut Phase 3: the wand's ease, which sets the perfect/ok bands (handmade.ts steamWindow); absent = 0. */
+  ease?: 1 | 2 | 3;
 }
 
 export interface Vec2 {
