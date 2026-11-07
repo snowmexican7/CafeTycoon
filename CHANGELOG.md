@@ -43,6 +43,7 @@ when a build goes out, the line moves under its version with the date.
 - The milk counter by the sink is stocked from the fridge: carry a carton over and put it out, then bring a shot or a
   cold brew to the counter to make an iced latte or a sweet cream on the spot. Milk is never picked up from the counter
   itself, and the cold brew machine just pours cold brew now.
+- Hairstyles are fully opaque (no head shape showing through), and the creator gains a **Long wavy** look beside Long straight.
 
 ## 3.9.2 — 2026-11-05 · A solid serving counter
 

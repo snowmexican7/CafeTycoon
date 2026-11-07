@@ -51,26 +51,73 @@ const TROUSERS = 0x4a3a33;
 const SKIRT = 0x3d4a6b;
 const WHITE_SHIRT = 0xf4efe6;
 
-/** ui-3.5.2 / Round 5: hair that hangs behind the head and body (drawn first). */
-function backHair(g: Graphics, style: HairStyle, hair: number, facing: Facing): void {
-  if (facing !== 'down') return;
-  // Long hair and ponytail hang behind; crown coverage is drawn in frontHair.
-  if (style === 'long') g.roundRect(-20, HEAD.hairline, 40, 48, 14).fill(hair);
-  else if (style === 'ponytail') g.ellipse(20, HEAD.hairline + 10, 5.5, 12).fill(hair);
+/** Soft S-curve lobes for long wavy (opaque overlapping ellipses — not translucent). */
+function wavyLobes(g: Graphics, hair: number, facing: Facing): void {
+  if (facing === 'down') {
+    for (const [cx, cy, rx, ry] of [
+      [-18, HEAD.hairline + 10, 7, 14],
+      [-16, HEAD.hairline + 26, 8, 12],
+      [-14, HEAD.hairline + 40, 7, 10],
+      [18, HEAD.hairline + 10, 7, 14],
+      [16, HEAD.hairline + 26, 8, 12],
+      [14, HEAD.hairline + 40, 7, 10],
+      [-6, HEAD.hairline + 2, 6, 5],
+      [6, HEAD.hairline + 2, 6, 5],
+    ] as const) {
+      g.ellipse(cx, cy, rx, ry).fill(hair);
+    }
+  } else {
+    for (const [cx, cy, rx, ry] of [
+      [-10, HEAD.hairline + 14, 9, 12],
+      [10, HEAD.hairline + 14, 9, 12],
+      [-8, HEAD.hairline + 30, 10, 12],
+      [8, HEAD.hairline + 30, 10, 12],
+      [0, HEAD.hairline + 44, 11, 10],
+    ] as const) {
+      g.ellipse(cx, cy, rx, ry).fill(hair);
+    }
+  }
 }
 
-/** ui-3.5.2 / Round 5: hair on top of the head (after the face). Crown always covers HEAD.top → hairline. */
+/** ui-3.5.2 / Round 5–6: hair that hangs behind the head and body (drawn first). Fully opaque. */
+function backHair(g: Graphics, style: HairStyle, hair: number, facing: Facing): void {
+  if (facing !== 'down') return;
+  // Long / wavy / ponytail hang behind; crown coverage is drawn in frontHair.
+  if (style === 'long') g.roundRect(-20, HEAD.hairline, 40, 48, 14).fill(hair);
+  else if (style === 'wavy') {
+    g.roundRect(-20, HEAD.hairline, 40, 44, 14).fill(hair);
+    wavyLobes(g, hair, 'down');
+  } else if (style === 'ponytail') g.ellipse(20, HEAD.hairline + 10, 5.5, 12).fill(hair);
+}
+
+/**
+ * Round 6: opaque under-cap over the full head disk, then style details.
+ * Gaps between spikes/curls/waves never show skin. No `alpha < 1` on hair fills.
+ */
 function frontHair(g: Graphics, style: HairStyle, hair: number, skin: number, facing: Facing): void {
   const geom = frontHairGeom(style, facing);
+  const cap = geom.underCap;
+  // 1) Solid under-cap: seals the entire head disk in hair colour (opaque).
+  g.circle(cap.cx, cap.cy, cap.r).fill(hair);
+  if (facing === 'down') {
+    // Restore the open face below the hairline so cheeks/chin stay skin (eyes draw later).
+    const pts: number[] = [HEAD.cx - HEAD.r, HEAD.hairline, HEAD.cx + HEAD.r, HEAD.hairline];
+    for (let i = 0; i <= 16; i++) {
+      const a = (Math.PI * i) / 16;
+      pts.push(HEAD.cx + Math.cos(a) * HEAD.r, HEAD.cy + Math.sin(a) * HEAD.r);
+    }
+    g.poly(pts).fill(skin);
+    // Crown half-dome again so the hairline edge is a clean opaque seal after the face plate.
+    halfDome(g, HEAD.cx, geom.hairline, geom.rx, CROWN_RY).fill(hair);
+  }
   const spikes = () => g.poly([-14, HEAD.hairline - 1, -11, HEAD_TOP - 4, -5, HEAD.hairline - 6, 0, HEAD_TOP - 6, 5, HEAD.hairline - 6, 11, HEAD_TOP - 4, 14, HEAD.hairline - 1]).fill(hair);
   const curls = () => {
     for (const [cx, cy] of [[-15, HEAD.hairline + 1], [-10, HEAD_TOP + 4], [0, HEAD_TOP], [10, HEAD_TOP + 4], [15, HEAD.hairline + 1]] as const) {
       g.circle(cx, cy, 6.5).fill(hair);
     }
   };
+  // 2) Style details on top of the under-cap (still opaque).
   if (facing === 'down') {
-    // Shared crown: half-dome from the hairline up to the skull top (no bald strip).
-    halfDome(g, HEAD.cx, geom.hairline, geom.rx, CROWN_RY).fill(hair);
     if (style === 'spiky') spikes();
     if (style === 'curly') curls();
     if (style === 'bob') {
@@ -81,14 +128,14 @@ function frontHair(g: Graphics, style: HairStyle, hair: number, skin: number, fa
       g.roundRect(-20, HEAD.hairline - 2, 7, 34, 3.5).fill(hair);
       g.roundRect(13, HEAD.hairline - 2, 7, 34, 3.5).fill(hair);
     }
+    if (style === 'wavy') wavyLobes(g, hair, 'down');
     if (style === 'ponytail') g.roundRect(14, HEAD.hairline, 5, 5, 2).fill(darker(hair, 0.7));
   } else {
-    // Back of head: full disk covering the skull crown (same top as HEAD_TOP).
-    g.circle(HEAD.cx, HEAD.cy, HEAD.r).fill(hair);
     if (style === 'spiky') spikes();
     if (style === 'curly') curls();
     if (style === 'bob') g.roundRect(-19, HEAD.hairline, 38, 20, 8).fill(hair);
     else if (style === 'long') g.roundRect(-18, HEAD.hairline - 2, 36, 40, 12).fill(hair);
+    else if (style === 'wavy') wavyLobes(g, hair, 'up');
     else if (style === 'ponytail') {
       g.ellipse(0, HEAD.hairline + 22, 5.5, 12).fill(hair);
       g.roundRect(-3, HEAD.hairline + 12, 6, 4, 2).fill(darker(hair, 0.7));
