@@ -147,6 +147,15 @@ export const ECONOMY = {
     // ...and an idle machine next to an empty-handed person stays theirs only until the orders needing it have waited this long.
     helperGuardSeconds: 8,
   },
+  /** Bot cut step 3: the solo robot cashier (src/sim/cashier.ts). It only rings customers up at the till. */
+  cashier: {
+    name: 'Robot cashier',
+    // Kennedy 2026-11-06: "free or a very low daily charge"; $1 a day chosen (on the night receipt's wages line).
+    // Set to 0 to make it free.
+    dailyCost: 1,
+    // A person this close to the till spot (tiles) has the till: the cashier doesn't press and steps aside until they move off.
+    deferTiles: 1.5,
+  },
   mess: {
     max: 12,
     spreadChance: 0.25,

@@ -30,6 +30,7 @@ import { applySyrupInput, stepHandmade } from './handmade';
 import type { GameState, ItemKind, Player, PlayerInput } from './types';
 import { validateInput } from './validate';
 import { isBotId, syncBots } from './bots/roster';
+import { CASHIER_ID, stepCashier } from './cashier';
 import { applyStaffInput } from './staff';
 import { drinkEspresso, stepEspresso } from './espresso';
 import { stepEggs, unlockSecret } from './eggs';
@@ -60,7 +61,8 @@ import { applyMoveStation } from './rearrange';
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
   const existing = s.players.find((p) => p.id === input.playerId);
-  if (existing?.bot || (input.kind === 'join' && isBotId(input.playerId))) return;
+  // Bot cut step 3: nobody plays as (or joins as) the robot cashier either.
+  if (existing?.bot || (input.kind === 'join' && (isBotId(input.playerId) || input.playerId === CASHIER_ID))) return;
   switch (input.kind) {
     case 'join': {
       if (existing) {
@@ -270,6 +272,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
   stepEvents(s, doorsOpen);
   const m = computeModifiers(s);
   stepStuns(s);
+  stepCashier(s); // bot cut step 3: the solo robot cashier walks to the till and rings
   botDriver?.step(s, m);
   applyMovement(s, m.moveSpeed);
   stepBumps(s);

@@ -33,7 +33,7 @@ describe('stores', () => {
     const st = memoryStorage();
     let n = 0;
     const s = createSettingsStore(st, () => `tok${++n}`);
-    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120, bots: 'auto', soloBots: 1 });
+    expect(s.get()).toEqual({ playerName: 'Barista', playerToken: 'tok1', pace: 3, dayLengthSec: 150, nightLengthSec: 120, bots: 'auto', soloBots: 1, soloCashier: true });
     expect(createSettingsStore(st, () => 'other').get().playerToken).toBe('tok1');
     expect(s.set({ playerName: 'Ken' }).playerName).toBe('Ken');
     expect(s.get().pace).toBe(3);
@@ -68,6 +68,18 @@ describe('stores', () => {
     expect(createSettingsStore(st, () => 'x').get().soloBots).toBe(0);
     expect(s.set({ soloBots: 'auto' }).soloBots).toBe('auto');
     expect(s.get().soloBots).toBe('auto');
+  });
+
+  it('soloCashier defaults to on, even for saved settings that predate it, and round-trips off', () => {
+    const st = memoryStorage();
+    const s = createSettingsStore(st, () => 'tok');
+    expect(s.get().soloCashier).toBe(true);
+    st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', playerName: 'K', soloBots: 1 }));
+    expect(s.get().soloCashier).toBe(true);
+    expect(s.set({ soloCashier: false }).soloCashier).toBe(false);
+    expect(createSettingsStore(st, () => 'x').get().soloCashier).toBe(false);
+    st.setItem('cafetycoon.settings', JSON.stringify({ playerToken: 'tok', soloCashier: 'yes' }));
+    expect(s.get().soloCashier).toBe(true);
   });
 });
 

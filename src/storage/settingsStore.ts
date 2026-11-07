@@ -20,6 +20,11 @@ export interface LocalSettings {
    * as `CreateRunOptions.settings.bots`.
    */
   soloBots: BotsChoice;
+  /**
+   * Bot cut step 3: a solo run's robot cashier (src/sim/cashier.ts), on by default (also for stored settings that
+   * predate it). main.ts passes it to a solo run as `CreateRunOptions.settings.cashier`; a co-op room never has one.
+   */
+  soloCashier: boolean;
 }
 
 export function createSettingsStore(
@@ -34,12 +39,14 @@ export function createSettingsStore(
     nightLengthSec: ECONOMY.nightLengthSec,
     bots: 'auto',
     soloBots: 1,
+    soloCashier: true,
   });
   const get = (): LocalSettings => {
     const stored = readJson<Partial<LocalSettings>>(storage, KEY);
     const merged = { ...defaults(), ...stored };
     merged.bots = parseBots(merged.bots) ?? 'auto';
     merged.soloBots = parseBots(merged.soloBots) ?? 1;
+    merged.soloCashier = merged.soloCashier !== false; // only an explicit false switches it off
     if (!stored || !stored.playerToken) storage.setItem(KEY, JSON.stringify(merged));
     return merged;
   };

@@ -38,6 +38,7 @@ import { secondsToTicks } from './constants';
 import { emitLog } from './log';
 import { menuDrinks, recipeAllowed } from './unlocks';
 import type { DrinkId, GameState, ItemKind, Player, Station, StationKind, SupplyId } from './types';
+import { CASHIER_ID } from './cashier';
 
 export const FRIDGE = {
   /** Servings in a milk carton taken from the fridge. */
@@ -285,7 +286,8 @@ export function closingChecklist(state: GameState): ClosingChecklist {
  */
 export function putAwayPending(state: GameState): boolean {
   if (!closingSoon(state) || !state.stations.some(isFridge)) return false;
-  if (!state.players.some((p) => p.bot && p.connected)) return false;
+  // The robot cashier (bot cut step 3) never puts anything away, so it doesn't hold the closing up.
+  if (!state.players.some((p) => p.bot && p.connected && p.id !== CASHIER_ID)) return false;
   const c = closingChecklist(state);
   return !c.milkAway || !c.barAway;
 }
