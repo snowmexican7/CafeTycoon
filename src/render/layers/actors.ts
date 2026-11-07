@@ -546,6 +546,12 @@ export class Actors {
       }
       sprite.extra.clear();
       if (c.kind === 'influencer') drawInfluencer(sprite.extra, timeSec);
+      // ui-3.10.0 (Round 6 block 5): an early-bird fan wears a gold star badge (super patient, came in before the doors)
+      if (c.kind === 'fan') {
+        const pulse = 1 + Math.sin(timeSec * 4) * 0.08;
+        sprite.extra.circle(-24, -118, 11 * pulse).fill(0xf6c35b).stroke({ width: 2, color: 0xffffff });
+        drawStar(sprite.extra, -24, -118, 7 * pulse, 0xffffff);
+      }
       if (c.rungAt !== undefined && !c.upset) drawReceipt(sprite.extra, -42, -128);
       const frac = c.patienceLeft / c.patienceMax;
       if (c.kind === 'impatient' && !c.upset) {

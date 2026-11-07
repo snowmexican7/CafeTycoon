@@ -8,9 +8,12 @@ import type { ClosingVM } from './viewModels';
 const rep = (s: string) => Number.parseFloat(s) || 0;
 
 /** End-of-day results: a receipt for the day, then on to the night shop. */
-export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: TierId): void } = {}): { render(vm: ClosingVM): void; show(): void; hide(): void } {
+export function createClosing(container: HTMLElement, handlers: { onGrow?(tier: TierId): void; onContinue?(): void } = {}): { render(vm: ClosingVM): void; show(): void; hide(): void } {
   onAction(container, (action, el) => {
-    if (action === 'continue') hide(container);
+    if (action === 'continue') {
+      hide(container);
+      handlers.onContinue?.(); // ui-3.10.0: the new-drink unlock replay plays after the receipt
+    }
     // ui-3.7.1: grow from the receipt; the dialog steps aside so the re-opening wipe and "What you gained" card play.
     else if (action === 'grow' && el.dataset.tier) {
       handlers.onGrow?.(el.dataset.tier as TierId);

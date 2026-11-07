@@ -231,6 +231,12 @@ export function diffCues(prev: GameState | null, next: GameState, me: PlayerId, 
       case 'tray.pick': cues.push({ id: 'liftUp', mine }); break;
       case 'tray.take': cues.push({ id: 'serve', mine }); break;
       case 'tray.refuse': cues.push({ id: 'buzz', mine }); break;
+      // ui-3.10.0 Round 6 cues (reuse familiar sounds, no new CueIds)
+      case 'tray.steal': cues.push({ id: 'buzz', mine: false }); break;
+      case 'station.clear': cues.push({ id: 'cupDown', mine }); break;
+      case 'station.clearFull': cues.push({ id: 'buzz', mine }); break;
+      case 'supply.fill': cues.push({ id: 'milkFill', mine }); break;
+      case 'fan': cues.push({ id: 'doorBell' }); break;
       case 'tray.spill': cues.push({ id: 'splash', mine }); break;
       case 'tray.void': cues.push({ id: 'trash', mine }); break;
       default: break;

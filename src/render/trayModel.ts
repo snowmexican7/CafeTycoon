@@ -120,6 +120,14 @@ export type TrayBurst =
 
 const REFUSE_LINES = ["That doesn't go here", 'Wrong tray', "Can't take that"] as const;
 
+/** ui-3.10.0: "Sam grabbed Ada's group latte! Use the tray" from `tray.steal { customer, from, drink }`. */
+export function trayStealLine(state: Pick<GameState, 'customers'>, d: Record<string, unknown>): string {
+  const thief = state.customers.find((c) => c.id === Number(d.customer))?.name?.trim() || 'Someone';
+  const victim = Number.isFinite(Number(d.from)) ? trayCustomerLabel(state, Number(d.from)) : 'a group';
+  const drink = typeof d.drink === 'string' && d.drink in DRINK_INFO ? trayDrinkShort(d.drink as DrinkId).toLowerCase() : 'cup';
+  return `${thief} grabbed ${victim}'s ${drink}! Use the tray`;
+}
+
 /** Plain-English refuse line (picked by log seq so every client matches). */
 export function trayRefuseLine(seq: number, drink?: unknown): string {
   const base = REFUSE_LINES[Math.abs(seq) % REFUSE_LINES.length]!;
@@ -162,6 +170,10 @@ export function trayBursts(prev: GameState | null, next: GameState, lastSeq: num
           drink: d.drink as DrinkId,
           at: by ? playerPos(next, by) : table,
         });
+        break;
+      // ui-3.10.0 (Round 6 block 3): a cup left on the counter for a group was taken by someone else
+      case 'tray.steal':
+        bursts.push({ kind: 'cue', text: trayStealLine(next, d), tone: 'bad', at: { ...layoutFor(next.tier).pickup } });
         break;
       case 'tray.claim':
         bursts.push({ kind: 'cue', text: `Tray for ${label}`, tone: 'good', at: table });

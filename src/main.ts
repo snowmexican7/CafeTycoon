@@ -35,7 +35,7 @@ import { createRecordsStore } from './storage/recordsStore';
 import { createMetaStore } from './storage/metaStore';
 import { PERKS, type PerkId } from './data/perks';
 import { createRecordsDialog } from './ui/records';
-import type { CreateRunOptions, GameState, Phase, PlayerId, PlayerInput, PlayerLook } from './sim/types';
+import type { CreateRunOptions, DrinkId, GameState, Phase, PlayerId, PlayerInput, PlayerLook } from './sim/types';
 import { createHistoryStore } from './storage/historyStore';
 import { createRoomStore } from './storage/roomStore';
 import { createSeatStore } from './storage/seatStore';
@@ -44,6 +44,8 @@ import { createSettingsStore } from './storage/settingsStore';
 import { createSnapshotStore } from './storage/snapshotStore';
 import { APP_VERSION } from './version';
 import { createClosing } from './ui/closing';
+import { createUnlockReplay } from './ui/unlockReplay';
+import { newlyLearned } from './ui/unlockReplayModel';
 import { createHud } from './ui/hud';
 import { loadRecipeHints, saveRecipeHints } from './ui/tickets';
 import { hudLive, nightExtras } from './ui/live';
@@ -155,6 +157,9 @@ interface Session {
   peerStatus: PeerStatus | 'hosting';
   started: boolean;
   pendingStart: StartChoice | null;
+  /** ui-3.10.0: the drinks known when today opened, and those learned since (replayed after the receipt). */
+  dayUnlocked?: DrinkId[];
+  learnedTonight?: DrinkId[];
 }
 
 async function main(): Promise<void> {
@@ -239,7 +244,16 @@ async function main(): Promise<void> {
   const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook() });
   // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).
   const dev = isDevMode(location.search) ? createDevPanel(document, send, me) : null;
-  const closing = createClosing($('#closing'), { onGrow: (tier) => send({ kind: 'grow', playerId: me(), tier }) });
+  // ui-3.10.0: the new-drink unlock replay (scripted ghost barista, no bot brain) after "On to the night shop".
+  const unlockReplay = createUnlockReplay($('#unlockReplay'));
+  const closing = createClosing($('#closing'), {
+    onGrow: (tier) => send({ kind: 'grow', playerId: me(), tier }),
+    onContinue: () => {
+      const learned = session?.learnedTonight ?? [];
+      if (session) session.learnedTonight = [];
+      unlockReplay.play(learned);
+    },
+  });
   const weekEnd = createWeekEnd($('#weekEnd'), {
     onContinue: () => send({ kind: 'weekEnd', playerId: me(), choice: 'continue' }),
     onStop: () => send({ kind: 'weekEnd', playerId: me(), choice: 'stop' }),
@@ -577,7 +591,7 @@ async function main(): Promise<void> {
       const fresh = freshEvents(state, toastSeenSeq ?? state.nextLogSeq - 1, TOAST_KINDS);
       toastSeenSeq = fresh.seen;
       const nameOf = (id: string) => state.players.find((p) => p.id === id)?.name ?? 'Someone';
-      const lines = logToastLines(fresh.events, nameOf, s.me);
+      const lines = logToastLines(fresh.events, nameOf, s.me, state);
       if (lines.length) (state.phase === 'night' ? night.toast(lines) : hud.toast(lines));
     }
     // FB2 C11: live review.post → phone pop-up during the day (name, text, sentiment, stars).
@@ -617,6 +631,9 @@ async function main(): Promise<void> {
       s.lastPhase = state.phase;
       // The day's receipt leads into the night shop; after the last day (or a missed rent) the
       // week-end screen sums up instead, so the receipt ("On to the night shop") stays hidden.
+      if (state.phase === 'day') s.dayUnlocked = [...(state.unlocked ?? [])];
+      if (from === 'closing' && state.phase === 'night') s.learnedTonight = s.dayUnlocked ? newlyLearned(s.dayUnlocked, state) : [];
+      if (state.phase !== 'night') unlockReplay.close();
       if (from === 'closing' && s.lastClosing && state.phase === 'night') {
         closing.render(closingViewModel(s.lastClosing, state));
         closing.show();

@@ -1,14 +1,16 @@
 import { seasonNow } from '../sim/season';
 import { money } from './viewModels';
 import { emptyHandsWanted, recipeAt, recipeFor, stocked } from '../sim/stations';
-import { autoMilk, closingChecklist, closingSoon, fridgeGear, isFridge, isMilkStation } from '../sim/fridge';
+import { autoMilk, closingChecklist, closingSoon, fridgeGear, isFridge, isMilkStation, supplyWants } from '../sim/fridge';
+import { canClearOutput } from '../sim/stationClear';
+import { openGraceLeft } from '../sim/customers';
 import { FRIDGES } from '../data/fridges';
 import { TILL, ringProgress, selfOrder, tillNext } from '../sim/till';
 import { passSlots, pickupTarget, spotOf } from '../sim/pickup';
 import { ticketOpen, trayComplete } from '../sim/tray';
 import { trayToolLabel } from '../render/trayModel';
 import { CONDIMENTS, canTakeBox } from '../sim/condiments';
-import { CONDIMENTS_ID } from '../data/layout';
+import { CONDIMENTS_ID, SUPPLY_ID } from '../data/layout';
 import { DRINK_INFO } from '../data/drinks';
 import { GEAR } from '../data/gear';
 import { COLD_BREW_REFILL_SEC, canRefillColdBrew, gearSpeed, podsOnly, tapCupRecipe } from '../sim/gear';
@@ -54,14 +56,14 @@ export const DRINK_STEPS: Record<DrinkId, string[]> = {
   espresso: ['Grind', 'Pull', 'Hand off'],
   latte: ['Grind', 'Pull', 'Steam', 'Hand off'],
   coldBrew: ['Pour cold brew', 'Hand off'],
-  icedLatte: ['Grind', 'Pull', 'Ice + milk', 'Hand off'],
+  icedLatte: ['Grind', 'Pull', 'Milk counter: ice + milk', 'Hand off'],
   mocha: ['Grind', 'Pull', 'Steam', 'Cocoa', 'Hand off'],
   matcha: ['Whisk', 'Hand off'],
   special: ['Pour cold brew', 'Foam', 'Hand off'],
   drip: ['Pour', 'Hand off'],
   americano: ['Grind', 'Pull', 'Water', 'Hand off'],
   doppio: ['Grind', 'Pull', 'Pull again', 'Hand off'],
-  sweetCream: ['Pour cold brew', 'Cream', 'Hand off'],
+  sweetCream: ['Pour cold brew', 'Milk counter: cream', 'Hand off'],
   cafeAuLait: ['Drip', 'Milk', 'Hand off'],
   redEye: ['Drip', 'Shot', 'Hand off'],
   pourOver: ['Pour', 'Hand off'],
@@ -83,7 +85,7 @@ export interface OrderTicket {
   /** Patience left, 0..1. Changes every tick: patch it, do not key on it. */
   patience: number;
   /** Who's asking, when it matters: "Ada · regular", "In a hurry", "Group · 2 more", "Influencer", "Wrong drink!". */
-  tag?: { text: string; tone: 'regular' | 'impatient' | 'group' | 'influencer' | 'upset' };
+  tag?: { text: string; tone: 'regular' | 'impatient' | 'group' | 'influencer' | 'upset' | 'fan' };
   /** Batch/pickup (Gear): rung up at the till, now waiting at the pickup area. */
   pickup?: true;
   /** ui-3.5.1 / B6 leftovers: every drink on a multi-drink ticket, in order, with done ticks (cold crossed out). */
@@ -121,12 +123,17 @@ export function ticketTag(c: GameState['customers'][number], snobs?: ReadonlySet
     }
     case 'influencer':
       return { text: 'Influencer \u00b7 bonus', tone: 'influencer' };
+    // ui-3.10.0 (Round 6 block 5): a fan who came in during the quiet open; very patient
+    case 'fan':
+      return { text: '\u2b50 Early bird! \u00b7 fan, happy to wait', tone: 'fan' };
     default:
       return undefined;
   }
 }
 
 export interface HudLive {
+  /** ui-3.10.0 (Round 6 block 5): seconds until the doors open to regulars (the quiet open); absent once open. */
+  openGrace?: number;
   /** Run day (1-based): day 1 auto-opens the first ticket's recipe steps. */
   day?: number;
   dayInWeek: number;
@@ -299,7 +306,8 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   const held = player.holding;
   const spot = spotOf(station);
   if (spot === 'sink') return sinkHint(state, player);
-  if (spot === 'fridge' || spot === 'supply') return fridgeHint(state, player, spot === 'supply' ? 'Milk & cream' : undefined);
+  if (spot === 'supply') return supplyHint(state, player);
+  if (spot === 'fridge') return fridgeHint(state, player);
   // FB2 B7: the tray table — never "Set on the pickup counter" / Till copy (HANDOFF).
   if (spot === 'trayTable') {
     if (player.tool === 'tray') return { go: false, title: 'Carry the tray to pickup', detail: `${where} · E at pickup puts it down` };
@@ -368,6 +376,32 @@ function gearCounterHint(state: GameState, player: GameState['players'][number],
   return { go: false, title: servings <= CONDIMENTS_LOW ? 'Bar is running low' : 'Cream & sugar', detail: `${where} · ${servings}/${CONDIMENTS.servings} servings` };
 }
 
+/**
+ * ui-3.10.0 (Round 6 block 4, mirrors sim/fridge.ts supplyWants): the milk counter is stocked from a fridge carton,
+ * and a shot or a cold brew in hand fills there into an iced latte / a sweet cream. Empty hands never take milk here.
+ */
+export function supplyHint(state: GameState, player: GameState['players'][number]): HandHint {
+  const where = 'Milk counter';
+  const w = supplyWants(state, player);
+  const milk = Math.floor(state.supplyMilk ?? 0);
+  if (!w) return { go: false, title: 'Milk counter', detail: where };
+  switch (w.kind) {
+    case 'stock':
+      return { go: true, title: 'Stock the milk counter', detail: `${where} · ${w.n} milk from your carton · ${milk} out now` };
+    case 'fill':
+      return { go: true, title: `Make ${DRINK_INFO[w.gives].short.toLowerCase()} here`, detail: `${where} · fills at once · ${w.milk} milk left` };
+    case 'empty':
+      return { go: false, title: 'Milk counter is empty', detail: `${where} · bring a carton from the fridge for the ${DRINK_INFO[w.gives].short.toLowerCase()}` };
+    case 'lift':
+      return { go: true, title: 'Put the milk away', detail: `${where} · ${w.n} milk · closing soon: back in the fridge` };
+    default:
+      if (player.holding !== null && player.holding !== 'grounds') return { go: false, title: 'Only shots and cold brew fill here', detail: `${where} · iced latte or sweet cream` };
+      return milk > 0
+        ? { go: false, title: `Milk counter · ${milk} milk`, detail: `${where} · bring a shot or a cold brew` }
+        : { go: false, title: 'Milk counter is empty', detail: `${where} · stock it with a carton from the fridge` };
+  }
+}
+
 /** ui-3.4.1 (FB2 A4, mirrors sim/fridge.ts fridgeInteract): empty hands take a carton; a cup stays in hand. Round 5: the milk & cream shelf uses the same copy. */
 function fridgeHint(state: GameState, player: GameState['players'][number], label?: string): HandHint {
   const id = fridgeGear(state);
@@ -389,6 +423,8 @@ function carryHint(state: GameState, player: GameState['players'][number], stati
   const soon = closingSoon(state);
   if (player.tool === 'milk') {
     if (isFridge(station)) return { go: true, title: 'Put the milk away', detail: `Fridge · ${n} milk back in` };
+    // ui-3.10.0 (Round 6 block 4): the milk counter by the sink takes the carton for cold milk drinks
+    if (station?.id === SUPPLY_ID) return supplyHint(state, player);
     if (station && isMilkStation(station)) {
       return soon
         ? { go: true, title: 'Put a carton out', detail: `${STATION_NAME[station.kind]} · closing soon: the fridge is better` }
@@ -396,7 +432,7 @@ function carryHint(state: GameState, player: GameState['players'][number], stati
     }
     return soon
       ? { go: false, title: 'Put the milk in the fridge', detail: 'Closing soon: walk it over, or R puts it back' }
-      : { go: false, title: 'Carry the milk to the steam wand', detail: 'R puts it back in the fridge' };
+      : { go: false, title: 'Carry the milk to the steam wand or the milk counter', detail: 'R puts it back in the fridge' };
   }
   if (isFridge(station)) return { go: true, title: 'Put the condiment bar away', detail: `Fridge · ${n} servings kept for tomorrow` };
   if (station?.id === CONDIMENTS_ID) return { go: true, title: 'Set the bar back out', detail: `Condiment bar · ${n} servings` };
@@ -529,6 +565,16 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
     return go(`Rush it out now (−1★)`, `${where} · ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`);
   // Review Block 6: say why E won't fire (busy / wrong item), not a vague idle.
   if (station.busyTicksLeft > 0) return idle('Machine is busy', `${where} · ready in ${Math.ceil(station.busyTicksLeft / TICK_RATE)} s`);
+  // ui-3.10.0 (Round 6 block 1, mirrors sim/stations.ts + stationClear.ts): a waiting cup no longer locks the machine.
+  // Holding the next cup for it, the waiting cup slides to the pickup counter and the new drink starts.
+  if (station.output !== null && held !== null && state.gear === true && canClearOutput(station)) {
+    const r = recipeAt(state, station, held);
+    if (r && r.takes === held) {
+      const waiting = ITEM_LABEL[station.output].toLowerCase();
+      if (state.pass.length >= passSlots(state)) return idle('Pickup counter is full', `${where} · the waiting ${waiting} has nowhere to go`);
+      if (stocked(state, r)) return go(`Make ${ITEM_LABEL[r.gives].toLowerCase()}`, `${where} · the waiting ${waiting} slides to pickup`);
+    }
+  }
   if (station.output !== null) return idle('Hands full: set it down first', where);
   // Gear G5: dead or jammed machines.
   if (station.dead) return idle('Dead till tonight', where);
@@ -556,7 +602,7 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
     if (r && r.consumes.includes('milk') && (state.milkOut ?? 0) < 1) {
       if (!state.stations.some(isFridge)) return idle('No milk: buy a fridge tonight', where);
       return (state.supplies.milk ?? 0) >= 1
-        ? idle('Out of milk here: grab a carton', `${where} · from the fridge or Milk & cream`)
+        ? idle('Out of milk here: grab a carton', `${where} · from the fridge`)
         : idle('Out of milk', `${where} · the fridge is empty too`);
     }
     if (r && !stocked(state, r)) {
@@ -619,6 +665,10 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     ...(state.gear === true ? { gear: true } : {}),
     meName: player?.name ?? '',
     hint: handHint(state, me),
+    ...(() => {
+      const left = state.gear === true && state.phase === 'day' ? openGraceLeft(state) : 0;
+      return left > 0 ? { openGrace: Math.ceil(left / TICK_RATE) } : {};
+    })(),
     closeEarly: closeEarlyVM(state, me),
     ...(state.branch ? { call: callVM(state, me) } : {}),
     ...(() => {

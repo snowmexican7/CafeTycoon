@@ -416,3 +416,13 @@
 @keyframes feed-pop-in { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
 @media (max-width: 1180px) { #hud .hud-feed-pop { width: min(280px, 40vw); right: 10px; } }
 @media (prefers-reduced-motion: reduce) { #hud .hud-feed-pop.in { animation: none; } }
+
+/* ui-3.10.0 (Round 6 block 5): quiet open countdown + early-bird fan tickets */
+#hud .hud-opengrace { position: absolute; top: calc(var(--topbar) + 10px); left: 50%; transform: translateX(-50%) rotate(-1deg); z-index: 6;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 16px; border-radius: 14px; background: #fffaf1;
+  box-shadow: 0 0 0 3px #f6c35b, var(--sh-1); font: 600 15px var(--font-body); color: var(--ink-soft); pointer-events: none; }
+#hud .hud-opengrace b { font: 700 20px var(--font-display); color: var(--ink); }
+#hud .hud-opengrace .n { font-style: normal; color: var(--caramel-dk); font-variant-numeric: tabular-nums; }
+#hud .hud-opengrace:not([hidden]) ~ .toast { top: calc(var(--topbar) + 82px); }
+#hud .ticket.kind-fan .ktag { background: #fdf1d6; color: #8a5a10; }
+#hud .ticket.kind-fan { box-shadow: 0 0 0 2px #f6c35b, var(--sh-1); }

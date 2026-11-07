@@ -2,11 +2,13 @@ import { sinkToast, SINK_ID } from './sinkModel';
 import { fridgeLabel, fridgeToast, isFridgeEvent } from './fridgeModel';
 import { handmadeToast, isHandmadeEvent } from './handmadeModel';
 import { TWIST_INFO, type TwistId } from '../sim/taste';
-import type { DrinkId, GameState, Personality } from '../sim/types';
+import type { DrinkId, GameState } from '../sim/types';
+import { DRINK_INFO } from '../data/drinks';
+import { SUPPLY_ID } from '../data/layout';
 
 /**
  * Pure helpers for customer and crew personality visuals: serve toasts, perfect-serve celebrations,
- * bot looks and emotes, combo streaks, fail feedback, and the crew vibe meter. No Pixi here.
+ * combo streaks, fail feedback, and the crew vibe meter. No Pixi here.
  */
 
 const DRINK_PHRASE: Record<DrinkId, string> = {
@@ -246,6 +248,9 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
       bursts.push({ kind: 'storm', count: 1 });
       resetCombo(mem);
       bumpVibe(mem, -8);
+    } else if (e.kind === 'station.clear' || e.kind === 'station.clearFull' || e.kind === 'supply.fill' || e.kind === 'fan') {
+      const t = round6Note(e, next);
+      if (t) bursts.push({ kind: 'note', ...t });
     } else if (e.kind === 'station.reset') {
       // FB2 C10: layout snapped back after a grow or gear change.
       bursts.push({ kind: 'note', text: 'Bar layout went back to the default', tone: 'warn' });
@@ -275,6 +280,31 @@ export function crewBursts(prev: GameState | null, next: GameState, lastSeq: num
   mem.lostSeen = lostNow;
 
   return { bursts, lastSeq: Math.max(lastSeq, cursor) };
+}
+
+/** Short drink name for a floating note ("Latte", "Iced latte"). */
+const short = (d: unknown): string => (typeof d === 'string' && d in DRINK_INFO ? DRINK_INFO[d as DrinkId].short : 'Cup');
+
+/**
+ * ui-3.10.0 Round 6 cues (pure, testable): a waiting cup sliding to pickup (`station.clear`), the counter being full
+ * (`station.clearFull`), a cold milk drink made at the milk counter (`supply.fill`) and an early-bird fan (`fan`).
+ */
+export function round6Note(e: { kind: string; data: Record<string, unknown> }, state: Pick<GameState, 'customers'>): { text: string; tone: 'good' | 'warn' | 'bad'; at?: string } | null {
+  const st = typeof e.data.station === 'string' ? e.data.station : undefined;
+  switch (e.kind) {
+    case 'station.clear':
+      return { text: `${short(e.data.drink)} → pickup`, tone: 'good', ...(st ? { at: st } : {}) };
+    case 'station.clearFull':
+      return { text: 'Pickup counter is full!', tone: 'warn', ...(st ? { at: st } : {}) };
+    case 'supply.fill':
+      return { text: `${short(e.data.drink)} made`, tone: 'good', at: SUPPLY_ID };
+    case 'fan': {
+      const c = state.customers.find((x) => x.id === Number(e.data.customer));
+      return { text: `⭐ Early bird! ${c?.name ? `${c.name}, a fan,` : 'A fan'} is happy to wait`, tone: 'good' };
+    }
+    default:
+      return null;
+  }
 }
 
 /** Label + tone for the HUD vibe chip. */

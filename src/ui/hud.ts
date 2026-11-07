@@ -96,6 +96,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <div class="hud-office" role="status" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
     <div class="hud-checklist" role="status" hidden></div>
+    <div class="hud-opengrace" role="timer" aria-live="polite" hidden></div>
     <section class="hud-restock-panel" id="hud-restock-panel" aria-label="Rush delivery" hidden></section>
     <div class="hud-syrup" role="group" aria-label="Syrup picker" hidden></div>
     <div class="toast" role="status" hidden></div>
@@ -182,6 +183,16 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   // FB2 B6 leftovers: office-run phone (countdown only).
   const officeEl = $<HTMLElement>('.hud-office');
   let lastOffice = '';
+  // ui-3.10.0 (Round 6 block 5): the quiet open — a doors-open countdown while only early fans may walk in
+  const graceEl = $<HTMLElement>('.hud-opengrace');
+  let lastGrace = -1;
+  function renderGrace(secs: number | undefined): void {
+    const n = secs ?? 0;
+    if (n === lastGrace) return;
+    lastGrace = n;
+    graceEl.hidden = n <= 0;
+    if (n > 0) graceEl.innerHTML = `<b>Doors open in <i class="n">${n}</i>s</b><span>Dump old coffee, get the milk out. Only early birds now.</span>`;
+  }
   // ui-3.4.1 (FB2 A4): the closing-soon checklist, ticked off as things get put away
   const listEl = $<HTMLElement>('.hud-checklist');
   let lastList = '';
@@ -605,6 +616,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       renderCall(live?.call);
       renderOfficePhone(live?.officePhone);
       renderChecklist(live?.checklist);
+      renderGrace(live?.openGrace);
     },
     toast(lines) {
       if (lines.length === 0) return;
