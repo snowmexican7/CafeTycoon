@@ -17,6 +17,7 @@ import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './egg
 import { fridgeInteract, readyStock, useStock } from './fridge';
 import { afterInsert, handmadePress, jugFirst } from './handmade';
 import { trayInteract } from './tray';
+import { canClearOutput, clearOutputToPass } from './stationClear';
 import type { DrinkId, GameState, ItemKind, PlayerId, Station, StationKind, SupplyId } from './types';
 
 /** Each working station's first (classic) recipe: what it takes, gives back and uses up. See RECIPES for all of them. */
@@ -187,10 +188,13 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   }
   if (gearTapPour(state, station, player)) return state;
   const idle = station.busyTicksLeft === 0 && station.output === null;
-  if (idle && gearBlocked(state, station, player)) return state;
+  // Round 6 block 1: a waiting cup doesn't lock the machine for a held-cup recipe; it moves to the pickup counter first.
+  const clearing = !idle && player.holding !== null && canClearOutput(station);
+  if ((idle || clearing) && gearBlocked(state, station, player)) return state;
   const recipe = recipeAt(state, station, player.holding);
-  if (idle && recipe && stocked(state, recipe) && (station.batchLeft !== 0 || !tapCupRecipe(recipe))) {
+  if ((idle || (clearing && recipe?.takes === player.holding)) && recipe && stocked(state, recipe) && (station.batchLeft !== 0 || !tapCupRecipe(recipe))) {
     if (jugFirst(state, player, station, recipe)) return state; // FB2 B8: a person fills the milk jug first
+    if (!idle && !clearOutputToPass(state, station, player)) return state;
     for (const s of recipe.consumes) useStock(state, s);
     cupIntoStation(player, station);
     // Gear Tree: the iced latte step uses a steeped cup (the sweet-cream step does not); cheap gear marks the cup.
