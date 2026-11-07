@@ -2722,3 +2722,8 @@ Spec: `docs/CLAUDE_PROMPT_ROUND6.md`. One branch per block; names as built.
   tick), at most one; `spawnFan(state)`, event `fan { customer }`, `DayStats.fan?`. Helper `openGraceLeft(state)`
   (ticks left). Tests: `src/sim/testSetup.ts` (via `vite.config.ts` `setupFiles`) sets `openGraceSeconds` to 0 for
   every other test file so they keep customers right after `startDay`; `openGrace.test.ts` restores 8. Smoke runs use 8.
+- **Block 2, patience and groups (`r6-patience`, constants only, no protocol change).** `ECONOMY.patienceSeconds` 33 →
+  36; impatient patience 0.6 → 0.68; mix normal 0.65 → 0.63, group 0.12 → 0.14; `ORDERS.combo.chance` 0.08 → 0.10.
+  Group size (2–3), office and day 1 unchanged (day 1 stays gentler via `DAY_CURVE` 1.12 and no groups). Balance,
+  before → after: gearBalance 7×4 served 1429 → 1458, lost 443 → 417, cash 2232 → 1832, 0 bankrupt; p4Smoke 14×3
+  served 690 → 711, lost 276 → 285, cash 528 → 744, 0 bankrupt. The two cash readings disagree: Kennedy to judge in play.

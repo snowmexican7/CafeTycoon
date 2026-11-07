@@ -20,6 +20,8 @@ when a build goes out, the line moves under its version with the date.
   gets its drink walks out and you lose the whole order. Use the serving tray.
 - Early birds: the first 8 seconds of each day are quiet (time to dump old coffee and stock milk), and sometimes a very
   patient fan shows up early.
+- Customers are a little more patient (impatient ones too), and more of them order for friends: a few more combos and
+  group orders instead of quick walk-outs.
 
 ## 3.9.2 — 2026-11-05 · A solid serving counter
 
