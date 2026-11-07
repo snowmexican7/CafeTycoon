@@ -4,7 +4,7 @@ import { step } from './step';
 import { stationsFromSlots } from './slots';
 import { applyGearInput, podsOnly } from './gear';
 import { addStandIns } from './bots/roster';
-import { chainFor } from './bots/brain';
+import { chainFor } from '../harness/brain';
 import { gearVM } from '../ui/gearVM';
 import { handHint, hudLive } from '../ui/live';
 import { nextStepIndex, ticketSteps, ticketsHtml, ticketsKey, type TicketOpts } from '../ui/tickets';

@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { addStandIns } from './roster';
-import { ensureCounterSpots, stationsFromSlots } from '../slots';
-import type { GearId } from '../../data/gear';
-import type { GameState } from '../types';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { addStandIns } from '../sim/bots/roster';
+import { ensureCounterSpots, stationsFromSlots } from '../sim/slots';
+import type { GearId } from '../data/gear';
+import type { GameState } from '../sim/types';
 
 /**
  * A stocked Gear stand (C1 tap, E1 pods, and a plain steam station in the third slot: FB2 C9 retired the S1 steamer; a

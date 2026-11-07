@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { stationsFromSlots, type SlotContent } from '../slots';
-import { BASE_DRINKS } from '../../data/drinks';
-import type { GearId } from '../../data/gear';
-import type { BotStep, Customer, DrinkId, GameState, Player, Station, SupplyId } from '../types';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { stationsFromSlots, type SlotContent } from '../sim/slots';
+import { BASE_DRINKS } from '../data/drinks';
+import type { GearId } from '../data/gear';
+import type { BotStep, Customer, DrinkId, GameState, Player, Station, SupplyId } from '../sim/types';
 import { think } from './brain';
-import { addStandIns } from './roster';
+import { addStandIns } from '../sim/bots/roster';
 
 /** A café-tier Gear run with the bar set by hand, `standIns` stand-in bots, p1 parked, no walk-ins, drip on the menu. */
 function gearShop(slots: SlotContent[], gear: (GearId | null)[], standIns = 1): GameState {

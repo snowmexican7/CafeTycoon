@@ -1,17 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { ECONOMY } from '../../data/economy';
-import { LAYOUT } from '../../data/layout';
-import { createRun, startDay } from '../run';
-import { nearestStation } from '../movement';
-import { step } from '../step';
-import type { GameState, Personality, Player, Vec2 } from '../types';
+import { ECONOMY } from '../data/economy';
+import { LAYOUT } from '../data/layout';
+import { createRun, startDay } from '../sim/run';
+import { nearestStation } from '../sim/movement';
+import { step } from '../sim/step';
+import type { GameState, Personality, Player, Vec2 } from '../sim/types';
 import { chainFor, dropPlan, reactionDelay, think, uncoveredOrder } from './brain';
-import { findPath, floorDropNode, isWalkable, nodeOf, targetNodes, walkableNodes } from '../path';
-import { addStandIns, botSpeed, makeBotState } from './roster';
-import { floorFields } from '../tiles';
-import { stationsFromSlots, type SlotContent } from '../slots';
-import { tierOf } from '../growth';
-import { spillTiles } from '../floor';
+import { findPath, floorDropNode, isWalkable, nodeOf, targetNodes, walkableNodes } from '../sim/path';
+import { addStandIns, botSpeed, makeBotState } from '../sim/bots/roster';
+import { floorFields } from '../sim/tiles';
+import { stationsFromSlots, type SlotContent } from '../sim/slots';
+import { tierOf } from '../sim/growth';
+import { spillTiles } from '../sim/floor';
 
 /** One human p1 who never moves, `bots` bot baristas, no arrivals, and a long day. */
 function cafe(bots: number): GameState {

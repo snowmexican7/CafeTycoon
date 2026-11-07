@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { addStandIns } from './roster';
-import { makeTicket } from '../orders';
-import type { GearId } from '../../data/gear';
-import type { Customer, DrinkId, GameState } from '../types';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { addStandIns } from '../sim/bots/roster';
+import { makeTicket } from '../sim/orders';
+import type { GearId } from '../data/gear';
+import type { Customer, DrinkId, GameState } from '../sim/types';
 
 /** A stocked Gear cart (tap + pods) with one stand-in, nobody else on the floor, no walk-ins. */
 function cartDay(bots = 1): GameState {

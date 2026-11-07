@@ -7,6 +7,7 @@
 import { createRun, startNight } from '../src/sim/run';
 import { beginSeason } from '../src/sim/season';
 import { step } from '../src/sim/step';
+import { installHarness } from '../src/harness';
 import { addStandIns, syncBots } from '../src/sim/bots/roster';
 import { restockCost } from '../src/sim/night';
 import { expectedUse } from '../src/sim/brief';
@@ -17,6 +18,8 @@ import { fridgeWanted } from '../src/sim/fridge';
 import { TIERS, nextTier } from '../src/sim/growth';
 import { gearArea } from '../src/sim/gear';
 import type { GameState, PlayerInput, ScenarioId, SupplyId, TierId } from '../src/sim/types';
+
+installHarness(); // bot cut: stand-ins are played by the test-only player
 // Node globals, typed locally so src tests can import this file without @types/node.
 declare const process: { env: Record<string, string | undefined>; argv: string[]; exit(code?: number): never };
 

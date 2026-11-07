@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { secondsToTicks } from '../constants';
-import { stationsFromSlots } from '../slots';
-import { ECONOMY } from '../../data/economy';
-import type { GearId } from '../../data/gear';
-import type { BotStep, Customer, GameState, Player, Station, SupplyId } from '../types';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { secondsToTicks } from '../sim/constants';
+import { stationsFromSlots } from '../sim/slots';
+import { ECONOMY } from '../data/economy';
+import type { GearId } from '../data/gear';
+import type { BotStep, Customer, GameState, Player, Station, SupplyId } from '../sim/types';
 import { think } from './brain';
-import { addStandIns } from './roster';
+import { addStandIns } from '../sim/bots/roster';
 import { helping, ticketFresh } from './helper';
 
 /** FB2 A1: a stocked Gear stand (C1 tap + E1 pods) with one person (p1) and `bots` crew bots, no walk-ins, no events. */

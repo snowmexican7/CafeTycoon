@@ -19,7 +19,7 @@ import { TICK_RATE, secondsToTicks } from './constants';
 import { openGraceLeft, spawnCustomers, spawnFan, stepCustomers } from './customers';
 import { stepLine, stepWaiting } from './line';
 import { stepEvents } from './events';
-import { computeModifiers } from './effects';
+import { computeModifiers, type Modifiers } from './effects';
 import { applyMenuInput } from './menu';
 import { applyMovement } from './movement';
 import { applyNightInput, applyRestockInput, stepNight } from './night';
@@ -27,11 +27,10 @@ import { startNight } from './run';
 import { stepPass } from './pass';
 import { interact, stepStations } from './stations';
 import { applySyrupInput, stepHandmade } from './handmade';
-import type { GameState, PlayerInput } from './types';
+import type { GameState, ItemKind, Player, PlayerInput } from './types';
 import { validateInput } from './validate';
 import { isBotId, syncBots } from './bots/roster';
 import { applyStaffInput } from './staff';
-import { afterBotInteract, stepBots } from './bots/brain';
 import { drinkEspresso, stepEspresso } from './espresso';
 import { stepEggs, unlockSecret } from './eggs';
 import { stepBumps, stepCustomerBumps } from './bumps';
@@ -252,12 +251,26 @@ export function enterClosing(s: GameState): void {
   s.phaseTicksLeft = secondsToTicks(ECONOMY.closingGraceSeconds);
 }
 
+/**
+ * Bot cut step 2: the old bot brain is a test-only player (src/harness/). The game never imports it; tests and
+ * scripts plug it in here with `installHarness()`, so a stand-in moves and presses at the same point in the tick
+ * as it always did. With no driver installed, bot players simply stand still.
+ */
+export interface BotDriver {
+  step(s: GameState, m: Modifiers): void;
+  afterInteract(s: GameState, p: Player, heldBefore: ItemKind | null): void;
+}
+let botDriver: BotDriver | null = null;
+export function setBotDriver(d: BotDriver | null): void {
+  botDriver = d;
+}
+
 function stepDay(s: GameState, doorsOpen: boolean): void {
   stepEspresso(s);
   stepEvents(s, doorsOpen);
   const m = computeModifiers(s);
   stepStuns(s);
-  stepBots(s, m);
+  botDriver?.step(s, m);
   applyMovement(s, m.moveSpeed);
   stepBumps(s);
   stepCustomerBumps(s);
@@ -271,7 +284,7 @@ function stepDay(s: GameState, doorsOpen: boolean): void {
     if (!p.interactQueued) continue;
     const held = p.holding;
     interact(s, p.id);
-    if (p.bot) afterBotInteract(s, p, held);
+    if (p.bot) botDriver?.afterInteract(s, p, held);
   }
   resolveDrops(s);
   stepRingUp(s); // Round 3 item 5: a ring-up at the till takes time (and self-order screens take orders)

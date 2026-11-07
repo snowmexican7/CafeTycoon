@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay, startNight } from '../run';
-import { step } from '../step';
-import { branchAreas } from '../branch';
-import { callFor, callRinging, type CallKind } from '../call';
-import { secondsToTicks } from '../constants';
-import type { GameState } from '../types';
+import { createRun, startDay, startNight } from '../sim/run';
+import { step } from '../sim/step';
+import { branchAreas } from '../sim/branch';
+import { callFor, callRinging, type CallKind } from '../sim/call';
+import { secondsToTicks } from '../sim/constants';
+import type { GameState } from '../sim/types';
 
 const SECS = (n: number) => secondsToTicks(n);
 

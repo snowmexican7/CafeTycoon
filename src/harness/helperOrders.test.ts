@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { secondsToTicks } from '../constants';
-import { ECONOMY } from '../../data/economy';
-import type { GearId } from '../../data/gear';
-import type { Customer, DrinkId, GameState, Player, Station, SupplyId } from '../types';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { secondsToTicks } from '../sim/constants';
+import { ECONOMY } from '../data/economy';
+import type { GearId } from '../data/gear';
+import type { Customer, DrinkId, GameState, Player, Station, SupplyId } from '../sim/types';
 import { uncoveredOrders } from './brain';
-import { addStandIns } from './roster';
+import { addStandIns } from '../sim/bots/roster';
 import { heldByPerson, heldForPeople } from './helper';
-import { makeTicket } from '../orders';
+import { makeTicket } from '../sim/orders';
 
 /** FB2 B6 fix round 1: a stocked Gear stand (C1 tap + E1 pods) with one person (p1) and one crew bot. */
 function helperStand(): GameState {

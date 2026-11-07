@@ -1,7 +1,11 @@
 import type { HostToClient } from '../net/transport';
 import { TICK_RATE } from '../sim/constants';
 import { step } from '../sim/step';
+import { installHarness } from '../harness';
 import type { GameState, PlayerInput } from '../sim/types';
+
+// Bot cut step 2, TEMPORARY: the live game still has bot crewmates until step 5 removes the bots setting.
+installHarness();
 
 /** Snapshots go out at 20 Hz. */
 export const SNAPSHOT_INTERVAL_MS = 50;

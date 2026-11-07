@@ -2,10 +2,13 @@
 import { addStandIns } from '../src/sim/bots/roster';
 import { createRun } from '../src/sim/run';
 import { step } from '../src/sim/step';
+import { installHarness } from '../src/harness';
 import { nightInputs } from './balanceCore';
 import type { GameState } from '../src/sim/types';
 import { applyPatch, diff, roundFloats } from '../src/net/delta';
 import { KEYFRAME_EVERY } from '../src/net/hostRoom';
+
+installHarness(); // bot cut: stand-ins are played by the test-only player
 // Wire size per snapshot at 20 Hz (every 3rd 60 Hz tick): full JSON vs a delta against the last one sent.
 let wirePrev: unknown = null; let wireTicks = 0; let diffMs = 0; let fullSum = 0, deltaSum = 0, deltaMax = 0, wireN = 0, mismatches = 0;
 let last = '';

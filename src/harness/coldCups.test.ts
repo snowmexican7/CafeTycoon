@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { createRun, startDay } from '../run';
-import { step } from '../step';
-import { addStandIns } from './roster';
+import { createRun, startDay } from '../sim/run';
+import { step } from '../sim/step';
+import { addStandIns } from '../sim/bots/roster';
 import { afterBotInteract, dropPlan, think } from './brain';
-import { TICK_RATE } from '../constants';
-import type { GearId } from '../../data/gear';
-import type { BotStep, Customer, DrinkId, GameState, PassItem, SupplyId } from '../types';
-import { stationsFromSlots } from '../slots';
+import { TICK_RATE } from '../sim/constants';
+import type { GearId } from '../data/gear';
+import type { BotStep, Customer, DrinkId, GameState, PassItem, SupplyId } from '../sim/types';
+import { stationsFromSlots } from '../sim/slots';
 
 // Feedback 2 A2: bots and cold cups (src/sim/cooling.ts).
 const secs = (n: number) => Math.round(n * TICK_RATE);

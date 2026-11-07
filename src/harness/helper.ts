@@ -23,14 +23,14 @@
  * mop, answer the phone, rescue orphaned drinks, and make the drinks people aren't covering. Pure: no RNG,
  * no state written.
  */
-import { ECONOMY } from '../../data/economy';
-import { secondsToTicks } from '../constants';
-import { STATION_RECIPES, recipeAt } from '../stations';
-import { recipeChain } from '../../data/drinks';
-import { tillNext } from '../till';
-import type { BotStep, Customer, GameState, Player, Station } from '../types';
-import { humanCount } from './roster';
-import { undoneDrinks } from '../orders';
+import { ECONOMY } from '../data/economy';
+import { secondsToTicks } from '../sim/constants';
+import { STATION_RECIPES, recipeAt } from '../sim/stations';
+import { recipeChain } from '../data/drinks';
+import { tillNext } from '../sim/till';
+import type { BotStep, Customer, GameState, Player, Station } from '../sim/types';
+import { humanCount } from '../sim/bots/roster';
+import { undoneDrinks } from '../sim/orders';
 
 const BOTS = ECONOMY.bots;
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);

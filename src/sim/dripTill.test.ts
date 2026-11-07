@@ -5,7 +5,7 @@ import { createRun, startDay } from './run';
 import { applyGearInput } from './gear';
 import { step } from './step';
 import { addStandIns } from './bots/roster';
-import { think } from './bots/brain';
+import { think } from '../harness/brain';
 import { targetNodes } from './path';
 import { groups } from './rearrange';
 import type { CreateRunOptions, Customer, GameState, TierId, Vec2 } from './types';
