@@ -23,6 +23,10 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-06: **Bots, answered:** solo only gets a robot cashier (on by default, off switch, $1/day); co-op has no
+  bots at all (a friend dropping out ends the run); no hired bot baristas, temps or bot wages; the phone answering
+  mechanic is cut (calls are heads-ups only); the old bot brain stays as a test-only player. Plan:
+  `docs/PLAN_BOTS_CUT_AND_WANDS.md`.
 - 2026-11-06: **Bots are being cut almost entirely.** Design for human play only; at most a single-player robot cashier
   that just rings up. No new bot logic, bot tests or bot review asks (beyond "nothing crashes"). Plan (draft, awaiting Kennedy's
   answers): `docs/PLAN_BOTS_CUT_AND_WANDS.md`.

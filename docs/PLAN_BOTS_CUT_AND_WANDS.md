@@ -1,6 +1,6 @@
 # Plan: cut the bots, keep a robot cashier, and make wand upgrades ease the meters
 
-Status: **draft for Kennedy** (2026-11-06, Claude). Nothing below is built. Decisions are logged in
+Status: **approved by Kennedy 2026-11-06** (answers below). Nothing below is built yet. Decisions are logged in
 `docs/HANDOFF.md` (2026-11-06). The facts come from a survey of `main` at caf1cce.
 
 ## Why
@@ -104,6 +104,21 @@ Rough size: Phase 1 is the biggest (several days of agent work, mostly test chur
 
 **Risk:** solo play gets harder once the bot crew is gone. Today a solo café is balanced around one person plus bots
 and wages. The robot cashier softens it, and Kennedy's playtests decide the rest.
+
+## Kennedy's answers (2026-11-06)
+
+1. **Robot cashier:** solo only, on by default with an off switch. Free or a very low daily charge — Claude's call:
+   **$1 a day** on the receipt (a named constant, easy to set to 0).
+2. **Co-op:** no bots at all, not even to cover a friend who drops out; the run is simply over then.
+3. **Phone:** it's a coffee game, not an answering-the-phone game. **Cut the answering mechanic**: no `call` input, no
+   bot answering. Calls stay only as heads-ups that come through (like the office run's ring). The branch-call outcomes
+   (take an order / fix a machine) go away with it.
+4. **Hired bot baristas, the temp card and bot wages:** removed. They'd need a full rework to come back.
+5. **Tests:** keep the old bot brain as a test-only player (`src/harness/`), so the automated play-throughs and the
+   `p4Smoke` check keep working. It never runs in the game.
+
+Phase 1 step 4 therefore also removes `call.ts` answering (`applyBotCall`, the `call` input, `callAnswer`, branch-call
+outcomes), keeping the office-run heads-up.
 
 ## Open questions for Kennedy
 
