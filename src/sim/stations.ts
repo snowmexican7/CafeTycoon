@@ -15,7 +15,7 @@ import { rollBinLeak, rollStationMess } from './messes';
 import { RECIPES, recipeChain, type Recipe, type RecipeStation } from '../data/drinks';
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
 import { fridgeInteract, readyStock, useStock } from './fridge';
-import { afterInsert, handmadePress, jugFirst } from './handmade';
+import { afterInsert, handmadePress, jugFirst, steamLocked } from './handmade';
 import { trayInteract } from './tray';
 import { canClearOutput, clearOutputToPass } from './stationClear';
 import { recipeAllowed } from './unlocks';
@@ -126,6 +126,8 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
     return state;
   }
   if (station.occupiedBy !== null) return state;
+  // Round 6: a foam meter on this wand (busyTicksLeft stays 0) still locks it for everyone else.
+  if (steamLocked(state, station)) return state;
   if (catBlocking(state, station.id)) return state;
   // FB2 A3: the back sink pours a drink away; a drip machine with its pot out, or a cold or stale pot, handles the press itself.
   if (isSink(station) && state.gear === true) {

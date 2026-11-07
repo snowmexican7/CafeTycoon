@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- Hand-made lattes: fill the jug, stop the steam meter for foam, and the drink is already in your hand — no waiting on
+  the wand and no second E to pick it up.
 - Dropping a group's cups on the pickup counter is risky now: other customers can grab them, and a group that never
   gets its drink walks out and you lose the whole order. Use the serving tray.
 - Early birds: the first 8 seconds of each day are quiet (time to dump old coffee and stock milk), and sometimes a very
