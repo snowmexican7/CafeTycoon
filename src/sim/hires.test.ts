@@ -10,7 +10,7 @@ import { forecastIsRough } from './forecast';
 import { priceForecast } from './pricing';
 import { menuDrinks } from './unlocks';
 import { syncBots } from './bots/roster';
-import { crewTips } from './bots/planner';
+import { crewTips } from './advice';
 import { wagesForDay, wageEach, billsForDay } from './staff';
 import { HIRE_WAGE, MARKETER_TRAFFIC, hasMarketer, hasStrategist, hireWagesForDay } from './hires';
 import { bestStep } from './strategist';

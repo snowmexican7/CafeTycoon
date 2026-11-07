@@ -5,7 +5,7 @@ import { stationsFromSlots } from './slots';
 import { interact } from './stations';
 import { floorPatience, stepCleanliness, placeMess } from './floor';
 import { computeModifiers } from './effects';
-import { nodeOf } from './bots/path';
+import { nodeOf } from './path';
 import { rngNext } from './rng';
 import { GEAR_FLOOR, MESSES } from './messes';
 import { ECONOMY } from '../data/economy';

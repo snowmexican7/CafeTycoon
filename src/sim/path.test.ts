@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { ECONOMY } from '../../data/economy';
-import { createRun, startDay } from '../run';
-import type { Vec2 } from '../types';
+import { ECONOMY } from '../data/economy';
+import { createRun, startDay } from './run';
+import type { Vec2 } from './types';
 import { findPath, idleNode, isWalkable, nodeOf, targetNodes } from './path';
 
 const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));

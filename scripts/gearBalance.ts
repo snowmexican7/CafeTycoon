@@ -10,7 +10,7 @@ import { step } from '../src/sim/step';
 import { addStandIns, syncBots } from '../src/sim/bots/roster';
 import { restockCost } from '../src/sim/night';
 import { expectedUse } from '../src/sim/brief';
-import { GEAR_PATH, PATH_WAND, pathWandCard, planNight, wandFirst } from '../src/sim/bots/planner';
+import { GEAR_PATH, PATH_WAND, pathWandCard, planNight, wandFirst } from '../src/sim/advice';
 import { ECONOMY } from '../src/data/economy';
 import { GEAR, WANDS } from '../src/data/gear';
 import { fridgeWanted } from '../src/sim/fridge';

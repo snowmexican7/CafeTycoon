@@ -13,7 +13,7 @@ import { GEAR } from '../../data/gear';
 import { zeroDrinks } from '../tally';
 import { tally } from '../tally';
 import type { BotAction, BotState, BotStep, Customer, DrinkId, GameState, ItemKind, Mess, Player, Station, StationKind, Vec2 } from '../types';
-import { byDistance, findPath, floorDropNode, idleNode, nodeOf, targetNodes, walkableNodes } from './path';
+import { byDistance, findPath, floorDropNode, idleNode, nodeOf, targetNodes, walkableNodes } from '../path';
 import { spillHeld, spillTiles } from '../floor';
 import { floorWidth } from '../growth';
 import { gearArea, tapCupRecipe } from '../gear';

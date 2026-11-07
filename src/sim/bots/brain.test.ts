@@ -6,7 +6,7 @@ import { nearestStation } from '../movement';
 import { step } from '../step';
 import type { GameState, Personality, Player, Vec2 } from '../types';
 import { chainFor, dropPlan, reactionDelay, think, uncoveredOrder } from './brain';
-import { findPath, floorDropNode, isWalkable, nodeOf, targetNodes, walkableNodes } from './path';
+import { findPath, floorDropNode, isWalkable, nodeOf, targetNodes, walkableNodes } from '../path';
 import { addStandIns, botSpeed, makeBotState } from './roster';
 import { floorFields } from '../tiles';
 import { stationsFromSlots, type SlotContent } from '../slots';

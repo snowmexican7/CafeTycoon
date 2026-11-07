@@ -5,7 +5,7 @@ import { stationsFromSlots } from './slots';
 import { drinkEspresso } from './espresso';
 import { blocked } from './movement';
 import { floorWidth } from './growth';
-import { isWalkable } from './bots/path';
+import { isWalkable } from './path';
 import { freeSpot } from './spawn';
 import { LAYOUT, layoutFor } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';

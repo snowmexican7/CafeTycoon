@@ -9,7 +9,7 @@ import { interact } from './stations';
 import { drinkEspresso } from './espresso';
 import { blocked, nearestStation } from './movement';
 import { addStandIns } from './bots/roster';
-import { findPath, targetNodes, walkableNodes } from './bots/path';
+import { findPath, targetNodes, walkableNodes } from './path';
 import { SINK_ID, LAYOUT, layoutFor } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
 import { ECONOMY } from '../data/economy';

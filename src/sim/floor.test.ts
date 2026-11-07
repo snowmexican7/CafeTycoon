@@ -3,7 +3,7 @@ import { createRun, startDay } from './run';
 import { step } from './step';
 import { onTileEntry } from './floor';
 import { trackTiles } from './tiles';
-import { isWalkable } from './bots/path';
+import { isWalkable } from './path';
 import { seedRng } from './rng';
 import type { GameState, Mess, Vec2 } from './types';
 

@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { createRun } from '../run';
-import { step } from '../step';
-import { computeModifiers } from '../effects';
-import { ECONOMY } from '../../data/economy';
-import { DRINK_INFO, TAP_DRINKS } from '../../data/drinks';
-import { menuDrinks, unlockDrink } from '../unlocks';
-import { billsForDay } from '../staff';
-import { steepTarget } from '../steep';
-import { PLAN_PRIORITY, planNight, STEEP_MARGIN } from './planner';
-import type { Advice } from './planner';
-import type { GearId } from '../../data/gear';
-import type { DrinkId, GameState, PlayerInput } from '../types';
+import { createRun } from './run';
+import { step } from './step';
+import { computeModifiers } from './effects';
+import { ECONOMY } from '../data/economy';
+import { DRINK_INFO, TAP_DRINKS } from '../data/drinks';
+import { menuDrinks, unlockDrink } from './unlocks';
+import { billsForDay } from './staff';
+import { steepTarget } from './steep';
+import { PLAN_PRIORITY, planNight, STEEP_MARGIN } from './advice';
+import type { Advice } from './advice';
+import type { GearId } from '../data/gear';
+import type { DrinkId, GameState, PlayerInput } from './types';
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 

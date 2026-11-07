@@ -4,7 +4,7 @@ import { LAYOUT } from '../data/layout';
 import { finishDay } from './closing';
 import { serveCustomer, stepCustomers } from './customers';
 import { ROGUE_REVIEW } from './describe';
-import { findPath, nodeOf, targetNodes } from './bots/path';
+import { findPath, nodeOf, targetNodes } from './path';
 import { isFreeForRogue, pickStation } from './rogue';
 import { stationsFromSlots } from './slots';
 import { tierOf } from './growth';

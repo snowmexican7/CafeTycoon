@@ -73,37 +73,37 @@
  * Pure: no RNG, no Date, no mutation of `state`. Reads only what the crew can see (the taste
  * notebook, the scouted rival copy), never hidden state (`comboStars`, `adOutcome`, `rivalMenu`).
  */
-import { AREAS } from '../../data/areas';
-import type { AreaId } from '../../data/areas';
-import { BASE_DRINKS, DRINK_INFO, TAP_DRINKS } from '../../data/drinks';
-import { ECONOMY } from '../../data/economy';
-import { GEAR, WANDS } from '../../data/gear';
-import type { AddOnWand, GearId } from '../../data/gear';
-import { expectedOrders, expectedUse } from '../brief';
-import type { NightFix } from '../brief';
-import { CHECKOUT, nextCheckout } from '../checkout';
-import { CONDIMENTS } from '../condiments';
-import { fridgeCapacity, fridgeWanted, packsThatFit } from '../fridge';
-import { FRIDGES } from '../../data/fridges';
-import { billsForDay, crewCount, crewNames, wageEach } from '../staff';
-import { averageStars } from '../accuracy';
-import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun, wandCards, type WandCard } from '../gear';
-import { DRINK_STATIONS, nextTier, TIERS } from '../growth';
-import { restockCost } from '../night';
-import { steepPlan } from '../steep';
-import { PRICING, priceStep } from '../pricing';
-import { bestStep, forecastProfit, peakSteps } from '../strategist';
-import { HIRE_ROLES, hireWage, isHired, type HireRole } from '../hires';
-import { BRANCH, branchAreas, branchDay, branchExpectedLoss, canOpenBranch } from '../branch';
-import { profitOf } from '../profit';
-import { copyIsLive, countered, hasStamps, isPromoDay, loyaltyLive, RIVAL, sigPrice } from '../rival';
-import { SIG } from '../signature';
-import { reasonOff, slotCount } from '../slots';
-import { knownStars, TWIST_INFO, TWISTS, twistFor } from '../taste';
-import type { TwistId } from '../taste';
-import { menuDrinks, SUPPLY_IDS, unlockedDrinks } from '../unlocks';
-import { BOT_IDS, botsFor, humanCount } from './roster';
-import type { CheckoutId, DrinkId, GameState, PlayerId, StationKind, SupplyId, TierId } from '../types';
+import { AREAS } from '../data/areas';
+import type { AreaId } from '../data/areas';
+import { BASE_DRINKS, DRINK_INFO, TAP_DRINKS } from '../data/drinks';
+import { ECONOMY } from '../data/economy';
+import { GEAR, WANDS } from '../data/gear';
+import type { AddOnWand, GearId } from '../data/gear';
+import { expectedOrders, expectedUse } from './brief';
+import type { NightFix } from './brief';
+import { CHECKOUT, nextCheckout } from './checkout';
+import { CONDIMENTS } from './condiments';
+import { fridgeCapacity, fridgeWanted, packsThatFit } from './fridge';
+import { FRIDGES } from '../data/fridges';
+import { billsForDay, crewCount, crewNames, wageEach } from './staff';
+import { averageStars } from './accuracy';
+import { GEAR_VOTE_MIN, gearRequiresMet, isGearRun, wandCards, type WandCard } from './gear';
+import { DRINK_STATIONS, nextTier, TIERS } from './growth';
+import { restockCost } from './night';
+import { steepPlan } from './steep';
+import { PRICING, priceStep } from './pricing';
+import { bestStep, forecastProfit, peakSteps } from './strategist';
+import { HIRE_ROLES, hireWage, isHired, type HireRole } from './hires';
+import { BRANCH, branchAreas, branchDay, branchExpectedLoss, canOpenBranch } from './branch';
+import { profitOf } from './profit';
+import { copyIsLive, countered, hasStamps, isPromoDay, loyaltyLive, RIVAL, sigPrice } from './rival';
+import { SIG } from './signature';
+import { reasonOff, slotCount } from './slots';
+import { knownStars, TWIST_INFO, TWISTS, twistFor } from './taste';
+import type { TwistId } from './taste';
+import { menuDrinks, SUPPLY_IDS, unlockedDrinks } from './unlocks';
+import { BOT_IDS, botsFor, humanCount } from './bots/roster';
+import type { CheckoutId, DrinkId, GameState, PlayerId, StationKind, SupplyId, TierId } from './types';
 
 /** `equip` is only reused by Gear rows (gear, fridge, staff, hires); Round 4 f deleted the classic slot/equip advice. */
 export type AdviceKind = 'restock' | 'price' | 'twist' | 'signature' | 'scout' | 'rival' | 'grow' | 'checkout' | 'equip' | 'menu';

@@ -1,9 +1,9 @@
-import { ECONOMY } from '../../data/economy';
-import { FRIDGE_ID, LAYOUT, SUPPLY_ID } from '../../data/layout';
-import { floorWidth } from '../growth';
-import { blocked, nearestStation } from '../movement';
-import { spillTiles } from '../floor';
-import type { GameState, Player, Station, Vec2 } from '../types';
+import { ECONOMY } from '../data/economy';
+import { FRIDGE_ID, LAYOUT, SUPPLY_ID } from '../data/layout';
+import { floorWidth } from './growth';
+import { blocked, nearestStation } from './movement';
+import { spillTiles } from './floor';
+import type { GameState, Player, Station, Vec2 } from './types';
 
 const key = (n: Vec2): string => `${n.x},${n.y}`;
 const dist = (a: Vec2, b: Vec2): number => Math.hypot(a.x - b.x, a.y - b.y);

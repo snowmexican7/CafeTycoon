@@ -8,7 +8,7 @@ import { gearBoard } from '../ui/night';
 import { itemIcon } from '../ui/icons';
 import { growthVM, nightViewModel } from '../ui/viewModels';
 import { stationMenuNote } from '../ui/stationsVM';
-import { planNight } from './bots/planner';
+import { planNight } from './advice';
 import type { GameState, Station } from './types';
 
 const run = (gear = true): GameState => {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRun } from './run';
 import { stationsFromSlots, TWIN_OFFSET } from './slots';
 import { nearestStation } from './movement';
-import { targetNodes } from './bots/path';
+import { targetNodes } from './path';
 import { LEVEL_UPS, levelUpGearOk } from './levelUp';
 import { hudGearVM, gearStats } from '../ui/gearVM';
 import { emptySlotPositions } from '../render/slotModel';

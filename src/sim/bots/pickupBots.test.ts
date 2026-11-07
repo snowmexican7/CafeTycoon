@@ -140,7 +140,7 @@ describe('pickup review fixes (M1, M3)', () => {
   });
 
   it('M1: an idle bot does not park on a counter spot a carrier needs', async () => {
-    const { targetNodes, idleNode } = await import('./path');
+    const { targetNodes, idleNode } = await import('../path');
     const s = quiet(gearStand());
     sim(s).pos = { x: 5, y: 5 }; // standing right where a carrier sets drinks down
     const spots = s.stations.filter((st) => st.kind === 'counter');
