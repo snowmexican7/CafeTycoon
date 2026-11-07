@@ -5,7 +5,7 @@ import { step } from './step';
 import type { GameState } from './types';
 
 const run = (): GameState => {
-  const s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 9, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
   startDay(s);
   return s;
 };

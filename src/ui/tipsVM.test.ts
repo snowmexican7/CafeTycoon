@@ -6,7 +6,7 @@ import { shortTip, tipsVM } from './tipsVM';
 import type { PlayerInput } from '../sim/types';
 
 const opening = () => {
-  const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 'auto' } });
+  const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], });
   s.supplies.beans = 0;
   s.supplies.pastry = 500; // R4 b: a stocked case, so no pastry chip crowds the tips under test
   s.cash = 200;
@@ -54,7 +54,7 @@ describe('crew tips (FB1 WP6)', () => {
   it('shows the same chips without a bot crew', () => {
     const s = opening();
     const withBots = tipsVM(s);
-    s.settings = { ...s.settings, bots: 0 };
+    s.settings = { ...s.settings };
     expect(tipsVM(s)).toEqual(withBots);
   });
 });
@@ -68,7 +68,7 @@ describe('reused AdviceKind rows (3.3.1)', () => {
     expect(tipIcon({ kind: 'restock', input: { kind: 'branch', action: 'send', supply: 'beans' } })).toBe('🏪');
     expect(tipIcon({ kind: 'rival', input: { kind: 'rivalCounter' } })).toBe('⏰');
     expect(tipIcon({ kind: 'rival', input: { kind: 'stampCard' } })).toBe('🎟️');
-    expect(tipIcon({ kind: 'equip', input: { kind: 'staff', action: 'fire' } })).toBe('👋');
+    expect(tipIcon({ kind: 'equip', input: { kind: 'staff', action: 'hire', role: 'marketer' } })).toBe('👋');
     expect(tipIcon({ kind: 'equip', input: { kind: 'gear', action: 'buy', gear: 'grinder' } as never })).toBe('⚙️');
     expect(shortTip({ kind: 'restock', text: 'Steep 12 cold brews for tomorrow (about 10 cold brew orders expected)', input: { kind: 'steep', cups: 12 } })).toBe('Steep 12 cold brews for tomorrow');
     expect(shortTip({ kind: 'restock', text: 'x', input: { kind: 'condimentBox', boxes: 1 } })).toMatch(/^Buy 1 condiment box \(\$\d+\)$/);

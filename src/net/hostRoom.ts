@@ -1,7 +1,7 @@
 import type { GameState } from '../sim/types';
 import type { TeleEvent } from '../host/telemetry';
 import { applyPatch, diff, roundFloats } from './delta';
-import { parseBots, parseInput, parseJoin, parseResync, parseTele, PROTOCOL_VERSION, type BotsChoice, type Member } from './protocol';
+import { parseInput, parseJoin, parseResync, parseTele, PROTOCOL_VERSION, type Member } from './protocol';
 import { assignSeat } from './seats';
 import type { RoomLink } from './roomLink';
 import type { HostToClient, Transport } from './transport';
@@ -10,15 +10,8 @@ import type { HostToClient, Transport } from './transport';
 export interface HostRoom {
   members(): Member[];
   latestSnapshot(): HostToClient | null;
-  /** The bots setting the run will start with: the host's pick, else the default for this crew size. */
-  bots(): { bots: BotsChoice; picked: boolean };
-  /** Host only, before the start: pick Off/1–3 (null goes back to the default). Synced to the lobby. */
-  setBots(choice: BotsChoice | null): void;
   close(): void;
 }
-
-/** Off once two or more baristas are in; a lone host gets bots filling the empty seats. */
-export const defaultBots = (humans: number): BotsChoice => (humans >= 2 ? 0 : 'auto');
 
 /** A full snapshot every this many sends (5 s at 20 Hz), so a dropped delta heals on its own. */
 export const KEYFRAME_EVERY = 100;
@@ -38,7 +31,6 @@ export function createHostRoom(
   let latest: HostToClient | null = null;
   let started = false;
   let closed = false;
-  let botsChoice: BotsChoice | null = null;
   // What every peer holds after the last broadcast (floats rounded), and its sequence number.
   let wire: { state: GameState; seq: number; sentAt: number } | null = null;
   const sendKeyframe = (peerId?: string) => {
@@ -47,14 +39,9 @@ export function createHostRoom(
   };
 
   const members = (): Member[] => [host, ...byPeer.values()];
-  const bots = (): { bots: BotsChoice; picked: boolean } => {
-    if (latest) return { bots: latest.state.settings.bots, picked: true };
-    return botsChoice !== null ? { bots: botsChoice, picked: true } : { bots: defaultBots(members().length), picked: false };
-  };
   const broadcastLobby = () => {
     const list = members();
-    const b = bots();
-    link.send('lobby', { t: 'lobby', members: list, started, bots: b.bots, botsPicked: b.picked });
+    link.send('lobby', { t: 'lobby', members: list, started });
     onMembers?.(list);
   };
 
@@ -140,14 +127,6 @@ export function createHostRoom(
   return {
     members,
     latestSnapshot: () => latest,
-    bots,
-    setBots(choice) {
-      if (closed || latest) return;
-      const next = choice === null ? null : (parseBots(choice) ?? null);
-      if (next === botsChoice) return;
-      botsChoice = next;
-      broadcastLobby();
-    },
     close() {
       if (closed) return;
       closed = true;

@@ -19,7 +19,7 @@
  */
 import { ECONOMY } from '../data/economy';
 import { LAYOUT } from '../data/layout';
-import { makeBotState } from './bots/roster';
+import { CASHIER_ID, makeBotState } from './botBody';
 import { findPath, idleNode, nodeOf, targetNodes } from './path';
 import { freeSpot } from './spawn';
 import { floorFields } from './tiles';
@@ -27,7 +27,7 @@ import { nearestStation } from './movement';
 import { selfOrder, tillNext } from './till';
 import type { GameState, Player, Vec2 } from './types';
 
-export const CASHIER_ID = 'cashier';
+export { CASHIER_ID };
 
 /** The till's station id (the batch/pickup counter spot where orders are rung up). */
 const TILL_ID = 'counter';

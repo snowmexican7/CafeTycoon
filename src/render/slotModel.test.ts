@@ -54,7 +54,7 @@ describe('stationBadges', () => {
 });
 
 describe('wallMenuRows (the wall chalkboard follows the menu)', () => {
-  const run = (gear: boolean) => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear });
+  const run = (gear: boolean) => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear });
   it('a classic stand lists its makeable menu drinks at today\'s price', () => {
     const s = run(false);
     const rows = wallMenuRows(s);
@@ -66,7 +66,7 @@ describe('wallMenuRows (the wall chalkboard follows the menu)', () => {
     expect(wallMenuRows(run(true))).toEqual([]);
   });
   it('more than four drinks fold into "+N more"', () => {
-    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'cafe' });
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cafe' });
     const many = ['espresso', 'latte', 'coldBrew', 'mocha', 'americano', 'drip', 'icedLatte', 'doppio'];
     s.unlocked = many as never;
     for (const d of many) (s.menu as Record<string, boolean>)[d] = true;

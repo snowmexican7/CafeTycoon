@@ -13,7 +13,7 @@ import { TICK_RATE } from './constants';
 import { nearestStation } from './movement';
 import { targetNodes } from './path';
 import { planNight, wandFirst } from './advice';
-import { addStandIns } from './bots/roster';
+import { addStandIns } from '../harness/crew';
 import { createSnapshotStore, SNAPSHOT_VERSION } from '../storage/snapshotStore';
 import { memoryStorage } from '../storage/storageLike';
 import { GEAR, GEAR_IDS, GEAR_TREES, WANDS, WAND_SECONDS, WAND_UPGRADE, treeTiers, type AddOnWand, type GearId } from '../data/gear';
@@ -26,7 +26,6 @@ const gearRun = (tier: TierId = 'stand', players = 1): GameState =>
     seed: 7,
     hostId: 'p1',
     players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: ['Kay', 'Mo', 'Ari'][i]! })),
-    settings: { bots: 0 },
     tier,
     gear: true,
   });

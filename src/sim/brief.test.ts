@@ -9,7 +9,7 @@ import { BRANCH, branchDay, branchExpectedLoss } from './branch';
 import { billsForDay } from './staff';
 import type { DayStats, GameState } from './types';
 
-const run = (): GameState => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const run = (): GameState => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 
 const dayStats = (over: Partial<DayStats> = {}): DayStats => ({
   day: 1, served: 23, lost: 2, turnedAway: 0, sales: 40.84, tips: 3, rent: 25, ...over,
@@ -240,7 +240,7 @@ describe('nightBrief alerts', () => {
 });
 
 describe('nightBrief cash alert counts a losing branch (review M4)', () => {
-  const gear = (): GameState => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true, tier: 'stand' });
+  const gear = (): GameState => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true, tier: 'stand' });
   /** A second shop that expects a loss tomorrow: a dull area, no reputation, long (dear) shifts. */
   const withBranch = (losing: boolean): GameState => {
     const s = gear();

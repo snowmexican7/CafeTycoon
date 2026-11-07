@@ -5,9 +5,10 @@ import { step } from './step';
 import { crewRows, tallyStats } from './stats';
 import { awardsFor, awardsText, mvpScore } from './awards';
 import type { GameState, SimEvent } from './types';
+import { addBots } from '../harness/crew';
 
 const run = (seed: number, bots = 2) =>
-  createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'Kennedy' }], settings: { bots } });
+  addBots(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'Kennedy' }] }), bots);
 const ticks = (s: GameState, n: number) => {
   for (let i = 0; i < n; i++) s = step(s, []);
   return s;
@@ -18,7 +19,7 @@ const log = (s: GameState, kind: string, data: SimEvent['data']) => {
 
 describe('crew stats', () => {
   it('counts each log entry once, for the right player', () => {
-    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }] });
     log(s, 'served', { by: 'p1', perfect: true, amount: 6.5 });
     log(s, 'served', { by: 'p2', perfect: false, amount: 4 });
     log(s, 'pass.put', { by: 'p2' });
@@ -51,7 +52,7 @@ describe('crew stats', () => {
 
 describe('awards', () => {
   it('gives every person an award and the MVP to a person', () => {
-    const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }, { id: 'p3', name: 'J' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'S' }, { id: 'p3', name: 'J' }] });
     for (let i = 0; i < 5; i++) log(s, 'served', { by: 'p1', perfect: i < 3, amount: 5 });
     for (let i = 0; i < 4; i++) log(s, 'slip', { player: 'p2' });
     tallyStats(s);
@@ -64,14 +65,14 @@ describe('awards', () => {
   });
 
   it('has no MVP when nobody did anything, but still a joke award each', () => {
-    const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     const aw = awardsFor(s);
     expect(aw.map((a) => a.tone)).toEqual(['joke']);
     expect(s.crew).toEqual({ seen: 0, players: [] }); // reading awards does not touch the state
   });
 
   it('bots are not award rows: no Best Supporting Bot, no bot winners, no bot flag (bot cut)', () => {
-    const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     s.players.push({ ...s.players[0]!, id: 'bot-1', name: 'Bo', bot: { personality: 'steady' } } as GameState['players'][number]);
     for (let i = 0; i < 9; i++) log(s, 'served', { by: 'bot-1', perfect: true, amount: 5 });
     for (let i = 0; i < 3; i++) log(s, 'slip', { player: 'bot-1' });

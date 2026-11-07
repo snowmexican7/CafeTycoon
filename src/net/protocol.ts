@@ -2,7 +2,7 @@ import type { Patch } from './delta';
 import { RESERVED_TELE_KINDS, type TeleEvent } from '../host/telemetry';
 import { isReservedId } from '../sim/constants';
 import { cleanLook } from '../sim/look';
-import type { BotsChoice, GameState, PlayerInput, PlayerLook } from '../sim/types';
+import type { GameState, PlayerInput, PlayerLook } from '../sim/types';
 
 /** Room identity on the public introduction relays. Change it and old builds stop seeing new rooms. */
 export const APP_ID = 'cafetycoon-v1';
@@ -39,7 +39,6 @@ export interface SeatMsg {
   t: 'seat';
   token: string;
 }
-export type { BotsChoice };
 export interface InputMsg {
   t: 'input';
   input: PlayerInput;
@@ -66,10 +65,6 @@ export interface LobbyMsg {
   t: 'lobby';
   members: Member[];
   started: boolean;
-  /** The bots run setting the host will start with (absent from older hosts). */
-  bots?: BotsChoice;
-  /** True when the host picked it; false while it follows the default. */
-  botsPicked?: boolean;
 }
 export interface TeleMsg {
   t: 'tele';
@@ -117,13 +112,6 @@ export function parseSeat(data: unknown): SeatMsg | null {
   return { t: 'seat', token: data.token };
 }
 
-const MAX_BOTS = 3;
-export function parseBots(v: unknown): BotsChoice | undefined {
-  if (v === 'auto') return 'auto';
-  if (finite(v) && Number.isInteger(v) && v >= 0 && v <= MAX_BOTS) return v;
-  return undefined;
-}
-
 export function parseInput(data: unknown): InputMsg | null {
   if (!isObj(data) || data.t !== 'input' || !isObj(data.input)) return null;
   if (!str(data.input.kind) || !str(data.input.playerId)) return null;
@@ -154,13 +142,7 @@ export function parseLobby(data: unknown): LobbyMsg | null {
     const look = cleanLook(m.look);
     members.push({ token: m.token, name: m.name, ...(look ? { look } : {}) });
   }
-  const msg: LobbyMsg = { t: 'lobby', members, started: data.started };
-  const bots = parseBots(data.bots);
-  if (bots !== undefined) {
-    msg.bots = bots;
-    msg.botsPicked = data.botsPicked === true;
-  }
-  return msg;
+  return { t: 'lobby', members, started: data.started };
 }
 
 export function parseTele(data: unknown): TeleMsg | null {

@@ -21,7 +21,7 @@ const ui = (over: Partial<NightUiState> = {}): NightUiState => ({
 });
 
 function withGear(seed = 7): GameState {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }], settings: { bots: 0 }, gear: true, tier: 'cafe' });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }], gear: true, tier: 'cafe' });
   s.day = 3;
   s.phase = 'day';
   s.phaseTicksLeft = secondsToTicks(s.settings.dayLengthSec) - secondsToTicks(20);

@@ -10,7 +10,7 @@ import { tipsField } from './pause';
 import { nightViewModel } from './viewModels';
 
 const run = (tier: 'stand' | 'cart' | 'cafe', gear = true): GameState =>
-  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear });
+  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear });
 const ui = (over: Partial<NightUiState> = {}): NightUiState => ({ tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' }, ...over });
 
 describe('ui-3.4.0 tier looks', () => {

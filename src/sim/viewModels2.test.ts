@@ -5,7 +5,7 @@ import { createRun, startDay } from './run';
 
 describe('hud pass', () => {
   it('hud lists the pass and keys it without seconds', () => {
-    const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
     s.pass = [{ item: 'latte', ticksLeft: 125 }];
     expect(hudViewModel(s).pass).toEqual([{ item: 'latte', secondsLeft: 3 }]);
     const key = hudStructureKey(hudViewModel(s));
@@ -18,7 +18,7 @@ describe('hud pass', () => {
 
 describe('hud chaos', () => {
   it('hud key ignores per-tick chaos values', () => {
-    const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
     const make = (o: { amount?: number; cleanliness?: number; secondsLeft?: number; rogueX?: number; kind?: 'spill' | 'grounds'; heldBy?: string | null; stage?: 'walking' | 'waiting' } = {}): HudVM => ({
       ...hudViewModel(s),
       messes: [{ id: 1, kind: o.kind ?? 'spill', x: 3, y: 4, amount: o.amount ?? 1 }],
@@ -37,7 +37,7 @@ describe('hud chaos', () => {
 
 describe('night menu vm', () => {
   it('lists the menu switches in fixed order', () => {
-    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     s.menu.latte = false;
     expect(nightViewModel(s, 'p1').menu?.map(({ drink, on }) => ({ drink, on }))).toEqual([
       { drink: 'espresso', on: true },
@@ -49,7 +49,7 @@ describe('night menu vm', () => {
 
 describe('hud events', () => {
   it('lists active events and keys them without seconds', () => {
-    const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    const s = startDay(createRun({ seed: 1, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
     s.events = [{ kind: 'rushHour', ticksLeft: 61 }];
     expect(hudViewModel(s).events).toEqual([{ kind: 'rushHour', label: 'Rush hour', secondsLeft: 2 }]);
     const key = hudStructureKey(hudViewModel(s));

@@ -11,10 +11,11 @@ import { callHtml } from '../ui/hud';
 import { callLine } from '../ui/branchView';
 import type { DayStats, GameState } from './types';
 import { diffCues, logCursor, RING_EVERY_SEC } from '../audio/cues';
+import { addBots } from '../harness/crew';
 
 /** A Gear run at night with a branch open since day 1, then rolled to the first day of `kind` call. */
 function dayWithCall(kind: CallKind): GameState {
-  const s = createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }], settings: { bots: 1 } });
+  const s = addBots(createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'Kay' }] }), 1);
   s.gear = true;
   s.tier = 'cafe';
   s.cash = 1000;

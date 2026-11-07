@@ -17,7 +17,7 @@ type Kit = GearId | 'steamer';
 
 /** A Gear stand open for the day: grinder, steamer, espresso and the bin. */
 function gearStand(gear: Kit[] = ['g2', 'steamer', 'e3', 'b0']): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
   s.slotGear = gear.map((id) => (id === 'steamer' ? null : id));
   s.slots = gear.map((id) => (id === 'steamer' ? 'steamer' : GEAR[id].station));
   s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
@@ -29,7 +29,7 @@ function gearStand(gear: Kit[] = ['g2', 'steamer', 'e3', 'b0']): GameState {
   return d;
 }
 
-const classicDay = (): GameState => startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' }));
+const classicDay = (): GameState => startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand' }));
 
 /** An rng state whose next draw passes `ok`. */
 function rngWhere(ok: (r: number) => boolean): number {

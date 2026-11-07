@@ -16,7 +16,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** A Gear stand at night with the given machines bought, cash after the buying set to `cash`. */
 function gearNight(gears: GearId[], cash: number, dayLengthSec = 150): GameState {
-  let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec }, gear: true, tier: 'stand' });
+  let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec }, gear: true, tier: 'stand' });
   s.cash = 5000;
   for (const gear of gears) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear }]);
   s.cash = cash;
@@ -134,7 +134,7 @@ describe('Task 12: the planner suggests the steep number', () => {
   });
 
   it('a classic run has neither steep nor condiment advice', () => {
-    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand' });
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand' });
     s.cash = 300;
     const ids = planNight(s).map((a) => a.id);
     expect(ids).not.toContain('steep');

@@ -28,7 +28,6 @@ import { SEASON, seasonMedal, seasonTarget, targetsHit, type Medal } from '../si
 import { ECONOMY } from '../data/economy';
 import { scenarioById } from '../data/scenarios';
 import { TICK_RATE, secondsToTicks } from '../sim/constants';
-import { botsFor } from '../sim/bots/roster';
 import { availableDrinks } from '../sim/customers';
 import { serveCapacity } from '../sim/capacity';
 import { challengePaperLine, describeEffects, radioLine, splitEffects } from '../sim/describe';
@@ -42,14 +41,12 @@ import { profitOf } from '../sim/profit';
 import { fittingsValue, scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
-import type { BotsChoice, Member } from '../net/protocol';
+import type { Member } from '../net/protocol';
 import type { AdId, AdOutcome, PitchKind, PitchTier, CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 import { BASE_DRINKS, DRINK_IDS, GEAR_ONLY_DRINKS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
 import { menuDrinks, neededSupplies, unlockedDrinks } from '../sim/unlocks';
 import { forecastById } from '../data/forecasts';
-import { BOT_PERSONALITIES } from '../sim/bots/roster';
-import { canHire, crewNames, wageEach } from '../sim/staff';
 import { hireWage } from '../sim/hires';
 import { CONDIMENTS } from '../sim/condiments';
 import { WEEKDAY_NAMES, forecastFor, forecastName, forecastOf, weekdayOf } from '../sim/forecast';
@@ -802,12 +799,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
   };
 }
 
-/** P3 B15: the night board's staff row. Round 3 item 3: Strategist / Marketer hire cards. */
+/** Round 3 item 3: the night board's Strategist / Marketer hire cards (bot cut 4a: no bot barista row). */
 export interface StaffVM {
-  crew: { name: string; trait: string }[];
-  wage: string;
-  total: string;
-  canHire: boolean;
   /** Round 3 hires (Gear only). */
   hires: {
     strategist: { hired: boolean; wage: string; blurb: string };
@@ -815,18 +808,9 @@ export interface StaffVM {
   };
 }
 
-const TRAIT: Record<string, string> = { steady: 'steady', hurried: 'quick, sloppy', veteran: 'careful', rookie: 'new', human: 'stand-in' };
-
 export function staffViewModel(state: GameState): StaffVM | undefined {
   if (!state.gear) return undefined;
-  const names = crewNames(state);
-  const w = wageEach(state);
-  const trait = (name: string, i: number) => TRAIT[state.players.find((p) => p.name === name && p.bot)?.bot!.personality ?? BOT_PERSONALITIES[i]] ?? '';
   return {
-    crew: names.map((name, i) => ({ name, trait: trait(name, i) })),
-    wage: money(w),
-    total: money(w * names.length),
-    canHire: canHire(state),
     hires: {
       strategist: {
         hired: !!state.staff?.strategist,
@@ -1118,19 +1102,8 @@ export interface LobbyVM {
   isHost: boolean;
   canStart: boolean;
   statusText: string;
-  /** The bots run setting: Off (0) or 1–3. Host edits it before the start; everyone else just sees it. */
-  bots?: LobbyBotsVM;
 }
 
-export interface LobbyBotsVM {
-  /** 0 = Off. For 'auto' this is how many bots fill the empty seats right now. */
-  count: number;
-  /** How many actually clock in with this crew (bots never take a fourth human's spot). */
-  clocking: number;
-  auto: boolean;
-  picked: boolean;
-  editable: boolean;
-}
 
 
 export function lobbyViewModel(input: {
@@ -1139,7 +1112,6 @@ export function lobbyViewModel(input: {
   isHost: boolean;
   status: PeerStatus | 'hosting';
   started: boolean;
-  bots?: { bots: BotsChoice; picked: boolean };
 }): LobbyVM {
   const { status, started } = input;
   let statusText = '';
@@ -1156,17 +1128,6 @@ export function lobbyViewModel(input: {
     isHost: input.isHost,
     canStart: input.isHost && !started,
     statusText,
-    ...(input.bots
-      ? {
-          bots: {
-            count: input.bots.bots === 'auto' ? botsFor('auto', input.members.length) : input.bots.bots,
-            clocking: botsFor(input.bots.bots, input.members.length),
-            auto: input.bots.bots === 'auto',
-            picked: input.bots.picked,
-            editable: input.isHost && !started,
-          },
-        }
-      : {}),
   };
 }
 

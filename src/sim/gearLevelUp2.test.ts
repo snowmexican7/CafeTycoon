@@ -12,7 +12,7 @@ import { itemIcon } from '../ui/icons';
 import type { DrinkId, GameState, Station } from './types';
 import type { GearId } from '../data/gear';
 
-const run = (gear = true): GameState => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'P1' }], settings: { bots: 0 }, tier: 'stand', gear });
+const run = (gear = true): GameState => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'P1' }], tier: 'stand', gear });
 const serve = (s: GameState, d: DrinkId, n: number) => { const out: DrinkId[] = []; for (let i = 0; i < n; i++) out.push(...levelUpOnServe(s, d)); return out; };
 const own = (s: GameState, ...ids: (GearId | null)[]) => { s.slotGear = ids; };
 

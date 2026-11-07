@@ -94,7 +94,7 @@ describe('ui-3.5.2: creator screen', () => {
 
 describe('ui-3.5.2: night "Edit my barista"', () => {
   it('sits in the More row', () => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K', look: DEFAULT_LOOK }], settings: { bots: 0 } });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K', look: DEFAULT_LOOK }] });
     expect(s.players[0].look).toEqual(DEFAULT_LOOK);
     s.phase = 'night';
     const ui: NightUiState = { tab: 'tonight', spend: 'cards', drawer: null, sig: null, pitch: { kind: 'promo', text: '' } };

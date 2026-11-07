@@ -5,12 +5,12 @@ import { applyGearInput } from './gear';
 import { applyCheckoutInput } from './checkout';
 import { tillNext, ringProgress, ringSeconds, TILL } from './till';
 import { secondsToTicks } from './constants';
-import { addStandIns } from './bots/roster';
+import { addStandIns } from '../harness/crew';
 import type { CheckoutId, Customer, GameState, Player } from './types';
 
 /** A quiet Gear stand day (no walk-ins), `checkout` installed, p1 standing at the till. */
 function tillDay(checkout: CheckoutId = 'register', bots = 0): GameState {
-  let s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'P1' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  let s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'P1' }], tier: 'stand', gear: true });
   if (bots) addStandIns(s, bots);
   applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
   s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });

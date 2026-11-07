@@ -10,7 +10,7 @@ import { rentForDay } from './effects';
 import { ECONOMY } from '../data/economy';
 import type { GameState, PlayerInput } from './types';
 
-const run = (): GameState => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const run = (): GameState => createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 const FULL = { beans: 500, milk: 500, concentrate: 500, flavour: 500 };
 const find = (s: GameState, id: string) => nightBrief(s).alerts.find((a) => a.id === id);
 const buy = (s: GameState, packs: number): GameState => applyNightInput(s, { kind: 'restock', playerId: 'p1', supply: 'pastry', packs });
@@ -45,7 +45,7 @@ describe('R4 b: pastries are a restock item', () => {
   });
 
   it('pastries do not need the fridge: a Gear run buys them with no fridge at all', () => {
-    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true });
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true });
     const t = buy(s, 1);
     expect(t.supplies.pastry).toBe(ECONOMY.packs.pastry.size);
     // and the morning setup carries them into the day untouched

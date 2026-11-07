@@ -55,7 +55,6 @@ export function shortTip(a: Pick<Advice, 'kind' | 'text' | 'input'>): string {
   if (i.kind === 'condimentBox') return `Buy ${i.boxes} condiment ${i.boxes === 1 ? 'box' : 'boxes'} ($${(i.boxes * CONDIMENTS.boxCost).toFixed(0)})`;
   if (i.kind === 'rivalCounter') return 'Match the happy hour';
   if (i.kind === 'stampCard') return 'Print our own stamp card';
-  if (i.kind === 'staff' && i.action === 'fire') return 'Let a paid barista go';
   if (i.kind === 'branch' && i.action === 'send' && i.supply) return `Send a pack of ${SUPPLY_NAME[i.supply as SupplyId] ?? i.supply} to the branch`;
   if (i.kind === 'branch' && i.action === 'staff' && typeof i.staff === 'number') return `Put ${i.staff} ${i.staff === 1 ? 'barista' : 'baristas'} at the branch`;
   let t = a.text;

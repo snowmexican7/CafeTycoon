@@ -405,7 +405,9 @@ export function payCup(state: GameState, customer: Customer, drink: DrinkId, by?
   noteFamilyTip(state, drink, tip);
   state.today.served += 1;
   tallyDrink(state.today, drink);
-  noteReport(state.today, customer, drink, by, price + tip);
+  // Bot cut 4a: the manager report's who-served-what is people only (no row for a bot body: the cashier, test crew, stand-ins).
+  const person = by !== undefined && state.players.some((p) => p.id === by && !p.bot) ? by : undefined;
+  noteReport(state.today, customer, drink, person, price + tip);
   levelUpOnServe(state, drink); // Gear G6: drinks level up with use
   // For the "Dev served a latte +$6" toast: who, what, how much, and whether it was a perfect serve.
   const perfect = customer.patienceLeft / customer.patienceMax >= PERFECT_PATIENCE;
@@ -468,7 +470,7 @@ export function serveDrink(state: GameState, playerId: PlayerId): GameState {
   return state;
 }
 
-/** P4 B3: the manager report's per-day tallies (wait, takings per drink, who served what). */
+/** P4 B3: the manager report's per-day tallies (wait, takings per drink, who served what: people only). */
 function noteReport(today: GameState['today'], customer: Customer, drink: DrinkId, by: PlayerId | undefined, takings: number): void {
   today.waitTicks = (today.waitTicks ?? 0) + Math.max(0, customer.patienceMax - customer.patienceLeft);
   const t = (today.takingsByDrink ??= {});

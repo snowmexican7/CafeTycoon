@@ -4,7 +4,7 @@ import { applyGearInput } from './gear';
 import type { CreateRunOptions, GameState } from './types';
 import type { GearId } from '../data/gear';
 
-const opts: CreateRunOptions = { seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true };
+const opts: CreateRunOptions = { seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true };
 const buy = (s: GameState, gear: GearId) => applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear });
 
 describe('Gear G4e: buy multiples of the same machine', () => {

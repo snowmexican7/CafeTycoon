@@ -273,11 +273,6 @@ export const CATALOGUE: CatalogueItem[] = [
     flavor: '"Two lattes, one mocha, over." Nobody shouts across the bar any more.',
   },
   {
-    id: 'hireTemp', name: 'Hire a temp', category: 'staff', cost: 30, rarity: 'uncommon', path: 'speed',
-    duration: 'tomorrow', effects: [{ kind: 'temp' }],
-    flavor: 'Robin from the agency. Slow, keen, brings their own apron. Needs a free spot behind the bar.',
-  },
-  {
     id: 'turboGrinder', name: 'Turbo grinder (very loud)', category: 'equipment', cost: 30, rarity: 'uncommon', path: 'speed', spicy: true,
     duration: 'permanent', effects: [{ kind: 'stationSpeed', station: 'grinder', mul: 1.7 }, { kind: 'patience', mul: 0.95 }],
     flavor: 'Grinds in a blink. Sounds like a jet taking off next to the pastries.',

@@ -3,7 +3,6 @@ import { createRun } from './run';
 import { step } from './step';
 import { finishDay } from './closing';
 import { canMake } from './growth';
-import { syncBots } from './bots/roster';
 import { setStrategistMenu } from './strategist';
 import type { GameState } from './types';
 
@@ -14,7 +13,7 @@ import type { GameState } from './types';
 const gearRun = (players = 1): GameState => {
   let s = createRun({
     seed: 7, hostId: 'p1', players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` })),
-    settings: { dayLengthSec: 150, nightLengthSec: 30, bots: 0 }, tier: 'stand', gear: true,
+    settings: { dayLengthSec: 150, nightLengthSec: 30 }, tier: 'stand', gear: true,
   });
   const cash = s.cash;
   s.cash = 300;
@@ -26,7 +25,6 @@ const hire = (s: GameState): GameState => step(s, [{ kind: 'staff', playerId: 'p
 const menuEvents = (s: GameState) => s.log.filter((e) => e.kind === 'strategist.menu').map((e) => e.data);
 const nextNight = (s: GameState): GameState => {
   const t = structuredClone(s);
-  syncBots(t);
   t.challenges = [];
   t.phase = 'closing';
   t.cash = 500;
@@ -89,7 +87,7 @@ describe('the Strategist sets the menu', () => {
   });
 
   it('a bar that can make nothing yet leaves the menu alone', () => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
     s.staff = { strategist: true };
     for (const k of Object.keys(s.menu) as (keyof typeof s.menu)[]) s.menu[k] = true;
     s.slots = s.slots!.map(() => null);

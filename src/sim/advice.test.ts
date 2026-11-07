@@ -6,7 +6,7 @@ import { computeModifiers, rentForDay } from './effects';
 import { restockCost } from './night';
 import { priceForecast } from './pricing';
 import { sigPrice } from './rival';
-import { syncBots } from './bots/roster';
+import { addBots } from '../harness/crew';
 import { crewTips, planNight, PLAN_PRIORITY, RESTOCK_MARGIN } from './advice';
 import type { Advice } from './advice';
 import { CHECKOUT } from './checkout';
@@ -16,7 +16,7 @@ import { RIVAL } from './rival';
 import type { DayStats, DrinkId, GameState, TierId } from './types';
 
 const run = (tier?: TierId): GameState =>
-  createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, ...(tier ? { tier } : {}) });
+  createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], ...(tier ? { tier } : {}) });
 
 const dayStats = (over: Partial<DayStats> = {}): DayStats => ({ day: 1, served: 23, lost: 2, turnedAway: 0, sales: 40.84, tips: 3, rent: 25, ...over });
 
@@ -383,7 +383,7 @@ describe('planNight: order, purity, money', () => {
 
 describe('crewTips (bot cut: unvoiced)', () => {
   it('is the top `max` of planNight, with nobody named, with or without bots', () => {
-    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     s.supplies.beans = 0;
     s.cash = 200;
     const plan = planNight(s);
@@ -391,8 +391,7 @@ describe('crewTips (bot cut: unvoiced)', () => {
     expect(crewTips(s)).toEqual(plan.slice(0, 2));
     expect(crewTips(s, 3)).toEqual(plan.slice(0, 3));
     expect(crewTips(s).every((t) => !('by' in t))).toBe(true);
-    s.settings = { ...s.settings, bots: 2 };
-    syncBots(s);
+    addBots(s, 2);
     expect(crewTips(s, 3)).toEqual(planNight(s).slice(0, 3));
   });
 
@@ -409,7 +408,7 @@ describe('planNight: Gear runs', () => {
   // A Gear run replaces the classic stations shop: the `equip` and `slot` inputs do nothing there, so the planner
   // must not offer them as crew tips.
   const gearRun = (): GameState => {
-    let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true, tier: 'stand' });
+    let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true, tier: 'stand' });
     for (const gear of ['g1', 'e2'] as const) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear }]);
     s.days.push(dayStats({ served: 3, lost: 9 }));
     s.cash = 300;

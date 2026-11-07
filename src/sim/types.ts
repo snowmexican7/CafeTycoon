@@ -20,7 +20,6 @@ export type Pace = 1 | 2 | 3 | 4 | 5;
 export type EventKind = 'rushHour' | 'powerFlicker' | 'influencerVisit' | 'healthInspector';
 export type CustomerKind = 'normal' | 'impatient' | 'group' | 'regular' | 'influencer' | 'fan';
 export type Personality = 'rookie' | 'steady' | 'veteran' | 'hurried' | 'human'; // 'human' = tester stand-in
-export type BotSkill = 1 | 2 | 3 | 4 | 5;
 /** FB2 A3: `lift` a cold or stale drip pot off its machine, `dump` what is in hand (or the pot) at the back sink.
  *  FB2 A4: `fetch` a milk carton at the fridge, `stock` it at a milk station (or the lifted bar back on the bar),
  *  `stow` (lift) the milk or the bar during closing soon, `store` what is carried in the fridge. */
@@ -584,8 +583,6 @@ export type Effect =
   | { kind: 'unlock'; drink: DrinkId }
   /** Upgrade cards (B6): stars added to (or taken off) the rating at each closing. */
   | { kind: 'quality'; add: number }
-  /** A temp barista (a rookie bot) clocks in for the day, if a spot is free. */
-  | { kind: 'temp' }
   /** Weather radio: tomorrow's events are drawn at night and shown on the paper. */
   | { kind: 'reveal' };
 
@@ -631,15 +628,10 @@ export interface Scenario {
   effects: Effect[];
 }
 
-/** Off (0), a fixed count, or 'auto' (fill empty seats). */
-export type BotsChoice = Settings['bots'];
-
 export interface Settings {
   dayLengthSec: number;
   nightLengthSec: number;
   pace: Pace;
-  bots: number | 'auto';
-  botSkill: BotSkill;
   /** Bot cut step 3: a solo run's robot cashier (src/sim/cashier.ts) rings customers up at the till. Absent/false = none. */
   cashier?: boolean;
 }
@@ -966,7 +958,7 @@ export type PlayerInput =
   | { kind: 'rivalCounter'; playerId: PlayerId; on?: boolean }
   | { kind: 'stampCard'; playerId: PlayerId }
   /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
-  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire'; /** Round 3 item 3: absent = a barista. */ role?: 'strategist' | 'marketer' }
+  | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire'; /** Round 3 item 3; bot cut 4a: always named (no barista hires). */ role: 'strategist' | 'marketer' }
   | { kind: 'branch'; playerId: PlayerId; action: 'open' | 'staff' | 'send' | 'close'; area?: AreaId; staff?: number; supply?: SupplyId }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }
   | { kind: 'checkout'; playerId: PlayerId; checkout: CheckoutId }

@@ -29,8 +29,8 @@ import { interact, stepStations } from './stations';
 import { applySyrupInput, stepHandmade } from './handmade';
 import type { GameState, ItemKind, Player, PlayerInput } from './types';
 import { validateInput } from './validate';
-import { isBotId, syncBots } from './bots/roster';
-import { CASHIER_ID, stepCashier } from './cashier';
+import { isBotId } from './botBody';
+import { stepCashier } from './cashier';
 import { applyStaffInput } from './staff';
 import { drinkEspresso, stepEspresso } from './espresso';
 import { stepEggs, unlockSecret } from './eggs';
@@ -61,8 +61,8 @@ import { applyMoveStation } from './rearrange';
 function applyInput(s: GameState, input: PlayerInput): void {
   const isHost = input.playerId === s.hostId;
   const existing = s.players.find((p) => p.id === input.playerId);
-  // Bot cut step 3: nobody plays as (or joins as) the robot cashier either.
-  if (existing?.bot || (input.kind === 'join' && (isBotId(input.playerId) || input.playerId === CASHIER_ID))) return;
+  // Bot cut: nobody plays as (or joins as) a bot body: the robot cashier, or a test-only crew bot or stand-in.
+  if (existing?.bot || (input.kind === 'join' && isBotId(input.playerId))) return;
   switch (input.kind) {
     case 'join': {
       if (existing) {
@@ -114,8 +114,6 @@ function applyInput(s: GameState, input: PlayerInput): void {
     case 'settings':
       if (isHost) {
         Object.assign(s.settings, input.settings); // already cleaned by validateInput (sanitizeSettings)
-        // Between days a new bots choice shows up now; during the day it waits for the next startDay.
-        if (input.settings.bots !== undefined && (s.phase === 'night' || s.phase === 'weekEnd')) syncBots(s);
       }
       break;
     case 'move': {

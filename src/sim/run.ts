@@ -15,7 +15,6 @@ import { checkoutMorning } from './checkout';
 import { pitchMorning } from './pitch';
 import { dealHand } from './night';
 import { forecastFor } from './forecast';
-import { syncBots } from './bots/roster';
 import { syncCashier } from './cashier';
 import { espressoMorning } from './espresso';
 import { floorFields, tileOf } from './tiles';
@@ -62,8 +61,6 @@ export function createRun(opts: CreateRunOptions): GameState {
     dayLengthSec: ECONOMY.dayLengthSec,
     nightLengthSec: ECONOMY.nightLengthSec,
     pace: 3,
-    bots: 'auto',
-    botSkill: 3,
     ...opts.settings,
   };
   const players: Player[] = opts.players.map((p, i) => {
@@ -185,7 +182,6 @@ export function startDay(state: GameState): GameState {
   state.cleanliness = 100;
   state.mop = { pos: { ...layoutFor(state.tier).mopHome }, heldBy: null };
   state.rogue = null;
-  syncBots(state);
   syncCashier(state); // bot cut step 3: a cashier run has its robot cashier on every day
   for (const p of state.players) settle(state, p); // FB2 A3: old saves gain the sink on load; growing moves fixtures
   for (const p of state.players) p.tile = tileOf(p.pos);

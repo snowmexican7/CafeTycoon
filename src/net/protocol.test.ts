@@ -29,12 +29,10 @@ describe('protocol parsers', () => {
     expect(parseSeat({ t: 'seat' })).toBeNull();
   });
 
-  it('parses the lobby bots setting leniently', () => {
+  it('bot cut 4a: a lobby message has no bots setting (an old host’s is dropped)', () => {
     const base = { t: 'lobby', members: [], started: false };
-    expect(parseLobby({ ...base, bots: 2, botsPicked: true })).toEqual({ ...base, bots: 2, botsPicked: true });
-    expect(parseLobby({ ...base, bots: 'auto' })).toEqual({ ...base, bots: 'auto', botsPicked: false });
-    expect(parseLobby({ ...base, bots: 9 })).toEqual(base);
-    expect(parseLobby({ ...base, bots: 1.5 })).toEqual(base);
+    expect(parseLobby({ ...base, bots: 2, botsPicked: true })).toEqual(base);
+    expect(parseLobby({ ...base, bots: 'auto' })).toEqual(base);
     expect(parseLobby(base)).toEqual(base);
   });
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRun, startDay } from '../sim/run';
 import { step } from '../sim/step';
 import { think } from './brain';
-import { addStandIns } from '../sim/bots/roster';
+import { addStandIns } from './crew';
 import { ensureCounterSpots, stationsFromSlots } from '../sim/slots';
 import type { GearId } from '../data/gear';
 import type { Customer, GameState, Player } from '../sim/types';
@@ -13,7 +13,7 @@ import type { Customer, GameState, Player } from '../sim/types';
 
 /** A stocked Gear stand with `gear` bought, `bots` stand-ins and no walk-ins; the host is off the floor. */
 function gearStand(gear: GearId[], bots = 1): GameState {
-  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 150 }, tier: 'stand', gear: true });
+  let s = createRun({ seed: 101, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'stand', gear: true });
   addStandIns(s, bots);
   for (const g of gear) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
   s.supplies.beans = 40;
@@ -63,7 +63,7 @@ describe('Gear bots passing in the back corridor (FB2 balance)', () => {
   // on, picked the same spare row, and swapped rows in step for the rest of the day (p4 traces: a shot stuck in the
   // machine for 40-99 s on 5 of 331 days, 28 served / 81 lost, one bankruptcy). Moving bots are not routed around.
   it('a bot binning grounds and a bot fetching a shot get past each other', () => {
-    let s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 600 }, tier: 'cart', gear: true });
+    let s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 600 }, tier: 'cart', gear: true });
     s.owned.push({ itemId: 'test-no-traffic', effects: [{ kind: 'traffic', mul: 0 }] });
     s.slots = ['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash'];
     s.slotGear = ['g2', 'e3', null, 'c3', 'b0'];

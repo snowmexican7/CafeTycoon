@@ -14,7 +14,7 @@ import type { Customer, GameState, SimEvent, TierId } from './types';
 const L = ECONOMY.line;
 
 function shop(tier: TierId = 'cart', traffic = 0): GameState {
-  const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
+  const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   s.scenario = 'normal';
   s.cash = 1000;
   applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'd1' }); // drip on the board

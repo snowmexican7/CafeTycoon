@@ -5,10 +5,11 @@ import { restockCost, rushCost } from './night';
 import { CONDIMENTS } from './condiments';
 import { ECONOMY, RESTOCK } from '../data/economy';
 import type { GameState } from './types';
+import { addBots } from '../harness/crew';
 
 /** Round 4 f follow-up: restock (and condiment boxes) also work in the day, as a rush delivery at +25%. */
 const gearNight = (bots = 0): GameState =>
-  createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'L' }], settings: { bots }, tier: 'stand', gear: true });
+  addBots(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'L' }], tier: 'stand', gear: true }), bots);
 const gearDay = (bots = 0): GameState => {
   const s = gearNight(bots);
   s.supplies.concentrate = 20;

@@ -7,7 +7,7 @@ import { ECONOMY } from '../data/economy';
 import { nightViewModel } from '../ui/viewModels';
 import type { GameState } from './types';
 
-const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 const withSig = (s: GameState, premium = 2, since = 1) => {
   s.signature = { name: 'Honey Haze', drink: 'latte', twist: 'honey', premium, since };
   return s;

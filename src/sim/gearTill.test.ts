@@ -8,7 +8,7 @@ import { TICK_RATE } from './constants';
 import { gearVM } from '../ui/gearVM';
 import type { CreateRunOptions, Customer, GameState } from './types';
 
-const opts = (gear: boolean, players = 1): CreateRunOptions => ({ seed: 7, hostId: 'p1', players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` })), settings: { bots: 0 }, tier: 'stand', gear });
+const opts = (gear: boolean, players = 1): CreateRunOptions => ({ seed: 7, hostId: 'p1', players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` })), tier: 'stand', gear });
 const day = (gear: boolean) => {
   const s = createRun(opts(gear));
   if (gear) applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });

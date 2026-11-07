@@ -6,7 +6,7 @@ import { comboStars, knownStale, knownStars, risingTwist, seasonOf, seasonStarts
 import { forecastViewModel, menuLines } from '../ui/viewModels';
 import type { GameState } from './types';
 
-const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+const run = (seed = 1) => createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
 const serveLatte = (s: GameState) => {
   s.players[0].holding = 'latte';
   s.players[0].pos = { x: 6, y: 5.1 };

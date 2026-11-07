@@ -19,7 +19,7 @@ import { nightViewModel } from './viewModels';
 type Kit = GearId | 'steamer';
 
 function gearNight(gear: Kit[] = ['steamer', 'e2'], tier: TierId = 'stand', fridge: FridgeId | null = 'f1'): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {

@@ -13,7 +13,7 @@ const LOOK: PlayerLook = { hair: 'bob', hairColor: '#aa5500', skin: 'tan2', outf
 
 /** A host Transport that runs the real sim: inputs in, a snapshot out after each. */
 function simLocal() {
-  let state: GameState = createRun({ seed: 1, hostId: 'H', players: [{ id: 'H', name: 'Host' }], settings: { bots: 0 } });
+  let state: GameState = createRun({ seed: 1, hostId: 'H', players: [{ id: 'H', name: 'Host' }] });
   const handlers = new Set<(s: HostToClient) => void>();
   const emit = () => handlers.forEach((h) => h({ t: 'snapshot', state, sentAt: 1 }));
   const t: Transport = {

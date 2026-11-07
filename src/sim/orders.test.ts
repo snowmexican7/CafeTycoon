@@ -16,7 +16,7 @@ import type { Customer, DrinkId, GameState, SupplyId, TierId } from './types';
 type Kit = GearId | 'steamer';
 
 function gearDay(day = 2, tier: TierId = 'stand', gear: Kit[] = ['c1', 'e1', 'steamer', 'd1'], seed = 7): GameState {
-  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
+  const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   {
     const slots = [...s.slots!];
     const slotGear = [...s.slotGear!];
@@ -93,7 +93,7 @@ describe('combos (FB2 B6)', () => {
 
   it('none on day 1, none in classic runs', () => {
     const d1 = gearDay(1);
-    const classic = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    const classic = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
     classic.day = 4;
     for (let i = 0; i < 300; i++) {
       for (const s of [d1, classic]) {
@@ -346,7 +346,7 @@ describe('office runs (FB2 B6)', () => {
   });
 
   it('officeMorning draws nothing outside its window (classic runs keep their rng stream)', () => {
-    const classic = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const classic = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     classic.day = 5;
     const rng = classic.rng;
     officeMorning(classic);

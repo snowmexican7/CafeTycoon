@@ -24,7 +24,7 @@ type Kit = GearId | 'steamer';
 
 /** A Gear run at night with `gear` in the first slots. The stand gets the Dorm Room Cube unless `fridge` says otherwise. */
 function gearNight(gear: Kit[], tier: TierId = 'stand', fridge: FridgeId | null = 'f1'): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier, gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
@@ -72,7 +72,7 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
       expect(fridgeCapacity(s)).toBe(FRIDGES[id].holds);
     }
     // a run created at the café (no tier) has its fridge from the first night
-    const cafe = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, gear: true });
+    const cafe = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], gear: true });
     expect([fridgeGear(cafe), hasFridge(cafe)]).toEqual(['f3', 1]);
     const d = gearDay();
     expect(d.milkOut ?? 0).toBe(0);
@@ -80,7 +80,7 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
   });
 
   it('a classic run has no fridge, and the steamer draws straight from supplies as before', () => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     expect(s.stations.some((x) => x.id === FRIDGE_ID)).toBe(false);
     expect([s.fridge, fridgeGear(s), fridgeCards(s)]).toEqual([undefined, null, []]);
     startDay(s);
@@ -382,7 +382,7 @@ describe('FB2 A4: closing soon and the close', () => {
     while (s.phase === 'day') s = run(s);
     expect(seen.size).toBe(1);
     expect(s.closingSoonAt).toBe(fired);
-    let c = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0, dayLengthSec: 40 } });
+    let c = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 40 } });
     c = startDay(c);
     let classic = 0;
     while (c.phase === 'day') {

@@ -10,3 +10,5 @@ import { afterBotInteract, stepBots } from './brain';
 export function installHarness(): void {
   setBotDriver({ step: stepBots, afterInteract: afterBotInteract });
 }
+
+export { addBots, addStandIns, humanCount, BOT_IDS, BOT_PERSONALITIES } from './crew';

@@ -9,7 +9,7 @@ import { GEAR, type GearId } from '../data/gear';
 import type { Customer, DrinkId, GameState } from './types';
 
 function gearDay(gear: GearId[] = ['c1', 'e1']): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 }, tier: 'stand', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {
@@ -57,7 +57,7 @@ describe('the condiment stop at pickup (Task 10)', () => {
       }
     }
     // A classic run has no bar: nobody stops.
-    const classic = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } }));
+    const classic = startDay(createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] }));
     expect(wantsCondiments(classic, atPickup(yes, 'drip'), 'drip')).toBe(false);
   });
 

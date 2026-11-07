@@ -14,7 +14,6 @@ function cafe(seed = 1): GameState {
     seed,
     hostId: 'p1',
     players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'J' }],
-    settings: { bots: 0 },
   });
   s.scenario = 'normal';
   const d = startDay(s);
@@ -241,7 +240,7 @@ describe('bumps', () => {
   });
 
   it('a run where nobody bumps keeps its RNG stream (seed 5, one player, no bots, 900 ticks)', () => {
-    let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { bots: 0 } });
+    let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
     s.scenario = 'normal';
     s = startDay(s);
     for (let i = 0; i < 900; i++) s = step(s, []);
