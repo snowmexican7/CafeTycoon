@@ -53,23 +53,30 @@ const SUPPLY_NAME: Record<SupplyId, string> = { beans: 'beans', milk: 'milk', co
 
 const cap = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
 
-/** The sim's advice sentence, cut to what fits on a chip. */
+/** Chip length: short enough to read at a glance, verb-first. */
+const TIP_MAX = 40;
+
+/** The sim's advice sentence, cut to a short actionable chip (Round 6). */
 export function shortTip(a: Pick<Advice, 'kind' | 'text' | 'input'>): string {
   const i = a.input;
-  if (a.kind === 'restock' && i.kind === 'restock') return `Buy ${i.packs} ${i.packs === 1 ? 'pack' : 'packs'} of ${SUPPLY_NAME[i.supply]}`;
-  if (i.kind === 'steep') return `Steep ${i.cups} cold ${i.cups === 1 ? 'brew' : 'brews'} for tomorrow`;
-  if (i.kind === 'condimentBox') return `Buy ${i.boxes} condiment ${i.boxes === 1 ? 'box' : 'boxes'} ($${(i.boxes * CONDIMENTS.boxCost).toFixed(0)})`;
+  if (a.kind === 'restock' && i.kind === 'restock') return `Restock ${SUPPLY_NAME[i.supply]} (×${i.packs})`;
+  if (i.kind === 'steep') return `Steep ${i.cups} cold brew tonight`;
+  if (i.kind === 'condimentBox') return `Buy condiment box ($${(i.boxes * CONDIMENTS.boxCost).toFixed(0)})`;
   if (i.kind === 'rivalCounter') return 'Match the happy hour';
-  if (i.kind === 'stampCard') return 'Print our own stamp card';
+  if (i.kind === 'stampCard') return 'Print our stamp card';
   if (i.kind === 'staff' && i.action === 'fire') return 'Let a paid barista go';
-  if (i.kind === 'branch' && i.action === 'send' && i.supply) return `Send a pack of ${SUPPLY_NAME[i.supply as SupplyId] ?? i.supply} to the branch`;
-  if (i.kind === 'branch' && i.action === 'staff' && typeof i.staff === 'number') return `Put ${i.staff} ${i.staff === 1 ? 'barista' : 'baristas'} at the branch`;
+  if (i.kind === 'branch' && i.action === 'send' && i.supply) return `Send ${SUPPLY_NAME[i.supply as SupplyId] ?? i.supply} to the branch`;
+  if (i.kind === 'branch' && i.action === 'staff' && typeof i.staff === 'number') return `Staff the branch (${i.staff})`;
+  if (a.kind === 'price' && i.kind === 'price') {
+    const m = a.text.match(/^(Cut|Raise) the (.+?) to \$([0-9.]+)/i);
+    if (m) return `${m[1]} the ${m[2]} to $${m[3]}`;
+  }
   let t = a.text;
   const colon = t.indexOf(': ');
   if (colon > 0 && (a.kind === 'rival' || a.kind === 'equip')) t = cap(t.slice(colon + 2));
   else if (colon > 0 && a.kind === 'menu') t = t.slice(0, colon);
   t = t.replace(/\s*\((now|known|untried)[^)]*\)/g, '').replace(/, then free a slot for it$/, '');
-  return t.length > 44 ? `${t.slice(0, 43).trimEnd()}…` : t;
+  return t.length > TIP_MAX ? `${t.slice(0, TIP_MAX - 1).trimEnd()}…` : t;
 }
 
 /** Alert ids that already cover a piece of advice (the sim brief's and the Tonight list's). */

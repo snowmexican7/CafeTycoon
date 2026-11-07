@@ -16,6 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- Drink icons and day HUD type are a notch larger, and tip / hint bubbles use shorter, more actionable wording.
 - Dropping a group's cups on the pickup counter is risky now: other customers can grab them, and a group that never
   gets its drink walks out and you lose the whole order. Use the serving tray.
 - Early birds: the first 8 seconds of each day are quiet (time to dump old coffee and stock milk), and sometimes a very

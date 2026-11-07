@@ -42,7 +42,8 @@ function itemShape(kind: ItemKind): string {
 }
 
 /** A held item or drink, drawn like the scene's props. */
-export const itemIcon = (kind: ItemKind, size = 28): string =>
+/** Round 6: default a notch larger so pantry / menu chips match the bigger ticket icons. */
+export const itemIcon = (kind: ItemKind, size = 32): string =>
   `<svg class="ic-item" width="${size}" height="${size}" viewBox="-16 -18 32 32" aria-hidden="true">${kind === 'grounds' ? `<defs>${CHROME}</defs>` : ''}<g transform="scale(1.1)">${itemShape(kind)}</g></svg>`;
 
 export const coin = (s = 22): string =>

@@ -341,6 +341,41 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /**
+   * Round 6 block 2: night Restock first with crew tip chips (short actionable copy) visible under Heads up.
+   */
+  crewTips: {
+    night: true,
+    extras: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      s.cash = 200;
+      // Enough stock that Heads up stays short; bots still voice Restock/Scout tips.
+      s.supplies = { ...s.supplies, beans: 8, milk: 10, pastry: 6, concentrate: 4, flavour: 6 };
+      s.settings = { ...s.settings, bots: 'auto' };
+      s.players.push(
+        { ...s.players[0]!, id: 'bot-lu', name: 'Lu', bot: { personality: 'hurried' } } as GameState['players'][number],
+        { ...s.players[0]!, id: 'bot-bo', name: 'Bo', bot: { personality: 'steady' } } as GameState['players'][number],
+      );
+      s.today = { ...s.today, day: 3, served: 28, lost: 4, turnedAway: 1, sales: 132, tips: 18, rent: 25 };
+    },
+    timeline: [],
+  },
+  /** Round 6 block 2: a single latte ticket with the larger drink icon. */
+  bigTicket: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 1);
+      s.customers = [
+        { id: 71, drink: 'latte', patienceLeft: 1200, patienceMax: 1500, name: 'Ada', stage: 'pickup', rungAt: s.tick },
+      ];
+      s.players[0]!.holding = 'latte';
+      s.players[0]!.pos = { x: 6, y: 5 };
+    },
+    timeline: [],
+  },
   /** 3.7.2 (PR #10): two price walk-outs on a Gear café day say "Too pricey!" (or kin), never "Sold out?!". */
   priceWalkout: {
     setup(s) {
