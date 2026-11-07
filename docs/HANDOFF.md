@@ -111,7 +111,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Claude → Grok
 
-### State of the sim (2026-11-06, main after Round 6 blocks 1–5, protocol 68, snapshot 34)
+### State of the sim (2026-11-07, main after the bot cut Phase 1, protocol 69, snapshot 35)
+- **Bots are cut (Phase 1 done):** see the first Needs item below. Phase 3 (wand meter tiers) waits on #29.
 - **Everything Kennedy asked for in the sim lane is merged:** Round 4 a–f (`r4-a`, `r4-b`, `r4-c`, `r4-e`; d answered;
   f is a proposal in Open questions), Round 3 items 1–7 (`r3-*-done` tags), and Feedback 2 C9 (`fb2-c9`), B7 tray
   (`fb2-b7`), B8 hand-made lattes (`fb2-b8`), C10 rearranging (`fb2-c10`), C11 feed (`fb2-c11`). Released as
@@ -126,6 +127,32 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Bot cut Phase 1 landed (2026-11-07, Claude), protocol 69, snapshot 35.** Plan: `docs/PLAN_BOTS_CUT_AND_WANDS.md`;
+  this is your **Phase 2**. Names as built:
+  - The old brain is a test-only player in `src/harness/` (`installHarness()`, `addBots`, `addStandIns` in
+    `src/harness/crew.ts`). The game never runs it. `src/sim/bots/` is deleted; `src/sim/path.ts`, `src/sim/advice.ts`,
+    `src/sim/botBody.ts` (`makeBotState`, `botSpeed`, `isBotId`) hold what's left.
+  - **Robot cashier:** `src/sim/cashier.ts` (`CASHIER_ID = 'cashier'`, `cashierOf`, `stepCashier`, `syncCashier`),
+    `Settings.cashier?: boolean`, `LocalSettings.soloCashier` (default true), `ECONOMY.cashier` (`dailyCost: 1`,
+    `deferTiles: 1` tile, straight beside only, `returnAfterSec: 2`). It is a `p.bot` body (name "Robot cashier"), so it
+    draws today with the bot look and tag: give it its own look if you like. Its $1 is in `today.wages`; the receipt's
+    wages line should read as the cashier's (+ Strategist/Marketer).
+  - **Removed:** `Settings.bots`/`botSkill`, `BotsChoice`, `soloBots`, lobby `bots`/`botsPicked`, `parseBots`,
+    `defaultBots`, barista hire/fire (`staff` input needs `role`), crew wages, the temp card (`'temp'` effect), the
+    espresso cover bot, the `call` input (`applyCall`, `callAnswer`, `callRang`), `Award.bot`, telemetry `botMistakes`,
+    `crewTips`' `by` (it returns plain `Advice[]`).
+  - **Branch phone:** `GameState.callDecision { day, take }` decided at first ring (`branchTakesCall`); `callRinging`
+    shows the whole window and carries `take`; log event `call.outcome` replaces `call.answer`.
+  - **I touched your files (minimal, to compile):** `src/main.ts` (solo passes `cashier`, lobby bots and `onCall`
+    wiring gone), `src/ui/title.ts` (the "Solo helpers" segment is now **Robot cashier On/Off**, `.solo-cashier` in
+    title.css), `src/ui/lobby.ts` (bots picker gone), `src/ui/viewModels.ts` (lobby bots, crew wage reads),
+    `src/ui/night.ts` (barista hire row; tip chips lost `p-<personality>` and `tip-by`), `src/ui/nightInputs.ts`,
+    `src/ui/tipsVM.ts`, `src/ui/live.ts` + `src/ui/hud.ts` (phone card: no answer buttons, says what the branch did),
+    `src/ui/branchView.ts` (call line wording), `src/ui/weekEnd.ts` (no "bot" em on awards), `src/render/crewModel.ts`
+    + `src/render/scene.ts` (call burst reads `call.outcome`), `src/dev/fixtures.ts`.
+  - **Still yours:** dead CSS (`.botscard` in menus.css, `.staff`/`.sf-*` in night.css, `.hc-b`, `.tip-by`, `.tip.p-*`);
+    bot name tags / 🤖 marks and the `botOops` cue (`bot.mistake` is only emitted by the test harness now); 🤖 rows in
+    "who served" (`DayStats.byPlayer` is people-only now); draw the cashier as a robot if you want.
 - [ ] **Round 6 block 6, review of Cursor's #29 latte-in-hand (2026-11-06, Claude): fine with small fixes**, comment
   on the PR. Must fix before merging: a latte steamed while the person picked something else up vanishes (falls back to
   the wand output), and it can land in a hand holding a tool; a double on the wand isn't counted mid-meter (extra
