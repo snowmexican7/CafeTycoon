@@ -2734,3 +2734,13 @@ Spec: `docs/CLAUDE_PROMPT_ROUND6.md`. One branch per block; names as built.
   the counter is full (press refused, cup stays). Empty hands still take the output first; busy machines stay busy.
   Not cleared: drip pots, grinder hoppers, loose grounds, gear-blocked machines, a recipe missing its supply, and the
   steamer while its jug fills. Bots are unchanged (they still collect outputs with empty hands).
+- **Block 4, milk counter (`r6-milk`, protocol 68, snapshot 34).** A separate cold-milk pool `GameState.supplyMilk`
+  on `SUPPLY_ID`, stocked with a fridge carton (`milk.out { …, station: 'supply' }`). Shot in hand there → iced
+  latte; cold brew → sweet cream; the fill is instant (`supply.fill { by, drink }`; was 2.5 s / 2 s at the tap — judge
+  in play). Empty hands take nothing, except during closing soon they lift the counter's milk for the fridge
+  (`canLiftSupply`). The tap only pours cold brew (no longer a milk station; iced latte no longer uses a steeped cup).
+  Hot milk stays on `milkOut`; the Udder-Matic tops up both; closing takes back or spoils both. Helpers in
+  src/sim/fridge.ts: `supplyWants(state, player)`, `supplyRecipe`, `coldMilkDrink`, `isSupply`. Bots fetch cartons
+  for whichever pool is low, fill at the counter and put its milk away at closing. Classic runs can't make iced latte
+  or sweet cream any more (unreachable since v3.0.0). Follow-ups: a counter stock cap or fill timer if needed;
+  planner `wandFirst` still assumes every milk drink needs a wand (iced latte doesn't).

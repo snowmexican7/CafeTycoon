@@ -23,6 +23,14 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-06: **Bots are being cut almost entirely.** Design for human play only; at most a single-player robot cashier
+  that just rings up. No new bot logic, bot tests or bot review asks (beyond "nothing crashes"). How and when bots come
+  out is still to be planned.
+- 2026-11-06: **Steam wand upgrades make the meters easier, not faster:** a better wand makes the jug fill fast at the
+  start, very slow in the middle and fast at the end (a quick run almost always hits the line), and gives a much wider
+  green band on the steam meter.
+- 2026-11-06: **Cappuccino's second steam also finishes straight into your hand**, the same as a latte (Round 6 block 3,
+  PR #29): no second wait or second E at the wand.
 - 2026-11-05: **Round 6 approved (Kennedy, Nov 5 evening).** Docs: `docs/CURSOR_PROMPT_NEXT.md`,
   `docs/CLAUDE_PROMPT_ROUND6.md`, ROADMAP "Round 6". Target **v3.10.0**.
   - **Hair:** fully opaque (no head shape through hair) + add long wavy; hairline cover already shipped in R5 #21.
@@ -99,7 +107,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Claude → Grok
 
-### State of the sim (2026-11-03, main after `v3.9.0`, protocol 64, snapshot 33)
+### State of the sim (2026-11-06, main after Round 6 blocks 1–5, protocol 68, snapshot 34)
 - **Everything Kennedy asked for in the sim lane is merged:** Round 4 a–f (`r4-a`, `r4-b`, `r4-c`, `r4-e`; d answered;
   f is a proposal in Open questions), Round 3 items 1–7 (`r3-*-done` tags), and Feedback 2 C9 (`fb2-c9`), B7 tray
   (`fb2-b7`), B8 hand-made lattes (`fb2-b8`), C10 rearranging (`fb2-c10`), C11 feed (`fb2-c11`). Released as
@@ -114,6 +122,21 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   `gearStats` (wand text), and a few UI tests whose numbers moved (listed per item below).
 
 ### Needs from you (UI lane)
+- [ ] **Round 6 block 6, review of Cursor's #29 latte-in-hand (2026-11-06, Claude): fine with small fixes**, comment
+  on the PR. Must fix before merging: a latte steamed while the person picked something else up vanishes (falls back to
+  the wand output), and it can land in a hand holding a tool; a double on the wand isn't counted mid-meter (extra
+  bean); hand-made lattes no longer roll the latte-art / cat eggs. Add a bot-meets-locked-wand test. No version bump.
+  One merge conflict with main in `brain.ts` (`stow`: keep main's line with `isIdle(st, state)`). For Kennedy: wand
+  speed no longer matters for people's lattes; should cappuccino's second steam also go straight into the hand? Kennedy: yes (Decisions 2026-11-06).
+- [ ] **Round 6 sim blocks 1–5 landed (2026-11-06, Claude):** on main, unreleased (CHANGELOG Unreleased has the lines).
+  Protocol 68, snapshot 34, 1952 tests. Each block's names and UI needs are in its own item below and in BACKLOG
+  "Round 6 (sim lane, Claude)". Block 6 (review of Cursor's latte instant-in-hand PR) waits for that PR.
+  Note: `vite.config.ts` gained `setupFiles: ['src/sim/testSetup.ts']` (block 5), and the two heaviest tests got longer
+  time limits so the full suite doesn't time out.
+- [ ] **Round 6 block 4, milk counter (2026-11-06, `r6-milk`, protocol 68, snapshot 34).** Draw the counter's stock
+  from `state.supplyMilk` and hints from `supplyWants(state, player)` (src/sim/fridge.ts); cue on `supply.fill { by,
+  drink }`. In `live.ts` the iced latte and sweet cream steps should point to the milk counter, not the cold brew tap.
+  The dev fixture `supplyStation` (src/dev/fixtures.ts) still describes "empty hands take a carton".
 - [ ] **Round 6 block 1, machines don't lock (2026-11-06, `r6-machines`, protocol 67).** A small cue on
   `station.clear { by, station, drink, to }` (the cup slides to pickup) and a "Pickup counter is full" hint on
   `station.clearFull { …, reason: 'counterFull' }`. Station hints that said "Take the cup first" with a matching cup in

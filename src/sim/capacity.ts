@@ -15,6 +15,7 @@
  */
 import { ECONOMY } from '../data/economy';
 import { DRINK_INFO, recipeChain, type RecipeStation } from '../data/drinks';
+import { SUPPLY_ID } from '../data/layout';
 import { GEAR } from '../data/gear';
 import type { Modifiers } from './effects';
 import { gearPullMul, gearSpeed, POD_SHOT } from './gear';
@@ -102,6 +103,7 @@ export function serveCapacity(state: GameState, menu: DrinkId[], m: Modifiers): 
       const share = w[i] / total;
       for (const { station, recipe } of recipeChain(d)) {
         steps += share;
+        if (station === SUPPLY_ID) continue; // Round 6 block 4: the milk counter fills a cup at once (no machine time)
         const s = recipe.seconds ?? ECONOMY.stationSeconds[station];
         secs.set(station, (secs.get(station) ?? 0) + share * s);
       }

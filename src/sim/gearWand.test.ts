@@ -577,6 +577,6 @@ describe('FB2 C9: the planner and saves', () => {
     }
     createSnapshotStore(storage).save(s);
     expect(createSnapshotStore(storage).load()?.gear).toBe(true);
-    expect(SNAPSHOT_VERSION).toBe(33); // Round 5: hopper doses + grounds polish; pre-open gone
+    expect(SNAPSHOT_VERSION).toBe(34); // Round 6: milk counter stock
   });
 });

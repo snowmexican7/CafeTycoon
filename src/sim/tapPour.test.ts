@@ -81,13 +81,14 @@ describe('instant cold brew from the steeped tap (Task 3)', () => {
     expect(s.players[0].holding).toBeNull();
     expect(tap.busyTicksLeft).toBe(0);
     const out = availableDrinks(s);
-    for (const d of ['coldBrew', 'icedLatte', 'sweetCream', 'special'] as const) expect(out).not.toContain(d);
+    for (const d of ['coldBrew', 'sweetCream', 'special'] as const) expect(out).not.toContain(d);
     expect(out).toContain('espresso');
-    expect(reasonOff(s, 'icedLatte')).toBe('noStock');
+    expect(out).toContain('icedLatte'); // Round 6 block 4: a shot and the milk counter, no steeped cup
+    expect(reasonOff(s, 'sweetCream')).toBe('noStock');
     expect(reasonOff(s, 'espresso')).toBeNull();
   });
 
-  it('the iced latte step takes a steeped cup; the sweet-cream step does not', () => {
+  it('Round 6 block 4: the tap finishes neither iced latte nor sweet cream; the milk counter does, using no steeped cup', () => {
     const s = gearDay(['c1', 'e1', 'steamer'], { concentrate: 50, beans: 50, milk: 5, flavour: 5 });
     s.unlocked = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'sweetCream', 'special'];
     for (const d of s.unlocked) s.menu[d] = true;
@@ -96,27 +97,22 @@ describe('instant cold brew from the steeped tap (Task 3)', () => {
     tap.batchLeft = 1;
     s.players[0].holding = 'espresso';
     interact(s, 'p1');
-    expect([tap.batchLeft, tap.busyTicksLeft > 0, tap.making, s.players[0].holding]).toEqual([0, true, 'icedLatte', null]);
-    // sweet cream: a cup already in hand, none left in the tap
-    const t2 = gearDay(['c1', 'e1', 'steamer'], { concentrate: 50, beans: 50, milk: 5, flavour: 5 });
-    t2.unlocked = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'sweetCream', 'special'];
-    for (const d of t2.unlocked) t2.menu[d] = true;
-    const tap2 = tapOf(t2);
-    stand(t2, tap2.id);
-    tap2.batchLeft = 0;
-    t2.players[0].holding = 'coldBrew';
-    interact(t2, 'p1');
-    expect([tap2.batchLeft, tap2.busyTicksLeft > 0, tap2.making, t2.players[0].holding]).toEqual([0, true, 'sweetCream', null]);
-    // an espresso with no cup left to pour over: refused
-    const t3 = gearDay(['c1', 'e1', 'steamer'], { concentrate: 50, beans: 50, milk: 5, flavour: 5 });
-    t3.unlocked = ['espresso', 'latte', 'coldBrew', 'icedLatte', 'sweetCream', 'special'];
-    for (const d of t3.unlocked) t3.menu[d] = true;
-    const tap3 = tapOf(t3);
-    stand(t3, tap3.id);
-    tap3.batchLeft = 0;
-    t3.players[0].holding = 'espresso';
-    interact(t3, 'p1');
-    expect([tap3.busyTicksLeft, t3.players[0].holding]).toEqual([0, 'espresso']);
+    // the shot at the tap: no step there any more (a fumble, the cup stays in hand)
+    expect([tap.batchLeft, tap.busyTicksLeft, s.players[0].holding, s.players[0].cupSlips]).toEqual([1, 0, 'espresso', 1]);
+    s.players[0].holding = 'coldBrew';
+    delete s.players[0].cupSlips;
+    interact(s, 'p1');
+    expect([tap.batchLeft, tap.busyTicksLeft, s.players[0].holding]).toEqual([1, 0, 'coldBrew']);
+    // at the milk counter, both finish from its cold milk and leave the tap's cups alone
+    s.supplyMilk = 2;
+    const counter = s.stations.find((x) => x.id === 'supply')!;
+    s.players[0].pos = { x: counter.pos.x - 1, y: counter.pos.y };
+    s.players[0].tile = { ...s.players[0].pos };
+    interact(s, 'p1');
+    expect(s.players[0].holding).toBe('sweetCream');
+    s.players[0].holding = 'espresso';
+    interact(s, 'p1');
+    expect([s.players[0].holding, s.supplyMilk, tap.batchLeft]).toEqual(['icedLatte', 0, 1]);
   });
 
   it('classic taps still brew for 1.5 s and use concentrate', () => {

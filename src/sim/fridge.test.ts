@@ -500,6 +500,11 @@ describe('FB2 A4: closing soon and the close', () => {
     me(s).holding = null;
     s.customers = [];
     interact(s, 'p1');
+    // Round 6 block 4: the tap is no milk station any more, so it just pours again
+    expect([me(s).tool, me(s).holding, s.milkOut]).toEqual([null, 'coldBrew', 4]);
+    me(s).holding = null;
+    standAt(s, 'steamer');
+    interact(s, 'p1');
     expect([me(s).tool, me(s).carry, s.milkOut]).toEqual(['milk', 4, 0]);
   });
 
@@ -519,13 +524,13 @@ describe('FB2 A4: closing soon and the close', () => {
     expect([me(s).tool, s.milkOut]).toEqual([null, 4]);
   });
 
-  it('a carton can go out at the cold brew tap too (iced lattes use milk there)', () => {
+  it('Round 6 block 4: a carton no longer goes out at the cold brew tap (its milk drinks finish at the milk counter)', () => {
     const s = gearDay(['c2', 'e2']);
     me(s).tool = 'milk';
     me(s).carry = 6;
     standAt(s, 'coldBrewTap');
     interact(s, 'p1');
-    expect(s.milkOut).toBe(6);
+    expect([me(s).tool, me(s).carry, s.milkOut ?? 0]).toEqual(['milk', 6, 0]);
   });
 
   it('a new day starts the bar with nothing but what was put away', () => {

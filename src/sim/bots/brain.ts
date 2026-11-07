@@ -22,8 +22,8 @@ import { rogueNear, rogueTiles } from '../rogue';
 import { passSlots } from '../pickup';
 import { heldCool, takeBackCold, slotCool, stationCool } from '../cooling';
 import { tillNext } from '../till';
-import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, TRAY_ID, layoutFor } from '../../data/layout';
-import { FRIDGE, autoMilk, closingSoon, isMilkStation, readyStock } from '../fridge';
+import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, SUPPLY_ID, TRAY_ID, layoutFor } from '../../data/layout';
+import { FRIDGE, autoMilk, canLiftSupply, closingSoon, coldMilkDrink, isMilkStation, isSupply, readyStock, supplyRecipe } from '../fridge';
 import { CONDIMENTS, canTakeBox, returnBox } from '../condiments';
 import { isSink, needsDump } from '../sink';
 import { answerPhone } from './phone';
@@ -147,8 +147,11 @@ function groundsPlan(state: GameState, p: Player): BotStep[] {
 // a pot drip machine and a pour-over bar are both 'drip'. So every insert step is chosen by what the
 // machine will make from what the bot will be holding there (`recipeAt`, exactly what `interact` runs).
 
-/** One machine visit: at a station of `kind`, holding `held`, the machine should make `gives` (`last`: the drink itself). */
-interface Need { kind: RecipeKind; held: ItemKind | null; gives: ItemKind; last?: boolean }
+/**
+ * One machine visit: at a station of `kind`, holding `held`, the machine should make `gives` (`last`: the drink itself).
+ * Round 6 block 4: `kind` SUPPLY_ID is the milk counter (a cup filled there at once from its cold milk).
+ */
+interface Need { kind: RecipeKind | typeof SUPPLY_ID; held: ItemKind | null; gives: ItemKind; last?: boolean }
 
 /**
  * Gear G9: stations a bot can work, i.e. with a walkable whole-tile node from which it is the station "use"
@@ -220,6 +223,8 @@ const pair = (st: Station, gives: ItemKind, instant = false): BotStep[] => [
  * can stand at it (G9: not an out-of-reach twin).
  */
 function canMake(state: GameState, p: Player, st: Station, need: Need): boolean {
+  // Round 6 block 4: the milk counter fills from its own cold milk, which no other bot has already planned to use.
+  if (need.kind === SUPPLY_ID) return isSupply(st) && reachable(state, st) && supplyRecipe(state, need.held)?.gives === need.gives && milkFree(state, p, 'counter') >= 1;
   if (st.kind !== need.kind) return false;
   // FB2 A3 fix round 1 (I3): a pot a person walked off with may not come back soon; only a bot's carry is worth a wait.
   if (personHasPot(state, st)) return false;
@@ -236,6 +241,7 @@ function canMake(state: GameState, p: Player, st: Station, need: Need): boolean 
  * Round 5: a hopper with doses is like a pot: free (0) while fewer bots plan it than it has doses.
  */
 function stationScore(state: GameState, p: Player, st: Station, need: Need): number {
+  if (isSupply(st)) return 0; // Round 6 block 4: a fill at the milk counter is instant, so it is never busy
   if (hasPot(st) && need.held === null && need.gives === 'drip') return potScore(state, p, st, need);
   if (st.kind === 'grinder' && st.doses !== undefined && st.output === 'grounds' && need.held === null) return plannersAt(state, p, st) < st.doses ? 0 : 1;
   return isIdle(st, state) && !plannedByOther(state, p, st) ? 0 : 1;
@@ -287,7 +293,7 @@ function route(state: GameState, p: Player, needs: Need[]): { steps: BotStep[]; 
       if (dump === null) return null;
       steps.push(...dump);
     }
-    steps.push(...pair(got.st, need.gives, pours(state, got.st, need.held)));
+    steps.push(...pair(got.st, need.gives, pours(state, got.st, need.held) || isSupply(got.st)));
     scores.push(got.score);
   }
   return { steps, scores };
@@ -623,28 +629,48 @@ const POT_TRIP_TICKS = secondsToTicks(10);
 
 // ---------------------------------------------------------------------------------------------- FB2 A4: the fridge
 
-/** A drink that takes milk (Gear: drawn from the milk out at the bar). */
+/** A drink that takes milk (Gear: drawn from the milk out at the bar, or from the milk counter). */
 const milky = (d: DrinkId): boolean => ECONOMY.drinkSupplies[d].includes('milk');
 
-/** An insert step that will draw milk at a milk station (what the machine makes there takes milk). */
-function milkInsert(state: GameState, x: BotStep): boolean {
+/**
+ * Round 6 block 4: the two pools of milk a Gear bar draws from: `bar`, the milk out at the steamer / wand
+ * (`state.milkOut`), and `counter`, the milk counter's cold milk (`state.supplyMilk`, the iced latte and sweet cream).
+ */
+type MilkPool = 'bar' | 'counter';
+const MILK_POOLS: MilkPool[] = ['bar', 'counter'];
+/** A drink that takes milk from `pool`. */
+const milkyIn = (d: DrinkId, pool: MilkPool): boolean => milky(d) && (coldMilkDrink(d) ? 'counter' : 'bar') === pool;
+const poolHave = (state: GameState, pool: MilkPool): number => (pool === 'bar' ? readyStock(state, 'milk') : (state.supplyMilk ?? 0));
+
+/** An insert step that will draw milk from `pool`: at a milk station (what the machine makes there takes milk), or at the milk counter. */
+function milkInsert(state: GameState, x: BotStep, pool: MilkPool = 'bar'): boolean {
   if (x.kind !== 'use' || x.action !== 'insert' || x.makes === undefined) return false;
+  if (pool === 'counter') return x.station === SUPPLY_ID;
   const st = state.stations.find((y) => y.id === x.station);
   return !!st && isMilkStation(st) && isRecipeKind(st.kind) && RECIPES[st.kind].some((r) => r.gives === x.makes && r.consumes.includes('milk'));
 }
 
-/** Gear: milk out at the bar that no other bot's plan is already counting on (classic: the stock). */
-function milkFree(state: GameState, self: Player): number {
-  const have = readyStock(state, 'milk');
+/** Where a carton a player carries (or a bot plans to fetch) is going, from the bot's plan; null when unknown (a person, or no plan yet). */
+function cartonPool(o: Player): MilkPool | null {
+  const to = o.bot?.plan.find((x) => x.kind === 'use' && x.action === 'stock');
+  return to?.kind === 'use' ? (to.station === SUPPLY_ID ? 'counter' : 'bar') : null;
+}
+
+/** Gear: milk in `pool` that no other bot's plan is already counting on (classic: the stock). */
+function milkFree(state: GameState, self: Player, pool: MilkPool = 'bar'): number {
+  const have = poolHave(state, pool);
   if (state.gear !== true) return have;
-  const planned = state.players.reduce((n, o) => n + (o !== self && o.bot ? o.bot.plan.filter((x) => milkInsert(state, x)).length : 0), 0);
+  const planned = state.players.reduce((n, o) => n + (o !== self && o.bot ? o.bot.plan.filter((x) => milkInsert(state, x, pool)).length : 0), 0);
   // FB2 review I2: a carton on its way counts (in someone's hands, or a fetch another bot has planned), so a latte's
   // grind and pull start while the milk walks over; the steamer's milk wait (BOTS.milkWaitSeconds) covers the arrival.
-  // Not during closing soon: those cartons go into the fridge.
+  // Not during closing soon: those cartons go into the fridge. Round 6: a carton counts for the pool it is going to
+  // (either, when that is unknown).
   let coming = 0;
   if (!closingSoon(state)) {
     const fetch = Math.min(FRIDGE.carton, Math.floor(state.supplies.milk ?? 0));
     for (const o of state.players) {
+      const to = cartonPool(o);
+      if (to !== null && to !== pool) continue;
       if (o.tool === 'milk') coming += o.carry ?? 0;
       else if (o !== self && o.bot?.plan.some((x) => x.kind === 'use' && x.action === 'fetch')) coming += fetch;
     }
@@ -653,25 +679,31 @@ function milkFree(state: GameState, self: Player): number {
 }
 
 /**
- * FB2 review I3: milk still to be steamed: milk orders nobody is covering yet, plus the milk steps already in a bot's
- * plan (a latte made and waiting on the counter needs no more milk).
+ * FB2 review I3: milk still to be steamed (Round 6: or filled at the milk counter): milk orders nobody is covering yet,
+ * plus the milk steps already in a bot's plan (a latte made and waiting on the counter needs no more milk). No `pool`:
+ * both.
  */
-function milkToSteam(state: GameState, self: Player): number {
-  const orders = uncoveredOrders(state, self).filter((c) => milky(c.drink)).length;
-  return orders + state.players.reduce((n, o) => n + (o.bot ? o.bot.plan.filter((x) => milkInsert(state, x)).length : 0), 0);
+function milkToSteam(state: GameState, self: Player, pool?: MilkPool): number {
+  const pools = pool ? [pool] : MILK_POOLS;
+  const orders = uncoveredOrders(state, self).filter((c) => pools.some((x) => milkyIn(c.drink, x))).length;
+  return orders + state.players.reduce((n, o) => n + (o.bot ? o.bot.plan.filter((x) => pools.some((y) => milkInsert(state, x, y))).length : 0), 0);
 }
 
 /** FB2 review I3: the last seconds of closing: put things away whatever is still wanted (else they go bad at close). */
 const LAST_CALL_SECONDS = 8;
 const lastCall = (state: GameState): boolean => state.phase === 'closing' && state.phaseTicksLeft <= secondsToTicks(LAST_CALL_SECONDS);
 
-/** Closing soon, doors locked: the milk can go in the fridge (nothing left to steam, or last call). */
-const milkDone = (state: GameState, self: Player): boolean => closingSoon(state) && state.phase === 'closing' && (lastCall(state) || milkToSteam(state, self) === 0);
+/** Closing soon, doors locked: the milk (of `pool`, else all of it) can go in the fridge (nothing left to steam, or last call). */
+const milkDone = (state: GameState, self: Player, pool?: MilkPool): boolean =>
+  closingSoon(state) && state.phase === 'closing' && (lastCall(state) || milkToSteam(state, self, pool) === 0);
 /** Closing soon, doors locked: the bar can go in the fridge (nobody waiting on drip or cold brew, or last call). */
 const barDone = (state: GameState): boolean => closingSoon(state) && state.phase === 'closing' && (lastCall(state) || !barWanted(state));
 
-/** Someone in the shop is waiting on a drink that takes milk. */
-const milkWanted = (state: GameState): boolean => state.customers.some((c) => milky(c.drink) || (c.extra?.some(milky) ?? false));
+/** Someone in the shop is waiting on a drink that takes milk from `pool`. */
+const milkWanted = (state: GameState, pool: MilkPool): boolean => {
+  const m = (d: DrinkId) => milkyIn(d, pool);
+  return state.customers.some((c) => m(c.drink) || (c.extra?.some(m) ?? false));
+};
 
 /** Someone in the shop will stop at the condiment bar (plain drip or cold brew). */
 const barWanted = (state: GameState): boolean =>
@@ -686,8 +718,12 @@ function fridgeBusy(state: GameState, self: Player): boolean {
   return state.players.some((o) => o !== self && (o.tool === 'milk' || o.tool === 'bar' || (o.bot?.plan.some(isFridgeStep) ?? false)));
 }
 
-/** The milk station to put a carton out at (or lift it from): a steamer side a bot can reach first, else a tap. */
-function milkStation(state: GameState, p: Player): Station | null {
+/**
+ * The milk station to put a carton out at (or lift it from): a steamer side a bot can reach (Round 6: the tap takes no
+ * milk). `counter`: the milk counter, when a bot can reach it.
+ */
+function milkStation(state: GameState, p: Player, pool: MilkPool = 'bar'): Station | null {
+  if (pool === 'counter') return state.stations.find((st) => isSupply(st) && reachable(state, st)) ?? null;
   let best: Station | null = null;
   for (const st of state.stations) {
     if (!isMilkStation(st) || !reachable(state, st)) continue;
@@ -707,25 +743,42 @@ function carryPlan(state: GameState, p: Player): BotStep[] {
   // A lifted bar only ever goes in the fridge during closing soon; a carton goes back once there's nothing left to steam.
   const putAway = p.tool === 'bar' ? closingSoon(state) : milkDone(state, p);
   const fridge = fridgeReachable(state);
-  const out = p.tool === 'milk' ? milkStation(state, p) : state.stations.find((st) => st.id === CONDIMENTS_ID && reachable(state, st));
+  const out = p.tool === 'milk' ? cartonTo(state, p) : state.stations.find((st) => st.id === CONDIMENTS_ID && reachable(state, st));
   const at = putAway ? (fridge ?? out) : (out ?? fridge);
   return [at ? { kind: 'use', station: at.id, action: at === fridge ? 'store' : 'stock' } : { kind: 'floor', node: nodeOf(state, p.pos), action: 'drop' }];
+}
+
+/**
+ * Round 6 block 4: where a carton in hand goes when no plan says: the pool a waiting order needs most (wanted, with the
+ * least milk), else one whose drinks are on the board, else the bar; only pools a bot can reach.
+ */
+function cartonTo(state: GameState, p: Player): Station | null {
+  const at = MILK_POOLS.map((pool) => ({ pool, st: milkStation(state, p, pool) })).filter((x) => x.st !== null);
+  const score = (pool: MilkPool) => (milkWanted(state, pool) ? 0 : availableDrinks(state).some((d) => milkyIn(d, pool)) ? 1 : 2);
+  at.sort((a, b) => score(a.pool) - score(b.pool) || poolHave(state, a.pool) - poolHave(state, b.pool));
+  return at[0]?.st ?? null;
 }
 
 /** FB2 A4 fix round 1: a bot fetches a carton for waiting milk orders once the milk out (cartons on the way included) is this low. */
 export const MILK_LOW = 4;
 
-/** Gear: milk out is low, a milk drink is wanted, the fridge has milk, nobody else is on it: fetch a carton and put it out. */
+/**
+ * Gear: milk out (Round 6: or on the milk counter) is low, a drink that draws it is wanted, the fridge has milk, nobody
+ * else is on it: fetch a carton and put it out there. The bar's pool first, then the counter's.
+ */
 function cartonPlan(state: GameState, p: Player): BotStep[] | null {
-  if (state.gear !== true || autoMilk(state) || (state.supplies.milk ?? 0) < 1 || milkFree(state, p) > MILK_LOW) return null;
-  // Re-review I-1: during closing soon only for milk still to steam, and never at last call (no shuttle, nothing put
-  // out just to go bad at close).
-  const wanted = closingSoon(state) ? milkToSteam(state, p) > 0 && !lastCall(state) : milkWanted(state);
-  if (!wanted || fridgeBusy(state, p)) return null;
+  if (state.gear !== true || autoMilk(state) || (state.supplies.milk ?? 0) < 1 || fridgeBusy(state, p)) return null;
   const fridge = fridgeReachable(state);
-  const out = milkStation(state, p);
-  if (!fridge || !out) return null;
-  return [{ kind: 'use', station: fridge.id, action: 'fetch' }, { kind: 'use', station: out.id, action: 'stock' }];
+  if (!fridge) return null;
+  for (const pool of MILK_POOLS) {
+    if (milkFree(state, p, pool) > MILK_LOW) continue;
+    // Re-review I-1: during closing soon only for milk still to steam, and never at last call (no shuttle, nothing put
+    // out just to go bad at close).
+    const wanted = closingSoon(state) ? milkToSteam(state, p, pool) > 0 && !lastCall(state) : milkWanted(state, pool);
+    const out = wanted ? milkStation(state, p, pool) : null;
+    if (out) return [{ kind: 'use', station: fridge.id, action: 'fetch' }, { kind: 'use', station: out.id, action: 'stock' }];
+  }
+  return null;
 }
 
 /** The milk out a bot keeps ready at the bar ahead of orders (FB2 review I2). */
@@ -734,11 +787,16 @@ export const MILK_AHEAD = 3;
 /** FB2 review I2: open hours, not closing soon, milk drinks on the board and little milk out: fetch a carton ahead of time. */
 function proactiveCarton(state: GameState, p: Player): BotStep[] | null {
   if (state.gear !== true || state.phase !== 'day' || closingSoon(state) || autoMilk(state)) return null;
-  if ((state.supplies.milk ?? 0) < 1 || milkFree(state, p) > MILK_AHEAD || fridgeBusy(state, p)) return null;
-  if (!availableDrinks(state).some(milky)) return null;
+  if ((state.supplies.milk ?? 0) < 1 || fridgeBusy(state, p)) return null;
   const fridge = fridgeReachable(state);
-  const out = milkStation(state, p);
-  return fridge && out ? [{ kind: 'use', station: fridge.id, action: 'fetch' }, { kind: 'use', station: out.id, action: 'stock' }] : null;
+  if (!fridge) return null;
+  const board = availableDrinks(state);
+  for (const pool of MILK_POOLS) {
+    if (milkFree(state, p, pool) > MILK_AHEAD || !board.some((d) => milkyIn(d, pool))) continue;
+    const out = milkStation(state, p, pool);
+    if (out) return [{ kind: 'use', station: fridge.id, action: 'fetch' }, { kind: 'use', station: out.id, action: 'stock' }];
+  }
+  return null;
 }
 
 /**
@@ -751,7 +809,10 @@ function putAwayPlan(state: GameState, p: Player): BotStep[] | null {
   if (!fridge) return null;
   const store: BotStep = { kind: 'use', station: fridge.id, action: 'store' };
   const out = milkStation(state, p);
-  if ((state.milkOut ?? 0) > 0 && !autoMilk(state) && out && milkDone(state, p)) return [{ kind: 'use', station: out.id, action: 'stow' }, store];
+  if ((state.milkOut ?? 0) > 0 && !autoMilk(state) && out && milkDone(state, p, 'bar')) return [{ kind: 'use', station: out.id, action: 'stow' }, store];
+  // Round 6 block 4: the milk counter's cold milk too, once the counter lets it go (nobody waiting on a cold milk drink).
+  const counter = milkStation(state, p, 'counter');
+  if (counter && canLiftSupply(state) && milkDone(state, p, 'counter')) return [{ kind: 'use', station: counter.id, action: 'stow' }, store];
   const bar = state.stations.find((st) => st.id === CONDIMENTS_ID && reachable(state, st));
   if ((state.condiments?.servings ?? 0) > 0 && bar && barDone(state)) return [{ kind: 'use', station: bar.id, action: 'stow' }, store];
   return null;
@@ -1156,6 +1217,15 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
   const b = p.bot!;
   switch (step.action) {
     case 'insert': {
+      // Round 6 block 4: the milk counter fills the cup in hand at once from its cold milk; a carton on its way: wait.
+      if (isSupply(st)) {
+        if (b.noticeTicksLeft > 0 && isDrink(p.holding)) return wait(state, p);
+        const r = supplyRecipe(state, p.holding);
+        const right = r !== null && (step.makes === undefined || r.gives === step.makes);
+        if (right && (state.supplyMilk ?? 0) >= 1) return execute(p);
+        if (right && fridgeBusy(state, p)) return wait(state, p, secondsToTicks(BOTS.milkWaitSeconds));
+        return abandon(state, p);
+      }
       if (!isRecipeKind(st.kind)) return abandon(state, p);
       // FB2 A3: a pot machine with its pot at the sink: wait for it. One that went cold or stale since the plan was
       // made: lift it and take it to the sink first (or wait while another bot does).
@@ -1283,13 +1353,13 @@ function act(state: GameState, p: Player, step: Extract<BotStep, { kind: 'use' }
       const fridge = p.tool === 'milk' && milkDone(state, p) ? fridgeReachable(state) : null;
       if (fridge) return setPlan(b, [{ kind: 'use', station: fridge.id, action: 'store' }]);
       // A carton out at a milk station, or the lifted bar back on the bar.
-      if ((p.tool === 'milk' && isMilkStation(st)) || (p.tool === 'bar' && st.id === CONDIMENTS_ID)) return execute(p);
+      if ((p.tool === 'milk' && (isMilkStation(st) || isSupply(st))) || (p.tool === 'bar' && st.id === CONDIMENTS_ID)) return execute(p);
       return abandon(state, p);
     }
     case 'stow': {
       // Closing soon: lift what is still out (the milk at an idle milk station, or the bar).
       const bar = st.id === CONDIMENTS_ID;
-      const has = bar ? (state.condiments?.servings ?? 0) > 0 : (state.milkOut ?? 0) > 0 && isIdle(st, state);
+      const has = bar ? (state.condiments?.servings ?? 0) > 0 : isSupply(st) ? canLiftSupply(state) : (state.milkOut ?? 0) > 0 && isIdle(st, state);
       if (closingSoon(state) && p.tool === null && p.holding === null && has) return execute(p);
       return setPlan(b, []);
     }

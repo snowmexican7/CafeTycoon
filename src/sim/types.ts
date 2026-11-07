@@ -244,6 +244,8 @@ export type SimEventKind =
   | 'fridge.auto'
   | 'supply.spoil'
   | 'closing.soon'
+  /** Round 6 block 4: a shot or a cold brew in hand filled at the milk counter, `{ by, drink }` (stocking it is `milk.out`). */
+  | 'supply.fill'
   /** FB2 B6: multi-drink orders (src/sim/orders.ts). */
   | 'order.combo'
   /** Round 3 item 1 (src/sim/lattes.ts): "and a latte for my friend", `{ customer, drink }`. */
@@ -881,8 +883,11 @@ export interface GameState {
   /** FB2 A4: the fridge the crew bought (the cube at the stand, the Udder-Matic at the café; absent = none bought). The shop's
    *  fridge is the better of this and the one its size comes with (sim/fridge.ts `fridgeGear`). `supplies.milk` is inside it. */
   fridge?: FridgeId;
-  /** FB2 A4: milk servings out at the bar, where the steamer, a steam wand and the tap draw from (Gear runs; absent = 0). */
+  /** FB2 A4: milk servings out at the bar, where the steamer and a steam wand draw from (Gear runs; absent = 0). */
   milkOut?: number;
+  /** Round 6 block 4: cold milk servings stocked at the milk counter (`SUPPLY_ID`, by the sink) from a fridge carton;
+   *  iced lattes and sweet cream finish there from it (Gear runs; absent = 0). Hot milk stays `milkOut`. */
+  supplyMilk?: number;
   /** FB2 A4: condiment servings put away in the fridge at closing; they go back on the bar next morning (absent = 0). */
   barAway?: number;
   /** FB2 A4: an open co-op proposal to buy a $50+ fridge card (the Udder-Matic); voted with the gear vote input, one

@@ -39,7 +39,7 @@ describe('balance tester', () => {
     expect(w.days.every((d) => typeof d.forecast === 'string')).toBe(true);
     expect(main(args).output).toBe(main(args).output);
     expect(main(['--weeks', '1', '--day', '30', '--humans', '1', '--bots', '0', '--policy', 'nope']).code).toBe(2);
-  }, 30_000);
+  }, 60_000);
   it('--layout noTrash opens without a bin, and an unknown layout is a usage error', () => {
     const args = ['--weeks', '1', '--seed', '3', '--day', '30', '--humans', '1', '--bots', '1', '--layout', 'noTrash', '--summary'];
     const r = main(args);

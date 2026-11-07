@@ -40,6 +40,6 @@ describe('fix round 1: four bots on the stand keep the pickup counter moving', (
       expect(day.served).toBeGreaterThanOrEqual(20);
       // The stall binned 11-14; a few cups going stale on the counter after a customer gives up is normal play.
       expect(day.wasted ?? 0).toBeLessThanOrEqual(4);
-    });
+    }, 60_000); // a full four-bot day: a few seconds alone, past 15 s when the whole suite runs at once
   }
 });

@@ -65,7 +65,7 @@ describe('steeping cold brew at night (Task 1 shapes)', () => {
   });
 
   it('TAP_DRINKS: every drink drawn from the cold brew tap', () => {
-    expect(TAP_DRINKS).toEqual(['coldBrew', 'icedLatte', 'special', 'sweetCream']);
+    expect(TAP_DRINKS).toEqual(['coldBrew', 'special', 'sweetCream']); // Round 6 block 4: the iced latte left the tap
   });
 });
 
