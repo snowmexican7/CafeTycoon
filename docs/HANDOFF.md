@@ -24,8 +24,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
 - 2026-11-06: **Bots are being cut almost entirely.** Design for human play only; at most a single-player robot cashier
-  that just rings up. No new bot logic, bot tests or bot review asks (beyond "nothing crashes"). How and when bots come
-  out is still to be planned.
+  that just rings up. No new bot logic, bot tests or bot review asks (beyond "nothing crashes"). Plan (draft, awaiting Kennedy's
+  answers): `docs/PLAN_BOTS_CUT_AND_WANDS.md`.
 - 2026-11-06: **Steam wand upgrades make the meters easier, not faster:** a better wand makes the jug fill fast at the
   start, very slow in the middle and fast at the end (a quick run almost always hits the line), and gives a much wider
   green band on the steam meter.
