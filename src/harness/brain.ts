@@ -32,6 +32,7 @@ import { ticketOpen, trayComplete, trayCups } from '../sim/tray';
 import { heldByPerson, heldForPeople, isPerson, ringsAtOnce } from './helper';
 import { addSyrup, askedSyrup } from '../sim/handmade';
 import { SYRUP_ID } from '../data/layout';
+import { CASHIER_ID } from '../sim/cashier';
 
 const BOTS = ECONOMY.bots;
 const MESS = ECONOMY.mess;
@@ -999,6 +1000,7 @@ export function reactionDelay(state: GameState, bot: BotState): number {
  * The bot does not know yet; it notices after a while (see stepBot) and bins it.
  */
 export function afterBotInteract(state: GameState, p: Player, heldBefore: ItemKind | null): void {
+  if (p.id === CASHIER_ID) return; // bot cut step 3: the robot cashier drives itself (src/sim/cashier.ts)
   const b = p.bot;
   if (b && heldBefore === null && p.holding === null) {
     // Extras review I1: an empty-handed press at a Gear tap that poured nothing (a cat on it, the last cup gone
@@ -1621,7 +1623,8 @@ function stepBot(state: GameState, p: Player): void {
 export function stepBots(state: GameState, _m: Modifiers): GameState {
   answerPhone(state);
   for (const p of state.players) {
-    if (p.bot && p.connected && p.stunTicksLeft === 0) stepBot(state, p);
+    // Bot cut step 3: the robot cashier drives itself (src/sim/cashier.ts); the brain leaves it alone.
+    if (p.bot && p.connected && p.stunTicksLeft === 0 && p.id !== CASHIER_ID) stepBot(state, p);
   }
   return state;
 }

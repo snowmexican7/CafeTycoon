@@ -12,6 +12,7 @@ import { rentForDay } from './effects';
 import { emitLog } from './log';
 import { hireWagesForDay, isHired, type HireRole } from './hires';
 import { strategistNight } from './strategist';
+import { cashierOf } from './cashier';
 import type { GameState, PlayerInput, TierId } from './types';
 
 export const WAGE_BY_TIER: Record<TierId, number> = { stand: 1, cart: 3, cafe: 5 };
@@ -61,9 +62,19 @@ export function hiredCount(state: GameState): number {
 /** The bots that draw a wage today. */
 const paidCount = (state: GameState): number => Math.min(crewCount(state), hiredCount(state));
 
-/** Wages owed at today's closing: the crew's, plus the Strategist's and Marketer's (Round 3 item 3). */
+/**
+ * Bot cut step 3: the robot cashier's daily charge (`ECONOMY.cashier.dailyCost`) when it is on shift: between days,
+ * when the run has it switched on (it clocks in at the morning's syncCashier); during the day and at closing, when it
+ * is behind the bar. Not part of `hireWages`.
+ */
+export function cashierWage(state: GameState): number {
+  const onShift = state.phase === 'night' || state.phase === 'weekEnd' ? state.settings.cashier === true : cashierOf(state) !== undefined;
+  return onShift ? ECONOMY.cashier.dailyCost : 0;
+}
+
+/** Wages owed at today's closing: the crew's, plus the Strategist's and Marketer's (Round 3 item 3), plus the robot cashier's. */
 export function wagesForDay(state: GameState): number {
-  return round2(wageEach(state) * paidCount(state) + hireWagesForDay(state));
+  return round2(wageEach(state) * paidCount(state) + hireWagesForDay(state) + cashierWage(state));
 }
 
 /** Everything closing will take from the till: rent plus wages. */
@@ -118,11 +129,14 @@ function applyHireRole(state: GameState, role: HireRole, action: 'hire' | 'fire'
   return state;
 }
 
-/** Closing: pay the crew, the Strategist and the Marketer. Recorded on the day as `wages` (`hireWages` is the specialists' part). */
+/**
+ * Closing: pay the crew, the Strategist, the Marketer and the robot cashier. Recorded on the day as `wages`
+ * (`hireWages` is the specialists' part).
+ */
 export function payWages(state: GameState): void {
   const crew = round2(wageEach(state) * Math.min(staff(state).length, hiredCount(state)));
   const hires = hireWagesForDay(state);
-  const w = round2(crew + hires);
+  const w = round2(crew + hires + cashierWage(state));
   if (w <= 0) return;
   state.cash = round2(state.cash - w);
   state.today.wages = w;

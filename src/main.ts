@@ -324,13 +324,14 @@ async function main(): Promise<void> {
     }
   }
 
-  function runOptions(choice: StartChoice, hostId: PlayerId, players: Member[], bots: BotsChoice = 'auto'): CreateRunOptions {
+  function runOptions(choice: StartChoice, hostId: PlayerId, players: Member[], bots: BotsChoice = 'auto', cashier = false): CreateRunOptions {
     const settings = stores.settings.get();
     return {
       seed: choice.seed ?? Math.floor(Math.random() * 2 ** 31),
       hostId,
       players: players.map((m) => ({ id: m.token, name: m.name, ...(m.look ? { look: m.look } : {}) })),
-      settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec, bots },
+      // Bot cut step 3: only a solo start passes `cashier` (the robot cashier); a co-op room never has one.
+      settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec, bots, ...(cashier ? { cashier } : {}) },
       // P3 B13: every new run opens as a kerbside stand and grows from there.
       tier: 'stand',
       // G11 (v3.0.0): every new run is a Gear run; ?gear=0 is a hidden classic escape hatch.
@@ -410,7 +411,7 @@ async function main(): Promise<void> {
     attachTelemetry(s, tele);
     armWatchdog(s);
     rememberPerk(choice);
-    local.start(runOptions(choice, id, [{ token: id, name: settings.playerName, ...(look ? { look } : {}) }], settings.soloBots));
+    local.start(runOptions(choice, id, [{ token: id, name: settings.playerName, ...(look ? { look } : {}) }], settings.soloBots, settings.soloCashier));
   }
 
   function openHostRoom(s: Session, local: Transport, code: string, hostMember: Member): void {

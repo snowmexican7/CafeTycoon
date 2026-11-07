@@ -640,6 +640,8 @@ export interface Settings {
   pace: Pace;
   bots: number | 'auto';
   botSkill: BotSkill;
+  /** Bot cut step 3: a solo run's robot cashier (src/sim/cashier.ts) rings customers up at the till. Absent/false = none. */
+  cashier?: boolean;
 }
 
 /** One optional daily challenge and its live progress (B7). */

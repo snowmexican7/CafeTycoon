@@ -6,12 +6,13 @@
 import { applyBotCall, callFor, callRinging, elapsed } from '../sim/call';
 import { secondsToTicks } from '../sim/constants';
 import type { GameState, Player } from '../sim/types';
+import { CASHIER_ID } from '../sim/cashier';
 
 /** How long a call rings before a bot steps in. */
 export const BOT_ANSWER_SEC = 10;
 
 const idle = (p: Player): boolean =>
-  !!p.bot && p.connected && p.stunTicksLeft === 0 && p.bot.claim === null && (p.bot.plan.length === 0 || p.bot.plan[0]!.kind === 'idle');
+  p.id !== CASHIER_ID && !!p.bot && p.connected && p.stunTicksLeft === 0 && p.bot.claim === null && (p.bot.plan.length === 0 || p.bot.plan[0]!.kind === 'idle');
 
 /** Order: take it unless yesterday's branch day lost people; machine: fix it with two or more branch staff. */
 export function botTakesCall(state: GameState, kind: 'machine' | 'order'): boolean {

@@ -1,5 +1,6 @@
 import { ECONOMY } from '../data/economy';
 import { isBotId } from '../sim/bots/roster';
+import { CASHIER_ID } from '../sim/cashier';
 import type { GameState } from '../sim/types';
 
 export type SeatResult = { seat: string } | { reject: 'full' };
@@ -31,7 +32,7 @@ export function assignSeat(req: SeatRequest): SeatResult {
     if (live.has(token)) return { seat: token }; // the same tab again: the latest connection wins
     return live.size + 1 >= max ? { reject: 'full' } : { seat: token };
   }
-  const humans = state.players.filter((p) => !p.bot && !isBotId(p.id));
+  const humans = state.players.filter((p) => !p.bot && !isBotId(p.id) && p.id !== CASHIER_ID);
   if (live.has(token) || humans.some((p) => p.id === token)) return { seat: token };
   const away = humans.filter((p) => p.id !== hostToken && !live.has(p.id));
   const mine = prev !== undefined ? away.find((p) => p.id === prev) : undefined;
