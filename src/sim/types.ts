@@ -708,7 +708,7 @@ export interface DayStats {
   ad?: { id: AdId; outcome: AdOutcome };
   /** P3 B12: what the checkout cost today (card fees plus the kiosk licence). */
   checkoutFees?: number;
-  /** P3 B15: wages paid to the hired bot baristas at closing (Gear runs; absent = none). */
+  /** Wages paid at closing: the Strategist, the Marketer and the robot cashier (Gear runs; absent = none). */
   wages?: number;
   /** Round 3 item 3: the part of `wages` that went to the Strategist and Marketer (absent = none). */
   hireWages?: number;
@@ -959,7 +959,7 @@ export type PlayerInput =
   | { kind: 'scout'; playerId: PlayerId }
   | { kind: 'rivalCounter'; playerId: PlayerId; on?: boolean }
   | { kind: 'stampCard'; playerId: PlayerId }
-  /** P3 B15: hire one more bot barista, or let the newest one go. Gear runs, night only. */
+  /** Round 3 item 3: hire or let go the Strategist or the Marketer (bot cut 4a: no bot baristas). Gear runs, night only. */
   | { kind: 'staff'; playerId: PlayerId; action: 'hire' | 'fire'; /** Round 3 item 3; bot cut 4a: always named (no barista hires). */ role: 'strategist' | 'marketer' }
   | { kind: 'branch'; playerId: PlayerId; action: 'open' | 'staff' | 'send' | 'close'; area?: AreaId; staff?: number; supply?: SupplyId }
   | { kind: 'ad'; playerId: PlayerId; ad: AdId | null }

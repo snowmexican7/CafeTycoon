@@ -304,7 +304,7 @@ export interface NightVM {
    */
   makeable: boolean;
   ready: { id: PlayerId; name: string; ready: boolean }[];
-  /** P3 B15 (Gear runs): the hired bot baristas, each one's daily wage, and whether a spot is free. */
+  /** Gear runs: the Strategist / Marketer hire cards (bot cut 4a: no bot baristas). */
   staff?: StaffVM;
   /** Phase 3 B3: regulars, their favourite and loyalty. */
   regulars?: RegularVM[];
@@ -834,7 +834,7 @@ export interface ClosingVM {
   sales: string;
   tips: string;
   rent: string;
-  /** P3 B15: wages paid to the hired crew today (Gear runs). */
+  /** Wages paid today: the Strategist, the Marketer and the robot cashier (Gear runs). */
   wages?: string;
   /** Round 3 / review: specialists' share of wages (`DayStats.hireWages`). */
   hireWages?: string;

@@ -10,8 +10,9 @@
  * - at home, with a customer to ring (`tillNext`) and nobody else ringing, it presses once, then stays put until the
  *   ring finishes (`stepRingUp` cancels a ring whose ringer walks off);
  * - it defers to people: while an empty-handed person (ringing up needs empty hands, so someone carrying a drink to
- *   the pickup counter isn't coming to ring) is within `ECONOMY.cashier.deferTiles` of the till spot (on it or a tile
- *   straight beside it, not diagonal), or someone else's ring-up runs, it never presses and waits on an idle tile next
+ *   the pickup counter isn't coming to ring, and someone collapsed from espresso isn't ringing either) stands on the till
+ *   spot's tile or one straight beside it (`ECONOMY.cashier.deferTiles`, counted in tiles along the grid, never
+ *   diagonal), or someone else's ring-up runs, it never presses and waits on an idle tile next
  *   to the till (`idleNode`); it walks back only `ECONOMY.cashier.returnAfterSec` after the last tick a person counted
  *   (`BotState.personSeenTick`), so it doesn't dither back and forth on the small stand;
  * - at the self-order tier (Squarely) customers ring themselves, so it just waits on its idle tile;
@@ -24,7 +25,8 @@ import { LAYOUT } from '../data/layout';
 import { CASHIER_ID, makeBotState } from './botBody';
 import { findPath, idleNode, nodeOf, targetNodes } from './path';
 import { freeSpot } from './spawn';
-import { floorFields } from './tiles';
+import { floorFields, tileOf } from './tiles';
+import { isOut } from './espresso';
 import { nearestStation } from './movement';
 import { selfOrder, tillNext } from './till';
 import { secondsToTicks } from './constants';
@@ -85,11 +87,17 @@ export function cashierHome(state: GameState): Vec2 | null {
 }
 
 /**
- * A person (connected, not a bot) has the till: they stand within `deferTiles` of the till spot with empty hands and no
- * tool (only empty hands can ring, so someone carrying a drink to the pickup counter isn't coming for the till).
+ * A person (connected, not a bot, not collapsed) has the till: their tile is the till spot's tile or one straight beside
+ * it (`deferTiles` along the grid, never diagonal), with empty hands and no tool (only empty hands can ring, so someone
+ * carrying a drink to the pickup counter isn't coming for the till).
  */
 function personAtTill(state: GameState, home: Vec2): boolean {
-  return state.players.some((o) => !o.bot && o.connected && o.holding === null && !o.tool && dist(o.pos, home) <= ECONOMY.cashier.deferTiles);
+  const spot = tileOf(home);
+  return state.players.some((o) => {
+    if (o.bot || !o.connected || isOut(o) || o.holding !== null || o.tool) return false;
+    const t = tileOf(o.pos);
+    return Math.abs(t.x - spot.x) + Math.abs(t.y - spot.y) <= ECONOMY.cashier.deferTiles;
+  });
 }
 
 /** Another body stands on (or next to) `node`. */

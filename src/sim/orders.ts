@@ -16,7 +16,7 @@
  *   no lost customers, no wasted cups, no bad review, no reputation hit. Served: one customer for reputation
  *   (`DayStats.officeExtra`). Since losing one costs nothing, it never takes a walk-in's place: it takes a cup off the
  *   pickup counter only when no one else wants it (`pickup.ts`), and bots keep one of its drinks in the queue at its
- *   place and make the rest after the walk-ins' (`bots/brain.ts`, fix round 1 I1).
+ *   place and make the rest after the walk-ins' (`src/harness/brain.ts`, fix round 1 I1).
  * Events: `order.combo`, `order.office { customer, count }`, `office.call`, `order.done { customer, paid, tip }`,
  * `order.lost`. Randomness from `state.rng` only, drawn only in Gear runs inside each window.
  */

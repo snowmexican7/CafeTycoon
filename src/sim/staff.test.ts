@@ -7,7 +7,8 @@ import { validateInput } from './validate';
 import { profitOf } from './profit';
 import { rentForDay } from './effects';
 import { hireWage } from './hires';
-import { billsForDay, wagesForDay } from './staff';
+import { billsForDay, wageEach, wagesForDay, WAGE_BY_TIER } from './staff';
+import { nightWarnings } from '../ui/nightWarnings';
 import { nightHtml, type NightUiState } from '../ui/night';
 import { nightExtras } from '../ui/live';
 import { nightViewModel } from '../ui/viewModels';
@@ -46,6 +47,53 @@ describe('staff (bot cut 4a: no bot baristas, no crew wages)', () => {
     const after = step(gearRun(2), [{ kind: 'staff', playerId: 'p1', action: 'hire' } as unknown as PlayerInput]);
     expect(after.players.map((p) => p.id)).toEqual(['p1', 'p2']);
     expect(after.staff).toBeUndefined();
+  });
+
+  it('wageEach (a second-shop barista, src/sim/branch.ts) scales with the shop and is paid by the hour (B17)', () => {
+    const s = gearRun();
+    expect(wageEach(s)).toBe(WAGE_BY_TIER.stand);
+    s.tier = 'cart';
+    expect(wageEach(s)).toBe(WAGE_BY_TIER.cart);
+    s.tier = 'cafe';
+    expect(wageEach(s)).toBe(WAGE_BY_TIER.cafe);
+    s.tier = 'stand';
+    s.settings.dayLengthSec = 60;
+    expect(wageEach(s)).toBe(0.4);
+    s.tier = 'cafe';
+    expect(wageEach(s)).toBe(2);
+    s.settings.dayLengthSec = 300;
+    expect(wageEach(s)).toBe(2 * WAGE_BY_TIER.cafe);
+    expect(wageEach(gearRun(1, false))).toBe(0); // classic runs pay none
+  });
+
+  it('wages can bankrupt a shop that cannot cover them (a hired Strategist)', () => {
+    const s = gearRun();
+    s.staff = { strategist: true };
+    expect(wagesForDay(s)).toBeGreaterThan(0);
+    s.challenges = []; // no challenge tip muddying the till
+    s.phase = 'closing';
+    s.cash = rentForDay(s) + wagesForDay(s) / 2; // the rent, not the wage
+    expect(finishDay(s).bankrupt).toBe(true);
+    const ok = gearRun();
+    ok.staff = { strategist: true };
+    ok.challenges = [];
+    ok.phase = 'closing';
+    ok.cash = billsForDay(ok) + 1;
+    expect(finishDay(ok).bankrupt).toBe(false);
+  });
+
+  it('the night warns about rent and wages together (the Strategist, the Marketer and the robot cashier)', () => {
+    const s = gearRun(1, true, true);
+    s.staff = { strategist: true, marketer: true };
+    const bills = billsForDay(s);
+    expect(bills).toBe(rentForDay(s) + hireWage(s, 'strategist') + hireWage(s, 'marketer') + ECONOMY.cashier.dailyCost);
+    s.cash = rentForDay(s) + 1; // enough for rent, not the wages
+    const w = nightWarnings(s).find((x) => x.kind === 'cash');
+    expect(w?.title).toMatch(/short on rent and wages/);
+    expect(w?.detail).toContain('Rent and wages are $' + bills);
+    const plain = gearRun();
+    plain.cash = rentForDay(plain) - 1; // no wages: rent alone
+    expect(nightWarnings(plain).find((x) => x.kind === 'cash')?.title).not.toMatch(/wages/);
   });
 
   it('old days without wages keep their profit (old saves)', () => {

@@ -99,7 +99,7 @@ describe('bot cut step 3: the solo robot cashier', () => {
     let s = cashierDay();
     cashier(s).pos = { x: 2, y: 5 };
     const home = cashierHome(s)!;
-    expect(dist(me(s).pos, home)).toBeGreaterThan(ECONOMY.cashier.deferTiles);
+    expect(dist(me(s).pos, home)).toBeGreaterThan(2);
     cust(s, 901);
     const path = findPath(s, cashier(s).pos, home)!;
     const perTick = (ECONOMY.moveSpeedTilesPerSecond * ECONOMY.bots.personalities.steady.speed) / TICK_RATE; // ×1.0: no skill dial
@@ -146,20 +146,46 @@ describe('bot cut step 3: the solo robot cashier', () => {
     expect(byId(s, 901).stage).toBe('pickup');
   });
 
-  it('a person diagonal to the till spot does not make it leave: it stays and rings (deferTiles 1.1)', () => {
-    expect(ECONOMY.cashier.deferTiles).toBe(1.1);
+  /** Cashier at home, a customer waiting, p1 held at `pos` (with `setup` applied) each tick for 3 s. */
+  const holdAt = (pos: (home: Vec2) => Vec2, setup: (p: Player) => void = () => {}) => {
     let s = cashierDay();
     const home = cashierHome(s)!;
     cashier(s).pos = { ...home };
-    const diagonal = { x: home.x - 1, y: home.y + 1 };
-    expect(dist(diagonal, home)).toBeGreaterThan(ECONOMY.cashier.deferTiles);
-    me(s).pos = { ...diagonal };
+    let left = false;
+    const place = () => {
+      me(s).pos = pos(home);
+      setup(me(s));
+    };
+    place();
     cust(s, 901);
     for (let i = 0; i < secondsToTicks(3); i++) {
       s = tick(s, []);
-      me(s).pos = { ...diagonal };
-      expect(dist(cashier(s).pos, home)).toBeLessThan(0.5); // never walks off
+      place();
+      if (dist(cashier(s).pos, home) >= 0.5) left = true;
     }
+    return { s, left };
+  };
+
+  it('defers by tiles: a person on the till tile or straight beside it counts, never one on a diagonal tile', () => {
+    expect(ECONOMY.cashier.deferTiles).toBe(1); // Manhattan tile radius
+    // On a diagonal tile, even off-centre toward the till (well under 1.1 tiles in a straight line): it stays and rings.
+    const diag = holdAt((h) => ({ x: h.x - 1 + 0.45, y: h.y + 1 - 0.45 }));
+    expect(diag.left).toBe(false);
+    expect(rungBy(diag.s, CASHIER_ID)).toHaveLength(1);
+    expect(byId(diag.s, 901).stage).toBe('pickup');
+    // On the tile straight beside it, even at its far edge (over 1.1 tiles away): it steps aside and never rings.
+    const side = holdAt((h) => ({ x: h.x - 1.45, y: h.y }));
+    expect(side.left).toBe(true);
+    expect(starts(side.s, CASHIER_ID)).toHaveLength(0);
+    expect(byId(side.s, 901).stage).toBe('order');
+  });
+
+  it('a collapsed person on the till spot does not stop the cashier', () => {
+    const { s, left } = holdAt(
+      (h) => ({ ...h }),
+      (p) => (p.espresso = { shots: 6, boostTicksLeft: 0, mul: 1, collapsedAt: 0, fellAt: { ...p.pos }, out: true }),
+    );
+    expect(left).toBe(false);
     expect(rungBy(s, CASHIER_ID)).toHaveLength(1);
     expect(byId(s, 901).stage).toBe('pickup');
   });
@@ -238,8 +264,7 @@ describe('bot cut step 3: the solo robot cashier', () => {
       let s = cashierDay();
       const home = cashierHome(s)!;
       cashier(s).pos = { ...home };
-      const spot = { x: home.x - 1, y: home.y }; // within deferTiles of the till spot
-      expect(dist(spot, home)).toBeLessThanOrEqual(ECONOMY.cashier.deferTiles);
+      const spot = { x: home.x - 1, y: home.y }; // the tile straight beside the till spot
       me(s).pos = { ...spot };
       me(s).holding = holding;
       cust(s, 901);
