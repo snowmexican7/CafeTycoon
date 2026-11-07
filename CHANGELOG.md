@@ -16,6 +16,10 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Better steam wands make lattes easier, not faster.** With the proper wand the milk slows right at the line on the
+  jug, so a quick stop lands on it, and the foam meter's perfect band is about twice as wide. The Annihilator and
+  Double Trouble go further: on Double Trouble the milk all but stops at the line and the foam is nearly always
+  perfect. The little wand works as before.
 - **Bots are gone.** No more bot crewmates in solo or co-op, no hired bot baristas or bot wages, no temp-barista card,
   and nobody covers for someone who collapses from espresso. It's a game for people now.
 - **Robot cashier (solo).** Playing solo, a robot cashier rings customers up at the till for $1 a day (on the night

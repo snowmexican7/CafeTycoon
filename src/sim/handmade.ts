@@ -25,6 +25,7 @@
  */
 import { ECONOMY } from '../data/economy';
 import { recipeChain, type Recipe } from '../data/drinks';
+import { GEAR } from '../data/gear';
 import { SYRUP_ID, SYRUP_SPOT } from '../data/layout';
 import { ACCURACY, cupOutOfStation } from './accuracy';
 import { secondsToTicks } from './constants';
@@ -82,18 +83,89 @@ export function fillGrade(level: number, line: number): FillGrade {
   return level < line ? 'under' : 'over';
 }
 
-export function steamGrade(pos: number): SteamGrade {
-  const off = Math.abs(pos - 0.5);
-  if (off <= HANDMADE.perfect + 1e-9) return 'perfect';
-  return off <= HANDMADE.ok + 1e-9 ? 'ok' : 'miss';
+// ---------------------------------------------------------------------------------------------- wand ease (Phase 3)
+
+/**
+ * Bot cut Phase 3 (Kennedy 2026-11-06): a better steam wand makes the hand-made meters EASIER, not faster. The jug
+ * fills fast, then slow around the ticket's line, then fast again (same total time), so a quick stop lands on the
+ * line; the steam meter's green band is wider. 0 = the little wand (E3 add-on, as before), 1 = the proper wand (E4
+ * add-on), 2 = The Annihilator's built-in wand (E5), 3 = Double Trouble's (E6).
+ */
+export type WandEase = 0 | 1 | 2 | 3;
+/**
+ * Per ease: `fillDwell`, how much slower the jug fills right on the line than far from it (0 = even speed; the slowdown
+ * fades out linearly over `FILL_DWELL_WIDTH` either side), and the steam meter's `perfect` half-width.
+ */
+export const WAND_EASE: readonly { fillDwell: number; perfect: number }[] = [
+  { fillDwell: 0, perfect: 0.08 },
+  { fillDwell: 2, perfect: 0.15 },
+  { fillDwell: 5, perfect: 0.2 },
+  { fillDwell: 10, perfect: 0.25 },
+];
+/** How far either side of the line the jug's slow stretch reaches (share of full). */
+export const FILL_DWELL_WIDTH = 0.15;
+
+/** Which ease a wand station gives (no wand, or not a wand station: the little wand's 0). */
+export function wandEase(st: Station | undefined): WandEase {
+  if (!st?.wand || st.wand === 'weak') return 0;
+  if (st.wand === 'strong') return 1;
+  const built = st.wandOf ? GEAR[st.wandOf].wand?.built : undefined;
+  return built && built.tier >= 4 ? 3 : 2;
 }
 
-/** The jug's level now: as stopped, else rising with the clock. */
+/** Area under the slowdown bump (height 1 on the line, 0 at FILL_DWELL_WIDTH away) from 0 to `level`. */
+function dwellArea(level: number, line: number): number {
+  const h = FILL_DWELL_WIDTH;
+  const g = (x: number): number => {
+    const u = (x - line) / h;
+    if (u <= -1) return 0;
+    if (u <= 0) return ((u + 1) * (u + 1)) / 2;
+    if (u <= 1) return 1 - ((1 - u) * (1 - u)) / 2;
+    return 1;
+  };
+  return h * (g(level) - g(0));
+}
+
+/**
+ * The jug's level after share `t` (0..1) of the fill time, for a wand's ease and the ticket's line. Time spent per bit
+ * of milk is 1 + fillDwell × bump(level), so the fill crawls on the line and hurries elsewhere; the level is that
+ * time map inverted (bisection: pure arithmetic, the same on every peer).
+ */
+export function fillLevel(t: number, ease: WandEase, line: number): number {
+  const k = WAND_EASE[ease]!.fillDwell;
+  const tt = clamp01(t);
+  if (k === 0) return tt;
+  const time = (level: number) => level + k * dwellArea(level, line);
+  const target = tt * time(1);
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (time(mid) < target) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+/** The steam meter's perfect and ok half-widths for a wand's ease (ok grows by as much as perfect does). */
+export function steamWindow(ease: WandEase): { perfect: number; ok: number } {
+  const perfect = WAND_EASE[ease]!.perfect;
+  return { perfect, ok: HANDMADE.ok + (perfect - HANDMADE.perfect) };
+}
+
+export function steamGrade(pos: number, ease: WandEase = 0): SteamGrade {
+  const w = steamWindow(ease);
+  const off = Math.abs(pos - 0.5);
+  if (off <= w.perfect + 1e-9) return 'perfect';
+  return off <= w.ok + 1e-9 ? 'ok' : 'miss';
+}
+
+/** The jug's level now: as stopped, else rising with the clock (eased by the wand it started at). */
 export function jugFill(state: GameState, p: Player): number {
   const j = p.jug;
   if (!j) return 0;
   if (j.done) return j.fill;
-  return clamp01((state.tick - j.startedAt) / secondsToTicks(HANDMADE.fillSeconds));
+  return fillLevel((state.tick - j.startedAt) / secondsToTicks(HANDMADE.fillSeconds), j.ease ?? 0, j.line);
 }
 
 /** Where the steam meter is (0..1, a triangle wave starting at 0), or null when this person has none running. For the UI. */
@@ -262,6 +334,12 @@ function needsFoamMeter(state: GameState, p: Player, station: Station, recipe: R
   return state.gear === true && !p.bot && station.kind === 'steamer' && recipe.takes === 'latte' && recipe.gives === 'cappuccino';
 }
 
+/** The wand's ease to keep on a jug or meter (left off for the little wand, so old shapes stay the same). */
+const easeOf = (st: Station): { ease?: 1 | 2 | 3 } => {
+  const e = wandEase(st);
+  return e === 0 ? {} : { ease: e };
+};
+
 function stopJug(state: GameState, p: Player): void {
   const j = p.jug!;
   j.fill = jugFill(state, p);
@@ -316,7 +394,7 @@ export function handmadePress(state: GameState, p: Player): boolean {
   if (p.steam) {
     const st = state.stations.find((x) => x.id === p.steam!.station);
     if (st && dist(p.pos, st.pos) <= ECONOMY.interactRangeTiles) {
-      stopSteam(state, p, steamGrade(steamPos(state, p)!));
+      stopSteam(state, p, steamGrade(steamPos(state, p)!, p.steam.ease ?? 0));
       return true;
     }
   }
@@ -329,7 +407,7 @@ export function handmadePress(state: GameState, p: Player): boolean {
  */
 export function jugFirst(state: GameState, p: Player, station: Station, recipe: Recipe): boolean {
   if (!needsJug(state, p, station, recipe) || p.jug?.done) return false;
-  if (!p.jug) p.jug = { fill: 0, startedAt: state.tick, line: jugLine(state, p) };
+  if (!p.jug) p.jug = { fill: 0, startedAt: state.tick, line: jugLine(state, p), ...easeOf(station) };
   return true;
 }
 
@@ -351,13 +429,13 @@ export function afterInsert(state: GameState, p: Player, station: Station, recip
     station.made = { ...station.made, milk: grade };
     if (grade === 'over' && readyStock(state, 'milk') >= 1) useStock(state, 'milk');
     delete p.jug;
-    p.steam = { startedAt: state.tick, speed: HANDMADE.steamSpeed, station: station.id };
+    p.steam = { startedAt: state.tick, speed: HANDMADE.steamSpeed, station: station.id, ...easeOf(station) };
     // Round 6: the meter is the only timer — no steamer busy wait (others are blocked via `steamLocked`).
     return 0;
   }
   // Round 6 (Kennedy): cappuccino's second steam also finishes into hand — meter only, no steamer wait.
   if (needsFoamMeter(state, p, station, recipe)) {
-    p.steam = { startedAt: state.tick, speed: HANDMADE.steamSpeed, station: station.id };
+    p.steam = { startedAt: state.tick, speed: HANDMADE.steamSpeed, station: station.id, ...easeOf(station) };
     return 0;
   }
   return out;

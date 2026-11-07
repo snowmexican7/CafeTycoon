@@ -3,6 +3,7 @@ import { createRun, startDay } from '../sim/run';
 import { stationsFromSlots } from '../sim/slots';
 import { GEAR, type GearId } from '../data/gear';
 import { SYRUP_ID } from '../data/layout';
+import { steamWindow } from '../sim/handmade';
 import { JUG_LINES } from '../sim/handmade';
 import type { GameState } from '../sim/types';
 import { handHint, hudLive, ordersKey } from './live';
@@ -202,5 +203,14 @@ describe('FB2 B8 juice + sounds', () => {
     emit(b, 'syrup.miss', { customer: 2 });
     const ids = diffCues(a, b, 'p1', logCursor(a)).cues.map((c) => c.id) as CueId[];
     expect(ids).toEqual(expect.arrayContaining(['milkFill', 'steamResult', 'syrupAdd', 'syrupMiss']));
+  });
+});
+
+describe('Phase 3: the drawn steam meter matches the wand', () => {
+  it("the meter's bands widen with the wand the meter started at", () => {
+    const s = { tick: 10 } as unknown as Parameters<typeof steamMeter>[0];
+    const p = (ease?: 1 | 2 | 3) => ({ steam: { startedAt: 0, speed: 1, station: 'wand', ...(ease ? { ease } : {}) } }) as unknown as Parameters<typeof steamMeter>[1];
+    expect(steamMeter(s, p())).toMatchObject(steamWindow(0));
+    expect(steamMeter(s, p(3))).toMatchObject({ perfect: 0.25, ok: steamWindow(3).ok });
   });
 });
