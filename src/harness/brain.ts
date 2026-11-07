@@ -26,7 +26,6 @@ import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, SUPPLY_ID, TRAY_ID, layou
 import { FRIDGE, autoMilk, canLiftSupply, closingSoon, coldMilkDrink, isMilkStation, isSupply, readyStock, supplyRecipe } from '../sim/fridge';
 import { CONDIMENTS, canTakeBox, returnBox } from '../sim/condiments';
 import { isSink, needsDump } from '../sim/sink';
-import { answerPhone } from './phone';
 import { wantsItem } from '../sim/orders';
 import { ticketOpen, trayComplete, trayCups } from '../sim/tray';
 import { heldByPerson, heldForPeople, isPerson, ringsAtOnce } from './helper';
@@ -1621,7 +1620,6 @@ function stepBot(state: GameState, p: Player): void {
 
 /** Every connected bot, in players order, picks its moveDir and whether to press "use" this tick. */
 export function stepBots(state: GameState, _m: Modifiers): GameState {
-  answerPhone(state);
   for (const p of state.players) {
     // Bot cut step 3: the robot cashier drives itself (src/sim/cashier.ts); the brain leaves it alone.
     if (p.bot && p.connected && p.stunTicksLeft === 0 && p.id !== CASHIER_ID) stepBot(state, p);

@@ -20,7 +20,7 @@
  *   stand-in also with no job of its own). With nobody free a bot may claim any ticket at once.
  *
  * Everything else bots do is unchanged: ring up, set drinks on the pickup counter, refill the condiment bar,
- * mop, answer the phone, rescue orphaned drinks, and make the drinks people aren't covering. Pure: no RNG,
+ * mop, rescue orphaned drinks, and make the drinks people aren't covering. Pure: no RNG,
  * no state written.
  */
 import { ECONOMY } from '../data/economy';

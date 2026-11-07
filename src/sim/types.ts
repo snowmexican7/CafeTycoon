@@ -219,8 +219,8 @@ export type SimEventKind =
   | 'steep'
   /** Round 5 block 4: mid-day refill of an empty Gear cold brew (`{ by, station, cups }`). */
   | 'coldbrew.refill'
-  /** P4 B6: someone (a person or a bot) picked up the branch's phone. */
-  | 'call.answer'
+  /** P4 B6 (bot cut): the branch's call rang and the branch decided (`{ kind, take }`). */
+  | 'call.outcome'
   /** FB2 A3 (Gear runs): the back sink, drip pots and messes. */
   | 'sink.dump'
   | 'pot.lift'
@@ -735,7 +735,7 @@ export interface DayStats {
   /** P4 B3: who handed off what today: serves and takings per player (bots included). */
   byPlayer?: Record<PlayerId, { serves: number; takings: number }>;
   /** P4 B4: the second shop's day (its profit is already in the till). */
-  branch?: { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number; /** P4 B6: today's phone call and how it ended. */ call?: { kind: 'machine' | 'order'; took: boolean; by?: string } };
+  branch?: { served: number; walked: number; takings: number; costs: number; profit: number; fromStock?: number; /** P4 B6: today's phone call and how it ended. */ call?: { kind: 'machine' | 'order'; took: boolean } };
   /** FB1 WP4: seconds into the day when the board first sold out. */
   soldOutAt?: number;
   /** Batch/pickup: drip and cold brew customers who found the condiment bar empty and took it black. */
@@ -817,10 +817,11 @@ export interface GameState {
   morningNotes: string[];
   /** FB1 WP3: connected humans who have voted to close early (absent = nobody; cleared each phase). */
   closeVotes?: PlayerId[];
-  /** P4 B6: who answered the branch's phone call, and whether they fixed it / took the order. */
-  callAnswer?: { day: number; take: boolean; by: string };
-  /** Review I2: the day today's branch call first rang (absent = it hasn't, so closing doesn't count it as missed). */
-  callRang?: number;
+  /**
+   * P4 B6 (bot cut): what the branch decided about today's phone call (fix it / take the order), set when the call
+   * first rings (absent, or another day = it hasn't rung, so closing records no call).
+   */
+  callDecision?: { day: number; take: boolean };
   /**
    * FB2 B6: today's office run (Gear, cart and café, from day 3), drawn at day start: it walks in `at` ticks after
    * opening (the phone rings `ORDERS.office.callSeconds` before); `called` once it rang, `came` its customer id.
@@ -996,7 +997,6 @@ export type PlayerInput =
   | { kind: 'devFill'; playerId: PlayerId }
   /** Round 5: host only, dev runs only, the day or its closing: end the day now (closing, then night, with the normal settlement). */
   | { kind: 'devSkip'; playerId: PlayerId }
-  | { kind: 'call'; playerId: PlayerId; take: boolean }
   | { kind: 'join'; playerId: PlayerId; name: string; look?: PlayerLook }
   /** R4 e: set my own look (night or week end only; a bad look is refused). */
   | { kind: 'look'; playerId: PlayerId; look: PlayerLook }

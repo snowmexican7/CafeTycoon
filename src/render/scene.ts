@@ -367,7 +367,7 @@ export class Scene {
         this.fx.spawn(`🧊 ${b.cups} ${b.cups === 1 ? 'cup' : 'cups'} of cold brew ready${fresh}`, SCENE_WIDTH / 2, sy(2), 0x9fd3ff, 17);
       }
     } else if (b.kind === 'call') {
-      const text = !b.take ? `${b.by} let the phone ring` : b.call === 'machine' ? `📞 ${b.by} talked the branch through the machine` : `📞 ${b.by} took the branch's order`;
+      const text = b.call === 'machine' ? (b.take ? '📞 The branch is fixing its machine' : "📞 The branch can't fix its machine today") : b.take ? '📞 The branch took an office order' : '📞 The branch turned down an office order';
       this.fx.spawn(text, SCENE_WIDTH / 2, sy(2) + 30, b.take ? 0x7fcfb4 : 0xf0a63a, 15);
     } else if (b.kind === 'challenge') {
       this.fx.spawn(`Challenge! +$${b.reward}`, cx, cy - 160, 0x7fcfb4, 16);

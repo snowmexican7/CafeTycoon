@@ -237,7 +237,6 @@ async function main(): Promise<void> {
     // FB2 B8: syrup rack picker (1 vanilla · 2 caramel).
     onSyrup: (flavour) => send({ kind: 'syrup', playerId: me(), flavour }),
     onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }),
-    onCall: (take) => send({ kind: 'call', playerId: me(), take }),
   }, { recipeHints });
   const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook() });
   // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).

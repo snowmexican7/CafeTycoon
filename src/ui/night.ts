@@ -362,10 +362,10 @@ function alertRow(a: BriefAlert): string {
     ${a.fix ? `<button class="btn mini" data-action="${a.fix.action}" ${data}>${esc(a.fix.label)}</button>` : ''}</li>`;
 }
 
-/** FB1 WP6: a bot's tip as one big tap-to-apply chip ("💬 Bo · hurried: Raise the latte to $5.50 ✓"). */
+/** FB1 WP6: a tip as one big tap-to-apply chip ("🏷️ Raise the latte to $5.50 · Try it"; unvoiced since the bot cut). */
 function tipChip(t: TipVM): string {
-  return `<button class="tip p-${t.personality}" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.by}: ${t.full}. Click to try it.`)}">
-    <span class="tip-by"><span aria-hidden="true">💬</span> ${esc(t.by)}</span><span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Try it</span></button>`;
+  return `<button class="tip" data-action="tip" data-tip="${esc(t.id)}" title="${esc(`${t.full}. Click to try it.`)}">
+    <span class="tip-ic" aria-hidden="true">${t.icon}</span><span class="tip-t">${esc(t.text)}</span><span class="tip-go">Try it</span></button>`;
 }
 
 /** Round 3 item 3: a Strategist or Marketer hire / fire card. */

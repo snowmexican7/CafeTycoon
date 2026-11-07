@@ -19,7 +19,7 @@
  *     priority: number;  // see the table below
  *   }
  *   planNight(state): Advice[]                                   // priority desc, then id asc
- *   crewTips(state, max = 2): (Advice & { by: PlayerId })[]      // top `max`, round-robin over connected bots (before they clock in: the ids the roster spawns)
+ *   crewTips(state, max = 2): Advice[]                           // the top `max` of planNight (unvoiced since the bot cut)
  *
  * Priorities (PLAN_PRIORITY); Gear-only rows marked G:
  *
@@ -102,8 +102,8 @@ import { reasonOff, slotCount } from './slots';
 import { knownStars, TWIST_INFO, TWISTS, twistFor } from './taste';
 import type { TwistId } from './taste';
 import { menuDrinks, SUPPLY_IDS, unlockedDrinks } from './unlocks';
-import { BOT_IDS, botsFor, humanCount } from './bots/roster';
-import type { CheckoutId, DrinkId, GameState, PlayerId, StationKind, SupplyId, TierId } from './types';
+import { BOT_IDS } from './bots/roster';
+import type { CheckoutId, DrinkId, GameState, StationKind, SupplyId, TierId } from './types';
 
 /** `equip` is only reused by Gear rows (gear, fridge, staff, hires); Round 4 f deleted the classic slot/equip advice. */
 export type AdviceKind = 'restock' | 'price' | 'twist' | 'signature' | 'scout' | 'rival' | 'grow' | 'checkout' | 'equip' | 'menu';
@@ -854,13 +854,7 @@ export function planNight(state: GameState): Advice[] {
   return all.sort((a, b) => b.priority - a.priority || byId(a, b));
 }
 
-/** The top `max` advice, voiced by the connected bot crewmates in players order, round-robin. */
-export function crewTips(state: GameState, max = 2): (Advice & { by: PlayerId })[] {
-  const present = state.players.filter((p) => p.connected && p.bot && p.bot.personality !== 'human').map((p) => p.id);
-  // bots only clock in at startDay: before that (the opening night) name the ones the roster will spawn
-  const bots = present.length > 0 ? present : BOT_IDS.slice(0, botsFor(state.settings.bots, humanCount(state)));
-  if (bots.length === 0 || max <= 0) return [];
-  return planNight(state)
-    .slice(0, max)
-    .map((a, i) => ({ ...a, by: bots[i % bots.length] }));
+/** The top `max` advice for the Tonight tab's tips (unvoiced: nobody says it since the bot cut). */
+export function crewTips(state: GameState, max = 2): Advice[] {
+  return max > 0 ? planNight(state).slice(0, max) : [];
 }

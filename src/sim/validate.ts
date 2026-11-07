@@ -170,8 +170,6 @@ export function validateInput(input: PlayerInput): PlayerInput | null {
       const look = cleanLook(input.look);
       return look ? { kind: 'look', playerId: input.playerId, look } : null;
     }
-    case 'call':
-      return typeof input.take === 'boolean' ? { kind: 'call', playerId: input.playerId, take: input.take } : null;
     case 'devPause':
       return typeof input.paused === 'boolean' ? { kind: 'devPause', playerId: input.playerId, paused: input.paused } : null;
     case 'devFill':
