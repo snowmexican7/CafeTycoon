@@ -1307,8 +1307,8 @@ const FIXTURES: Record<string, Fixture> = {
     timeline: [],
   },
   /**
-   * Round 5 block 1: all 8 hairstyles × both facings on the floor (front row faces the camera,
-   * back row faces away) so the hairline fix is easy to screenshot.
+   * Round 5/6 hair: every hairstyle × both facings on the floor (front row faces the camera,
+   * back row faces away) — opaque crowns + long wavy. Two rows of styles when there are more than 5.
    */
   hairGrid: {
     setup(s) {
@@ -1316,15 +1316,18 @@ const FIXTURES: Record<string, Fixture> = {
       gearStart(s);
       atTier(s, 'cafe', 0);
       s.customers = [];
-      const colours = ['brown', 'black', 'blonde', 'red', 'dark', 'blue', 'pink', 'grey'] as const;
-      const shirts = ['red', 'blue', 'green', 'purple', 'yellow', 'pink', 'teal', 'black'] as const;
+      const colours = ['brown', 'black', 'blonde', 'red', 'dark', 'blue', 'pink', 'grey', 'brown'] as const;
+      const shirts = ['red', 'blue', 'green', 'purple', 'yellow', 'pink', 'teal', 'black', 'green'] as const;
       const template = s.players[0]!;
       s.players = [];
+      const cols = 5;
       HAIR_STYLES.forEach((hs, i) => {
-        const x = 1.5 + (i % 8) * 1.35;
-        // Front row: facing down (toward camera). Back row: facing up.
-        for (const [row, facingY, suffix] of [[0, 1, ''], [1, -1, ' · back']] as const) {
-          const pos = { x, y: 2.2 + row * 2.2 };
+        const col = i % cols;
+        const styleRow = Math.floor(i / cols);
+        const x = 1.8 + col * 2.0;
+        // Per style: facing-down (toward camera) then facing-up behind it.
+        for (const [faceRow, facingY, suffix] of [[0, 1, ''], [1, -1, ' · back']] as const) {
+          const pos = { x, y: 1.6 + styleRow * 3.4 + faceRow * 1.5 };
           const id = `h${i}${facingY > 0 ? 'f' : 'b'}`;
           s.players.push({
             ...structuredClone(template),

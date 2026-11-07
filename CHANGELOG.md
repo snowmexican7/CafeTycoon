@@ -16,7 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- Hairstyles are fully opaque (no head shape showing through), and the creator gains a **Long wavy** look beside Long straight.
 
 ## 3.9.2 — 2026-11-05 · A solid serving counter
 
