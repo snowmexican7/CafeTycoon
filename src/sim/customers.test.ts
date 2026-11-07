@@ -75,7 +75,7 @@ describe('customers', () => {
     expect(s.pass).toEqual([{ item: 'coldBrew', ticksLeft: 36000 }]);
   });
 
-  it('day 1 spawns only normal and impatient; later days follow the 0.65/0.15/0.12/0.08 mix', () => {
+  it('day 1 spawns only normal and impatient; later days follow the 0.63/0.15/0.14/0.08 mix', () => {
     const s = day();
     const share = (kind: string, n = 2000) => {
       let c = 0;
@@ -98,7 +98,7 @@ describe('customers', () => {
     const normal = addCustomer(s, 'normal')!;
     const impatient = addCustomer(s, 'impatient')!;
     const grp = addCustomer(s, 'group')!;
-    expect(impatient.patienceMax / normal.patienceMax).toBeCloseTo(0.6, 2);
+    expect(impatient.patienceMax / normal.patienceMax).toBeCloseTo(0.68, 2);
     expect(1 + (grp.extra?.length ?? 0)).toBeGreaterThanOrEqual(2);
     expect(1 + (grp.extra?.length ?? 0)).toBeLessThanOrEqual(3);
     expect(grp.patienceMax / normal.patienceMax).toBeCloseTo(1.3, 2);

@@ -22,7 +22,7 @@ export const ECONOMY = {
     Exclude<StationKind, 'counter' | 'trash'>,
     number
   >,
-  patienceSeconds: 33,
+  patienceSeconds: 36, // R6 b2: was 33
   maxTipRate: 0.35,
   baseArrivalsPerSecond: 1 / 6,
   queueCapacity: 6,
@@ -97,8 +97,8 @@ export const ECONOMY = {
   },
   customers: {
     mixDay1: { normal: 0.85, impatient: 0.15 },
-    mix: { normal: 0.65, impatient: 0.15, group: 0.12, regular: 0.08 },
-    impatient: { patience: 0.6, tip: 1.5 },
+    mix: { normal: 0.63, impatient: 0.15, group: 0.14, regular: 0.08 }, // R6 b2: group 0.12 -> 0.14
+    impatient: { patience: 0.68, tip: 1.5 }, // R6 b2: was 0.6
     group: { min: 2, max: 3, patience: 1.3, refill: 0.3 },
     regular: { tip: 1.25, max: 3, lostWeight: 2, names: ['Ada', 'Ravi', 'June'] },
   },

@@ -46,7 +46,8 @@ export const ORDERS = {
      * Share of normal and impatient walk-ins who order two drinks (fix round 1: 8%, about 6-7% of all arrivals; at 12%
      * combos and office runs together overran a two-person cart crew: 7 of 24 smoke runs bankrupt against main's 3).
      */
-    chance: 0.08,
+    /** R6 b2: 0.08 -> 0.10 (walk-in patience went up a little; the pressure moves to multi tickets). */
+    chance: 0.10,
     /** Of those, the share who ask for an espresso-bar drink and a drip (when the first drink allows it); else a pair. */
     mix: 0.5,
     patience: 1.3,
