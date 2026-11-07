@@ -23,6 +23,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-06: **Cappuccino's second steam also finishes straight into your hand**, the same as a latte (Round 6 block 3,
+  PR #29): no second wait or second E at the wand.
 - 2026-11-05: **Round 6 approved (Kennedy, Nov 5 evening).** Docs: `docs/CURSOR_PROMPT_NEXT.md`,
   `docs/CLAUDE_PROMPT_ROUND6.md`, ROADMAP "Round 6". Target **v3.10.0**.
   - **Hair:** fully opaque (no head shape through hair) + add long wavy; hairline cover already shipped in R5 #21.
@@ -119,7 +121,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   the wand output), and it can land in a hand holding a tool; a double on the wand isn't counted mid-meter (extra
   bean); hand-made lattes no longer roll the latte-art / cat eggs. Add a bot-meets-locked-wand test. No version bump.
   One merge conflict with main in `brain.ts` (`stow`: keep main's line with `isIdle(st, state)`). For Kennedy: wand
-  speed no longer matters for people's lattes; should cappuccino's second steam also go straight into the hand?
+  speed no longer matters for people's lattes; should cappuccino's second steam also go straight into the hand? Kennedy: yes (Decisions 2026-11-06).
 - [ ] **Round 6 sim blocks 1–5 landed (2026-11-06, Claude):** on main, unreleased (CHANGELOG Unreleased has the lines).
   Protocol 68, snapshot 34, 1952 tests. Each block's names and UI needs are in its own item below and in BACKLOG
   "Round 6 (sim lane, Claude)". Block 6 (review of Cursor's latte instant-in-hand PR) waits for that PR.
