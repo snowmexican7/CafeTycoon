@@ -70,7 +70,10 @@ export function buildWall(width: number): { root: Container; menuBoard: Containe
   // Until the scene hands over the live menu: the three classics at list price.
   setMenu([['Espresso', ECONOMY.prices.espresso.toFixed(2)], ['Latte', ECONOMY.prices.latte.toFixed(2)], ['Cold brew', ECONOMY.prices.coldBrew.toFixed(2)]]);
 
-  // Specialty shops: a small plaque on the left wall, clear of the chalkboard (x 378) and the machines below.
+  // Specialty shops: a small plaque on the shelf between the grinder (tile x 1) and the espresso
+  // machine (tile x 3). Its bottom sits on the shelf (y 44). The tallest station sprite on the back
+  // row is the grinder hopper, which reaches y 87, and no machine can stand north of that row, so
+  // the plaque stays clear of every station on every tier and every layout. The chalkboard starts at x 378.
   const sign = new Container();
   sign.visible = false;
   const signBoard = new Graphics();
@@ -86,13 +89,13 @@ export function buildWall(width: number): { root: Container; menuBoard: Containe
     if (!next) return;
     signText.text = next;
     const measured = signText.width > 12 ? signText.width : next.length * 11;
-    const w = Math.max(108, Math.ceil(measured) + 28);
-    const h = 40;
-    const x = 18;
-    const y = 62;
+    const w = Math.max(96, Math.ceil(measured) + 22);
+    const h = 32;
+    const y = 12;
+    const x = 128 - w / 2;
     signBoard.clear();
-    signBoard.moveTo(x + w / 2, y - 16).lineTo(x + w / 2, y).stroke({ width: 2, color: MAT.trim });
-    signBoard.roundRect(x, y, w, h, 6).fill(0xf6e2c4).stroke({ width: 4, color: 0x6b4430 });
+    signBoard.moveTo(x + w / 2, 4).lineTo(x + w / 2, y).stroke({ width: 2, color: MAT.trim });
+    signBoard.roundRect(x, y, w, h, 6).fill(0xf6e2c4).stroke({ width: 3, color: 0x6b4430 });
     signText.position.set(x + w / 2, y + h / 2 + 1);
   };
 
