@@ -5,7 +5,7 @@ import type { GameState } from '../sim/types';
 import { describe, it, expect } from 'vitest';
 import { createTelemetry, withTelemetry, type TeleEvent } from '../host/telemetry';
 import { createRun } from '../sim/run';
-import { createHostRoom } from './hostRoom';
+import { createHostRoom, SEND_GIVE_UP_MS } from './hostRoom';
 import { PROTOCOL_VERSION } from './protocol';
 import { createFakeLink } from './testing/fakeLink';
 import type { HostToClient, Transport } from './transport';
@@ -282,6 +282,187 @@ describe('HostRoom', () => {
       expect(link.sent.at(-1)).toMatchObject({ kind: 'hello', target: 'p4', data: { reject: 'full' } });
       expect(kinds(local.inputs, 'join')).toHaveLength(3);
     });
+  });
+
+  it('collapses snapshots that arrive while a send is still on the wire', async () => {
+    const link = createFakeLink();
+    const real = link.send.bind(link);
+    const queued: (() => void)[] = [];
+    link.send = (kind, data, target) => new Promise<void>((resolve) => {
+      queued.push(() => {
+        real(kind, data, target);
+        resolve();
+      });
+    });
+    const local = fakeLocal();
+    createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+    let state = createRun({ seed: 1, hostId: 'H', players: [{ id: 'H', name: 'Host' }] });
+    const snaps: GameState[] = [];
+    for (let i = 0; i < 3; i++) {
+      state = step(state, []);
+      snaps.push(state);
+      local.emit({ t: 'snapshot', state, sentAt: i + 1 });
+    }
+    // The first café is on the wire. The two newer ones must not join the queue behind it.
+    expect(link.sent).toHaveLength(0);
+    expect(queued).toHaveLength(1);
+    for (let n = 0; n < 12; n++) {
+      if (!queued.length) {
+        await Promise.resolve();
+        if (!queued.length) break;
+      }
+      queued.shift()?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    }
+    const wire = link.sent.filter((m) => m.kind === 'snap' || m.kind === 'snapd');
+    expect(wire.map((m) => (m.data as { seq: number }).seq)).toEqual([1, 2]);
+    const peerLink = createFakeLink('peer');
+    const peer = createPeerSession(peerLink, { token: 'P', name: 'Pat', timeoutMs: 1000, setTimer: () => 0, clearTimer: () => {} });
+    const seen: GameState[] = [];
+    peer.onSnapshot((s) => seen.push(s.state));
+    peerLink.receive('hello', { t: 'hello', protocol: PROTOCOL_VERSION, hostToken: 'H' }, 'host');
+    for (const m of wire) peerLink.receive(m.kind, JSON.parse(JSON.stringify(m.data)), 'host');
+    expect(seen).toHaveLength(2);
+    expect(seen.at(-1)).toEqual(roundFloats(snaps[2]));
+    peer.close();
+  });
+
+  /** A clock the watchdog can be moved with, so a test never waits out SEND_GIVE_UP_MS. */
+  function fakeClock() {
+    let now = 0;
+    const timers: { at: number; fn: () => void; dead: boolean }[] = [];
+    return {
+      setTimer(fn: () => void, ms: number) {
+        const t = { at: now + ms, fn, dead: false };
+        timers.push(t);
+        return t;
+      },
+      clearTimer(id: unknown) {
+        (id as { dead: boolean }).dead = true;
+      },
+      advance(ms: number) {
+        now += ms;
+        for (;;) {
+          const due = timers.filter((t) => !t.dead && t.at <= now).sort((a, b) => a.at - b.at)[0];
+          if (!due) return;
+          due.dead = true;
+          due.fn();
+        }
+      },
+    };
+  }
+
+  it('gives up on a send that never settles, then ignores that promise when it resolves late', async () => {
+    const link = createFakeLink();
+    const real = link.send.bind(link);
+    const clock = fakeClock();
+    let hang = false;
+    const held: { fire: (() => void) | null } = { fire: null };
+    link.send = (kind, data, target) => {
+      if (!hang) {
+        real(kind, data, target);
+        return;
+      }
+      hang = false;
+      return new Promise<void>((resolve) => {
+        held.fire = () => {
+          real(kind, data, target);
+          resolve();
+        };
+      });
+    };
+    const local = fakeLocal();
+    const room = createHostRoom(link, local.t, { token: 'H', name: 'Host' }, undefined, clock);
+    let state = createRun({ seed: 1, hostId: 'H', players: [{ id: 'H', name: 'Host' }] });
+    const shot = () => {
+      state = step(state, []);
+      local.emit({ t: 'snapshot', state, sentAt: state.tick });
+      return state;
+    };
+    shot();
+    link.sent.length = 0;
+    hang = true;
+    shot();
+    const latest = shot();
+    const snapsOf = () => link.sent.filter((m) => m.kind === 'snap' || m.kind === 'snapd');
+    expect(snapsOf()).toHaveLength(0);
+    clock.advance(SEND_GIVE_UP_MS - 1);
+    expect(snapsOf()).toHaveLength(0);
+    clock.advance(1);
+    expect(snapsOf().map((m) => (m.data as { t: string; seq: number }).t + (m.data as { seq: number }).seq)).toEqual(['snap1']);
+    expect((snapsOf()[0]!.data as { state: GameState }).state).toEqual(roundFloats(latest));
+    held.fire?.();
+    await Promise.resolve();
+    await Promise.resolve();
+    const third = shot();
+    const frames = snapsOf();
+    expect(frames.at(-1)!.data).toMatchObject({ t: 'snapd', seq: 2 });
+    const peerLink = createFakeLink('peer');
+    const peer = createPeerSession(peerLink, { token: 'P', name: 'Pat', timeoutMs: 1000, setTimer: () => 0, clearTimer: () => {} });
+    const seen: GameState[] = [];
+    peer.onSnapshot((s) => seen.push(s.state));
+    peerLink.receive('hello', { t: 'hello', protocol: PROTOCOL_VERSION, hostToken: 'H' }, 'host');
+    peerLink.receive('snap', frames.find((m) => (m.data as { t: string }).t === 'snap')!.data, 'host');
+    peerLink.receive('snapd', frames.at(-1)!.data, 'host');
+    expect(seen.at(-1)).toEqual(roundFloats(third));
+    peer.close();
+    room.close();
+  });
+
+  it('a peer leaving mid-send does not stop snapshots to the peers still there', async () => {
+    const link = createFakeLink();
+    const real = link.send.bind(link);
+    const clock = fakeClock();
+    let hang = false;
+    const held: { fire: (() => void) | null } = { fire: null };
+    link.send = (kind, data, target) => {
+      if (!hang) {
+        real(kind, data, target);
+        return;
+      }
+      hang = false;
+      return new Promise<void>((resolve) => {
+        held.fire = () => {
+          real(kind, data, target);
+          resolve();
+        };
+      });
+    };
+    const local = fakeLocal();
+    const room = createHostRoom(link, local.t, { token: 'H', name: 'Host' }, undefined, clock);
+    let state = createRun({ seed: 2, hostId: 'H', players: [{ id: 'H', name: 'Host' }] });
+    const shot = () => {
+      state = step(state, []);
+      local.emit({ t: 'snapshot', state, sentAt: state.tick });
+      return state;
+    };
+    shot();
+    link.peerJoins('p1');
+    link.receive('join', join('T1', 'Sam'), 'p1');
+    link.peerJoins('p2');
+    link.receive('join', join('T2', 'Ada'), 'p2');
+    link.sent.length = 0;
+    hang = true;
+    shot();
+    const latest = shot();
+    // The clock does not move: leaving has to unblock the room without waiting out the watchdog.
+    link.peerLeaves('p1');
+    const frames = () => link.sent.filter((m) => m.kind === 'snap' || m.kind === 'snapd');
+    expect(frames()).toHaveLength(1);
+    expect(frames()[0]!.target).toBeUndefined();
+    expect((frames()[0]!.data as { state: GameState }).state).toEqual(roundFloats(latest));
+    expect(room.members().map((m) => m.token)).toEqual(['H', 'T2']);
+    const lobby = link.sent.filter((m) => m.kind === 'lobby').at(-1)!.data as { members: { token: string }[] };
+    expect(lobby.members.map((m) => m.token)).toEqual(['H', 'T2']);
+    shot();
+    expect(frames().at(-1)!.data).toMatchObject({ t: 'snapd', seq: 2 });
+    held.fire?.();
+    await Promise.resolve();
+    await Promise.resolve();
+    shot();
+    expect(frames().at(-1)!.data).toMatchObject({ t: 'snapd', seq: 3 });
+    room.close();
   });
 
   it('bot cut 4a: lobby messages carry no bots setting', () => {

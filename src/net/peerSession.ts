@@ -110,6 +110,9 @@ export function createPeerSession(link: RoomLink, opts: PeerSessionOptions): Pee
     if (peerId !== hostPeerId) return;
     const msg = parseSnap(data);
     if (!msg) return;
+    // A join can be followed by a newer picture of the same room. An older keyframe arriving late
+    // must not paint over a look (or a player) we already have.
+    if (held && msg.seq < held.seq) return;
     held = { state: msg.state, seq: msg.seq };
     resyncAsked = null;
     emit(msg.state, msg.sentAt);

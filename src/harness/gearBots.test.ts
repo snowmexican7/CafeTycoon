@@ -596,6 +596,8 @@ describe('fix round 1', () => {
 
   it('I3: an order the bar cannot make (americano on pods only) does not stop the bot mopping', () => {
     let s = gearShop(['espresso', 'trash', null, null, null, null], ['e1', 'b0', null, null, null, null], { drinks: ['americano'] });
+    // The café's staff flap is column 11. (10, 5) is the way back from the mop, so don't stand there.
+    s.players[0].pos = { x: 9, y: 3 };
     for (let i = 0; i < 6; i++) s.messes.push({ id: 700 + i, kind: 'spill', x: 2 + i, y: 4, amount: 1 });
     s.cleanliness = 0.1;
     s.customers = [order(1620, 'americano')];

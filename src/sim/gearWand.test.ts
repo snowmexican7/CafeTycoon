@@ -572,6 +572,6 @@ describe('FB2 C9: the planner and saves', () => {
     }
     createSnapshotStore(storage).save(s);
     expect(createSnapshotStore(storage).load()?.gear).toBe(true);
-    expect(SNAPSHOT_VERSION).toBe(36); // growth order: cart is the 8-tile start; older saves are refused
+    expect(SNAPSHOT_VERSION).toBe(38); // growth order on the solid front counter; older saves are refused
   });
 });

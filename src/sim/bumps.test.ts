@@ -23,15 +23,15 @@ function cafe(seed = 1): GameState {
 
 const pl = (s: GameState, id: string): Player => s.players.find((p) => p.id === id)!;
 
-/** p1 at (4, 6) facing p2 just inside `bodyTiles`, both walking into each other (open floor). */
+/** p1 at (4, 4) facing p2 just inside `bodyTiles`, both walking into each other (open floor, behind the counter). */
 function headOn(seed = 1, gap = B.bodyTiles - 0.1): GameState {
   const s = cafe(seed);
   const a = pl(s, 'p1');
   const b = pl(s, 'p2');
-  a.pos = { x: 4, y: 6 };
-  b.pos = { x: 4 + gap, y: 6 };
-  a.tile = { x: 4, y: 6 };
-  b.tile = { x: 4, y: 6 };
+  a.pos = { x: 4, y: 4 };
+  b.pos = { x: 4 + gap, y: 4 };
+  a.tile = { x: 4, y: 4 };
+  b.tile = { x: 4, y: 4 };
   a.heldDir = { x: 1, y: 0 };
   b.heldDir = { x: -1, y: 0 };
   return s;
@@ -133,8 +133,8 @@ describe('bumps', () => {
     const gap = B.bodyTiles - 0.1;
     for (let i = 0; i < 30; i++) {
       // keep them pressed together and pushing
-      pl(s, 'p1').pos = { x: 4, y: 6 };
-      pl(s, 'p2').pos = { x: 4 + gap, y: 6 };
+      pl(s, 'p1').pos = { x: 4, y: 4 };
+      pl(s, 'p2').pos = { x: 4 + gap, y: 4 };
       s = step(s, []);
     }
     // log is pruned after 120 ticks, so all 30 ticks of logs are still here
@@ -161,8 +161,8 @@ describe('bumps', () => {
     let s = headOn();
     pl(s, 'p1').heldDir = { x: 0, y: 0 };
     pl(s, 'p2').heldDir = { x: 0, y: 0 };
-    pl(s, 'p1').pos = { x: 4, y: 6 };
-    pl(s, 'p2').pos = { x: 4.2, y: 6 };
+    pl(s, 'p1').pos = { x: 4, y: 4 };
+    pl(s, 'p2').pos = { x: 4.2, y: 4 };
     const before = Math.hypot(pl(s, 'p2').pos.x - pl(s, 'p1').pos.x, pl(s, 'p2').pos.y - pl(s, 'p1').pos.y);
     s = step(s, []);
     expect(bumps(s)).toHaveLength(0);
@@ -204,7 +204,7 @@ describe('bumps', () => {
     expect(flushY - pl(s, 'p2').pos.y).toBeGreaterThanOrEqual(B.bodyTiles - 1e-6);
   });
 
-  it('a staggered player covers about 35% of the normal distance (Round 5 staggerSpeed)', () => {
+  it('a staggered player covers about 80% of the normal distance (playtest teammate bump)', () => {
     const run = (stagger: number) => {
       const s = cafe();
       const a = pl(s, 'p1');

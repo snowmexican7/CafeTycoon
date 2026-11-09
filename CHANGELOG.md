@@ -19,8 +19,38 @@ when a build goes out, the line moves under its version with the date.
 - **You start with a coffee cart, on the sidewalk.** Grow into a stand, then the café. The cart is the small cheap shop: a short line, lower prices, no fridge until you buy the little cube, and no office runs. The stand is the middle shop ($70): more floor, a longer line, a beer fridge that comes with the keys, and office runs. The café is still last ($150).
 - The cart has wheels and a striped awning on the street. The stand is a fixed stall on that same street. The park is not where either shop sits.
 - The end-of-day receipt, the FOR LEASE sign, the "What you gained" card, and the night shop all name the next size in this order. Word of mouth unlocks when you grow the cart into a stand.
+- The solid front counter follows those sizes. You still cannot walk through it. The register and the pickup stay side by side. The right-hand end stays open, so the crew can walk around to the mop, the boxes and a spill.
 
 
+
+## 3.11.2 — 2026-11-09 · A solid front counter
+
+The counter between the crew and the customers is solid, on the stand, the cart and the café, in classic runs and in Gear.
+
+- You cannot walk through the front counter. The register and the pickup counter stay together on it. Customers stay on their side, in front.
+- The right-hand end is open, so you can still walk around to the mop, the boxes and a spill in front. The door stays open.
+- Two people still fit side by side at the pickup counter, and they can still step apart. A new drip pot keeps its usual seat.
+
+## 3.11.1 — 2026-11-09 · Tray, milk shelf, co-op looks
+
+- On the stand, the drip machine by the door no longer covers the tray. The TRAY sign sits above the tray board, and the top of the drip stays clear of the board.
+- The milk counter's shelf shows how much milk is left. A full carton (or more) fills the shelf, a partly used carton leaves one jug and one carton, a splash leaves a short carton, and an empty counter shows a bare shelf.
+- In a co-op room, the barista you made (hair, skin, shirt and outfit) shows for everyone. That includes a friend who joins, comes back, or is given someone else's empty seat.
+
+## 3.11.0 — 2026-11-09 · Playtest feel
+
+Kennedy's Nov 7 playthrough. Five feel fixes. Protocol 71, snapshot 36. Also the co-op lag fix from the same day.
+
+- **Co-op: a joined player no longer falls further and further behind.** When the connection can't
+  keep up with 20 updates a second, the host now sends the latest café instead of a queue of old ones.
+  The host's own game was never waiting on that queue. If a send never finishes (someone's connection
+  dies mid-update), the host gives up after a second and a half and keeps updating everyone else.
+
+- **Milk drinks are one steam step.** Latte, cappuccino and the rest: no more filling the jug, then steaming. Press at the steam wand, stop the foam meter, and the drink is already in your hand. A better wand still makes that foam meter easier to hit.
+- **A two-group espresso machine is one spot.** Stand at the machine and pull a shot even while another shot is sitting there (it holds two). You pick the waiting shot up from the same spot. It no longer locks the machine.
+- **Closing gives you a wrap-up.** If the checklist is done and nobody is left, the day ends right away. If something is still out, or customers are still here, you get a wrap-up (up to 45 seconds) with a list of what is left. The timer is the cap, so the day cannot hang.
+- **Every new drink gets a how-to, and you can look one up later.** After the nightly profit screen, each drink you learned that day plays in order (several, if you learned several). A latte how-to says to steam the milk. "How to make it" is on the night menu and on each order ticket.
+- **Teammates bump more lightly, and the pickup counter is wider.** Brushing past another player is a short, small slowdown. Bumping a customer is the same as before. The pickup counter sits clear of the cashier's lane, wide enough for two people side by side, on the stand, the cart and the café.
 
 ## 3.10.0 — 2026-11-07 · Round 6 and the bot cut
 

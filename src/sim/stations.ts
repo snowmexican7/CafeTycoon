@@ -16,6 +16,7 @@ import { RECIPES, recipeChain, type Recipe, type RecipeStation } from '../data/d
 import { catBlocking, onStationFinished, tryClearSmoke, tryShooCat } from './eggs';
 import { fridgeInteract, readyStock, useStock } from './fridge';
 import { afterInsert, handmadePress, jugFirst, steamLocked } from './handmade';
+import { pickEspressoHead } from './groupHead';
 import { trayInteract } from './tray';
 import { canClearOutput, clearOutputToPass } from './stationClear';
 import { recipeAllowed } from './unlocks';
@@ -120,7 +121,9 @@ export function interact(state: GameState, playerId: PlayerId): GameState {
   }
   // B8: pet the cat / dump a burnt shot before normal station use.
   if (tryShooCat(state, playerId) || tryClearSmoke(state, playerId)) return state;
-  const station = nearestStation(state, player.pos);
+  const nearest = nearestStation(state, player.pos);
+  // A double group-head is one area: the press uses whichever head can take the job.
+  const station = nearest ? pickEspressoHead(state, player, nearest) : null;
   if (!station) {
     if (player.holding === null) mopInteract(state, player);
     return state;

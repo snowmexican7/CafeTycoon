@@ -14,7 +14,7 @@ const KEY = 'cafetycoon.run';
  * block 5, the morning pre-open removed (`preOpenUntil` gone from the state; rearranging is at night).
  * Recheck before 1.0.
  */
-export const SNAPSHOT_VERSION = 36; // 36: growth order. `cart` is the 8-tile sidewalk start; `stand` is the $70 stall. No migration: older saves are refused. 35: bot cut.
+export const SNAPSHOT_VERSION = 38; // 38: growth order on the solid front counter. `cart` is the 8-tile sidewalk start; `stand` is the $70 stall. No migration. 37: solid front counter is a layout rule. 36: playtest feel, GameState.learned. 35: bot cut.
 
 /** A saved state if it was written at SNAPSHOT_VERSION (with its shop's fixed spots made sure of), else null. */
 export function migrateSnapshot(version: number, state: GameState): GameState | null {

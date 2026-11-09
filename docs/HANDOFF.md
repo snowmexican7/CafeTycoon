@@ -23,6 +23,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-09: **Solid front counter, v3.11.2, protocol 72, snapshot 37.** `TierLayout.frontCounter` (`y`, `x0`, `x1`, `gap`) in `src/data/layout.ts`. `blocked()` in `src/sim/movement.ts` treats the solid columns as walls for players and for anyone who pathfinds (the rogue). The door stays at (1, 6), left of `x0`. The flap is the right-hand end: stand column 7, cart columns 8–9 (a new drip pot sits at (9, 5) and seals column 9), café column 11. Register stays at (6, 6); Gear pickup stays at (4, 6) and condiments at (5, 6). Staff tiles (3, 5) and (4, 5) stay open. No new `GameState` fields. No bot logic. The counter is drawn from `counterSegments` in `src/render/scene.ts` (classic as well as Gear). What v3.11.0 already did, and this did not redo: the wide pickup, the move to (4, 6), and the light teammate bump.
+- 2026-11-09: **Playtest feel fixes (Kennedy, Nov 7 playthrough), v3.11.0, protocol 71, snapshot 36.** One PR, both lanes. (1) Espresso milk drinks drop the jug fill; the steam meter is the only skill and the drink finishes in hand. Wand ease still widens `steamWindow`. (2) A double group-head is one interactable (`pickEspressoHead` in `src/sim/groupHead.ts`): a free head takes a new shot while one sits, capacity 2. The second head is not drawn as its own machine. (3) Closing: checklist done and nobody left closes on `closingMinSeconds`; otherwise `closingGraceSeconds` (now 45) is the wrap-up cap. `putAwayPending` is the whole checklist for people. (4) `GameState.learned` queues every drink unlocked since the doors opened; the receipt plays them in order. "How to make it" on the night menu and on tickets. The latte how-to names the milk. (5) Teammate bumps are a light brush (`ECONOMY.bump`). Customer bumps unchanged. Pickup is at (4, 6), condiments at (5, 6), wide enough for two people at (3, 5) and (4, 5), off the cashier's tile. No new bot logic. No save migration.
 - 2026-11-09: **Answers on the design drafts (Kennedy). The plans stay drafts, not approved to build.** Campaign's poor start is about right: about $40, a cheap pot, drip only; tune the numbers later (`docs/PLAN_CAMPAIGN_AND_BLITZ.md`). 2v2 is one shared street where customers pick a shop; a mirrored week is maybe later (`docs/PLAN_2V2.md`). The cart sits on the sidewalk, not in the park. Night Layout is snapped, and players can move everything anywhere except the cash register and the pickup, which stay next to each other at the front (`docs/PLAN_GROWTH_AND_LAYOUT.md`). Street-view drive-ups are an occasional extra on top of walk-ins, not a replacement (`docs/PLAN_STREET_VIEW.md`).
 - 2026-11-09: **Design drafts written, not approved to build.** Kennedy's answers the same day are the entry above. The five plans:
   Campaign and Blitz (`docs/PLAN_CAMPAIGN_AND_BLITZ.md`), 2v2 plus the 3-player rush (`docs/PLAN_2V2.md`),
@@ -42,7 +44,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   answers): `docs/PLAN_BOTS_CUT_AND_WANDS.md`.
 - 2026-11-06: **Steam wand upgrades make the meters easier, not faster:** a better wand makes the jug fill fast at the
   start, very slow in the middle and fast at the end (a quick run almost always hits the line), and gives a much wider
-  green band on the steam meter.
+  green band on the steam meter. **The fill half is superseded 2026-11-09:** the jug step is gone; ease is the foam band only.
 - 2026-11-06: **Cappuccino's second steam also finishes straight into your hand**, the same as a latte (Round 6 block 3,
   PR #29): no second wait or second E at the wand.
 - 2026-11-05: **Round 6 approved (Kennedy, Nov 5 evening).** Docs: `docs/CURSOR_PROMPT_NEXT.md`,
@@ -51,7 +53,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   - **UI:** drink icons a bit larger; UI a bit larger; tip bubbles clearer. Full "I've played this before" tutorial
     stays **Later**; **Soon** is the new-drink unlock replay after the nightly receipt (bot plays how-to).
   - **Latte / B8 un-parked:** keep jug fill + steam meter; remove the end timer and the extra E — drink is instantly
-    done and in hand. Cursor builds; Claude reviews the sim edits.
+    done and in hand. Cursor builds; Claude reviews the sim edits. **Fill step removed 2026-11-09** (steam meter only).
   - **Machines:** a pending `station.output` must not lock the machine (e.g. sitting shot + drip → red-eye still works);
     same for all machines. Claude owns.
   - **Patience:** less walk-in-order-leave; challenge via more multi / group orders, not stupider impatience. Claude.
@@ -61,7 +63,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
     counter; empty hands there do not grab a carton. Claude sim + Cursor UI.
   - **Open grace:** 5–10 s at café open with no regular customers; rare VIP / ultra fans in-window (super patient). Claude.
   - **Later / notes only:** co-op night-menu scroll jump (+ locking menus together); co-op look-sync; `devFill` /
-    `devSkip`; grow-event UI; 4-player 2v2; solid `frontCounter` (`docs/CURSOR_PROMPT_COUNTER.md`, still open).
+    `devSkip`; grow-event UI; 4-player 2v2; solid `frontCounter` (`docs/CURSOR_PROMPT_COUNTER.md`, shipped in v3.11.2).
 - 2026-11-03: **The stand's drip machine stays by the door** at (1,5) when bought (cart (9,5), café unchanged), so it
   never takes another fixture's working tile. Players can still move it on the night Layout map.
 - 2026-11-03: **Round 5 approved (Kennedy, Nov 2 playtest + Nov 3 refinements).** Cursor builds six blocks
@@ -121,6 +123,16 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 ---
 
 ## Claude → Grok
+
+### Co-op guest lag (2026-11-09, `7173e05`, Cursor cloud agent, protocol 70 unchanged)
+Done by a Cursor cloud agent, following `docs/CLAUDE_PROMPT_COOP_LAG.md`. No Claude → Grok findings were here before this entry. Cross-machine WebRTC was not run (this box has no second machine; the 2.0.0 note that real-network rooms were untested still stands). Numbers are from an in-process host and guest (`npx tsx scripts/coopLagProbe.ts`) plus `scripts/perf4.ts`.
+
+- **Cause.** `createHostRoom` handed Trystero a snapshot every 50 ms and did not wait for `send()`. Trystero uses one reliable ordered data channel, and `send()` resolves only once that payload is written (a JSON body over **16348** bytes, one 16384-byte frame minus the 36-byte header, instead waits a round trip while the guest accepts the offer). The next deltas were submitted anyway. The guest has to apply that stream in order, so it plays the past. The host's sim is local and never waits on it. A link that finishes one send every third snapshot (60 snapshots, host tick 180): the guest fell **3 → 66 → 126 ticks** behind (2.1 s and still climbing), **42** sends still queued, guest tick 54. After the fix, the same link stays flat at **9 ticks** (0.15 s) from the midpoint on, max 24 during the join, **1** send in flight, guest tick **171**, and the peer's state matches the latest snapshot (`hostRoom.test.ts`).
+- **Not the guest's apply or a full re-render.** On a classic 45 s day with a queue (3 customers), `applyPatch` averaged **0.02 ms** and `hudViewModel` + `hudLive` **0.19 ms** (the probe: full snapshot avg 5414 B, max 6381 B, delta avg 603 B, none over 16348). The guest does not `structuredClone` the snapshot: `peerSession` keeps the patched object and `main.ts` `onSnapshot` stores that reference (`s.prev` / `s.next`). The scene redraws station art only when its key changes, and the night screen rebuilds only when `nightStructureKey` changes (the scroll jump stays parked; nothing here says it is the same bug). The parked per-tick `structuredClone` is `step()` in the host worker, well under a millisecond per snapshot on these runs. It is not what the joined player waits on.
+- **Sizes, and what grew.** Wire floats are already rounded, so the number that matters is the rounded JSON, not `JSON.stringify` of the raw sim. `scripts/perf4.ts` today (4 stand-ins, a week): full snapshot avg **13190** B, delta avg **801** B, max delta **2747** B, diff avg **0.137 ms**. 2.0.1's note was full avg 8676 / max ~11 KB, delta avg 744 / max 3.9 KB. A classic week measured here peaked at **14501** rounded bytes (the `days` array alone **8296** by day 7); **0** payloads crossed 16348. A fresh Gear café with only the bin, before anyone buys a machine, stays about **4–6 KB**. So the chunk handshake did not fire in these runs, but the same send gate keeps a chunked keyframe's body ahead of the next delta if a later week does cross the frame.
+- **Fix.** `RoomLink.send` may return Trystero's promise (`src/net/roomLink.ts`). `createHostRoom` (`src/net/hostRoom.ts`) writes the next message only after that promise settles, and if more snapshots arrived it sends one delta (or keyframe) from the last café the peers have to the latest one. Sequence numbers stay contiguous. A healthy link still sends at 20 Hz: a small send resolves in a microtask, well under 50 ms. One slow guest holds the next snapshot for the whole room, because that promise waits for every peer.
+- **A send that never settles.** `SEND_GIVE_UP_MS` is **1500**. The slow-link probe stays 150 ms behind while sends still finish, so 1.5 s is ten times that and inside the 1–2 s bound. On give-up, or when a peer leaves mid-send (Trystero may reject or hang), the host bumps a generation counter, clears `inflight`, sets `wire = null` (the next publish is a keyframe) and pumps. A late settle of the abandoned promise sees the old generation and does nothing. No protocol bump. No UI files. No bot logic.
+- **Left alone.** Night-menu scroll jump. A render-side prediction buffer would be a larger change; this cap is the backlog that made the guest unplayable.
 
 ### State of the sim (2026-11-07, main after the bot cut Phase 1, protocol 69, snapshot 35)
 - **Bots are cut (Phase 1 done):** see the first Needs item below. Phase 3 (wand meter tiers) landed too (protocol 70).
@@ -462,22 +474,33 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Grok → Claude
 
-### Growth order, awaiting the owner's review (2026-11-09)
+### Growth order, awaiting the owner's review (2026-11-09, merged with v3.11.2)
 - **Built, not merged, not approved.** Part (a) of `docs/PLAN_GROWTH_AND_LAYOUT.md` only: cart → stand → café.
   Free night layout is not in this change. Held for Kennedy. An agent must not merge it.
+- Merged `origin/main` at `d2f458a` (v3.11.2 solid front counter) with a merge commit. The solid line
+  (`TierLayout.frontCounter`) follows the new footprints: cart `frontLine(8, 7, 7)`, stand `frontLine(10, 8, 9)`,
+  café `frontLine(12, 11, 11)`. The flap is the right-hand end. Register stays `(6, 6)`, pickup `(5, 6)`,
+  condiments `(4, 6)`. Crew work from behind the counter; customers stay in front.
 - Names as built: `TIER_IDS` is `['cart', 'stand', 'cafe']`. `main.ts` `runOptions` passes `tier: 'cart'`.
   The 8-tile footprint, queue 3, rent $10, prices ×0.8, traffic ×0.65, no fridge, no office run sit on `cart`.
   The 10-tile footprint, queue 5, rent $17, prices ×0.9, traffic ×0.85, `TIER_FRIDGE.stand === 'f2'`, office size
   `[4, 6]` sit on `stand`. Café fields are unchanged. `ORDERS.office.size` is `{ stand, cafe }`.
-  `ECONOMY.line.waiting` is `{ cart: 0, stand: 2, cafe: 4 }`. Pickup stays `(5, 6)` and the register `(6, 6)`.
+  `ECONOMY.line.waiting` is `{ cart: 0, stand: 2, cafe: 4 }`.
 - Art: `buildOutdoor('cart')` paints the sidewalk (`paintSidewalk`) plus wheels, a push handle and string lights.
   The striped awning is still `buildLot` when `tier === 'cart'`. `buildOutdoor('stand')` is the same street with
   stall posts and a "THE STAND" board; `barSkin('stand')` is `'stall'` (no wheels). The park plaza is gone.
-- Snapshot **36** (`SNAPSHOT_VERSION`). Old saves are refused. No migration. Meta rank is `{ cart: 0, stand: 1, cafe: 2 }`;
+- Snapshot **38** (`SNAPSHOT_VERSION`), past main's 37. Protocol stays **72** (the growth order does not change a
+  message). Old saves are refused. No migration. Meta rank is `{ cart: 0, stand: 1, cafe: 2 }`;
   Word of mouth (`earnedPerks`) needs `bestTier` of `stand` or `cafe`. An old meta that stored `bestTier: 'stand'`
   for "never grew" now reads as the middle shop. That is the no-compat rule, not a migration.
 - Playthrough: `src/sim/growth.test.ts` "a Gear shop opens on the sidewalk cart, then grows into the stand and the café".
-  Screenshots: `scripts/growthOrderShots.mjs` (fixtures `morningCart`, `morningStand`, `morningCafe`, `growCardStand`, `growCardCafe`).
+  Screenshots: `scripts/growthOrderShots.mjs`.
+
+### State of the UI (2026-11-09, follow-ups: stand tray, milk shelf, co-op looks)
+- **Stand drip vs tray (render only).** The drip stays at (1, 5). The TRAY nameplate is no longer the hanging plate under the counter (that sits inside the drip's table). It is drawn above the tray board (`TRAY_PLATE` in `src/render/stationReadability.ts`), and the drip tank uses `DRIP_RESERVOIR` so it no longer clips the board. `dripCoversTray()` is the check. Seats are unchanged. Merged with v3.11.0: pickup stays at (4, 6), condiments at (5, 6), and the look catch-up shares `createHostRoom` with the one-send-in-flight queue.
+- **Milk counter shelf.** `milkShelfLevel` / `milkShelfParts` (`src/render/supplyModel.ts`) turn `GameState.supplyMilk` into empty (0), low (1–2), partial (3–7) and full (a carton, `FRIDGE.carton`, or more). `buildSupplyShelf` draws that, and `Scene.buildStations` rebuilds when the band changes. The count bubble is unchanged.
+- **Co-op looks.** `main.ts` `startPeer` uses `createPeerTransport(code, token, name, prev?, look?)` again (join, rejoin and the seat the host hands back all send `look`). A join's first keyframe can still be the picture from before the sim applies it; `createHostRoom` sends that peer another keyframe once the snapshot shows them with that look. `createPeerSession` ignores a keyframe older than the one it already holds, so the late stale picture cannot wipe the look. A host who resumes passes their saved `Player.look` on the host `Member`. No new bot logic. Sim `setLook` / `join` were already correct.
+- **Merged with v3.11.0 (82df8e9), not rewritten:** steam-only milk, the two-group machine as one spot, the closing wrap-up, how-to cards, light teammate bumps. This growth-order branch puts the pickup back beside the register at (5, 6); condiments stay at (4, 6).
 
 ### Incoming playtest notes (not to build yet) — 2026-11-07
 - Growth order cart → stand → café is the review item above. Was: note only, no Cursor prompt yet.

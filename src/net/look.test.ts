@@ -106,4 +106,98 @@ describe('look over the net', () => {
     const room = createHostRoom(hostLink, local.t, { token: 'H', name: 'Host', look: LOOK });
     expect(room.members()[0]).toEqual({ token: 'H', name: 'Host', look: LOOK });
   });
+
+  it('a look sent before the café opens is on the member the host starts with', () => {
+    const hostLink = createFakeLink();
+    const local = simLocal();
+    const room = createHostRoom(hostLink, local.t, { token: 'H', name: 'Host', look: LOOK });
+    hostLink.peerJoins('sam');
+    hostLink.receive('join', { t: 'join', protocol: PROTOCOL_VERSION, token: 'T1', name: 'Sam', look: { ...LOOK, hair: 'wavy', outfit: 'slim-dress' } }, 'sam');
+    const members = room.members();
+    expect(members.map((m) => m.look?.hair)).toEqual([LOOK.hair, 'wavy']);
+    const started = createRun({
+      seed: 4,
+      hostId: 'H',
+      players: members.map((m) => ({ id: m.token, name: m.name, ...(m.look ? { look: m.look } : {}) })),
+    });
+    expect(started.players.find((p) => p.id === 'H')!.look).toEqual(LOOK);
+    expect(started.players.find((p) => p.id === 'T1')!.look).toMatchObject({ hair: 'wavy', outfit: 'slim-dress' });
+  });
+
+  it('join, rejoin and a taken seat show the new look, including to someone already in the room', () => {
+    const HOST: PlayerLook = { hair: 'bun', hairColor: 'black', skin: 's1', outfit: 'broad-vest', shirtColor: 'red' };
+    const SAM: PlayerLook = { hair: 'wavy', hairColor: 'pink', skin: 's6', outfit: 'slim-dress', shirtColor: 'blue' };
+    const SAM2: PlayerLook = { hair: 'bob', hairColor: 'blonde', skin: 's3', outfit: 'slim-hoodie', shirtColor: 'teal' };
+    const KIM: PlayerLook = { hair: 'ponytail', hairColor: 'brown', skin: 's4', outfit: 'broad-apron', shirtColor: 'green' };
+    const JO: PlayerLook = { hair: 'spiky', hairColor: 'red', skin: 's5', outfit: 'broad-overalls', shirtColor: 'yellow' };
+    // The worker applies inputs on a later tick, so the keyframe in the join handler is still the old picture.
+    let state = createRun({ seed: 1, hostId: 'H', players: [{ id: 'H', name: 'Host', look: HOST }] });
+    let pending: PlayerInput[] = [];
+    const handlers = new Set<(s: HostToClient) => void>();
+    const local: Transport = {
+      start() {},
+      resume() {},
+      sendInput(i) {
+        pending.push(i);
+      },
+      onSnapshot(h) {
+        handlers.add(h);
+        return () => handlers.delete(h);
+      },
+      onError: () => () => {},
+      close() {},
+    };
+    const emit = () => {
+      if (pending.length) {
+        state = step(state, pending);
+        pending = [];
+      }
+      handlers.forEach((h) => h({ t: 'snapshot', state, sentAt: state.tick }));
+    };
+    const hostLink = createFakeLink();
+    createHostRoom(hostLink, local, { token: 'H', name: 'Host', look: HOST });
+    emit();
+    const join = (peerId: string, token: string, name: string, look: PlayerLook, prev?: string) => {
+      hostLink.peerJoins(peerId);
+      hostLink.receive('join', { t: 'join', protocol: PROTOCOL_VERSION, token, name, look, ...(prev ? { prev } : {}) }, peerId);
+    };
+
+    join('sam', 'T1', 'Sam', SAM);
+    const early = hostLink.sent.filter((s) => s.kind === 'snap' && s.target === 'sam').at(-1)!;
+    expect((early.data as { state: GameState }).state.players.some((p) => p.id === 'T1')).toBe(false);
+    emit();
+    expect(state.players.find((p) => p.id === 'T1')!.look).toEqual(SAM);
+    const caught = hostLink.sent.filter((s) => s.kind === 'snap' && s.target === 'sam').at(-1)!;
+    const caughtState = (caught.data as { state: GameState }).state;
+    expect(caughtState.players.find((p) => p.id === 'H')!.look).toEqual(HOST);
+    expect(caughtState.players.find((p) => p.id === 'T1')!.look).toEqual(SAM);
+
+    // Same seat, a new look (a rejoin after editing, or a refresh).
+    hostLink.peerLeaves('sam');
+    emit();
+    join('sam2', 'T1', 'Sam', SAM2);
+    emit();
+    expect(state.players.find((p) => p.id === 'T1')!.look).toEqual(SAM2);
+
+    // Jo takes Kim's away seat. The body Kim left now wears Jo's look.
+    join('kim', 'T2', 'Kim', KIM);
+    emit();
+    hostLink.peerLeaves('kim');
+    emit();
+    join('jo', 'FRESH', 'Jo', JO, 'T2');
+    expect(hostLink.sent.find((s) => s.kind === 'seat' && s.target === 'jo')?.data).toEqual({ t: 'seat', token: 'T2' });
+    emit();
+    expect(state.players.find((p) => p.id === 'T2')!.look).toEqual(JO);
+
+    // Someone who was here from the first picture, following only the room-wide snapshots.
+    const wire = hostLink.sent.filter((s) => (s.kind === 'snap' || s.kind === 'snapd') && s.target === undefined);
+    let held = (wire[0]!.data as { state: GameState }).state;
+    for (const m of wire.slice(1)) {
+      if (m.kind === 'snap') held = (m.data as { state: GameState }).state;
+      else if ((m.data as { patch?: Patch | null }).patch) held = applyPatch(held, (m.data as { patch: Patch }).patch) as GameState;
+    }
+    expect(held.players.find((p) => p.id === 'H')!.look).toEqual(HOST);
+    expect(held.players.find((p) => p.id === 'T1')!.look).toEqual(SAM2);
+    expect(held.players.find((p) => p.id === 'T2')!.look).toEqual(JO);
+  });
 });

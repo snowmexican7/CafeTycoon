@@ -19,7 +19,7 @@ import { createHostRoom, type HostRoom } from './net/hostRoom';
 import { markPeersAway } from './net/hostResume';
 import { createLocalTransport } from './net/localTransport';
 import type { PeerStatus } from './net/peerSession';
-import { createPeerSession } from './net/peerSession';
+import { createPeerTransport } from './net/peerTransport';
 import { PROTOCOL_VERSION, type Member } from './net/protocol';
 import { makeRoomCode, normalizeRoomCode } from './net/roomCode';
 import { createTrysteroLink } from './net/roomLink';
@@ -233,6 +233,8 @@ async function main(): Promise<void> {
     if (look) send({ kind: 'look', playerId: me(), look });
   }
   let recipeHints = loadRecipeHints(hintStore);
+  // How-to cards (new drinks after the receipt, and any drink you look up from a ticket or the menu).
+  const unlockReplay = createUnlockReplay($('#unlockReplay'));
   const hud = createHud($('#hud'), {
     onMute: () => audio.toggleMute(),
     // ui-3.7.1: day-HUD Restock (rush delivery, 25% more). Cream & sugar comes by the box.
@@ -240,12 +242,11 @@ async function main(): Promise<void> {
     // FB2 B8: syrup rack picker (1 vanilla · 2 caramel).
     onSyrup: (flavour) => send({ kind: 'syrup', playerId: me(), flavour }),
     onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }),
+    onHowTo: (drink) => unlockReplay.play([drink], 'lookup'),
   }, { recipeHints });
-  const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook() });
+  const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook(), onHowTo: (drink) => unlockReplay.play([drink], 'lookup') });
   // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).
   const dev = isDevMode(location.search) ? createDevPanel(document, send, me) : null;
-  // ui-3.10.0: the new-drink unlock replay (scripted ghost barista, no bot brain) after "On to the night shop".
-  const unlockReplay = createUnlockReplay($('#unlockReplay'));
   const closing = createClosing($('#closing'), {
     onGrow: (tier) => send({ kind: 'grow', playerId: me(), tier }),
     onContinue: () => {
@@ -459,16 +460,8 @@ async function main(): Promise<void> {
     stores.peerRoom.save({ code, role: 'peer' });
     const id = tabIdentity();
     const prev = stores.seats.load(code);
-    // ui-3.5.2: createPeerTransport (src/net/peerTransport.ts) has no look parameter yet, so the session is built here.
-    const transport = createPeerSession(roomLinkFor(code, createTrysteroLink), {
-      token: id,
-      name: settings.playerName,
-      prev: prev && prev !== id ? prev : undefined,
-      ...(look ? { look } : {}),
-      timeoutMs: 15_000,
-      setTimer: (fn, ms) => setTimeout(fn, ms),
-      clearTimer: (t) => clearTimeout(t as ReturnType<typeof setTimeout>),
-    });
+    // The look rides on the join (`createPeerTransport`'s `look`), including a rejoin and a seat the host hands back.
+    const transport = createPeerTransport(code, id, settings.playerName, prev && prev !== id ? prev : undefined, look ?? undefined);
     const s = createSession('peer', code, transport, id);
     stores.seats.save(code, id);
     // The host handed back an older seat (this browser's, or an away barista with our name): play as it.
@@ -524,7 +517,8 @@ async function main(): Promise<void> {
     if (room?.role === 'host') {
       const s = createSession('host', room.code, local, saved.hostId);
       attachTelemetry(s, tele);
-      openHostRoom(s, local, room.code, { token: saved.hostId, name: hostName });
+      const hostLook = saved.players.find((p) => p.id === saved.hostId)?.look;
+      openHostRoom(s, local, room.code, { token: saved.hostId, name: hostName, ...(hostLook ? { look: hostLook } : {}) });
       armWatchdog(s);
       local.resume(markPeersAway(saved, saved.hostId));
       return;
@@ -632,7 +626,12 @@ async function main(): Promise<void> {
       // The day's receipt leads into the night shop; after the last day (or a missed rent) the
       // week-end screen sums up instead, so the receipt ("On to the night shop") stays hidden.
       if (state.phase === 'day') s.dayUnlocked = [...(state.unlocked ?? [])];
-      if (from === 'closing' && state.phase === 'night') s.learnedTonight = s.dayUnlocked ? newlyLearned(s.dayUnlocked, state) : [];
+      if (from === 'closing' && state.phase === 'night') {
+        const fromState = state.learned?.length ? [...state.learned] : [];
+        const fromSnap = s.dayUnlocked ? newlyLearned(s.dayUnlocked, state) : [];
+        const seen = new Set<DrinkId>();
+        s.learnedTonight = [...fromState, ...fromSnap].filter((d) => (seen.has(d) ? false : (seen.add(d), true)));
+      }
       if (state.phase !== 'night') unlockReplay.close();
       if (from === 'closing' && s.lastClosing && state.phase === 'night') {
         closing.render(closingViewModel(s.lastClosing, state));

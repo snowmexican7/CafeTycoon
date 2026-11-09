@@ -15,12 +15,13 @@ describe('bot pathfinding', () => {
     expect(nodes('steamer')).toEqual(['5,2', '6,1']);
     expect(nodes('coldBrewTap')).toEqual(['7,1', '8,2', '9,1']);
     expect(nodes('trash')).toEqual(['10,2', '11,1']);
-    expect(nodes('counter')).toEqual(['5,6', '6,5', '7,6']);
+    // v3.11.2: the counter line is solid. The till is worked from behind it. The café's flap is at the right end.
+    expect(nodes('counter')).toEqual(['6,5']);
   });
 
   it('sorts target nodes by distance from the caller, ties lower y then lower x', () => {
     const counter = s.stations.find((x) => x.id === 'counter')!;
-    expect(targetNodes(s, counter, { x: 6, y: 4 })).toEqual([{ x: 6, y: 5 }, { x: 5, y: 6 }, { x: 7, y: 6 }]);
+    expect(targetNodes(s, counter, { x: 6, y: 4 })).toEqual([{ x: 6, y: 5 }]);
   });
 
   it('finds a 4-neighbour path through walkable nodes', () => {

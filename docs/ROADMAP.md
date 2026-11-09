@@ -3,7 +3,9 @@
 > Agreed order with Kennedy (2026-10-28): **phases go from easiest and lowest risk to hardest and riskiest.** AI is the hardest, so it comes late (Phase 5), and a polish phase closes it out. The machine-readable copy the game reads is `public/roadmap.json`.
 > The design spec (`superpowers/specs/2026-10-28-cafetycoon-design.md`, §17) uses older numbering (P3 = AI, P4 = bigger games). This roadmap supersedes it.
 
-## Where we are now (updated 2026-11-07, ~noon Toronto)
+## Where we are now (updated 2026-11-09)
+
+> **Latest (2026-11-09): v3.11.2.** The front counter is solid (`TierLayout.frontCounter`, `blocked()`). Players walk around the right-hand end, not through the register and pickup. v3.11.0 had already widened pickup and moved it to (4, 6). See [`CURSOR_PROMPT_COUNTER.md`](CURSOR_PROMPT_COUNTER.md).
 
 > **Latest (2026-11-07): v3.10.0 shipped** (`ui-3.10.0`). Round 6 is done: opaque hair + long wavy (#27), bigger drink
 > icons and short tips (#28, merged bot-free), latte-in-hand (#29), machines that don't lock, patience + more group
@@ -16,8 +18,8 @@
 
 > **Latest (2026-11-05):** Round 6 is approved (Kennedy's Nov 5 playtest notes). Cursor builds six UI/hand-off/unlock
 > PRs ([`CURSOR_PROMPT_NEXT.md`](CURSOR_PROMPT_NEXT.md)); Claude owns the sim pieces
-> ([`CLAUDE_PROMPT_ROUND6.md`](CLAUDE_PROMPT_ROUND6.md)). Target release **v3.10.0**. Solid `frontCounter` remains a
-> separate open prompt ([`CURSOR_PROMPT_COUNTER.md`](CURSOR_PROMPT_COUNTER.md)).
+> ([`CLAUDE_PROMPT_ROUND6.md`](CLAUDE_PROMPT_ROUND6.md)). Target release **v3.10.0**. Solid `frontCounter` was still open then; it shipped in v3.11.2
+> ([`CURSOR_PROMPT_COUNTER.md`](CURSOR_PROMPT_COUNTER.md)).
 
 > **Latest (2026-11-05 earlier):** main is **v3.9.2** (solid serving-counter draw + compact office phone). Before that
 > **v3.9.1** (Cursor #19/#20 polish) and **v3.9.0** (Round 5: hairline, espresso speed, bumps, cold-brew refill, supply

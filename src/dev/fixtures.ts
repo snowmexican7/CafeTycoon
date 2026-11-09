@@ -717,6 +717,101 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /** 3.11.0: steam-only latte. The foam meter is running; there is no jug fill. */
+  steamOnly: {
+    setup(s) {
+      FIXTURES.latteSteam!.setup(s);
+    },
+    timeline: [],
+  },
+  /** 3.11.0: Double Trouble as one machine. One shot is sitting, the other head is pulling. */
+  doubleHead: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'stand', 1);
+      const slots: (StationKind | null)[] = ['grinder', 'espresso', null, 'trash'];
+      const slotGear: (GearId | null)[] = ['g2', 'e6', null, 'b0'];
+      s.slots = slots;
+      s.slotGear = slotGear;
+      s.stations = stationsFromSlots('stand', slots, slotGear);
+      ensureCounterSpots(s);
+      const heads = s.stations.filter((st) => st.kind === 'espresso');
+      const main = heads.find((h) => !h.twin) ?? heads[0]!;
+      const twin = heads.find((h) => h.twin);
+      // One shot sitting on the machine, the other head free: Pull a shot still works.
+      main.busyTicksLeft = 0;
+      main.making = null;
+      main.output = 'espresso';
+      main.outputSince = s.tick;
+      if (twin) {
+        twin.output = null;
+        twin.busyTicksLeft = 0;
+        twin.making = null;
+      }
+      const ana = s.players[0]!;
+      ana.pos = { x: main.pos.x, y: main.pos.y + 1 };
+      ana.holding = 'grounds';
+      s.customers = [{ id: 3, drink: 'espresso', patienceLeft: 1100, patienceMax: 1400 }];
+    },
+    timeline: [],
+  },
+  /** 3.11.0: doors locked, checklist still open, a customer left. The wrap-up card names what is left. */
+  wrapUp: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 1);
+      s.fridge = 'f3';
+      ensureCounterSpots(s);
+      s.phase = 'closing';
+      s.closingSoonAt = s.tick;
+      s.phaseTicksLeft = 24 * 60;
+      s.milkOut = 6;
+      s.condiments = { servings: 4 };
+      s.messes = [{ id: 1, kind: 'spill', x: 3, y: 3, amount: 1 }];
+      s.pass = [{ item: 'latte', ticksLeft: 800, by: 'ana', madeAt: s.tick }];
+      s.customers = [{ id: 9, drink: 'latte', patienceLeft: 900, patienceMax: 1400, stage: 'pickup', rungAt: 1 }];
+    },
+    timeline: [],
+  },
+  /** 3.11.0: the latte how-to, including the milk step, the way a lookup or a new unlock shows it. */
+  latteHow: {
+    replay: ['latte'],
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
+    },
+    timeline: [],
+  },
+  /** 3.11.0: two players side by side at the wide pickup, the till lane left clear. */
+  widePickup: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
+      s.customers = [
+        { id: 1, drink: 'latte', patienceLeft: 1100, patienceMax: 1400, stage: 'pickup', rungAt: 1 },
+        { id: 2, drink: 'espresso', patienceLeft: 1000, patienceMax: 1400 },
+      ];
+      s.pass = [
+        { item: 'latte', ticksLeft: 900, by: 'ana', madeAt: s.tick },
+        { item: 'drip', ticksLeft: 800, by: 'ben', madeAt: s.tick },
+      ];
+      const [ana, ben, cleo] = s.players;
+      if (ana) {
+        ana.pos = { x: 3, y: 5 };
+        ana.holding = 'cappuccino';
+      }
+      if (ben) {
+        ben.pos = { x: 4.35, y: 5 };
+        ben.holding = 'espresso';
+      }
+      if (cleo) cleo.pos = { x: 6, y: 5 };
+    },
+    timeline: [],
+  },
   /** ui-3.10.0: the new-drink unlock replay (Americano) as it plays after "On to the night shop". */
   unlockReplay: {
     replay: ['americano'],
@@ -801,11 +896,29 @@ const FIXTURES: Record<string, Fixture> = {
       if (drip) {
         drip.output = 'drip';
         drip.potLeft = 3;
-        s.players[0]!.pos = { x: drip.pos.x + 1, y: drip.pos.y }; // beside it, so the tray's label stays in view
+        // Beside the drip, and the rest of the crew off the left column, so the TRAY sign stays in view.
+        s.players.forEach((p, i) => (p.pos = i === 0 ? { x: drip.pos.x + 1.15, y: drip.pos.y } : { x: 3.2 + i, y: 2.4 }));
       }
       s.customers = [
         { id: 41, drink: 'drip', patienceLeft: 1100, patienceMax: 1400, stage: 'pickup', rungAt: s.tick },
       ];
+    },
+    timeline: [],
+  },
+  /**
+   * Milk counter shelf. `?milk=` is the servings on it (0 empty, 1–2 low, 3–7 partial, 8+ full).
+   * The crew stands clear of the shelf so the cartons are the picture.
+   */
+  milkShelf: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'stand', 0);
+      s.customers = [];
+      const q = typeof location === 'undefined' ? '' : location.search;
+      const n = Number(new URLSearchParams(q).get('milk') ?? '8');
+      s.supplyMilk = Number.isFinite(n) ? Math.max(0, n) : 8;
+      s.players.forEach((p, i) => (p.pos = { x: 2 + i * 1.1, y: 6.2 }));
     },
     timeline: [],
   },
@@ -1571,6 +1684,56 @@ const FIXTURES: Record<string, Fixture> = {
       });
     },
     timeline: [],
+  },
+  /**
+   * v3.11.2: the solid front counter. `?f=counterLine&tier=stand|cart|cafe&gear=0` (gear defaults on).
+   * Two people stand behind the pickup (Gear) or the register (classic). Customers stand in front.
+   */
+  counterLine: {
+    setup(s) {
+      const q = new URLSearchParams(location.search);
+      const asked = q.get('tier');
+      const tier: TierId = asked === 'stand' || asked === 'cart' ? asked : 'cafe';
+      const gear = q.get('gear') !== '0';
+      if (gear) s.gear = true;
+      else delete s.gear;
+      if (gear) gearStart(s);
+      atTier(s, tier, 0);
+      const template = s.players[0]!;
+      const behind = gear
+        ? [{ x: 4, y: 5 }, { x: 5, y: 5 }, { x: 6, y: 5 }]
+        : [{ x: 5, y: 5 }, { x: 6, y: 5 }];
+      const names = ['Ana', 'Ben', 'Cleo'] as const;
+      const ids = ['ana', 'ben', 'cleo'] as const;
+      s.players = behind.map((pos, i) => {
+        const p = {
+          ...structuredClone(template),
+          ...floorFields(pos),
+          id: ids[i]!,
+          name: names[i]!,
+          pos,
+          facing: { x: 0, y: 1 },
+          moveDir: { x: 0, y: 0 },
+          connected: true,
+          holding: null,
+        };
+        delete p.bot;
+        return p;
+      });
+      const cust = (id: number, drink: 'latte' | 'espresso' | 'coldBrew', stage?: 'order' | 'pickup') => ({
+        id,
+        drink,
+        name: ['Sam', 'Ada', 'Mo'][id - 1],
+        patienceLeft: 1400,
+        patienceMax: 1600,
+        ...(stage ? { stage } : {}),
+      });
+      s.customers = gear
+        ? [cust(1, 'latte', 'pickup'), cust(2, 'espresso', 'order'), cust(3, 'coldBrew', 'order')]
+        : [cust(1, 'latte'), cust(2, 'espresso'), cust(3, 'coldBrew')];
+    },
+    timeline: [],
+    me: 'ana',
   },
 };
 
