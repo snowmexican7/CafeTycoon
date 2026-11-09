@@ -6,7 +6,7 @@
  *   cupsPerArrival(state, m)                 cups a walk-in orders on average (groups and combos add cups)
  *   serveCapacity(state, menu, m)            { perSecond, queue, day }: cups per second, the queue's cap, the day's cups
  *   expectedCups(state, menu, m, walkIns)    walk-ins (after price) -> cups ordered, capped by `day`
- *   shareWeights(state, menu, m)             each menu drink's order weight (bias, price, gear pull)
+ *   shareWeights(state, menu, m)             each menu drink's order weight (the same weights drawDrink uses)
  *
  * The rate is the slower of two limits: the machines (each station kind: its machines' speed over the seconds an
  * average cup needs there) and the crew (people on the floor, each needing a little time per cup besides the
@@ -14,16 +14,15 @@
  * queue's spots (the line is already poured into by the doors locking).
  */
 import { ECONOMY } from '../data/economy';
-import { DRINK_INFO, recipeChain, type RecipeStation } from '../data/drinks';
+import { recipeChain, type RecipeStation } from '../data/drinks';
 import { SUPPLY_ID } from '../data/layout';
 import { GEAR } from '../data/gear';
 import type { Modifiers } from './effects';
-import { gearPullMul, gearSpeed, POD_SHOT } from './gear';
-import { availableDrinks, queueCapacity } from './customers';
+import { gearSpeed, POD_SHOT } from './gear';
+import { availableDrinks, identityMul, orderWeight, queueCapacity } from './customers';
 import { tierInfo, tierOf } from './growth';
-import { demandFactor } from './pricing';
 import { latteAddonChance, ORDERS } from './orders';
-import { isMilkDrink, milkPush } from './lattes';
+import { milkPush } from './lattes';
 import type { DrinkId, GameState } from './types';
 
 export const CAPACITY = {
@@ -44,10 +43,11 @@ export function dripPotCups(state?: GameState): number {
   return best > 0 ? best : smallest;
 }
 
-/** Each menu drink's weight in the order draw: forecast and drink bias, the price's pull and the gear's pull. */
+/** Each menu drink's weight in the order draw: the same weights `drawDrink` uses, including the shop's identity. */
 export function shareWeights(state: GameState, menu: DrinkId[], m: Modifiers): number[] {
-  const push = milkPush(state, menu, m); // Round 3 item 1
-  return menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d) * gearPullMul(state, d) * (isMilkDrink(d) ? push : 1));
+  const push = milkPush(state, menu, m); // Round 3 item 1; 1 once a named identity is set
+  const identity = identityMul(state, menu, m);
+  return menu.map((d) => orderWeight(state, d, m, push, identity));
 }
 
 /**

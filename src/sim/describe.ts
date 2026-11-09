@@ -163,6 +163,8 @@ export function morningNotes(state: GameState): string[] {
   if ((state.days.at(-1)?.rogues ?? 0) > 0) notes.push(ROGUE_REVIEW);
   const walked = state.days.at(-1)?.soldOutWalkouts ?? 0;
   if (walked > 0) notes.push(`${walked === 1 ? '1 person' : `${walked} people`} walked away from a sold-out board yesterday.`);
+  const odd = state.days.at(-1)?.oneOffLeft ?? 0;
+  if (odd > 0) notes.push(odd === 1 ? 'Someone asked for a drink this shop rarely makes, and left politely.' : `${odd} people asked for a drink this shop rarely makes, and left politely.`);
   const early = state.days.at(-1)?.closedEarly;
   if (early !== undefined) notes.push(`You closed early yesterday with ${Math.floor(early / 60)}:${String(early % 60).padStart(2, '0')} still on the clock.`);
   for (const kind of new Set(state.eventSchedule.map((e) => e.kind))) notes.push(EVENT_FORESHADOW[kind]);

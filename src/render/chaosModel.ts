@@ -1,4 +1,5 @@
 import { LAYOUT, layoutFor, SINK_ID } from '../data/layout';
+import { SPECIALTY } from '../sim/specialty';
 import type { GameState, MessKind, RogueStage, Vec2 } from '../sim/types';
 import { tillPos } from './ringUpModel';
 import { complainSpot, tumbleweedSpawn } from './waitingModel';
@@ -126,6 +127,15 @@ export function chaosBursts(prev: GameState | null, next: GameState, lastSeq: nu
       if (e.data.reason === 'price') {
         if (!walked) {
           bursts.push({ kind: 'walkout', at: { ...LAYOUT.door }, text: PRICE_LINES[e.seq % PRICE_LINES.length]!, door: true });
+          walked = true;
+        }
+        continue;
+      }
+      // Specialty shops: they asked for something this shop rarely makes, and left from the door.
+      if (e.data.reason === 'oneOff') {
+        if (!walked) {
+          const lines = SPECIALTY.oneOffLines;
+          bursts.push({ kind: 'walkout', at: { ...LAYOUT.door }, text: lines[e.seq % lines.length]!, door: true });
           walked = true;
         }
         continue;

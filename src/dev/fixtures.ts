@@ -15,7 +15,7 @@ import { createRenderer } from '../render/app';
 import { EVENT_FORESHADOW } from '../sim/describe';
 import { createRun, startDay, startNight } from '../sim/run';
 import { createNight } from '../ui/night';
-import type { DrinkId, GameState, SimEvent, StationKind, TierId } from '../sim/types';
+import type { DayStats, DrinkId, GameState, SimEvent, StationKind, TierId } from '../sim/types';
 import { CASHIER_ID } from '../sim/botBody';
 import { cashierHome, syncCashier } from '../sim/cashier';
 import { createUnlockReplay } from '../ui/unlockReplay';
@@ -1638,6 +1638,43 @@ const FIXTURES: Record<string, Fixture> = {
           delete s.players[s.players.length - 1]!.bot;
         }
       });
+    },
+    timeline: [],
+  },
+  /** Specialty shops: the Menu-tab line after three latte-heavy days. */
+  specialtyNight: {
+    night: true,
+    nightTab: 'menu',
+    extras: true,
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 0);
+      s.supplies.beans = 40;
+      s.supplies.milk = 40;
+      s.supplies.concentrate = 20;
+      const drinks = { latte: 32, cappuccino: 14, espresso: 10, drip: 4, coldBrew: 4 };
+      const row = (day: number) => ({ day, served: 64, lost: 0, turnedAway: 0, sales: 240, tips: 20, rent: 25, drinks: { ...drinks } as DayStats['drinks'] });
+      s.days = [row(1), row(2)];
+      s.today = { ...s.today, ...row(3) };
+      s.day = 4;
+    },
+    timeline: [],
+  },
+  /** Specialty shops: the in-shop sign on a day the street already knows. */
+  specialtyShop: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'cafe', 2);
+      s.phase = 'day';
+      s.challenges = [];
+      s.shopIdentity = 'specialty';
+      s.soldWindow = [{ day: 3, drinks: { latte: 32, cappuccino: 14, espresso: 10, drip: 4, coldBrew: 4 } }];
+      s.customers = [
+        { id: 11, drink: 'latte', patienceLeft: 1400, patienceMax: 1800 },
+        { id: 12, drink: 'espresso', patienceLeft: 900, patienceMax: 1800 },
+      ];
     },
     timeline: [],
   },

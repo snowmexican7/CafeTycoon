@@ -97,6 +97,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <div class="hud-office" role="status" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
     <div class="hud-opengrace" role="timer" aria-live="polite" hidden></div>
+    <p class="hud-shop-note" role="status" hidden></p>
     <section class="hud-restock-panel" id="hud-restock-panel" aria-label="Rush delivery" hidden></section>
     <div class="hud-syrup" role="group" aria-label="Syrup picker" hidden></div>
     <div class="toast" role="status" hidden></div>
@@ -186,6 +187,36 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   // ui-3.10.0 (Round 6 block 5): the quiet open — a doors-open countdown while only early fans may walk in
   const graceEl = $<HTMLElement>('.hud-opengrace');
   let lastGrace = -1;
+  const shopNoteEl = $<HTMLElement>('.hud-shop-note');
+  let lastShop = '';
+  let shopNoteTimer: ReturnType<typeof setTimeout> | null = null;
+  let shopNoteHide: ReturnType<typeof setTimeout> | null = null;
+  /** The "people ask for…" line at the start of a day. The wall sign stays; this fades. */
+  const SHOP_NOTE_MS = 5500;
+  function renderShop(vm: HudVM): void {
+    const shop = vm.phase === 'day' ? vm.shop : undefined;
+    const key = shop ? `${vm.dayLabel}|${shop.demand}` : '';
+    if (key === lastShop) return;
+    lastShop = key;
+    if (shopNoteTimer) clearTimeout(shopNoteTimer);
+    if (shopNoteHide) clearTimeout(shopNoteHide);
+    shopNoteTimer = null;
+    shopNoteHide = null;
+    if (!shop) {
+      shopNoteEl.hidden = true;
+      shopNoteEl.classList.remove('fade-out');
+      return;
+    }
+    shopNoteEl.hidden = false;
+    shopNoteEl.classList.remove('fade-out');
+    shopNoteEl.textContent = shop.demand;
+    shopNoteTimer = setTimeout(() => {
+      shopNoteEl.classList.add('fade-out');
+      shopNoteHide = setTimeout(() => {
+        shopNoteEl.hidden = true;
+      }, 450);
+    }, SHOP_NOTE_MS);
+  }
   function renderGrace(secs: number | undefined): void {
     const n = secs ?? 0;
     if (n === lastGrace) return;
@@ -624,6 +655,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
       renderOfficePhone(live?.officePhone);
       renderChecklist(live?.checklist);
       renderGrace(live?.openGrace);
+      renderShop(vm);
     },
     toast(lines) {
       if (lines.length === 0) return;

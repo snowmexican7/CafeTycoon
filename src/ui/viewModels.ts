@@ -43,6 +43,7 @@ import { fittingsValue, scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
 import type { Member } from '../net/protocol';
+import { shopFacing, type ShopFacing } from '../sim/specialty';
 import type { AdId, AdOutcome, PitchKind, PitchTier, CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 import { BASE_DRINKS, DRINK_IDS, GEAR_ONLY_DRINKS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
@@ -115,6 +116,8 @@ export interface HudVM {
   results?: { inspection: 'pass' | 'fail' | null; influencer: 'served' | 'lost' | null; followers: string };
   /** Optional daily challenges (B7): chip text + done/failed for the HUD. */
   challenges?: { id: string; text: string; done: boolean; failed: boolean; reward: number }[];
+  /** Specialty shops: the sign over the floor during the day (absent until a scored day, and at night). */
+  shop?: ShopFacing;
 }
 
 export interface Scrutiny {
@@ -190,6 +193,7 @@ export function hudViewModel(state: GameState): HudVM {
   const mods = computeModifiers(state);
   const available = availableDrinks(state);
   const soldOut = (state.phase === 'day' || state.phase === 'closing') && menuDrinks(state).length > 0 && available.length === 0;
+  const shop = state.phase === 'day' || state.phase === 'closing' ? shopFacing(state) : null;
   return {
     ...(state.gear ? { gear: hudGearVM(state) } : {}),
     dayLabel: dayLabelFor(state.day),
@@ -212,6 +216,7 @@ export function hudViewModel(state: GameState): HudVM {
     ...rogueHud(state),
     ...(state.phase === 'closing' ? { closing: { left: state.customers.length + (state.rogue ? 1 : 0) } } : {}),
     ...(scrutinyFor(state) ? { scrutiny: scrutinyFor(state) } : {}),
+    ...(shop ? { shop } : {}),
     results: { inspection: state.today.inspection ?? null, influencer: state.today.influencer ?? null, followers: followerBump(state.seed, state.day) },
     challenges: (state.challenges ?? []).map((c) => ({
       id: c.id,
@@ -339,6 +344,8 @@ export interface NightVM {
   tips: TipVM[];
   /** FB1 WP1: timed night or Relaxed (no clock, ready-up). */
   timer: NightTimerVM;
+  /** Specialty shops: the Menu-tab line. Absent on night 1, before any scored day. */
+  shop?: ShopFacing;
 }
 
 export interface FreshDrinkVM {
@@ -787,6 +794,8 @@ export function nightViewModel(state: GameState, me: PlayerId): NightVM {
     forecast: forecastViewModel(state),
     timer: nightTimerVM(state),
   };
+  const facing = shopFacing(state);
+  if (facing) vm.shop = facing;
   const brief = nightBriefVM(vm, state);
   const report = reportViewModel(state);
   const branch = branchViewModel(state);

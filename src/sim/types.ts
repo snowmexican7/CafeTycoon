@@ -654,6 +654,18 @@ export interface ChallengeProgress {
   failed: boolean;
 }
 
+/**
+ * Specialty shops phase 1: what the last few days of cups say the shop is.
+ * `neighbourhood` is the mixed middle. Absent on `GameState` until a Gear day has been scored.
+ */
+export type ShopIdentity = 'specialty' | 'fastCasual' | 'neighbourhood';
+
+/** One scored day in `GameState.soldWindow`: the receipt's drink counts, not a live tally. */
+export interface SoldDay {
+  day: number;
+  drinks: Partial<Record<DrinkId, number>>;
+}
+
 /** Gear G8 (doc §8): a big buy or sell waiting on a majority of connected humans. */
 export interface GearVote { by: PlayerId; byName: string; action: 'buy' | 'sell'; gear: GearId; index?: number; amount: number; yes: PlayerId[]; no: PlayerId[]; /** FB2 C9: a wand bought with the machine. */ wand?: AddOnWand }
 
@@ -746,6 +758,8 @@ export interface DayStats {
   officeExtra?: number;
   /** Round 3 item 4: would-be customers who left quietly during a line complaint (stats only: not lost, no reputation). */
   lineLeft?: number;
+  /** Specialty shops: arrivals who asked for a drink this shop rarely makes and left (not lost, no reputation). */
+  oneOffLeft?: number;
   /** FB2 C11: every bad or great moment today by reason (posted or not), the live posts they made, and the day's feed. */
   feedMoments?: Partial<Record<FeedReason, number>>;
   posts?: FeedPost[];
@@ -942,6 +956,12 @@ export interface GameState {
    * The receipt queues a how-to for each. Cleared when the next day starts. Playtest 2026-11-09.
    */
   learned?: DrinkId[];
+  /**
+   * Specialty shops phase 1: the last few scored days of cups (`DayStats.drinks`), and the identity
+   * earned from them at night. Absent until a Gear day has been scored. The host writes both.
+   */
+  soldWindow?: SoldDay[];
+  shopIdentity?: ShopIdentity;
   /** Drinks that joined the menu tonight (day unlocks and cards), for the night banner. */
   freshDrinks?: DrinkId[];
   /** Weather radio (B6): tomorrow's events, drawn at night. */

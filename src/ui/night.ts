@@ -338,8 +338,10 @@ function menuPane(vm: NightVM): string {
   const sumLabel = rough
     ? `<span class="mn-sum" title="Only a rough guess: weather, events and the rival can swing it. A strategist can tell you more."><em class="mn-guess">Rough guess</em> for tomorrow: <b>≈${sum.orders} orders</b> · <b>≈$${sum.profit.toFixed(0)}</b> profit <small class="mn-more">A strategist can tell you more</small></span>`
     : `<span class="mn-sum" title="Tomorrow's forecast: weather, events and the rival can still swing it.">${vm.strategist ? '<em class="mn-honest">Strategist forecast</em>' : 'Forecast'} for tomorrow: <b>≈${sum.orders} orders</b> · <b>≈$${sum.profit.toFixed(0)}</b> profit</span>`;
+  const shopLine = vm.shop ? `<p class="shop-line" role="status">${esc(vm.shop.line)}</p>` : '';
   return `${strat}<div class="mn-head">${sumLabel}${sig}
       <button class="btn mini ghost" data-action="drawer" data-d="pricing">How pricing works ⓘ</button></div>
+    ${shopLine}
     ${vm.growth.waiting ? `<div class="mn-wait" role="status">${esc(vm.growth.waiting)} ${vm.gear ? '<button class="btn mini" data-action="tab" data-tab="gear">Gear shop ▸</button>' : ''}</div>` : ''}
     <div class="dgrid" style="--cols:${menuCols(menu.length)};--rows:${Math.ceil(menu.length / menuCols(menu.length)) || 1}">${menu.map((m) => drinkCard(m, onCount === 1)).join('')}</div>`;
 }

@@ -10,6 +10,7 @@
  */
 import { DRINK_INFO } from '../data/drinks';
 import type { Modifiers } from './effects';
+import { identityStepsAside } from './specialty';
 import type { DrinkId, GameState } from './types';
 
 export const LATTES = {
@@ -25,8 +26,8 @@ export const LATTES = {
 
 export const isMilkDrink = (d: DrinkId): boolean => LATTES.drinks.includes(d);
 
-/** The factor on every milk drink's order weight for this menu (1 = no push). */
-export function milkPush(state: GameState, menu: DrinkId[], m: Modifiers): number {
+/** The wand's latte factor for this menu, ignoring whether a shop identity has taken over. */
+export function milkPushAmount(state: GameState, menu: DrinkId[], m: Modifiers): number {
   if (state.gear !== true) return 1;
   let milk = 0;
   let rest = 0;
@@ -38,4 +39,14 @@ export function milkPush(state: GameState, menu: DrinkId[], m: Modifiers): numbe
   if (milk <= 0 || rest <= 0) return 1;
   const need = (LATTES.milkShare * rest) / ((1 - LATTES.milkShare) * milk);
   return Math.min(LATTES.maxPush, Math.max(1, need));
+}
+
+/**
+ * The factor on every milk drink's order weight for this menu (1 = no push).
+ * A latte bar, an espresso bar, or a quick cup has its own weights, so this push steps aside.
+ * A neighbourhood café, and a shop with no identity yet, keeps it.
+ */
+export function milkPush(state: GameState, menu: DrinkId[], m: Modifiers): number {
+  if (identityStepsAside(state)) return 1;
+  return milkPushAmount(state, menu, m);
 }
