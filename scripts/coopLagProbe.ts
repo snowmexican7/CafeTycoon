@@ -6,7 +6,7 @@
 // The run below is the fixed host. behindTicks should stay flat, about one send (9 ticks).
 import { addStandIns, installHarness } from '../src/harness';
 import { applyPatch, diff, roundFloats } from '../src/net/delta';
-import { KEYFRAME_EVERY, createHostRoom } from '../src/net/hostRoom';
+import { KEYFRAME_EVERY, SEND_GIVE_UP_MS, createHostRoom } from '../src/net/hostRoom';
 import { createPeerSession } from '../src/net/peerSession';
 import { createFakeLink } from '../src/net/testing/fakeLink';
 import type { ActionKind } from '../src/net/protocol';
@@ -115,7 +115,7 @@ async function slowLink(): Promise<Record<string, unknown>> {
     onError: () => () => {},
     close() {},
   };
-  createHostRoom(host, local, { token: 'host', name: 'Host' });
+  const room = createHostRoom(host, local, { token: 'host', name: 'Host' });
   const peerLink = createFakeLink('peer');
   const peer = createPeerSession(peerLink, { token: 'guest', name: 'Guest', timeoutMs: 60_000, setTimer: () => 0, clearTimer: () => {} });
   let guestTick = 0;
@@ -151,8 +151,10 @@ async function slowLink(): Promise<Record<string, unknown>> {
     pump();
     behind.push(s.tick - guestTick);
   }
+  room.close();
   peer.close();
   return {
+    giveUpMs: SEND_GIVE_UP_MS,
     hostTick: s.tick,
     guestTick,
     applied,

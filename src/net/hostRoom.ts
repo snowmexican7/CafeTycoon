@@ -15,9 +15,18 @@ export interface HostRoom {
 
 /** A full snapshot every this many sends (5 s at 20 Hz), so a dropped delta heals on its own. */
 export const KEYFRAME_EVERY = 100;
+/**
+ * Give up on a send that never settles. The slow-link probe stays 9 ticks (150 ms) behind while sends
+ * still complete; 1.5 s is ten times that and inside the 1–2 s bound, short of freezing the other guests.
+ * A chunked keyframe's round trip fits under this. A vanished peer or a channel that never rejects does not.
+ */
+export const SEND_GIVE_UP_MS = 1500;
 
 export interface HostRoomHooks {
   onTele?(token: string, events: TeleEvent[]): void;
+  /** Tests pass a fake clock. The page uses `setTimeout`. */
+  setTimer?(fn: () => void, ms: number): unknown;
+  clearTimer?(id: unknown): void;
 }
 
 export function createHostRoom(
@@ -38,8 +47,18 @@ export function createHostRoom(
   // body lands after the deltas that were supposed to follow it. Hold at most one snapshot send.
   let inflight = false;
   let snapWaiting = false;
+  // Bumped when a send settles or is abandoned, so a late settle can't clear a newer send's inflight.
+  let flight = 0;
+  let giveUpTimer: unknown = null;
   const later: (() => void)[] = [];
+  const setTimer = hooks?.setTimer ?? ((fn: () => void, ms: number) => setTimeout(fn, ms));
+  const clearTimer = hooks?.clearTimer ?? ((id: unknown) => clearTimeout(id as ReturnType<typeof setTimeout>));
   const isPromise = (v: unknown): v is Promise<unknown> => typeof (v as { then?: unknown } | null)?.then === 'function';
+  const clearGiveUp = (): void => {
+    if (giveUpTimer == null) return;
+    clearTimer(giveUpTimer);
+    giveUpTimer = null;
+  };
   const pump = (): void => {
     while (!inflight && !closed) {
       const job = later.shift();
@@ -55,20 +74,34 @@ export function createHostRoom(
       break;
     }
   };
+  /** The in-flight send will not settle usefully. The next publish is a keyframe. */
+  const dropFlight = (): void => {
+    if (!inflight || closed) return;
+    flight += 1;
+    clearGiveUp();
+    inflight = false;
+    wire = null;
+    pump();
+  };
   const afterSend = (result: void | Promise<unknown>, onFail?: () => void): void => {
     if (!isPromise(result)) return;
+    const gen = ++flight;
     inflight = true;
-    void result.then(
-      () => {
-        inflight = false;
-        pump();
-      },
-      () => {
-        onFail?.();
-        inflight = false;
-        pump();
-      },
-    );
+    clearGiveUp();
+    giveUpTimer = setTimer(() => {
+      if (closed || gen !== flight) return;
+      giveUpTimer = null;
+      dropFlight();
+    }, SEND_GIVE_UP_MS);
+    const finish = (failed: boolean) => {
+      if (closed || gen !== flight) return;
+      flight += 1;
+      clearGiveUp();
+      inflight = false;
+      if (failed) onFail?.();
+      pump();
+    };
+    void result.then(() => finish(false), () => finish(true));
   };
   /** Start `run` now, or behind whatever send is already on the wire. Synchronous links never queue. */
   const sendOut = (run: () => void | Promise<unknown>, onFail?: () => void): void => {
@@ -184,10 +217,14 @@ export function createHostRoom(
   link.onPeerLeave((peerId) => {
     if (closed) return;
     const member = byPeer.get(peerId);
-    if (!member) return;
-    byPeer.delete(peerId);
-    local.sendInput({ kind: 'leave', playerId: member.token });
-    broadcastLobby();
+    if (member) {
+      byPeer.delete(peerId);
+      local.sendInput({ kind: 'leave', playerId: member.token });
+    }
+    // A departed peer can reject this send, or leave it pending forever. Either way the others
+    // must not wait on it: drop the flight (a late settle is ignored) and keep publishing.
+    dropFlight();
+    if (member) broadcastLobby();
   });
 
   return {
@@ -196,6 +233,9 @@ export function createHostRoom(
     close() {
       if (closed) return;
       closed = true;
+      flight += 1;
+      clearGiveUp();
+      inflight = false;
       snapWaiting = false;
       later.length = 0;
       unsubscribe();
