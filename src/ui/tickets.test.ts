@@ -16,7 +16,9 @@ describe('FB1 WP2 order tickets', () => {
     expect(count(html, /class="ticket /g)).toBe(MAX_TICKETS);
     expect(html).toContain('+2 more');
     expect(ticketsHtml(orders(4), opts())).not.toContain('more');
-    expect(ticketsHtml([], opts())).toContain('No one in line');
+    expect(ticketsHtml([], opts())).toContain('Grind some beans');
+    expect(ticketsHtml([], opts({ pot: true }))).toContain('Brew a pot');
+    expect(ticketsHtml([], opts({ pot: true }))).not.toContain('Grind some beans');
   });
 
   it('hides steps by default and shows them for toggled ids only', () => {

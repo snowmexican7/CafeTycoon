@@ -540,6 +540,9 @@ export interface PitchResult {
 /** P3 B13: the growth path, smallest first. */
 export type TierId = 'stand' | 'cart' | 'cafe';
 
+/** Blitz is today's week. Campaign is the long shop that starts on the pot. Absent on a run means Blitz. */
+export type RunMode = 'blitz' | 'campaign';
+
 /** P3 B12: the checkout path. */
 export type CheckoutId = 'register' | 'kiosk' | 'squarely';
 /** Owned checkouts (always the register) and the one in use; `since` is the day the latest was installed. */
@@ -772,6 +775,11 @@ export interface FeedPost {
 
 /** The whole game. Plain data, JSON-safe, stepped by pure functions. */
 export interface GameState {
+  /**
+   * Blitz or Campaign. Absent means Blitz, so a run from before this field (and every current test that
+   * does not ask) stays a Blitz run. New games from the title set it.
+   */
+  mode?: RunMode;
   /** P3 B16: the head start this run opened with (Gear runs only; absent in old saves). */
   perk?: PerkId;
   seed: number;
@@ -1015,10 +1023,12 @@ export interface CreateRunOptions {
   hostId: PlayerId;
   players: { id: PlayerId; name: string; look?: PlayerLook }[];
   settings?: Partial<Settings>;
-  /** P3 B13: the size the run opens at (absent = the café; new games from the title start at the stand). */
+  /** P3 B13: the size the run opens at (absent = the café). New games from the title start on the cart. */
   tier?: TierId;
-  /** Gear Tree: start a Gear run ($120, no stations, no supplies). The sim default stays classic (old saves, golden tests); since v3.0.0 the UI sets it for every new run (`?gear=0` opts out). */
+  /** Gear Tree: start a Gear run. Blitz is $120 and an empty bar. Campaign replaces that with the pot and about $40. The sim default stays classic. */
   gear?: boolean;
+  /** Absent means Blitz. Campaign (with `gear`) places the pot, the small till, and drip only. */
+  mode?: RunMode;
   /** P3 B16: a head start earned in earlier runs (Gear runs only; applied once at createRun). */
   perk?: PerkId;
   /** R4 a: a dev run (`?dev=1`): unlimited cash, a pausable night, never saved to meta, records or history. */

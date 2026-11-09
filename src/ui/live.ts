@@ -150,6 +150,8 @@ export interface HudLive {
   heldCold?: true;
   /** Every espresso machine is a pod machine: tickets show "Pod" instead of Grind + Pull. */
   pods?: boolean;
+  /** A drip pot is on the floor and there is no grinder: the quiet line says to brew, not grind. */
+  pot?: boolean;
   /** Batch/pickup: a Gear run (tickets end in "Pickup"). */
   gear?: boolean;
   meName: string;
@@ -670,6 +672,7 @@ export function hudLive(state: GameState, me: PlayerId): HudLive {
     ...(player?.tool ? { tool: toolLabel(player, state)! } : {}),
     ...(player && heldColdNow(state, player) ? { heldCold: true as const } : {}),
     ...(podsOnly(state) ? { pods: true } : {}),
+    ...(state.stations.some((st) => st.kind === 'drip') && !state.stations.some((st) => st.kind === 'grinder') ? { pot: true as const } : {}),
     ...(state.gear === true ? { gear: true } : {}),
     meName: player?.name ?? '',
     hint: handHint(state, me),

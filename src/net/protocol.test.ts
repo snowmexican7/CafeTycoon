@@ -4,7 +4,7 @@ import { ACTIONS, parseHello, parseInput, parseJoin, parseLobby, parseSeat, pars
 
 describe('protocol parsers', () => {
   it('is on version 13 (seat reclaim, room cap, lobby bots, forecasts, re-roll, challenges, eggs, crew stats, B11 balance, 2.0.1 deltas, P3 roles, prices, regulars)', () => {
-    expect(PROTOCOL_VERSION).toBe(71);
+    expect(PROTOCOL_VERSION).toBe(72);
     expect(ACTIONS).toContain('snapd');
     expect(ACTIONS).toContain('resync');
     expect(ACTIONS).toContain('seat');
@@ -30,10 +30,13 @@ describe('protocol parsers', () => {
   });
 
   it('bot cut 4a: a lobby message has no bots setting (an old host’s is dropped)', () => {
-    const base = { t: 'lobby', members: [], started: false };
+    const base = { t: 'lobby', members: [], started: false, mode: 'blitz' as const };
     expect(parseLobby({ ...base, bots: 2, botsPicked: true })).toEqual(base);
     expect(parseLobby({ ...base, bots: 'auto' })).toEqual(base);
     expect(parseLobby(base)).toEqual(base);
+    expect(parseLobby({ t: 'lobby', members: [], started: false })).toEqual(base);
+    expect(parseLobby({ ...base, mode: 'campaign' })!.mode).toBe('campaign');
+    expect(parseLobby({ ...base, mode: 'season' })!.mode).toBe('blitz');
   });
 
   it('parses well-formed messages and rejects junk', () => {

@@ -196,7 +196,10 @@ describe('lobby view model', () => {
       isHost: true,
       canStart: true,
       statusText: 'Share the code. Start when everyone is in.',
+      mode: 'blitz',
+      modeLine: 'Blitz. A week on the cart, starting with $120. The host picked this.',
     });
+    expect(lobbyViewModel({ code: 'ABCDE', members, isHost: false, status: 'connected', started: false, mode: 'campaign' }).modeLine).toMatch(/Campaign/);
     expect(lobbyViewModel({ code: 'ABCDE', members, isHost: true, status: 'hosting', started: true }).canStart).toBe(false);
   });
   it('describes every peer status', () => {

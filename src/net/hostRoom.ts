@@ -1,4 +1,4 @@
-import type { GameState, PlayerLook } from '../sim/types';
+import type { GameState, PlayerLook, RunMode } from '../sim/types';
 import type { TeleEvent } from '../host/telemetry';
 import { applyPatch, diff, roundFloats } from './delta';
 import { parseInput, parseJoin, parseResync, parseTele, PROTOCOL_VERSION, type Member } from './protocol';
@@ -27,6 +27,8 @@ export interface HostRoomHooks {
   /** Tests pass a fake clock. The page uses `setTimeout`. */
   setTimer?(fn: () => void, ms: number): unknown;
   clearTimer?(id: unknown): void;
+  /** The game the host picked. Absent is Blitz. Every lobby message carries it so a joiner can see it. */
+  mode?: RunMode;
 }
 
 function sameLook(a: PlayerLook | undefined, b: PlayerLook | undefined): boolean {
@@ -138,7 +140,8 @@ export function createHostRoom(
   const broadcastLobby = () => {
     const list = members();
     onMembers?.(list);
-    sendOut(() => link.send('lobby', { t: 'lobby', members: list, started }));
+    const mode: RunMode = hooks?.mode === 'campaign' ? 'campaign' : 'blitz';
+    sendOut(() => link.send('lobby', { t: 'lobby', members: list, started, mode }));
   };
   const publish = (snap: HostToClient) => {
     if (closed) return;

@@ -43,6 +43,7 @@ import { fittingsValue, scoreRun } from '../sim/score';
 import { cutsIntoRent, nightWarnings, type NightWarning } from './nightWarnings';
 import type { PeerStatus } from '../net/peerSession';
 import type { Member } from '../net/protocol';
+import type { RunMode } from '../sim/types';
 import type { AdId, AdOutcome, PitchKind, PitchTier, CardPath, CatalogueItem, Rarity, DayStats, DrinkId, EventKind, GameState, MessKind, Phase, PlayerId, RogueStage, RunRecord, SupplyId } from '../sim/types';
 import type { RoomRecord } from '../storage/roomStore';
 import { BASE_DRINKS, DRINK_IDS, GEAR_ONLY_DRINKS, DRINK_INFO, DRINK_TEMP } from '../data/drinks';
@@ -1107,7 +1108,15 @@ export interface LobbyVM {
   isHost: boolean;
   canStart: boolean;
   statusText: string;
+  /** The game the host picked. Joiners see the same one. */
+  mode: RunMode;
+  modeLine: string;
 }
+
+const MODE_LINE: Record<RunMode, string> = {
+  blitz: 'Blitz. A week on the cart, starting with $120. The host picked this.',
+  campaign: 'Campaign. A register, a cheap pot, and about $40. The host picked this.',
+};
 
 
 
@@ -1117,8 +1126,11 @@ export function lobbyViewModel(input: {
   isHost: boolean;
   status: PeerStatus | 'hosting';
   started: boolean;
+  /** Absent is Blitz, including a room opened before this field existed. */
+  mode?: RunMode;
 }): LobbyVM {
   const { status, started } = input;
+  const mode: RunMode = input.mode === 'campaign' ? 'campaign' : 'blitz';
   let statusText = '';
   if (status === 'hosting') statusText = started ? 'Room open. Friends can still join.' : 'Share the code. Start when everyone is in.';
   else if (status === 'connecting') statusText = 'Finding the host…';
@@ -1133,6 +1145,8 @@ export function lobbyViewModel(input: {
     isHost: input.isHost,
     canStart: input.isHost && !started,
     statusText,
+    mode,
+    modeLine: MODE_LINE[mode],
   };
 }
 

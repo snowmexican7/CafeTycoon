@@ -70,6 +70,7 @@
 #lobby { position: fixed; inset: 0; z-index: 15; display: flex; align-items: center; justify-content: center; padding: 16px; overflow: auto; background: #f7d9b8; color: var(--ink); }
 #lobby .lobby-shade { position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(58, 36, 24, .12), rgba(58, 36, 24, .45)); }
 #lobby .lobbycard { position: relative; width: min(100%, 460px); }
+#lobby .mode-line { margin: 0; padding: 12px 14px; border-radius: 14px; background: #fff6e8; box-shadow: inset 0 0 0 2px var(--oat); font: 700 17px/1.35 var(--font-body); color: var(--espresso); }
 .codebox { background: #fff; border-radius: 18px; padding: 12px 14px; box-shadow: var(--sh-1); display: flex; flex-direction: column; gap: 8px; }
 .codebox .code { display: flex; gap: 8px; justify-content: center; }
 .codebox .code span { width: 58px; height: 68px; border-radius: 14px; background: var(--espresso); color: var(--honey); display: grid; place-items: center;

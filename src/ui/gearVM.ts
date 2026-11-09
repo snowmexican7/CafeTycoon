@@ -87,8 +87,10 @@ export interface GearVM {
   vote?: GearVoteVM;
   voteLast?: { text: string; passed: boolean };
   voteRule?: string;
-  /** The first night of a Gear run: "Pick your gear". */
+  /** The first night of a Blitz run: "Pick your gear". Campaign already has its pot. */
   pickNight: boolean;
+  /** Campaign's first night, on the Restock tab. Absent on Blitz. */
+  openNote?: string;
   slots: GearSlotVM[];
   trees: { id: GearTree; name: string; icon: string; tiers: GearTierVM[] }[];
   freeSlots: number;
@@ -227,9 +229,13 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
   else if (!Object.values(state.supplies).some((x) => x > 0)) note = 'No supplies yet: restock on the Restock tab.';
   // G4g: co-op pick night nudges toward two cheap machines so everyone has a job (plus the till).
   const humans = state.players.filter((p) => !p.bot).length;
-  const coopHint = state.day <= 1 && humans > 1
+  const blitz = state.mode !== 'campaign';
+  const coopHint = state.day <= 1 && humans > 1 && blitz
     ? `Playing with ${humans}? Two cheap machines give two people a job (try The Hanes Method $5 + Pod-o-Matic $45). Whoever's free runs the till: ring up orders at the counter for speed tips.`
     : null;
+  const openNote = state.day <= 1 && !blitz
+    ? `Stock beans, then open. Drip is what you can sell.${humans > 1 ? ` Playing with ${humans}? One of you brews, and whoever is free rings the register.` : ''}`
+    : undefined;
   const voters = state.players.filter((p) => p.connected && !p.bot);
   const v = state.gearVote;
   const fv = state.fridgeVote;
@@ -260,7 +266,8 @@ export function gearVM(state: GameState, me?: PlayerId): GearVM {
     ...(fridge ? { fridge } : {}),
     wands,
     wandNote,
-    pickNight: state.day <= 1,
+    pickNight: state.day <= 1 && blitz,
+    ...(openNote ? { openNote } : {}),
     slots,
     trees,
     freeSlots,

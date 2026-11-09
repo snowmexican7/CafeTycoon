@@ -38,6 +38,21 @@ describe('G4f: one clear night order in Gear runs', () => {
 
 describe('Gear polish: night board wording', () => {
   const title = (h: string) => /<h1[^>]*>([^<]*)/.exec(h)?.[1] ?? h;
+  it('Campaign\'s first night opens on Restock and does not say to pick your gear', () => {
+    const s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }, { id: 'p2', name: 'Sam' }], tier: 'cart', gear: true, mode: 'campaign' });
+    const vm = nightViewModel(s, 'p1');
+    expect(nightTabs(vm.gear).map((t) => t.label)).toEqual(['Restock', 'Menu', 'Gear shop', 'Extras']);
+    expect(vm.gear?.pickNight).toBe(false);
+    const restock = nightHtml(vm, undefined, null, ui({ tab: 'tonight' }));
+    expect(restock).toContain('The pot is on the cart');
+    expect(restock).toContain('Drip is what you can sell');
+    expect(restock).not.toContain('Pick your gear');
+    expect(restock).not.toContain('empty counter');
+    expect(restock).toMatch(/Playing with 2/);
+    const shop = nightHtml(vm, undefined, null, ui({ tab: 'gear' }));
+    expect(shop).toContain('Thrift Store Special');
+    expect(shop).not.toContain('Pick your gear');
+  });
   it('the title says "Pick your gear" only on the gear tab of the first night', () => {
     const vm = nightViewModel(run(true), 'p1');
     expect(nightHtml(vm, undefined, null, ui({ tab: 'gear' }))).toContain('Pick your gear');

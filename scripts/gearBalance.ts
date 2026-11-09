@@ -90,10 +90,19 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
 /** P4 B8: an optional extra crew move, asked when the scripted night has nothing left to do (and each day tick). */
 export type ExtraMoves = (state: GameState, ids: string[]) => PlayerInput[];
 
-export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0, extra?: ExtraMoves, onState?: (s: GameState) => void, start?: { tier: TierId; cash: number }) {
-  let s = createRun({ seed, hostId: 'tester', players: [], tier: start?.tier ?? 'cart', gear: true, settings: { dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4 } });
+export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0, extra?: ExtraMoves, onState?: (s: GameState) => void, start?: { tier?: TierId; cash?: number; mode?: 'blitz' | 'campaign'; cashier?: boolean }) {
+  let s = createRun({
+    seed,
+    hostId: 'tester',
+    players: [],
+    tier: start?.tier ?? 'cart',
+    gear: true,
+    ...(start?.mode ? { mode: start.mode } : {}),
+    settings: { dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4, ...(start?.cashier ? { cashier: true } : {}) },
+  });
   // P6-6: start further along (e.g. the café tier with cash) so later systems get exercised. createRun builds the tier's floor.
-  if (start) s.cash = s.startingCash = start.cash;
+  // A Campaign start keeps CAMPAIGN_START.cash unless the caller passes a cash override.
+  if (start?.cash !== undefined) s.cash = s.startingCash = start.cash;
   addStandIns(s, humans);
   if (bots) addBots(s, bots);
   if (scenario) s.scenario = scenario;
@@ -109,6 +118,8 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
   let floorMin = 100;
   let messTicks = 0;
   const floorEnd: number[] = [];
+  /** Till after each day's rent, in day order. */
+  const till: number[] = [];
   while (s.phase !== 'ended' && s.days.length < days) {
     if (s.phase === 'day') {
       floorSum += s.cleanliness;
@@ -162,6 +173,7 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
     if (buyer) delete buyer.bot;
     s = step(s, inputs);
     if (buyer && bot) s.players.find((p) => p.id === ids[0])!.bot = bot;
+    if (s.days.length > till.length) till.push(r2(s.cash));
   }
   onState?.(s);
   const d = s.days;
@@ -179,6 +191,7 @@ export function playGear(humans: number, seed: number, scenario: ScenarioId | nu
     messy: floorTicks ? Math.round((messTicks / floorTicks) * 100) : null,
     floorEnd: floorEnd.length ? Math.round(floorEnd.reduce((a, x) => a + x, 0) / floorEnd.length) : null,
     cashByDay: d.map((x) => Math.round(x.sales + x.tips)),
+    till,
     ...(s.season ? { season: s.season.weeks.map((w) => `w${w.week}:${Math.round(w.profit)}${w.target !== null ? '/' + w.target : ''}`).join(' ') } : {}),
   };
 }

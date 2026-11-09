@@ -1,5 +1,5 @@
 import { ECONOMY } from '../data/economy';
-import type { Pace } from '../sim/types';
+import type { Pace, RunMode } from '../sim/types';
 import type { LocalSettings } from '../storage/settingsStore';
 import { esc, hide, onAction, show } from './dom';
 import { logoCup } from './icons';
@@ -20,6 +20,8 @@ export interface StartChoice {
   perk?: PerkId;
   /** Bot cut 4a: the robot cashier in Play solo (On/Off); absent = keep the stored setting. */
   soloCashier?: boolean;
+  /** Blitz is today's week. Campaign starts on the pot. Absent reads as Blitz. */
+  mode?: RunMode;
 }
 
 /** Bot cut 4a: the Play solo robot cashier picker, On / Off (bound to `LocalSettings.soloCashier`). */
@@ -32,6 +34,22 @@ export function soloCashierSeg(current: boolean): string {
 /** Reads the picked robot cashier choice, or undefined when none is picked. */
 export function readSoloCashier(value: string | undefined): boolean | undefined {
   return value === 'on' ? true : value === 'off' ? false : undefined;
+}
+
+/** The two games. Blitz is checked when nothing else is. */
+export function modeChoice(current: RunMode): string {
+  const rows: { id: RunMode; name: string; line: string }[] = [
+    { id: 'blitz', name: 'Blitz', line: 'A week on the cart. You start with $120 and pick a machine tonight.' },
+    { id: 'campaign', name: 'Campaign', line: 'A register, a cheap pot, and about $40. Drip only, for one sitting.' },
+  ];
+  return `<div class="modes" role="radiogroup" aria-label="Game">${rows
+    .map((r) => `<label class="mode"><input type="radio" name="mode" value="${r.id}" ${current === r.id ? 'checked' : ''}><span><b>${r.name}</b><small>${r.line}</small></span></label>`)
+    .join('')}</div>`;
+}
+
+/** The picked game. Anything other than Campaign is Blitz. */
+export function readMode(value: string | undefined): RunMode {
+  return value === 'campaign' ? 'campaign' : 'blitz';
 }
 
 const DAY_LENGTHS = [60, 90, 120, 150, 180, 240, 300];
@@ -92,6 +110,7 @@ export function createTitle(
       pace: Number(container.querySelector<HTMLInputElement>('[name=pace]:checked')?.value ?? 3) as Pace,
       dayLengthSec: Number(q<HTMLSelectElement>('[name=dayLength]').value),
       nightLengthSec: Number(container.querySelector<HTMLSelectElement>('[name=nightLength]')?.value ?? DEFAULT_NIGHT_LENGTH),
+      mode: readMode(container.querySelector<HTMLInputElement>('[name=mode]:checked')?.value),
     };
     const cashier = readSoloCashier(container.querySelector<HTMLInputElement>('[name=soloCashier]:checked')?.value);
     if (cashier !== undefined) choice.soloCashier = cashier;
@@ -140,6 +159,7 @@ export function createTitle(
         <main class="paper titlecard">
           <div class="logo">${logoCup(78)}<h1>Cafe<b>Tycoon</b></h1></div>
           <p class="tag">Plan the shop by night. Survive the rush by day. With friends.</p>
+          ${modeChoice('blitz')}
           ${notice ? `<p class="notice" role="alert">${esc(notice)}</p>` : ''}
           ${vm.canResume ? '<button class="btn mint block resume" data-action="resume">▶ Resume your run</button>' : ''}
           <div class="row2">

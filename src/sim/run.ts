@@ -23,7 +23,7 @@ import { zeroDrinks } from './tally';
 import { unlockForDay } from './unlocks';
 import { dealChallenges, pruneChallenges } from './challenges';
 import { eggsMorning } from './eggs';
-import { gearMorning, gearStart } from './gear';
+import { campaignMorning, campaignStart, gearMorning, gearStart } from './gear';
 import { fridgeMorning } from './fridge';
 import { potMorning } from './sink';
 import { settle } from './spawn';
@@ -125,9 +125,12 @@ export function createRun(opts: CreateRunOptions): GameState {
     rogue: null,
     forecast: forecastFor(opts.seed, 1),
     unlocked: [...BASE_DRINKS],
+    ...(opts.mode === 'blitz' || opts.mode === 'campaign' ? { mode: opts.mode } : {}),
   };
   state.scenario = SCENARIOS[rngInt(state, SCENARIOS.length)].id;
   if (opts.gear) gearStart(state);
+  // Campaign replaces the $120 empty bar. Absent mode, and an explicit Blitz, stay on gearStart.
+  if (state.mode === 'campaign' && state.gear) campaignStart(state);
   for (const p of state.players) settle(state, p); // FB2 A3: the Gear fixtures (the sink) may cover a spawn point
   applyPerk(state, opts.perk);
   if (opts.dev) {
@@ -191,6 +194,8 @@ export function startDay(state: GameState): GameState {
   pruneChallenges(state);
   eggsMorning(state);
   state.morningNotes = morningNotes(state);
+  const campaignLine = campaignMorning(state);
+  if (campaignLine) state.morningNotes.unshift(campaignLine);
   const rivalNote = rivalMorning(state);
   if (rivalNote) state.morningNotes.push(rivalNote);
   const promoNote = promoMorning(state);

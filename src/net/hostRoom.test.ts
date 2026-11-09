@@ -473,6 +473,18 @@ describe('HostRoom', () => {
     link.receive('join', join('T1', 'Sam'), 'p1');
     const lobby = link.sent.filter((x) => x.kind === 'lobby').map((x) => x.data as Record<string, unknown>);
     expect(lobby.length).toBeGreaterThan(0);
-    for (const m of lobby) expect(Object.keys(m).sort()).toEqual(['members', 'started', 't']);
+    for (const m of lobby) expect(Object.keys(m).sort()).toEqual(['members', 'mode', 'started', 't']);
+    for (const m of lobby) expect(m.mode).toBe('blitz');
+  });
+
+  it('a Campaign room tells every joiner the mode on the lobby', () => {
+    const link = createFakeLink();
+    const local = fakeLocal();
+    createHostRoom(link, local.t, { token: 'H', name: 'Host' }, undefined, { mode: 'campaign' });
+    link.peerJoins('p1');
+    link.receive('join', join('T1', 'Sam'), 'p1');
+    const lobby = link.sent.filter((x) => x.kind === 'lobby').map((x) => x.data as { mode?: string });
+    expect(lobby.length).toBeGreaterThan(0);
+    for (const m of lobby) expect(m.mode).toBe('campaign');
   });
 });

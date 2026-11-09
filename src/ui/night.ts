@@ -417,7 +417,9 @@ function tonightPane(vm: NightVM, extras: NightExtras | undefined): string {
   // ui-3.5.1: every night opens here, so the first (pick-your-gear) night points at the gear tab.
   const pick = vm.gear?.pickNight
     ? `<div class="tn-pick" role="note"><span aria-hidden="true">⚙️</span><span><b>First night: pick your gear.</b> Buy a machine first, then stock up for it here.</span><button class="btn" data-action="tab" data-tab="gear">② Pick gear ▸</button></div>`
-    : '';
+    : vm.gear?.openNote
+      ? `<div class="tn-pick" role="note"><span aria-hidden="true">🫖</span><span><b>The pot is on the cart.</b> ${esc(vm.gear.openNote)}</span></div>`
+      : '';
   const stats = extras ? `<div class="yd-stats">${extras.served} served · <span class="${extras.lost ? 'neg' : ''}">${extras.lost} walked</span> · ${extras.reputation.toFixed(1)}★${branchChip(vm.branch)}</div>` : '';
   const branchBtn = vm.branch && (vm.branch.open || vm.branch.canOpen) ? `<button class="btn mini ghost" data-action="drawer" data-d="branch">🏪 ${vm.branch.open ? 'Second shop' : 'Open a 2nd shop'} ▸</button>` : '';
   const h = b.headline;
@@ -667,7 +669,7 @@ export interface NightUiState {
 export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: string | null | undefined, ui: NightUiState): string {
   const cash = parseMoney(vm.cash);
   const day = extras?.day ?? 1;
-  const title = day <= 1 ? (vm.gear && ui.tab === 'gear' ? 'Pick your gear' : 'Opening night') : `After Day ${day - 1}`;
+  const title = day <= 1 ? (vm.gear?.pickNight && ui.tab === 'gear' ? 'Pick your gear' : 'Opening night') : `After Day ${day - 1}`;
   const sub = `planning ${extras ? `${extras.weekday}, ` : ''}Day ${day}`;
   const alertN = vm.brief.alerts.filter((a) => a.severity === 'danger' || a.severity === 'warn').length;
   const badge: Record<NightTab, string> = { tonight: alertN ? `${alertN}` : '', menu: '', spend: vm.hand.length ? `${vm.hand.length}` : '', gear: '' };

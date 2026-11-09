@@ -35,7 +35,7 @@ import { createRecordsStore } from './storage/recordsStore';
 import { createMetaStore } from './storage/metaStore';
 import { PERKS, type PerkId } from './data/perks';
 import { createRecordsDialog } from './ui/records';
-import type { CreateRunOptions, DrinkId, GameState, Phase, PlayerId, PlayerInput, PlayerLook } from './sim/types';
+import type { CreateRunOptions, DrinkId, GameState, Phase, PlayerId, PlayerInput, PlayerLook, RunMode } from './sim/types';
 import { createHistoryStore } from './storage/historyStore';
 import { createRoomStore } from './storage/roomStore';
 import { createSeatStore } from './storage/seatStore';
@@ -157,6 +157,8 @@ interface Session {
   peerStatus: PeerStatus | 'hosting';
   started: boolean;
   pendingStart: StartChoice | null;
+  /** The game this room is playing. The host picks it; joiners only see it. */
+  lobbyMode: RunMode;
   /** ui-3.10.0: the drinks known when today opened, and those learned since (replayed after the receipt). */
   dayUnlocked?: DrinkId[];
   learnedTonight?: DrinkId[];
@@ -346,6 +348,7 @@ async function main(): Promise<void> {
       ...(isDevMode(location.search) ? { dev: true } : {}),
       // P3 B16: the host's head start (the sim ignores it in classic runs).
       ...(gearFlag() && choice.perk ? { perk: choice.perk } : {}),
+      mode: choice.mode === 'campaign' ? 'campaign' : 'blitz',
     };
   }
 
@@ -374,6 +377,7 @@ async function main(): Promise<void> {
       peerStatus: 'hosting',
       started: false,
       pendingStart: null,
+      lobbyMode: 'blitz',
     };
     s.unsubscribers.push(transport.onSnapshot((snap) => onSnapshot(s, snap)));
     s.unsubscribers.push(
@@ -400,7 +404,7 @@ async function main(): Promise<void> {
 
   function renderLobby(s: Session): void {
     if (!s.code) return;
-    lobby.render(lobbyViewModel({ code: s.code, members: s.members, isHost: s.role === 'host', status: s.peerStatus, started: s.started }));
+    lobby.render(lobbyViewModel({ code: s.code, members: s.members, isHost: s.role === 'host', status: s.peerStatus, started: s.started, mode: s.lobbyMode }));
   }
 
   function startSolo(choice: StartChoice, look: PlayerLook | null = null): void {
@@ -416,12 +420,13 @@ async function main(): Promise<void> {
     local.start(runOptions(choice, id, [{ token: id, name: settings.playerName, ...(look ? { look } : {}) }], settings.soloCashier));
   }
 
-  function openHostRoom(s: Session, local: Transport, code: string, hostMember: Member): void {
+  function openHostRoom(s: Session, local: Transport, code: string, hostMember: Member, mode: RunMode = 'blitz'): void {
+    s.lobbyMode = mode;
     const link = roomLinkFor(code, createTrysteroLink);
     s.room = createHostRoom(link, local, hostMember, (members) => {
       s.members = members;
       renderLobby(s);
-    }, { onTele: (token, events) => s.telemetry?.peerEvents(token, events) });
+    }, { onTele: (token, events) => s.telemetry?.peerEvents(token, events), mode });
     s.members = s.room.members();
     s.peerStatus = 'hosting';
     renderLobby(s);
@@ -437,7 +442,7 @@ async function main(): Promise<void> {
     const s = createSession('host', code, local, id);
     attachTelemetry(s, tele);
     s.pendingStart = choice;
-    openHostRoom(s, local, code, { token: id, name: settings.playerName, ...(look ? { look } : {}) });
+    openHostRoom(s, local, code, { token: id, name: settings.playerName, ...(look ? { look } : {}) }, choice.mode === 'campaign' ? 'campaign' : 'blitz');
     lobby.show();
   }
 
@@ -500,6 +505,7 @@ async function main(): Promise<void> {
       transport.onLobby((msg) => {
         s.members = msg.members;
         s.started = msg.started;
+        s.lobbyMode = msg.mode;
         renderLobby(s);
       }),
     );
@@ -518,7 +524,7 @@ async function main(): Promise<void> {
       const s = createSession('host', room.code, local, saved.hostId);
       attachTelemetry(s, tele);
       const hostLook = saved.players.find((p) => p.id === saved.hostId)?.look;
-      openHostRoom(s, local, room.code, { token: saved.hostId, name: hostName, ...(hostLook ? { look: hostLook } : {}) });
+      openHostRoom(s, local, room.code, { token: saved.hostId, name: hostName, ...(hostLook ? { look: hostLook } : {}) }, saved.mode === 'campaign' ? 'campaign' : 'blitz');
       armWatchdog(s);
       local.resume(markPeersAway(saved, saved.hostId));
       return;

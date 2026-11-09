@@ -241,6 +241,25 @@ describe('sink and pot hints (3.3.3, FB2 A3)', () => {
   });
 });
 
+describe('mode select', () => {
+  it('offers Blitz and Campaign in plain words, with Blitz checked', async () => {
+    const { modeChoice, readMode } = await import('./title');
+    const html = modeChoice('blitz');
+    expect(html).toMatch(/aria-label="Game"/);
+    expect(html).toMatch(/value="blitz" checked/);
+    expect(html).toContain('A week on the cart');
+    expect(html).toContain('$120');
+    expect(html).toContain('about $40');
+    expect(html).toContain('Drip only');
+    expect(html).not.toMatch(/\btap\b/i);
+    expect(modeChoice('campaign')).toMatch(/value="campaign" checked/);
+    expect(readMode('campaign')).toBe('campaign');
+    expect(readMode('blitz')).toBe('blitz');
+    expect(readMode(undefined)).toBe('blitz');
+    expect(readMode('season')).toBe('blitz');
+  });
+});
+
 describe('Play solo robot cashier picker (bot cut 4a)', () => {
   it('draws On / Off with the stored choice checked, and reads it back', async () => {
     const { readSoloCashier, soloCashierSeg } = await import('./title');

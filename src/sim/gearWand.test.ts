@@ -572,6 +572,6 @@ describe('FB2 C9: the planner and saves', () => {
     }
     createSnapshotStore(storage).save(s);
     expect(createSnapshotStore(storage).load()?.gear).toBe(true);
-    expect(SNAPSHOT_VERSION).toBe(37); // growth order on the playtest-feel state; a snapshot 36 from either parent is refused
+    expect(SNAPSHOT_VERSION).toBe(38); // GameState.mode; a snapshot from before Campaign is refused
   });
 });

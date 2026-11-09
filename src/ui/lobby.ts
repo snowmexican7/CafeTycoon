@@ -38,6 +38,7 @@ export function createLobby(
         <div class="paper menu lobbycard" role="dialog" aria-labelledby="lob-h">
           <div class="menu-hd"><span class="badge-ic">${logoCup(30)}</span><div><h2 id="lob-h">${vm.isHost ? 'Your room' : 'Joining a room'}</h2>
             <p>${vm.isHost ? 'Friends type this code on the title screen.' : 'Hang tight while we find the café.'}</p></div></div>
+          <p class="mode-line" role="status">${esc(vm.modeLine)}</p>
           <div class="codebox"><span class="lbl">Room code</span>
             <div class="code" aria-label="Room code ${esc(vm.code.split('').join(' '))}">${vm.code
               .split('')

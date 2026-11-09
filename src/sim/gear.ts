@@ -24,6 +24,7 @@ import { AREAS, AREA_ASK, AREA_TIP, DRINK_FAMILY, QUALITY_TIP_PER_STAR, SNOB, SN
  * Classic `equip` and `slot` inputs do nothing in a Gear run (the Gear tab replaces the stations shop).
  * Pure and deterministic: no RNG.
  */
+import { CAMPAIGN_START } from '../data/campaign';
 import { GEAR, GEAR_START, WANDS, WAND_SECONDS, WAND_UPGRADE, type AddOnWand, type GearId } from '../data/gear';
 import { SLOT_POSITIONS } from '../data/layout';
 import { ensureCounterSpots, slotSpots, stationsFromSlots, slotCount, wandOn } from './slots';
@@ -71,6 +72,43 @@ export function gearStart(state: GameState): void {
   // Batch/pickup: a full condiment bar and no stock boxes yet.
   state.condiments = { servings: CONDIMENTS.servings };
   state.condimentBoxes = 0;
+}
+
+/**
+ * Campaign, after `gearStart`. The cart already has the Ka-Ching register. This places the Thrift Store
+ * pot and the cardboard bin, a small till, and a scoop of beans. Drip is the only drink on the menu.
+ * The pot is not a purchase, so it is not a pile of points and it is not in the gear log.
+ * Cash, the pot, and the scoop live in `CAMPAIGN_START`.
+ */
+export function campaignStart(state: GameState): void {
+  const pot = CAMPAIGN_START.pot;
+  const info = GEAR[pot];
+  state.mode = 'campaign';
+  state.cash = CAMPAIGN_START.cash;
+  state.startingCash = CAMPAIGN_START.cash;
+  for (const k of Object.keys(state.supplies) as (keyof typeof state.supplies)[]) state.supplies[k] = 0;
+  state.supplies.beans = CAMPAIGN_START.beans;
+  const slots = [...(state.slots ?? [])];
+  const gear = [...(state.slotGear ?? [])];
+  const at = slots.findIndex((x) => x === null);
+  if (at >= 0 && info.pot) {
+    slots[at] = info.station;
+    gear[at] = pot;
+  }
+  state.slots = slots;
+  state.slotGear = gear;
+  state.slotWand = Array.from({ length: slots.length }, () => null);
+  rebuild(state);
+  if (at >= 0 && info.pot) seatDripByTill(state, at);
+  const known = state.unlocked ?? [...BASE_DRINKS];
+  if (!known.includes('drip')) state.unlocked = DRINK_IDS.filter((d) => d === 'drip' || known.includes(d));
+  for (const d of DRINK_IDS) state.menu[d] = d === 'drip';
+}
+
+/** Day 1 morning line for a Campaign cart. Blitz and later mornings stay on the usual notes. */
+export function campaignMorning(state: GameState): string | null {
+  if (state.mode !== 'campaign' || !state.gear || state.day !== 1) return null;
+  return 'The Thrift Store pot is on the cart. Drip is what you can sell.';
 }
 
 /** The bar from the slots, on each slot's kept spot (FB2 C10 `slotPos`; none = the defaults), and the fixed spots. */

@@ -78,6 +78,8 @@ export interface TicketOpts {
   prices: Partial<Record<DrinkId, string>>;
   /** Pod-only espresso bar (see ticketSteps). */
   pods?: boolean;
+  /** A pot is on the floor and nothing grinds: the empty line says to brew. */
+  pot?: boolean;
   /** Gear run: the last step is "Pickup", not "Hand off". */
   gear?: boolean;
 }
@@ -125,7 +127,10 @@ const tilt = (id: number) => (((id * 37) % 7) - 3) * 0.3;
 
 /** The order rail's markup (pure, so it's testable without a DOM). Patience bars are patched per tick. */
 export function ticketsHtml(orders: readonly OrderTicket[], o: TicketOpts): string {
-  if (!orders.length) return `<div class="empty-orders">No one in line yet.<br>${o.pods ? 'Tidy up' : 'Grind some beans'} while it's quiet.</div>`;
+  if (!orders.length) {
+    const quiet = o.pods ? 'Tidy up' : o.pot ? 'Brew a pot' : 'Grind some beans';
+    return `<div class="empty-orders">No one in line yet.<br>${quiet} while it's quiet.</div>`;
+  }
   const shown = orders.slice(0, MAX_TICKETS);
   return (
     shown

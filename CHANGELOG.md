@@ -16,6 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **Pick Blitz or Campaign before a run.** Blitz is the week you already know: $120 on the cart, pick a machine that first night, seven days. Campaign starts on that same cart with the Ka-Ching register, a Thrift Store drip pot, and about $40. Drip is the only drink. You buy the next machines and the next size the same way as always. It is one sitting (there is no save yet). In a co-op room the host picks the game, and everyone sees which one it is before the doors open.
 - **You start with a coffee cart, on the sidewalk.** Grow into a stand, then the café. The cart is the small cheap shop: a short line, lower prices, no fridge until you buy the little cube, and no office runs. The stand is the middle shop ($70): more floor, a longer line, a beer fridge that comes with the keys, and office runs. The café is still last ($150).
 - The cart has wheels and a striped awning on the street. The stand is a fixed stall on that same street. The park is not where either shop sits.
 - The end-of-day receipt, the FOR LEASE sign, the "What you gained" card, and the night shop all name the next size in this order. Word of mouth unlocks when you grow the cart into a stand.

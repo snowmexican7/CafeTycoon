@@ -64,7 +64,7 @@ describe('stores', () => {
 
 describe('snapshot versioning', () => {
   it('pins the snapshot version', () => {
-    expect(SNAPSHOT_VERSION).toBe(37); // 37: cart/stand swap plus GameState.learned. A snapshot 36 from either parent is refused.
+    expect(SNAPSHOT_VERSION).toBe(38); // 38: GameState.mode. Older saves, including snapshot 37, are refused.
   });
 
   it('FB2 C9 (no save compatibility): every older save is turned away, a current one loads with its fixed spots', () => {

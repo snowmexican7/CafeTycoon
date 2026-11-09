@@ -79,6 +79,12 @@ function ringing(s: GameState, kind: 'machine' | 'order'): void {
   }
 }
 
+/** Replace a fixture's starter café with a run built the way a real game starts. */
+function adopt(s: GameState, next: GameState): void {
+  for (const k of Object.keys(s)) delete (s as unknown as Record<string, unknown>)[k];
+  Object.assign(s, next);
+}
+
 function base(): GameState {
   let s = createRun({
     seed: 7,
@@ -1271,6 +1277,36 @@ const FIXTURES: Record<string, Fixture> = {
       s.stations = stationsFromSlots('stand', s.slots);
       s.tierLog = [{ tier: 'stand', day: 3, by: 'Ben' }];
       s.today = { day: 2, served: 24, lost: 2, turnedAway: 5, sales: 104.2, tips: 10.4, rent: 17 };
+    },
+    timeline: [],
+  },
+  /** Campaign day 1, doors just open: the pot, the register, and about $40. */
+  campaignDay1: {
+    setup(s) {
+      adopt(s, startDay(createRun({
+        seed: 7,
+        hostId: 'ana',
+        players: [{ id: 'ana', name: 'Ana' }],
+        tier: 'cart',
+        gear: true,
+        mode: 'campaign',
+        settings: { cashier: true },
+      })));
+    },
+    timeline: [],
+  },
+  /** Blitz day 1: today's week, $120, nothing bought yet. */
+  blitzDay1: {
+    setup(s) {
+      adopt(s, startDay(createRun({
+        seed: 7,
+        hostId: 'ana',
+        players: [{ id: 'ana', name: 'Ana' }],
+        tier: 'cart',
+        gear: true,
+        mode: 'blitz',
+        settings: { cashier: true },
+      })));
     },
     timeline: [],
   },

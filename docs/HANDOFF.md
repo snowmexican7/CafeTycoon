@@ -473,6 +473,13 @@ Done by a Cursor cloud agent, following `docs/CLAUDE_PROMPT_COOP_LAG.md`. No Cla
 
 ## Grok → Claude
 
+### Campaign and Blitz, phase 1, awaiting the owner's review (2026-11-09)
+- **Built, not merged, not approved.** Phase 1 of `docs/PLAN_CAMPAIGN_AND_BLITZ.md` on top of the growth-order branch (PR #35): name Blitz, and a Campaign start. No furniture, no save work, no bots. Held for Kennedy. An agent must not merge it. Review it after #35. This branch also contains #35, and it merges v3.11.1.
+- **Sim files (called out):** `src/data/campaign.ts` (`CAMPAIGN_START`: cash 40, pot `d1`, bin `b0`, beans 8), `src/sim/gear.ts` `campaignStart` / `campaignMorning`, `src/sim/run.ts` (after `gearStart` when `mode === 'campaign'`), `src/sim/types.ts` `RunMode` and `GameState.mode` / `CreateRunOptions.mode` (absent means Blitz), `src/net/protocol.ts` `LobbyMsg.mode`, `src/net/hostRoom.ts` (the host's `hooks.mode` is on every lobby message). Snapshot **38**, protocol **72**. Old saves are refused. No migration.
+- Names: `runOptions` in `src/main.ts` passes `mode` from the title. `openHostRoom` takes that mode. A joiner reads `msg.mode` and does not pick. Solo cashier is unchanged and on for both. `pickNight` is Blitz day 1 only (`gearVM`). Campaign night 1 stays on Restock (`openNote`: the pot is already there). The gear tab title says "Opening night", not "Pick your gear".
+- Pacing, one place: `CAMPAIGN_START`. The pot is placed, not bought (its $15 is not charged, and it is not in `gearLog`, so `scoreRun` starts at 0). Probe `scripts/campaignProbe.ts` (stand-in, robot cashier, balance-crew nights, 150 s days), seeds 1, 2, 3, 7, 11, 13, 21, five days, none bankrupt. Till after rent: seed 1 `75.73, 44.09, 89.18, 109.60, 78.94`. The lowest till in the set was **$41.70** (seed 7, day 3, after a machine). Day 1 finished between **$55.21** and **$93.12**. Still drip, still the cart. The stand is $70, so a careful shop is not a café by day 5.
+- Left for later phases: furniture, saves, week-end chapters, and whether the 4-week season stays Blitz-only. Campaign still reaches the same week-end screen.
+
 ### Growth order, awaiting the owner's review (2026-11-09)
 - **Built, not merged, not approved.** Part (a) of `docs/PLAN_GROWTH_AND_LAYOUT.md` only: cart → stand → café.
   Free night layout is not in this change. Held for Kennedy. An agent must not merge it.
