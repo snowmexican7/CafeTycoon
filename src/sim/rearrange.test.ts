@@ -14,7 +14,7 @@ import { validateInput } from './validate';
 
 /** A Gear run at night with the back bar set by hand. */
 function night(slots: SlotContent[], gear: (GearId | null)[], o: { tier?: TierId; people?: number; wands?: (AddOnWand | null)[]; standIns?: number } = {}): GameState {
-  const tier = o.tier ?? 'stand';
+  const tier = o.tier ?? 'cart';
   const people = Array.from({ length: o.people ?? 1 }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` }));
   const s = createRun({ seed: 4, hostId: 'p1', players: people, settings: { dayLengthSec: 600 }, gear: true, tier });
   s.slots = [...slots];
@@ -114,10 +114,10 @@ describe('Round 5: rearranging at night (no morning pre-open)', () => {
     expect(lastEvent(s, 'station.place')?.data.station).toBe('espresso');
   });
 
-  it("a one-twin machine on the cart's last column has its twin on the left", () => {
-    // Cart: last column is x=9; stand's x=7 is next to Round 5's milk & cream shelf at (7,3).
+  it("a one-twin machine on the stand's last column has its twin on the left", () => {
+    // Stand: last column is x=9; the cart's x=7 is next to the milk & cream shelf at (7,3).
     let s = night(['grinder', 'espresso', null, null, 'trash'], ['g1', 'e3', null, null, 'b0'], {
-      tier: 'cart',
+      tier: 'stand',
       wands: [null, 'weak', null, null, null],
     });
     expect(at(s, 'steamer')).toEqual({ x: 3.55, y: 1 });
@@ -278,8 +278,8 @@ describe('Round 5: moves last the run', () => {
     let s = night(STAND, STAND_GEAR);
     s = move(s, 'drip', { x: 4, y: 3 });
     s.cash = 100_000;
-    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
-    expect(s.tier).toBe('cart');
+    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'stand' }]);
+    expect(s.tier).toBe('stand');
     expect(at(s, 'drip')).toEqual({ x: 4, y: 3 });
     expect(events(s, 'station.reset')).toHaveLength(0);
   });
@@ -287,11 +287,11 @@ describe('Round 5: moves last the run', () => {
   it("a grow that leaves the moved layout blocked puts every station back on the bigger shop's default spots", () => {
     let s = night(STAND, STAND_GEAR);
     s = move(s, 'drip', { x: 3, y: 3 });
-    s = move(s, 'espresso', { x: 1, y: 3 }); // the cart's fridge comes here
+    s = move(s, 'espresso', { x: 1, y: 3 }); // the stand's fridge comes here
     expect(at(s, 'espresso')).toEqual({ x: 1, y: 3 });
     s.cash = 100_000;
-    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
-    expect(s.tier).toBe('cart');
+    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'stand' }]);
+    expect(s.tier).toBe('stand');
     expect(s.slotPos).toBeUndefined();
     expect(at(s, 'espresso')).toEqual({ x: 3, y: 1 });
     expect(at(s, 'drip')).toEqual({ x: 5, y: 1 });

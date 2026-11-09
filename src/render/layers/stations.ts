@@ -23,27 +23,18 @@ export function setBarSkin(next: BarSkin): void {
   skin = next;
 }
 
-/** A folding table with a gingham cloth (the stand): pale top, cloth skirt with a scalloped hem, thin steel legs. */
-function foldingTable(g: Graphics, cx: number, cy: number, w: number, topY: number, topH: number): void {
+/** A fixed wood stall (the stand): posts, plank front, no wheels, a butcher-block top. */
+function stallPanel(g: Graphics, cx: number, cy: number, w: number, topY: number, topH: number): void {
   const x = cx - w / 2;
-  shadow(g, cx, cy + 30, w / 2 + 6, 7, 0.18);
-  // splayed legs under the cloth
-  for (const side of [-1, 1]) {
-    const lx = cx + side * (w / 2 - 6);
-    g.moveTo(lx, cy + 14).lineTo(lx + side * 3, cy + 30).stroke({ width: 3, color: 0x8d989f, cap: 'round' });
-  }
-  g.moveTo(cx - w / 2 + 8, cy + 24).lineTo(cx + w / 2 - 8, cy + 24).stroke({ width: 2, color: 0x9aa7ae });
-  // the cloth: red and cream gingham, hanging over the front
-  const top = topY + topH - 4;
-  const bottom = cy + 18;
-  g.rect(x - 2, top, w + 4, bottom - top).fill(0xfbefe0);
-  for (let i = 0; x - 2 + i * 8 < x + w + 2; i += 2) g.rect(x - 2 + i * 8, top, 8, bottom - top).fill({ color: 0xe0564a, alpha: 0.55 });
-  for (let yy = top + 4; yy < bottom; yy += 12) g.rect(x - 2, yy, w + 4, 6).fill({ color: 0xe0564a, alpha: 0.35 });
-  for (let sx0 = x - 2; sx0 < x + w + 2; sx0 += 10) g.moveTo(sx0, bottom).arc(sx0 + 5, bottom, 5, Math.PI, 0, true).lineTo(sx0, bottom).fill(0xfbefe0);
-  g.rect(x - 2, top, w + 4, 3).fill({ color: 0x000000, alpha: 0.08 });
-  // the table top
-  g.roundRect(x - 3, topY, w + 6, topH, 6).fill(0xfaf6ee);
-  g.roundRect(x - 3, topY + topH - 6, w + 6, 5, 2.5).fill(0xe6ddd0);
+  shadow(g, cx, cy + 30, w / 2 + 8, 8, 0.2);
+  g.rect(x, cy - 10, 8, 40).fill(0x6e3f22);
+  g.rect(x + w - 8, cy - 10, 8, 40).fill(0x6e3f22);
+  g.rect(x + 8, cy - 6, w - 16, 32).fill(0xc49a6c);
+  for (let i = 0; i < 3; i++) g.rect(x + 10, cy - 2 + i * 10, w - 20, 3).fill({ color: 0x8a6238, alpha: 0.45 });
+  g.rect(x, cy - 10, w, 4).fill(0x8a5a3a);
+  g.roundRect(x - 4, topY, w + 8, topH, 5).fill(0xdcb07d);
+  for (let i = 1; i < 6; i++) g.rect(x - 4 + ((w + 8) * i) / 6, topY + 3, 1.5, topH - 8).fill({ color: 0xa87848, alpha: 0.5 });
+  g.roundRect(x - 4, topY + topH - 6, w + 8, 5, 2.5).fill(0xb98654);
 }
 
 /** A painted coffee-cart panel (the cart): teal with a cream inset, gold trim, butcher-block top, little wheels. */
@@ -68,7 +59,7 @@ function cartPanel(g: Graphics, cx: number, cy: number, w: number, topY: number,
 }
 
 function cabinet(g: Graphics, cx: number, cy: number, w = 60): void {
-  if (skin === 'table') return foldingTable(g, cx, cy, w, cy - 30, 28);
+  if (skin === 'stall') return stallPanel(g, cx, cy, w, cy - 30, 28);
   if (skin === 'cart') return cartPanel(g, cx, cy, w, cy - 30, 28, true);
   const x = cx - w / 2;
   shadow(g, cx, cy + 30, w / 2 + 8, 8);
@@ -401,7 +392,7 @@ function buildSupplyShelf(pos: Vec2, level: MilkShelfLevel): Container {
 function counterBody(g: Graphics, cx: number, cy: number, top = 0xf3efe9): void {
   if (onRun) return;
   const w = 58;
-  if (skin === 'table') return foldingTable(g, cx, cy + 2, w, cy - 34, 30);
+  if (skin === 'stall') return stallPanel(g, cx, cy + 2, w, cy - 34, 30);
   if (skin === 'cart') return cartPanel(g, cx, cy + 2, w, cy - 34, 30, false);
   const x = cx - w / 2;
   shadow(g, cx, cy + 32, 38, 9);
@@ -415,7 +406,7 @@ function counterBody(g: Graphics, cx: number, cy: number, top = 0xf3efe9): void 
  * ui-3.9.2 (Kennedy): the front serving counter. One solid top and front panel under the till and the pickup and
  * condiment spots beside it (`pickupModel.servingRun`), from tile edge `x0` to `x1` on row `y`, so the counter reads
  * as the divide between staff and customers. The spots on it draw only what sits on top (`buildStation(…, run)`).
- * Drawn just behind those spots in depth, with the shop size's skin (gingham table, cart panel, café counter).
+ * Drawn just behind those spots in depth, with the shop size's skin (wood stall, cart panel, café counter).
  */
 export function buildServingCounter(x0: number, x1: number, y: number, look: BarSkin): Container {
   const root = new Container();
@@ -427,8 +418,8 @@ export function buildServingCounter(x0: number, x1: number, y: number, look: Bar
   const cx = (left + right) / 2;
   const cy = sy(y);
   root.zIndex = stationDepth({ x: x0, y }) - 0.5;
-  if (look === 'table') {
-    foldingTable(g, cx, cy + 2, w, cy - 34, 30);
+  if (look === 'stall') {
+    stallPanel(g, cx, cy + 2, w, cy - 34, 30);
     return root;
   }
   if (look === 'cart') {

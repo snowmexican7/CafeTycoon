@@ -16,7 +16,12 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- **You start with a coffee cart, on the sidewalk.** Grow into a stand, then the café. The cart is the small cheap shop: a short line, lower prices, no fridge until you buy the little cube, and no office runs. The stand is the middle shop ($70): more floor, a longer line, a beer fridge that comes with the keys, and office runs. The café is still last ($150).
+- The cart has wheels and a striped awning on the street. The stand is a fixed stall on that same street. The park is not where either shop sits.
+- The end-of-day receipt, the FOR LEASE sign, the "What you gained" card, and the night shop all name the next size in this order. Word of mouth unlocks when you grow the cart into a stand.
+- The solid front counter follows those sizes. You still cannot walk through it. The register and the pickup stay side by side. The right-hand end stays open, so the crew can walk around to the mop, the boxes and a spill.
+
+
 
 ## 3.11.2 — 2026-11-09 · A solid front counter
 

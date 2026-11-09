@@ -16,8 +16,8 @@ type Kit = GearId | 'steamer';
 
 /** Every slot filled, so the fixtures (back bar, counter spots, the sink) are all on the floor. */
 const FULL: Record<TierId, Kit[]> = {
-  stand: ['d1', 'e3', 'steamer', 'b0'],
-  cart: ['g2', 'e3', 'steamer', 'd1', 'b0'],
+  cart: ['d1', 'e3', 'steamer', 'b0'],
+  stand: ['g2', 'e3', 'steamer', 'd1', 'b0'],
   cafe: ['g2', 'e3', 'steamer', 'd1', 'c1', 'b0'],
 };
 function fullShop(tier: TierId, bots = 0): GameState {
@@ -40,7 +40,7 @@ describe('FB2 A3 fix round 2: nobody is placed inside a fixture', () => {
         if (!blocked(sp, s.stations, floorWidth(s))) expect(at).toEqual(sp); // a free spawn point is kept as it is
       }
     }
-    expect(blocked(LAYOUT.spawnPoints[2]!, fullShop('stand').stations, layoutFor('stand').width)).toBe(true); // spawn index 2 is the stand's sink tile
+    expect(blocked(LAYOUT.spawnPoints[2]!, fullShop('cart').stations, layoutFor('cart').width)).toBe(true); // spawn index 2 is the cart's sink tile
   });
 
   it('a Gear stand run with three baristas places none of them inside the sink', () => {

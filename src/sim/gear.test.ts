@@ -10,7 +10,7 @@ import { validateInput } from './validate';
 import { GEAR } from '../data/gear';
 import type { CreateRunOptions, GameState } from './types';
 
-const opts = (gear?: boolean): CreateRunOptions => ({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear });
+const opts = (gear?: boolean): CreateRunOptions => ({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cart', gear });
 const gearRun = () => createRun(opts(true));
 const buy = (s: GameState, gear: keyof typeof GEAR) => applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear });
 const sell = (s: GameState, index: number) => applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'sell', index });
@@ -141,8 +141,8 @@ describe('Gear Tree G2: the sim', () => {
     const s = gearRun();
     buy(s, 'c1');
     s.cash = 500;
-    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cart' });
-    expect(s.tier).toBe('cart');
+    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'stand' });
+    expect(s.tier).toBe('stand');
     expect(s.slotGear).toEqual(['c1', null, null, 'b0', null]);
     expect(s.stations.filter((x) => x.kind !== 'counter').map((x) => x.gear)).toEqual(['c1', 'b0']);
   });

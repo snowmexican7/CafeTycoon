@@ -117,19 +117,19 @@ describe('Round 5 block 6: drip sits by the till', () => {
     expect(drips.find((x) => x.id === 'drip')!.pos).toEqual(first);
   });
 
-  it('the drip keeps a till-side seat when the shop grows from a stand (kept, or seated again after a reset)', () => {
-    let s = createRun(opts('stand'));
+  it('the drip keeps a till-side seat when the shop grows from a cart (kept, or seated again after a reset)', () => {
+    let s = createRun(opts('cart'));
     s.cash = 100_000;
     buy(s, 'd1');
-    let kept = step(structuredClone(s), [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
-    expect(kept.tier).toBe('cart');
+    let kept = step(structuredClone(s), [{ kind: 'grow', playerId: 'p1', tier: 'stand' }]);
+    expect(kept.tier).toBe('stand');
     expect(dripAt(kept).y).toBe(Math.round(till(kept).pos.y) - 1);
-    // A move the cart can't keep (its fridge comes to (1,3)) resets the layout; the drip is seated by the till again.
+    // A move the stand can't keep (its fridge comes to (1,3)) resets the layout; the drip is seated by the till again.
     buy(s, 'e2');
     s = step(s, [{ kind: 'moveStation', playerId: 'p1', station: 'espresso', to: { x: 1, y: 3 } }]);
     expect(s.stations.find((x) => x.id === 'espresso')!.pos).toEqual({ x: 1, y: 3 });
-    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
-    expect(s.tier).toBe('cart');
+    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'stand' }]);
+    expect(s.tier).toBe('stand');
     expect(s.log.filter((e) => e.kind === 'station.reset')).toHaveLength(1);
     expect(dripAt(s).y).toBe(Math.round(till(s).pos.y) - 1);
   });

@@ -66,7 +66,7 @@ export const SYRUP_ID = 'syrups';
 export const SYRUP_SPOT: Vec2 = { x: 2, y: 6 };
 
 /**
- * The solid front counter (v3.11.2). One row of tiles the crew cannot walk through.
+ * The solid front counter. One row of tiles the crew cannot walk through.
  * `gap` is the staff flap at the right end (walk around the counter, not through it).
  * The door stays at (1, y), just left of `x0`, and is not part of the line.
  */
@@ -112,16 +112,16 @@ export function counterSegments(fc: FrontCounter): { y: number; x0: number; x1: 
 }
 
 /**
- * The counter for a floor width. Stand 8, cart 10, café 12. Anything narrower than the
- * cart uses the stand; anything wider than the cart uses the café.
+ * The counter for a floor width. Cart 8, stand 10, café 12. Anything as narrow as the
+ * cart uses the cart; anything as narrow as the stand uses the stand; wider uses the café.
  */
 export function frontCounterForWidth(width: number): FrontCounter {
-  if (width <= TIER_LAYOUTS.stand.width) return TIER_LAYOUTS.stand.frontCounter;
   if (width <= TIER_LAYOUTS.cart.width) return TIER_LAYOUTS.cart.frontCounter;
+  if (width <= TIER_LAYOUTS.stand.width) return TIER_LAYOUTS.stand.frontCounter;
   return TIER_LAYOUTS.cafe.frontCounter;
 }
 
-/** P3 B13: what changes between the stand, the cart and the café. Door, spawn points, counter and the front of the queue stay put. */
+/** What changes between the cart, the stand and the café. Door, spawn points, counter and the front of the queue stay put. The register and the pickup stay side by side on the front row. */
 export interface TierLayout {
   /** Floor width in tiles: the rest of the 12-wide lot is hoarding ("space for lease"). */
   width: number;
@@ -162,13 +162,11 @@ export interface TierLayout {
 }
 
 /**
- * Playtest 2026-11-09: the pickup counter sits two tiles left of the till so it does not share the cashier's
- * lane (the till is worked from x=6). It is wide (`PICKUP_BODY`): two players stand side by side at (3, 5)
- * and (4, 5). The condiment bar sits on the tile between pickup and the till, so the front counter stays
- * one solid run and the cart's box corner (7, 7) stays clear.
- * The same spots on every tier (the till, door and front of the queue never move).
+ * The register (6, 6) and the pickup (5, 6) stay side by side on the solid front counter.
+ * The condiment bar is the tile to the pickup's left. The same spots on every tier.
+ * The till, the door and the front of the queue never move.
  */
-const SPOTS = { pickup: { x: 4, y: 6 }, condiments: { x: 5, y: 6 }, fridge: { x: 1, y: 3 }, trayTable: { x: 1, y: 4 } };
+const SPOTS = { pickup: { x: 5, y: 6 }, condiments: { x: 4, y: 6 }, fridge: { x: 1, y: 3 }, trayTable: { x: 1, y: 4 } };
 
 /**
  * How far a barista on the staff side can stand and still use the pickup counter. Wider than a normal
@@ -182,16 +180,17 @@ const COUNTER = { id: 'counter', kind: 'counter' as const, pos: { x: 6, y: 6 } }
 
 /**
  * The line starts at column 2 so the door (1, 6) stays open. The flap is the right-hand end,
- * beside the wall, where a person fits without wedging against the till.
- * The cart's last column is where a new drip pot sits (9, 5), which seals that column, so the
- * cart's flap is the two end columns and the counter stops one tile past the till.
+ * beside the wall, so the crew can still reach the mop, the boxes and a spill in front.
+ * The stand's last column is where a new drip pot sits (9, 5), which seals that column, so the
+ * stand's flap is the two end columns and the counter stops one tile past the till.
  */
 function frontLine(width: number, gap0: number, gap1: number): FrontCounter {
   return { y: 6, x0: 2, x1: width - 1, gap: { x0: gap0, x1: gap1 } };
 }
 
 export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
-  stand: {
+  // The 8-tile footprint (the cheap start). The cart sits on it.
+  cart: {
     width: 8,
     frontCounter: frontLine(8, 7, 7),
     stations: [
@@ -208,7 +207,8 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
     sink: { x: 7, y: 4 },
     supply: { x: 7, y: 3 },
   },
-  cart: {
+  // The 10-tile footprint (the $70 step). The stand sits on it.
+  stand: {
     width: 10,
     frontCounter: frontLine(10, 8, 9),
     stations: [
@@ -245,13 +245,13 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
  * moving them would change every bot path) and gains a sixth at the end of the bar.
  */
 export const SLOT_POSITIONS: Record<TierId, Vec2[]> = {
-  stand: [
+  cart: [
     { x: 1, y: 1 },
     { x: 3, y: 1 },
     { x: 5, y: 1 },
     { x: 7, y: 1 },
   ],
-  cart: [
+  stand: [
     { x: 1, y: 1 },
     { x: 3, y: 1 },
     { x: 5, y: 1 },

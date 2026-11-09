@@ -18,8 +18,8 @@ const gearRun = (tier: TierId): GameState =>
 
 /** Every slot of the tier filled with gear (the bin stays in the last slot). */
 const FULL: Record<TierId, Kit[]> = {
-  stand: ['c1', 'e1', 'steamer', 'b0'],
-  cart: ['g1', 'e1', 'steamer', 'c1', 'b0'],
+  cart: ['c1', 'e1', 'steamer', 'b0'],
+  stand: ['g1', 'e1', 'steamer', 'c1', 'b0'],
   cafe: ['g1', 'e1', 'steamer', 'd1', 'c1', 'b0'],
 };
 
@@ -28,7 +28,7 @@ function fullShop(tier: TierId): GameState {
   s.slotGear = FULL[tier].map((id) => (id === 'steamer' ? null : id));
   s.slots = FULL[tier].map((id) => (id === 'steamer' ? 'steamer' : GEAR[id].station));
   s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear);
-  s.fridge = 'f1'; // FB2 A4: the stand's cube (the cart and café come with theirs)
+  s.fridge = 'f1'; // the cart's cube (the stand and café come with theirs)
   ensureCounterSpots(s);
   return s;
 }
@@ -42,16 +42,16 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
       const s = gearRun(tier);
       expect(counters(s)).toEqual([
         ['counter', { x: 6, y: 6 }],
-        ['pickup', { x: 4, y: 6 }],
-        ['condiments', { x: 5, y: 6 }],
+        ['pickup', { x: 5, y: 6 }],
+        ['condiments', { x: 4, y: 6 }],
         ['sink', layoutFor(tier).sink], // FB2 A3: the back sink is a counter-kind fixed spot too
         ['supply', layoutFor(tier).supply], // Round 5 block 4: milk & cream by the sink
         ['trayTable', layoutFor(tier).trayTable], // FB2 B7: so is the tray table
-        // FB2 A4: the cart and the café come with a fridge (the stand buys its cube)
-        ...(tier === 'stand' ? [] : [['fridge', { x: 1, y: 3 }]]),
+        // The stand and the café come with a fridge (the cart buys its cube)
+        ...(tier === 'cart' ? [] : [['fridge', { x: 1, y: 3 }]]),
       ]);
       const spot = s.stations.find((x) => x.id === 'pickup')!;
-      expect(spot).toEqual({ id: 'pickup', kind: 'counter', pos: { x: 4, y: 6 }, busyTicksLeft: 0, output: null, occupiedBy: null });
+      expect(spot).toEqual({ id: 'pickup', kind: 'counter', pos: { x: 5, y: 6 }, busyTicksLeft: 0, output: null, occupiedBy: null });
     }
     expect(createRun({ seed: 7, hostId: 'p1', players: [] }).stations.filter((x) => x.kind === 'counter')).toHaveLength(1);
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
@@ -60,14 +60,14 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
   });
 
   it('box corners sit two tiles left of the mop', () => {
-    expect([layoutFor('stand').boxCorner, layoutFor('cart').boxCorner, layoutFor('cafe').boxCorner]).toEqual([
+    expect([layoutFor('cart').boxCorner, layoutFor('stand').boxCorner, layoutFor('cafe').boxCorner]).toEqual([
       { x: 1, y: 7 },
       { x: 7, y: 7 },
       { x: 9, y: 7 },
     ]);
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
       const l = layoutFor(tier);
-      expect([l.pickup, l.condiments]).toEqual([{ x: 4, y: 6 }, { x: 5, y: 6 }]);
+      expect([l.pickup, l.condiments]).toEqual([{ x: 5, y: 6 }, { x: 4, y: 6 }]);
       expect(l.boxCorner).toEqual({ x: l.mopHome.x - 2, y: l.mopHome.y });
     }
   });
@@ -85,10 +85,10 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
   });
 
   it('growing and gear deals keep the spots; ensureCounterSpots adds missing ones once', () => {
-    const s = gearRun('stand');
+    const s = gearRun('cart');
     s.cash = 10_000;
-    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cart' });
-    expect(s.tier).toBe('cart');
+    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'stand' });
+    expect(s.tier).toBe('stand');
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
     expect(s.stations.some((x) => x.gear === 'c1')).toBe(true);
     const ids = () => s.stations.filter((x) => x.kind === 'counter').map((x) => x.id);

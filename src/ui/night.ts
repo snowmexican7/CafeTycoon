@@ -344,7 +344,7 @@ function menuPane(vm: NightVM): string {
     <div class="dgrid" style="--cols:${menuCols(menu.length)};--rows:${Math.ceil(menu.length / menuCols(menu.length)) || 1}">${menu.map((m) => drinkCard(m, onCount === 1)).join('')}</div>`;
 }
 
-/** ui-3.4.0: "You can afford a cart!" beside the cash; ui-3.7.1: it opens the receipt, where growing lives. */
+/** "You can afford a stand!" (or the café) beside the cash. It opens the receipt, where growing lives. */
 function nudgeChip(n: GrowNudge): string {
   return `<button class="nudge-chip" data-nudge data-action="drawer" data-d="receipt" title="Grow into ${esc(n.name)} for $${n.cost}: it is on the receipt">
     <span class="nc-ic" aria-hidden="true">${n.icon}</span><span class="nc-t">You can afford ${n.tier === 'cafe' ? 'the café' : `a ${esc(n.short)}`}!</span><b>Grow ▸</b></button>`;

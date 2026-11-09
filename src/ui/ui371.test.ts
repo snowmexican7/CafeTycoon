@@ -115,36 +115,36 @@ describe('ui-3.7.1 Strategist on the night Menu', () => {
 
 describe('ui-3.7.1 Grow on the receipt', () => {
   it('offers the next tier with its cost and whether you can afford it', () => {
-    const s = run('stand');
+    const s = run('cart');
     s.phase = 'night';
-    s.cash = TIERS.cart.cost - 5;
+    s.cash = TIERS.stand.cost - 5;
     const poor = growOffer(s)!;
-    expect(poor).toMatchObject({ tier: 'cart', cost: TIERS.cart.cost, affordable: false, short: 5 });
+    expect(poor).toMatchObject({ tier: 'stand', cost: TIERS.stand.cost, affordable: false, short: 5 });
     expect(growOfferHtml(poor)).toContain('Need $5 more');
     expect(growOfferHtml(poor)).not.toContain('data-action="grow"');
-    s.cash = TIERS.cart.cost;
+    s.cash = TIERS.stand.cost;
     const h = growOfferHtml(growOffer(s));
-    expect(h).toContain(`data-action="grow" data-tier="cart"`);
-    expect(h).toContain(`Grow · $${TIERS.cart.cost}`);
+    expect(h).toContain(`data-action="grow" data-tier="stand"`);
+    expect(h).toContain(`Grow · $${TIERS.stand.cost}`);
     const c = run('cafe');
     expect(growOffer(c)).toBeNull();
   });
   it('sits on the closing receipt (heading into the night) and in the night Receipt drawer', () => {
-    const before = run('stand');
+    const before = run('cart');
     before.phase = 'closing';
     before.cash = 200;
     const after = structuredClone(before);
     after.phase = 'night';
     after.days.push({ ...before.today });
-    expect(closingViewModel(before, after).grow?.tier).toBe('cart');
+    expect(closingViewModel(before, after).grow?.tier).toBe('stand');
     after.phase = 'weekEnd';
     expect(closingViewModel(before, after).grow).toBeUndefined();
-    const n = run('stand');
+    const n = run('cart');
     n.phase = 'night';
     n.day = 2;
     n.cash = 200;
     n.days.push({ ...n.today, day: 1 });
-    expect(nightHtml(nightViewModel(n, 'p1'), undefined, null, ui({ drawer: 'receipt' }))).toContain('data-action="grow" data-tier="cart"');
+    expect(nightHtml(nightViewModel(n, 'p1'), undefined, null, ui({ drawer: 'receipt' }))).toContain('data-action="grow" data-tier="stand"');
   });
   it('the night board has no crew roles, card re-roll, Stations board or grow board', () => {
     const s = run('stand', false);

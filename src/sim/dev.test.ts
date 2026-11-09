@@ -20,7 +20,7 @@ const opts = (dev?: boolean): CreateRunOptions => ({
   seed: 7,
   hostId: 'p1',
   players: [{ id: 'p1', name: 'P1' }, { id: 'p2', name: 'P2' }],
-  tier: 'stand',
+  tier: 'cart',
   gear: true,
   ...(dev === undefined ? {} : { dev }),
 });
@@ -51,10 +51,10 @@ describe('R4 a: dev mode', () => {
     expect(b).toEqual(a);
   });
 
-  it('dev on: a fresh stand run grows to the cafe and buys every gear line on night 1', () => {
+  it('dev on: a fresh cart run grows to the cafe and buys every gear line on night 1', () => {
     let s = createRun(opts(true));
-    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
-    expect(s.tier).toBe('cart');
+    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'stand' }]);
+    expect(s.tier).toBe('stand');
     s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'cafe' }]);
     expect(s.tier).toBe('cafe');
     expect(s.cash).toBe(DEV_CASH);
@@ -88,7 +88,7 @@ describe('R4 a: dev mode', () => {
   it('the top-up is not income: score, takings and season targets ignore it', () => {
     let s = createRun(opts(true));
     expect(scoreRun(s)).toBe(0);
-    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
+    s = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'stand' }]);
     expect(s.cash).toBe(DEV_CASH);
     // money was spent, so the score is the (negative) resale-adjusted cost, never plus the top-up
     expect(scoreRun(s)).toBeLessThanOrEqual(0);

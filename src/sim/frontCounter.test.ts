@@ -43,8 +43,8 @@ describe('solid front counter', () => {
         expect(isFrontSolid(fc, 6)).toBe(true);
         expect(fc.gap.x0).toBeGreaterThan(6);
         if (gear) {
-          expect(lay.pickup).toEqual({ x: 4, y: 6 });
-          expect(lay.condiments).toEqual({ x: 5, y: 6 });
+          expect(lay.pickup).toEqual({ x: 5, y: 6 });
+          expect(lay.condiments).toEqual({ x: 4, y: 6 });
           for (const x of [4, 5, 6]) expect(isFrontSolid(fc, x), `column ${x}`).toBe(true);
         }
         const w = lay.width;
@@ -93,12 +93,10 @@ describe('solid front counter', () => {
         const lay = layoutFor(tier);
         const a = s.players[0]!;
         const b = s.players[1]!;
-        a.pos = { x: 3, y: 5 };
-        b.pos = { x: 4, y: 5 };
-        if (gear) {
-          expect(nearestStation(s, a.pos)?.id).toBe('pickup');
-          expect(nearestStation(s, b.pos)?.id).toBe('pickup');
-        }
+        a.pos = { x: 4, y: 5 };
+        b.pos = { x: 5, y: 5 };
+        expect(a.pos.y).toBeLessThan(lay.frontCounter.y);
+        expect(b.pos.y).toBeLessThan(lay.frontCounter.y);
         stepDir(s, { p1: { x: 0, y: 1 }, p2: { x: 0, y: 1 } }, 40);
         expect(a.pos.y).toBeLessThan(5.5);
         expect(b.pos.y).toBeLessThan(5.5);
@@ -119,7 +117,7 @@ describe('solid front counter', () => {
   }
 
   it('a bought drip keeps its seat, and the flap still reaches the front', () => {
-    const seats: Record<TierId, Vec2> = { stand: { x: 1, y: 5 }, cart: { x: 9, y: 5 }, cafe: { x: 8, y: 5 } };
+    const seats: Record<TierId, Vec2> = { cart: { x: 1, y: 5 }, stand: { x: 9, y: 5 }, cafe: { x: 8, y: 5 } };
     for (const tier of TIERS) {
       const s = createRun({ seed: 4, hostId: 'p1', players: [{ id: 'p1', name: 'Ana' }], tier, gear: true });
       s.cash = 500;

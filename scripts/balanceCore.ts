@@ -448,7 +448,8 @@ function tickCap(daySeconds: number): number {
 export function runWeek(opts: BalanceOptions, seed: number, menu: DrinkId[], policy: Policy = opts.policies[0] ?? 'smart'): WeekResult {
   let state = createRun({
     seed, hostId: TESTER, players: [],
-    ...(policy === 'stand' || policy === 'grow' || policy === 'planner' ? { tier: 'stand' as const } : {}),
+    // The small start is the cart (the policy name `stand` is the old CLI word for "begin small and stay there").
+    ...(policy === 'stand' || policy === 'grow' || policy === 'planner' ? { tier: 'cart' as const } : {}),
     settings: { pace: opts.pace, dayLengthSec: opts.daySeconds, nightLengthSec: NIGHT_SECONDS },
   });
   addStandIns(state, opts.humans);

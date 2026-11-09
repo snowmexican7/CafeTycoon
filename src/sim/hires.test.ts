@@ -19,7 +19,7 @@ import type { GameState, PlayerInput } from './types';
 const gearRun = (players = 1): GameState => {
   let s = createRun({
     seed: 7, hostId: 'p1', players: Array.from({ length: players }, (_, i) => ({ id: `p${i + 1}`, name: `P${i + 1}` })),
-    settings: { dayLengthSec: 150, nightLengthSec: 30 }, tier: 'stand', gear: true,
+    settings: { dayLengthSec: 150, nightLengthSec: 30 }, tier: 'cart', gear: true,
   });
   const cash = s.cash;
   s.cash = 300;

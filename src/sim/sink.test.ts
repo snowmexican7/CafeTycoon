@@ -92,14 +92,14 @@ describe('FB2 A3: the back sink fixture', () => {
 
   it('is not gear, not equipment and not a slot: nothing buys, sells or moves it', () => {
     expect(Object.values(GEAR).some((g) => (g.station as string) === 'sink' || (g.id as string) === SINK_ID)).toBe(false);
-    const s = gearRun('stand');
+    const s = gearRun('cart');
     expect(s.slots).not.toContain('sink');
     s.cash = 10_000;
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'buy', gear: 'c1' });
     applyGearInput(s, { kind: 'gear', playerId: 'p1', action: 'sell', index: s.slots!.length - 1 });
-    expect(st(s, SINK_ID).pos).toEqual(layoutFor('stand').sink);
-    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cart' });
-    expect(s.stations.filter((x) => x.id === SINK_ID).map((x) => x.pos)).toEqual([layoutFor('cart').sink]);
+    expect(st(s, SINK_ID).pos).toEqual(layoutFor('cart').sink);
+    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'stand' });
+    expect(s.stations.filter((x) => x.id === SINK_ID).map((x) => x.pos)).toEqual([layoutFor('stand').sink]);
   });
 
   it('old Gear saves get the sink once (ensureCounterSpots)', () => {

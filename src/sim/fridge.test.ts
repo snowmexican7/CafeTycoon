@@ -22,8 +22,8 @@ import type { GameState, Player, SimEvent, TierId } from './types';
 /** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
 type Kit = GearId | 'steamer';
 
-/** A Gear run at night with `gear` in the first slots. The stand gets the Dorm Room Cube unless `fridge` says otherwise. */
-function gearNight(gear: Kit[], tier: TierId = 'stand', fridge: FridgeId | null = 'f1'): GameState {
+/** A Gear run at night with `gear` in the first slots. The cart gets the Dorm Room Cube unless `fridge` says otherwise. */
+function gearNight(gear: Kit[], tier: TierId = 'cart', fridge: FridgeId | null = 'f1'): GameState {
   const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
@@ -39,9 +39,9 @@ function gearNight(gear: Kit[], tier: TierId = 'stand', fridge: FridgeId | null 
   return s;
 }
 
-/** Stand tier: s2 steamer in slot 0 (x 1), e2 espresso in slot 1 (x 3), the cardboard box in the last slot. */
+/** Cart tier: s2 steamer in slot 0 (x 1), e2 espresso in slot 1 (x 3), the cardboard box in the last slot. */
 function gearDay(gear: Kit[] = ['steamer', 'e2'], fridge: FridgeId | null = 'f1'): GameState {
-  const s = gearNight(gear, 'stand', fridge);
+  const s = gearNight(gear, 'cart', fridge);
   s.supplies.milk = 20;
   s.supplies.beans = 20;
   return startDay(s);
@@ -59,12 +59,12 @@ const logs = (s: GameState, kind: string): SimEvent[] => s.log.filter((e) => e.k
 const buy = (s: GameState, fridge: FridgeId) => step(s, [{ kind: 'fridge', playerId: 'p1', fridge }]);
 
 describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', () => {
-  it('the stand starts with none; the cart comes with the Garage Beer Fridge, the café with the Chrome Reach-In', () => {
-    const stand = gearNight([], 'stand', null);
-    expect(fridgeGear(stand)).toBeNull();
-    expect(hasFridge(stand)).toBe(0);
-    expect(fridgeCapacity(stand)).toBe(0);
-    for (const [tier, id] of [['cart', 'f2'], ['cafe', 'f3']] as const) {
+  it('the cart starts with none; the stand comes with the Garage Beer Fridge, the café with the Chrome Reach-In', () => {
+    const cart = gearNight([], 'cart', null);
+    expect(fridgeGear(cart)).toBeNull();
+    expect(hasFridge(cart)).toBe(0);
+    expect(fridgeCapacity(cart)).toBe(0);
+    for (const [tier, id] of [['stand', 'f2'], ['cafe', 'f3']] as const) {
       const s = gearNight([], tier, null);
       expect(fridgeGear(s)).toBe(id);
       expect(at(s, FRIDGE_ID).pos).toEqual(layoutFor(tier).fridge);
@@ -94,16 +94,16 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
     expect(step(s, [{ kind: 'fridge', playerId: 'p1', fridge: 'f1' }]).fridge).toBeUndefined();
   });
 
-  it('the stand buys the Dorm Room Cube once ($20, a single card); the fridge appears at its spot', () => {
-    const s = gearNight([], 'stand', null);
+  it('the cart buys the Dorm Room Cube once ($20, a single card); the fridge appears at its spot', () => {
+    const s = gearNight([], 'cart', null);
     s.cash = 100;
     expect(fridgeCards(s)).toEqual([{ id: 'f1', price: 20 }]);
     const t = buy(s, 'f1');
     expect([t.fridge, t.cash, hasFridge(t)]).toEqual(['f1', 80, 1]);
     expect(fridgeCards(t)).toEqual([]);
     expect(buy(t, 'f1').cash).toBe(80); // once
-    expect(buy(t, 'f4').fridge).toBe('f1'); // not at the stand
-    const poor = gearNight([], 'stand', null);
+    expect(buy(t, 'f4').fridge).toBe('f1'); // not at the cart
+    const poor = gearNight([], 'cart', null);
     poor.cash = 19;
     expect(buy(poor, 'f1').fridge).toBeUndefined();
     const day = gearDay(['steamer', 'e2'], null);
@@ -113,9 +113,9 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
 
   it('growing hands over the bigger fridge for free, cube or not; the café can buy the Udder-Matic', () => {
     for (const cube of [true, false]) {
-      const s = gearNight([], 'stand', cube ? 'f1' : null);
+      const s = gearNight([], 'cart', cube ? 'f1' : null);
       s.cash = 10_000;
-      applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cart' });
+      applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'stand' });
       expect([fridgeGear(s), hasFridge(s)]).toEqual(['f2', 1]);
       expect(fridgeCards(s)).toEqual([]);
       applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cafe' });
@@ -130,7 +130,7 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
   });
 
   it('no fridge: no milk can be bought, the bar can\'t be put away and spoils at close', () => {
-    const s = gearNight(['steamer', 'e2'], 'stand', null);
+    const s = gearNight(['steamer', 'e2'], 'cart', null);
     s.cash = 100;
     expect(step(s, [{ kind: 'restock', playerId: 'p1', supply: 'milk', packs: 2 }]).supplies.milk).toBe(0);
     const d = gearDay(['steamer', 'e2'], null);
@@ -144,7 +144,7 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
   });
 
   it('I1: every Gear state gets the fridge its shop has, on load (any snapshot version) and every morning, once', () => {
-    const s = gearNight(['steamer', 'e2'], 'cart', null);
+    const s = gearNight(['steamer', 'e2'], 'stand', null);
     s.stations = s.stations.filter((x) => x.id !== FRIDGE_ID);
     const loaded = migrateSnapshot(SNAPSHOT_VERSION, JSON.parse(JSON.stringify(s)) as GameState)!;
     expect(hasFridge(loaded)).toBe(1);
@@ -154,10 +154,10 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
     ensureCounterSpots(s);
     ensureCounterSpots(s);
     expect(hasFridge(s)).toBe(1);
-    // a stand with no fridge stays without one
-    const stand = gearNight([], 'stand', null);
-    startDay(stand);
-    expect(hasFridge(stand)).toBe(0);
+    // a cart with no fridge stays without one
+    const cart = gearNight([], 'cart', null);
+    startDay(cart);
+    expect(hasFridge(cart)).toBe(0);
   });
 
   it('the fridge caps the milk restock: only whole packs that fit are bought, nothing is lost', () => {
@@ -228,7 +228,7 @@ describe('FB2 A4: which fridge a shop has (Kennedy: it follows the shop size)', 
     startDay(lapse);
     expect(lapse.fridgeVote).toBeUndefined();
     // the $20 cube is below the vote line: bought at once
-    let c = gearNight([], 'stand', null);
+    let c = gearNight([], 'cart', null);
     c = step(c, [{ kind: 'join', playerId: 'p2', name: 'J' }]);
     c.cash = 100;
     expect(fridgeGear(buy(c, 'f1'))).toBe('f1');

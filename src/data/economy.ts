@@ -34,7 +34,7 @@ export const ECONOMY = {
    * quietly with `quietLeaveChance` (`line.leave`, quiet: no reputation, not lost, `DayStats.lineLeft`).
    */
   line: {
-    waiting: { stand: 0, cart: 2, cafe: 4 } as Record<TierId, number>,
+    waiting: { cart: 0, stand: 2, cafe: 4 } as Record<TierId, number>,
     browsePatience: 0.5,
     stallSeconds: 12,
     complainMin: 2,

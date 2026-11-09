@@ -265,15 +265,15 @@ describe('planNight: rival', () => {
 
 describe('planNight: grow and checkout', () => {
   it('grows when cash covers the cost plus rent', () => {
-    const s = run('stand');
+    const s = run('cart');
     s.supplies = { ...FULL };
     s.day = 2;
     s.days.push(dayStats({ rent: 10 }));
-    s.cash = TIERS.cart.cost + rentForDay(s);
-    expect(find(s, 'grow:cart')).toMatchObject({ kind: 'grow', input: { kind: 'grow', tier: 'cart' }, priority: PLAN_PRIORITY.grow });
+    s.cash = TIERS.stand.cost + rentForDay(s);
+    expect(find(s, 'grow:stand')).toMatchObject({ kind: 'grow', input: { kind: 'grow', tier: 'stand' }, priority: PLAN_PRIORITY.grow });
     expect(planNight(s).some((a) => a.kind === 'checkout')).toBe(false);
     s.cash -= 0.01;
-    expect(find(s, 'grow:cart')).toBeUndefined();
+    expect(find(s, 'grow:stand')).toBeUndefined();
   });
 
   it('otherwise buys the next checkout when affordable', () => {
@@ -293,7 +293,7 @@ describe('planNight: grow and checkout', () => {
 
 describe('planNight: opening night', () => {
   it('no grow, checkout or equip advice before a finished day', () => {
-    const s = run('stand');
+    const s = run('cart');
     s.supplies = { ...FULL };
     s.cash = 500;
     const kinds = planNight(s).map((a) => a.kind);
@@ -308,7 +308,7 @@ describe('planNight: opening night', () => {
 
 describe('planNight: the board', () => {
   it('switches off a drink the bar has no station for, while at least one other drink stays on', () => {
-    const s = run('stand');
+    const s = run('cart');
     s.supplies = { ...FULL };
     s.cash = rentForDay(s);
     expect(find(s, 'menu:latte')).toMatchObject({ kind: 'menu', input: { kind: 'menu', drink: 'latte', on: false }, priority: PLAN_PRIORITY.menu });
@@ -320,8 +320,8 @@ describe('planNight: the board', () => {
     expect(find(s, 'menu:latte')).toBeUndefined();
   });
 
-  it('makes the board honest on a stand with no cold brew tap (espresso, the one drink with a station, stays on)', () => {
-    const s = run('stand');
+  it('makes the board honest on a cart with no cold brew tap (espresso, the one drink with a station, stays on)', () => {
+    const s = run('cart');
     s.supplies = { ...FULL };
     s.cash = rentForDay(s);
     s.slots = ['grinder', 'espresso', null, 'trash'];
@@ -330,11 +330,11 @@ describe('planNight: the board', () => {
   });
 
   it('keeps it on while the plan grows to a tier that may add the station', () => {
-    const s = run('stand');
+    const s = run('cart');
     s.supplies = { ...FULL };
     s.day = 2;
     s.days.push(dayStats({ rent: 10 }));
-    s.cash = TIERS.cart.cost + rentForDay(s);
+    s.cash = TIERS.stand.cost + rentForDay(s);
     const plan = planNight(s);
     expect(plan.some((a) => a.kind === 'grow')).toBe(true);
     expect(plan.some((a) => a.kind === 'menu')).toBe(false);
@@ -343,7 +343,7 @@ describe('planNight: the board', () => {
 
 describe('planNight: order, purity, money', () => {
   const busy = (): GameState => {
-    const s = run('stand');
+    const s = run('cart');
     s.day = 2;
     s.days.push(dayStats({ served: 5, lost: 9, drinks: { espresso: 5 } as Record<DrinkId, number> }));
     s.supplies.beans = 0;

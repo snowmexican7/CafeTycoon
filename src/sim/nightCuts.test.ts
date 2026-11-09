@@ -11,7 +11,7 @@ import type { PlayerInput } from './types';
  * their input kinds are gone from `PlayerInput`; a stale client can still send them, `validateInput` refuses them
  * (unknown kind), so they do nothing. They are typed loosely here on purpose.
  */
-const gearNight = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
+const gearNight = () => createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cart', gear: true });
 const deprecated = [
   { kind: 'role', playerId: 'p1', role: 'manager' },
   { kind: 'role', playerId: 'p1', role: null },
@@ -57,27 +57,27 @@ describe('cut night inputs: roles, re-roll, classic slot and equip', () => {
   });
 
   it('growing a classic run lays out the bigger shop with its default stations', () => {
-    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand' });
+    const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cart' });
     s.cash = 5000;
-    const t = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
-    expect(t.tier).toBe('cart');
-    expect(t.slots).toEqual(defaultSlots('cart'));
-    expect(t.stations.filter((x) => x.kind !== 'counter').map((x) => x.kind)).toEqual(defaultSlots('cart').filter((k) => k !== null));
+    const t = step(s, [{ kind: 'grow', playerId: 'p1', tier: 'stand' }]);
+    expect(t.tier).toBe('stand');
+    expect(t.slots).toEqual(defaultSlots('stand'));
+    expect(t.stations.filter((x) => x.kind !== 'counter').map((x) => x.kind)).toEqual(defaultSlots('stand').filter((k) => k !== null));
     expect('equipment' in t).toBe(false);
   });
 });
 
 describe('Round 4 f item 4: growing from the end-of-day receipt', () => {
   it('the grow input works on the very first tick of the night (the receipt shows at night start)', () => {
-    let s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
+    let s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cart', gear: true });
     s = startDay(s);
     s.challenges = [];
     s.phase = 'closing';
     const night = finishDay(s);
     expect(night.phase).toBe('night');
     night.cash = 5000;
-    const t = step(night, [{ kind: 'grow', playerId: 'p1', tier: 'cart' }]);
-    expect(t.tier).toBe('cart');
-    expect(t.log.filter((e) => e.kind === 'grow.done').map((e) => e.data.to)).toEqual(['cart']);
+    const t = step(night, [{ kind: 'grow', playerId: 'p1', tier: 'stand' }]);
+    expect(t.tier).toBe('stand');
+    expect(t.log.filter((e) => e.kind === 'grow.done').map((e) => e.data.to)).toEqual(['stand']);
   });
 });

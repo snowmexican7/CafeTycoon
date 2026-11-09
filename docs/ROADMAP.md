@@ -38,7 +38,8 @@
 - **Versions:** newest release **v3.10.0** (2026-11-07, Round 6 + bot cut). Earlier: **v3.9.2** (serving counter),
   **v3.9.1** (#19/#20), **v3.9.0** (Round 5). Protocol **70**, snapshot **35**.
 - **Rule of thumb:** one shared version line.
-- **Gear is the game** (no classic runs), no save compatibility for now, runs start at the stand, solo starts
+- **Gear is the game** (no classic runs), no save compatibility for now. Runs start on the sidewalk cart and grow
+  cart → stand → café (this change is awaiting the owner's review). Solo starts
   with the robot cashier (no bot crew since the bot cut). All rulings: HANDOFF "Decisions".
 
 ### Lanes
@@ -133,7 +134,7 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
 ### Later (not scheduled)
 - **Campaign and Blitz (draft 2026-11-09, not approved):** today's week gets the name Blitz. Campaign starts with about $40, a cheap pot, and drip only; the exact numbers are tuned later. [`PLAN_CAMPAIGN_AND_BLITZ.md`](PLAN_CAMPAIGN_AND_BLITZ.md).
 - **2v2 and the 3-player rush (draft 2026-11-09, not approved):** two teams of two on one shared street, customers pick a shop; a mirrored week is maybe later. Three players stay one shop with more rush. [`PLAN_2V2.md`](PLAN_2V2.md).
-- **Growth order and loose layout (draft 2026-11-09, not approved):** cart on the sidewalk, then stand, then café. Night Layout snaps to tiles; everything moves except the register and the pickup, which stay together at the front. [`PLAN_GROWTH_AND_LAYOUT.md`](PLAN_GROWTH_AND_LAYOUT.md).
+- **Growth order and loose layout (draft 2026-11-09, not approved):** cart on the sidewalk, then stand, then café. Night Layout snaps to tiles; everything moves except the register and the pickup, which stay together at the front. [`PLAN_GROWTH_AND_LAYOUT.md`](PLAN_GROWTH_AND_LAYOUT.md). The growth-order half is built and waiting on Kennedy's review. The free-layout half is not built.
 - **Specialty shops (draft 2026-11-09, not approved):** what you sell over a few days becomes the shop. [`PLAN_SPECIALTY_SHOPS.md`](PLAN_SPECIALTY_SHOPS.md).
 - **Street view (draft 2026-11-09, not approved):** cars drive past with comment bubbles; later a driver comes in as an occasional extra customer. [`PLAN_STREET_VIEW.md`](PLAN_STREET_VIEW.md).
 - **Co-op guest lag (Kennedy, Nov 7; investigate first):** the host plays smoothly; a joined player can become

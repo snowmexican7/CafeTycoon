@@ -9,7 +9,7 @@
  * - Combos: from day 2, about one walk-in in twelve orders two drinks: a pair (one for the spouse in the car), or an
  *   espresso-bar drink and a drip. The ticket waits 1.3× as long. `order.combo { customer, items }`.
  * - Groups (Gear): one ticket too (was: pay per drink); each cup taken still tops their patience up.
- * - Office runs: on the cart and at the café from day 3, about every other day (drawn at day start), 4-6 drinks off
+ * - Office runs: on the stand and at the café from day 3, about every other day (drawn at day start), 4-6 drinks off
  *   the menu (`size`, by tier), 4× the patience, a 25% bonus tip on the order's price when complete. The phone rings
  *   10 s before they walk in (`office.call { at }`, `at` the tick they are due: with the queue over capacity they
  *   wait outside, so it can be later). Lost (patience out, or still in when the doors lock): `order.lost { customer }`,
@@ -56,8 +56,8 @@ export const ORDERS = {
     fromDay: 3,
     /** Chance a day has one. */
     chance: 0.5,
-    /** Drinks on the order, from..to, by tier (fix round 1 tuning: 4-6 everywhere; never above 6 on the cart). */
-    size: { cart: [4, 6], cafe: [4, 6] },
+    /** Drinks on the order, from..to, by tier (4-6 on the stand and at the café; the cart has no office run). */
+    size: { stand: [4, 6], cafe: [4, 6] },
     patience: 4,
     /** Bonus tip on completion, as a share of the order's price. */
     bonus: 0.25,
@@ -241,13 +241,13 @@ export function officeLeaves(state: GameState): void {
 }
 
 /**
- * Day start: does an office run come today, and when? Gear runs on the cart or at the café from day 3, one rngNext
- * (and one more for the time on a yes). Draws nothing anywhere else.
+ * Day start: does an office run come today, and when? Gear runs on the stand or at the café from day 3, one rngNext
+ * (and one more for the time on a yes). Draws nothing on the cart.
  */
 export function officeMorning(state: GameState): void {
   delete state.office;
   const cfg = ORDERS.office;
-  if (state.gear !== true || state.day < cfg.fromDay || tierOf(state) === 'stand') return;
+  if (state.gear !== true || state.day < cfg.fromDay || tierOf(state) === 'cart') return;
   if (rngNext(state) >= cfg.chance) return;
   const dayTicks = secondsToTicks(state.settings.dayLengthSec);
   const at = Math.max(secondsToTicks(cfg.callSeconds), Math.floor(dayTicks * (cfg.from + rngNext(state) * cfg.span)));
@@ -278,7 +278,7 @@ function spawnOffice(state: GameState): Customer | null {
   if (menu.length === 0 || state.customers.length > tierInfo(state).queue) return null;
   const cfg = ORDERS.office;
   const m = computeModifiers(state);
-  const [min, max] = cfg.size[tierOf(state) === 'cart' ? 'cart' : 'cafe'];
+  const [min, max] = cfg.size[tierOf(state) === 'stand' ? 'stand' : 'cafe'];
   const n = min + rngInt(state, max - min + 1);
   const drinks = Array.from({ length: n }, () => drawDrink(state, menu, m));
   const wait = Math.max(...drinks.map((d) => drinkWait(state, d) * pricePatience(state, d)));

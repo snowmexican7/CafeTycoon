@@ -474,15 +474,36 @@ Done by a Cursor cloud agent, following `docs/CLAUDE_PROMPT_COOP_LAG.md`. No Cla
 
 ## Grok → Claude
 
+### Growth order, awaiting the owner's review (2026-11-09, merged with v3.11.2)
+- **Built, not merged, not approved.** Part (a) of `docs/PLAN_GROWTH_AND_LAYOUT.md` only: cart → stand → café.
+  Free night layout is not in this change. Held for Kennedy. An agent must not merge it.
+- Merged `origin/main` at `d2f458a` (v3.11.2 solid front counter) with a merge commit. The solid line
+  (`TierLayout.frontCounter`) follows the new footprints: cart `frontLine(8, 7, 7)`, stand `frontLine(10, 8, 9)`,
+  café `frontLine(12, 11, 11)`. The flap is the right-hand end. Register stays `(6, 6)`, pickup `(5, 6)`,
+  condiments `(4, 6)`. Crew work from behind the counter; customers stay in front.
+- Names as built: `TIER_IDS` is `['cart', 'stand', 'cafe']`. `main.ts` `runOptions` passes `tier: 'cart'`.
+  The 8-tile footprint, queue 3, rent $10, prices ×0.8, traffic ×0.65, no fridge, no office run sit on `cart`.
+  The 10-tile footprint, queue 5, rent $17, prices ×0.9, traffic ×0.85, `TIER_FRIDGE.stand === 'f2'`, office size
+  `[4, 6]` sit on `stand`. Café fields are unchanged. `ORDERS.office.size` is `{ stand, cafe }`.
+  `ECONOMY.line.waiting` is `{ cart: 0, stand: 2, cafe: 4 }`.
+- Art: `buildOutdoor('cart')` paints the sidewalk (`paintSidewalk`) plus wheels, a push handle and string lights.
+  The striped awning is still `buildLot` when `tier === 'cart'`. `buildOutdoor('stand')` is the same street with
+  stall posts and a "THE STAND" board; `barSkin('stand')` is `'stall'` (no wheels). The park plaza is gone.
+- Snapshot **38** (`SNAPSHOT_VERSION`), past main's 37. Protocol stays **72** (the growth order does not change a
+  message). Old saves are refused. No migration. Meta rank is `{ cart: 0, stand: 1, cafe: 2 }`;
+  Word of mouth (`earnedPerks`) needs `bestTier` of `stand` or `cafe`. An old meta that stored `bestTier: 'stand'`
+  for "never grew" now reads as the middle shop. That is the no-compat rule, not a migration.
+- Playthrough: `src/sim/growth.test.ts` "a Gear shop opens on the sidewalk cart, then grows into the stand and the café".
+  Screenshots: `scripts/growthOrderShots.mjs`.
+
 ### State of the UI (2026-11-09, follow-ups: stand tray, milk shelf, co-op looks)
 - **Stand drip vs tray (render only).** The drip stays at (1, 5). The TRAY nameplate is no longer the hanging plate under the counter (that sits inside the drip's table). It is drawn above the tray board (`TRAY_PLATE` in `src/render/stationReadability.ts`), and the drip tank uses `DRIP_RESERVOIR` so it no longer clips the board. `dripCoversTray()` is the check. Seats are unchanged. Merged with v3.11.0: pickup stays at (4, 6), condiments at (5, 6), and the look catch-up shares `createHostRoom` with the one-send-in-flight queue.
 - **Milk counter shelf.** `milkShelfLevel` / `milkShelfParts` (`src/render/supplyModel.ts`) turn `GameState.supplyMilk` into empty (0), low (1–2), partial (3–7) and full (a carton, `FRIDGE.carton`, or more). `buildSupplyShelf` draws that, and `Scene.buildStations` rebuilds when the band changes. The count bubble is unchanged.
 - **Co-op looks.** `main.ts` `startPeer` uses `createPeerTransport(code, token, name, prev?, look?)` again (join, rejoin and the seat the host hands back all send `look`). A join's first keyframe can still be the picture from before the sim applies it; `createHostRoom` sends that peer another keyframe once the snapshot shows them with that look. `createPeerSession` ignores a keyframe older than the one it already holds, so the late stale picture cannot wipe the look. A host who resumes passes their saved `Player.look` on the host `Member`. No new bot logic. Sim `setLook` / `join` were already correct.
-- **Merged with v3.11.0 (82df8e9), not rewritten:** steam-only milk, the two-group machine as one spot, the closing wrap-up, how-to cards, light teammate bumps, and the wider pickup at (4, 6).
+- **Merged with v3.11.0 (82df8e9), not rewritten:** steam-only milk, the two-group machine as one spot, the closing wrap-up, how-to cards, light teammate bumps. This growth-order branch puts the pickup back beside the register at (5, 6); condiments stay at (4, 6).
 
 ### Incoming playtest notes (not to build yet) — 2026-11-07
-- Growth should be **cart → stand → café**, the real-life order; currently **stand → cart → café**. Note only; no
-  Cursor prompt yet.
+- Growth order cart → stand → café is the review item above. Was: note only, no Cursor prompt yet.
 - Night Layout should let players move anything anywhere, not only restricted grid spots, including supply-box
   locations; leave room for future tables using the same layout system. Note only; no implementation or Cursor prompt
   yet.

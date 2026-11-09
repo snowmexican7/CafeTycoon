@@ -1,11 +1,13 @@
 /**
- * P3 B13: the growth path. A new run opens as a tiny kerbside stand and the crew grows it at night:
- * stand → coffee cart → the café. Each tier changes the floor (the rest of the lot is hoarding),
- * the stations (classic: the stand has no steamer), the line's length, the rent and who walks in:
+ * The growth path. A new run opens as a coffee cart on the sidewalk and the crew grows it at night:
+ * cart → stand → the café. Each tier changes the floor (the rest of the lot is hoarding),
+ * the stations (classic: the cart has no steamer), the line's length, the rent and who walks in.
+ * The numbers stay on the footprint: the 8-tile shop is the cheap start, the 10-tile shop is the $70 step.
  *
- *  - Stand: 8 tiles wide, grinder + espresso + cold-brew tap, a line of 3, $10 rent. Commuters in a
- *    hurry: more impatient walk-ins, no groups, fewer regulars.
- *  - Cart: 10 wide, a line of 5, $17 rent, some groups (classic: adds the steamer; FB2 C9 Gear: milk needs a wand, E3+).
+ *  - Cart: 8 tiles wide, grinder + espresso + cold-brew tap, a line of 3, $10 rent. On the sidewalk.
+ *    Commuters in a hurry: more impatient walk-ins, no groups, fewer regulars. No fridge, no office run.
+ *  - Stand: 10 wide, a line of 5, $17 rent, some groups (classic: adds the steamer; FB2 C9 Gear: milk needs a wand, E3+).
+ *    A fixed stall. The beer fridge and office runs come with the keys.
  *  - Café: the full 12-wide floor, a line of 6, $25 rent, everyone (the game before B13).
  *
  * Runs without a tier (every save before B13) are the café. Pure arithmetic: no RNG of its own, and a
@@ -26,7 +28,7 @@ export interface TierInfo {
   name: string;
   short: string;
   icon: string;
-  /** Price to grow into this tier (the stand is where runs start). */
+  /** Price to grow into this tier (the cart is where runs start). */
   cost: number;
   /** Line length before walk-ins are turned away. */
   queue: number;
@@ -42,27 +44,27 @@ export interface TierInfo {
   milestone: string;
 }
 
-export const TIER_IDS: TierId[] = ['stand', 'cart', 'cafe'];
+export const TIER_IDS: TierId[] = ['cart', 'stand', 'cafe'];
 
 export const TIERS: Record<TierId, TierInfo> = {
-  stand: {
-    name: 'Kerbside stand',
-    short: 'stand',
-    icon: '⛱️',
+  cart: {
+    name: 'Coffee cart',
+    short: 'cart',
+    icon: '🛺',
     cost: 0,
     queue: 3,
     rentPerDay: 10,
     mix: { impatient: 1.4, group: 0, regular: 0.6 },
     price: 0.8,
     traffic: 0.65,
-    crowd: 'Commuters in a hurry, no groups. Fewer passers-by, and nobody pays café prices at a folding table (−20%)',
-    blurb: 'A folding table, one grinder, one machine and a cold-brew keg. Everyone is late for something.',
+    crowd: 'Commuters in a hurry, no groups. Fewer passers-by, and nobody pays café prices at a sidewalk cart (−20%)',
+    blurb: 'Wheels, a short awning and a cold-brew keg on the sidewalk. No fridge until you buy the little cube. Everyone is late for something.',
     milestone: '',
   },
-  cart: {
-    name: 'Coffee cart',
-    short: 'cart',
-    icon: '🛺',
+  stand: {
+    name: 'The stand',
+    short: 'stand',
+    icon: '🏪',
     cost: 70,
     queue: 5,
     rentPerDay: 17,
@@ -70,7 +72,7 @@ export const TIERS: Record<TierId, TierInfo> = {
     price: 0.9,
     traffic: 0.85,
     crowd: 'Some friends in pairs, more regulars. Busier, prices −10%',
-    blurb: 'A proper cart with a striped awning, a beer fridge for the milk and room for one more machine. Put a wand on a Sylvia and lattes are back on the board.',
+    blurb: 'A fixed stall with more floor, a real queue, and a beer fridge that comes with the keys. Office runs start calling. Put a wand on a Sylvia and lattes are back on the board.',
     milestone: 'Somebody asked if we do oat milk. We are a real business now.',
   },
   cafe: {
@@ -85,7 +87,7 @@ export const TIERS: Record<TierId, TierInfo> = {
     traffic: 1,
     crowd: 'Everyone: groups, regulars, the lot',
     blurb: 'Four walls, a window seat and a doormat that says HELLO. The whole floor is ours.',
-    milestone: 'We started with a folding table. Look at us now.',
+    milestone: 'We started with a cart on the sidewalk. Look at us now.',
   },
 };
 

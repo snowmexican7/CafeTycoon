@@ -19,6 +19,9 @@ import type { DrinkId, GameState, SimEvent, StationKind, TierId } from '../sim/t
 import { CASHIER_ID } from '../sim/botBody';
 import { cashierHome, syncCashier } from '../sim/cashier';
 import { createUnlockReplay } from '../ui/unlockReplay';
+import { createGrowFx } from '../ui/growFx';
+import { gainedDiff } from '../ui/growModel';
+import { growthMorning } from '../sim/growth';
 import type { GearId } from '../data/gear';
 import { defaultSlots, ensureCounterSpots, stationsFromSlots } from '../sim/slots';
 import { createClosing } from '../ui/closing';
@@ -38,7 +41,7 @@ import { emptyRecords, foldRecords } from '../storage/recordsStore';
 import { HAIR_STYLES } from '../render/lookModel';
 import { floorFields } from '../sim/tiles';
 
-type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean; replay?: DrinkId[] };
+type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean; replay?: DrinkId[]; gained?: { from: TierId; to: TierId } };
 
 const $ = (sel: string) => document.querySelector<HTMLElement>(sel)!;
 const emit = (s: GameState, kind: SimEvent['kind'], data: SimEvent['data'] = {}) => s.log.push({ seq: s.nextLogSeq++, tick: s.tick, kind, data });
@@ -58,10 +61,10 @@ function atTier(s: GameState, tier: TierId, n: number): void {
   // ui-3.9.2: a Gear run's fixed spots (pickup, condiments, sink, fridge, tray table…) as every real morning has them;
   // without this, a fixture that sets the tier after gearStart showed a till with no serving counter (no-op in classic).
   ensureCounterSpots(s);
-  const spots = tier === 'stand' ? [{ x: 1.4, y: 2.2 }, { x: 3, y: 2.3 }, { x: 5, y: 2.2 }, { x: 6.6, y: 4.6 }] : tier === 'cart' ? [{ x: 2, y: 2.3 }, { x: 4, y: 2.3 }, { x: 7, y: 2.4 }, { x: 6.5, y: 4.7 }] : [{ x: 2, y: 2.3 }, { x: 5, y: 2.3 }, { x: 8.5, y: 2.4 }, { x: 6.5, y: 4.7 }];
+  const spots = tier === 'cart' ? [{ x: 1.4, y: 2.2 }, { x: 3, y: 2.3 }, { x: 5, y: 2.2 }, { x: 6.6, y: 4.6 }] : tier === 'stand' ? [{ x: 2, y: 2.3 }, { x: 4, y: 2.3 }, { x: 7, y: 2.4 }, { x: 6.5, y: 4.7 }] : [{ x: 2, y: 2.3 }, { x: 5, y: 2.3 }, { x: 8.5, y: 2.4 }, { x: 6.5, y: 4.7 }];
   s.players.forEach((p, i) => (p.pos = { ...spots[i] }));
-  const drinks = tier === 'stand' ? (['espresso', 'coldBrew', 'icedLatte', 'espresso'] as const) : (['latte', 'espresso', 'coldBrew', 'mocha', 'latte', 'icedLatte', 'espresso'] as const);
-  s.customers = Array.from({ length: n }, (_, i) => ({ id: 70 + i, drink: drinks[i % drinks.length], patienceLeft: 1300 - i * 110, patienceMax: 1600, ...(i === 1 && tier !== 'stand' ? { kind: 'group' as const } : {}) }));
+  const drinks = tier === 'cart' ? (['espresso', 'coldBrew', 'icedLatte', 'espresso'] as const) : (['latte', 'espresso', 'coldBrew', 'mocha', 'latte', 'icedLatte', 'espresso'] as const);
+  s.customers = Array.from({ length: n }, (_, i) => ({ id: 70 + i, drink: drinks[i % drinks.length], patienceLeft: 1300 - i * 110, patienceMax: 1600, ...(i === 1 && tier !== 'cart' ? { kind: 'group' as const } : {}) }));
 }
 
 /** P4 B6: a café Gear run with a branch, on the first day its phone rings about `kind`, at the moment it rings. */
@@ -295,11 +298,11 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
-  /** ui-3.7.1: the end-of-day receipt with the cart affordable (Grow is on the receipt now). */
+  /** The end-of-day receipt on the cart, with the stand affordable (Grow is on the receipt). */
   receiptGrow: {
     closing: true,
     setup(s) {
-      atTier(s, 'stand', 0);
+      atTier(s, 'cart', 0);
       s.cash = 128;
       s.today = { ...s.today, served: 24, lost: 2, turnedAway: 3, sales: 104.2, tips: 10.4, rent: 10 };
     },
@@ -325,8 +328,9 @@ const FIXTURES: Record<string, Fixture> = {
       s.gear = true;
       s.cash = 120;
       s.day = 1;
-      s.slots = defaultSlots('stand').map(() => null);
-      s.stations = stationsFromSlots('stand', s.slots);
+      s.tier = 'cart';
+      s.slots = defaultSlots('cart').map(() => null);
+      s.stations = stationsFromSlots('cart', s.slots);
       s.slotGear = (s.slotGear ?? []).map(() => null);
       for (const d of Object.keys(s.menu) as (keyof typeof s.menu)[]) s.menu[d] = false;
     },
@@ -873,12 +877,12 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
-  /** ui-3.9.1: the stand's drip seat by the door at (1,5) (Kennedy, 2026-11-03), with a pot to pour. */
+  /** The cart's drip seat by the door at (1,5) (the 8-tile shop; Kennedy, 2026-11-03), with a pot to pour. */
   dripStand: {
     setup(s) {
       s.gear = true;
       gearStart(s);
-      atTier(s, 'stand', 1);
+      atTier(s, 'cart', 1);
       gearStart(s);
       s.cash = 220;
       // ui-3.9.1: gear buys only land at night; buy there, then back to the day.
@@ -1241,34 +1245,74 @@ const FIXTURES: Record<string, Fixture> = {
   standDay: { setup: (s) => atTier(s, 'stand', 3), timeline: [] },
   cartDay: { setup: (s) => atTier(s, 'cart', 5), timeline: [] },
   cafeDay: { setup: (s) => atTier(s, 'cafe', 6), timeline: [] },
-  /** P3 B13: the first morning in the cart: the grand re-opening burst. */
-  grownDay: { setup: (s) => { atTier(s, 'cart', 4); s.tierLog = [{ tier: 'cart', day: s.day, by: 'Ben' }]; }, timeline: [] },
-  /** P3 B13: the Shopfront tab at the stand with the cart affordable, and the night Ben grew into the cart. */
+  /** The first morning in the stand: the grand re-opening burst. */
+  grownDay: { setup: (s) => { atTier(s, 'stand', 4); s.tierLog = [{ tier: 'stand', day: s.day, by: 'Ben' }]; s.morningNotes = [growthMorning(s)!].filter(Boolean); }, timeline: [] },
+  /** Night on the cart with the stand affordable. */
   growStand: {
     night: true,
     setup(s) {
       s.cash = 128;
       s.day = 3;
-      s.tier = 'stand';
-      s.slots = defaultSlots('stand');
-      s.stations = stationsFromSlots('stand', s.slots);
+      s.tier = 'cart';
+      s.slots = defaultSlots('cart');
+      s.stations = stationsFromSlots('cart', s.slots);
       s.today = { day: 2, served: 22, lost: 3, turnedAway: 4, sales: 98.5, tips: 9.1, rent: 10 };
     },
     timeline: [],
   },
+  /** Night after growing into the stand. */
   growCart: {
     night: true,
     setup(s) {
       s.cash = 61;
       s.day = 3;
-      s.tier = 'cart';
-      s.slots = defaultSlots('cart');
-      s.stations = stationsFromSlots('cart', s.slots);
-      s.tierLog = [{ tier: 'cart', day: 3, by: 'Ben' }];
-      s.today = { day: 2, served: 24, lost: 2, turnedAway: 5, sales: 104.2, tips: 10.4, rent: 10 };
+      s.tier = 'stand';
+      s.slots = defaultSlots('stand');
+      s.stations = stationsFromSlots('stand', s.slots);
+      s.tierLog = [{ tier: 'stand', day: 3, by: 'Ben' }];
+      s.today = { day: 2, served: 24, lost: 2, turnedAway: 5, sales: 104.2, tips: 10.4, rent: 17 };
     },
     timeline: [],
   },
+  /** First morning of each size, for the growth-order screenshots. */
+  morningCart: {
+    setup(s) {
+      s.gear = true;
+      atTier(s, 'cart', 2);
+      s.day = 1;
+      s.phase = 'day';
+      s.cash = 86;
+      s.morningNotes = ['Day 1. The cart is open on the sidewalk.'];
+    },
+    timeline: [],
+  },
+  morningStand: {
+    setup(s) {
+      s.gear = true;
+      atTier(s, 'stand', 3);
+      s.day = 2;
+      s.phase = 'day';
+      s.cash = 140;
+      s.tierLog = [{ tier: 'stand', day: 2, by: 'Ana' }];
+      s.morningNotes = [growthMorning(s)!];
+    },
+    timeline: [],
+  },
+  morningCafe: {
+    setup(s) {
+      s.gear = true;
+      atTier(s, 'cafe', 4);
+      s.day = 4;
+      s.phase = 'day';
+      s.cash = 220;
+      s.tierLog = [{ tier: 'stand', day: 2, by: 'Ana' }, { tier: 'cafe', day: 4, by: 'Ana' }];
+      s.morningNotes = [growthMorning(s)!];
+    },
+    timeline: [],
+  },
+  /** The "What you gained" card for cart → stand and stand → café. */
+  growCardStand: { gained: { from: 'cart', to: 'stand' }, setup(s) { s.gear = true; atTier(s, 'stand', 2); s.day = 2; s.tierLog = [{ tier: 'stand', day: 2, by: 'Ana' }]; }, timeline: [] },
+  growCardCafe: { gained: { from: 'stand', to: 'cafe' }, setup(s) { s.gear = true; atTier(s, 'cafe', 3); s.day = 4; s.tierLog = [{ tier: 'stand', day: 2, by: 'Ana' }, { tier: 'cafe', day: 4, by: 'Ana' }]; }, timeline: [] },
   /** P3 B12: the counter with each checkout, a full line waiting. */
   counterRegister: { setup: (s) => counterLine(s, 'register', 6), timeline: [] },
   counterKiosk: { setup: (s) => counterLine(s, 'kiosk', 7), timeline: [] },
@@ -1657,7 +1701,7 @@ const FIXTURES: Record<string, Fixture> = {
       atTier(s, tier, 0);
       const template = s.players[0]!;
       const behind = gear
-        ? [{ x: 3, y: 5 }, { x: 4, y: 5 }, { x: 6, y: 5 }]
+        ? [{ x: 4, y: 5 }, { x: 5, y: 5 }, { x: 6, y: 5 }]
         : [{ x: 5, y: 5 }, { x: 6, y: 5 }];
       const names = ['Ana', 'Ben', 'Cleo'] as const;
       const ids = ['ana', 'ben', 'cleo'] as const;
@@ -1752,6 +1796,7 @@ async function main(): Promise<void> {
     createRecordsDialog(() => r).open();
   }
   if (fx.replay) createUnlockReplay($('#unlockReplay')).play(fx.replay);
+  if (fx.gained) createGrowFx().play(gainedDiff(fx.gained.from, fx.gained.to, state.gear === true));
   const renderer = await createRenderer($('#game'));
   const me = fx.me ?? 'ana';
   renderer.setLocalPlayer(me);

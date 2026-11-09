@@ -338,8 +338,8 @@ async function main(): Promise<void> {
       players: players.map((m) => ({ id: m.token, name: m.name, ...(m.look ? { look: m.look } : {}) })),
       // Bot cut step 3: only a solo start passes `cashier` (the robot cashier); a co-op room never has one.
       settings: { pace: choice.pace, dayLengthSec: choice.dayLengthSec, nightLengthSec: settings.nightLengthSec, ...(cashier ? { cashier } : {}) },
-      // P3 B13: every new run opens as a kerbside stand and grows from there.
-      tier: 'stand',
+      // Every new run opens as a coffee cart on the sidewalk and grows cart → stand → café.
+      tier: 'cart',
       // G11 (v3.0.0): every new run is a Gear run; ?gear=0 is a hidden classic escape hatch.
       ...(gearFlag() ? { gear: true } : {}),
       // R4 a: a dev run (?dev=1): cash topped up, a pausable night, never saved to records.

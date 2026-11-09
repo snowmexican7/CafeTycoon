@@ -12,7 +12,7 @@ import { GEAR, type GearId } from '../data/gear';
 import type { Customer, GameState, PlayerInput, SupplyId } from './types';
 
 function gearDay(gear: GearId[], supplies: Partial<Record<SupplyId, number>> = {}): GameState {
-  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
+  const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cart', gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
   gear.forEach((id, i) => {

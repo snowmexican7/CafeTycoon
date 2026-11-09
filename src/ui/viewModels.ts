@@ -524,7 +524,7 @@ export interface GrowthVM {
   milestone?: { name: string; icon: string; by: string; line: string; width: number; queue: number };
   /** Known drinks this shop has no station for yet (the menu tab's note). */
   waiting?: string;
-  /** ui-3.4.0: the night chip "You can afford a cart!" (growNudge). */
+  /** The night chip "You can afford a stand!" (growNudge). */
   nudge?: GrowNudge;
 }
 

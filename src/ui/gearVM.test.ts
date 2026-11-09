@@ -3,7 +3,7 @@ import { createRun } from '../sim/run';
 import { applyGearInput } from '../sim/gear';
 import { gearVM } from './gearVM';
 
-const run = () => createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true });
+const run = () => createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cart', gear: true });
 
 describe('gearVM (Gear Tree G3)', () => {
   it('Pick your gear: four slots, the box in the last, every tier priced against $120', () => {

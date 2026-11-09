@@ -15,7 +15,7 @@ import type { Customer, DrinkId, GameState, SupplyId, TierId } from './types';
 /** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
 type Kit = GearId | 'steamer';
 
-function gearDay(day = 2, tier: TierId = 'stand', gear: Kit[] = ['c1', 'e1', 'steamer', 'd1'], seed = 7): GameState {
+function gearDay(day = 2, tier: TierId = 'cart', gear: Kit[] = ['c1', 'e1', 'steamer', 'd1'], seed = 7): GameState {
   const s = createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   {
     const slots = [...s.slots!];
@@ -222,12 +222,12 @@ describe('office runs (FB2 B6)', () => {
     expect(s!.customers.filter((x) => x.order === 'office')).toHaveLength(1);
   });
 
-  it('the order size by tier: 4-6 drinks on the cart and at the café (fix round 1 tuning)', () => {
-    expect(ORDERS.office.size.cart).toEqual([4, 6]);
+  it('the order size by tier: 4-6 drinks on the stand and at the café (the cart has none)', () => {
+    expect(ORDERS.office.size.stand).toEqual([4, 6]);
     expect(ORDERS.office.size.cafe).toEqual([4, 6]);
-    const sizes = { cart: new Set<number>(), cafe: new Set<number>() };
+    const sizes = { stand: new Set<number>(), cafe: new Set<number>() };
     for (let seed = 1; seed <= 120; seed++) {
-      for (const tier of ['cart', 'cafe'] as const) {
+      for (const tier of ['stand', 'cafe'] as const) {
         const s = gearDay(4, tier, undefined, seed);
         if (!s.office) continue;
         s.customers = [];
@@ -236,19 +236,19 @@ describe('office runs (FB2 B6)', () => {
         sizes[tier].add(s.customers.find((c) => c.order === 'office')!.items!.length);
       }
     }
-    expect([...sizes.cart].sort()).toEqual([4, 5, 6]);
+    expect([...sizes.stand].sort()).toEqual([4, 5, 6]);
     expect([...sizes.cafe].sort()).toEqual([4, 5, 6]);
   });
 
-  it('about every other day from day 3, on the cart and at the café; never on the stand, never before day 3', () => {
+  it('about every other day from day 3, on the stand and at the café; never on the cart, never before day 3', () => {
     let cafe = 0;
     for (let seed = 1; seed <= 200; seed++) {
-      const s = gearDay(3 + (seed % 5), seed % 2 ? 'cafe' : 'cart', undefined, seed);
+      const s = gearDay(3 + (seed % 5), seed % 2 ? 'cafe' : 'stand', undefined, seed);
       if (s.office?.day === s.day) cafe += 1;
       const d2 = gearDay(2, 'cafe', undefined, seed);
       expect(d2.office).toBeUndefined();
-      const stand = gearDay(5, 'stand', ['c1', 'e1'], seed);
-      expect(stand.office).toBeUndefined();
+      const cart = gearDay(5, 'cart', ['c1', 'e1'], seed);
+      expect(cart.office).toBeUndefined();
     }
     expect(cafe / 200).toBeGreaterThan(0.35);
     expect(cafe / 200).toBeLessThan(0.65);

@@ -1,14 +1,14 @@
-import { Container, FillGradient, Graphics } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { layoutFor } from '../../data/layout';
 import { FRONT, PALETTE, TILE, WALL, sy } from '../theme';
 import type { TierLook } from '../tierLook';
 import { label, shadow } from './draw';
 
 /**
- * ui-3.4.0: the outdoor scenes for the stand (a sidewalk) and the cart (a park plaza). Render-only. Everything
- * here sits behind the stations or on ground nobody walks on; the stations, slots and line are where they always
- * were. `back` goes over the café floor and wallpaper (between the floor and the depth-sorted layer), `props`
- * join the depth sort, `over` hangs above everyone (the stand's umbrella, the cart's string lights).
+ * The outdoor scenes. Both shops sit on the sidewalk the small shop already painted. The cart adds wheels,
+ * a push handle and string lights (its awning is drawn with the lot). The stand is a fixed stall on the same
+ * street: wood posts, a stall sign, no wheels and no park. Render-only. Stations, slots and the line stay put.
+ * `back` sits behind the floor, `props` join the depth sort, `over` hangs above everyone (the cart's lights).
  */
 export interface OutdoorScene {
   back: Container;
@@ -31,17 +31,15 @@ function rng(seed: number): () => number {
 }
 
 export function buildOutdoor(look: Exclude<TierLook, 'cafe'>): OutdoorScene {
-  return look === 'stand' ? buildStand() : buildCart();
+  return look === 'cart' ? buildCart() : buildStand();
 }
 
-// ------------------------------------------------------------------------------------------------ stand
-
-function buildStand(): OutdoorScene {
-  const W = layoutFor('stand').width * TILE;
+/** The shared street: brick building, pavement, kerb and road. Width follows the shop. */
+function paintSidewalk(W: number, seed: number): { back: Container; g: Graphics; kerbTop: number } {
   const back = new Container();
   const g = new Graphics();
   back.addChild(g);
-  const r = rng(7);
+  const r = rng(seed);
 
   // the building behind: warm red brick, running bond
   g.rect(0, 0, W, WALL).fill(0xb4604a);
@@ -114,36 +112,7 @@ function buildStand(): OutdoorScene {
   for (let i = 0; i < 70; i++) g.circle(r() * W, kerbTop + 14 + r() * (H - kerbTop - 16), 0.8 + r()).fill({ color: 0x8a8b94, alpha: 0.6 });
   for (let x = 20; x < W; x += 90) g.rect(x, H - 9, 44, 4).fill(0xf2d34a);
 
-  // the umbrella pole, behind the back bar
-  g.rect(188, 30, 5, 120).fill(0xe8e2d8);
-  g.rect(190, 30, 1.5, 120).fill({ color: 0x000000, alpha: 0.15 });
-
-  const props = [lamppost(24, kerbTop + 2), pot(110, FRONT_EDGE + 26, 0x6fb466), pot(470, FRONT_EDGE + 26, 0x5fa35a, true), aFrame(158, FRONT_EDGE + 30, ['COFFEE', 'hot & cold', 'iced brew ✓'])];
-
-  // the market umbrella over the bar
-  const over = new Container();
-  const u = new Graphics();
-  over.addChild(u);
-  // (left of the chalkboard menu, which hangs on the bricks at x 378..476)
-  const cx = 190;
-  const span = 176;
-  const top = 2;
-  const rim = 40;
-  const n = 8;
-  for (let i = 0; i < n; i++) {
-    const a = cx - span + (2 * span * i) / n;
-    const b = cx - span + (2 * span * (i + 1)) / n;
-    u.poly([cx, top, a, rim, b, rim]).fill(i % 2 ? 0xfff4e2 : 0xe0564a);
-  }
-  for (let i = 0; i < n; i++) {
-    const a = cx - span + (2 * span * i) / n;
-    const w = (2 * span) / n;
-    u.moveTo(a, rim).arc(a + w / 2, rim, w / 2, Math.PI, 0, true).lineTo(a, rim).fill(i % 2 ? 0xfff4e2 : 0xe0564a);
-  }
-  u.moveTo(cx - span, rim).lineTo(cx, top).lineTo(cx + span, rim).stroke({ width: 2, color: 0xb8413a, alpha: 0.6, join: 'round' });
-  u.circle(cx, top + 2, 5).fill(0xe8e2d8);
-  u.ellipse(cx, rim + 26, span * 0.7, 6).fill({ color: 0x000000, alpha: 0.06 });
-  return { back, props, over };
+  return { back, g, kerbTop };
 }
 
 function lamppost(x: number, foot: number): Container {
@@ -194,67 +163,39 @@ function aFrame(x: number, foot: number, lines: string[]): Container {
   return c;
 }
 
-// ------------------------------------------------------------------------------------------------- cart
-
 function buildCart(): OutdoorScene {
   const W = layoutFor('cart').width * TILE;
-  const back = new Container();
-  const g = new Graphics();
-  back.addChild(g);
-  const r = rng(11);
-
-  // sky, clouds, the park's trees and a clipped hedge
-  const sky = new FillGradient({ type: 'linear', start: { x: 0, y: 0 }, end: { x: 0, y: 1 }, colorStops: [{ offset: 0, color: 0xa9d8f0 }, { offset: 1, color: 0xf3ead2 }] });
-  g.rect(0, 0, W, WALL).fill(sky);
-  for (const [cx, cy] of [[120, 46], [420, 38]] as const) {
-    for (const [dx, dy, rad] of [[-16, 2, 10], [0, -4, 13], [16, 2, 10]] as const) g.circle(cx + dx, cy + dy, rad).fill({ color: 0xffffff, alpha: 0.85 });
-  }
-  for (let x = -10; x < W + 20; x += 46) {
-    const h = 26 + r() * 24;
-    g.rect(x + 20, 96 - h + 20, 5, h).fill(0x7a5a3e);
-    g.circle(x + 22, 96 - h + 10, 24 + r() * 6).fill(r() > 0.5 ? 0x77b46b : 0x6aa862);
-  }
-  g.rect(0, 84, W, 26).fill(0x4f8f4c);
-  for (let x = 0; x < W; x += 18) g.circle(x + 9, 86, 10).fill(0x5a9e56);
-  // the low planter wall
-  g.rect(0, WALL - 12, W, 12).fill(0xc9bda7);
-  g.rect(0, WALL - 12, W, 3).fill(0xe0d6c2);
-  g.rect(0, WALL, W, 6).fill({ color: 0x000000, alpha: 0.1 });
-  // string-light poles at either end
-  for (const px of [6, W - 6]) {
-    g.rect(px - 3, 24, 6, WALL - 24).fill(0x3a2a20);
-    g.circle(px, 24, 4).fill(0x3a2a20);
-  }
-
-  // the plaza: warm cobbles, with a rosette where the café's rug lies
-  g.rect(0, WALL, W, STRIP_TOP - WALL).fill(0xb9a98e);
-  for (let row = 0, y = WALL + 2; y < STRIP_TOP - 4; row++, y += 18) {
-    const off = row % 2 ? 15 : 0;
-    for (let x = -off; x < W; x += 30) g.roundRect(x + 2, y, 26, 15, 5).fill([0xdacbb2, 0xd2c2a7, 0xe2d5bf, 0xcdbb9e][Math.floor(r() * 4)]!);
-  }
-  const rx = 4.7 * TILE;
-  const ry = 3.4 * TILE + WALL;
-  for (const [rad, col] of [[118, 0xa98f6c], [96, 0xe7dcc8], [74, 0xb39a77], [50, 0xe7dcc8], [26, 0xa98f6c]] as const) g.ellipse(rx, ry, rad, rad * 0.62).stroke({ width: 7, color: col, alpha: 0.6 });
-  // the gravel path the line waits on, edged with timber
-  g.rect(0, STRIP_TOP, W, FRONT_EDGE + 12 - STRIP_TOP).fill(0xe8d9b6);
-  for (let i = 0; i < 260; i++) g.circle(r() * W, STRIP_TOP + 3 + r() * (FRONT_EDGE + 6 - STRIP_TOP), 0.8 + r() * 1.2).fill({ color: r() > 0.5 ? 0xc8b48c : 0xf6ecd4, alpha: 0.9 });
-  g.rect(0, STRIP_TOP, W, 4).fill(0x8a6a42);
-  // grass at the front with a few flowers
-  g.rect(0, FRONT_EDGE + 12, W, H - FRONT_EDGE - 12).fill(0x86c06f);
-  g.rect(0, FRONT_EDGE + 12, W, 4).fill(0x6aa85a);
-  for (let i = 0; i < 60; i++) {
-    const x = r() * W;
-    const y = FRONT_EDGE + 20 + r() * (H - FRONT_EDGE - 24);
-    g.moveTo(x, y).lineTo(x - 2, y - 6).moveTo(x, y).lineTo(x + 2, y - 6).stroke({ width: 1.4, color: 0x5f9e4e });
-  }
-  for (let i = 0; i < 14; i++) g.circle(r() * W, FRONT_EDGE + 22 + r() * 24, 2.6).fill([0xffffff, 0xffd36b, 0xf29bb2][i % 3]!);
-
+  const { back, g, kerbTop } = paintSidewalk(W, 7);
   // the cart's push handle, sticking out behind the first station
   g.roundRect(-8, 168, 30, 8, 4).fill(0x8a6a42);
+  const props = [
+    lamppost(24, kerbTop + 2),
+    pot(110, FRONT_EDGE + 26, 0x6fb466),
+    pot(Math.min(470, W - 42), FRONT_EDGE + 26, 0x5fa35a, true),
+    aFrame(158, FRONT_EDGE + 30, ['COFFEE', 'hot & cold', 'on wheels']),
+  ];
+  return { back, props, over: stringLights(W) };
+}
 
-  const props = [bench(72, FRONT_EDGE + 40), aFrame(176, FRONT_EDGE + 34, ['COFFEE', 'steamed milk', 'lattes ✓']), pot(590, FRONT_EDGE + 30, 0x5a9e56, true)];
+function buildStand(): OutdoorScene {
+  const W = layoutFor('stand').width * TILE;
+  const { back, g, kerbTop } = paintSidewalk(W, 13);
+  // wood posts and a header beam: a stall that does not roll away
+  g.rect(16, WALL + 4, 10, 78).fill(0x6e3f22);
+  g.rect(W - 26, WALL + 4, 10, 78).fill(0x6e3f22);
+  g.roundRect(16, WALL + 2, W - 32, 10, 2).fill(0x8a5a3a);
+  const props = [
+    lamppost(36, kerbTop + 2),
+    pot(150, FRONT_EDGE + 26, 0x6fb466),
+    pot(W - 80, FRONT_EDGE + 26, 0x5fa35a, true),
+    aFrame(220, FRONT_EDGE + 30, ['STAND', 'hot drinks', 'lattes ✓']),
+    stallBoard(W * 0.55, WALL + 36),
+  ];
+  return { back, props, over: new Container() };
+}
 
-  // string lights in a soft swag across the top of the cart
+/** String lights in a soft swag. The striped awning itself is drawn with the lot. */
+function stringLights(W: number): Container {
   const over = new Container();
   const l = new Graphics();
   over.addChild(l);
@@ -277,19 +218,19 @@ function buildCart(): OutdoorScene {
     l.circle(x, y + 5, 3.6).fill(bulbs[i % bulbs.length]!);
     l.rect(x - 1.5, y, 3, 2.5).fill(0x3a2a20);
   }
-  return { back, props, over };
+  return over;
 }
 
-function bench(x: number, foot: number): Container {
+/** A small wood board that says this is a stand, not a cart. */
+function stallBoard(x: number, y: number): Container {
   const c = new Container();
   const g = new Graphics();
   c.addChild(g);
-  shadow(g, x, foot, 46, 5);
-  for (const dx of [-36, 36]) g.rect(x + dx - 3, foot - 22, 6, 22).fill(0x3a3f44);
-  g.roundRect(x - 46, foot - 26, 92, 8, 3).fill(0xb98654);
-  g.roundRect(x - 46, foot - 44, 92, 7, 3).fill(0xa7653c);
-  g.roundRect(x - 46, foot - 34, 92, 7, 3).fill(0xa7653c);
-  for (const dx of [-38, 38]) g.rect(x + dx - 2, foot - 46, 4, 22).fill(0x3a3f44);
-  c.zIndex = foot;
+  g.roundRect(x - 46, y - 16, 92, 28, 4).fill(0xfff4e2).stroke({ width: 3, color: 0x6e3f22 });
+  const s = label('THE STAND', 11, 0x6e3f22, '800');
+  s.anchor.set(0.5);
+  s.position.set(x, y - 2);
+  c.addChild(s);
+  c.zIndex = y + 40;
   return c;
 }

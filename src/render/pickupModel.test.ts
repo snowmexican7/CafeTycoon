@@ -8,7 +8,7 @@ const lay: SpotsLayout = {
   width: 12,
   queueSlots: [0, 1, 2, 3].map((i) => ({ x: 6 + i, y: 7.6 })),
   till: { x: 6, y: 6 },
-  pickup: { x: 4, y: 6 },
+  pickup: { x: 5, y: 6 },
 };
 
 describe('pickupModel (3.3.1)', () => {

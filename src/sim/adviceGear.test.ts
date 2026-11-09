@@ -27,7 +27,7 @@ const gearRun = (opts: { bots?: number; tier?: TierId; dayLengthSec?: number; se
   addBots(createRun({
     seed: opts.seed ?? 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }],
     settings: { ...(opts.dayLengthSec ? { dayLengthSec: opts.dayLengthSec } : {}) },
-    gear: true, tier: opts.tier ?? 'stand',
+    gear: true, tier: opts.tier ?? 'cart',
   }), opts.bots ?? 0);
 /** A Gear run with some machines bought (cash set to `cash` afterwards), at night. */
 function equipped(gears: GearId[], opts: Parameters<typeof gearRun>[0] = {}, cash = 300): GameState {
@@ -38,7 +38,7 @@ function equipped(gears: GearId[], opts: Parameters<typeof gearRun>[0] = {}, cas
   s.supplies = { ...FULL };
   return s;
 }
-const classicRun = (bots = 0, tier: TierId = 'stand'): GameState =>
+const classicRun = (bots = 0, tier: TierId = 'cart'): GameState =>
   addBots(createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier }), bots);
 
 const round2 = (n: number) => Math.round(n * 100) / 100;

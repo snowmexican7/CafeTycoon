@@ -21,7 +21,7 @@ import { FRIDGE_ID, LAYOUT, SINK_ID, SLOT_POSITIONS } from '../data/layout';
 import { BASE_DRINKS } from '../data/drinks';
 import type { GameState, PlayerId, Station, SupplyId, TierId } from './types';
 
-const gearRun = (tier: TierId = 'stand', players = 1): GameState =>
+const gearRun = (tier: TierId = 'cart', players = 1): GameState =>
   createRun({
     seed: 7,
     hostId: 'p1',
@@ -38,7 +38,7 @@ const logs = (s: GameState, kind: string) => s.log.filter((e) => e.kind === kind
 
 /** A stand at night with a grinder in slot 0 and `gear` (with `wand`) in slot 1, and plenty of cash. */
 function stand(gear: GearId, wand?: AddOnWand, cash = 1000): GameState {
-  const s = gearRun('stand');
+  const s = gearRun('cart');
   s.cash = cash;
   buy(s, 'g2');
   buy(s, gear, wand);
@@ -187,7 +187,7 @@ describe('FB2 C9: buying a wand', () => {
 
   it('growing keeps a wand on its machine', () => {
     const s = stand('e3', 'weak');
-    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cart' });
+    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'stand' });
     expect(s.slotWand).toEqual([null, 'weak', null, null, null]);
     expect(wandOf(s)?.wand).toBe('weak');
   });
@@ -485,7 +485,7 @@ describe('FB2 C9: the floor', () => {
 
 describe('FB2 C9: the planner and saves', () => {
   it('advises the Sylvia with the little wand, and a wand for a Sylvia that has none', () => {
-    const s = gearRun('cart');
+    const s = gearRun('stand');
     s.cash = 1000;
     s.slots = ['grinder', 'espresso', null, null, 'trash'];
     s.slotGear = ['g2', 'e1', null, null, 'b0'];
@@ -507,8 +507,8 @@ describe('FB2 C9: the planner and saves', () => {
     expect(w?.input).toEqual({ kind: 'wand', station: 'espresso', wand: 'weak' });
   });
 
-  it('at the cart, the Sylvia and its wand come before growing into the café; a stand still grows to the cart', () => {
-    const s = gearRun('cart');
+  it('at the stand, the Sylvia and its wand come before growing into the café; a cart still grows to the stand', () => {
+    const s = gearRun('stand');
     s.cash = 1000;
     s.days.push({ day: 1, served: 20, lost: 0, turnedAway: 0, sales: 60, tips: 5, rent: 17 });
     s.slots = ['grinder', 'espresso', null, null, 'trash'];
@@ -523,12 +523,12 @@ describe('FB2 C9: the planner and saves', () => {
     s.stations = stationsFromSlots(s.tier, s.slots, s.slotGear, s.slotWand);
     expect(wandFirst(s, 'cafe')).toBe(false);
     expect(planNight(s).some((a) => a.id === 'grow:cafe')).toBe(true);
-    const st = gearRun('stand');
-    expect(wandFirst(st, 'cart')).toBe(false);
+    const st = gearRun('cart');
+    expect(wandFirst(st, 'stand')).toBe(false);
   });
 
   it('review M3: the café hold needs a grinder and an espresso machine to put a wand on', () => {
-    const s = gearRun('cart');
+    const s = gearRun('stand');
     s.cash = 1000;
     s.days.push({ day: 1, served: 20, lost: 0, turnedAway: 0, sales: 60, tips: 5, rent: 17 });
     const floor = (slots: (Station['kind'] | null)[], gear: (GearId | null)[]) => {
@@ -547,7 +547,7 @@ describe('FB2 C9: the planner and saves', () => {
   });
 
   it('review M2/M4: an E4 with no wand is advised the proper wand; a second wandless machine waits once a wand is on', () => {
-    const s = gearRun('cart');
+    const s = gearRun('stand');
     s.cash = 1000;
     s.slots = ['grinder', 'espresso', 'coldBrewTap', null, 'trash'];
     s.slotGear = ['g2', 'e4', 'c3', null, 'b0'];
@@ -572,6 +572,6 @@ describe('FB2 C9: the planner and saves', () => {
     }
     createSnapshotStore(storage).save(s);
     expect(createSnapshotStore(storage).load()?.gear).toBe(true);
-    expect(SNAPSHOT_VERSION).toBe(37); // solid front counter: layout rule, no new field
+    expect(SNAPSHOT_VERSION).toBe(38); // growth order on the solid front counter; older saves are refused
   });
 });

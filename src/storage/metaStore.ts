@@ -19,7 +19,7 @@ export const META_BAD_KEY = 'cafetycoon.meta.bad';
 export const RECORDS_KEY = 'cafetycoon.records';
 export const META_VERSION = 1;
 const KEEP_RUNS = 20;
-const TIER_RANK: Record<TierId, number> = { stand: 0, cart: 1, cafe: 2 };
+const TIER_RANK: Record<TierId, number> = { cart: 0, stand: 1, cafe: 2 };
 
 export interface MetaSave {
   version: 1;
@@ -39,7 +39,7 @@ export interface MetaSave {
 }
 
 export function emptyMeta(): MetaSave {
-  return { version: 1, weeks: 0, served: 0, bestTier: 'stand', discovered: [], unlocked: [], lastPerk: null, counted: [] };
+  return { version: 1, weeks: 0, served: 0, bestTier: 'cart', discovered: [], unlocked: [], lastPerk: null, counted: [] };
 }
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
@@ -51,7 +51,7 @@ export function earnedPerks(m: Pick<MetaSave, 'weeks' | 'served' | 'bestTier'>):
   const out: PerkId[] = [];
   if (m.weeks >= 1) out.push('nestEgg');
   if (m.served >= PERK_TUNING.pantryServed) out.push('pantry');
-  if (TIER_RANK[m.bestTier] >= TIER_RANK.cart) out.push('wordOfMouth');
+  if (TIER_RANK[m.bestTier] >= TIER_RANK.stand) out.push('wordOfMouth');
   return out;
 }
 
@@ -81,14 +81,14 @@ function sanitizeV1(r: Record<string, unknown>): MetaSave {
     version: 1,
     weeks: num(r.weeks),
     served: num(r.served),
-    bestTier: isTier(r.bestTier) ? r.bestTier : 'stand',
+    bestTier: isTier(r.bestTier) ? r.bestTier : 'cart',
     discovered: Array.isArray(r.discovered) ? [...new Set(r.discovered.filter((d): d is DrinkId => (DRINK_IDS as string[]).includes(d as string)))] : [],
     unlocked: Array.isArray(r.unlocked) ? [...new Set(r.unlocked.filter(isPerkId))] : [],
     lastPerk: isPerkId(r.lastPerk) ? r.lastPerk : null,
     counted: Array.isArray(r.counted)
       ? r.counted
           .filter((c): c is Record<string, unknown> => !!c && typeof c === 'object' && typeof (c as { key?: unknown }).key === 'string')
-          .map((c) => ({ key: c.key as string, served: num(c.served), week: c.week === true, tier: isTier(c.tier) ? c.tier : 'stand' }))
+          .map((c) => ({ key: c.key as string, served: num(c.served), week: c.week === true, tier: isTier(c.tier) ? c.tier : 'cart' }))
           .slice(-KEEP_RUNS)
       : [],
   };
@@ -104,7 +104,7 @@ const runKey = (s: GameState) => `${s.seed}|${s.hostId}`;
 export function foldMeta(prev: MetaSave, state: GameState): { meta: MetaSave; newly: PerkId[] } {
   if (!state.gear || state.dev) return { meta: prev, newly: [] }; // R4 a: a dev run never earns head starts
   const key = runKey(state);
-  const before = prev.counted.find((c) => c.key === key) ?? { key, served: 0, week: false, tier: 'stand' as TierId };
+  const before = prev.counted.find((c) => c.key === key) ?? { key, served: 0, week: false, tier: 'cart' as TierId };
   const served = state.days.reduce((n, d) => n + d.served, 0);
   const week = before.week || ((state.phase === 'weekEnd' || state.phase === 'ended') && !state.bankrupt && state.days.length >= 7);
   const tier: TierId = maxTier(before.tier, state.tier ?? 'cafe');

@@ -291,9 +291,9 @@ export function fridgeVM(state: GameState, voters = 1): FridgeVM {
     ? 'No fridge yet: milk drinks need one, and the condiment bar goes bad overnight without it.'
     : FRIDGES[now].auto
       ? 'Pours milk to the bar by itself, and puts it back at closing.'
-      : tier === 'stand'
-        ? 'Growing into a cart brings a bigger fridge for free.'
-        : tier === 'cart'
+      : tier === 'cart'
+        ? 'Growing into a stand brings a bigger fridge for free.'
+        : tier === 'stand'
           ? 'Growing into a café brings a chrome reach-in for free.'
           : 'Grab milk from the fridge, put a carton out by the steam wand, and put it all back before closing.';
   return { have, cards, note };

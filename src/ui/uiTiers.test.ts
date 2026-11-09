@@ -20,34 +20,34 @@ describe('ui-3.4.0 tier looks', () => {
     expect(tierLook('cafe')).toBe('cafe');
     expect(tierLook(undefined)).toBe('cafe');
     expect([isOutdoor('stand'), isOutdoor('cart'), isOutdoor('cafe')]).toEqual([true, true, false]);
-    expect([barSkin('stand'), barSkin('cart'), barSkin('cafe')]).toEqual(['table', 'cart', 'cabinet']);
+    expect([barSkin('cart'), barSkin('stand'), barSkin('cafe')]).toEqual(['cart', 'stall', 'cabinet']);
   });
   it('the FOR LEASE sign names the next size and its price, and goes away at the café', () => {
     expect(leaseLines('cafe')).toBeNull();
     expect(leaseLines(undefined)).toBeNull();
-    const stand = leaseLines('stand')!;
-    expect(stand.narrow).toBe(false);
-    expect(stand.lines.join(' ')).toMatch(/cart.*\$70/);
     const cart = leaseLines('cart')!;
-    expect(cart.narrow).toBe(true);
-    expect(cart.lines.join(' ')).toMatch(/café.*\$150/);
+    expect(cart.narrow).toBe(false);
+    expect(cart.lines.join(' ')).toMatch(/Stand.*\$70/);
+    const stand = leaseLines('stand')!;
+    expect(stand.narrow).toBe(true);
+    expect(stand.lines.join(' ')).toMatch(/Café.*\$150/);
   });
 });
 
 describe('ui-3.4.0 grow transition', () => {
   it('detects a grow only within the same run and only upward', () => {
     expect(detectGrow(null, { seed: 1, tier: 'cart' })).toBeNull();
-    expect(detectGrow({ seed: 1, tier: 'stand' }, { seed: 1, tier: 'cart' })).toEqual({ from: 'stand', to: 'cart' });
-    expect(detectGrow({ seed: 1, tier: 'cart' }, { seed: 1, tier: 'cafe' })).toEqual({ from: 'cart', to: 'cafe' });
-    expect(detectGrow({ seed: 1, tier: 'stand' }, { seed: 2, tier: 'cart' })).toBeNull();
+    expect(detectGrow({ seed: 1, tier: 'cart' }, { seed: 1, tier: 'stand' })).toEqual({ from: 'cart', to: 'stand' });
+    expect(detectGrow({ seed: 1, tier: 'stand' }, { seed: 1, tier: 'cafe' })).toEqual({ from: 'stand', to: 'cafe' });
+    expect(detectGrow({ seed: 1, tier: 'cart' }, { seed: 2, tier: 'stand' })).toBeNull();
     expect(detectGrow({ seed: 1, tier: 'cart' }, { seed: 1, tier: 'cart' })).toBeNull();
     expect(detectGrow({ seed: 1, tier: 'cafe' }, { seed: 1, tier: 'stand' })).toBeNull();
     expect(growSeen({ seed: 3, tier: undefined } as never)).toEqual({ seed: 3, tier: 'cafe' });
   });
   it('"What you gained" compares line, prices, traffic and rent, and lists unlocks', () => {
-    const g = gainedDiff('stand', 'cart');
-    expect(g.from.name).toBe('Kerbside stand');
-    expect(g.to.name).toBe('Coffee cart');
+    const g = gainedDiff('cart', 'stand');
+    expect(g.from.name).toBe('Coffee cart');
+    expect(g.to.name).toBe('The stand');
     const by = Object.fromEntries(g.rows.map((r) => [r.label, r]));
     expect(by['Line holds']).toMatchObject({ from: '3 people', to: '5 people', tone: 'good' });
     expect(by['Prices you can charge']).toMatchObject({ tone: 'good' });
@@ -60,10 +60,10 @@ describe('ui-3.4.0 grow transition', () => {
     const html = gainedCardHtml(g);
     expect(html).toContain('What you gained');
     expect(html).toContain('data-gained-close');
-    expect(html).toContain('Coffee cart');
+    expect(html).toContain('The stand');
   });
   it('classic runs list new stations and drinks instead of gear slots', () => {
-    const g = gainedDiff('stand', 'cart', false);
+    const g = gainedDiff('cart', 'stand', false);
     expect(g.unlocks.join(' ')).toMatch(/New drinks?:/);
     expect(g.unlocks.join(' ')).not.toMatch(/back-bar/);
   });
@@ -71,13 +71,13 @@ describe('ui-3.4.0 grow transition', () => {
 
 describe('ui-3.4.0 night nudge', () => {
   it('shows when the next size is affordable at night, not on the Gear pick night, not at the café', () => {
-    const s = run('stand');
+    const s = run('cart');
     s.phase = 'night';
     s.day = 2;
     s.cash = 69;
     expect(growNudge(s)).toBeNull();
     s.cash = 70;
-    expect(growNudge(s)).toMatchObject({ tier: 'cart', cost: 70 });
+    expect(growNudge(s)).toMatchObject({ tier: 'stand', cost: 70 });
     s.day = 1;
     expect(growNudge(s)).toBeNull();
     s.day = 3;
@@ -90,14 +90,14 @@ describe('ui-3.4.0 night nudge', () => {
     expect(growNudge(c)).toBeNull();
   });
   it('renders a chip that opens the receipt, where Grow lives (ui-3.7.1)', () => {
-    const s = run('stand');
+    const s = run('cart');
     s.phase = 'night';
     s.day = 2;
     s.cash = 200;
     const h = nightHtml(nightViewModel(s, 'p1'), undefined, null, ui());
     expect(h).toMatch(/data-nudge data-action="drawer" data-d="receipt"/);
     expect(h).not.toContain('data-sub="grow"');
-    expect(h).toContain('You can afford a cart!');
+    expect(h).toContain('You can afford a stand!');
     s.cash = 10;
     expect(nightHtml(nightViewModel(s, 'p1'), undefined, null, ui())).not.toContain('data-nudge');
   });
@@ -133,13 +133,13 @@ describe('ui-3.4.0 new-player tips', () => {
     expect(parseHints('{"seen":["till","bogus","till"],"off":true,"snoozedUntil":5}')).toEqual({ seen: ['till'], off: true, snoozedUntil: 5 });
   });
   it('picks the right tip for the moment', () => {
-    const s = run('stand');
+    const s = run('cart');
     s.phase = 'day';
     s.customers = [];
     expect(hintTriggers(s, 'p1')).toEqual([]);
     s.customers = [{ stage: 'order' } as never];
-    expect(hintTriggers(s, 'p1')).toEqual(['till', 'standPrice']);
-    expect(pickHint(markSeen(NEW_HINTS, 'till'), s, 'p1', 0)).toBe('standPrice');
+    expect(hintTriggers(s, 'p1')).toEqual(['till', 'cartPrice']);
+    expect(pickHint(markSeen(NEW_HINTS, 'till'), s, 'p1', 0)).toBe('cartPrice');
     s.phase = 'night';
     s.day = 2;
     s.cash = 100;

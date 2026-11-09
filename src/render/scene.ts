@@ -174,7 +174,7 @@ export class Scene {
   }
   private lotKey = '';
   private lotTier: TierId | undefined = undefined;
-  /** ui-3.4.0: the stand's sidewalk or the cart's plaza (empty in the café), its props, and the café-only decor. */
+  /** The cart's sidewalk or the stand's stall street (empty in the café), its props, and the café-only decor. */
   private readonly outdoorBack = new Container();
   private outdoorProps: Container[] = [];
   private readonly decor: Container[] = [];
@@ -193,7 +193,8 @@ export class Scene {
   private celebrate(tier: TierId): void {
     const w = sx(layoutFor(tier).width);
     const cy = sy(3);
-    this.fx.spawn(tier === 'cafe' ? 'Grand opening: the café!' : 'Grand re-opening: the cart!', w / 2, cy - 40, 0xf6c35b, 24);
+    const line = tier === 'cafe' ? 'Grand opening: the café!' : tier === 'stand' ? 'Grand re-opening: the stand!' : 'Grand re-opening: the cart!';
+    this.fx.spawn(line, w / 2, cy - 40, 0xf6c35b, 24);
     for (let i = 0; i < 5; i++) this.fx.confetti((w * (i + 0.5)) / 5, cy - 80, 22);
     this.fx.sparkles(w / 2, cy, 12);
   }

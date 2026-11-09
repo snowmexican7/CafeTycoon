@@ -42,9 +42,9 @@ const rush = (s: GameState) => {
 const events = (s: GameState, kind: string) => s.log.filter((e) => e.kind === kind);
 
 describe('Round 3 item 4: the waiting area', () => {
-  it('sizes stand at 0 for the stand, 2 for the cart and 4 for the café', () => {
-    expect(waitingRoom(shop('stand'))).toBe(0);
-    expect(waitingRoom(shop('cart'))).toBe(2);
+  it('sizes the waiting room at 0 for the cart, 2 for the stand and 4 for the café', () => {
+    expect(waitingRoom(shop('cart'))).toBe(0);
+    expect(waitingRoom(shop('stand'))).toBe(2);
     expect(waitingRoom(shop('cafe'))).toBe(4);
   });
 
@@ -61,7 +61,7 @@ describe('Round 3 item 4: the waiting area', () => {
   }
 
   it('browsers join the line in arrival order as space frees', () => {
-    let s = shop('cart', 1000);
+    let s = shop('stand', 1000);
     fill(s);
     for (let i = 0; i < 600 && (s.waiting?.length ?? 0) < 2; i++) s = spawnCustomers(s);
     const [a, b] = s.waiting!;
@@ -78,7 +78,7 @@ describe('Round 3 item 4: the waiting area', () => {
   });
 
   it('a new arrival never jumps ahead of the browsers', () => {
-    let s = shop('cart', 1000);
+    let s = shop('stand', 1000);
     fill(s);
     for (let i = 0; i < 600 && (s.waiting?.length ?? 0) < 2; i++) s = spawnCustomers(s);
     const [a] = s.waiting!;
