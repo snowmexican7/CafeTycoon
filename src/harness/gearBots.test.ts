@@ -457,7 +457,10 @@ describe('item 5: level-up drinks (G6/G6b/G6c, G10a) and the recipe clash', () =
     let s = FULL({ standIns: 2 });
     s.customers = NEW.map((d, i) => rung(1300 + i, d)); // already rung: this is about the drinks (ringing: pickupBots.test.ts)
     s = serveAll(s, 60 * 300);
-    expect(s.today.served).toBe(NEW.length);
+    // Every planted ticket is made. A drive-up (DRIVE_UP_EVERY, about one a day) may be served too.
+    for (const d of NEW) expect(s.today.drinks?.[d] ?? 0).toBeGreaterThan(0);
+    expect(s.today.served).toBeGreaterThanOrEqual(NEW.length);
+    expect(s.today.served).toBeLessThanOrEqual(NEW.length + 6);
     expect(s.today.wasted ?? 0).toBe(0);
   });
 });

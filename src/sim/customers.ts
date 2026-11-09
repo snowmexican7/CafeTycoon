@@ -28,6 +28,7 @@ import { menuDrinks, unlockedDrinks } from './unlocks';
 import { comboDrinks, latteAddon, loseTicket, makeTicket, ORDERS } from './orders';
 import { isMilkDrink, milkPush } from './lattes';
 import { addCustomerAsks } from './handmade';
+import { driveUpThisTick, streetHash } from './driveUp';
 import { promoteWaiting, quietLeave, sendToBrowse, waitingFree } from './line';
 
 const DRINKS: DrinkId[] = DRINK_IDS;
@@ -97,34 +98,70 @@ function priceWalkout(state: GameState, menu: DrinkId[], m: Modifiers): void {
  * the list-price rate: a roll the price takes away (below list, above the priced rate) is a price walkout. Round 3
  * item 4: browsers move up first (so an arrival never jumps them), an arrival may leave quietly during a line
  * complaint, and with the line full they browse in the waiting area while it has room.
+ * After that trial, `addDriveUp` may add one extra ordinary customer. The walk-in roll is unchanged.
  */
 export function spawnCustomers(state: GameState): GameState {
+  spawnWalkIn(state);
+  addDriveUp(state);
+  return state;
+}
+
+function spawnWalkIn(state: GameState): void {
   promoteWaiting(state);
   const menu = availableDrinks(state);
-  if (menu.length === 0) return soldOutWalkup(state);
+  if (menu.length === 0) {
+    soldOutWalkup(state);
+    return;
+  }
   const m = computeModifiers(state);
   const list = (ECONOMY.baseArrivalsPerSecond * m.traffic) / TICK_RATE;
   const p = list * priceTraffic(state, menu, m);
   const roll = rngNext(state);
   if (roll >= p) {
     if (roll < list) priceWalkout(state, menu, m);
-    return state;
+    return;
   }
-  if (gearAskedFor(state, menu)) return state; // Gear G7c: wanted something you don't serve
-  if (quietLeave(state)) return state; // Round 3 item 4: "Line's too long!"
+  if (gearAskedFor(state, menu)) return; // Gear G7c: wanted something you don't serve
+  if (quietLeave(state)) return; // Round 3 item 4: "Line's too long!"
   if (state.customers.length >= queueCapacity(m, tierInfo(state).queue)) {
     if (waitingFree(state) <= 0) {
       state.today.turnedAway += 1;
-      return state;
+      return;
     }
     const c = addCustomer(state, rollKind(state));
     if (c) sendToBrowse(state, c);
-    return state;
+    return;
   }
   // B8: rare Wi-Fi camper takes a seat instead of ordering.
-  if (maybeSpawnCamper(state)) return state;
+  if (maybeSpawnCamper(state)) return;
   addCustomer(state, rollKind(state));
-  return state;
+}
+
+/**
+ * A driver who parked out front, on top of whoever the walk-in roll already added.
+ * No `rngNext`: the drink comes from the seed and the tick, patience is a normal single order,
+ * and a full queue plus a full waiting area means the car drives on. See `DRIVE_UP_EVERY`.
+ */
+export function addDriveUp(state: GameState): boolean {
+  // Doors locked (closing wrap-up, night): the car does not stop. Walk-ins have already stopped.
+  if (state.phase !== 'day') return false;
+  if (!driveUpThisTick(state.seed, state.tick)) return false;
+  const menu = availableDrinks(state);
+  if (menu.length === 0) return false;
+  const m = computeModifiers(state);
+  // A card that stops walk-ins (traffic ×0) stops drive-ups too. They are extra people, not a separate crowd.
+  if (m.traffic <= 0) return false;
+  const cap = queueCapacity(m, tierInfo(state).queue);
+  if (state.customers.length >= cap && waitingFree(state) <= 0) return false;
+  const drink = menu[streetHash(state.seed, state.tick, 7) % menu.length]!;
+  const wait = drinkWait(state, drink) * pricePatience(state, drink);
+  const patienceMax = patienceFor(m, wait * areaPatienceMul(state, [drink]));
+  const queueFull = state.customers.length >= cap;
+  const customer: Customer = { id: state.nextCustomerId++, drink, patienceLeft: patienceMax, patienceMax };
+  if (state.gear === true) customer.stage = 'order';
+  state.customers.push(customer);
+  if (queueFull) sendToBrowse(state, customer);
+  return true;
 }
 
 /** Round 6 block 5: ticks of the open grace window still to go (0 once normal spawning has resumed). */

@@ -16,7 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- **A street out front.** The view drops a little so you can see the road in front of the shop, on the cart, the stand and the café. Cars drive by. Now and then one of them has a short comment ("Smells good", "That line though", "Is that a café yet?"). Once in a while, while the doors are open, a car stops and the driver comes in as an ordinary extra customer, on top of the people already walking in. Held for review.
 
 ## 3.11.0 — 2026-11-09 · Playtest feel
 

@@ -31,6 +31,8 @@ import { GEAR } from '../data/gear';
 import { buildWall } from './layers/wall';
 import { buildLot } from './layers/lot';
 import { buildOutdoor } from './layers/outdoor';
+import { Street } from './layers/street';
+import { ambulanceOnKerb } from './streetModel';
 import { barSkin, isOutdoor, tierLook } from './tierLook';
 import { layoutFor } from '../data/layout';
 import { availableDrinks } from '../sim/customers';
@@ -69,6 +71,8 @@ export class Scene {
   private readonly counts = new CountsLayer();
   private readonly sink: SinkVisuals;
   private readonly fridge: FridgeVisuals;
+  /** Road and passing cars under the shop. Render-only; see streetModel.ts. */
+  private readonly street = new Street(SCENE_WIDTH, SCENE_HEIGHT);
   /** FB2 C10: valid set-down outlines while carrying a machine in the pre-open. */
   private readonly ghosts = new GhostSpots();
   /** Shots per player as last drawn, to pop a "+30%" when someone drinks. */
@@ -102,7 +106,7 @@ export class Scene {
     this.fridge = new FridgeVisuals(this.depth);
     this.overlay.addChild(this.stationOverlay.root, this.pickup.overlay, this.sink.overlay, this.fridge.overlay, this.counts.root, this.tags, this.chaos.overlay, this.ghosts.root);
     // ui-3.4.0: the outdoor backdrop (stand, cart) covers the café wallpaper and floor; the menu board stays on top.
-    this.root.addChild(this.wall.root, buildLamps(), floor, this.outdoorBack, this.wall.menuBoard, this.soldOutSign, this.chaos.floor, this.pickup.floor, this.depth, this.lot, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
+    this.root.addChild(this.wall.root, buildLamps(), floor, this.outdoorBack, this.wall.menuBoard, this.soldOutSign, this.chaos.floor, this.pickup.floor, this.depth, this.lot, this.street.root, this.lighting.root, this.eventFx.wash, this.overlay, this.fx.root);
   }
 
   /** FB1 WP4: a red "SOLD OUT" strip hung across the chalkboard menu while nothing can be made. */
@@ -262,7 +266,9 @@ export class Scene {
     const poses = this.gags.update(state.players, simAge, now, (p) => fellAtScreen(p.espresso?.fellAt ?? p.pos));
     const lay = layoutFor(state.tier);
     this.actors.spots = { gear: state.gear === true, width: lay.width, queueSlots: lay.queueSlots, till: LAYOUT.stations.find((s) => s.kind === 'counter')!.pos, pickup: lay.pickup };
-    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses, waitingToDraw(state), state.tier ?? 'cafe');
+    const kerbBusy = ambulanceOnKerb(state.players, state.tick);
+    this.street.update(state, kerbBusy);
+    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses, waitingToDraw(state), state.tier ?? 'cafe', state.seed, state.tick, kerbBusy, state.phase === 'day');
     this.pickup.update(state, now);
     this.sink.update(state, localId, now);
     this.fridge.update(state, localId, now);

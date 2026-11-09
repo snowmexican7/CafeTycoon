@@ -10,7 +10,14 @@ import type { StationKind } from '../sim/types';
  */
 export const TILE = 64;
 export const WALL = 120;
-export const FRONT = 56;
+/**
+ * Pixels under the floor. The first `SIDEWALK` is the kerb the queue stands above (unchanged).
+ * `STREET_BAND` is the road the cars drive on. A single tile was a little short: car roofs met
+ * the espresso ambulance, so the band is a bit more than 64.
+ */
+export const SIDEWALK = 56;
+export const STREET_BAND = 96;
+export const FRONT = SIDEWALK + STREET_BAND;
 
 export const sx = (tilesX: number) => tilesX * TILE;
 export const sy = (tilesY: number) => WALL + tilesY * TILE;

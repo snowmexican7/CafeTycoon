@@ -15,6 +15,7 @@ import { drawBarCaddy, drawCarton } from './fridgeArt';
 import { lookArt, type BodyStyle, type HairStyle, type OutfitStyle } from '../lookModel';
 import { CROWN_RY, HEAD, HEAD_TOP, frontHairGeom } from '../hairGeom';
 import { waitingSpots } from '../waitingModel';
+import { driveUpOrigin } from '../streetModel';
 
 /** Feet sit a little below the sim centre so a barista reads as standing on its tile. */
 export const FEET_OFFSET = 0.3;
@@ -369,6 +370,8 @@ interface CustomerSprite {
   companions: Graphics[];
   count: Text | null;
   nameTag: Container | null;
+  /** Stepped out of a parked car: slide up to the line a little slower than a door arrival. */
+  fromKerb: boolean;
 }
 
 /**
@@ -399,6 +402,10 @@ export class Actors {
     collapsed: Record<PlayerId, CollapsePose> = {},
     waiting: Customer[] = [],
     tier: TierId = 'cafe',
+    seed = 0,
+    tick = 0,
+    curbBusy = false,
+    doorsOpen = true,
   ): void {
     const seen = new Set<PlayerId>();
     players.forEach((p, index) => {
@@ -508,15 +515,20 @@ export class Actors {
     const seenC = new Set<number>();
     const spots = this.spots;
     const where = customerSpots(customers, spots?.gear === true, spots ?? { width: LAYOUT.width, queueSlots: this.queueSlots, till: this.queueSlots[0], pickup: this.queueSlots[0] });
+    let newest = -1;
+    for (let n = 0; n < customers.length; n++) if (customers[n]!.id > newest) newest = customers[n]!.id;
+    for (let n = 0; n < waiting.length; n++) if (waiting[n]!.id > newest) newest = waiting[n]!.id;
     customers.forEach((c, i) => {
       seenC.add(c.id);
       const slot = where[i];
       const targetX = sx(slot.x);
       const targetY = sy(slot.y) + CUSTOMER_FEET_PX;
       let sprite = this.customers.get(c.id);
-      if (!sprite) sprite = this.addCustomer(c, targetX + TILE * 0.8, targetY);
-      sprite.x += (targetX - sprite.x) * 0.15;
-      sprite.y += (targetY - sprite.y) * 0.15;
+      if (!sprite) {
+        const kerb = driveUpOrigin(seed, tick, c.id, newest, curbBusy, doorsOpen);
+        sprite = this.addCustomer(c, kerb ? kerb.x : targetX + TILE * 0.8, kerb ? kerb.y : targetY, kerb != null);
+      }
+      this.stepToward(sprite, targetX, targetY, 0.15);
       const feet = sprite.y;
       const shuffling = Math.abs(targetX - sprite.x) > 1 || Math.abs(targetY - sprite.y) > 1;
       sprite.root.position.set(sprite.x, feet + (shuffling ? -Math.abs(Math.sin(timeSec * 12)) * 2 : 0));
@@ -591,9 +603,11 @@ export class Actors {
       const targetX = sx(slot.x);
       const targetY = sy(slot.y) + CUSTOMER_FEET_PX;
       let sprite = this.browsers.get(c.id);
-      if (!sprite) sprite = this.addBrowser(c, targetX + TILE * 0.4, targetY);
-      sprite.x += (targetX - sprite.x) * 0.12;
-      sprite.y += (targetY - sprite.y) * 0.12;
+      if (!sprite) {
+        const kerb = driveUpOrigin(seed, tick, c.id, newest, curbBusy, doorsOpen);
+        sprite = this.addBrowser(c, kerb ? kerb.x : targetX + TILE * 0.4, kerb ? kerb.y : targetY, kerb != null);
+      }
+      this.stepToward(sprite, targetX, targetY, 0.12);
       const feet = sprite.y;
       const bob = Math.sin(timeSec * 2.4 + c.id) * 1.5;
       sprite.root.position.set(sprite.x, feet + bob);
@@ -624,7 +638,17 @@ export class Actors {
   }
 
   /** A waiting-area browser: same body as a queue customer, no companions / name tag. */
-  private addBrowser(c: Customer, startX: number, startY: number): CustomerSprite {
+  /** Slide toward the queue. A driver from the kerb takes about a second; everyone else keeps the old step. */
+  private stepToward(sprite: CustomerSprite, targetX: number, targetY: number, near: number): void {
+    const dx = targetX - sprite.x;
+    const dy = targetY - sprite.y;
+    const far = sprite.fromKerb && (dx > 24 || dx < -24 || dy > 24 || dy < -24);
+    sprite.x += dx * (far ? 0.045 : near);
+    sprite.y += dy * (far ? 0.045 : near);
+    if (sprite.fromKerb && !far) sprite.fromKerb = false;
+  }
+
+  private addBrowser(c: Customer, startX: number, startY: number, fromKerb = false): CustomerSprite {
     const root = new Container();
     const body = new Graphics();
     drawPerson(body, { ...customerLook(c.id), facing: 'down' });
@@ -633,7 +657,7 @@ export class Actors {
     const extra = new Graphics();
     root.addChild(body, extra, bubble);
     this.depthLayer.addChild(root);
-    const sprite: CustomerSprite = { root, body, bubble, extra, x: startX, y: startY, companions: [], count: null, nameTag: null };
+    const sprite: CustomerSprite = { root, body, bubble, extra, x: startX, y: startY, companions: [], count: null, nameTag: null, fromKerb };
     this.browsers.set(c.id, sprite);
     return sprite;
   }
@@ -727,7 +751,7 @@ export class Actors {
     return sprite;
   }
 
-  private addCustomer(c: Customer, startX: number, startY: number): CustomerSprite {
+  private addCustomer(c: Customer, startX: number, startY: number, fromKerb = false): CustomerSprite {
     const root = new Container();
     const body = new Graphics();
     const look = customerLook(c.id);
@@ -768,7 +792,7 @@ export class Actors {
       root.addChild(nameTag);
     }
     this.depthLayer.addChild(root);
-    const sprite: CustomerSprite = { root, body, bubble, extra, x: startX, y: startY, companions, count, nameTag };
+    const sprite: CustomerSprite = { root, body, bubble, extra, x: startX, y: startY, companions, count, nameTag, fromKerb };
     this.customers.set(c.id, sprite);
     return sprite;
   }
