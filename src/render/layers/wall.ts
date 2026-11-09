@@ -4,7 +4,7 @@ import { FONT_BODY, MAT, PALETTE, WALL } from '../theme';
 import { label, vertical } from './draw';
 
 /** The back wall band (render-only, above sim row 0): wallpaper, shelf, chalkboard menu, window, wainscot. */
-export function buildWall(width: number): { root: Container; menuBoard: Container; setNight(night: boolean): void; setMenu(rows: readonly [string, string][]): void } {
+export function buildWall(width: number): { root: Container; menuBoard: Container; setNight(night: boolean): void; setMenu(rows: readonly [string, string][]): void; setSign(text: string | null): void } {
   const root = new Container();
   const g = new Graphics();
   root.addChild(g);
@@ -70,6 +70,32 @@ export function buildWall(width: number): { root: Container; menuBoard: Containe
   // Until the scene hands over the live menu: the three classics at list price.
   setMenu([['Espresso', ECONOMY.prices.espresso.toFixed(2)], ['Latte', ECONOMY.prices.latte.toFixed(2)], ['Cold brew', ECONOMY.prices.coldBrew.toFixed(2)]]);
 
+  // Specialty shops: a small plaque on the left wall, clear of the chalkboard (x 378) and the machines below.
+  const sign = new Container();
+  sign.visible = false;
+  const signBoard = new Graphics();
+  sign.addChild(signBoard);
+  const signText = label('Café', 18, 0x3a2418, '800');
+  sign.addChild(signText);
+  let signKey = '';
+  const setSign = (text: string | null) => {
+    const next = text ?? '';
+    if (next === signKey) return;
+    signKey = next;
+    sign.visible = next.length > 0;
+    if (!next) return;
+    signText.text = next;
+    const measured = signText.width > 12 ? signText.width : next.length * 11;
+    const w = Math.max(108, Math.ceil(measured) + 28);
+    const h = 40;
+    const x = 18;
+    const y = 62;
+    signBoard.clear();
+    signBoard.moveTo(x + w / 2, y - 16).lineTo(x + w / 2, y).stroke({ width: 2, color: MAT.trim });
+    signBoard.roundRect(x, y, w, h, 6).fill(0xf6e2c4).stroke({ width: 4, color: 0x6b4430 });
+    signText.position.set(x + w / 2, y + h / 2 + 1);
+  };
+
   // hanging plant
   g.moveTo(560, 0).lineTo(560, 18).stroke({ width: 2, color: MAT.trim });
   g.poly([548, 18, 572, 18, 568, 30, 552, 30]).fill(0xe6a160);
@@ -104,11 +130,13 @@ export function buildWall(width: number): { root: Container; menuBoard: Containe
   for (let x = 8; x < width; x += 48) w.roundRect(x, WALL - 24, 38, 18, 3).stroke({ width: 2, color: MAT.wainscotDk, alpha: 0.55 });
   w.rect(0, WALL - 4, width, 4).fill(MAT.trim);
   root.addChild(w);
+  root.addChild(sign);
 
   return {
     root,
     menuBoard,
     setMenu,
+    setSign,
     setNight(night) {
       if (dayGlass.visible === !night) return;
       dayGlass.visible = !night;

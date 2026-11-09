@@ -35,6 +35,7 @@ import { buildOutdoor } from './layers/outdoor';
 import { barSkin, isOutdoor, tierLook } from './tierLook';
 import { layoutFor } from '../data/layout';
 import { availableDrinks } from '../sim/customers';
+import { shopFacing } from '../sim/specialty';
 import { menuDrinks } from '../sim/unlocks';
 import { label } from './layers/draw';
 import { FRONT, MAT, PLAYER_COLORS, TILE as THEME_TILE, WALL, isNightLook, sx, sy } from './theme';
@@ -219,6 +220,8 @@ export class Scene {
 
     const mods = computeModifiers(state);
     this.wall.setMenu(wallMenuRows(state, mods.price));
+    const showSign = state.phase === 'day' || state.phase === 'closing';
+    this.wall.setSign(showSign ? shopFacing(state)?.badge ?? null : null);
     const ring = ringBar(state);
     const groupParent = (s: (typeof state.stations)[number]) =>
       s.twin && s.kind === 'espresso'

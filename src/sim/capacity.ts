@@ -19,7 +19,7 @@ import { SUPPLY_ID } from '../data/layout';
 import { GEAR } from '../data/gear';
 import type { Modifiers } from './effects';
 import { gearSpeed, POD_SHOT } from './gear';
-import { availableDrinks, orderWeight, queueCapacity } from './customers';
+import { availableDrinks, identityMul, orderWeight, queueCapacity } from './customers';
 import { tierInfo, tierOf } from './growth';
 import { latteAddonChance, ORDERS } from './orders';
 import { milkPush } from './lattes';
@@ -45,8 +45,9 @@ export function dripPotCups(state?: GameState): number {
 
 /** Each menu drink's weight in the order draw: the same weights `drawDrink` uses, including the shop's identity. */
 export function shareWeights(state: GameState, menu: DrinkId[], m: Modifiers): number[] {
-  const push = milkPush(state, menu, m); // Round 3 item 1; 1 once a specialty or fast-casual identity is set
-  return menu.map((d) => orderWeight(state, d, m, push));
+  const push = milkPush(state, menu, m); // Round 3 item 1; 1 once a named identity is set
+  const identity = identityMul(state, menu, m);
+  return menu.map((d) => orderWeight(state, d, m, push, identity));
 }
 
 /**

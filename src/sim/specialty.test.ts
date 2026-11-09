@@ -6,6 +6,7 @@ import { ECONOMY } from '../data/economy';
 import { computeModifiers } from './effects';
 import { finishDay } from './closing';
 import { spawnCustomers, drawDrink, oneOffLeave } from './customers';
+import { priceForecast } from './pricing';
 import { milkPush } from './lattes';
 import { morningNotes } from './describe';
 import { rngNext } from './rng';
@@ -56,13 +57,11 @@ function gearNight(): GameState {
 }
 
 /** Cups in the identity's families, as a share of `draws` (same RNG start if the caller resets `state.rng`). */
-function familyShare(s: GameState, menu: DrinkId[], want: 'espressoMilky' | 'filter', draws = 8000): number {
+function familyShare(s: GameState, menu: DrinkId[], want: 'milky' | 'espresso' | 'filter', draws = 8000): number {
   const m = computeModifiers(s);
   let n = 0;
   for (let i = 0; i < draws; i++) {
-    const fam = DRINK_FAMILY[drawDrink(s, menu, m)];
-    const hit = want === 'filter' ? fam === 'filter' : fam === 'espresso' || fam === 'milky';
-    if (hit) n++;
+    if (DRINK_FAMILY[drawDrink(s, menu, m)] === want) n++;
   }
   return n / draws;
 }
@@ -192,20 +191,33 @@ describe('specialty shops: orders follow the identity, and the wand push steps a
     expect(milkPush(s, WIDE, m)).toBe(1);
   });
 
-  it('sells more espresso and lattes once it is a latte bar, on a short menu and a wide one', () => {
+  it('a latte bar sells more lattes, and an espresso bar more espresso, on a short menu and a wide one', () => {
     for (const menu of [EARLY, WIDE]) {
-      const s = gearDay(5, WAND);
-      const rng = s.rng;
-      const before = familyShare(s, menu, 'espressoMilky');
-      s.rng = rng;
-      s.shopIdentity = 'specialty';
-      s.soldWindow = [sold(1, { latte: 70, espresso: 10, drip: 10, coldBrew: 10 })];
-      const after = familyShare(s, menu, 'espressoMilky');
-      expect(after, `${menu.join(',')} before ${before.toFixed(3)} after ${after.toFixed(3)}`).toBeGreaterThan(before + 0.02);
+      const latteShop = gearDay(5, WAND);
+      const rng = latteShop.rng;
+      const beforeMilk = familyShare(latteShop, menu, 'milky');
+      latteShop.rng = rng;
+      latteShop.shopIdentity = 'specialty';
+      latteShop.soldWindow = [sold(1, { latte: 70, espresso: 10, drip: 10, coldBrew: 10 })];
+      const afterMilk = familyShare(latteShop, menu, 'milky');
+      const milkDelta = afterMilk - beforeMilk;
+      expect(milkDelta, `${menu.join(',')} milky ${beforeMilk.toFixed(3)} -> ${afterMilk.toFixed(3)}`).toBeGreaterThan(0.08);
+      expect(milkDelta).toBeLessThan(0.12);
+
+      const espressoShop = gearDay(5, WAND);
+      const rngE = espressoShop.rng;
+      const beforeEsp = familyShare(espressoShop, menu, 'espresso');
+      espressoShop.rng = rngE;
+      espressoShop.shopIdentity = 'specialty';
+      espressoShop.soldWindow = [sold(1, { espresso: 60, latte: 8, drip: 16, coldBrew: 16 })];
+      const afterEsp = familyShare(espressoShop, menu, 'espresso');
+      const espDelta = afterEsp - beforeEsp;
+      expect(espDelta, `${menu.join(',')} espresso ${beforeEsp.toFixed(3)} -> ${afterEsp.toFixed(3)}`).toBeGreaterThan(0.08);
+      expect(espDelta).toBeLessThan(0.12);
     }
   });
 
-  it('sells more drip once it is a quick cup', () => {
+  it('sells more drip once it is a quick cup, about 13 points', () => {
     for (const menu of [EARLY, WIDE]) {
       const s = gearDay(5, WAND);
       const rng = s.rng;
@@ -214,18 +226,42 @@ describe('specialty shops: orders follow the identity, and the wand push steps a
       s.shopIdentity = 'fastCasual';
       s.soldWindow = [sold(1, { drip: 70, latte: 15, espresso: 10, coldBrew: 5 })];
       const after = familyShare(s, menu, 'filter');
-      expect(after, `${menu.join(',')} before ${before.toFixed(3)} after ${after.toFixed(3)}`).toBeGreaterThan(before + 0.02);
+      const delta = after - before;
+      expect(delta, `${menu.join(',')} filter ${before.toFixed(3)} -> ${after.toFixed(3)}`).toBeGreaterThan(0.11);
+      expect(delta).toBeLessThan(0.15);
     }
+  });
+
+  it('the night forecast, rough guess included, gives the named drink more orders', () => {
+    const s = gearDay(5, WAND);
+    // One barista pours so few cups that rounding the guess to 5 hides a real lift. A full crew does not.
+    for (const [id, name] of [['p2', 'A'], ['p3', 'B'], ['p4', 'C']] as const) {
+      s.players.push({ ...s.players[0]!, id, name, connected: true });
+    }
+    const menu = EARLY;
+    const m = computeModifiers(s);
+    const walkIns = ECONOMY.baseArrivalsPerSecond * s.settings.dayLengthSec * m.traffic;
+    const beforeExact = priceForecast(s, menu, m, walkIns, true);
+    const beforeRough = priceForecast(s, menu, m, walkIns, false);
+    s.shopIdentity = 'specialty';
+    s.soldWindow = [sold(1, { latte: 70, espresso: 10, drip: 10, coldBrew: 10 })];
+    const afterExact = priceForecast(s, menu, m, walkIns, true);
+    const afterRough = priceForecast(s, menu, m, walkIns, false);
+    const orders = (lines: { drink: DrinkId; orders: number }[], drink: DrinkId) => lines.find((l) => l.drink === drink)!.orders;
+    expect(orders(afterExact, 'latte')).toBeGreaterThan(orders(beforeExact, 'latte'));
+    expect(orders(afterExact, 'latte')).toBeGreaterThan(orders(afterExact, 'coldBrew'));
+    expect(orders(afterRough, 'latte')).toBeGreaterThan(orders(beforeRough, 'latte'));
+    expect(afterRough.every((l) => l.rough)).toBe(true);
   });
 
   it('a neighbourhood name does not move the mix', () => {
     const s = gearDay(5, WAND);
     const rng = s.rng;
-    const before = familyShare(s, WIDE, 'espressoMilky', 2000);
+    const before = familyShare(s, WIDE, 'milky', 2000);
     s.rng = rng;
     s.shopIdentity = 'neighbourhood';
     s.soldWindow = [sold(1, { latte: 28, espresso: 22, drip: 28, coldBrew: 22 })];
-    const after = familyShare(s, WIDE, 'espressoMilky', 2000);
+    const after = familyShare(s, WIDE, 'milky', 2000);
     expect(after).toBeCloseTo(before, 5);
   });
 });

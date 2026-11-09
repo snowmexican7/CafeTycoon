@@ -33,15 +33,15 @@ export const SPECIALTY = {
   /** Stay a quick cup until filter falls below this. */
   holdFastPct: 40,
   /**
-   * `drawDrink` multiplier on espresso and milky while specialty.
-   * The plan's draft was 1.4. On a four-drink menu the wand push already puts espresso and
-   * milk near 62% of orders, and 1.4 with that push turned off slips under it. 1.8 stays
-   * ahead of the wand (the earned shop sells more of what it is known for) without stacking
-   * both systems.
+   * Extra share of orders for the named family, on top of the mix the shop would draw with the
+   * wand's latte push still on. A latte bar lifts milky drinks, an espresso bar lifts espresso,
+   * a quick cup lifts filter. Solved per menu so turning the wand push off cannot drop the
+   * named drinks. Capped so one family cannot take the whole order book.
    */
-  specialtyPull: 1.8,
-  /** `drawDrink` multiplier on filter while fast-casual. The plan's draft, and it already lifts drip. */
-  fastPull: 1.5,
+  latteLift: 0.1,
+  espressoLift: 0.1,
+  fastLift: 0.13,
+  maxShare: 0.85,
   /** A family under this percent of the window is the light side. An off-menu ask comes from there. */
   lightPct: 15,
   /** Chance an arrival who would have ordered asks for a light-side drink and leaves. */
@@ -122,18 +122,36 @@ export function noteShopIdentity(state: GameState): void {
   state.soldWindow = window;
 }
 
-/** True when the wand's latte push should get out of the way (specialty or fast-casual, not neighbourhood). */
+/** True when the wand's latte push should get out of the way (a named shop, not a neighbourhood café). */
 export function identityStepsAside(state: GameState): boolean {
   return state.shopIdentity === 'specialty' || state.shopIdentity === 'fastCasual';
 }
 
-/** Extra order weight for this drink from the shop's identity (1 when the identity does not pull it). */
-export function identityWeight(state: GameState, drink: DrinkId): number {
-  const fam: DrinkFamily | null = DRINK_FAMILY[drink];
-  if (!fam) return 1;
-  if (state.shopIdentity === 'specialty' && (fam === 'espresso' || fam === 'milky')) return SPECIALTY.specialtyPull;
-  if (state.shopIdentity === 'fastCasual' && fam === 'filter') return SPECIALTY.fastPull;
-  return 1;
+/** Which shop the player is looking at. A specialty shop is a latte bar unless espresso outsells milk. */
+export function shopKind(state: GameState): 'latte' | 'espresso' | 'fast' | 'neighbourhood' | null {
+  if (state.gear !== true || !state.shopIdentity) return null;
+  if (state.shopIdentity === 'neighbourhood') return 'neighbourhood';
+  if (state.shopIdentity === 'fastCasual') return 'fast';
+  const shares = familyShares(state.soldWindow ?? []);
+  return shares.espresso > shares.milky ? 'espresso' : 'latte';
+}
+
+/** The family this identity pulls. Null for a neighbourhood café and before any name is set. */
+export function namedFamily(state: GameState): DrinkFamily | null {
+  const kind = shopKind(state);
+  if (kind === 'latte') return 'milky';
+  if (kind === 'espresso') return 'espresso';
+  if (kind === 'fast') return 'filter';
+  return null;
+}
+
+/** How many extra points of the order book the named family should gain, over the wand-push mix. */
+export function namedLift(state: GameState): number {
+  const kind = shopKind(state);
+  if (kind === 'latte') return SPECIALTY.latteLift;
+  if (kind === 'espresso') return SPECIALTY.espressoLift;
+  if (kind === 'fast') return SPECIALTY.fastLift;
+  return 0;
 }
 
 /** Menu drinks whose family is under `lightPct` of the window. Empty when the window has no cups. */
@@ -197,19 +215,20 @@ export function shopFacing(state: GameState): ShopFacing | null {
   const days = overDays(state.soldWindow.length);
   if (id === 'specialty') {
     const espresso = shares.espresso > shares.milky;
+    const known = espresso ? 'espresso' : 'lattes';
     return {
       id,
       badge: espresso ? 'Espresso bar' : 'Latte bar',
-      demand: 'People ask for espresso and lattes more often',
-      line: `This shop is known for ${espresso ? 'espresso' : 'lattes'}. Over ${days}, ${mix}. People walking in ask for espresso and lattes more often.`,
+      demand: espresso ? 'People ask for espresso more often' : 'People ask for lattes more often',
+      line: `This shop is known for ${known}. Over ${days}, ${mix}. People walking in ask for ${known} more often.`,
     };
   }
   if (id === 'fastCasual') {
     return {
       id,
       badge: 'Quick cup',
-      demand: 'People ask for drip more often',
-      line: `This shop is a quick cup counter, known for drip. Over ${days}, ${mix}. People walking in ask for drip more often.`,
+      demand: 'People ask for quick drip more often',
+      line: `This shop is a quick cup counter, known for quick drip. Over ${days}, ${mix}. People walking in ask for quick drip more often.`,
     };
   }
   const line = shares.total <= 0

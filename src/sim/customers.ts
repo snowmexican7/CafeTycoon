@@ -26,8 +26,8 @@ import { checkoutFee } from './checkout';
 import { tierInfo } from './growth';
 import { menuDrinks, unlockedDrinks } from './unlocks';
 import { comboDrinks, latteAddon, loseTicket, makeTicket, ORDERS } from './orders';
-import { isMilkDrink, milkPush } from './lattes';
-import { identityStepsAside, identityWeight, lightDrinks, SPECIALTY } from './specialty';
+import { isMilkDrink, milkPush, milkPushAmount } from './lattes';
+import { identityStepsAside, lightDrinks, namedFamily, namedLift, SPECIALTY } from './specialty';
 import { addCustomerAsks } from './handmade';
 import { promoteWaiting, quietLeave, sendToBrowse, waitingFree } from './line';
 
@@ -149,15 +149,54 @@ export function spawnFan(state: GameState): Customer | null {
   return c;
 }
 
-/** One menu drink's weight in the order draw: forecast, bias, price, gear, the wand's latte push, and the shop's identity. */
-export function orderWeight(state: GameState, drink: DrinkId, m: Modifiers, push: number): number {
-  return m.orderBias[drink] * DRINK_INFO[drink].bias * demandFactor(state, drink) * gearPullMul(state, drink) * (isMilkDrink(drink) ? push : 1) * identityWeight(state, drink);
+/** Weight of one drink before the shop's identity (forecast, bias, price, gear, and the wand push when it is passed). */
+function plainWeight(state: GameState, drink: DrinkId, m: Modifiers, push: number): number {
+  return m.orderBias[drink] * DRINK_INFO[drink].bias * demandFactor(state, drink) * gearPullMul(state, drink) * (isMilkDrink(drink) ? push : 1);
+}
+
+/**
+ * How much to scale the named family so its share of orders is `namedLift` above the mix the wand
+ * push would have drawn. 1 when this shop has no named family. The wand push is off while an
+ * identity holds; this puts that share back, plus the lift, so the named drinks do not fall.
+ */
+export function identityMul(state: GameState, menu: DrinkId[], m: Modifiers): number {
+  const fam = namedFamily(state);
+  const lift = namedLift(state);
+  if (!fam || lift <= 0 || menu.length === 0) return 1;
+  const push = milkPushAmount(state, menu, m);
+  let namedBefore = 0;
+  let restBefore = 0;
+  let namedRaw = 0;
+  let restRaw = 0;
+  for (const d of menu) {
+    const raw = plainWeight(state, d, m, 1);
+    const before = plainWeight(state, d, m, push);
+    if (DRINK_FAMILY[d] === fam) {
+      namedBefore += before;
+      namedRaw += raw;
+    } else {
+      restBefore += before;
+      restRaw += raw;
+    }
+  }
+  const beforeTotal = namedBefore + restBefore;
+  if (beforeTotal <= 0 || namedRaw <= 0 || restRaw <= 0) return 1;
+  const target = Math.min(SPECIALTY.maxShare, namedBefore / beforeTotal + lift);
+  if (target <= 0 || target >= 1) return 1;
+  return (target * restRaw) / ((1 - target) * namedRaw);
+}
+
+/** One menu drink's weight in the order draw: the plain weight, and the identity's family boost. */
+export function orderWeight(state: GameState, drink: DrinkId, m: Modifiers, push: number, identity = 1): number {
+  const fam = DRINK_FAMILY[drink];
+  const boosted = fam !== null && fam === namedFamily(state) ? identity : 1;
+  return plainWeight(state, drink, m, push) * boosted;
 }
 
 /** Weighted drink draw over the menu, biased by the café's order modifiers (one rngNext). */
 export function drawDrink(state: GameState, menu: DrinkId[], m: Modifiers): DrinkId {
   const push = milkPush(state, menu, m); // Round 3 item 1: lean toward lattes when the bar can make them
-  return drawAmong(state, menu, m, push);
+  return drawAmong(state, menu, m, push, identityMul(state, menu, m));
 }
 
 /**
@@ -170,14 +209,14 @@ export function oneOffLeave(state: GameState, menu: DrinkId[]): boolean {
   const light = lightDrinks(state, menu);
   if (light.length === 0) return false;
   if (rngNext(state) >= SPECIALTY.oneOff) return false;
-  const drink = drawAmong(state, light, computeModifiers(state), 1);
+  const drink = drawAmong(state, light, computeModifiers(state), 1, 1);
   tally(state.today, 'oneOffLeft');
   emitLog(state, 'walkout', { customer: state.nextCustomerId++, reason: 'oneOff', drink });
   return true;
 }
 
-function drawAmong(state: GameState, menu: DrinkId[], m: Modifiers, push: number): DrinkId {
-  const weights = menu.map((d) => orderWeight(state, d, m, push));
+function drawAmong(state: GameState, menu: DrinkId[], m: Modifiers, push: number, identity: number): DrinkId {
+  const weights = menu.map((d) => orderWeight(state, d, m, push, identity));
   let roll = rngNext(state) * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < menu.length; i++) {
     roll -= weights[i];

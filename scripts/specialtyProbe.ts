@@ -13,6 +13,7 @@ import { milkPush } from '../src/sim/lattes';
 import { createRun, startDay } from '../src/sim/run';
 import { stationsFromSlots } from '../src/sim/slots';
 import { SPECIALTY } from '../src/sim/specialty';
+import type { SoldDay } from '../src/sim/types';
 import type { DrinkId, GameState, SupplyId } from '../src/sim/types';
 
 const DRAWS = 20000;
@@ -76,24 +77,40 @@ const s = cafe();
 const m = computeModifiers(s);
 const menus: [string, DrinkId[]][] = [['early (espresso, latte, cold brew, drip)', EARLY], ['wide (plus cappuccino and café au lait)', WIDE]];
 
-console.log(`draws ${DRAWS}  specialtyPull ${SPECIALTY.specialtyPull}  fastPull ${SPECIALTY.fastPull}  oneOff ${(SPECIALTY.oneOff * 100).toFixed(0)}%`);
-console.log('tourist season, ordinary day, wand on the bar. Before = no identity. After = identity set.\n');
+const latteWindow: SoldDay[] = [{ day: 1, drinks: { latte: 70, espresso: 10, drip: 10, coldBrew: 10 } }];
+const espressoWindow: SoldDay[] = [{ day: 1, drinks: { espresso: 60, latte: 8, drip: 16, coldBrew: 16 } }];
+const fastWindow: SoldDay[] = [{ day: 1, drinks: { drip: 70, latte: 15, espresso: 10, coldBrew: 5 } }];
+
+console.log(`draws ${DRAWS}  latteLift ${SPECIALTY.latteLift}  espressoLift ${SPECIALTY.espressoLift}  fastLift ${SPECIALTY.fastLift}  oneOff ${(SPECIALTY.oneOff * 100).toFixed(0)}%`);
+console.log('tourist season, ordinary day, wand on the bar. Before = no identity (wand push on). After = that name.\n');
+
+function points(after: number, before: number): string {
+  const d = ((after - before) / DRAWS) * 100;
+  return `${d >= 0 ? '+' : ''}${d.toFixed(1)}`;
+}
 
 for (const [name, menu] of menus) {
   console.log(name);
+  delete s.shopIdentity;
+  delete s.soldWindow;
   const before = mix(s, menu);
   const pushBefore = milkPush(s, menu, m);
   s.shopIdentity = 'specialty';
-  const spec = mix(s, menu);
-  const pushSpec = milkPush(s, menu, m);
+  s.soldWindow = latteWindow;
+  const latte = mix(s, menu);
+  const pushLatte = milkPush(s, menu, m);
+  s.soldWindow = espressoWindow;
+  const espresso = mix(s, menu);
+  const pushEspresso = milkPush(s, menu, m);
   s.shopIdentity = 'fastCasual';
+  s.soldWindow = fastWindow;
   const fast = mix(s, menu);
   const pushFast = milkPush(s, menu, m);
   delete s.shopIdentity;
+  delete s.soldWindow;
   console.log(line('before', before, pushBefore));
-  console.log(line('after specialty', spec, pushSpec));
+  console.log(line('after latte bar', latte, pushLatte));
+  console.log(line('after espresso bar', espresso, pushEspresso));
   console.log(line('after quick cup', fast, pushFast));
-  const specDelta = ((spec.espresso + spec.milky) - (before.espresso + before.milky)) / DRAWS * 100;
-  const fastDelta = (fast.filter - before.filter) / DRAWS * 100;
-  console.log(`  specialty espresso+milky ${specDelta >= 0 ? '+' : ''}${specDelta.toFixed(1)} points    quick cup filter ${fastDelta >= 0 ? '+' : ''}${fastDelta.toFixed(1)} points\n`);
+  console.log(`  latte bar milky ${points(latte.milky, before.milky)}    espresso bar espresso ${points(espresso.espresso, before.espresso)}    quick cup filter ${points(fast.filter, before.filter)}\n`);
 }

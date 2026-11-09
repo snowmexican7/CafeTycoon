@@ -26,7 +26,8 @@ describe('specialty shops on screen', () => {
     const html = nightHtml(nightViewModel(named(), 'p1'), undefined, null, ui());
     const line = html.match(/<p class="shop-line"[^>]*>([\s\S]*?)<\/p>/)?.[1] ?? '';
     expect(line).toContain('known for lattes');
-    expect(line).toContain('People walking in ask for espresso and lattes more often');
+    expect(line).toContain('People walking in ask for lattes more often');
+    expect(line).not.toContain('espresso and lattes');
     expect(line.toLowerCase()).not.toContain('tap');
   });
 
@@ -34,7 +35,7 @@ describe('specialty shops on screen', () => {
     const s = startDay(named());
     const shop = hudViewModel(s).shop;
     expect(shop?.badge).toBe('Latte bar');
-    expect(shop?.demand).toBe('People ask for espresso and lattes more often');
+    expect(shop?.demand).toBe('People ask for lattes more often');
     expect(shop?.line.toLowerCase()).not.toContain('tap');
   });
 
