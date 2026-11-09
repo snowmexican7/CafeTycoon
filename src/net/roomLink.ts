@@ -4,8 +4,12 @@ import { ACTIONS, APP_ID, type ActionKind } from './protocol';
 /** The slice of a peer-to-peer room the game needs. The only thing that knows about trystero is createTrysteroLink. */
 export interface RoomLink {
   readonly selfId: string;
-  /** Send to one peer, or to everyone when target is omitted. */
-  send(kind: ActionKind, data: unknown, target?: string): void;
+  /**
+   * Send to one peer, or to everyone when target is omitted.
+   * Trystero's send is asynchronous (it waits out a full data channel, and a payload over one 16 KB
+   * frame waits for the other side to accept). A link may return that promise; a synchronous link returns nothing.
+   */
+  send(kind: ActionKind, data: unknown, target?: string): void | Promise<void>;
   onMessage(kind: ActionKind, handler: (data: unknown, peerId: string) => void): void;
   onPeerJoin(handler: (peerId: string) => void): void;
   onPeerLeave(handler: (peerId: string) => void): void;
@@ -47,8 +51,9 @@ export function createTrysteroLink(code: string): RoomLink {
   return {
     selfId,
     send(kind, data, target) {
-      // Our messages are plain JSON objects, which is what trystero accepts.
-      void actions.get(kind)!.send(data as DataPayload, target ? { target } : undefined);
+      // Our messages are plain JSON objects, which is what trystero accepts. The promise settles
+      // once this payload has been written to the data channel (a large one, only after the guest accepts).
+      return actions.get(kind)!.send(data as DataPayload, target ? { target } : undefined);
     },
     onMessage: (kind, handler) => void messageHandlers.get(kind)!.add(handler),
     onPeerJoin: (handler) => void joinHandlers.add(handler),

@@ -129,11 +129,11 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
   pushed further apart in look.
 
 ### Later (not scheduled)
-- **Campaign and Blitz (draft 2026-11-09, not approved):** today's week gets the name Blitz; Campaign starts with a register and a coffee pot and builds up. [`PLAN_CAMPAIGN_AND_BLITZ.md`](PLAN_CAMPAIGN_AND_BLITZ.md).
-- **2v2 and the 3-player rush (draft 2026-11-09, not approved):** two teams of two, each with a shop; three players stay one shop with more rush. [`PLAN_2V2.md`](PLAN_2V2.md).
-- **Growth order and loose layout (draft 2026-11-09, not approved):** cart, then stand, then café; night Layout moves anything, including supply boxes. [`PLAN_GROWTH_AND_LAYOUT.md`](PLAN_GROWTH_AND_LAYOUT.md).
+- **Campaign and Blitz (draft 2026-11-09, not approved):** today's week gets the name Blitz. Campaign starts with about $40, a cheap pot, and drip only; the exact numbers are tuned later. [`PLAN_CAMPAIGN_AND_BLITZ.md`](PLAN_CAMPAIGN_AND_BLITZ.md).
+- **2v2 and the 3-player rush (draft 2026-11-09, not approved):** two teams of two on one shared street, customers pick a shop; a mirrored week is maybe later. Three players stay one shop with more rush. [`PLAN_2V2.md`](PLAN_2V2.md).
+- **Growth order and loose layout (draft 2026-11-09, not approved):** cart on the sidewalk, then stand, then café. Night Layout snaps to tiles; everything moves except the register and the pickup, which stay together at the front. [`PLAN_GROWTH_AND_LAYOUT.md`](PLAN_GROWTH_AND_LAYOUT.md).
 - **Specialty shops (draft 2026-11-09, not approved):** what you sell over a few days becomes the shop. [`PLAN_SPECIALTY_SHOPS.md`](PLAN_SPECIALTY_SHOPS.md).
-- **Street view (draft 2026-11-09, not approved):** cars drive past with comment bubbles; later a driver comes in. [`PLAN_STREET_VIEW.md`](PLAN_STREET_VIEW.md).
+- **Street view (draft 2026-11-09, not approved):** cars drive past with comment bubbles; later a driver comes in as an occasional extra customer. [`PLAN_STREET_VIEW.md`](PLAN_STREET_VIEW.md).
 - **Co-op guest lag (Kennedy, Nov 7; investigate first):** the host plays smoothly; a joined player can become
   almost unplayable. Claude measures host/guest sync before any small reversible fix
   ([`CLAUDE_PROMPT_COOP_LAG.md`](CLAUDE_PROMPT_COOP_LAG.md)). Large changes need approval. The bot cut stands.
@@ -143,7 +143,7 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
   screen jumps to the top. Later idea: lock the menus together. Do not build yet.
 - **Co-op scaling (Kennedy, Nov 2; design only, not built):** the review draft is
   [`PLAN_2V2.md`](PLAN_2V2.md) (2026-11-09, not approved). Short version: 3 players stay in one shop with more
-  rush; 4-player 2v2 is two shops (same town or a mirrored week), not one shared line. The sketch below is the
+  rush; 4-player 2v2 is two shops on one shared street, and customers pick a shop. A mirrored week is maybe later. The sketch below is the
   older note. There is still no crew-size scaling in the sim (`ECONOMY.maxHumans` is 4).
   - **3 players:** more rush orders, e.g. likelier `rushHour` events (`effects.ts` `eventOdds`) or more combo and
     office orders (`Customer.order`).

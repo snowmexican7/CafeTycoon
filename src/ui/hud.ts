@@ -75,6 +75,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <aside class="hud-side left" aria-label="Orders">
       <div class="h">Orders <span class="n">0</span></div>
       <div class="tickets"></div>
+      <div class="hud-checklist" role="status" hidden></div>
     </aside>
     <aside class="hud-side right">
       <div class="h">Pantry</div><div class="card pantry"></div>
@@ -95,7 +96,6 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     <div class="hud-call" role="alert" hidden></div>
     <div class="hud-office" role="status" hidden></div>
     <div class="hud-closing" role="status" hidden><b>Doors locked</b><span>finish up! <i class="n">0</i> left</span></div>
-    <div class="hud-checklist" role="status" hidden></div>
     <div class="hud-opengrace" role="timer" aria-live="polite" hidden></div>
     <section class="hud-restock-panel" id="hud-restock-panel" aria-label="Rush delivery" hidden></section>
     <div class="hud-syrup" role="group" aria-label="Syrup picker" hidden></div>

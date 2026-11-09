@@ -20,7 +20,12 @@ _Nothing yet._
 
 ## 3.11.0 — 2026-11-09 · Playtest feel
 
-Kennedy's Nov 7 playthrough. Five feel fixes. Protocol 71, snapshot 36.
+Kennedy's Nov 7 playthrough. Five feel fixes. Protocol 71, snapshot 36. Also the co-op lag fix from the same day.
+
+- **Co-op: a joined player no longer falls further and further behind.** When the connection can't
+  keep up with 20 updates a second, the host now sends the latest café instead of a queue of old ones.
+  The host's own game was never waiting on that queue. If a send never finishes (someone's connection
+  dies mid-update), the host gives up after a second and a half and keeps updating everyone else.
 
 - **Milk drinks are one steam step.** Latte, cappuccino and the rest: no more filling the jug, then steaming. Press at the steam wand, stop the foam meter, and the drink is already in your hand. A better wand still makes that foam meter easier to hit.
 - **A two-group espresso machine is one spot.** Stand at the machine and pull a shot even while another shot is sitting there (it holds two). You pick the waiting shot up from the same spot. It no longer locks the machine.
