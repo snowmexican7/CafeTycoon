@@ -8,7 +8,7 @@ describe('render theme', () => {
     expect(sx(0)).toBe(0);
     expect(sx(LAYOUT.width)).toBe(LAYOUT.width * TILE);
     expect(sy(0)).toBe(WALL);
-    expect(sy(LAYOUT.height) + FRONT).toBe(688);
+    expect(sy(LAYOUT.height) + FRONT).toBe(784);
   });
 
   it('colours patience green → amber → red', () => {

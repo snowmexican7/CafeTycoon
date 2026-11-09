@@ -16,6 +16,8 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+- **A street out front.** The view drops a little so you can see the road in front of the shop, on the cart, the stand and the café. Cars drive by. Now and then one of them has a short comment ("Smells good", "That line though", "Is that a café yet?"). Once in a while a car stops and the driver comes in as an ordinary extra customer, on top of the people already walking in. Held for review.
+
 - **Co-op: a joined player no longer falls further and further behind.** When the connection can't
   keep up with 20 updates a second, the host now sends the latest café instead of a queue of old ones.
   The host's own game was never waiting on that queue. If a send never finishes (someone's connection

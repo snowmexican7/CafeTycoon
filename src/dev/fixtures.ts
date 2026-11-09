@@ -37,6 +37,7 @@ import { blank } from '../sim/stats';
 import { emptyRecords, foldRecords } from '../storage/recordsStore';
 import { HAIR_STYLES } from '../render/lookModel';
 import { floorFields } from '../sim/tiles';
+import { blankCars, STREET_WIDTH, tickWithBubble, type StreetRead } from '../render/streetModel';
 
 type Fixture = { setup(s: GameState): void; timeline: [number, (s: GameState) => void][]; me?: string; closing?: boolean; weekEnd?: boolean; unlocks?: string[]; records?: boolean; night?: boolean; extras?: boolean; restock?: boolean; nightToast?: boolean; nightTab?: string; feedPop?: boolean; replay?: DrinkId[] };
 
@@ -1128,6 +1129,35 @@ const FIXTURES: Record<string, Fixture> = {
   standDay: { setup: (s) => atTier(s, 'stand', 3), timeline: [] },
   cartDay: { setup: (s) => atTier(s, 'cart', 5), timeline: [] },
   cafeDay: { setup: (s) => atTier(s, 'cafe', 6), timeline: [] },
+  /**
+   * Street view on the café: cars on the road, one of them with a comment. The tick is one where
+   * a bubble is up and no drive-up is pulling over, so the shot is the passing traffic.
+   */
+  streetCafe: {
+    setup(s) {
+      atTier(s, 'cafe', 1);
+      s.reputation = 4.6;
+      s.seed = 7;
+      s.day = 3;
+      const cars = blankCars();
+      const read: StreetRead = {
+        seed: s.seed,
+        tick: 0,
+        day: s.day,
+        night: false,
+        queue: s.customers.length,
+        reputation: s.reputation,
+        tier: 'cafe',
+        complained: false,
+        curbBusy: false,
+        width: STREET_WIDTH,
+      };
+      const tick = tickWithBubble(read, cars);
+      if (tick < 0) throw new Error('no street comment on this seed');
+      s.tick = tick;
+    },
+    timeline: [],
+  },
   /** P3 B13: the first morning in the cart: the grand re-opening burst. */
   grownDay: { setup: (s) => { atTier(s, 'cart', 4); s.tierLog = [{ tier: 'cart', day: s.day, by: 'Ben' }]; }, timeline: [] },
   /** P3 B13: the Shopfront tab at the stand with the cart affordable, and the night Ben grew into the cart. */

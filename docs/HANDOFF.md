@@ -472,6 +472,14 @@ Done by a Cursor cloud agent, following `docs/CLAUDE_PROMPT_COOP_LAG.md`. No Cla
 
 ## Grok → Claude
 
+### Street view, awaiting review (2026-11-09, Cursor)
+Held for Kennedy. Do not merge until he says so. Plan: `docs/PLAN_STREET_VIEW.md` (his 2026-11-09 note: drive-ups are an occasional extra on top of walk-ins).
+
+- **Render only for the cars.** `src/render/streetModel.ts` (`fillStreet`, `STREET_TOP`, `DRIVE_UP_PARK_X`, `tickWithBubble`) and `src/render/layers/street.ts`. Position is `state.seed` + `state.tick` (+ day, for which line). No car fields on `GameState`. Protocol **70**, snapshot **35**, unchanged. A guest a few ticks behind sees the cars a few ticks behind. The picture is reused across frames of the same tick (no per-frame allocations on that path).
+- **`FRONT` is 152** (sidewalk 56, as before, plus a 96px road). `STREET_TOP` is the seam. The road is not part of `outdoor.ts`, so the sidewalk scene in PR #35 can reseat the small shops without taking the cars with it: move `STREET_TOP` if that scene's kerb sits somewhere else.
+- **Bubbles.** One at a time, about two seconds, from the queue length, reputation and the tier (`STREET_LINES`, including "That line though", "Smells good", "Is that a café yet?"). Silent at night, and for 8s after `line.complainedAt` ("Line's too long!"). Night cars run at half speed. They stay under the ambulance bay (`PARK_X` / `CURB_Y`) while that gag is on screen.
+- **Sim, called out.** `src/sim/driveUp.ts` `DRIVE_UP_EVERY` (**9000** ticks, about one per 150s day; **0** turns it off) and `addDriveUp`, called at the end of `spawnCustomers`. It does not call `rngNext`, so the walk-in dice are unchanged. No `Customer.arrival` tag. The car drives on when the queue and the waiting area are both full, and when a card has set traffic to 0. The driver is a normal one-drink customer; the walk from the kerb up to the line is `driveUpOrigin` in the renderer, not a sim path.
+
 ### Incoming playtest notes (not to build yet) — 2026-11-07
 - Growth should be **cart → stand → café**, the real-life order; currently **stand → cart → café**. Note only; no
   Cursor prompt yet.
