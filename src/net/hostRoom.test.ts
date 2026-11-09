@@ -284,6 +284,50 @@ describe('HostRoom', () => {
     });
   });
 
+  it('collapses snapshots that arrive while a send is still on the wire', async () => {
+    const link = createFakeLink();
+    const real = link.send.bind(link);
+    const queued: (() => void)[] = [];
+    link.send = (kind, data, target) => new Promise<void>((resolve) => {
+      queued.push(() => {
+        real(kind, data, target);
+        resolve();
+      });
+    });
+    const local = fakeLocal();
+    createHostRoom(link, local.t, { token: 'H', name: 'Host' });
+    let state = createRun({ seed: 1, hostId: 'H', players: [{ id: 'H', name: 'Host' }] });
+    const snaps: GameState[] = [];
+    for (let i = 0; i < 3; i++) {
+      state = step(state, []);
+      snaps.push(state);
+      local.emit({ t: 'snapshot', state, sentAt: i + 1 });
+    }
+    // The first café is on the wire. The two newer ones must not join the queue behind it.
+    expect(link.sent).toHaveLength(0);
+    expect(queued).toHaveLength(1);
+    for (let n = 0; n < 12; n++) {
+      if (!queued.length) {
+        await Promise.resolve();
+        if (!queued.length) break;
+      }
+      queued.shift()?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    }
+    const wire = link.sent.filter((m) => m.kind === 'snap' || m.kind === 'snapd');
+    expect(wire.map((m) => (m.data as { seq: number }).seq)).toEqual([1, 2]);
+    const peerLink = createFakeLink('peer');
+    const peer = createPeerSession(peerLink, { token: 'P', name: 'Pat', timeoutMs: 1000, setTimer: () => 0, clearTimer: () => {} });
+    const seen: GameState[] = [];
+    peer.onSnapshot((s) => seen.push(s.state));
+    peerLink.receive('hello', { t: 'hello', protocol: PROTOCOL_VERSION, hostToken: 'H' }, 'host');
+    for (const m of wire) peerLink.receive(m.kind, JSON.parse(JSON.stringify(m.data)), 'host');
+    expect(seen).toHaveLength(2);
+    expect(seen.at(-1)).toEqual(roundFloats(snaps[2]));
+    peer.close();
+  });
+
   it('bot cut 4a: lobby messages carry no bots setting', () => {
     const link = createFakeLink();
     const local = fakeLocal();

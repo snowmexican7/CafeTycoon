@@ -16,7 +16,9 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- **Co-op: a joined player no longer falls further and further behind.** When the connection can't
+  keep up with 20 updates a second, the host now sends the latest café instead of a queue of old ones.
+  The host's own game was never waiting on that queue.
 
 ## 3.10.0 — 2026-11-07 · Round 6 and the bot cut
 
