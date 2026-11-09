@@ -18,6 +18,14 @@ when a build goes out, the line moves under its version with the date.
 
 _Nothing yet._
 
+## 3.11.2 — 2026-11-09 · A solid front counter
+
+The counter between the crew and the customers is solid, on the stand, the cart and the café, in classic runs and in Gear.
+
+- You cannot walk through the front counter. The register and the pickup counter stay together on it. Customers stay on their side, in front.
+- The right-hand end is open, so you can still walk around to the mop, the boxes and a spill in front. The door stays open.
+- Two people still fit side by side at the pickup counter, and they can still step apart. A new drip pot keeps its usual seat.
+
 ## 3.11.1 — 2026-11-09 · Tray, milk shelf, co-op looks
 
 - On the stand, the drip machine by the door no longer covers the tray. The TRAY sign sits above the tray board, and the top of the drip stays clear of the board.

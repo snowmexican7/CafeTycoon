@@ -1,5 +1,5 @@
 import { ECONOMY } from '../data/economy';
-import { LAYOUT, PICKUP_BODY, PICKUP_ID, PICKUP_REACH } from '../data/layout';
+import { frontCounterForWidth, isFrontSolid, LAYOUT, PICKUP_BODY, PICKUP_ID, PICKUP_REACH } from '../data/layout';
 import { floorWidth } from './growth';
 import { TICK_RATE } from './constants';
 import type { GameState, Station, Vec2 } from './types';
@@ -13,9 +13,19 @@ function bodyHalf(s: Station): number {
   return s.id === PICKUP_ID ? PICKUP_BODY : 0.5;
 }
 
-/** True when a barista centred at `pos` overlaps a wall or any station's footprint. */
+/**
+ * True when a barista centred at `pos` overlaps a wall, the solid front counter, or any station's footprint.
+ * The counter is layout, not a station: the same line in classic and Gear. The door and the right-hand flap stay open.
+ */
 export function blocked(pos: Vec2, stations: Station[], width: number = LAYOUT.width): boolean {
   if (pos.x < HALF || pos.y < HALF || pos.x > width - HALF || pos.y > LAYOUT.height - HALF) return true;
+  const fc = frontCounterForWidth(width);
+  if (Math.abs(pos.y - fc.y) < 0.5 + HALF) {
+    for (let x = fc.x0; x <= fc.x1; x++) {
+      if (!isFrontSolid(fc, x)) continue;
+      if (Math.abs(pos.x - x) < 0.5 + HALF) return true;
+    }
+  }
   for (const s of stations) {
     if (Math.abs(pos.x - s.pos.x) < bodyHalf(s) + HALF && Math.abs(pos.y - s.pos.y) < 0.5 + HALF) return true;
   }
