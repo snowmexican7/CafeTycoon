@@ -18,6 +18,7 @@ import { ESPRESSO } from '../sim/espresso';
 import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
 import { StationOverlay, buildEmptySlot, buildServingCounter, buildStation, setBarSkin, type StationOverlayState } from './layers/stations';
+import { milkShelfLevel } from './supplyModel';
 import { PickupVisuals } from './layers/pickup';
 import { CountsLayer } from './layers/counts';
 import { SinkVisuals } from './layers/sink';
@@ -119,12 +120,14 @@ export class Scene {
     stations?: readonly Station[],
     fridge: FridgeId | null = null,
     slotPos?: readonly (Vec2 | null)[],
+    milk: ReturnType<typeof milkShelfLevel> = 'empty',
   ): void {
     // FB1 WP5: the art follows state.stations (bought duplicates, swapped slots), with a plinth in every empty slot.
     const lay = layoutFor(tier);
     const list = stations ?? lay.stations;
     const gearOf = (s: (typeof list)[number]) => ('gear' in s ? s.gear : undefined);
-    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}:${fridge ?? ''}:${JSON.stringify(slotPos ?? null)}`;
+    // `milk` rebuilds the milk counter's shelf when the stock crosses empty / low / partial / full.
+    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}:${fridge ?? ''}:${JSON.stringify(slotPos ?? null)}:${milk}`;
     if (key === this.stationKey) return;
     this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
@@ -138,7 +141,7 @@ export class Scene {
     this.stationArt = list.map((s, i) => {
       const twin = 'twin' in s && s.twin === true;
       const g = gearOf(s);
-      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge, run?.ids.includes(s.id) === true);
+      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge, run?.ids.includes(s.id) === true, milk);
     });
     if (run) this.stationArt.push(buildServingCounter(run.x0, run.x1, run.y, barSkin(look)));
     for (const pos of emptySlotPositions(tier, list, slotPos)) this.stationArt.push(buildEmptySlot(pos));
@@ -203,7 +206,7 @@ export class Scene {
 
   update(view: RenderView): void {
     const { state } = view;
-    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations, fridgeGear(state), state.slotPos);
+    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations, fridgeGear(state), state.slotPos, milkShelfLevel(state.supplyMilk));
     this.maybeCelebrate(state);
     const now = performance.now() / 1000;
     const dt = Math.min(0.1, Math.max(0, now - this.lastTime));

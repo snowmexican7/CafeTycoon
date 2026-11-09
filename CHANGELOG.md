@@ -18,6 +18,12 @@ when a build goes out, the line moves under its version with the date.
 
 _Nothing yet._
 
+## 3.11.1 — 2026-11-09 · Tray, milk shelf, co-op looks
+
+- On the stand, the drip machine by the door no longer covers the tray. The TRAY sign sits above the tray board, and the top of the drip stays clear of the board.
+- The milk counter's shelf shows how much milk is left. A full carton (or more) fills the shelf, a partly used carton leaves one jug and one carton, a splash leaves a short carton, and an empty counter shows a bare shelf.
+- In a co-op room, the barista you made (hair, skin, shirt and outfit) shows for everyone. That includes a friend who joins, comes back, or is given someone else's empty seat.
+
 ## 3.11.0 — 2026-11-09 · Playtest feel
 
 Kennedy's Nov 7 playthrough. Five feel fixes. Protocol 71, snapshot 36. Also the co-op lag fix from the same day.

@@ -473,6 +473,12 @@ Done by a Cursor cloud agent, following `docs/CLAUDE_PROMPT_COOP_LAG.md`. No Cla
 
 ## Grok → Claude
 
+### State of the UI (2026-11-09, follow-ups: stand tray, milk shelf, co-op looks)
+- **Stand drip vs tray (render only).** The drip stays at (1, 5). The TRAY nameplate is no longer the hanging plate under the counter (that sits inside the drip's table). It is drawn above the tray board (`TRAY_PLATE` in `src/render/stationReadability.ts`), and the drip tank uses `DRIP_RESERVOIR` so it no longer clips the board. `dripCoversTray()` is the check. Seats are unchanged. Merged with v3.11.0: pickup stays at (4, 6), condiments at (5, 6), and the look catch-up shares `createHostRoom` with the one-send-in-flight queue.
+- **Milk counter shelf.** `milkShelfLevel` / `milkShelfParts` (`src/render/supplyModel.ts`) turn `GameState.supplyMilk` into empty (0), low (1–2), partial (3–7) and full (a carton, `FRIDGE.carton`, or more). `buildSupplyShelf` draws that, and `Scene.buildStations` rebuilds when the band changes. The count bubble is unchanged.
+- **Co-op looks.** `main.ts` `startPeer` uses `createPeerTransport(code, token, name, prev?, look?)` again (join, rejoin and the seat the host hands back all send `look`). A join's first keyframe can still be the picture from before the sim applies it; `createHostRoom` sends that peer another keyframe once the snapshot shows them with that look. `createPeerSession` ignores a keyframe older than the one it already holds, so the late stale picture cannot wipe the look. A host who resumes passes their saved `Player.look` on the host `Member`. No new bot logic. Sim `setLook` / `join` were already correct.
+- **Merged with v3.11.0 (82df8e9), not rewritten:** steam-only milk, the two-group machine as one spot, the closing wrap-up, how-to cards, light teammate bumps, and the wider pickup at (4, 6).
+
 ### Incoming playtest notes (not to build yet) — 2026-11-07
 - Growth should be **cart → stand → café**, the real-life order; currently **stand → cart → café**. Note only; no
   Cursor prompt yet.
