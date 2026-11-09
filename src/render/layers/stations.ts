@@ -195,9 +195,11 @@ export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge' |
 
 /** Where pickup coaster `i` (0..3) sits on the pickup counter, in screen px. Shared with the per-frame cups. */
 export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: number } {
-  const span = 46;
+  // Wide runner: two people side by side, shifted a little left of the till.
+  const span = 108;
+  const shift = -18;
   const step = slots > 1 ? span / (slots - 1) : 0;
-  return { x: sx(pos.x) - span / 2 + i * step, y: sy(pos.y) - 18 };
+  return { x: sx(pos.x) + shift - span / 2 + i * step, y: sy(pos.y) - 18 };
 }
 
 /**
@@ -205,6 +207,12 @@ export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: n
  * off the static art so the per-frame sink layer can draw it full, cold, stale or gone to the sink.
  */
 export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour' | 'pot', spot?: CounterSpot, fridge?: FridgeId | null, run = false): Container {
+  // A second espresso group is the same machine: its cup is drawn on the main head, not as a tiny extra machine.
+  if (twin && kind === 'espresso') {
+    const root = new Container();
+    root.zIndex = stationDepth(pos);
+    return root;
+  }
   // ui-3.4.1 (FB2 A4): the fridge stands on its own (no counter under it), one look per fridge
   if (kind === 'counter' && spot === 'fridge') return buildFridge(pos, fridge ?? 'f1');
   // Round 5 block 4: milk & cream shelf by the sink
@@ -454,7 +462,8 @@ function buildPickupCounter(pos: Vec2): Container {
   const cy = sy(pos.y);
   root.zIndex = stationDepth(pos);
   counterBody(g, cx, cy);
-  g.roundRect(cx - 30, cy - 28, 60, 18, 6).fill(0x5fae86).stroke({ width: 1.5, color: 0x3f8a5d });
+  // Wide green runner: two staff tiles fit under it, clear of the till.
+  g.roundRect(cx - 78, cy - 30, 128, 22, 8).fill(0x5fae86).stroke({ width: 1.5, color: 0x3f8a5d });
   for (let i = 0; i < 4; i++) {
     const { x, y } = pickupSlotXY(pos, i);
     g.ellipse(x, y + 6, 6.5, 3).fill({ color: 0xeaf7ef, alpha: 0.9 });
@@ -598,6 +607,10 @@ function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId, cou
 export interface StationOverlayState {
   kind: StationKind;
   pos: Vec2;
+  /** Draw this head's cup on another station (the main group of a double espresso machine). */
+  drawAt?: Vec2;
+  /** Pixel nudge so the two group heads don't stack their cups. */
+  nudgeX?: number;
   /** 0..1 while working, null when idle. */
   progress: number | null;
   output: ItemKind | null;
@@ -634,8 +647,9 @@ export class StationOverlay {
     g.clear();
     let ringDrawn: { cx: number; by: number; label: string } | null = null;
     for (const s of stations) {
-      const cx = sx(s.pos.x);
-      const cy = sy(s.pos.y);
+      const at = s.drawAt ?? s.pos;
+      const cx = sx(at.x) + (s.nudgeX ?? 0);
+      const cy = sy(at.y);
       const top = cy - 20;
       if (s.kind === 'espresso') {
         const a = -Math.PI / 4 + (s.progress !== null ? Math.sin(timeSec * 9) * 0.5 + 0.9 : 0);

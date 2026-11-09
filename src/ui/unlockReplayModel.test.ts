@@ -25,6 +25,11 @@ describe('ui-3.10.0 new-drink unlock replay (scripted, no bot brain)', () => {
     expect(replayCaptions(iced).join(' ')).toMatch(/Milk counter: E with the espresso in hand fills it at once/);
     const capp = replayScript('cappuccino');
     expect(replayCaptions(capp).join(' ')).toMatch(/in your hand/);
+    const latte = replayScript('latte');
+    const text = replayCaptions(latte).join(' ');
+    expect(text).toMatch(/steams the milk/);
+    expect(text).toMatch(/in your hand/);
+    expect(text).not.toMatch(/fills the jug/);
   });
 
   it('every drink has a finite script that ends at pickup', () => {

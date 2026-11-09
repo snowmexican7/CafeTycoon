@@ -100,8 +100,22 @@ export interface TierLayout {
   trayTable: Vec2;
 }
 
-/** Batch/pickup: the same spots on every tier (the till, door and front of the queue never move either). */
-const SPOTS = { pickup: { x: 5, y: 6 }, condiments: { x: 4, y: 6 }, fridge: { x: 1, y: 3 }, trayTable: { x: 1, y: 4 } };
+/**
+ * Playtest 2026-11-09: the pickup counter sits two tiles left of the till so it does not share the cashier's
+ * lane (the till is worked from x=6). It is wide (`PICKUP_BODY`): two players stand side by side at (3, 5)
+ * and (4, 5). The condiment bar sits on the tile between pickup and the till, so the front counter stays
+ * one solid run and the cart's box corner (7, 7) stays clear.
+ * The same spots on every tier (the till, door and front of the queue never move).
+ */
+const SPOTS = { pickup: { x: 4, y: 6 }, condiments: { x: 5, y: 6 }, fridge: { x: 1, y: 3 }, trayTable: { x: 1, y: 4 } };
+
+/**
+ * How far a barista on the staff side can stand and still use the pickup counter. Wider than a normal
+ * station so the two tiles in front of it (and a step apart) both count.
+ */
+export const PICKUP_REACH = 1.5;
+/** Half-width of the pickup counter's blocked body, in tiles (before the barista's own margin). */
+export const PICKUP_BODY = 1.35;
 
 const COUNTER = { id: 'counter', kind: 'counter' as const, pos: { x: 6, y: 6 } };
 

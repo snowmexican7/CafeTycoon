@@ -343,7 +343,7 @@ function stepClosing(s: GameState): void {
   stepDay(s, false);
   if (s.phase !== 'closing') return;
   const elapsed = secondsToTicks(ECONOMY.closingGraceSeconds) - s.phaseTicksLeft;
-  // FB2 A4: with bots on the crew, the day also waits for them to put the milk and the bar away (the grace timer still ends it).
+  // Checklist done and nobody left: close straight away. Anything still out, or customers still here: the grace is the wrap-up cap.
   if (elapsed >= secondsToTicks(ECONOMY.closingMinSeconds) && shopEmpty(s) && !putAwayPending(s)) finishDay(s);
 }
 

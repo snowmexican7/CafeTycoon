@@ -294,7 +294,8 @@ describe('floor day', () => {
       const seen = { drop: false, slip: false, mop: false };
       for (let i = 0; i < 1200; i++) {
         const inputs: PlayerInput[] = [];
-        if (i < 600 && i % 120 === 0) inputs.push({ kind: 'move', playerId: 'p1', x: i % 240 === 0 ? 1 : -1, y: 0, interact: false });
+        // Pace across the spill row (teammate bumps are a light brush, so the walk itself has to cross the puddles).
+        if (i < 600) inputs.push({ kind: 'move', playerId: 'p1', x: i % 80 < 40 ? 1 : -1, y: 0, interact: false });
         if (i === 600) inputs.push({ kind: 'move', playerId: 'p1', x: 0, y: 0, interact: false });
         if (i % 90 === 45) inputs.push({ kind: 'drop', playerId: 'p1' });
         s = step(s, inputs);

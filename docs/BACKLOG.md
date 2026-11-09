@@ -1,5 +1,15 @@
 # Backlog, known limitations and decisions
 
+## Playtest feel, 2026-11-09 (v3.11.0, protocol 71, snapshot 36)
+
+Kennedy's Nov 7 playthrough. One PR across both lanes. No new bot logic. No save migration.
+
+- Milk drinks: jug fill removed from play (`jugFirst` always false). One press at the wand starts `Player.steam`; the recipe's one milk is `made.milk = 'right'`. Stop the meter and the drink is in hand. Wand ease still widens `steamWindow`.
+- Double group-head: `src/sim/groupHead.ts` `pickEspressoHead`. Two stations, one press. A free head takes a new shot while the other holds one. Espresso twins draw no second machine; both cups sit on the main head.
+- Closing wrap-up: `putAwayPending` is the full checklist (milk, bar, pots, floor, pickup) whenever closing soon is on, for people. Empty checklist and empty shop still ends after `closingMinSeconds`. Otherwise `closingGraceSeconds` (45) is the cap. HUD title `Wrap-up · Ns left` plus a note.
+- How-to: `unlockDrink` pushes `GameState.learned` (cleared in `startDay`). The receipt queues that list. `unlockReplay.play(drinks, 'lookup')` from the night menu (`howto`) and from ticket buttons (`data-howto`). Latte captions say "steams the milk".
+- Crowding: teammate `ECONOMY.bump` is a light brush; `customerTiles` and the rest of the customer bump are unchanged. Pickup `(4, 6)`, condiments `(5, 6)`, `PICKUP_BODY` 1.35, `PICKUP_REACH` 1.5 on the staff side only (`pickupStaffReach`). Same spots on stand, cart and café.
+
 Things both agents and the crew should be able to find without reading chat logs. Add to
 this file whenever a review defers something, or a decision is made that no other doc
 records. Roadmap: [`ROADMAP.md`](ROADMAP.md). Design:

@@ -233,6 +233,8 @@ async function main(): Promise<void> {
     if (look) send({ kind: 'look', playerId: me(), look });
   }
   let recipeHints = loadRecipeHints(hintStore);
+  // How-to cards (new drinks after the receipt, and any drink you look up from a ticket or the menu).
+  const unlockReplay = createUnlockReplay($('#unlockReplay'));
   const hud = createHud($('#hud'), {
     onMute: () => audio.toggleMute(),
     // ui-3.7.1: day-HUD Restock (rush delivery, 25% more). Cream & sugar comes by the box.
@@ -240,12 +242,11 @@ async function main(): Promise<void> {
     // FB2 B8: syrup rack picker (1 vanilla · 2 caramel).
     onSyrup: (flavour) => send({ kind: 'syrup', playerId: me(), flavour }),
     onCloseEarly: (on) => send({ kind: 'closeEarly', playerId: me(), on }),
+    onHowTo: (drink) => unlockReplay.play([drink], 'lookup'),
   }, { recipeHints });
-  const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook() });
+  const night = createNight($('#night'), { ...nightInputHandlers(send, me), onEditLook: () => void editLook(), onHowTo: (drink) => unlockReplay.play([drink], 'lookup') });
   // ui-3.5.1: dev mode only with ?dev=1 (DEV badge, pause the night timer via devPause, stubs for more dev inputs).
   const dev = isDevMode(location.search) ? createDevPanel(document, send, me) : null;
-  // ui-3.10.0: the new-drink unlock replay (scripted ghost barista, no bot brain) after "On to the night shop".
-  const unlockReplay = createUnlockReplay($('#unlockReplay'));
   const closing = createClosing($('#closing'), {
     onGrow: (tier) => send({ kind: 'grow', playerId: me(), tier }),
     onContinue: () => {
@@ -632,7 +633,12 @@ async function main(): Promise<void> {
       // The day's receipt leads into the night shop; after the last day (or a missed rent) the
       // week-end screen sums up instead, so the receipt ("On to the night shop") stays hidden.
       if (state.phase === 'day') s.dayUnlocked = [...(state.unlocked ?? [])];
-      if (from === 'closing' && state.phase === 'night') s.learnedTonight = s.dayUnlocked ? newlyLearned(s.dayUnlocked, state) : [];
+      if (from === 'closing' && state.phase === 'night') {
+        const fromState = state.learned?.length ? [...state.learned] : [];
+        const fromSnap = s.dayUnlocked ? newlyLearned(s.dayUnlocked, state) : [];
+        const seen = new Set<DrinkId>();
+        s.learnedTonight = [...fromState, ...fromSnap].filter((d) => (seen.has(d) ? false : (seen.add(d), true)));
+      }
       if (state.phase !== 'night') unlockReplay.close();
       if (from === 'closing' && s.lastClosing && state.phase === 'night') {
         closing.render(closingViewModel(s.lastClosing, state));

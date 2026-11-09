@@ -312,6 +312,7 @@ function drinkCard(m: MenuLineVM, onlyOne: boolean): string {
     <div class="dc-foot">
       <button class="btn mini sw ${m.on ? 'on' : ''}" data-action="menu" data-drink="${m.drink}" data-on="${m.on ? '0' : '1'}" ${m.on && onlyOne ? 'disabled title="Keep at least one drink on"' : ''} aria-pressed="${m.on}">${m.on ? 'On' : 'Off'}</button>
       <button class="btn mini ghost" data-action="drawer" data-d="twist:${m.drink}">${tw ? `${tw.icon} ${esc(tw.name)}` : 'Twist'} ▸</button>
+      <button class="btn mini ghost how" data-action="howto" data-drink="${m.drink}">How to make it</button>
     </div>
   </div>`;
 }
@@ -730,7 +731,7 @@ export function nightHtml(vm: NightVM, extras: NightExtras | undefined, room: st
 
 export function createNight(
   container: HTMLElement,
-  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire', role: 'strategist' | 'marketer'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void; onMoveStation?(station: string, to: Vec2): void },
+  handlers: { onBuy(itemId: string): void; onRestock(supply: SupplyId): void; onReady(): void; onMenu?(drink: DrinkId, on: boolean): void; onHowTo?(drink: DrinkId): void; onPrice?(drink: DrinkId, step: number): void; onTwist?(drink: DrinkId, twist: TwistId | null): void; onSignature?(sig: SigDraft | null): void; onScout?(): void; onAd?(ad: AdId | null): void; onPitch?(kind: PitchKind, text: string): void; onCheckout?(checkout: CheckoutId): void; onGrow?(tier: TierId): void; onGear?(action: 'buy', gear: GearId, wand?: AddOnWand): void; onWand?(station: string, wand: AddOnWand): void; onGearSell?(index: number): void; onGearVote?(yes: boolean): void; onFridge?(fridge: FridgeId): void; onTip?(input: NightFix): void; onCondimentBox?(): void; onEditLook?(): void; onStaff?(action: 'hire' | 'fire', role: 'strategist' | 'marketer'): void; onBranch?(action: 'open' | 'staff' | 'send' | 'close', opts: { area?: AreaId; staff?: number; supply?: SupplyId }): void; onMoveStation?(station: string, to: Vec2): void },
 ): { render(vm: NightVM, extras?: NightExtras, room?: string | null): void; toast(lines: string[]): void; show(): void; hide(): void } {
   // ui-3.7.1: a bubble for news like the Strategist's menu changes; it sits outside the board, which rebuilds.
   const bubble = document.createElement('div');
@@ -807,6 +808,7 @@ export function createNight(
       else handlers.onReady();
     }
     else if (action === 'menu') handlers.onMenu?.(el.dataset.drink as DrinkId, el.dataset.on === '1');
+    else if (action === 'howto') handlers.onHowTo?.(el.dataset.drink as DrinkId);
     else if (action === 'twist') handlers.onTwist?.(el.dataset.drink as DrinkId, (el.dataset.twist || null) as TwistId | null);
     else if (action === 'price') handlers.onPrice?.(el.dataset.drink as DrinkId, Number(el.dataset.step));
     else if (action === 'tab' || action === 'goto') {

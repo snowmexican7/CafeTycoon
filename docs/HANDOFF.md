@@ -23,6 +23,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-09: **Playtest feel fixes (Kennedy, Nov 7 playthrough), v3.11.0, protocol 71, snapshot 36.** One PR, both lanes. (1) Espresso milk drinks drop the jug fill; the steam meter is the only skill and the drink finishes in hand. Wand ease still widens `steamWindow`. (2) A double group-head is one interactable (`pickEspressoHead` in `src/sim/groupHead.ts`): a free head takes a new shot while one sits, capacity 2. The second head is not drawn as its own machine. (3) Closing: checklist done and nobody left closes on `closingMinSeconds`; otherwise `closingGraceSeconds` (now 45) is the wrap-up cap. `putAwayPending` is the whole checklist for people. (4) `GameState.learned` queues every drink unlocked since the doors opened; the receipt plays them in order. "How to make it" on the night menu and on tickets. The latte how-to names the milk. (5) Teammate bumps are a light brush (`ECONOMY.bump`). Customer bumps unchanged. Pickup is at (4, 6), condiments at (5, 6), wide enough for two people at (3, 5) and (4, 5), off the cashier's tile. No new bot logic. No save migration.
 - 2026-11-09: **Answers on the design drafts (Kennedy). The plans stay drafts, not approved to build.** Campaign's poor start is about right: about $40, a cheap pot, drip only; tune the numbers later (`docs/PLAN_CAMPAIGN_AND_BLITZ.md`). 2v2 is one shared street where customers pick a shop; a mirrored week is maybe later (`docs/PLAN_2V2.md`). The cart sits on the sidewalk, not in the park. Night Layout is snapped, and players can move everything anywhere except the cash register and the pickup, which stay next to each other at the front (`docs/PLAN_GROWTH_AND_LAYOUT.md`). Street-view drive-ups are an occasional extra on top of walk-ins, not a replacement (`docs/PLAN_STREET_VIEW.md`).
 - 2026-11-09: **Design drafts written, not approved to build.** Kennedy's answers the same day are the entry above. The five plans:
   Campaign and Blitz (`docs/PLAN_CAMPAIGN_AND_BLITZ.md`), 2v2 plus the 3-player rush (`docs/PLAN_2V2.md`),
@@ -42,7 +43,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   answers): `docs/PLAN_BOTS_CUT_AND_WANDS.md`.
 - 2026-11-06: **Steam wand upgrades make the meters easier, not faster:** a better wand makes the jug fill fast at the
   start, very slow in the middle and fast at the end (a quick run almost always hits the line), and gives a much wider
-  green band on the steam meter.
+  green band on the steam meter. **The fill half is superseded 2026-11-09:** the jug step is gone; ease is the foam band only.
 - 2026-11-06: **Cappuccino's second steam also finishes straight into your hand**, the same as a latte (Round 6 block 3,
   PR #29): no second wait or second E at the wand.
 - 2026-11-05: **Round 6 approved (Kennedy, Nov 5 evening).** Docs: `docs/CURSOR_PROMPT_NEXT.md`,
@@ -51,7 +52,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   - **UI:** drink icons a bit larger; UI a bit larger; tip bubbles clearer. Full "I've played this before" tutorial
     stays **Later**; **Soon** is the new-drink unlock replay after the nightly receipt (bot plays how-to).
   - **Latte / B8 un-parked:** keep jug fill + steam meter; remove the end timer and the extra E — drink is instantly
-    done and in hand. Cursor builds; Claude reviews the sim edits.
+    done and in hand. Cursor builds; Claude reviews the sim edits. **Fill step removed 2026-11-09** (steam meter only).
   - **Machines:** a pending `station.output` must not lock the machine (e.g. sitting shot + drip → red-eye still works);
     same for all machines. Claude owns.
   - **Patience:** less walk-in-order-leave; challenge via more multi / group orders, not stupider impatience. Claude.

@@ -18,10 +18,20 @@ when a build goes out, the line moves under its version with the date.
 
 - **A street out front.** The view drops a little so you can see the road in front of the shop, on the cart, the stand and the café. Cars drive by. Now and then one of them has a short comment ("Smells good", "That line though", "Is that a café yet?"). Once in a while a car stops and the driver comes in as an ordinary extra customer, on top of the people already walking in. Held for review.
 
+## 3.11.0 — 2026-11-09 · Playtest feel
+
+Kennedy's Nov 7 playthrough. Five feel fixes. Protocol 71, snapshot 36. Also the co-op lag fix from the same day.
+
 - **Co-op: a joined player no longer falls further and further behind.** When the connection can't
   keep up with 20 updates a second, the host now sends the latest café instead of a queue of old ones.
   The host's own game was never waiting on that queue. If a send never finishes (someone's connection
   dies mid-update), the host gives up after a second and a half and keeps updating everyone else.
+
+- **Milk drinks are one steam step.** Latte, cappuccino and the rest: no more filling the jug, then steaming. Press at the steam wand, stop the foam meter, and the drink is already in your hand. A better wand still makes that foam meter easier to hit.
+- **A two-group espresso machine is one spot.** Stand at the machine and pull a shot even while another shot is sitting there (it holds two). You pick the waiting shot up from the same spot. It no longer locks the machine.
+- **Closing gives you a wrap-up.** If the checklist is done and nobody is left, the day ends right away. If something is still out, or customers are still here, you get a wrap-up (up to 45 seconds) with a list of what is left. The timer is the cap, so the day cannot hang.
+- **Every new drink gets a how-to, and you can look one up later.** After the nightly profit screen, each drink you learned that day plays in order (several, if you learned several). A latte how-to says to steam the milk. "How to make it" is on the night menu and on each order ticket.
+- **Teammates bump more lightly, and the pickup counter is wider.** Brushing past another player is a short, small slowdown. Bumping a customer is the same as before. The pickup counter sits clear of the cashier's lane, wide enough for two people side by side, on the stand, the cart and the café.
 
 ## 3.10.0 — 2026-11-07 · Round 6 and the bot cut
 
