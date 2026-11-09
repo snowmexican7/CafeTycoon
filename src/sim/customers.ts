@@ -143,6 +143,8 @@ function spawnWalkIn(state: GameState): void {
  * and a full queue plus a full waiting area means the car drives on. See `DRIVE_UP_EVERY`.
  */
 export function addDriveUp(state: GameState): boolean {
+  // Doors locked (closing wrap-up, night): the car does not stop. Walk-ins have already stopped.
+  if (state.phase !== 'day') return false;
   if (!driveUpThisTick(state.seed, state.tick)) return false;
   const menu = availableDrinks(state);
   if (menu.length === 0) return false;

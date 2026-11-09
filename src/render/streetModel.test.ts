@@ -30,6 +30,7 @@ function read(over: Partial<StreetRead> = {}): StreetRead {
     tier: 'cafe',
     complained: false,
     curbBusy: false,
+    doorsOpen: true,
     width: STREET_WIDTH,
     ...over,
   };
@@ -123,6 +124,11 @@ describe('street cars', () => {
     r.curbBusy = true;
     fillStreet(cars, r);
     expect(cars.every((c) => c.parked === 0)).toBe(true);
+    r.curbBusy = false;
+    r.doorsOpen = false;
+    fillStreet(cars, r);
+    expect(cars.every((c) => c.parked === 0)).toBe(true);
+    r.doorsOpen = true;
     const left = PARK_X - 110;
     const right = PARK_X + 110;
     for (const c of cars) if (c.y === NEAR_LANE_Y) expect(c.x <= left || c.x >= right).toBe(true);

@@ -37,6 +37,7 @@ export class Street {
     tier: 'cafe',
     complained: false,
     curbBusy: false,
+    doorsOpen: true,
     width: 0,
   };
   private readonly body: Graphics[] = [];
@@ -55,6 +56,7 @@ export class Street {
   private seenTier: GameState['tier'] = undefined;
   private seenShout = false;
   private seenCurb = false;
+  private seenOpen = false;
   private readonly dim: Graphics;
 
   constructor(width: number, height: number) {
@@ -94,6 +96,7 @@ export class Street {
   /** Move the cars for this snapshot. Skips the hash work when nothing the picture reads has changed. */
   update(state: GameState, curbBusy: boolean): void {
     const night = isNightLook(state.phase);
+    const doorsOpen = state.phase === 'day';
     const tier = state.tier === 'stand' || state.tier === 'cart' ? state.tier : 'cafe';
     const queue = state.customers.length;
     const shout = lineIsShouting(state.tick, state.line?.complainedAt);
@@ -106,7 +109,8 @@ export class Street {
       this.seenRep === state.reputation &&
       this.seenTier === tier &&
       this.seenShout === shout &&
-      this.seenCurb === curbBusy
+      this.seenCurb === curbBusy &&
+      this.seenOpen === doorsOpen
     ) {
       return;
     }
@@ -119,6 +123,7 @@ export class Street {
     this.seenTier = tier;
     this.seenShout = shout;
     this.seenCurb = curbBusy;
+    this.seenOpen = doorsOpen;
     this.dim.visible = night;
 
     if (this.builtFor !== state.seed) {
@@ -142,6 +147,7 @@ export class Street {
     r.tier = tier;
     r.complained = shout;
     r.curbBusy = curbBusy;
+    r.doorsOpen = doorsOpen;
     fillStreet(this.cars, r);
     this.place(this.cars);
   }
@@ -187,18 +193,19 @@ export class Street {
 
 /** A hatchback (kind 0) or a delivery van (kind 1), wheels on y = 0, facing right. */
 function drawCar(g: Graphics, kind: 0 | 1, color: number): void {
-  const w = kind === 1 ? 78 : 54;
-  const h = kind === 1 ? 26 : 22;
-  const roof = kind === 1 ? 40 : 30;
-  g.ellipse(0, 3, w * 0.4, 4).fill({ color: 0x1a120c, alpha: 0.28 });
-  g.roundRect(-w / 2, -h, w, h - 2, 6).fill(color).stroke({ width: 2, color: 0x2a1608 });
-  g.roundRect(-roof / 2, -h - (ROOF_PX - h), roof, ROOF_PX - h + 4, 5).fill(color).stroke({ width: 2, color: 0x2a1608 });
-  g.roundRect(-roof / 2 + 3, -h - (ROOF_PX - h) + 3, roof - 6, 8, 2).fill(0xc5e4f6);
-  g.circle(-2, -h - 4, 3).fill(0xf2c6a0);
-  g.rect(w / 2 - 3, -h + 4, 4, 5).fill(0xffe08a);
-  g.rect(-w / 2 - 1, -h + 4, 3, 4).fill(0xe07070);
-  for (const wx of [-w / 2 + 12, w / 2 - 12]) {
-    g.circle(wx, -1, 6).fill(0x2a241c);
-    g.circle(wx, -1, 2.4).fill(0xdfe6ea);
+  const van = kind === 1;
+  const w = van ? 96 : 70;
+  const h = van ? 30 : 26;
+  const cabin = van ? 52 : 40;
+  g.ellipse(0, 4, w * 0.42, 5).fill({ color: 0x1a120c, alpha: 0.3 });
+  g.roundRect(-w / 2, -h, w, h - 2, 7).fill(color).stroke({ width: 2.5, color: 0x2a1608 });
+  g.roundRect(-cabin / 2, -ROOF_PX, cabin, ROOF_PX - h + 6, 6).fill(color).stroke({ width: 2.5, color: 0x2a1608 });
+  g.roundRect(-cabin / 2 + 4, -ROOF_PX + 4, cabin - 8, 12, 3).fill(0xc5e4f6);
+  g.circle(van ? -6 : -4, -h - 6, 4).fill(0xf2c6a0);
+  g.roundRect(w / 2 - 4, -h + 6, 6, 7, 1).fill(0xffe08a);
+  g.roundRect(-w / 2 - 2, -h + 6, 5, 6, 1).fill(0xe07070);
+  for (const wx of [-w / 2 + 16, w / 2 - 16]) {
+    g.circle(wx, -1, 8).fill(0x2a241c);
+    g.circle(wx, -1, 3.2).fill(0xdfe6ea);
   }
 }

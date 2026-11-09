@@ -22,7 +22,7 @@ import { SIDEWALK, TILE, sx, sy } from './theme';
 export const STREET_TOP = sy(LAYOUT.height) + SIDEWALK;
 
 /** How tall a car is, from its wheels up to the roof. The lanes are placed from this. */
-export const ROOF_PX = 30;
+export const ROOF_PX = 38;
 
 /** Wheel line of the lane nearer the shop (cars drive to the right). */
 export const NEAR_LANE_Y = STREET_TOP + 46;
@@ -86,6 +86,8 @@ export interface StreetRead {
   complained: boolean;
   /** The espresso ambulance is in the kerb bay. Cars leave that stretch clear. */
   curbBusy: boolean;
+  /** False once the doors lock (closing, night). No car pulls over. */
+  doorsOpen: boolean;
   width: number;
 }
 
@@ -127,8 +129,8 @@ export function ambulanceOnKerb(players: readonly { espresso?: { collapsedAt?: n
  * and they are the newest person. Null means the usual spot beside the queue. The walk
  * from here to the line is the renderer's existing slide; it is not a sim path.
  */
-export function driveUpOrigin(seed: number, tick: number, id: number, newest: number, curbBusy: boolean): { x: number; y: number } | null {
-  if (curbBusy || id !== newest || newest < 0) return null;
+export function driveUpOrigin(seed: number, tick: number, id: number, newest: number, curbBusy: boolean, doorsOpen = true): { x: number; y: number } | null {
+  if (!doorsOpen || curbBusy || id !== newest || newest < 0) return null;
   if (!driveUpThisTick(seed, tick)) return null;
   return { x: DRIVE_UP_PARK_X + 48, y: STREET_TOP - 8 };
 }
@@ -178,7 +180,7 @@ export function fillStreet(cars: StreetCar[], r: StreetRead): void {
   const motion = r.night ? r.tick >> 1 : r.tick;
   const span = r.width + 160;
   let driveTick = -1;
-  if (!r.curbBusy) {
+  if (r.doorsOpen && !r.curbBusy) {
     const from = r.tick - (HOLD + LEAVE);
     const to = r.tick + APPROACH;
     for (let t = from; t <= to; t++) {

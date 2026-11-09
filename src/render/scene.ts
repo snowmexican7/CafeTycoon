@@ -268,7 +268,7 @@ export class Scene {
     this.actors.spots = { gear: state.gear === true, width: lay.width, queueSlots: lay.queueSlots, till: LAYOUT.stations.find((s) => s.kind === 'counter')!.pos, pickup: lay.pickup };
     const kerbBusy = ambulanceOnKerb(state.players, state.tick);
     this.street.update(state, kerbBusy);
-    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses, waitingToDraw(state), state.tier ?? 'cafe', state.seed, state.tick, kerbBusy);
+    this.actors.update(state.players, view.baristaPositions, state.customers, localId, now, poses, waitingToDraw(state), state.tier ?? 'cafe', state.seed, state.tick, kerbBusy, state.phase === 'day');
     this.pickup.update(state, now);
     this.sink.update(state, localId, now);
     this.fridge.update(state, localId, now);

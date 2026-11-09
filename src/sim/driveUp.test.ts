@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { ECONOMY } from '../data/economy';
+import { layoutFor } from '../data/layout';
+import { customerSpots } from '../render/pickupModel';
 import { addDriveUp, availableDrinks, queueCapacity, spawnCustomers } from './customers';
+import { secondsToTicks } from './constants';
 import { DRIVE_UP_EVERY, driveUpThisTick } from './driveUp';
 import { computeModifiers } from './effects';
 import { tierInfo } from './growth';
 import { waitingRoom } from './line';
 import { createRun, startDay } from './run';
+import { step } from './step';
 
 const day = () => {
   const s = createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }] });
@@ -89,5 +93,32 @@ describe('drive-up customers', () => {
     expect(addDriveUp(s)).toBe(false);
     expect(s.rng).toBe(rng);
     expect(s.customers).toHaveLength(0);
+  });
+
+  it('does not stop once the doors lock, and still joins the line clear of the wider pickup', () => {
+    let s = day();
+    const at = firstDriveUp(s.seed);
+    s.phase = 'closing';
+    s.phaseTicksLeft = secondsToTicks(ECONOMY.closingGraceSeconds);
+    s.tick = at - 1;
+    s.customers = [];
+    s = step(s, []);
+    expect(s.phase).toBe('closing');
+    expect(s.tick).toBe(at);
+    expect(driveUpThisTick(s.seed, s.tick)).toBe(true);
+    expect(s.customers).toHaveLength(0);
+
+    const open = day();
+    open.gear = true;
+    open.tick = firstDriveUp(open.seed);
+    open.customers = [];
+    expect(addDriveUp(open)).toBe(true);
+    const c = open.customers[0]!;
+    expect(c.stage).toBe('order');
+    const lay = layoutFor('cafe');
+    expect(lay.pickup).toEqual({ x: 4, y: 6 });
+    const spot = customerSpots([c], true, { width: lay.width, queueSlots: lay.queueSlots, till: { x: 6, y: 6 }, pickup: lay.pickup })[0]!;
+    expect(spot.y).toBeGreaterThan(7);
+    expect(Math.hypot(spot.x - lay.pickup.x, spot.y - lay.pickup.y)).toBeGreaterThan(1.2);
   });
 });

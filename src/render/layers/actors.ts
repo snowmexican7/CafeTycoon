@@ -405,6 +405,7 @@ export class Actors {
     seed = 0,
     tick = 0,
     curbBusy = false,
+    doorsOpen = true,
   ): void {
     const seen = new Set<PlayerId>();
     players.forEach((p, index) => {
@@ -524,7 +525,7 @@ export class Actors {
       const targetY = sy(slot.y) + CUSTOMER_FEET_PX;
       let sprite = this.customers.get(c.id);
       if (!sprite) {
-        const kerb = driveUpOrigin(seed, tick, c.id, newest, curbBusy);
+        const kerb = driveUpOrigin(seed, tick, c.id, newest, curbBusy, doorsOpen);
         sprite = this.addCustomer(c, kerb ? kerb.x : targetX + TILE * 0.8, kerb ? kerb.y : targetY, kerb != null);
       }
       this.stepToward(sprite, targetX, targetY, 0.15);
@@ -603,7 +604,7 @@ export class Actors {
       const targetY = sy(slot.y) + CUSTOMER_FEET_PX;
       let sprite = this.browsers.get(c.id);
       if (!sprite) {
-        const kerb = driveUpOrigin(seed, tick, c.id, newest, curbBusy);
+        const kerb = driveUpOrigin(seed, tick, c.id, newest, curbBusy, doorsOpen);
         sprite = this.addBrowser(c, kerb ? kerb.x : targetX + TILE * 0.4, kerb ? kerb.y : targetY, kerb != null);
       }
       this.stepToward(sprite, targetX, targetY, 0.12);

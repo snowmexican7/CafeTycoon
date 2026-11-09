@@ -1225,11 +1225,14 @@ const FIXTURES: Record<string, Fixture> = {
   cartDay: { setup: (s) => atTier(s, 'cart', 5), timeline: [] },
   cafeDay: { setup: (s) => atTier(s, 'cafe', 6), timeline: [] },
   /**
-   * Street view on the café: cars on the road, one of them with a comment. The tick is one where
-   * a bubble is up and no drive-up is pulling over, so the shot is the passing traffic.
+   * Street view on a normal café. Gear, like every real run: the solid front counter, the till,
+   * the pickup and the cream bar. (A classic fixture draws only the one small till, which is what
+   * the first shot showed. The street starts under the sidewalk and does not cover this row.)
+   * The tick is one where a bubble is up and no drive-up is pulling over.
    */
   streetCafe: {
     setup(s) {
+      s.gear = true;
       atTier(s, 'cafe', 1);
       s.reputation = 4.6;
       s.seed = 7;
@@ -1245,6 +1248,7 @@ const FIXTURES: Record<string, Fixture> = {
         tier: 'cafe',
         complained: false,
         curbBusy: false,
+        doorsOpen: true,
         width: STREET_WIDTH,
       };
       const tick = tickWithBubble(read, cars);
