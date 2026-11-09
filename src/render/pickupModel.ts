@@ -1,4 +1,4 @@
-import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_ID, SINK_ID, SUPPLY_ID, SYRUP_ID, TRAY_ID } from '../data/layout';
+import { CONDIMENTS_ID, FRIDGE_ID, PICKUP_BODY, PICKUP_ID, SINK_ID, SUPPLY_ID, SYRUP_ID, TRAY_ID } from '../data/layout';
 import { CONDIMENTS } from '../sim/condiments';
 import { TICK_RATE } from '../sim/constants';
 import { passSlots } from '../sim/pickup';
@@ -121,15 +121,26 @@ const RUN_SPOTS: readonly CounterSpot[] = ['till', 'pickup', 'condiments'];
  * staff and customers. Returns the ids in the run and its left / right tile edges (the run covers exactly the tiles
  * the sim already blocks, so nobody seems to walk through it), or null with fewer than two spots (classic: the till alone).
  */
+/** How far either side of its centre a front-counter spot blocks (the wide pickup fills the gap to the till). */
+function spotReach(id: string): number {
+  return id === PICKUP_ID ? PICKUP_BODY : 0.5;
+}
+
 export function servingRun(list: readonly { id: string; kind: string; pos: Vec2; twin?: boolean }[]): { ids: string[]; y: number; x0: number; x1: number } | null {
   const till = list.find((s) => s.id === 'counter' && !s.twin);
   if (!till) return null;
-  const inRun = (x: number) =>
-    list.find((s) => !s.twin && s.pos.y === till.pos.y && Math.abs(s.pos.x - x) < 0.01 && RUN_SPOTS.includes(counterSpotOf(s, list) as CounterSpot));
-  const ids = [till.id];
+  const spots = list.filter(
+    (s) => !s.twin && s.pos.y === till.pos.y && RUN_SPOTS.includes(counterSpotOf(s, list) as CounterSpot),
+  );
+  // Walk out from the till only across tiles a spot's body actually covers, so a real gap stays walkable floor.
+  const covered = (x: number) => spots.some((s) => Math.abs(s.pos.x - x) <= spotReach(s.id) + 0.02);
   let lo = till.pos.x;
   let hi = till.pos.x;
-  for (let s = inRun(lo - 1); s; s = inRun(lo - 1)) (ids.unshift(s.id), (lo -= 1));
-  for (let s = inRun(hi + 1); s; s = inRun(hi + 1)) (ids.push(s.id), (hi += 1));
-  return ids.length < 2 ? null : { ids, y: till.pos.y, x0: lo - 0.5, x1: hi + 0.5 };
+  while (covered(lo - 1)) lo -= 1;
+  while (covered(hi + 1)) hi += 1;
+  const run = spots.filter((s) => s.pos.x >= lo - 0.01 && s.pos.x <= hi + 0.01).sort((a, b) => a.pos.x - b.pos.x);
+  if (run.length < 2) return null;
+  const pickup = run.find((s) => s.id === PICKUP_ID);
+  const x0 = pickup ? Math.min(lo - 0.5, pickup.pos.x - PICKUP_BODY) : lo - 0.5;
+  return { ids: run.map((s) => s.id), y: till.pos.y, x0, x1: hi + 0.5 };
 }

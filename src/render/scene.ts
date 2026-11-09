@@ -18,6 +18,7 @@ import { ESPRESSO } from '../sim/espresso';
 import { buildFloor } from './layers/floor';
 import { Lighting, buildLamps } from './layers/light';
 import { StationOverlay, buildEmptySlot, buildServingCounter, buildStation, setBarSkin, type StationOverlayState } from './layers/stations';
+import { milkShelfLevel } from './supplyModel';
 import { PickupVisuals } from './layers/pickup';
 import { CountsLayer } from './layers/counts';
 import { SinkVisuals } from './layers/sink';
@@ -119,12 +120,14 @@ export class Scene {
     stations?: readonly Station[],
     fridge: FridgeId | null = null,
     slotPos?: readonly (Vec2 | null)[],
+    milk: ReturnType<typeof milkShelfLevel> = 'empty',
   ): void {
     // FB1 WP5: the art follows state.stations (bought duplicates, swapped slots), with a plinth in every empty slot.
     const lay = layoutFor(tier);
     const list = stations ?? lay.stations;
     const gearOf = (s: (typeof list)[number]) => ('gear' in s ? s.gear : undefined);
-    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}:${fridge ?? ''}:${JSON.stringify(slotPos ?? null)}`;
+    // `milk` rebuilds the milk counter's shelf when the stock crosses empty / low / partial / full.
+    const key = `${tier ?? 'cafe'}:${checkout}:${list.map((s) => `${s.id}@${s.pos.x},${s.pos.y}:${gearOf(s) ?? ''}`).join('|')}:${fridge ?? ''}:${JSON.stringify(slotPos ?? null)}:${milk}`;
     if (key === this.stationKey) return;
     this.stationKey = key;
     for (const c of this.stationArt) c.destroy({ children: true });
@@ -138,7 +141,7 @@ export class Scene {
     this.stationArt = list.map((s, i) => {
       const twin = 'twin' in s && s.twin === true;
       const g = gearOf(s);
-      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge, run?.ids.includes(s.id) === true);
+      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge, run?.ids.includes(s.id) === true, milk);
     });
     if (run) this.stationArt.push(buildServingCounter(run.x0, run.x1, run.y, barSkin(look)));
     for (const pos of emptySlotPositions(tier, list, slotPos)) this.stationArt.push(buildEmptySlot(pos));
@@ -204,7 +207,7 @@ export class Scene {
 
   update(view: RenderView): void {
     const { state } = view;
-    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations, fridgeGear(state), state.slotPos);
+    this.buildStations(state.checkout?.active ?? 'register', state.tier, state.stations, fridgeGear(state), state.slotPos, milkShelfLevel(state.supplyMilk));
     this.maybeCelebrate(state);
     const now = performance.now() / 1000;
     const dt = Math.min(0.1, Math.max(0, now - this.lastTime));
@@ -218,6 +221,10 @@ export class Scene {
     const mods = computeModifiers(state);
     this.wall.setMenu(wallMenuRows(state, mods.price));
     const ring = ringBar(state);
+    const groupParent = (s: (typeof state.stations)[number]) =>
+      s.twin && s.kind === 'espresso'
+        ? state.stations.find((p) => !p.twin && p.kind === 'espresso' && p.gear === s.gear && Math.hypot(p.pos.x - s.pos.x, p.pos.y - s.pos.y) <= 1.2)
+        : undefined;
     const stations: StationOverlayState[] = state.stations.map((s) => {
       let progress: number | null = null;
       if (s.busyTicksLeft > 0 && s.kind !== 'counter' && s.kind !== 'trash') {
@@ -225,6 +232,8 @@ export class Scene {
         progress = Math.max(0, Math.min(1, 1 - s.busyTicksLeft / total));
       }
       const isTill = s.id === 'counter' || (s.kind === 'counter' && !state.stations.some((x) => x.id === 'pickup'));
+      const parent = groupParent(s);
+      const hasTwin = !s.twin && s.kind === 'espresso' && state.stations.some((t) => t.twin && t.kind === 'espresso' && t.gear === s.gear && Math.hypot(t.pos.x - s.pos.x, t.pos.y - s.pos.y) <= 1.2);
       return {
         kind: s.kind,
         pos: s.pos,
@@ -233,6 +242,8 @@ export class Scene {
         // ui-3.9.1: hopper doses show once, as the count over the grinder (countsModel / stationCountsLeft).
         cat: state.eggs?.cat?.stationId === s.id,
         smoke: state.eggs?.smoke?.stationId === s.id,
+        ...(parent ? { drawAt: parent.pos, nudgeX: -36 } : {}),
+        ...(hasTwin ? { nudgeX: 8 } : {}),
         ...(ring && isTill ? { ring: { progress: ring.progress, self: ring.self, label: ringBarLabel(ring.self) } } : {}),
       };
     });
@@ -242,7 +253,9 @@ export class Scene {
     let focus = null;
     if (me && me.connected && (state.phase === 'day' || state.phase === 'closing')) {
       const pos = view.baristaPositions[me.id] ?? me.pos;
-      focus = nearestStation(state, pos)?.pos ?? null;
+      const near = nearestStation(state, pos);
+      const parent = near ? groupParent(near) : undefined;
+      focus = (parent ?? near)?.pos ?? null;
     }
 
     this.stationOverlay.update(stations, focus, now);

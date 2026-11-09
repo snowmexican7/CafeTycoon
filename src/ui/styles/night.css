@@ -115,7 +115,8 @@
 #night .dc-step { font: 700 var(--fs-s) var(--font-body); margin-top: 4px; } #night .dc-step.up { color: var(--good); } #night .dc-step.down { color: var(--bad); }
 #night .dc-fc { font: 600 clamp(17px, calc(8px + 1.1vh), 21px) var(--font-display); color: var(--ink-soft); text-align: center; } #night .dc-fc b { color: var(--ink); }
 #night .dc-fan { color: var(--cherry); } #night .dc-fc em { font-style: normal; }
-#night .dc-foot { display: flex; gap: 10px; } #night .dc-foot .btn { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: 600 var(--fs-l) var(--font-display); min-height: clamp(48px, 6vh, 58px); padding: 8px 14px; border-radius: 16px; }
+#night .dc-foot { display: flex; flex-wrap: wrap; gap: 10px; } #night .dc-foot .btn { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: 600 var(--fs-l) var(--font-display); min-height: clamp(48px, 6vh, 58px); padding: 8px 14px; border-radius: 16px; }
+#night .dc-foot .how { flex: 1 1 100%; }
 #night .btn.sw.on { background: var(--mint); color: #12392d; box-shadow: 0 3px 0 var(--mint-dk); }
 
 /* ---------- Spend */

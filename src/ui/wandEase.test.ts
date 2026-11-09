@@ -17,7 +17,8 @@ describe('ui-3.10.0 wand ease on gear cards', () => {
     expect(wandEaseVM(1).text).toContain(`×${Number.isInteger(x) ? x : x.toFixed(1).replace(/\.0$/, '')}`);
     expect(wandEaseChip(wandEaseVM(2))).toContain('data-ease="2"');
     for (const id of ['e5', 'e6'] as const) {
-      expect(gearStats(id)).toContain('Steam wand built in (milk');
+      expect(gearStats(id)).toContain('Steam wand built in');
+      expect(gearStats(id).toLowerCase()).toContain('foam');
       expect(gearStats(id)).not.toMatch(/\d s steam/);
     }
   });

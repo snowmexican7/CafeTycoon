@@ -1,5 +1,7 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { CheckoutId, ItemKind, StationKind, Vec2 } from '../../sim/types';
+import { DRIP_COLUMN, DRIP_RESERVOIR, TRAY_BOARD, TRAY_PLATE } from '../stationReadability';
+import { milkShelfParts, type MilkShelfLevel } from '../supplyModel';
 import { MAT, PALETTE, PROGRESS_BAR_RISE, STATION_LABELS, sx, sy } from '../theme';
 import type { BarSkin } from '../tierLook';
 import { CHROME, dashedEllipse, drawItem, halfDome, label, shadow, sheen, vertical } from './draw';
@@ -186,20 +188,28 @@ export type CounterSpot = 'till' | 'pickup' | 'condiments' | 'sink' | 'fridge' |
 
 /** Where pickup coaster `i` (0..3) sits on the pickup counter, in screen px. Shared with the per-frame cups. */
 export function pickupSlotXY(pos: Vec2, i: number, slots = 4): { x: number; y: number } {
-  const span = 46;
+  // Wide runner: two people side by side, shifted a little left of the till.
+  const span = 108;
+  const shift = -18;
   const step = slots > 1 ? span / (slots - 1) : 0;
-  return { x: sx(pos.x) - span / 2 + i * step, y: sy(pos.y) - 18 };
+  return { x: sx(pos.x) + shift - span / 2 + i * step, y: sy(pos.y) - 18 };
 }
 
 /**
  * `variant`: 'pour' draws the pour-over bar; 'pot' (FB2 A3, a Gear drip machine with a carafe) leaves the carafe
  * off the static art so the per-frame sink layer can draw it full, cold, stale or gone to the sink.
  */
-export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour' | 'pot', spot?: CounterSpot, fridge?: FridgeId | null, run = false): Container {
+export function buildStation(kind: StationKind, pos: Vec2, checkout: CheckoutId = 'register', n = 1, twin = false, variant?: 'pour' | 'pot', spot?: CounterSpot, fridge?: FridgeId | null, run = false, milk: MilkShelfLevel = 'empty'): Container {
+  // A second espresso group is the same machine: its cup is drawn on the main head, not as a tiny extra machine.
+  if (twin && kind === 'espresso') {
+    const root = new Container();
+    root.zIndex = stationDepth(pos);
+    return root;
+  }
   // ui-3.4.1 (FB2 A4): the fridge stands on its own (no counter under it), one look per fridge
   if (kind === 'counter' && spot === 'fridge') return buildFridge(pos, fridge ?? 'f1');
-  // Round 5 block 4: milk & cream shelf by the sink
-  if (kind === 'counter' && spot === 'supply') return buildSupplyShelf(pos);
+  // Round 5 block 4: milk & cream shelf by the sink. `milk` is how full the drawn stock is.
+  if (kind === 'counter' && spot === 'supply') return buildSupplyShelf(pos, milk);
   plainArt = twin;
   onRun = run && !twin;
   let root: Container;
@@ -316,8 +326,36 @@ function buildFridge(pos: Vec2, id: FridgeId): Container {
   return root;
 }
 
-/** Round 5 block 4: a small fridge-ish shelf with a milk jug and a cream carton by the sink. */
-function buildSupplyShelf(pos: Vec2): Container {
+/**
+ * A milk jug whose base is `bottom`. Drawn on the top shelf: the sink one tile south covers
+ * anything lower. `half` leaves the top of the jug empty.
+ */
+function drawShelfJug(g: Graphics, x: number, bottom: number, half: boolean): void {
+  const h = 13;
+  const top = bottom - h;
+  g.roundRect(x, top, 9, h, 2).fill(0xffffff).stroke({ width: 1.2, color: 0x6f8aa6 });
+  g.moveTo(x, top + 3).lineTo(x - 4, top).stroke({ width: 1.4, color: 0x6f8aa6 });
+  const milkTop = half ? bottom - 5 : top + 2;
+  g.roundRect(x + 1, milkTop, 7, bottom - 1 - milkTop, 1).fill(0x3d79b0);
+}
+
+/** A carton whose base is `bottom`. `short` is a nearly-empty one: a sip of milk in the bottom. */
+function drawShelfCarton(g: Graphics, x: number, bottom: number, short: boolean): void {
+  const w = short ? 10 : 9;
+  const h = short ? 10 : 13;
+  const top = bottom - h;
+  g.roundRect(x, top, w, h, 2).fill(0xfdfdfb).stroke({ width: 1.2, color: 0x6f8aa6 });
+  if (short) {
+    // A visible sip in the bottom, with empty carton above it, so "low" is not a bare shelf.
+    g.rect(x + 1, bottom - 4, w - 2, 3).fill(0x3d79b0);
+    return;
+  }
+  g.poly([x, top, x + w, top, x + w - 2, top - 4, x + 2, top - 4]).fill(0x3d79b0);
+  g.rect(x, top + 4, w, 3).fill(0x7fb8e0);
+}
+
+/** Round 5 block 4: a small shelf by the sink. The cartons follow how much milk is left. */
+function buildSupplyShelf(pos: Vec2, level: MilkShelfLevel): Container {
   const root = new Container();
   const g = new Graphics();
   root.addChild(g);
@@ -330,16 +368,22 @@ function buildSupplyShelf(pos: Vec2): Container {
   g.roundRect(cx - 22, cy - 36, 44, 22, 3).fill(0xd5e0d4);
   g.roundRect(cx - 22, cy - 10, 44, 22, 3).fill(0xd5e0d4);
   g.moveTo(cx - 22, cy - 12).lineTo(cx + 22, cy - 12).stroke({ width: 1.5, color: 0x6f8a72 });
-  // milk jug (top shelf)
-  g.roundRect(cx - 14, cy - 32, 10, 14, 2).fill(0xffffff).stroke({ width: 1.2, color: 0x6f8aa6 });
-  g.moveTo(cx - 14, cy - 30).lineTo(cx - 18, cy - 33).stroke({ width: 1.4, color: 0x6f8aa6 });
-  g.ellipse(cx - 9, cy - 18, 3, 2).fill(0x3d79b0);
-  // cream carton (top shelf)
-  g.roundRect(cx + 2, cy - 34, 12, 16, 2).fill(0xfff8ee).stroke({ width: 1.2, color: 0xc49a6c });
-  g.rect(cx + 2, cy - 28, 12, 4).fill(0xf2c14e);
-  // spare carton (bottom)
-  g.roundRect(cx - 8, cy - 6, 10, 14, 2).fill(0xfdfdfb).stroke({ width: 1.2, color: 0x6f8aa6 });
-  g.poly([cx - 8, cy - 6, cx + 2, cy - 6, cx - 1, cy - 11, cx - 5, cy - 11]).fill(0x3d79b0);
+  const parts = milkShelfParts(level);
+  // Everything sits on the top shelf. The sink one tile south covers the lower half of this cabinet.
+  const base = cy - 17;
+  if (parts.jug !== 'none' && parts.cartons >= 2) {
+    drawShelfJug(g, cx - 18, base, false);
+    drawShelfCarton(g, cx - 6, base, false);
+    drawShelfCarton(g, cx + 6, base, false);
+  } else if (parts.jug !== 'none' && parts.cartons === 1) {
+    drawShelfJug(g, cx - 12, base, parts.jug === 'half');
+    drawShelfCarton(g, cx + 2, base, false);
+  } else if (parts.short) {
+    drawShelfCarton(g, cx - 4, base, true);
+  } else {
+    g.roundRect(cx - 8, base - 12, 16, 12, 2).stroke({ width: 1.4, color: 0x9aab9c });
+    g.moveTo(cx - 6, base - 1).lineTo(cx + 6, base - 11).stroke({ width: 1.3, color: 0xc45a4a });
+  }
   plate(root, g, cx, cy + 10, 'MILK', 0x3d79b0, 1);
   return root;
 }
@@ -405,13 +449,20 @@ function buildTrayTable(pos: Vec2): Container {
   root.zIndex = stationDepth(pos);
   counterBody(g, cx, cy, 0xe8dcc8);
   // board
-  g.roundRect(cx - 28, cy - 32, 56, 20, 4).fill(0xc49a6c).stroke({ width: 1.5, color: 0x8a6238 });
-  for (let i = 1; i < 4; i++) g.moveTo(cx - 28 + i * 14, cy - 32).lineTo(cx - 28 + i * 14, cy - 12).stroke({ width: 1, color: 0xa87848, alpha: 0.55 });
+  const board = TRAY_BOARD;
+  g.roundRect(cx + board.x, cy + board.y, board.w, board.h, 4).fill(0xc49a6c).stroke({ width: 1.5, color: 0x8a6238 });
+  for (let i = 1; i < 4; i++) g.moveTo(cx + board.x + i * 14, cy + board.y).lineTo(cx + board.x + i * 14, cy + board.y + board.h).stroke({ width: 1, color: 0xa87848, alpha: 0.55 });
   // empty tray silhouette
   g.roundRect(cx - 18, cy - 28, 36, 12, 3).fill({ color: 0xf4ebe0, alpha: 0.85 }).stroke({ width: 1.5, color: 0x8a6238 });
   g.ellipse(cx - 8, cy - 22, 4, 2.5).stroke({ width: 1.2, color: 0xb08960 });
   g.ellipse(cx + 8, cy - 22, 4, 2.5).stroke({ width: 1.2, color: 0xb08960 });
-  plate(root, g, cx, cy + 4, 'TRAY', 0x8a6238, 1);
+  // Beside the board, not under it: a drip one tile south covers the usual hanging plate.
+  const sign = TRAY_PLATE;
+  g.roundRect(cx + sign.x, cy + sign.y, sign.w, sign.h, sign.h / 2).fill(0x8a6238).stroke({ width: 2, color: 0xfff4e2 });
+  const trayName = label('TRAY', 12, 0xfff4e2, '700', undefined, 0.4);
+  if (trayName.width > sign.w - 8) trayName.scale.x *= (sign.w - 8) / trayName.width;
+  trayName.position.set(cx + sign.x + sign.w / 2, cy + sign.y + sign.h / 2);
+  root.addChild(trayName);
   return root;
 }
 
@@ -445,7 +496,8 @@ function buildPickupCounter(pos: Vec2): Container {
   const cy = sy(pos.y);
   root.zIndex = stationDepth(pos);
   counterBody(g, cx, cy);
-  g.roundRect(cx - 30, cy - 28, 60, 18, 6).fill(0x5fae86).stroke({ width: 1.5, color: 0x3f8a5d });
+  // Wide green runner: two staff tiles fit under it, clear of the till.
+  g.roundRect(cx - 78, cy - 30, 128, 22, 8).fill(0x5fae86).stroke({ width: 1.5, color: 0x3f8a5d });
   for (let i = 0; i < 4; i++) {
     const { x, y } = pickupSlotXY(pos, i);
     g.ellipse(x, y + 6, 6.5, 3).fill({ color: 0xeaf7ef, alpha: 0.9 });
@@ -557,8 +609,11 @@ function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId, cou
     g.poly([cx + 12, top - 18, cx + 30, top - 18, cx + 27, top, cx + 15, top]).fill(CHROME).stroke({ width: 1, color: 0x8d989f });
   } else if (kind === 'drip') {
     // G4d: a drip coffee maker: dark body, hot plate, a glass carafe of coffee.
-    g.roundRect(cx - 22, top - 60, 44, 14, 6).fill(0x2d2a30);
-    g.roundRect(cx + 10, top - 50, 12, 48, 4).fill(0x2d2a30);
+    // The tank and column use stationReadability's boxes so they stay clear of the tray one tile north.
+    const tank = DRIP_RESERVOIR;
+    const column = DRIP_COLUMN;
+    g.roundRect(cx + tank.x, cy + tank.y, tank.w, tank.h, 6).fill(0x2d2a30);
+    g.roundRect(cx + column.x, cy + column.y, column.w, column.h, 4).fill(0x2d2a30);
     g.roundRect(cx - 24, top - 6, 48, 6, 3).fill(0x56616a);
     g.circle(cx + 16, top - 40, 2.5).fill(PALETTE.cherry);
     if (noPot) {
@@ -589,6 +644,10 @@ function buildStationArt(kind: StationKind, pos: Vec2, checkout: CheckoutId, cou
 export interface StationOverlayState {
   kind: StationKind;
   pos: Vec2;
+  /** Draw this head's cup on another station (the main group of a double espresso machine). */
+  drawAt?: Vec2;
+  /** Pixel nudge so the two group heads don't stack their cups. */
+  nudgeX?: number;
   /** 0..1 while working, null when idle. */
   progress: number | null;
   output: ItemKind | null;
@@ -625,8 +684,9 @@ export class StationOverlay {
     g.clear();
     let ringDrawn: { cx: number; by: number; label: string } | null = null;
     for (const s of stations) {
-      const cx = sx(s.pos.x);
-      const cy = sy(s.pos.y);
+      const at = s.drawAt ?? s.pos;
+      const cx = sx(at.x) + (s.nudgeX ?? 0);
+      const cy = sy(at.y);
       const top = cy - 20;
       if (s.kind === 'espresso') {
         const a = -Math.PI / 4 + (s.progress !== null ? Math.sin(timeSec * 9) * 0.5 + 0.9 : 0);

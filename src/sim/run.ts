@@ -163,6 +163,7 @@ export function startNight(state: GameState): GameState {
 /** Open the doors for `state.day`. */
 export function startDay(state: GameState): GameState {
   state.phase = 'day';
+  delete state.learned; // the night's how-to queue has had its turn
   // Gear G8: open proposals lapse when the shop opens.
   delete state.gearVote;
   delete state.gearVoteLast;

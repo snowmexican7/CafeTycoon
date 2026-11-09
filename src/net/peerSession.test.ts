@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createPeerSession, HOST_TIMEOUT_MESSAGE, ROOM_FULL_MESSAGE, VERSION_MISMATCH_MESSAGE, type PeerStatus } from './peerSession';
+import type { PlayerLook } from '../sim/types';
 import { PROTOCOL_VERSION } from './protocol';
 import { createFakeLink } from './testing/fakeLink';
 import type { HostToClient } from './transport';
@@ -174,6 +175,23 @@ describe('PeerSession', () => {
       expect(rejoin.prev).toBeUndefined();
     });
 
+    it('sends the look with the join, and again after the host hands back a seat', () => {
+      const look: PlayerLook = { hair: 'wavy', hairColor: 'pink', skin: 's6', outfit: 'slim-dress', shirtColor: 'blue' };
+      const link = createFakeLink();
+      const t = timers();
+      createPeerSession(link, { token: 'T1', name: 'Sam', prev: 'OLD', look, timeoutMs: 15000, setTimer: t.setTimer, clearTimer: t.clearTimer });
+      link.peerJoins('h');
+      link.receive('hello', hello(), 'h');
+      expect(link.sent.find((x) => x.kind === 'join')?.data).toMatchObject({ token: 'T1', prev: 'OLD', look });
+      link.receive('seat', { t: 'seat', token: 'OLD' }, 'h');
+      link.peerLeaves('h');
+      link.peerJoins('h2');
+      link.receive('hello', hello(), 'h2');
+      const rejoin = link.sent.filter((x) => x.kind === 'join').at(-1)!.data as Record<string, unknown>;
+      expect(rejoin.token).toBe('OLD');
+      expect(rejoin.look).toEqual(look);
+    });
+
     it('a full room ends the session with a friendly message', () => {
       const { link, peer, statuses, errors } = setup();
       link.peerJoins('h');
@@ -198,6 +216,9 @@ describe('PeerSession', () => {
     link.receive('snapd', { t: 'snapd', seq: 9, patch: ['o', { tick: ['r', 5] }], sentAt: 5 }, 'hostPeer');
     expect(snaps).toHaveLength(3);
     expect(link.sent.filter((s) => s.kind === 'resync')).toEqual([{ kind: 'resync', data: { t: 'resync' }, target: 'hostPeer' }]);
+    // An older keyframe (the picture from before a look arrived) must not paint over the newer one.
+    link.receive('snap', { t: 'snap', state: { phase: 'day', tick: 1, cash: 1 }, sentAt: 5, seq: 3 }, 'hostPeer');
+    expect(snaps.at(-1)!.state).toEqual({ phase: 'day', tick: 2, cash: 5 });
     link.receive('snap', { t: 'snap', state: { phase: 'day', tick: 9, cash: 6 }, sentAt: 6, seq: 9 }, 'hostPeer');
     link.receive('snapd', { t: 'snapd', seq: 10, patch: ['o', { cash: ['r', 7] }], sentAt: 7 }, 'hostPeer');
     expect(snaps.at(-1)!.state).toEqual({ phase: 'day', tick: 9, cash: 7 });
