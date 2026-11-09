@@ -23,7 +23,8 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
-- 2026-11-09: **Design drafts, awaiting Kennedy's review, not approved to build.** Five plans only:
+- 2026-11-09: **Answers on the design drafts (Kennedy). The plans stay drafts, not approved to build.** Campaign's poor start is about right: about $40, a cheap pot, drip only; tune the numbers later (`docs/PLAN_CAMPAIGN_AND_BLITZ.md`). 2v2 is one shared street where customers pick a shop; a mirrored week is maybe later (`docs/PLAN_2V2.md`). The cart sits on the sidewalk, not in the park. Night Layout is snapped, and players can move everything anywhere except the cash register and the pickup, which stay next to each other at the front (`docs/PLAN_GROWTH_AND_LAYOUT.md`). Street-view drive-ups are an occasional extra on top of walk-ins, not a replacement (`docs/PLAN_STREET_VIEW.md`).
+- 2026-11-09: **Design drafts written, not approved to build.** Kennedy's answers the same day are the entry above. The five plans:
   Campaign and Blitz (`docs/PLAN_CAMPAIGN_AND_BLITZ.md`), 2v2 plus the 3-player rush (`docs/PLAN_2V2.md`),
   cart → stand → café and loose night Layout (`docs/PLAN_GROWTH_AND_LAYOUT.md`), specialty shops
   (`docs/PLAN_SPECIALTY_SHOPS.md`), and street-view cars (`docs/PLAN_STREET_VIEW.md`). Standing rules in

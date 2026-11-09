@@ -1,6 +1,6 @@
 # Plan: cart, then stand, then café, and a layout you can actually move
 
-Status: **draft for Kennedy to review (2026-11-09). Not approved to build.**
+Status: **draft. Not approved to build.** Kennedy answered the cart and the layout on 2026-11-09 (see Open questions). Those answers are part of the draft. They are not approval to write code.
 
 Two changes. They share a file because the long game (`docs/PLAN_CAMPAIGN_AND_BLITZ.md`) needs both: the sizes in real-life order, and a floor where tables and supply boxes can sit anywhere the later furniture needs.
 
@@ -8,9 +8,9 @@ Standing rules: human play only. No new bot logic. The robot cashier keeps using
 
 ## For the player
 
-You start with a coffee cart. It is the small one: wheels, a short line, no fridge until you buy the little cube. When you can afford it, you move up to a stand, a fixed stall with more floor, a queue, and a fridge that comes with the keys. The café is still the shop with the door and the window, last.
+You start with a coffee cart, on the sidewalk. It is the small one: wheels, a short line, no fridge until you buy the little cube. When you can afford it, you move up to a stand, a fixed stall with more floor, a queue, and a fridge that comes with the keys. The café is still the shop with the door and the window, last.
 
-At night, Layout lets you pick up anything that is not the door or the line, and set it down where you like. Machines, the milk shelf, the syrups, the box of cream and sugar, and later the tables. Spots are loose. You are not sliding tokens along a back-bar grid.
+At night, Layout lets you pick something up and set it down on any tile. The spot snaps to the grid. It does not float. The cash register and the pickup counter are the only things that stay put, side by side at the front. Machines, the milk shelf, the syrups, the sink, the fridge, the box of cream and sugar, the door, the line, and later the tables can all move.
 
 ## How this sits on the code
 
@@ -39,7 +39,7 @@ Keep every footprint's numbers on that footprint. The 8-tile shop stays the chea
 
 Swap the names, the art, and the order you meet them:
 
-- Start: **Coffee cart.** The 8-tile floor, cart panels and an awning, on the sidewalk (the cart is on the street, which is also what the street-view plan draws). Queue 3, rent $10, prices ×0.8, traffic ×0.65, no fridge, no office run.
+- Start: **Coffee cart, on the sidewalk.** Kennedy, 2026-11-09: the cart does not sit in the park. The 8-tile floor, cart panels and an awning, on the street the stand already paints. Queue 3, rent $10, prices ×0.8, traffic ×0.65, no fridge, no office run.
 - Next, $70: **The stand.** The 10-tile floor, a fixed stall, the beer fridge, office runs, queue 5, waiting 2.
 - Last, $150: **The café.** Unchanged.
 
@@ -63,18 +63,20 @@ Rearranging is `moveStation` (`src/sim/rearrange.ts`), at night, from the Gear s
 
 `GameState.slotPos` remembers one spot per slot. A grow or a gear buy keeps those spots when they still fit, and resets every slot when they do not (`keepMovesOrReset`).
 
-### What "loose" means here
+### What moves
 
 One placement rule for everything you can buy, so a later table does not grow a second editor.
 
-- The night map is the whole floor, including the front counter and the corner where the boxes sit, out to the tier's width. The door tile and the queue tiles stay locked, because customers, the line, and `LAYOUT.door` assume them.
-- A placeable has a `Vec2` in tile units. Recommended snap: a quarter tile (0.25). That is loose next to today's whole-tile bar grid, and it still lines up with the unit-square blocker and the 1.1 reach. A fully free float makes overlap and "can I work this" into special cases. Quarter-tile is the proposal.
-- Machines, the milk shelf, the syrup rack, the fridge, the sink, the tray table, the condiment bar, and the supply-box pile use that snap. The till stays on the front counter. The robot cashier, ring-up, and the queue all look for the counter. Moving the till is a different project.
-- The box pile is one position (`boxPos`), defaulting to today's `boxCorner`. Carrying a box stays the tool it is now. You drag the pile, not each cardboard box.
-- Tables and decorations, when Campaign adds them, are more entries in the same list with the same move and the same night map.
-- `layoutProblems` stays the safety check: door, spawns, mop, and a working tile within 1.1 of every station, plus an idle tile by the till. Overlap stays forbidden. The "bar rows only" test goes away. A layout that was legal before a grow and is illegal after still resets, the way `keepMovesOrReset` does.
+Kennedy, 2026-11-09: placement is snapped, and the player can put a piece on any snapped spot. The only fixed pieces are the cash register and the pickup counter. They stay next to each other at the front. Moving the pickup would mean redoing the serve, ring-up, and counter logic (`pickup.ts`, `till.ts`, the robot cashier). Everything else can go wherever the player wants: machines, fixtures, supply boxes, and later tables. The door and the queue are in "everything else." They are not a second pair of fixed spots.
 
-The pathfinder does not need a rewrite for the quarter-tile snap. Stations already block squares. A placeable that overlaps a tile marks that tile blocked. Phase 1 of layout can ship as "any whole tile on the floor" before the quarter-tile snap, so the map grows before the coordinates change. The quarter-tile snap is the phase that matches "not a grid of spots." Stopping after whole tiles would miss the request.
+- The night map is the whole floor, out to the tier's width, including the front and the corner where the boxes sit.
+- A placeable snaps to a whole tile, the grid the sim already uses (`Vec2` tile centres, unit squares in `blocked`). Any tile the layout rules accept is a legal drop. There is no back-bar-only list, and there is no free float between tiles. A quarter-tile or half-tile snap was an earlier idea in this draft. It is not the decision.
+- The register (`counter`, today (6, 6)) and the pickup (`PICKUP_ID`, today (5, 6)) stay where they are, adjacent on the front row. The night map draws them and does not select them. The robot cashier, ring-up, and handing a cup over keep finding them there.
+- Everything else uses the same snap and the same move: machines and their twins, the milk shelf, the syrup rack, the fridge, the sink, the tray table, the condiment bar, the supply-box pile, the door, the queue, and the mop home. The box pile is one position (`boxPos`), defaulting to today's `boxCorner`. Carrying a box stays the tool it is now. You move the pile, not each cardboard box.
+- Tables and decorations, when Campaign adds them, are more entries in the same list.
+- `layoutProblems` stays the safety check, retargeted at wherever the door, the spawns, and the mop home now sit: those tiles stay reachable, every station keeps a working tile within `interactRangeTiles` (1.1), and the register still has an idle tile beside it. Overlap stays forbidden. The "bar rows only" test goes away. A layout that was legal before a grow and is illegal after still resets, the way `keepMovesOrReset` does.
+
+The pathfinder does not need a new coordinate system. Stations already block squares. A placeable that sits on a tile marks that tile blocked. "Anywhere" means any of those tiles, not a finer grid.
 
 ## Data and state
 
@@ -89,35 +91,37 @@ Growth:
 
 Layout:
 
-- `slotPos` keeps machine spots and may store quarter-tile coordinates (`{ x: 2.25, y: 1 }`).
+- `slotPos` keeps machine spots on whole tiles.
 - `fixturePos?: Partial<Record<string, Vec2>>` for the shelf, syrups, fridge, sink, tray, condiment bar. Absent means the tier default from `layoutFor`.
 - `boxPos?: Vec2`. Absent means `boxCorner`. `condimentBoxes` stays a count.
-- Later, `placeables?: { id, kind, pos }[]` for tables and decor. The same `moveStation` family, or one `moveThing { id, to }` that machines, fixtures, the pile, and tables all accept. One input is easier for the night map. Recommended when fixtures start moving; machines can keep `moveStation` until then so the first layout phase stays small.
-- Protocol and snapshot bump when `fixturePos` or quarter-tile spots start being sent. Old saves are refused. No migration.
+- `doorPos?: Vec2` and a moved queue (the existing `queueSlots` list, stored once the player has dragged it). Absent means `LAYOUT.door` and the tier's `queueSlots`. Spawn points follow the door so customers still appear at the entrance the player chose.
+- The register and the pickup have no stored position. They stay on the front pair.
+- Later, `placeables?: { id, kind, pos }[]` for tables and decor. One `moveThing { id, to }` for machines, fixtures, the pile, the door, and tables. The night map sends it on drop.
+- Protocol and snapshot bump when any of those positions start being sent. Old saves are refused. No migration.
 
 ## Screens
 
 - **Receipt and shopfront.** `growOffer.ts` and `leaseLines` (`tierLook.ts`) already say the next size and the price. They follow `nextTier` and `TIERS`, so the labels change with the data. The FOR LEASE strip on the unused floor should say the next real name ("Stand" on the cart's hoarding, "Café" on the stand's).
-- **Grand re-opening.** The "What you gained" card already reads `growDiff`. After the swap it should describe the stand, then the café. The outdoor scene swaps with the tier, which `buildOutdoor` already does by look. The art pass is: the small shop draws the cart (wheels, awning) on the sidewalk; the middle shop draws a fixed stand, not a park plaza that is larger than the cart.
-- **Night Layout.** The map grows from the bar rows to the floor. Selectable things gain a fixture and the box pile. The blurb today says fixtures stay put (`nightLayout.ts`). It becomes "Click something, then click where it goes. The till, the door, and the line stay put." Highlights come from the same accept-list the sim uses, as they do now (`validStationSpots`). A quarter-tile map can light the four corners inside a tile, or the player drags and the ghost snaps. Dragging is the clearer "loose" feel; click-then-click can stay as the first slice because it is what the map already does.
+- **Grand re-opening.** The "What you gained" card already reads `growDiff`. After the swap it should describe the stand, then the café. The outdoor scene swaps with the tier, which `buildOutdoor` already does by look. The art pass puts the cart (wheels, awning) on the sidewalk, in the scene `buildStand` already paints, and gives the middle shop a fixed stall. The park plaza (`buildCart`) is not the cart's home.
+- **Night Layout.** The map grows from the bar rows to the floor. Anything except the register and the pickup can be selected, including fixtures, the box pile, the door, and the queue. The blurb today says fixtures stay put (`nightLayout.ts`). It becomes "Click something, then click a tile. The register and the pickup stay together at the front." Highlights are the tiles the sim would accept. The ghost snaps to the tile. A drag still sends one move on drop.
 - **Day.** No layout editing during service. The morning pre-open was removed on purpose (Round 5). Boxes picked up during the day still come from `boxPos`.
 
 ## Build order
 
-1. **Rename and reorder the sizes.** Data, `main.ts` start tier, art swap, fridge and office keys, receipt copy. One playable change: a new game starts on the cart and grows to the stand. Balance numbers on each footprint stay. Tests that name the tiers update with the data. No layout change in this phase.
-2. **Whole floor, whole tiles, machines only.** The night map shows the floor. `inBar` becomes "a free tile that does not make `layoutProblems` worse." Fixtures and the box pile still fixed. This is the map the next phase extends.
-3. **Quarter-tile snap for machines.** Ghost snaps to 0.25. Reach and overlap use the squares they already use. Playtest whether 0.25 feels loose enough.
-4. **Fixtures and the box pile.** `fixturePos` and `boxPos` on the same map. The till stays. Reset-on-grow includes them.
-5. **Tables and decor.** The Campaign furniture list, only after phase 4, so they call the same move.
+1. **Rename and reorder the sizes.** Data, `main.ts` start tier, art swap, fridge and office keys, receipt copy. The cart's scene is the sidewalk. One playable change: a new game starts on the cart and grows to the stand. Balance numbers on each footprint stay. Tests that name the tiers update with the data. No layout change in this phase.
+2. **Whole floor, machines, snapped.** The night map shows the floor. A machine can drop on any whole tile that does not make `layoutProblems` worse. The register and the pickup are drawn and cannot be selected. Fixtures and the box pile still start fixed. This is the map the next phase extends.
+3. **Fixtures and the box pile.** `fixturePos` and `boxPos` on that same snapped map. They can sit on any legal tile.
+4. **Door, queue, and mop.** Same snap, same map. Customers spawn at the moved door, and the line follows it. The register and the pickup stay the front pair, so ring-up, serving, and the robot cashier do not move.
+5. **Tables and decor.** The Campaign furniture list, only after phase 3, so they call the same move. They can share phase 4's timing. They must not land before the map can store a position.
 
-Phase 1 can ship without phase 2. Campaign's pot start can ship on phase 1. Campaign furniture waits for phase 4.
+Phase 1 can ship without phase 2. Campaign's pot start can ship on phase 1. Campaign furniture waits until a piece can be stored and moved.
 
 ## Open questions
 
-1. Does the cart keep the park, and the stand take the sidewalk, or does the cart sit on the sidewalk so the street-view cars have a road from the first day? This plan recommends the cart on the sidewalk.
-2. Is a quarter tile the right snap, or do you want half-tile, or a drag that only snaps when you let go near another object?
-3. Which fixtures may move in phase 4? Recommended movable: milk shelf, syrups, fridge, sink, tray table, condiment bar, box pile. Recommended fixed: till, door, queue, mop home.
-4. May two machines sit closer than a full tile if their art fits, or does the unit square stay the minimum gap?
+1. **Decided 2026-11-09.** The cart sits on the sidewalk, not in the park.
+2. **Decided 2026-11-09.** Placement snaps to the tile grid. The player can use any legal tile, anywhere on the floor. It is not a free float, and it is not the old list of back-bar spots.
+3. **Decided 2026-11-09.** The cash register and the pickup are the only fixed pieces. They stay next to each other at the front, because moving the pickup would mean redoing the serve and ring-up logic. Everything else, including machines, fixtures, and supply boxes, can go wherever the player wants. The door, the queue, and the mop home are in that "everything else."
+4. May two machines sit closer than a full tile if their art fits, or does the unit square stay the minimum gap? With the whole-tile snap above, they already cannot share a tile. This question is only about art that overhangs the square.
 5. Should a grow that invalidates a wild layout reset everything (today's rule), or keep every piece that still fits and reset only the ones that do not?
 6. Is the 8-tile start still called a cart if its art is a folding cart, even though some of today's "stand" copy ("folding table", commuters) is the better description of day 1? The names can be "Cart" and "Stand" while the blurbs get a pass in the same phase.
 
@@ -125,7 +129,8 @@ Phase 1 can ship without phase 2. Campaign's pot start can ship on phase 1. Camp
 
 - Renaming `stand` and `cart` touches data, sim, render, and tests in one change. Shipping it as copy-only, while the ids stay backwards, leaves the next change guessing. One rename is the smaller long-term risk. It is still a wide diff.
 - Office runs and the free fridge must follow the footprint. If they follow the id without the swap, the tiny cart gains a 4–6 drink office order and a beer fridge, and the start stops being the poor start Campaign wants.
-- Loose placement can block the only tile a station is worked from, or the cashier's idle spot. `layoutProblems` has to stay the authority, and the map has to highlight only what it accepts. The map already promises that for machines.
-- Quarter-tile positions make `same()` and the swap-two-slots logic (today they compare whole tiles) need a snap key. Getting that wrong stacks two machines in one square.
+- Loose placement can block the only tile a station is worked from, the door, or the cashier's idle spot beside the register. `layoutProblems` has to stay the authority, and the map has to highlight only what it accepts. The map already promises that for machines.
+- The door and the queue moving is customer-path work (`LAYOUT.door`, `queueSlots`, spawn). It is in the plan because they are not the register or the pickup. Phase 4 is where that work sits, so the first layout phases do not have to redraw the line.
+- Whole-tile positions keep today's `same()` checks. A later finer snap would have to revisit them. This decision does not add that snap.
 - Guest lag gets worse if the night map sends a move per drag-frame. Send on drop, one `moveThing`, as `moveStation` does now.
 - The test harness pathfinds to stations. It stays in `src/harness/`. Layout phases should keep a harness day from walking into a wall, and should not add game bots to try the new spots.
