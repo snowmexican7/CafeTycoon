@@ -267,7 +267,10 @@ describe('playthrough: cart → stand → café', () => {
   const front = (s: GameState) => {
     const till = s.stations.find((x) => x.id === 'counter')!;
     const pick = s.stations.find((x) => x.id === 'pickup');
-    if (pick) expect(pick.pos).toEqual({ x: till.pos.x - 1, y: till.pos.y });
+    const cond = s.stations.find((x) => x.id === 'condiments');
+    // v3.11.1: pickup is two tiles left of the till, condiments sit between them.
+    if (pick) expect(pick.pos).toEqual({ x: 4, y: 6 });
+    if (cond) expect(cond.pos).toEqual({ x: 5, y: 6 });
     expect(till.pos).toEqual({ x: 6, y: 6 });
   };
 
@@ -309,9 +312,11 @@ describe('playthrough: cart → stand → café', () => {
     expect(s.tierLog?.map((e) => e.tier)).toEqual(['stand', 'cafe']);
     front(s);
     expect(nextTier(s)).toBeNull();
-    // The register and the pickup stay the front pair on every footprint.
+    // The register and the pickup stay on the front row on every footprint.
+    // v3.11.1 puts the pickup at (4, 6) and the condiment bar between it and the till.
     for (const tier of ['cart', 'stand', 'cafe'] as const) {
-      expect(layoutFor(tier).pickup).toEqual({ x: 5, y: 6 });
+      expect(layoutFor(tier).pickup).toEqual({ x: 4, y: 6 });
+      expect(layoutFor(tier).condiments).toEqual({ x: 5, y: 6 });
       const till = layoutFor(tier).stations.find((x) => x.id === 'counter')!;
       expect(till.pos).toEqual({ x: 6, y: 6 });
     }
