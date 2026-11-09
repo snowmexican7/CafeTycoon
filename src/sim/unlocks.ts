@@ -17,6 +17,7 @@ export function unlockDrink(state: GameState, drink: DrinkId): boolean {
   if (needsFlavour(drink) && !known.some(needsFlavour)) state.supplies.flavour = (state.supplies.flavour ?? 0) + ECONOMY.flavourStarter;
   state.unlocked = DRINK_IDS.filter((d) => d === drink || known.includes(d));
   state.menu[drink] = true;
+  if (!(state.learned ?? []).includes(drink)) (state.learned ??= []).push(drink);
   return true;
 }
 

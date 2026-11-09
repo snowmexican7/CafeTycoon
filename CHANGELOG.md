@@ -18,6 +18,16 @@ when a build goes out, the line moves under its version with the date.
 
 _Nothing yet._
 
+## 3.11.0 — 2026-11-09 · Playtest feel
+
+Kennedy's Nov 7 playthrough. Five feel fixes. Protocol 71, snapshot 36.
+
+- **Milk drinks are one steam step.** Latte, cappuccino and the rest: no more filling the jug, then steaming. Press at the steam wand, stop the foam meter, and the drink is already in your hand. A better wand still makes that foam meter easier to hit.
+- **A two-group espresso machine is one spot.** Stand at the machine and pull a shot even while another shot is sitting there (it holds two). You pick the waiting shot up from the same spot. It no longer locks the machine.
+- **Closing gives you a wrap-up.** If the checklist is done and nobody is left, the day ends right away. If something is still out, or customers are still here, you get a wrap-up (up to 45 seconds) with a list of what is left. The timer is the cap, so the day cannot hang.
+- **Every new drink gets a how-to, and you can look one up later.** After the nightly profit screen, each drink you learned that day plays in order (several, if you learned several). A latte how-to says to steam the milk. "How to make it" is on the night menu and on each order ticket.
+- **Teammates bump more lightly, and the pickup counter is wider.** Brushing past another player is a short, small slowdown. Bumping a customer is the same as before. The pickup counter sits clear of the cashier's lane, wide enough for two people side by side, on the stand, the cart and the café.
+
 ## 3.10.0 — 2026-11-07 · Round 6 and the bot cut
 
 Round 6 (Kennedy's Nov 5 playtest) and the bot cut (Kennedy + Claude, Nov 6), released by Grok (`ui-3.10.0`), with

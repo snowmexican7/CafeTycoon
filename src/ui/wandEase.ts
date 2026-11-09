@@ -10,7 +10,7 @@ export interface WandEaseVM {
   ease: WandEase;
   /** "●●○○": filled pips = ease + 1 of 4. */
   pips: string;
-  /** Short, player-facing: what the wand does to the jug and the foam meter. */
+  /** Short, player-facing: what the wand does to the foam meter. */
   text: string;
 }
 
@@ -23,10 +23,10 @@ export function easeOfWand(wand: 'weak' | 'strong' | 'built', gear?: GearId | nu
 }
 
 const TEXT: Record<WandEase, string> = {
-  0: 'Even milk fill, narrow foam band',
-  1: 'Milk slows at the line, foam band ×{x}',
-  2: 'Milk crawls at the line, foam band ×{x}',
-  3: 'Milk all but stops at the line, foam nearly always perfect',
+  0: 'Narrow foam band',
+  1: 'Wider foam band, ×{x}',
+  2: 'Wide foam band, easier perfect steam',
+  3: 'Foam nearly always perfect',
 };
 
 export function wandEaseVM(ease: WandEase): WandEaseVM {

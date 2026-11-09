@@ -204,7 +204,7 @@ describe('bumps', () => {
     expect(flushY - pl(s, 'p2').pos.y).toBeGreaterThanOrEqual(B.bodyTiles - 1e-6);
   });
 
-  it('a staggered player covers about 35% of the normal distance (Round 5 staggerSpeed)', () => {
+  it('a staggered player covers about 80% of the normal distance (playtest teammate bump)', () => {
     const run = (stagger: number) => {
       const s = cafe();
       const a = pl(s, 'p1');

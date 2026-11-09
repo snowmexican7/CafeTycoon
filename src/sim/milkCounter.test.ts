@@ -6,6 +6,7 @@ import { interact, recipeAt } from './stations';
 import { ensureCounterSpots, stationsFromSlots } from './slots';
 import { stationLeft } from './counts';
 import { FRIDGE, closingChecklist, startClosingSoon, stockOf, supplyWants } from './fridge';
+import { ECONOMY } from '../data/economy';
 import { recipeChain, TAP_DRINKS } from '../data/drinks';
 import { FRIDGE_ID, SUPPLY_ID } from '../data/layout';
 import { GEAR, type GearId } from '../data/gear';
@@ -174,7 +175,8 @@ describe('Round 6 block 4: the milk counter', () => {
     expect(s.supplyMilk).toBe(8);
     me(s).holding = 'espresso';
     interact(s, 'p1');
-    expect(me(s).jug).toBeDefined();
+    expect(me(s).steam).toBeDefined();
+    expect(me(s).jug).toBeUndefined();
   });
 
   it('the cold brew tap is no longer a place to put milk out', () => {
@@ -263,7 +265,8 @@ describe('Round 6 block 4: bots and the milk counter', () => {
     let longest = 0;
     let stocked = 0;
     let fills = 0;
-    for (let i = 0; i < 180 * TICK_RATE && s.phase !== 'night'; i++) {
+    // Day plus the wrap-up cap (closing grace), with a little spare.
+    for (let i = 0; i < (s.settings.dayLengthSec + ECONOMY.closingGraceSeconds + 15) * TICK_RATE && s.phase !== 'night'; i++) {
       s = step(s, []);
       stocked += s.log.filter((e) => e.kind === 'milk.out' && e.data.station === SUPPLY_ID && e.tick === s.tick).length;
       fills += s.log.filter((e) => e.kind === 'supply.fill' && e.tick === s.tick).length;

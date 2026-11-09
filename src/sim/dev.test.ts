@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { ECONOMY } from '../data/economy';
 import { GEAR_IDS } from '../data/gear';
+import { secondsToTicks } from './constants';
 import { createRun, startDay } from './run';
 import { DEV_CASH, DEV_JAR } from './dev';
 import { CONDIMENTS } from './condiments';
@@ -236,7 +238,8 @@ describe('R4 a: dev mode', () => {
       // The same day run out by its own clock.
       let natural = day();
       natural.phaseTicksLeft = 1;
-      natural = ticks(natural, 2000);
+      // The wrap-up cap is the closing grace: a checklist still open holds the day until it runs out.
+      natural = ticks(natural, secondsToTicks(ECONOMY.closingGraceSeconds) + 5);
       expect(natural.phase).toBe('night');
       expect(skipped.days).toEqual(natural.days);
       expect(skipped.cash).toBe(natural.cash);

@@ -32,6 +32,7 @@ import { computeModifiers } from '../sim/effects';
 import { nearestStation } from '../sim/movement';
 import { canAddSyrup, syrupRackBlock } from '../render/handmadeModel';
 import { jugFill, steamPos } from '../sim/handmade';
+import { pickEspressoHead } from '../sim/groupHead';
 import type { CatalogueItem, DrinkId, Flavour, GameState, ItemKind, Player, PlayerId, Station, StationKind, SupplyId } from '../sim/types';
 
 export const PLAYER_HEX = ['#e0564a', '#4c8fd6', '#4fae7b', '#8a6bbf'] as const;
@@ -54,7 +55,7 @@ export const SUPPLY_NAME: Record<SupplyId, string> = { beans: 'Beans', milk: 'Mi
 /** The steps on an order ticket, in the order a barista does them. */
 export const DRINK_STEPS: Record<DrinkId, string[]> = {
   espresso: ['Grind', 'Pull', 'Hand off'],
-  latte: ['Grind', 'Pull', 'Steam', 'Hand off'],
+  latte: ['Grind', 'Pull', 'Steam the milk', 'Hand off'],
   coldBrew: ['Pour cold brew', 'Hand off'],
   icedLatte: ['Grind', 'Pull', 'Milk counter: ice + milk', 'Hand off'],
   mocha: ['Grind', 'Pull', 'Steam', 'Cocoa', 'Hand off'],
@@ -67,7 +68,7 @@ export const DRINK_STEPS: Record<DrinkId, string[]> = {
   cafeAuLait: ['Drip', 'Milk', 'Hand off'],
   redEye: ['Drip', 'Shot', 'Hand off'],
   pourOver: ['Pour', 'Hand off'],
-  cappuccino: ['Grind', 'Pull', 'Steam', 'Foam', 'Hand off'],
+  cappuccino: ['Grind', 'Pull', 'Steam the milk', 'Extra foam', 'Hand off'],
 };
 
 export interface CrewMember {
@@ -166,8 +167,10 @@ export interface HudLive {
 }
 
 export interface ClosingListVM {
-  /** "Closing soon · 24s" or "Doors locked: tidy up". */
+  /** "Closing soon · 24s" or "Wrap-up · 24s left". */
   title: string;
+  /** One line under the rows: what the timer means. */
+  note?: string;
   rows: { icon: string; text: string; done: boolean; warn?: true }[];
 }
 
@@ -467,11 +470,18 @@ export function closingListVM(state: GameState): ClosingListVM | undefined {
   rows.push({ icon: '🧽', text: 'Floor clean', done: c.floorClean });
   rows.push({ icon: '🛎️', text: 'Pickup counter clear', done: c.counterClear });
   const secs = Math.ceil(Math.max(0, state.phaseTicksLeft) / TICK_RATE);
-  return { title: state.phase === 'day' ? `Closing soon · ${secs}s` : 'Doors locked: tidy up', rows };
+  if (state.phase === 'closing') {
+    const people = state.customers.length + (state.waiting?.length ?? 0);
+    if (people > 0) rows.push({ icon: '🙂', text: people === 1 ? '1 customer still here' : `${people} customers still here`, done: false });
+  }
+  const open = rows.some((r) => !r.done);
+  if (state.phase === 'day') return { title: `Closing soon · ${secs}s`, rows };
+  if (open) return { title: `Wrap-up · ${secs}s left`, note: 'Finish what is left. The day ends when the timer hits 0.', rows };
+  return { title: 'All set', note: 'Nothing left to do. The day ends now.', rows };
 }
 
 /** Key for the HUD's checklist block. */
-export const checklistKey = (c: ClosingListVM | undefined): string => (c ? `${c.title}|${c.rows.map((r) => `${r.text}${r.done ? '+' : '-'}`).join(',')}` : '');
+export const checklistKey = (c: ClosingListVM | undefined): string => (c ? `${c.title}|${c.note ?? ''}|${c.rows.map((r) => `${r.text}${r.done ? '+' : '-'}`).join(',')}` : '');
 
 /** At or below this many servings the bar reads as low (the bots fetch a box at ≤ 2). */
 export const CONDIMENTS_LOW = 5;
@@ -492,7 +502,7 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
   const idle = (title: string, detail: string, key?: string): HandHint => ({ go: false, title, detail, ...(key ? { key } : {}) });
   const go = (title: string, detail: string, key?: string): HandHint => ({ go: true, title, detail, ...(key ? { key } : {}) });
   if (!player || (state.phase !== 'day' && state.phase !== 'closing')) return idle('', '');
-  // FB2 B8: a filling jug stops on E anywhere; a running steam meter stops on E at its wand.
+  // A running steam meter stops on E at its wand. The drink finishes in hand.
   if (player.jug && !player.jug.done) {
     const fill = Math.round(jugFill(state, player) * 100);
     return go('Stop the jug', `Milk filling · ${fill}% · E stops it`);
@@ -504,7 +514,9 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
     if (near) return go('Stop the steam', `Foam meter · E for the middle${pos !== null ? ` · ${Math.round(pos * 100)}%` : ''}`);
     return idle('Steam meter running', 'Get to the wand and press E');
   }
-  const station = nearestStation(state, player.pos);
+  // A double group-head is one spot: the hint names the head the press will actually use.
+  const nearest = nearestStation(state, player.pos);
+  const station = nearest && player.tool === null && nearest.kind === 'espresso' ? pickEspressoHead(state, player, nearest) : nearest;
   // ui-3.4.1 (FB2 A4): a carton or the packed-up bar in hand.
   if (state.gear === true && (player.tool === 'milk' || player.tool === 'bar')) return carryHint(state, player, station);
   // Batch/pickup: a condiment box in hand only goes in the bar.
@@ -617,18 +629,14 @@ function baseHandHint(state: GameState, me: PlayerId): HandHint {
     }
     return idle('Out of cold brew. Buy more with 📦 Restock', where);
   }
-  // FB2 B8 / Round 6: at a wand with a shot, fill the jug first; with a filled jug, E starts the foam meter
-  // (drink lands in hand when you stop — no steamer wait, no second pickup). Cappuccino's second steam is the same.
+  // Playtest 2026-11-09: one steam-meter step. E starts it (the milk is the carton's), E stops it, the drink is in hand.
   if (state.gear === true && !player.bot && kind === 'steamer') {
     const r = recipeAt(state, station, held);
     if (held === 'espresso' && r?.takes === 'espresso' && r.gives === 'latte') {
-      if (!player.jug?.done) {
-        return go('Fill the milk jug', `${where} · E starts it · E again stops on the ticket's line`);
-      }
-      return go('Press E to steam', `${where} · foam meter · drink finishes in your hand`);
+      return go('Steam the milk', `${where} · stop the foam meter · the latte finishes in your hand`);
     }
     if (held === 'latte' && r?.takes === 'latte' && r.gives === 'cappuccino') {
-      return go('Press E to steam', `${where} · extra foam · finishes in your hand`);
+      return go('Steam the extra foam', `${where} · stop the meter · the cappuccino finishes in your hand`);
     }
   }
   // Gear steeped pour: empty hands at a stocked cold brew, no wait.

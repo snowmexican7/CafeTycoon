@@ -2,17 +2,15 @@
  * FB2 B8: hand-made lattes and cappuccinos (Gear runs). Each step is a quick press, not a minigame; the meters live in
  * sim state, so the host stays authoritative and a peer's press lands on the host's tick.
  *
- * - Milk jug. A person with a shot in hand at a wand with milk out presses E: the jug starts filling (`Player.jug`,
- *   0→1 over `HANDMADE.fillSeconds`); E again stops it (anywhere), or it stops itself full. `jug.line` is the
- *   ticket's mark (`JUG_LINES`: cappuccino, latte, large). Within `lineWindow` of it is right; under makes a weaker
- *   drink (−1★, tip ×0.8); over wastes a second milk from `milkOut` when the shot goes on. `milk.fill { by, level,
- *   line, grade }`. The milk itself is the wand recipe's one serving (no double count).
- * - Steam meter. E with the filled jug puts the shot on the wand and starts the meter (`Player.steam`; position
- *   `steamPos`, a triangle wave 0..1 every `steamSeconds`). No second steamer wait — the meter *is* the interaction
- *   (`busyTicksLeft = 0`). E in reach of that wand stops it: within `perfect` of the middle is perfect (+1★, tip ×1.2),
- *   within `ok` ok, else a miss (−1★, tip ×0.8). The finished drink goes **straight into the player's hand** when free
- *   (no second E); if hands aren't empty it waits on the wand as `output`. Cappuccino's second steam uses the same
- *   meter. Not stopped before `steamMissAfter` seconds: scalded miss, same hand-off rules. `steam.result { by, grade }`.
+ * - Steam meter is the only skill (playtest 2026-11-09). The jug fill is gone: E with a shot at a wand that has
+ *   milk out puts the shot on and starts the meter (`Player.steam`; position `steamPos`, a triangle wave 0..1 every
+ *   `steamSeconds`). The recipe's one milk counts as a right fill (`made.milk = 'right'`) — no second milk, no jug.
+ *   No steamer wait — the meter *is* the interaction (`busyTicksLeft = 0`). E in reach of that wand stops it: within
+ *   `perfect` of the middle is perfect (+1★, tip ×1.2), within `ok` ok, else a miss (−1★, tip ×0.8). The finished
+ *   drink goes **straight into the player's hand** when free (no second E); if hands aren't empty it waits on the
+ *   wand as `output`. Cappuccino's second steam uses the same meter. Not stopped before `steamMissAfter` seconds:
+ *   scalded miss, same hand-off rules. `steam.result { by, grade }`. A better wand still widens that green band
+ *   (`steamWindow`); the old fill curve stays in the file for the ease numbers, and is not a step anyone plays.
  * - Shots. About `doubleChance` of latte and cappuccino asks want a double (`Customer.shots` / `OrderItem.shots`).
  *   While more doubles are owed than are in flight, the next pull is a double: ×`doubleTime` and a second bean.
  * - Syrups. About `syrupChance` of latte asks want vanilla or caramel (only while the shop has flavour stock). The
@@ -30,7 +28,7 @@ import { SYRUP_ID, SYRUP_SPOT } from '../data/layout';
 import { ACCURACY, cupOutOfStation } from './accuracy';
 import { secondsToTicks } from './constants';
 import { onStationFinished } from './eggs';
-import { readyStock, useStock } from './fridge';
+import { useStock } from './fridge';
 import { emitLog } from './log';
 import { rngNext } from './rng';
 import type { Customer, DrinkId, FillGrade, Flavour, GameState, HandMade, ItemKind, OrderItem, PassItem, Player, PlayerInput, Station, SteamGrade } from './types';
@@ -310,7 +308,8 @@ export function heldRecipe(state: GameState, p: Player): HeldRecipe | null {
   const shots = want.shots ?? 1;
   const steps: HeldRecipe['steps'] = [{ step: shots === 2 ? 'double' : 'shot', done: pulled && (shots === 1 || p.made?.shots === 2) }];
   if (want.syrup) steps.push({ step: want.syrup, done: p.made?.syrup === want.syrup });
-  steps.push({ step: 'milk', done: steamed || p.jug?.done === true });
+  // The milk goes in as the steam starts (no separate fill). Both read done once the drink is a milk drink.
+  steps.push({ step: 'milk', done: steamed || p.steam !== undefined });
   steps.push({ step: 'steam', done: steamed });
   if (want.drink === 'cappuccino') steps.push({ step: 'foam', done: held === 'cappuccino' });
   return { drink: want.drink, shots, ...(want.syrup ? { syrup: want.syrup } : {}), steps };
@@ -324,8 +323,8 @@ export function jugLine(state: GameState, p: Player): number {
 
 // ---------------------------------------------------------------------------------------------- presses
 
-/** A person's shot going on a wand needs the jug first (Gear runs; bots skip it). */
-function needsJug(state: GameState, p: Player, station: Station, recipe: Recipe): boolean {
+/** A person's shot on a wand is the steam-meter step (Gear runs; bots skip the meter and just wait). */
+function needsMilkSteam(state: GameState, p: Player, station: Station, recipe: Recipe): boolean {
   return state.gear === true && !p.bot && station.kind === 'steamer' && recipe.takes === 'espresso' && recipe.gives === 'latte';
 }
 
@@ -402,13 +401,11 @@ export function handmadePress(state: GameState, p: Player): boolean {
 }
 
 /**
- * At a wand that would steam the shot in hand right now (stations.ts interact, inside its "can start" branch): a
- * person with no filled jug starts filling one instead. True when the press was used up (the shot stays in hand).
+ * Kept so station interact can call it. The jug fill step is gone (playtest 2026-11-09): a shot at the wand goes
+ * straight onto the steam meter. Always false — the press is not used up here.
  */
-export function jugFirst(state: GameState, p: Player, station: Station, recipe: Recipe): boolean {
-  if (!needsJug(state, p, station, recipe) || p.jug?.done) return false;
-  if (!p.jug) p.jug = { fill: 0, startedAt: state.tick, line: jugLine(state, p), ...easeOf(station) };
-  return true;
+export function jugFirst(_state: GameState, _p: Player, _station: Station, _recipe: Recipe): boolean {
+  return false;
 }
 
 /**
@@ -424,13 +421,12 @@ export function afterInsert(state: GameState, p: Player, station: Station, recip
     station.made = { ...station.made, shots: 2 };
     out = Math.round(ticks * HANDMADE.doubleTime);
   }
-  if (needsJug(state, p, station, recipe) && p.jug?.done) {
-    const grade = fillGrade(p.jug.fill, p.jug.line);
-    station.made = { ...station.made, milk: grade };
-    if (grade === 'over' && readyStock(state, 'milk') >= 1) useStock(state, 'milk');
+  if (needsMilkSteam(state, p, station, recipe)) {
+    // One milk (already taken by the recipe). No fill grade: the steam meter is the skill, and the milk counts as right.
+    station.made = { ...station.made, milk: 'right' };
     delete p.jug;
     p.steam = { startedAt: state.tick, speed: HANDMADE.steamSpeed, station: station.id, ...easeOf(station) };
-    // Round 6: the meter is the only timer — no steamer busy wait (others are blocked via `steamLocked`).
+    // The meter is the only timer — no steamer busy wait (others are blocked via `steamLocked`).
     return 0;
   }
   // Round 6 (Kennedy): cappuccino's second steam also finishes into hand — meter only, no steamer wait.

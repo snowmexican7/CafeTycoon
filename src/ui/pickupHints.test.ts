@@ -147,7 +147,7 @@ describe('Gear counter hints (3.3.1)', () => {
   it('tickets end in "Pickup" in Gear and mark customers at pickup', () => {
     expect(ticketSteps('latte', false, true).at(-1)).toBe('Pickup');
     expect(ticketSteps('latte').at(-1)).toBe('Hand off');
-    expect(ticketSteps('latte', true, true)).toEqual(['Pod', 'Steam', 'Pickup']);
+    expect(ticketSteps('latte', true, true)).toEqual(['Pod', 'Steam the milk', 'Pickup']);
     const s = gearDay();
     s.customers = [cust(1, 'drip'), cust(2, 'latte', { stage: 'pickup', rungAt: 0 })];
     const l = hudLive(s, 'p1');

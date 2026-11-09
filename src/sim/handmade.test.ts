@@ -70,94 +70,47 @@ function atRack(s: GameState): void {
   p1(s).pos = { x: SYRUP_SPOT.x, y: SYRUP_SPOT.y - 1 };
   expect(nearestStation(s, p1(s).pos)?.id).toBe(SYRUP_ID);
 }
-/** Shot in hand at the wand: start the jug, let it fill `fillTicks`, stop it, put the shot on the wand. */
-function fillAndInsert(s: GameState, fillTicks: number): void {
+/** Shot in hand at the wand: one press starts the steam meter (the fill step is gone). `fillTicks` is ignored. */
+function fillAndInsert(s: GameState, _fillTicks?: number): void {
   atWand(s);
   p1(s).holding = 'espresso';
-  interact(s, 'p1');
-  tick(s, fillTicks);
-  interact(s, 'p1');
   interact(s, 'p1');
 }
 const pickupCustomer = (id: number, drink: DrinkId, extra: Partial<Customer> = {}): Customer => ({ id, drink, patienceLeft: 1e5, patienceMax: 1e5, stage: 'pickup', rungAt: 0, ...extra });
 const cup = (made?: HandMade, slips?: number): PassItem => ({ item: 'latte', ticksLeft: 1e5, by: 'p1', madeAt: Infinity, ...(made ? { made } : {}), ...(slips ? { slips } : {}) });
 const FILL = HANDMADE.fillSeconds * TICK_RATE;
 
-describe('FB2 B8: the milk jug', () => {
-  it('E with a shot at the wand starts the jug at the latte line; it fills 0→1 over 2 s', () => {
+describe('playtest 2026-11-09: steam only, no jug fill', () => {
+  it('E with a shot at the wand starts the steam meter and uses one milk; the drink is not in hand yet', () => {
     const s = open();
     atWand(s);
     p1(s).holding = 'espresso';
     interact(s, 'p1');
-    expect(p1(s).jug).toEqual({ fill: 0, startedAt: s.tick, line: JUG_LINES.latte });
-    expect(p1(s).holding).toBe('espresso');
-    expect(wandOf(s).making ?? null).toBeNull();
-    expect(s.milkOut).toBe(99); // no milk used yet
-    tick(s, FILL / 2);
-    expect(p1(s).jug!.fill).toBeCloseTo(0.5);
+    expect(p1(s).jug).toBeUndefined();
+    expect(p1(s).holding).toBeNull();
+    expect(p1(s).steam).toMatchObject({ station: wandOf(s).id, startedAt: s.tick });
+    expect(wandOf(s).making).toBe('latte');
+    expect(wandOf(s).made).toEqual({ milk: 'right' });
+    expect(wandOf(s).busyTicksLeft).toBe(0);
+    expect(s.milkOut).toBe(98);
+    expect(logs(s, 'milk.fill')).toEqual([]);
+  });
+
+  it('fill windows stay defined for the old curve, and a better wand still widens the steam band', () => {
+    expect(fillGrade(0.6, 0.6)).toBe('right');
+    expect(fillGrade(0.5, 0.6)).toBe('under');
     expect(JUG_LINES).toEqual({ cappuccino: 0.35, latte: 0.6, large: 0.85 });
   });
 
-  it('the line follows the ticket: an older cappuccino ticket marks the cappuccino line', () => {
-    const s = open();
-    s.unlocked = [...(s.unlocked ?? BASE_DRINKS), 'cappuccino'];
-    s.menu.cappuccino = true;
-    s.customers = [pickupCustomer(1, 'cappuccino'), pickupCustomer(2, 'latte')];
-    atWand(s);
-    p1(s).holding = 'espresso';
-    interact(s, 'p1');
-    expect(p1(s).jug!.line).toBe(JUG_LINES.cappuccino);
-  });
-
-  for (const [ticks, grade, milk] of [[0.6 * FILL, 'right', 1], [0.3 * FILL, 'under', 1], [0.9 * FILL, 'over', 2]] as const) {
-    it(`stopped at ${ticks / FILL}: ${grade}; the shot goes on with ${milk} milk out of milkOut`, () => {
-      const s = open();
-      atWand(s);
-      p1(s).holding = 'espresso';
-      interact(s, 'p1');
-      tick(s, ticks);
-      interact(s, 'p1');
-      expect(p1(s).jug).toMatchObject({ done: true, line: JUG_LINES.latte });
-      expect(p1(s).jug!.fill).toBeCloseTo(ticks / FILL);
-      expect(logs(s, 'milk.fill')).toEqual([{ by: 'p1', level: p1(s).jug!.fill, line: JUG_LINES.latte, grade }]);
-      expect(s.milkOut).toBe(99);
-      interact(s, 'p1');
-      expect(wandOf(s).making).toBe('latte');
-      expect(wandOf(s).made).toEqual({ milk: grade });
-      expect(p1(s).holding).toBeNull();
-      expect(p1(s).jug).toBeUndefined();
-      expect(s.milkOut).toBe(99 - milk);
-    });
-  }
-
-  it('fill windows: ±0.08 of the line is right', () => {
-    expect(fillGrade(0.6, 0.6)).toBe('right');
-    expect(fillGrade(0.52, 0.6)).toBe('right');
-    expect(fillGrade(0.68, 0.6)).toBe('right');
-    expect(fillGrade(0.5, 0.6)).toBe('under');
-    expect(fillGrade(0.7, 0.6)).toBe('over');
-  });
-
-  it('left running, the jug stops itself full (over); put the shot down and the jug is gone', () => {
-    const s = open();
-    atWand(s);
-    p1(s).holding = 'espresso';
-    interact(s, 'p1');
-    tick(s, FILL + 10);
-    expect(p1(s).jug).toMatchObject({ fill: 1, done: true });
-    expect(logs(s, 'milk.fill')).toEqual([{ by: 'p1', level: 1, line: JUG_LINES.latte, grade: 'over' }]);
-    p1(s).holding = null;
-    tick(s, 1);
-    expect(p1(s).jug).toBeUndefined();
-  });
-
-  it('no milk out: no jug (nothing happens)', () => {
+  it('no milk out: nothing starts', () => {
     const s = open();
     s.milkOut = 0;
     atWand(s);
     p1(s).holding = 'espresso';
     interact(s, 'p1');
     expect(p1(s).jug).toBeUndefined();
+    expect(p1(s).steam).toBeUndefined();
+    expect(p1(s).holding).toBe('espresso');
   });
 });
 
@@ -711,31 +664,15 @@ describe('FB2 B8 with B7: a hand-made cup on a tray', () => {
   });
 });
 
-describe('Phase 3: the wand eases the meters in play', () => {
-  it('a jug and a steam meter started at a proper wand carry its ease; the little wand leaves them as before', () => {
+describe('Phase 3: the wand eases the steam meter in play', () => {
+  it('a steam meter started at a proper wand carries its ease; the little wand leaves it off', () => {
     const little = open('e3', 'weak');
-    fillAndInsert(little, FILL / 2);
+    fillAndInsert(little);
     expect(p1(little).steam!.ease).toBeUndefined();
     const proper = open('e4', 'strong');
-    atWand(proper);
-    p1(proper).holding = 'espresso';
-    interact(proper, 'p1');
-    expect(p1(proper).jug!.ease).toBe(1);
-    tick(proper, FILL / 4);
-    interact(proper, 'p1');
-    interact(proper, 'p1');
+    fillAndInsert(proper);
     expect(p1(proper).steam!.ease).toBe(1);
-  });
-
-  it('the proper wand slows the jug on the line: a stop a beat early that is under on the little wand is right', () => {
-    // On the little wand the jug is at the latte line (0.6) after 60% of the fill time; stop at 48% (0.48: under).
-    const early = Math.round(FILL * 0.48);
-    const little = open('e3', 'weak');
-    fillAndInsert(little, early);
-    expect(logs(little, 'milk.fill').at(-1)).toMatchObject({ grade: 'under' });
-    const proper = open('e4', 'strong');
-    fillAndInsert(proper, early);
-    expect(logs(proper, 'milk.fill').at(-1)).toMatchObject({ grade: 'right' });
+    expect(p1(proper).jug).toBeUndefined();
   });
 
   it("The Annihilator's built-in wand grades a stop 0.2 off the middle perfect (ok on the little wand)", () => {

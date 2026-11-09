@@ -34,7 +34,7 @@ const patienceHex = (f: number) => (f > 0.55 ? '#4fae7b' : f > URGENT ? '#f0a63a
 /** Review Block 6: morning note fades after this many ms, or sooner on the first move. */
 export const NOTE_DISMISS_MS = 8000;
 
-export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onRestock?(id: SupplyId | 'condiments'): void; onSyrup?(flavour: 'vanilla' | 'caramel'): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
+export function createHud(container: HTMLElement, handlers: { onMute?(): void; onCloseEarly?(on: boolean): void; onRestock?(id: SupplyId | 'condiments'): void; onSyrup?(flavour: 'vanilla' | 'caramel'): void; onHowTo?(drink: DrinkId): void } = {}, opts: { recipeHints?: RecipeHints } = {}): {
   render(vm: HudVM, live?: HudLive): void;
   /** FB1 WP2: recipe steps on tickets: on click (default), always or off. */
   setRecipeHints(mode: RecipeHints): void;
@@ -206,7 +206,7 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
     listEl.classList.toggle('done', left === 0);
     listEl.innerHTML = `<b>⏰ ${esc(c.title)}</b><ul>${c.rows
       .map((r) => `<li class="${r.done ? 'ok' : r.warn ? 'warn' : ''}"><span class="i">${r.done ? '✓' : esc(r.icon)}</span>${esc(r.text)}</li>`)
-      .join('')}</ul>${left === 0 ? '<small>All put away. Nice!</small>' : ''}`;
+      .join('')}</ul>${c.note ? `<small>${esc(c.note)}</small>` : left === 0 ? '<small>All put away. Nice!</small>' : ''}`;
   }
   function renderCall(c: CallVM | undefined): void {
     const key = callKey(c);
@@ -365,6 +365,13 @@ export function createHud(container: HTMLElement, handlers: { onMute?(): void; o
   let lastLive: HudLive | null = null;
   const ticketOpts = (live: HudLive): TicketOpts => ({ mode: recipeHints, open: openSteps, day: live.day ?? 0, holding: live.holding, prices, ...(live.pods ? { pods: true } : {}), ...(live.gear ? { gear: true } : {}) });
   el.tickets.addEventListener('click', (ev) => {
+    const how = (ev.target as HTMLElement).closest<HTMLElement>('[data-howto]');
+    if (how?.dataset.howto) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      handlers.onHowTo?.(how.dataset.howto as DrinkId);
+      return;
+    }
     if (recipeHints !== 'click' || !lastLive) return;
     const t = (ev.target as HTMLElement).closest<HTMLElement>('.ticket[data-id]');
     if (!t) return;
