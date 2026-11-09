@@ -16,7 +16,7 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- **The shop becomes what you sell.** Sell mostly lattes and espresso and the place becomes a latte bar or an espresso bar. Sell mostly drip and it becomes a quick cup counter. A mix stays a neighbourhood café. The night menu says what you are known for, how the last few days split, and that people ask for those drinks more often. A sign in the shop says the same thing in short. The name sticks until the cups really change, so one odd day does not flip it. Now and then someone still asks for a drink you barely make. They head off politely, and it does not hurt your reputation.
 
 ## 3.11.0 — 2026-11-09 · Playtest feel
 

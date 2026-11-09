@@ -27,6 +27,7 @@ import { tierInfo } from './growth';
 import { menuDrinks, unlockedDrinks } from './unlocks';
 import { comboDrinks, latteAddon, loseTicket, makeTicket, ORDERS } from './orders';
 import { isMilkDrink, milkPush } from './lattes';
+import { identityStepsAside, identityWeight, lightDrinks, SPECIALTY } from './specialty';
 import { addCustomerAsks } from './handmade';
 import { promoteWaiting, quietLeave, sendToBrowse, waitingFree } from './line';
 
@@ -111,6 +112,7 @@ export function spawnCustomers(state: GameState): GameState {
     return state;
   }
   if (gearAskedFor(state, menu)) return state; // Gear G7c: wanted something you don't serve
+  if (oneOffLeave(state, menu)) return state; // specialty shops: asked for a drink this shop rarely makes, and left
   if (quietLeave(state)) return state; // Round 3 item 4: "Line's too long!"
   if (state.customers.length >= queueCapacity(m, tierInfo(state).queue)) {
     if (waitingFree(state) <= 0) {
@@ -147,10 +149,35 @@ export function spawnFan(state: GameState): Customer | null {
   return c;
 }
 
+/** One menu drink's weight in the order draw: forecast, bias, price, gear, the wand's latte push, and the shop's identity. */
+export function orderWeight(state: GameState, drink: DrinkId, m: Modifiers, push: number): number {
+  return m.orderBias[drink] * DRINK_INFO[drink].bias * demandFactor(state, drink) * gearPullMul(state, drink) * (isMilkDrink(drink) ? push : 1) * identityWeight(state, drink);
+}
+
 /** Weighted drink draw over the menu, biased by the café's order modifiers (one rngNext). */
 export function drawDrink(state: GameState, menu: DrinkId[], m: Modifiers): DrinkId {
   const push = milkPush(state, menu, m); // Round 3 item 1: lean toward lattes when the bar can make them
-  const weights = menu.map((d) => m.orderBias[d] * DRINK_INFO[d].bias * demandFactor(state, d) * gearPullMul(state, d) * (isMilkDrink(d) ? push : 1));
+  return drawAmong(state, menu, m, push);
+}
+
+/**
+ * Specialty shops: an arrival asks for a drink from a family the window barely sold, then leaves.
+ * No queue, no lost customer, no reputation. Draws RNG only when an identity is pulling and the
+ * menu has a light-side drink (one roll for the chance, and a second for which drink when it hits).
+ */
+export function oneOffLeave(state: GameState, menu: DrinkId[]): boolean {
+  if (!identityStepsAside(state)) return false;
+  const light = lightDrinks(state, menu);
+  if (light.length === 0) return false;
+  if (rngNext(state) >= SPECIALTY.oneOff) return false;
+  const drink = drawAmong(state, light, computeModifiers(state), 1);
+  tally(state.today, 'oneOffLeft');
+  emitLog(state, 'walkout', { customer: state.nextCustomerId++, reason: 'oneOff', drink });
+  return true;
+}
+
+function drawAmong(state: GameState, menu: DrinkId[], m: Modifiers, push: number): DrinkId {
+  const weights = menu.map((d) => orderWeight(state, d, m, push));
   let roll = rngNext(state) * weights.reduce((a, b) => a + b, 0);
   for (let i = 0; i < menu.length; i++) {
     roll -= weights[i];

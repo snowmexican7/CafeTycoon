@@ -125,6 +125,21 @@ describe('Round 3 money: price walkouts', () => {
   });
 });
 
+describe('specialty shops: off-menu leave', () => {
+  it('says they will head off, from the door, never the sold-out line', async () => {
+    const { LAYOUT } = await import('../data/layout');
+    const { SPECIALTY } = await import('../sim/specialty');
+    const { WALKOUT_LINES } = await import('./chaosModel');
+    const a = run();
+    const b = withLog(a, { kind: 'walkout', data: { reason: 'oneOff', drink: 'drip', customer: 4 } });
+    const w = chaosBursts(a, b, a.nextLogSeq - 1).bursts.filter((x) => x.kind === 'walkout');
+    expect(w).toHaveLength(1);
+    expect(SPECIALTY.oneOffLines as readonly string[]).toContain((w[0] as { text: string }).text);
+    expect(WALKOUT_LINES as readonly string[]).not.toContain((w[0] as { text: string }).text);
+    expect(w[0]).toMatchObject({ door: true, at: { ...LAYOUT.door } });
+  });
+});
+
 describe('Round 3 line + ring-up cues', () => {
   it('says "Line\'s too long!" on line.complain', async () => {
     const { COMPLAIN_LINE } = await import('./chaosModel');

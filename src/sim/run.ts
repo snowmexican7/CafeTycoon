@@ -28,6 +28,7 @@ import { fridgeMorning } from './fridge';
 import { potMorning } from './sink';
 import { settle } from './spawn';
 import { applyPerk } from './perks';
+import { noteShopIdentity } from './specialty';
 import { officeMorning } from './orders';
 import { topUpDevCash } from './dev';
 import { strategistNight } from './strategist';
@@ -148,6 +149,7 @@ export function startNight(state: GameState): GameState {
   state.boughtTonight = [];
   delete state.growNudged; // R3 6
   state.forecast = forecastFor(state.seed, state.day);
+  noteShopIdentity(state); // specialty shops: name the shop from the days just scored, before tonight's prices
   state.freshDrinks = unlockForDay(state).filter((d) => canMake(state, d));
   dealHand(state);
   // Weather radio (B6): tomorrow's events are drawn now, so the paper can report them tonight.

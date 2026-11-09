@@ -95,6 +95,8 @@
 
 /* ---------- Menu */
 #night .mn-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+#night .shop-line { margin: 0 0 14px; padding: 14px 18px; border-radius: 16px; background: #fffaf2; box-shadow: inset 0 0 0 3px #e08a3c;
+  font: 700 20px/1.35 var(--font-display); color: var(--ink); }
 #night .mn-sum { font: 600 var(--fs-m) var(--font-display); color: var(--ink-soft); } #night .mn-sum b { color: var(--ink); }
 #night .mn-sig { all: unset; cursor: pointer; display: inline-flex; align-items: baseline; gap: 8px; padding: 8px 14px; border-radius: 14px; background: #fff; border: 2px solid #f0c66b; font: 700 var(--fs-m) var(--font-display); }
 #night .mn-sig small { font: 600 var(--fs-xs) var(--font-body); color: var(--ink-soft); } #night .mn-sig em { font: 600 var(--fs-s) var(--font-display); font-style: normal; color: #a8630f; }

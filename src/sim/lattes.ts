@@ -10,6 +10,7 @@
  */
 import { DRINK_INFO } from '../data/drinks';
 import type { Modifiers } from './effects';
+import { identityStepsAside } from './specialty';
 import type { DrinkId, GameState } from './types';
 
 export const LATTES = {
@@ -25,9 +26,13 @@ export const LATTES = {
 
 export const isMilkDrink = (d: DrinkId): boolean => LATTES.drinks.includes(d);
 
-/** The factor on every milk drink's order weight for this menu (1 = no push). */
+/**
+ * The factor on every milk drink's order weight for this menu (1 = no push).
+ * A specialty or fast-casual shop has its own weights (`identityWeight`), so this push steps aside.
+ * A neighbourhood café, and a shop with no identity yet, keeps it.
+ */
 export function milkPush(state: GameState, menu: DrinkId[], m: Modifiers): number {
-  if (state.gear !== true) return 1;
+  if (state.gear !== true || identityStepsAside(state)) return 1;
   let milk = 0;
   let rest = 0;
   for (const d of menu) {
