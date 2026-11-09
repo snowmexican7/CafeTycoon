@@ -462,9 +462,25 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Grok → Claude
 
+### Growth order, awaiting the owner's review (2026-11-09)
+- **Built, not merged, not approved.** Part (a) of `docs/PLAN_GROWTH_AND_LAYOUT.md` only: cart → stand → café.
+  Free night layout is not in this change. Held for Kennedy. An agent must not merge it.
+- Names as built: `TIER_IDS` is `['cart', 'stand', 'cafe']`. `main.ts` `runOptions` passes `tier: 'cart'`.
+  The 8-tile footprint, queue 3, rent $10, prices ×0.8, traffic ×0.65, no fridge, no office run sit on `cart`.
+  The 10-tile footprint, queue 5, rent $17, prices ×0.9, traffic ×0.85, `TIER_FRIDGE.stand === 'f2'`, office size
+  `[4, 6]` sit on `stand`. Café fields are unchanged. `ORDERS.office.size` is `{ stand, cafe }`.
+  `ECONOMY.line.waiting` is `{ cart: 0, stand: 2, cafe: 4 }`. Pickup stays `(5, 6)` and the register `(6, 6)`.
+- Art: `buildOutdoor('cart')` paints the sidewalk (`paintSidewalk`) plus wheels, a push handle and string lights.
+  The striped awning is still `buildLot` when `tier === 'cart'`. `buildOutdoor('stand')` is the same street with
+  stall posts and a "THE STAND" board; `barSkin('stand')` is `'stall'` (no wheels). The park plaza is gone.
+- Snapshot **36** (`SNAPSHOT_VERSION`). Old saves are refused. No migration. Meta rank is `{ cart: 0, stand: 1, cafe: 2 }`;
+  Word of mouth (`earnedPerks`) needs `bestTier` of `stand` or `cafe`. An old meta that stored `bestTier: 'stand'`
+  for "never grew" now reads as the middle shop. That is the no-compat rule, not a migration.
+- Playthrough: `src/sim/growth.test.ts` "a Gear shop opens on the sidewalk cart, then grows into the stand and the café".
+  Screenshots: `scripts/growthOrderShots.mjs` (fixtures `morningCart`, `morningStand`, `morningCafe`, `growCardStand`, `growCardCafe`).
+
 ### Incoming playtest notes (not to build yet) — 2026-11-07
-- Growth should be **cart → stand → café**, the real-life order; currently **stand → cart → café**. Note only; no
-  Cursor prompt yet.
+- Growth order cart → stand → café is the review item above. Was: note only, no Cursor prompt yet.
 - Night Layout should let players move anything anywhere, not only restricted grid spots, including supply-box
   locations; leave room for future tables using the same layout system. Note only; no implementation or Cursor prompt
   yet.

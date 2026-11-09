@@ -18,7 +18,7 @@ import { nightViewModel } from './viewModels';
 /** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear (a Gear shop only gets one as an espresso machine's wand; the steam station itself works the same). */
 type Kit = GearId | 'steamer';
 
-function gearNight(gear: Kit[] = ['steamer', 'e2'], tier: TierId = 'stand', fridge: FridgeId | null = 'f1'): GameState {
+function gearNight(gear: Kit[] = ['steamer', 'e2'], tier: TierId = 'cart', fridge: FridgeId | null = 'f1'): GameState {
   const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
@@ -34,7 +34,7 @@ function gearNight(gear: Kit[] = ['steamer', 'e2'], tier: TierId = 'stand', frid
   return s;
 }
 function gearDay(fridge: FridgeId | null = 'f1'): GameState {
-  const s = gearNight(['steamer', 'e2'], 'stand', fridge);
+  const s = gearNight(['steamer', 'e2'], 'cart', fridge);
   s.supplies.milk = 20;
   s.supplies.beans = 20;
   return startDay(s);
@@ -141,8 +141,8 @@ describe('ui-3.4.1: the closing-soon checklist', () => {
 });
 
 describe('ui-3.4.1: night fridge cards', () => {
-  it('a stand with no fridge is offered the Dorm Room Cube for $20', () => {
-    const s = gearNight([], 'stand', null);
+  it('a cart with no fridge is offered the Dorm Room Cube for $20', () => {
+    const s = gearNight([], 'cart', null);
     s.cash = 100;
     const f = fridgeVM(s);
     expect(f.have).toBeNull();

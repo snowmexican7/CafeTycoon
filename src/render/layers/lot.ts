@@ -10,7 +10,7 @@ const LOT_H = WALL + LAYOUT.height * TILE + FRONT;
 
 /**
  * P3 B13: the part of the lot the shop hasn't grown into yet (plywood hoarding with a FOR LEASE sign),
- * and the striped awning over a stand or a cart. Render-only, drawn above the depth-sorted floor so the
+ * and the awning over a cart or a stand. Render-only, drawn above the depth-sorted floor so the
  * queue rope and the window behind it disappear; nothing walks there (the sim's walls stop at the floor's width).
  */
 export function buildLot(tier: TierId | undefined): Container {
@@ -21,15 +21,20 @@ export function buildLot(tier: TierId | undefined): Container {
   const g = new Graphics();
   root.addChild(g);
 
-  // awning over the serving side (ui-3.4.0: the cart only; the stand has a market umbrella, see outdoor.ts)
-  if (t === 'cart') {
-    const stripe = 0x3f9e80;
+  // awning over the serving side. The cart's is striped; the stand's is a solid stall canopy.
+  if (t === 'cart' || t === 'stand') {
     const aw = 26;
-    g.rect(0, 0, x0, aw).fill(0xfff4e2);
-    for (let x = 0; x < x0; x += 32) g.rect(x, 0, 16, aw).fill(stripe);
-    for (let x = 0; x < x0; x += 32) {
-      g.moveTo(x, aw).arc(x + 8, aw, 8, Math.PI, 0, true).lineTo(x, aw).fill(stripe);
-      g.moveTo(x + 16, aw).arc(x + 24, aw, 8, Math.PI, 0, true).lineTo(x + 16, aw).fill(0xfff4e2);
+    const stripe = t === 'cart';
+    g.rect(0, 0, x0, aw).fill(stripe ? 0xfff4e2 : 0xc45a42);
+    if (stripe) {
+      for (let x = 0; x < x0; x += 32) g.rect(x, 0, 16, aw).fill(0x3f9e80);
+      for (let x = 0; x < x0; x += 32) {
+        g.moveTo(x, aw).arc(x + 8, aw, 8, Math.PI, 0, true).lineTo(x, aw).fill(0x3f9e80);
+        g.moveTo(x + 16, aw).arc(x + 24, aw, 8, Math.PI, 0, true).lineTo(x + 16, aw).fill(0xfff4e2);
+      }
+    } else {
+      g.rect(0, aw - 5, x0, 5).fill(0x8a3a2c);
+      for (let x = 8; x < x0; x += 28) g.moveTo(x, aw).arc(x + 8, aw, 8, Math.PI, 0, true).lineTo(x, aw).fill(0xc45a42);
     }
     g.rect(0, aw + 8, x0, 3).fill({ color: 0x000000, alpha: 0.1 });
   }
@@ -56,7 +61,7 @@ export function buildLot(tier: TierId | undefined): Container {
   g.rect(x0 + 10, ty, w - 10, 12).fill(0xf6c35b);
   for (let x = x0 + 10; x < LOT_W; x += 20) g.poly([x, ty + 12, x + 10, ty, x + 16, ty, x + 6, ty + 12]).fill(0x3a2418);
 
-  // FOR LEASE sign (a tall narrow one on the cart's two-tile strip)
+  // FOR LEASE sign (a tall narrow one on the stand's two-tile strip)
   const cx = x0 + 9 + (w - 9) / 2;
   const lease = leaseLines(t)!;
   const narrow = lease.narrow;

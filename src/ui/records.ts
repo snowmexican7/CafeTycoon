@@ -15,7 +15,7 @@ export function perkRows(m: MetaSave): PerkRowVM[] {
   const progress: Record<string, string> = {
     nestEgg: 'Finish a week in a Gear run',
     pantry: `Serve ${PERK_TUNING.pantryServed} drinks in Gear runs (${Math.min(m.served, PERK_TUNING.pantryServed)}/${PERK_TUNING.pantryServed})`,
-    wordOfMouth: 'Grow a stand into a cart',
+    wordOfMouth: 'Grow a cart into a stand',
   };
   return PERK_IDS.map((id) => ({ icon: PERKS[id].icon, name: PERKS[id].name, effect: PERKS[id].effect, unlocked: m.unlocked.includes(id), how: progress[id] ?? PERKS[id].unlock }));
 }

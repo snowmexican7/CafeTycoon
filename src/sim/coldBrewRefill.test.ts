@@ -17,7 +17,7 @@ import type { DrinkId, GameState, SupplyId, TierId } from './types';
 /** FB2 C9: 'steamer' in a test kit is a plain steam station with no gear. */
 type Kit = GearId | 'steamer';
 
-function gearNight(gear: Kit[], supplies: Partial<Record<SupplyId, number>> = {}, tier: TierId = 'stand'): GameState {
+function gearNight(gear: Kit[], supplies: Partial<Record<SupplyId, number>> = {}, tier: TierId = 'cart'): GameState {
   const s = createRun({ seed: 7, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier, gear: true });
   const slots = [...s.slots!];
   const slotGear = [...s.slotGear!];
@@ -28,13 +28,13 @@ function gearNight(gear: Kit[], supplies: Partial<Record<SupplyId, number>> = {}
   s.slots = slots;
   s.slotGear = slotGear;
   s.stations = stationsFromSlots(s.tier, slots, slotGear);
-  if (tier === 'stand') s.fridge = 'f1';
+  if (tier === 'cart') s.fridge = 'f1';
   ensureCounterSpots(s);
   Object.assign(s.supplies, supplies);
   return s;
 }
 
-const gearDay = (gear: Kit[], supplies: Partial<Record<SupplyId, number>> = {}, tier: TierId = 'stand') => {
+const gearDay = (gear: Kit[], supplies: Partial<Record<SupplyId, number>> = {}, tier: TierId = 'cart') => {
   const s = startDay(gearNight(gear, supplies, tier));
   if (supplies.milk) s.milkOut = 0; // milk stays in the fridge until grabbed
   return s;
@@ -244,7 +244,7 @@ describe('Round 5 block 4b: staff milk & cream by the sink', () => {
   });
 
   it('no fridge → no carton from the supply shelf', () => {
-    const s = gearNight(['c1'], { milk: 20 }, 'stand');
+    const s = gearNight(['c1'], { milk: 20 }, 'cart');
     s.fridge = undefined as unknown as typeof s.fridge;
     delete (s as { fridge?: string }).fridge;
     // strip fridge station; keep supply
@@ -266,6 +266,6 @@ describe('Round 5 block 4b: staff milk & cream by the sink', () => {
     ensureCounterSpots(s);
     ensureCounterSpots(s);
     expect(s.stations.filter((x) => x.id === SUPPLY_ID)).toHaveLength(1);
-    expect(s.stations.find((x) => x.id === SUPPLY_ID)!.pos).toEqual(layoutFor('stand').supply);
+    expect(s.stations.find((x) => x.id === SUPPLY_ID)!.pos).toEqual(layoutFor('cart').supply);
   });
 });

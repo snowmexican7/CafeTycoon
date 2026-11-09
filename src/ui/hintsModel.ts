@@ -8,7 +8,7 @@ import { growNudge } from './growModel';
  * HINTS_KEY, a UI-owned key next to the storage lane's settings). "Snooze" hides them all for a while; "Turn off"
  * hides them for good until switched back on in the pause menu. Pure: the DOM lives in hints.ts.
  */
-export type HintId = 'till' | 'pickup' | 'sink' | 'standPrice' | 'restock' | 'shopfront';
+export type HintId = 'till' | 'pickup' | 'sink' | 'cartPrice' | 'restock' | 'shopfront';
 
 export const HINTS_KEY = 'cafetycoon.tips';
 export const SNOOZE_MS = 15 * 60 * 1000;
@@ -25,13 +25,13 @@ export const HINTS: Record<HintId, Hint> = {
   till: { icon: '🧾', title: 'Take the order', text: 'Walk to the till and press E, then make the drink.', where: 'day' },
   pickup: { icon: '☕', title: 'Hand it off', text: 'Carry the drink to PICKUP and press E.', where: 'day' },
   sink: { icon: '🫖', title: 'Dump the cold pot', text: 'Press E on the drip machine, then E at the sink.', where: 'day' },
-  standPrice: { icon: '⛱️', title: 'Stand prices are lower', text: `Commuters pay ${Math.round((1 - TIERS.stand.price) * 100)}% less here. Grow to a cart for better pay.`, where: 'day' },
+  cartPrice: { icon: '🛺', title: 'Cart prices are lower', text: `Commuters pay ${Math.round((1 - TIERS.cart.price) * 100)}% less here. Grow to a stand for better pay.`, where: 'day' },
   restock: { icon: '📦', title: 'Restock before open', text: 'Open the Restock tab and top up beans and milk.', where: 'night' },
   shopfront: { icon: '🏪', title: 'Ready to grow?', text: 'Extras → Shopfront unlocks a bigger shop and better prices.', where: 'night' },
 };
 
 /** Day hints, most urgent first; then night hints. */
-export const HINT_ORDER: HintId[] = ['till', 'pickup', 'sink', 'standPrice', 'shopfront', 'restock'];
+export const HINT_ORDER: HintId[] = ['till', 'pickup', 'sink', 'cartPrice', 'shopfront', 'restock'];
 
 export interface HintsState {
   seen: HintId[];
@@ -94,7 +94,7 @@ export function hintTriggers(state: GameState, me: PlayerId | null): HintId[] {
     if (gear && state.customers.some((c) => (c.stage ?? 'order') === 'order')) out.add('till');
     if (gear && p?.holding && (DRINK_IDS as string[]).includes(p.holding)) out.add('pickup');
     if (gear && (p?.tool === 'pot' || state.stations.some((s) => s.stale || (s.potLeft !== undefined && s.potLeft > 0 && s.potColdAt !== undefined && s.potColdAt <= state.tick)))) out.add('sink');
-    if (state.tier === 'stand' && state.customers.length > 0) out.add('standPrice');
+    if (state.tier === 'cart' && state.customers.length > 0) out.add('cartPrice');
   } else if (state.phase === 'night') {
     if (growNudge(state)) out.add('shopfront');
     if (state.day >= 2) out.add('restock');

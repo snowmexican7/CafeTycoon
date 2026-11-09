@@ -454,7 +454,7 @@ describe('FB2 B7: a ticket that leaves', () => {
 
 describe('FB2 B7: bots', () => {
   it('count cups on a tray as covering their ticket, and never use the table', () => {
-    const s = gearDay('cart', ['c1', 'e1', 'steamer', 'd1'], 1);
+    const s = gearDay('stand', ['c1', 'e1', 'steamer', 'd1'], 1);
     const bot = s.players.find((p) => p.bot)!;
     s.unlocked = [...(s.unlocked ?? []), 'drip', 'latte'];
     s.menu.drip = true;

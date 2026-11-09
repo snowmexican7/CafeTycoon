@@ -19,7 +19,7 @@ export const PERK_IDS: PerkId[] = ['nestEgg', 'pantry', 'wordOfMouth'];
 export const PERKS: Record<PerkId, PerkDef> = {
   nestEgg: { name: 'Nest egg', icon: '🪙', effect: '+$20 to start', unlock: 'Finish a week' },
   pantry: { name: 'Stocked pantry', icon: '🥫', effect: '+10 beans & milk', unlock: 'Serve 100 drinks (all runs)' },
-  wordOfMouth: { name: 'Word of mouth', icon: '⭐', effect: 'Open at 3★', unlock: 'Grow a stand into a cart' },
+  wordOfMouth: { name: 'Word of mouth', icon: '⭐', effect: 'Open at 3★', unlock: 'Grow a cart into a stand' },
 };
 
 export const PERK_TUNING = { nestEggCash: 20, pantry: { beans: 10, milk: 10 }, wordOfMouthRep: 3, pantryServed: 100 } as const;

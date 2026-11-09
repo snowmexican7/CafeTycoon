@@ -501,7 +501,7 @@ describe('item 6: multiples and twins (G4e, G9)', () => {
   });
 
   it('edge slot on the last column: the same for the outer twin on the right', () => {
-    let s = gearShop(['grinder', 'steamer', 'trash', 'espresso'], ['g2', null, 'b0', 'e6'], { standIns: 1, tier: 'stand' });
+    let s = gearShop(['grinder', 'steamer', 'trash', 'espresso'], ['g2', null, 'b0', 'e6'], { standIns: 1, tier: 'cart' });
     const outer = s.stations.find((x) => x.id === 'espresso-2')!;
     expect(outer.pos.x).toBeGreaterThan(7);
     s.players[0].pos = { x: 4, y: 4 };

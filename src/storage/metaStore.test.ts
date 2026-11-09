@@ -13,7 +13,7 @@ import { perkRows, perksHtml } from '../ui/records';
 import type { CreateRunOptions, GameState } from '../sim/types';
 
 const opts = (extra: Partial<CreateRunOptions> = {}): CreateRunOptions => ({
-  seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150, nightLengthSec: 30 }, tier: 'stand', gear: true, ...extra,
+  seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150, nightLengthSec: 30 }, tier: 'cart', gear: true, ...extra,
 });
 
 /** A Gear run that played `days` days serving `served` a day, sitting on the week-end screen. */
@@ -77,11 +77,11 @@ describe('P3 B16: meta save (fold)', () => {
     delete classic.gear;
     expect(foldMeta(emptyMeta(), classic).meta).toEqual(emptyMeta());
   });
-  it('growing to the cart unlocks word of mouth and records discovered drinks', () => {
-    const s = weekRun(3, 2, { tier: 'cart' });
+  it('growing to the stand unlocks word of mouth and records discovered drinks', () => {
+    const s = weekRun(3, 2, { tier: 'stand' });
     const { meta, newly } = foldMeta(emptyMeta(), s);
     expect(newly).toEqual(['wordOfMouth']);
-    expect(meta.bestTier).toBe('cart');
+    expect(meta.bestTier).toBe('stand');
     expect(meta.discovered.length).toBeGreaterThan(0);
   });
 });
@@ -110,8 +110,8 @@ describe('P3 B16: meta save (storage and migration)', () => {
   it('junk fields are cleaned; unlocks never go away; unknown perks dropped', () => {
     const m = migrateMeta({ version: 1, weeks: -3, served: 'lots', bestTier: 'castle', discovered: ['latte', 'unicorn'], unlocked: ['pantry', 'free-money'], lastPerk: 'free-money', counted: [null, { key: 'a', served: 5 }] });
     expect(m.status).toBe('ok');
-    expect(m.meta).toMatchObject({ weeks: 0, served: 0, bestTier: 'stand', discovered: ['latte'], unlocked: ['pantry'], lastPerk: null });
-    expect(m.meta.counted).toEqual([{ key: 'a', served: 5, week: false, tier: 'stand' }]);
+    expect(m.meta).toMatchObject({ weeks: 0, served: 0, bestTier: 'cart', discovered: ['latte'], unlocked: ['pantry'], lastPerk: null });
+    expect(m.meta.counted).toEqual([{ key: 'a', served: 5, week: false, tier: 'cart' }]);
   });
   it('a save from a newer version is read but never overwritten', () => {
     const st = memoryStorage();

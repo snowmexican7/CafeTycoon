@@ -65,7 +65,7 @@ export const SUPPLY_ID = 'supply';
 export const SYRUP_ID = 'syrups';
 export const SYRUP_SPOT: Vec2 = { x: 2, y: 6 };
 
-/** P3 B13: what changes between the stand, the cart and the café. Door, spawn points, counter and the front of the queue stay put. */
+/** What changes between the cart, the stand and the café. Door, spawn points, counter and the front of the queue stay put. The register and the pickup stay side by side on the front row. */
 export interface TierLayout {
   /** Floor width in tiles: the rest of the 12-wide lot is hoarding ("space for lease"). */
   width: number;
@@ -106,7 +106,8 @@ const SPOTS = { pickup: { x: 5, y: 6 }, condiments: { x: 4, y: 6 }, fridge: { x:
 const COUNTER = { id: 'counter', kind: 'counter' as const, pos: { x: 6, y: 6 } };
 
 export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
-  stand: {
+  // The 8-tile footprint (the cheap start). The cart sits on it.
+  cart: {
     width: 8,
     stations: [
       { id: 'grinder', kind: 'grinder', pos: { x: 1, y: 1 } },
@@ -122,7 +123,8 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
     sink: { x: 7, y: 4 },
     supply: { x: 7, y: 3 },
   },
-  cart: {
+  // The 10-tile footprint (the $70 step). The stand sits on it.
+  stand: {
     width: 10,
     stations: [
       { id: 'grinder', kind: 'grinder', pos: { x: 1, y: 1 } },
@@ -157,13 +159,13 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
  * moving them would change every bot path) and gains a sixth at the end of the bar.
  */
 export const SLOT_POSITIONS: Record<TierId, Vec2[]> = {
-  stand: [
+  cart: [
     { x: 1, y: 1 },
     { x: 3, y: 1 },
     { x: 5, y: 1 },
     { x: 7, y: 1 },
   ],
-  cart: [
+  stand: [
     { x: 1, y: 1 },
     { x: 3, y: 1 },
     { x: 5, y: 1 },

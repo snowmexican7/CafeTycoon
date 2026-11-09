@@ -17,7 +17,7 @@ const beanUnit = ECONOMY.packs.beans.cost / ECONOMY.packs.beans.size;
 const milkUnit = ECONOMY.packs.milk.cost / ECONOMY.packs.milk.size;
 
 /** A Gear shop with `gear` in its slots (pods cover the grinder), stocked, with every drink it can make on the board. */
-function gearRun(gear: GearId[], players = 1, tier: 'stand' | 'cart' | 'cafe' = 'stand'): GameState {
+function gearRun(gear: GearId[], players = 1, tier: 'stand' | 'cart' | 'cafe' = 'cart'): GameState {
   const s = createRun({
     seed: 5,
     hostId: 'p1',
@@ -44,9 +44,9 @@ function onlyMenu(s: GameState, drinks: DrinkId[]): void {
 }
 
 describe('Round 3 money: the slight softening', () => {
-  it('the stand charges 0.8 of the list price, supply packs are 10% cheaper, elasticity is 1.4', () => {
-    expect(TIERS.stand.price).toBe(0.8);
-    expect(TIERS.cart.price).toBe(0.9);
+  it('the cart charges 0.8 of the list price, supply packs are 10% cheaper, elasticity is 1.4', () => {
+    expect(TIERS.cart.price).toBe(0.8);
+    expect(TIERS.stand.price).toBe(0.9);
     expect(TIERS.cafe.price).toBe(1);
     expect(ECONOMY.packs.beans.cost).toBeCloseTo(7.2, 6);
     expect(ECONOMY.packs.milk.cost).toBeCloseTo(9, 6);
@@ -135,7 +135,7 @@ describe('Round 3 money: the restock estimate (expectedUse)', () => {
 
 describe('Round 3 money: forecast capped by real capacity', () => {
   it('capacity is the queue plus what the machines and the crew can pour in a day', () => {
-    const s = gearRun(['e1'], 1, 'stand');
+    const s = gearRun(['e1'], 1, 'cart');
     onlyMenu(s, ['espresso']);
     const m = computeModifiers(s);
     const cap = serveCapacity(s, menuDrinks(s), m);

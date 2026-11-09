@@ -59,7 +59,7 @@ describe('balance tester', () => {
     expect(main(['--help']).output).toContain('planner');
   }, 60_000);
   it('applyAdvice mirrors the sim: restock, price, twist, grow, slot, menu', () => {
-    const s = createRun({ seed: 1, hostId: 'tester', players: [], tier: 'stand' });
+    const s = createRun({ seed: 1, hostId: 'tester', players: [], tier: 'cart' });
     s.phase = 'night';
     s.cash = 400;
     const beans = s.supplies.beans;
@@ -74,7 +74,7 @@ describe('balance tester', () => {
     applyAdvice(s, { id: 'twist:latte', kind: 'twist', text: '', input: { kind: 'twist', drink: 'latte', twist: 'honey' }, priority: 1 });
     expect(s.twists).toEqual({ latte: 'honey' });
     s.cash = 5;
-    expect(applyAdvice(s, { id: 'grow:cart', kind: 'grow', text: '', input: { kind: 'grow', tier: 'cart' }, priority: 1 })).toBe(false);
+    expect(applyAdvice(s, { id: 'grow:stand', kind: 'grow', text: '', input: { kind: 'grow', tier: 'stand' }, priority: 1 })).toBe(false);
     s.cash = 900;
     const next = nextTier(s)!;
     expect(applyAdvice(s, { id: `grow:${next}`, kind: 'grow', text: '', input: { kind: 'grow', tier: next }, priority: 1 })).toBe(true);

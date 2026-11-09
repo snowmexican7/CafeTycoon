@@ -91,7 +91,7 @@ function night(state: GameState, ids: string[], stage: number, skip: Set<string>
 export type ExtraMoves = (state: GameState, ids: string[]) => PlayerInput[];
 
 export function playGear(humans: number, seed: number, scenario: ScenarioId | null, days: number, bots = 0, extra?: ExtraMoves, onState?: (s: GameState) => void, start?: { tier: TierId; cash: number }) {
-  let s = createRun({ seed, hostId: 'tester', players: [], tier: start?.tier ?? 'stand', gear: true, settings: { dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4 } });
+  let s = createRun({ seed, hostId: 'tester', players: [], tier: start?.tier ?? 'cart', gear: true, settings: { dayLengthSec: Number(process.env.DAY ?? 150), nightLengthSec: 4 } });
   // P6-6: start further along (e.g. the café tier with cash) so later systems get exercised. createRun builds the tier's floor.
   if (start) s.cash = s.startingCash = start.cash;
   addStandIns(s, humans);

@@ -2,7 +2,7 @@
  * Round 3 item 4: the line and the waiting area (constants in `ECONOMY.line`).
  *
  *  - Waiting area: when the line is full, an arrival browses inside instead of being turned away, while the tier's
- *    area has room (stand 0, cart 2, café 4). Browsers live in `GameState.waiting` (not `customers`: the till,
+ *    area has room (cart 0, stand 2, café 4). Browsers live in `GameState.waiting` (not `customers`: the till,
  *    pickup and bots never see them), drain patience at half speed, join the end of the line in arrival order as it
  *    frees, and at zero patience leave as a turn-away (never reached the line: not lost, no reputation hit).
  *  - Complaints: when the front of the order line hasn't changed for `stallSeconds` with at least `complainMin`

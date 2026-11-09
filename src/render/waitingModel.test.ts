@@ -27,8 +27,8 @@ describe('waitingModel', () => {
   });
 
   it('places browsers in arrival order and clips to the room', () => {
-    expect(waitingSpots('stand', 3)).toEqual([]);
-    expect(waitingSpots('cart', 2)).toEqual([
+    expect(waitingSpots('cart', 3)).toEqual([]);
+    expect(waitingSpots('stand', 2)).toEqual([
       { x: 2.0, y: 6.8 },
       { x: 2.9, y: 6.8 },
     ]);
@@ -36,7 +36,7 @@ describe('waitingModel', () => {
   });
 
   it('keeps browsers on the customers\' side of the counter, off the order line (ui-3.8.0)', () => {
-    for (const tier of ['cart', 'cafe'] as const) {
+    for (const tier of ['stand', 'cafe'] as const) {
       for (const p of waitingSpots(tier, 99)) {
         expect(p.y).toBeGreaterThan(6.5); // the counter row is y 6; the bar is above it
         for (const q of layoutFor(tier).queueSlots) expect(Math.hypot(p.x - q.x, p.y - q.y)).toBeGreaterThan(0.6);
@@ -45,7 +45,7 @@ describe('waitingModel', () => {
   });
 
   it('draws only as many browsers as the art room allows', () => {
-    const s = shop('cart');
+    const s = shop('stand');
     s.waiting = [
       { id: 1, drink: 'latte', patienceLeft: 800, patienceMax: 1000 },
       { id: 2, drink: 'espresso', patienceLeft: 700, patienceMax: 1000 },

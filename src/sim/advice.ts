@@ -46,7 +46,7 @@
  * tonight, says nothing while a crew vote is open, and leaves a flowing D4b alone (a daytime thing). FB2 C9: milk
  * needs a wand, so E3 is bought with the little wand and E4 with the proper one (`PATH_WAND`), and an E3/E4 that has
  * none (or E4's little one) gets the add-on first (`wand` input, `gear:wand:<station>` advice), and at the cart there
- * is no `grow:cafe` advice until a wand is on the floor (`wandFirst`: milk drinks used to come with the cart). A $50+
+ * is no `grow:cafe` advice until a wand is on the floor (`wandFirst`: milk drinks used to come with the stand). A $50+
  * buy in a co-op crew becomes a proposal; the input is the same. Bot cut 4a: no barista hire/fire rows. Phase 4: match the rival's happy hour on a promo night,
  * print the stamp card once the rival's loyalty card is live (cash after bills >= $30 + a day's restock),
  * open the second shop at the café tier (cash after bills >= lease + a day's restock, a profitable day, the area
@@ -447,7 +447,7 @@ function growAdvice(state: GameState, budget: Budget): Advice[] {
 }
 
 /**
- * FB2 C9: milk drinks wait for a wand (E3 and up), and they used to arrive with the cart. So at the cart (the café next)
+ * FB2 C9: milk drinks wait for a wand (E3 and up), and they used to arrive with the stand. So at the stand (the café next)
  * a Gear crew with no wand on the floor puts the Sylvia and its little wand before growing again, but only while that
  * can happen (review M3): a grinder on the floor and an espresso machine to trade up or put a wand on. A crew going the
  * cold brew and drip way, or with no room for a grinder, grows as before.

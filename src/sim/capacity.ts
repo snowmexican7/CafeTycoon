@@ -72,11 +72,11 @@ export function cupsPerArrival(state: GameState, m: Modifiers, menu: DrinkId[] =
   return cups;
 }
 
-/** Cups a day's office run adds on average (0 on the stand, before day 3, and outside Gear runs). */
+/** Cups a day's office run adds on average (0 on the cart, before day 3, and outside Gear runs). */
 export function officeCups(state: GameState): number {
   const tier = tierOf(state);
-  if (state.gear !== true || tier === 'stand' || state.day < ORDERS.office.fromDay) return 0;
-  const [lo, hi] = ORDERS.office.size[tier];
+  if (state.gear !== true || tier === 'cart' || state.day < ORDERS.office.fromDay) return 0;
+  const [lo, hi] = ORDERS.office.size[tier === 'stand' ? 'stand' : 'cafe'];
   return ORDERS.office.chance * ((lo + hi) / 2);
 }
 

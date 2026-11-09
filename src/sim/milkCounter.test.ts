@@ -28,7 +28,7 @@ function gearNight(gear: Kit[], tier: TierId = 'stand'): GameState {
   s.slots = slots;
   s.slotGear = slotGear;
   s.stations = stationsFromSlots(s.tier, slots, slotGear);
-  if (tier === 'stand') s.fridge = 'f1';
+  if (tier === 'cart') s.fridge = 'f1';
   ensureCounterSpots(s);
   return s;
 }

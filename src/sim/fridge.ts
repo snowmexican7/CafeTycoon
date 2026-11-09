@@ -3,7 +3,7 @@
  * here is a no-op (or reads like before) when `state.gear !== true`, so classic runs and their goldens don't move.
  *
  *  - The fridge is a fixed counter-kind spot (`FRIDGE_ID`, data/layout.ts). Which one follows the shop size (Kennedy,
- *    data/fridges.ts): the stand has none until it buys the Dorm Room Cube (f1, a single $20 card), the cart comes with
+ *    data/fridges.ts): the cart has none until it buys the Dorm Room Cube (f1, a single $20 card), the stand comes with
  *    the Garage Beer Fridge (f2), the café with the Chrome Reach-In (f3), and the café can buy the Udder-Matic 3000 (f4).
  *    `fridgeGear` = the better of what was bought (`state.fridge`) and what the size gives. Never sold or downgraded.
  *    With no fridge, nothing needing one happens: no milk is bought, no carton, and the bar can't be put away.

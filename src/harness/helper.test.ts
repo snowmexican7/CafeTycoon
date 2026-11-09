@@ -100,7 +100,7 @@ describe('FB2 A1: crew bots help a person instead of playing for them', () => {
     const mainLost = 3; // was 2 before Round 3 item 5: a ring-up takes 1.5 s now, so one more walk-out in these three days is noise
     let lost = 0;
     for (const seed of [3, 4, 5]) {
-      let s = addBots(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'stand', gear: true }), 1);
+      let s = addBots(createRun({ seed, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec: 150 }, tier: 'cart', gear: true }), 1);
       for (const g of ['c1', 'e1'] as GearId[]) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear: g }]);
       for (const k of Object.keys(s.supplies) as SupplyId[]) s.supplies[k] = 99;
       s = startDay(s);

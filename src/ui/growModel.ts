@@ -98,8 +98,8 @@ export interface GrowNudge {
 }
 
 /**
- * The night chip "You can afford a cart!": at night, when the next size up is affordable. Not on a Gear run's first
- * night (that night is for picking the first gear, and the starting cash already covers a cart).
+ * The night chip "You can afford a stand!": at night, when the next size up is affordable. Not on a Gear run's first
+ * night (that night is for picking the first gear, and the starting cash already covers a stand).
  */
 export function growNudge(state: Pick<GameState, 'phase' | 'cash' | 'tier' | 'day' | 'gear'>): GrowNudge | null {
   if (state.phase !== 'night') return null;
@@ -111,7 +111,7 @@ export function growNudge(state: Pick<GameState, 'phase' | 'cash' | 'tier' | 'da
   return { tier: next, name: t.name, short: t.short, icon: t.icon, cost: t.cost };
 }
 
-/** "a cart" / "the café". */
+/** "a cart" / "a stand" / "the café". */
 export function tierPhrase(tier: TierId): string {
   return tier === 'cafe' ? 'the café' : `a ${TIERS[tier].short}`;
 }

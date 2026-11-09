@@ -8,9 +8,9 @@ import { planNight, PLAN_PRIORITY } from './advice';
 import type { GearId } from '../data/gear';
 import type { GameState } from './types';
 
-/** A Gear stand at night with `gears` bought, $`cash`, `dayLengthSec` long days, the cube when `cube`, and an empty pantry. */
+/** A Gear cart at night with `gears` bought, $`cash`, `dayLengthSec` long days, the cube when `cube`, and an empty pantry. */
 function night(gears: GearId[], cash = 300, dayLengthSec = 150, cube = true): GameState {
-  let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec }, gear: true, tier: 'stand' });
+  let s = createRun({ seed: 5, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], settings: { dayLengthSec }, gear: true, tier: 'cart' });
   s.cash = 5000;
   for (const gear of gears) s = step(s, [{ kind: 'gear', playerId: 'p1', action: 'buy', gear }]);
   if (cube) s = step(s, [{ kind: 'fridge', playerId: 'p1', fridge: 'f1' }]);
@@ -29,7 +29,7 @@ describe('FB2 A4: the planner and the brief know the fridge', () => {
     expect(adviceOf(night(['g1', 'e5'], 300, 150, false), 'restock:milk')).toBeUndefined();
   });
 
-  it('a stand with a steam wand (E5) and no fridge: the planner suggests the cube, the brief warns (with a fix when affordable)', () => {
+  it('a cart with a steam wand (E5) and no fridge: the planner suggests the cube, the brief warns (with a fix when affordable)', () => {
     const s = night(['g1', 'e5'], 300, 150, false);
     expect(adviceOf(s, 'fridge:f1')).toMatchObject({ kind: 'equip', input: { kind: 'fridge', fridge: 'f1' }, priority: PLAN_PRIORITY.fridge });
     expect(nightBrief(s).alerts.find((x) => x.id === 'fridge')).toMatchObject({ kind: 'stock', severity: 'warn', fix: { kind: 'fridge', fridge: 'f1' } });
@@ -45,7 +45,7 @@ describe('FB2 A4: the planner and the brief know the fridge', () => {
 
   it('the café suggests the Udder-Matic only when a day\'s milk won\'t fit in the Chrome Reach-In', () => {
     const s = night(['g1', 'e5'], 10_000, 150, false);
-    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cart' });
+    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'stand' });
     applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cafe' });
     s.cash = 1000;
     expect(expectedUse(s).milk).toBeLessThanOrEqual(fridgeCapacity(s));

@@ -32,10 +32,10 @@ const setSlots = (s: GameState, slots: GameState['slots']) => {
 describe('station slots (FB1 WP5)', () => {
   it('slot positions per tier: the café keeps 1, 3, 5, 8, 10 and gains (11,1)', () => {
     expect(SLOT_POSITIONS.cafe).toEqual([{ x: 1, y: 1 }, { x: 3, y: 1 }, { x: 5, y: 1 }, { x: 8, y: 1 }, { x: 10, y: 1 }, { x: 11, y: 1 }]);
-    expect(SLOT_POSITIONS.cart.map((p) => p.x)).toEqual([1, 3, 5, 7, 9]);
-    expect(SLOT_POSITIONS.stand.map((p) => p.x)).toEqual([1, 3, 5, 7]);
-    expect(slotCount('stand')).toBe(4);
-    expect(slotCount('cart')).toBe(5);
+    expect(SLOT_POSITIONS.cart.map((p) => p.x)).toEqual([1, 3, 5, 7]);
+    expect(SLOT_POSITIONS.stand.map((p) => p.x)).toEqual([1, 3, 5, 7, 9]);
+    expect(slotCount('cart')).toBe(4);
+    expect(slotCount('stand')).toBe(5);
     expect(slotCount('cafe')).toBe(6);
     expect(slotCount(undefined)).toBe(6);
   });
@@ -43,8 +43,8 @@ describe('station slots (FB1 WP5)', () => {
   it('default slots are the tier layout in slot order; the café sixth slot is empty', () => {
     expect(defaultSlots('cafe')).toEqual(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash', null]);
     expect(defaultSlots(undefined)).toEqual(defaultSlots('cafe'));
-    expect(defaultSlots('cart')).toEqual(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash']);
-    expect(defaultSlots('stand')).toEqual(['grinder', 'espresso', 'coldBrewTap', 'trash']);
+    expect(defaultSlots('cart')).toEqual(['grinder', 'espresso', 'coldBrewTap', 'trash']);
+    expect(defaultSlots('stand')).toEqual(['grinder', 'espresso', 'steamer', 'coldBrewTap', 'trash']);
   });
 
   it.each(TIERS)('default slots rebuild exactly the stations %s had before slots (ids, order, positions, counter last)', (tier) => {
@@ -97,9 +97,9 @@ describe('station slots (FB1 WP5)', () => {
   });
 
   it('growing a (classic, test-only) shop lays out the floor exactly as before', () => {
-    const s = night('stand');
-    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cart' });
-    expect(s.stations).toStrictEqual(legacyStations('cart'));
+    const s = night('cart');
+    applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'stand' });
+    expect(s.stations).toStrictEqual(legacyStations('stand'));
     applyGrowInput(s, { kind: 'grow', playerId: 'p1', tier: 'cafe' });
     expect(s.slots).toEqual(defaultSlots('cafe'));
     expect(s.stations).toStrictEqual(legacyStations('cafe'));

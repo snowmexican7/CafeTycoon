@@ -12,15 +12,15 @@ import type { GameState } from './types';
 import { addBots } from '../harness/crew';
 
 const run = (gear: boolean): GameState =>
-  createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', ...(gear ? { gear: true } : {}) });
+  createRun({ seed: 3, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cart', ...(gear ? { gear: true } : {}) });
 
 describe('G9: dual boiler (two sides in one slot)', () => {
   const slots = ['grinder', 'espresso', null, 'trash'] as const;
 
   it('FB2 C9: an E3 with its add-on wand gets the wand half a tile to the right; plain machines add nothing', () => {
-    const plain = stationsFromSlots('stand', [...slots], ['g1', 'e3', null, 'b0']);
+    const plain = stationsFromSlots('cart', [...slots], ['g1', 'e3', null, 'b0']);
     expect(plain.some((s) => s.twin)).toBe(false);
-    const st = stationsFromSlots('stand', [...slots], ['g1', 'e3', null, 'b0'], [null, 'weak', null, null]);
+    const st = stationsFromSlots('cart', [...slots], ['g1', 'e3', null, 'b0'], [null, 'weak', null, null]);
     const shot = st.find((s) => s.id === 'espresso')!;
     const wand = st.find((s) => s.twin)!;
     expect(wand).toMatchObject({ id: 'steamer', kind: 'steamer', twin: true });
@@ -31,7 +31,7 @@ describe('G9: dual boiler (two sides in one slot)', () => {
   });
 
   it('E5 adds a wand and a second group on the other side, with the same gear', () => {
-    const st = stationsFromSlots('stand', [...slots], ['g1', 'e5', null, 'b0']);
+    const st = stationsFromSlots('cart', [...slots], ['g1', 'e5', null, 'b0']);
     const shot = st.find((s) => s.id === 'espresso')!;
     const g2 = st.find((s) => s.id === 'espresso-2')!;
     expect(g2).toMatchObject({ kind: 'espresso', gear: 'e5', twin: true });
@@ -40,26 +40,26 @@ describe('G9: dual boiler (two sides in one slot)', () => {
   });
 
   it('on the last column the first twin goes left', () => {
-    const st = stationsFromSlots('stand', ['grinder', null, null, 'espresso'], [null, null, null, 'e4']);
+    const st = stationsFromSlots('cart', ['grinder', null, null, 'espresso'], [null, null, null, 'e4']);
     const shot = st.find((s) => s.kind === 'espresso')!;
     expect(st.find((s) => s.twin)!.pos.x).toBeCloseTo(shot.pos.x - TWIN_OFFSET);
   });
 
   it('a steamer elsewhere keeps its id; the wand numbers after it', () => {
-    const st = stationsFromSlots('stand', ['steamer', 'espresso', null, 'trash'], [null, 'e5', null, 'b0']);
+    const st = stationsFromSlots('cart', ['steamer', 'espresso', null, 'trash'], [null, 'e5', null, 'b0']);
     expect(st.filter((s) => s.kind === 'steamer').map((s) => s.id)).toEqual(['steamer', 'steamer-2']);
   });
 
   it('slots and empty-slot art ignore twins', () => {
-    const st = stationsFromSlots('stand', [...slots], ['g1', 'e5', null, 'b0']);
-    expect(emptySlotPositions('stand', st)).toHaveLength(1);
+    const st = stationsFromSlots('cart', [...slots], ['g1', 'e5', null, 'b0']);
+    expect(emptySlotPositions('cart', st)).toHaveLength(1);
   });
 
   it('a barista reaches each side by standing nearer it; bots have a whole-tile node for each', () => {
     const s = run(true);
     s.slots = [...slots];
     s.slotGear = ['g1', 'e5', null, 'b0'];
-    s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
+    s.stations = stationsFromSlots('cart', s.slots, s.slotGear);
     const shot = s.stations.find((x) => x.id === 'espresso')!;
     const y = shot.pos.y + 1;
     expect(nearestStation(s, { x: shot.pos.x, y })!.id).toBe('espresso');
@@ -73,7 +73,7 @@ describe('G9: dual boiler (two sides in one slot)', () => {
   });
 
   it('one barista can pull a shot and steam milk at the same time (two separate stations)', () => {
-    const st = stationsFromSlots('stand', [...slots], ['g1', 'e6', null, 'b0']);
+    const st = stationsFromSlots('cart', [...slots], ['g1', 'e6', null, 'b0']);
     const shot = st.find((s) => s.id === 'espresso')!;
     const wand = st.find((s) => s.id === 'steamer')!;
     shot.busyTicksLeft = 10;
@@ -84,11 +84,11 @@ describe('G9: dual boiler (two sides in one slot)', () => {
   it("FB2 C9: a wand (add-on or built in) is what café au lait needs", () => {
     const s = run(true);
     const aulait = LEVEL_UPS.find((l) => l.unlocks === 'cafeAuLait')!;
-    s.stations = stationsFromSlots('stand', [...slots], ['g1', 'e4', null, 'b0']);
+    s.stations = stationsFromSlots('cart', [...slots], ['g1', 'e4', null, 'b0']);
     expect(levelUpGearOk(s, aulait)).toBe(false);
-    s.stations = stationsFromSlots('stand', [...slots], ['g1', 'e4', null, 'b0'], [null, 'weak', null, null]);
+    s.stations = stationsFromSlots('cart', [...slots], ['g1', 'e4', null, 'b0'], [null, 'weak', null, null]);
     expect(levelUpGearOk(s, aulait)).toBe(true);
-    s.stations = stationsFromSlots('stand', [...slots], ['g1', 'e6', null, 'b0']);
+    s.stations = stationsFromSlots('cart', [...slots], ['g1', 'e6', null, 'b0']);
     expect(levelUpGearOk(s, aulait)).toBe(true);
   });
 
@@ -96,7 +96,7 @@ describe('G9: dual boiler (two sides in one slot)', () => {
     const s = run(true);
     s.slots = [...slots];
     s.slotGear = ['g1', 'e5', null, 'b0'];
-    s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
+    s.stations = stationsFromSlots('cart', s.slots, s.slotGear);
     const hud = hudGearVM(s);
     const ids = JSON.stringify(hud);
     expect((ids.match(/e5/g) ?? []).length).toBeLessThanOrEqual(1);
@@ -108,7 +108,7 @@ describe('G9: dual boiler (two sides in one slot)', () => {
   it('classic runs and old saves without slot gear build no twins', () => {
     const s = run(false);
     expect(s.stations.some((x) => x.twin)).toBe(false);
-    expect(stationsFromSlots('stand', [...slots]).some((x) => x.twin)).toBe(false);
+    expect(stationsFromSlots('cart', [...slots]).some((x) => x.twin)).toBe(false);
   });
 });
 
@@ -116,10 +116,10 @@ describe('G9: a bot crew works a day with a two-group machine', () => {
   it('runs a day without errors and uses the twin sides', async () => {
     const { startDay } = await import('./run');
     const { step } = await import('./step');
-    let s = addBots(createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true }), 2);
+    let s = addBots(createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cart', gear: true }), 2);
     s.slots = ['grinder', 'espresso', null, 'trash'];
     s.slotGear = ['g1', 'e5', null, 'b0'];
-    s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
+    s.stations = stationsFromSlots('cart', s.slots, s.slotGear);
     for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 60;
     s.fridge = 'f1'; // FB2 A4: the stand's Dorm Room Cube (milk needs a fridge)
     s = startDay(s);
@@ -138,10 +138,10 @@ describe('G9: a bot crew works a day with a two-group machine', () => {
   it('with a person in the café (bots as helpers) the crew still works the day on both groups', async () => {
     const { startDay } = await import('./run');
     const { step } = await import('./step');
-    let s = addBots(createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'stand', gear: true }), 2);
+    let s = addBots(createRun({ seed: 11, hostId: 'p1', players: [{ id: 'p1', name: 'K' }], tier: 'cart', gear: true }), 2);
     s.slots = ['grinder', 'espresso', null, 'trash'];
     s.slotGear = ['g1', 'e5', null, 'b0'];
-    s.stations = stationsFromSlots('stand', s.slots, s.slotGear);
+    s.stations = stationsFromSlots('cart', s.slots, s.slotGear);
     for (const k of Object.keys(s.supplies) as (keyof typeof s.supplies)[]) s.supplies[k] = 60;
     s.fridge = 'f1'; // FB2 A4: the stand's Dorm Room Cube (milk needs a fridge)
     s = startDay(s);

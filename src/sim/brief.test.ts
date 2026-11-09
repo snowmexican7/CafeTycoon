@@ -179,15 +179,15 @@ describe('nightBrief alerts', () => {
 
   it('grow: info with a grow fix once the next tier is affordable (not on opening night)', () => {
     const s = second();
-    s.tier = 'stand';
+    s.tier = 'cart';
     s.cash = 200;
     expect(find(s, 'grow')).toMatchObject({
-      kind: 'grow', severity: 'info', text: 'You can grow to the cart ($70)', fix: { kind: 'grow', tier: 'cart' },
+      kind: 'grow', severity: 'info', text: 'You can grow to the stand ($70)', fix: { kind: 'grow', tier: 'stand' },
     });
     s.cash = 69;
     expect(find(s, 'grow')).toBeUndefined();
     const first = run();
-    first.tier = 'stand';
+    first.tier = 'cart';
     first.cash = 200;
     expect(find(first, 'grow')).toBeUndefined();
   });
