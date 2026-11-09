@@ -11,8 +11,8 @@ import type { DrinkId } from '../sim/types';
 const STOP_ICON: Record<string, string> = { grinder: '⚙️', espresso: '☕', steamer: '🥛', coldBrewTap: '🧊', drip: '🫖', supply: '🥛', pickup: '🛎️' };
 
 export interface UnlockReplay {
-  /** Queue drinks to replay one after another (no-op for an empty list). */
-  play(drinks: readonly DrinkId[]): void;
+  /** Queue drinks to replay one after another (no-op for an empty list). `lookup` is a how-to you opened yourself. */
+  play(drinks: readonly DrinkId[], kind?: 'new' | 'lookup'): void;
   isOpen(): boolean;
   close(): void;
 }
@@ -22,6 +22,7 @@ export function createUnlockReplay(container: HTMLElement, opts: { speed?: numbe
   let queue: DrinkId[] = [];
   let timers: number[] = [];
   let script: ReplayScript | null = null;
+  let badge = 'New drink unlocked!';
   const clear = () => {
     timers.forEach((t) => window.clearTimeout(t));
     timers = [];
@@ -31,7 +32,7 @@ export function createUnlockReplay(container: HTMLElement, opts: { speed?: numbe
     const caps = replayCaptions(s);
     container.innerHTML = `
       <div class="paper menu unlock-replay" role="dialog" aria-modal="true" aria-labelledby="ur-h">
-        <div class="ur-hd"><span class="ur-new">New drink unlocked!</span><h2 id="ur-h">${itemIcon(s.drink, 40)} ${esc(s.name)}: how to make it</h2></div>
+        <div class="ur-hd"><span class="ur-new">${esc(badge)}</span><h2 id="ur-h">${itemIcon(s.drink, 40)} ${esc(s.name)}: how to make it</h2></div>
         <div class="ur-stage" style="--stops:${s.stops.length}">
           ${s.stops.map((st, i) => `<div class="ur-stop" data-i="${i}"><span class="ur-ic" aria-hidden="true">${STOP_ICON[st] ?? '•'}</span><small>${esc(STOP_LABEL[st])}</small></div>`).join('')}
           <div class="ur-ghost" aria-hidden="true"><span class="ur-hand"></span><i class="ur-head"></i><i class="ur-body"></i><span class="ur-e">E</span></div>
@@ -102,8 +103,17 @@ export function createUnlockReplay(container: HTMLElement, opts: { speed?: numbe
   });
 
   return {
-    play(drinks) {
+    play(drinks, kind = 'new') {
       if (!drinks.length) return;
+      if (kind === 'lookup') {
+        clear();
+        queue = [...drinks];
+        script = null;
+        badge = 'How to make it';
+        next();
+        return;
+      }
+      badge = 'New drink unlocked!';
       queue.push(...drinks);
       if (!script) next();
     },

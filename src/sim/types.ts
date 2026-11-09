@@ -937,6 +937,11 @@ export interface GameState {
   forecast: ForecastId;
   /** Drinks the café knows how to make (B5): base drinks, day unlocks and card unlocks, in DRINK_IDS order. */
   unlocked: DrinkId[];
+  /**
+   * Drinks learned since the doors last opened (level-ups during the day, and the night's day-unlocks).
+   * The receipt queues a how-to for each. Cleared when the next day starts. Playtest 2026-11-09.
+   */
+  learned?: DrinkId[];
   /** Drinks that joined the menu tonight (day unlocks and cards), for the night banner. */
   freshDrinks?: DrinkId[];
   /** Weather radio (B6): tomorrow's events, drawn at night. */

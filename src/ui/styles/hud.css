@@ -40,6 +40,7 @@
 #hud .h { font: 600 14px var(--font-display); letter-spacing: .14em; color: var(--oat); text-transform: uppercase; display: flex; align-items: center; gap: 8px; margin: 4px 4px -4px; }
 #hud .h .n { background: var(--cherry); color: #fff; border-radius: 99px; padding: 0 8px; font-size: 14px; letter-spacing: 0; }
 #hud .h .n.zero { background: #ffffff22; }
+#hud .hud-side.left .tickets { flex: 1 1 auto; min-height: 0; overflow: auto; }
 #hud .tickets { display: flex; flex-direction: column; gap: 12px; overflow: hidden; padding: 6px 4px 4px; margin: -6px -4px 0; }
 /* FB1 WP2: bigger tickets; recipe steps hidden until the ticket is clicked (Pause > Recipe hints). */
 #hud .ticket { background: var(--foam); border-radius: 14px; padding: 12px 14px 12px 12px; box-shadow: var(--sh-1); display: grid;
@@ -295,21 +296,23 @@
 #hud .hold .slot .tool { font-size: 26px; line-height: 1; }
 #hud .hold .t b.cold { color: #3d79b0; font-weight: 800; }
 
-/* ui-3.4.1 (FB2 A4): the closing-soon checklist, pinned to the scene's top-right corner. */
-#hud .hud-checklist { position: absolute; top: calc(var(--topbar) + 10px); right: calc(var(--gutter) + 8px); width: 248px; z-index: 2; pointer-events: none;
-  background: #fffaf0; color: var(--ink); border-radius: 14px; padding: 10px 14px 10px 12px; box-shadow: 0 0 0 3px #e8a33a, var(--sh-2); transform: rotate(1deg); animation: hud-drop .3s ease-out; }
+/* Closing checklist: docked under the orders, in the left column, so it never covers the back bar or the doors-locked sign. */
+#hud .hud-checklist { position: static; width: auto; flex: 0 0 auto; z-index: 2; pointer-events: none; margin-top: 4px;
+  background: #fffaf0; color: var(--ink); border-radius: 14px; padding: 10px 12px; box-shadow: 0 0 0 3px #e8a33a, var(--sh-2); animation: hud-drop .3s ease-out; }
 #hud .hud-checklist[hidden] { display: none; }
 #hud .hud-checklist.done { box-shadow: 0 0 0 3px var(--mint-dk), var(--sh-2); }
-#hud .hud-checklist b { display: block; font: 600 16px var(--font-display); margin-bottom: 6px; color: #b0661a; }
+#hud .hud-checklist b { display: block; font: 700 20px var(--font-display); margin-bottom: 6px; color: #b0661a; }
 #hud .hud-checklist.done b { color: var(--mint-dk); }
 #hud .hud-checklist ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-#hud .hud-checklist li { display: flex; gap: 8px; align-items: flex-start; font: 700 14px/1.25 var(--font-body); }
+#hud .hud-checklist li { display: flex; gap: 8px; align-items: flex-start; font: 700 16px/1.25 var(--font-body); }
 #hud .hud-checklist li .i { flex: 0 0 20px; text-align: center; }
 #hud .hud-checklist li.ok { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: rgba(0,0,0,.35); }
 #hud .hud-checklist li.ok .i { color: var(--mint-dk); font-weight: 900; text-decoration: none; }
 #hud .hud-checklist li.warn { color: var(--cherry); }
-#hud .hud-checklist small { display: block; margin-top: 6px; font: 700 13px var(--font-body); color: var(--mint-dk); }
-@media (max-width: 1440px) { #hud .hud-checklist { width: 220px; padding: 8px 12px 8px 10px; } #hud .hud-checklist li { font-size: 13px; } }
+#hud .hud-checklist small { display: block; margin-top: 8px; font: 700 15px/1.3 var(--font-body); color: var(--ink); }
+@media (max-width: 1440px) { #hud .hud-checklist { padding: 10px 12px; } #hud .hud-checklist b { font-size: 17px; } #hud .hud-checklist li { font-size: 15px; } #hud .hud-checklist small { font-size: 14px; } }
+#hud .ticket-how { grid-column: 1 / span 3; justify-self: start; margin-top: 4px; font: 700 15px var(--font-display); background: #fff; color: var(--espresso); border: 2px solid var(--caramel); border-radius: 99px; padding: 4px 12px; cursor: pointer; }
+#hud .ticket-how:hover { background: var(--honey, #f6c35b); }
 
 /* ui-3.5.1 / B6 leftovers: tall stacked tickets (combo, office, group) — named row + tick per drink. */
 #hud .ticket.stack-2 { box-shadow: 5px 5px 0 -1px #efe2cc, 5px 5px 0 1px #00000014, var(--sh-1); margin: 0 8px 6px 0; }

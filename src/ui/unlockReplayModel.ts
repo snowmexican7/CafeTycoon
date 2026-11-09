@@ -61,10 +61,18 @@ export function replayScript(drink: DrinkId): ReplayScript {
     at = station;
     const gives = recipe.gives;
     const handIn = recipe.takes ? `with the ${itemName(recipe.takes)} in hand` : 'with empty hands';
-    if (station === 'steamer') {
-      // Round 6: fill the jug, stop the foam meter, and the drink is already in your hand.
-      steps.push({ stop: station, act: 'press', holding, caption: `${where}: E fills the jug, E again on the line`, sec: 1.3 });
-      steps.push({ stop: station, act: 'press', holding: gives, caption: `E stops the foam meter: the ${itemName(gives)} is in your hand`, sec: 1.3 });
+    if (station === 'steamer' && ((recipe.takes === 'espresso' && recipe.gives === 'latte') || (recipe.takes === 'latte' && recipe.gives === 'cappuccino'))) {
+      // Playtest 2026-11-09: one steam step. The caption names the milk so a latte how-to cannot skip it.
+      const milk = recipe.gives === 'latte'
+        ? `${where}: E with the espresso steams the milk (a carton at the wand)`
+        : `${where}: E again steams extra foam (uses more milk)`;
+      steps.push({ stop: station, act: 'press', holding, caption: milk, sec: 1.4 });
+      steps.push({ stop: station, act: 'press', holding: gives, caption: `Stop the foam meter: the ${itemName(gives)} is in your hand`, sec: 1.4 });
+    } else if (station === 'steamer') {
+      const milk = recipe.consumes.includes('milk') ? ' — it steams in milk' : '';
+      steps.push({ stop: station, act: 'press', holding: null, caption: `${where}: E ${handIn}${milk}`, sec: 0.9 });
+      steps.push({ stop: station, act: 'wait', holding: null, sec: 1.1 });
+      steps.push({ stop: station, act: 'press', holding: gives, caption: `E again picks up the ${itemName(gives)}`, sec: 0.9 });
     } else if (station === SUPPLY_ID) {
       steps.push({ stop: station, act: 'press', holding: gives, caption: `${where}: E ${handIn} fills it at once`, sec: 1.3 });
     } else if (station === 'coldBrewTap' || station === 'drip') {
