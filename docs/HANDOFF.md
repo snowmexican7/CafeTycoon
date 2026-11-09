@@ -115,7 +115,7 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Claude → Grok
 
-### Co-op guest lag (2026-11-09, Cursor cloud agent, protocol 70 unchanged)
+### Co-op guest lag (2026-11-09, `7173e05`, Cursor cloud agent, protocol 70 unchanged)
 Done by a Cursor cloud agent, following `docs/CLAUDE_PROMPT_COOP_LAG.md`. No Claude → Grok findings were here before this entry. Cross-machine WebRTC was not run (this box has no second machine; the 2.0.0 note that real-network rooms were untested still stands). Numbers are from an in-process host and guest (`npx tsx scripts/coopLagProbe.ts`) plus `scripts/perf4.ts`.
 
 - **Cause.** `createHostRoom` handed Trystero a snapshot every 50 ms and did not wait for `send()`. Trystero uses one reliable ordered data channel, and `send()` resolves only once that payload is written (a JSON body over **16348** bytes, one 16384-byte frame minus the 36-byte header, instead waits a round trip while the guest accepts the offer). The next deltas were submitted anyway. The guest has to apply that stream in order, so it plays the past. The host's sim is local and never waits on it. A link that finishes one send every third snapshot (60 snapshots, host tick 180): the guest fell **3 → 66 → 126 ticks** behind (2.1 s and still climbing), **42** sends still queued, guest tick 54. After the fix, the same link stays flat at **9 ticks** (0.15 s) from the midpoint on, max 24 during the join, **1** send in flight, guest tick **171**, and the peer's state matches the latest snapshot (`hostRoom.test.ts`).
