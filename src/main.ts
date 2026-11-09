@@ -19,7 +19,7 @@ import { createHostRoom, type HostRoom } from './net/hostRoom';
 import { markPeersAway } from './net/hostResume';
 import { createLocalTransport } from './net/localTransport';
 import type { PeerStatus } from './net/peerSession';
-import { createPeerSession } from './net/peerSession';
+import { createPeerTransport } from './net/peerTransport';
 import { PROTOCOL_VERSION, type Member } from './net/protocol';
 import { makeRoomCode, normalizeRoomCode } from './net/roomCode';
 import { createTrysteroLink } from './net/roomLink';
@@ -460,16 +460,8 @@ async function main(): Promise<void> {
     stores.peerRoom.save({ code, role: 'peer' });
     const id = tabIdentity();
     const prev = stores.seats.load(code);
-    // ui-3.5.2: createPeerTransport (src/net/peerTransport.ts) has no look parameter yet, so the session is built here.
-    const transport = createPeerSession(roomLinkFor(code, createTrysteroLink), {
-      token: id,
-      name: settings.playerName,
-      prev: prev && prev !== id ? prev : undefined,
-      ...(look ? { look } : {}),
-      timeoutMs: 15_000,
-      setTimer: (fn, ms) => setTimeout(fn, ms),
-      clearTimer: (t) => clearTimeout(t as ReturnType<typeof setTimeout>),
-    });
+    // The look rides on the join (`createPeerTransport`'s `look`), including a rejoin and a seat the host hands back.
+    const transport = createPeerTransport(code, id, settings.playerName, prev && prev !== id ? prev : undefined, look ?? undefined);
     const s = createSession('peer', code, transport, id);
     stores.seats.save(code, id);
     // The host handed back an older seat (this browser's, or an away barista with our name): play as it.
@@ -525,7 +517,8 @@ async function main(): Promise<void> {
     if (room?.role === 'host') {
       const s = createSession('host', room.code, local, saved.hostId);
       attachTelemetry(s, tele);
-      openHostRoom(s, local, room.code, { token: saved.hostId, name: hostName });
+      const hostLook = saved.players.find((p) => p.id === saved.hostId)?.look;
+      openHostRoom(s, local, room.code, { token: saved.hostId, name: hostName, ...(hostLook ? { look: hostLook } : {}) });
       armWatchdog(s);
       local.resume(markPeersAway(saved, saved.hostId));
       return;

@@ -18,6 +18,12 @@ when a build goes out, the line moves under its version with the date.
 
 - **The shop becomes what you sell.** Sell mostly lattes and espresso and the place becomes a latte bar or an espresso bar. Sell mostly drip and it becomes a quick cup counter. A mix stays a neighbourhood café. The night menu says what you are known for, how the last few days split, and that people ask for those drinks more often. A sign in the shop says the same thing in short. The name sticks until the cups really change, so one odd day does not flip it. Now and then someone still asks for a drink you barely make. They head off politely, and it does not hurt your reputation.
 
+## 3.11.1 — 2026-11-09 · Tray, milk shelf, co-op looks
+
+- On the stand, the drip machine by the door no longer covers the tray. The TRAY sign sits above the tray board, and the top of the drip stays clear of the board.
+- The milk counter's shelf shows how much milk is left. A full carton (or more) fills the shelf, a partly used carton leaves one jug and one carton, a splash leaves a short carton, and an empty counter shows a bare shelf.
+- In a co-op room, the barista you made (hair, skin, shirt and outfit) shows for everyone. That includes a friend who joins, comes back, or is given someone else's empty seat.
+
 ## 3.11.0 — 2026-11-09 · Playtest feel
 
 Kennedy's Nov 7 playthrough. Five feel fixes. Protocol 71, snapshot 36. Also the co-op lag fix from the same day.

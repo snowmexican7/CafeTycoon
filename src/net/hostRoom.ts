@@ -1,4 +1,4 @@
-import type { GameState } from '../sim/types';
+import type { GameState, PlayerLook } from '../sim/types';
 import type { TeleEvent } from '../host/telemetry';
 import { applyPatch, diff, roundFloats } from './delta';
 import { parseInput, parseJoin, parseResync, parseTele, PROTOCOL_VERSION, type Member } from './protocol';
@@ -29,6 +29,11 @@ export interface HostRoomHooks {
   clearTimer?(id: unknown): void;
 }
 
+function sameLook(a: PlayerLook | undefined, b: PlayerLook | undefined): boolean {
+  if (!a || !b) return false;
+  return a.hair === b.hair && a.skin === b.skin && a.outfit === b.outfit && a.shirtColor === b.shirtColor && a.hairColor === b.hairColor;
+}
+
 export function createHostRoom(
   link: RoomLink,
   local: Transport,
@@ -42,6 +47,12 @@ export function createHostRoom(
   let closed = false;
   // What every peer holds after the last broadcast we handed to the link (floats rounded), and its sequence.
   let wire: { state: GameState; seq: number; sentAt: number } | null = null;
+  /**
+   * A join is applied on the sim's next tick, so the keyframe sent in the join handler can still be the
+   * state from before that look (or before the player exists). Hold the peer until a snapshot shows
+   * them, with the look they sent, then send that snapshot. An older keyframe must not be the one they keep.
+   */
+  const catchUp = new Map<string, { seat: string; look?: PlayerLook }>();
   // Trystero writes one reliable ordered stream. If the next snapshot is handed over before the previous
   // send() finishes, the stream fills with stale cafés (the guest plays the past) and a chunked keyframe's
   // body lands after the deltas that were supposed to follow it. Hold at most one snapshot send.
@@ -146,6 +157,18 @@ export function createHostRoom(
       wire = { state, seq, sentAt };
       sendOut(() => link.send('snapd', { t: 'snapd', seq, patch, sentAt }), fail);
     }
+    for (const [peerId, want] of catchUp) {
+      const member = byPeer.get(peerId);
+      if (!member || member.token !== want.seat) {
+        catchUp.delete(peerId);
+        continue;
+      }
+      const player = wire.state.players.find((p) => p.id === want.seat);
+      if (!player?.connected) continue;
+      if (want.look && !sameLook(player.look, want.look)) continue;
+      sendKeyframe(peerId);
+      catchUp.delete(peerId);
+    }
     if (!started) {
       started = true;
       broadcastLobby();
@@ -189,7 +212,12 @@ export function createHostRoom(
     if (seat !== msg.token) sendOut(() => link.send('seat', { t: 'seat', token: seat }, peerId));
     byPeer.set(peerId, { token: seat, name: msg.name, ...(msg.look ? { look: msg.look } : {}) });
     local.sendInput({ kind: 'join', playerId: seat, name: msg.name, ...(msg.look ? { look: msg.look } : {}) });
+    // The sim applies the join on its next tick. Send what we have now so the café isn't blank, then
+    // (if that picture is still missing this player or their look) send again once a snapshot has it.
     sendKeyframe(peerId);
+    const shown = wire?.state.players.find((p) => p.id === seat);
+    const shownLook = !msg.look || sameLook(shown?.look, msg.look);
+    if (!shown?.connected || !shownLook) catchUp.set(peerId, { seat, ...(msg.look ? { look: msg.look } : {}) });
     broadcastLobby();
   });
 
@@ -216,6 +244,7 @@ export function createHostRoom(
 
   link.onPeerLeave((peerId) => {
     if (closed) return;
+    catchUp.delete(peerId);
     const member = byPeer.get(peerId);
     if (member) {
       byPeer.delete(peerId);
