@@ -1,8 +1,9 @@
 # P4 B7 design spike: 2v2 rival chains on a shared street
 
-Status: **design only, no code yet** (written overnight 2026-10-30 as the plan asks: "start with a
-written design and a throwaway prototype; ship behind a `?versus=1` flag first"). Nothing here is on
-main as behaviour. Kennedy decides before any prototype.
+Status: **earlier spike, 2026-10-30.** The review draft is [`PLAN_2V2.md`](PLAN_2V2.md) (2026-11-09, not
+approved to build). Where they differ, the draft wins: no bots fill a seat, co-op has no bots, the robot
+cashier stays solo-only, and a 3-player room is one shop with a heavier rush. The two-`GameState` shape
+below still stands. Nothing here is on main as behaviour.
 
 ## The game in one paragraph
 

@@ -129,6 +129,11 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
   pushed further apart in look.
 
 ### Later (not scheduled)
+- **Campaign and Blitz (draft 2026-11-09, not approved):** today's week gets the name Blitz; Campaign starts with a register and a coffee pot and builds up. [`PLAN_CAMPAIGN_AND_BLITZ.md`](PLAN_CAMPAIGN_AND_BLITZ.md).
+- **2v2 and the 3-player rush (draft 2026-11-09, not approved):** two teams of two, each with a shop; three players stay one shop with more rush. [`PLAN_2V2.md`](PLAN_2V2.md).
+- **Growth order and loose layout (draft 2026-11-09, not approved):** cart, then stand, then café; night Layout moves anything, including supply boxes. [`PLAN_GROWTH_AND_LAYOUT.md`](PLAN_GROWTH_AND_LAYOUT.md).
+- **Specialty shops (draft 2026-11-09, not approved):** what you sell over a few days becomes the shop. [`PLAN_SPECIALTY_SHOPS.md`](PLAN_SPECIALTY_SHOPS.md).
+- **Street view (draft 2026-11-09, not approved):** cars drive past with comment bubbles; later a driver comes in. [`PLAN_STREET_VIEW.md`](PLAN_STREET_VIEW.md).
 - **Co-op guest lag (Kennedy, Nov 7; investigate first):** the host plays smoothly; a joined player can become
   almost unplayable. Claude measures host/guest sync before any small reversible fix
   ([`CLAUDE_PROMPT_COOP_LAG.md`](CLAUDE_PROMPT_COOP_LAG.md)). Large changes need approval. The bot cut stands.
@@ -136,14 +141,14 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
   skipped, a short helpful first playthrough. Not Round 6 (unlock replay is the Soon piece instead).
 - **Co-op night-menu scroll jump (Kennedy, Nov 5; note only):** when one player clicks in the night menus, the other's
   screen jumps to the top. Later idea: lock the menus together. Do not build yet.
-- **Co-op scaling (Kennedy, Nov 2; design only, not built):**
+- **Co-op scaling (Kennedy, Nov 2; design only, not built):** the review draft is
+  [`PLAN_2V2.md`](PLAN_2V2.md) (2026-11-09, not approved). Short version: 3 players stay in one shop with more
+  rush; 4-player 2v2 is two shops (same town or a mirrored week), not one shared line. The sketch below is the
+  older note. There is still no crew-size scaling in the sim (`ECONOMY.maxHumans` is 4).
   - **3 players:** more rush orders, e.g. likelier `rushHour` events (`effects.ts` `eventOdds`) or more combo and
-    office orders (`Customer.order`). There's no crew-size scaling of orders in the sim today (only `ECONOMY.maxHumans: 4`).
-  - **4 players, a 2v2 challenge.** Option A: **one shared customer pool**. Both teams serve the same line in one shop
-    (or two bars facing one queue), and whoever serves a customer scores them. It's direct and chaotic, but needs team
-    ownership of stations and tickets. Option B: **twin simulations**. Each team runs its own copy of the same day
-    (same seed, same customers), and the scores are compared at close. It's fair, and simpler to build on the
-    deterministic sim (two `GameState`s on the host), but less head-to-head. See also `docs/P4_B7_VERSUS_SPIKE.md`.
+    office orders (`Customer.order`).
+  - **4 players, a 2v2 challenge.** Older options, superseded as the recommendation by `PLAN_2V2.md`: one shared
+    line in a single shop, or two `GameState`s. See also `docs/P4_B7_VERSUS_SPIKE.md`.
 - **Café add-ons first:** a seating nook that juts out as a trapezoid with a big window; an outside queue of
   shadow figures.
 - A cashier hire who entertains the line (so it can grow to 6+).
@@ -152,7 +157,7 @@ Sim side is in [`CLAUDE_PROMPT_ROUND_4.md`](CLAUDE_PROMPT_ROUND_4.md).
 - Upgrade paths per line: speed, reliability, taste, quality.
 - A smart café that runs itself (top registers pair with smart machines), with conveyor belts as the Easter-egg
   win.
-- 2v2 battles (maybe Phase 5).
+- 2v2 battles (maybe Phase 5). Draft to review first: [`PLAN_2V2.md`](PLAN_2V2.md).
 - Mobile: a phone-browser test build first, then the App Store.
 
 ---
