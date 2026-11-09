@@ -797,11 +797,29 @@ const FIXTURES: Record<string, Fixture> = {
       if (drip) {
         drip.output = 'drip';
         drip.potLeft = 3;
-        s.players[0]!.pos = { x: drip.pos.x + 1, y: drip.pos.y }; // beside it, so the tray's label stays in view
+        // Beside the drip, and the rest of the crew off the left column, so the TRAY sign stays in view.
+        s.players.forEach((p, i) => (p.pos = i === 0 ? { x: drip.pos.x + 1.15, y: drip.pos.y } : { x: 3.2 + i, y: 2.4 }));
       }
       s.customers = [
         { id: 41, drink: 'drip', patienceLeft: 1100, patienceMax: 1400, stage: 'pickup', rungAt: s.tick },
       ];
+    },
+    timeline: [],
+  },
+  /**
+   * Milk counter shelf. `?milk=` is the servings on it (0 empty, 1–2 low, 3–7 partial, 8+ full).
+   * The crew stands clear of the shelf so the cartons are the picture.
+   */
+  milkShelf: {
+    setup(s) {
+      s.gear = true;
+      gearStart(s);
+      atTier(s, 'stand', 0);
+      s.customers = [];
+      const q = typeof location === 'undefined' ? '' : location.search;
+      const n = Number(new URLSearchParams(q).get('milk') ?? '8');
+      s.supplyMilk = Number.isFinite(n) ? Math.max(0, n) : 8;
+      s.players.forEach((p, i) => (p.pos = { x: 2 + i * 1.1, y: 6.2 }));
     },
     timeline: [],
   },

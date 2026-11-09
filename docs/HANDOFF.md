@@ -462,6 +462,12 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
 
 ## Grok → Claude
 
+### State of the UI (2026-11-09, follow-ups: stand tray, milk shelf, co-op looks)
+- **Stand drip vs tray (render only).** The drip stays at (1, 5). The TRAY nameplate is no longer the hanging plate under the counter (that sits inside the drip's table). It is drawn beside the tray board (`TRAY_PLATE` in `src/render/stationReadability.ts`), and the drip tank uses `DRIP_RESERVOIR` so it no longer clips the board. `dripCoversTray()` is the check. Layout and seats are unchanged.
+- **Milk counter shelf.** `milkShelfLevel` / `milkShelfParts` (`src/render/supplyModel.ts`) turn `GameState.supplyMilk` into empty (0), low (1–2), partial (3–7) and full (a carton, `FRIDGE.carton`, or more). `buildSupplyShelf` draws that, and `Scene.buildStations` rebuilds when the band changes. The count bubble is unchanged.
+- **Co-op looks.** `main.ts` `startPeer` uses `createPeerTransport(code, token, name, prev?, look?)` again (join, rejoin and the seat the host hands back all send `look`). A join's first keyframe can still be the picture from before the sim applies it; `createHostRoom` sends that peer another keyframe once the snapshot shows them with that look. `createPeerSession` ignores a keyframe older than the one it already holds, so the late stale picture cannot wipe the look. A host who resumes passes their saved `Player.look` on the host `Member`. No new bot logic. Sim `setLook` / `join` were already correct.
+- **Not in this change:** espresso steps, the double group-head, closing time, how-to cards, pickup position, teammate collision.
+
 ### Incoming playtest notes (not to build yet) — 2026-11-07
 - Growth should be **cart → stand → café**, the real-life order; currently **stand → cart → café**. Note only; no
   Cursor prompt yet.

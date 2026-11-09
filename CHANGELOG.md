@@ -16,7 +16,9 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-_Nothing yet._
+- On the stand, the drip machine by the door no longer covers the tray. The TRAY sign sits beside the tray, and the top of the drip stays clear of the board.
+- The milk counter's shelf shows how much milk is left. A full carton (or more) fills the shelf, a partly used carton leaves one jug and one carton, a splash leaves a short carton, and an empty counter shows a bare shelf.
+- In a co-op room, the barista you made (hair, skin, shirt and outfit) shows for everyone. That includes a friend who joins, comes back, or is given someone else's empty seat.
 
 ## 3.10.0 — 2026-11-07 · Round 6 and the bot cut
 
