@@ -23,6 +23,12 @@ honest. `docs/BACKLOG.md` stays the long record; this file is "what's true right
   PR and noted here. **Grok reviews and merges** those PRs (merge commits, not squash), then releases and tags.
 
 ## Decisions (Kennedy's rulings; both lanes follow these)
+- 2026-11-09: **Design drafts, awaiting Kennedy's review, not approved to build.** Five plans only:
+  Campaign and Blitz (`docs/PLAN_CAMPAIGN_AND_BLITZ.md`), 2v2 plus the 3-player rush (`docs/PLAN_2V2.md`),
+  cart → stand → café and loose night Layout (`docs/PLAN_GROWTH_AND_LAYOUT.md`), specialty shops
+  (`docs/PLAN_SPECIALTY_SHOPS.md`), and street-view cars (`docs/PLAN_STREET_VIEW.md`). Standing rules in
+  all five: human play only (the bot cut is final); co-op has no bots; solo has the robot cashier; no
+  save-compat work yet (Campaign saves are a later phase of that plan).
 - 2026-11-07: **Co-op guest lag investigation approved:** host feels fine but joined player can become almost unplayable;
   Claude measures and diagnoses before proposing a small reversible fix (`docs/CLAUDE_PROMPT_COOP_LAG.md`); large
   changes need approval, UI/menu-scroll work stays separate, and the bot cut stands.
