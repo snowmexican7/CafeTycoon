@@ -468,7 +468,7 @@ describe('bots and the rogue', () => {
     s = step(s, []);
     expect(s.rogue).toMatchObject({ drink: 'coldBrew', station: 'coldBrewTap', stage: 'walking' });
     expect(botOf(s).bot!.claim).toBe(900);
-    // A second's hesitation: the rogue reaches the tap first, with the bot a step away and still walking to it.
+    // A second's hesitation, then both head for the only free tap. The counter sends the rogue the long way around.
     botOf(s).bot!.reactionTicksLeft = 60;
     const served = s.today.served;
     let arrived = false;
@@ -479,13 +479,16 @@ describe('bots and the rogue', () => {
       const tap = station(s, 'coldBrewTap');
       if (walking && s.rogue && s.rogue.stage !== 'walking') {
         arrived = true;
-        expect(dist(botOf(s).pos, tap.pos)).toBeLessThanOrEqual(ECONOMY.interactRangeTiles);
-        expect(botOf(s).bot!.plan[0]).toEqual({ kind: 'use', station: 'coldBrewTap', action: 'insert', makes: 'coldBrew' });
+        // The front counter is solid, so the rogue walks around the end. That takes longer than the
+        // old shortcut, and the bot may already be carrying the drink. The rogue still gets the tap
+        // (it is making, never waiting) and the order still goes out.
+        expect(s.rogue.stage).toBe('making');
       }
       expect(s.rogue?.stage).not.toBe('waiting'); // a bot never holds a rogue up
       if (tap.occupiedBy !== null) {
+        // The rogue has the tap. A person would make the rogue wait; a test bot must not.
         expect(s.rogue).not.toBeNull();
-        expect(botOf(s).bot!.claim).toBe(900); // the claim survives the whole occupancy
+        expect(tap.occupiedBy).toBe(s.rogue!.customerId);
       }
       if (s.rogue === null || s.rogue.stage === 'leaving' || s.rogue.stage === 'stormingOut') {
         done = true;

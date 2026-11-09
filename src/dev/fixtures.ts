@@ -1678,6 +1678,56 @@ const FIXTURES: Record<string, Fixture> = {
     },
     timeline: [],
   },
+  /**
+   * v3.11.2: the solid front counter. `?f=counterLine&tier=stand|cart|cafe&gear=0` (gear defaults on).
+   * Two people stand behind the pickup (Gear) or the register (classic). Customers stand in front.
+   */
+  counterLine: {
+    setup(s) {
+      const q = new URLSearchParams(location.search);
+      const asked = q.get('tier');
+      const tier: TierId = asked === 'stand' || asked === 'cart' ? asked : 'cafe';
+      const gear = q.get('gear') !== '0';
+      if (gear) s.gear = true;
+      else delete s.gear;
+      if (gear) gearStart(s);
+      atTier(s, tier, 0);
+      const template = s.players[0]!;
+      const behind = gear
+        ? [{ x: 3, y: 5 }, { x: 4, y: 5 }, { x: 6, y: 5 }]
+        : [{ x: 5, y: 5 }, { x: 6, y: 5 }];
+      const names = ['Ana', 'Ben', 'Cleo'] as const;
+      const ids = ['ana', 'ben', 'cleo'] as const;
+      s.players = behind.map((pos, i) => {
+        const p = {
+          ...structuredClone(template),
+          ...floorFields(pos),
+          id: ids[i]!,
+          name: names[i]!,
+          pos,
+          facing: { x: 0, y: 1 },
+          moveDir: { x: 0, y: 0 },
+          connected: true,
+          holding: null,
+        };
+        delete p.bot;
+        return p;
+      });
+      const cust = (id: number, drink: 'latte' | 'espresso' | 'coldBrew', stage?: 'order' | 'pickup') => ({
+        id,
+        drink,
+        name: ['Sam', 'Ada', 'Mo'][id - 1],
+        patienceLeft: 1400,
+        patienceMax: 1600,
+        ...(stage ? { stage } : {}),
+      });
+      s.customers = gear
+        ? [cust(1, 'latte', 'pickup'), cust(2, 'espresso', 'order'), cust(3, 'coldBrew', 'order')]
+        : [cust(1, 'latte'), cust(2, 'espresso'), cust(3, 'coldBrew')];
+    },
+    timeline: [],
+    me: 'ana',
+  },
 };
 
 async function main(): Promise<void> {

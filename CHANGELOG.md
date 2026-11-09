@@ -16,7 +16,17 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
+Version 3.11.3, awaiting review. It follows 3.11.2.
+
 - **The shop becomes what you sell.** Sell mostly lattes and the place becomes a latte bar: people ask for lattes more often. Sell mostly espresso and it becomes an espresso bar. Sell mostly drip and it becomes a quick cup counter, known for quick drip. A mix stays a neighbourhood café. The night menu says what you are known for, how the last few days split, and the order guess follows that. A small sign on the wall names the shop. At the start of the day a line says who is asking for what, then it fades. The name sticks until the cups really change, so one odd day does not flip it. Now and then someone still asks for a drink you barely make. They head off politely, and it does not hurt your reputation.
+
+## 3.11.2 — 2026-11-09 · A solid front counter
+
+The counter between the crew and the customers is solid, on the stand, the cart and the café, in classic runs and in Gear.
+
+- You cannot walk through the front counter. The register and the pickup counter stay together on it. Customers stay on their side, in front.
+- The right-hand end is open, so you can still walk around to the mop, the boxes and a spill in front. The door stays open.
+- Two people still fit side by side at the pickup counter, and they can still step apart. A new drip pot keeps its usual seat.
 
 ## 3.11.1 — 2026-11-09 · Tray, milk shelf, co-op looks
 

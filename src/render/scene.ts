@@ -25,7 +25,7 @@ import { SinkVisuals } from './layers/sink';
 import { FridgeVisuals } from './layers/fridge';
 import { fridgeGear } from '../sim/fridge';
 import type { FridgeId } from '../data/fridges';
-import { counterSpotOf, servingRun } from './pickupModel';
+import { counterSpotOf } from './pickupModel';
 import { emptySlotPositions, stationBadges, wallMenuRows } from './slotModel';
 import { GhostSpots } from './ghostSpots';
 import { GEAR } from '../data/gear';
@@ -33,7 +33,7 @@ import { buildWall } from './layers/wall';
 import { buildLot } from './layers/lot';
 import { buildOutdoor } from './layers/outdoor';
 import { barSkin, isOutdoor, tierLook } from './tierLook';
-import { layoutFor } from '../data/layout';
+import { counterSegments, layoutFor, onFrontCounter } from '../data/layout';
 import { availableDrinks } from '../sim/customers';
 import { shopFacing } from '../sim/specialty';
 import { menuDrinks } from '../sim/unlocks';
@@ -137,14 +137,18 @@ export class Scene {
     // 3.3.1: the pickup counter and the condiment bar are named counters, not a second and third till, so no number badge
     // (3.3.3: nor the back sink)
     const badges = stationBadges(list.map((s) => ({ kind: s.kind, twin: ('twin' in s && s.twin === true) || ['pickup', 'condiments', 'sink', 'fridge', 'supply', 'trayTable', 'syrups'].includes(counterSpotOf(s, list) ?? '') })));
-    // ui-3.9.2: the till and the pickup / condiment spots beside it share one solid serving counter.
-    const run = servingRun(list.map((s) => ({ id: s.id, kind: s.kind, pos: s.pos, twin: 'twin' in s && s.twin === true })));
+    // v3.11.2: the solid front counter (classic and Gear). Spots that sit on it draw only what is on top.
+    const onLine = (s: (typeof list)[number]) => {
+      if (!onFrontCounter(tier, s.pos)) return false;
+      const spot = counterSpotOf(s, list);
+      return s.id === 'counter' || spot === 'till' || spot === 'pickup' || spot === 'condiments' || spot === 'syrups';
+    };
     this.stationArt = list.map((s, i) => {
       const twin = 'twin' in s && s.twin === true;
       const g = gearOf(s);
-      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge, run?.ids.includes(s.id) === true, milk);
+      return buildStation(s.kind, s.pos, checkout, badges[i]!, twin, g && GEAR[g]?.pour ? 'pour' : g && GEAR[g]?.pot && !twin ? 'pot' : undefined, counterSpotOf(s, list), fridge, onLine(s), milk);
     });
-    if (run) this.stationArt.push(buildServingCounter(run.x0, run.x1, run.y, barSkin(look)));
+    for (const seg of counterSegments(lay.frontCounter)) this.stationArt.push(buildServingCounter(seg.x0, seg.x1, seg.y, barSkin(look)));
     for (const pos of emptySlotPositions(tier, list, slotPos)) this.stationArt.push(buildEmptySlot(pos));
     setBarSkin('cabinet');
     for (const c of this.stationArt) this.depth.addChild(c);

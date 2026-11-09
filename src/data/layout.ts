@@ -65,6 +65,62 @@ export const SUPPLY_ID = 'supply';
 export const SYRUP_ID = 'syrups';
 export const SYRUP_SPOT: Vec2 = { x: 2, y: 6 };
 
+/**
+ * The solid front counter (v3.11.2). One row of tiles the crew cannot walk through.
+ * `gap` is the staff flap at the right end (walk around the counter, not through it).
+ * The door stays at (1, y), just left of `x0`, and is not part of the line.
+ */
+export interface FrontCounter {
+  /** The till's row. */
+  y: number;
+  /** Inclusive tile columns of the line. */
+  x0: number;
+  x1: number;
+  /** Inclusive columns that stay open: the flap at the right end. */
+  gap: { x0: number; x1: number };
+}
+
+/** True for a column of the solid run (the flap is open). */
+export function isFrontSolid(fc: FrontCounter, x: number): boolean {
+  return x >= fc.x0 && x <= fc.x1 && (x < fc.gap.x0 || x > fc.gap.x1);
+}
+
+/** A whole tile on the solid run (register, pickup and the closed floor beside them). */
+export function onFrontCounter(tier: TierId | undefined, pos: Vec2): boolean {
+  const fc = layoutFor(tier).frontCounter;
+  return Math.round(pos.y) === fc.y && isFrontSolid(fc, Math.round(pos.x));
+}
+
+/**
+ * The runs to draw: tile-edge spans of the solid columns, split by the flap.
+ * `x0` / `x1` are the left and right edges (a tile centred on `n` covers `n - 0.5` to `n + 0.5`).
+ */
+export function counterSegments(fc: FrontCounter): { y: number; x0: number; x1: number }[] {
+  const out: { y: number; x0: number; x1: number }[] = [];
+  let start = -1;
+  const flush = (end: number) => {
+    if (start >= 0 && end >= start) out.push({ y: fc.y, x0: start - 0.5, x1: end + 0.5 });
+    start = -1;
+  };
+  for (let x = fc.x0; x <= fc.x1; x++) {
+    if (isFrontSolid(fc, x)) {
+      if (start < 0) start = x;
+    } else flush(x - 1);
+  }
+  flush(fc.x1);
+  return out;
+}
+
+/**
+ * The counter for a floor width. Stand 8, cart 10, café 12. Anything narrower than the
+ * cart uses the stand; anything wider than the cart uses the café.
+ */
+export function frontCounterForWidth(width: number): FrontCounter {
+  if (width <= TIER_LAYOUTS.stand.width) return TIER_LAYOUTS.stand.frontCounter;
+  if (width <= TIER_LAYOUTS.cart.width) return TIER_LAYOUTS.cart.frontCounter;
+  return TIER_LAYOUTS.cafe.frontCounter;
+}
+
 /** P3 B13: what changes between the stand, the cart and the café. Door, spawn points, counter and the front of the queue stay put. */
 export interface TierLayout {
   /** Floor width in tiles: the rest of the 12-wide lot is hoarding ("space for lease"). */
@@ -73,6 +129,11 @@ export interface TierLayout {
   stations: { id: string; kind: StationKind; pos: Vec2 }[];
   queueSlots: Vec2[];
   mopHome: Vec2;
+  /**
+   * v3.11.2: the solid front counter. Players cannot walk through it. The register and the pickup
+   * stay on it. The flap (`gap`) is the right-hand end, so the crew can still reach the front.
+   */
+  frontCounter: FrontCounter;
   /** Batch/pickup (Gear runs): the pickup counter, left of the till. */
   pickup: Vec2;
   /** Batch/pickup (Gear runs): the condiment bar, left of the pickup counter. */
@@ -119,9 +180,20 @@ export const PICKUP_BODY = 1.35;
 
 const COUNTER = { id: 'counter', kind: 'counter' as const, pos: { x: 6, y: 6 } };
 
+/**
+ * The line starts at column 2 so the door (1, 6) stays open. The flap is the right-hand end,
+ * beside the wall, where a person fits without wedging against the till.
+ * The cart's last column is where a new drip pot sits (9, 5), which seals that column, so the
+ * cart's flap is the two end columns and the counter stops one tile past the till.
+ */
+function frontLine(width: number, gap0: number, gap1: number): FrontCounter {
+  return { y: 6, x0: 2, x1: width - 1, gap: { x0: gap0, x1: gap1 } };
+}
+
 export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
   stand: {
     width: 8,
+    frontCounter: frontLine(8, 7, 7),
     stations: [
       { id: 'grinder', kind: 'grinder', pos: { x: 1, y: 1 } },
       { id: 'espresso', kind: 'espresso', pos: { x: 3, y: 1 } },
@@ -138,6 +210,7 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
   },
   cart: {
     width: 10,
+    frontCounter: frontLine(10, 8, 9),
     stations: [
       { id: 'grinder', kind: 'grinder', pos: { x: 1, y: 1 } },
       { id: 'espresso', kind: 'espresso', pos: { x: 3, y: 1 } },
@@ -155,6 +228,7 @@ export const TIER_LAYOUTS: Record<TierId, TierLayout> = {
   },
   cafe: {
     width: LAYOUT.width,
+    frontCounter: frontLine(LAYOUT.width, 11, 11),
     stations: LAYOUT.stations,
     queueSlots: LAYOUT.queueSlots,
     mopHome: LAYOUT.mopHome,

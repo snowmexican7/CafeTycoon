@@ -1,5 +1,7 @@
 # Cursor prompt: a full-width front counter (sim + layout)
 
+**Status, v3.11.2 (2026-11-09).** Done. The sim line is `TierLayout.frontCounter` and `blocked()` treats it as solid. The door and a right-hand flap stay open. Classic gets the same line. The counter is drawn from that line (the "don't change the render" line below is out of date: the screenshots needed the full counter). v3.11.0 had already moved pickup to (4, 6), put condiments at (5, 6), and widened the pickup so two people fit at (3, 5) and (4, 5). v3.11.1 did not touch collision. No new bot logic. No save migration; protocol 72, snapshot 37, because the collision rule changed.
+
 Kennedy, 2026-11-05. **This is a sim/layout change, so it is not in the UI lane.** The UI half shipped in `ui-3.9.2`.
 
 ## What shipped in 3.9.2 (render only)

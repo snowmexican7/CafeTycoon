@@ -572,6 +572,6 @@ describe('FB2 C9: the planner and saves', () => {
     }
     createSnapshotStore(storage).save(s);
     expect(createSnapshotStore(storage).load()?.gear).toBe(true);
-    expect(SNAPSHOT_VERSION).toBe(37); // specialty shops: soldWindow, shopIdentity, oneOffLeft
+    expect(SNAPSHOT_VERSION).toBe(38); // specialty shops on the solid counter: soldWindow, shopIdentity, oneOffLeft
   });
 });
