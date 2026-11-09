@@ -42,8 +42,8 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
       const s = gearRun(tier);
       expect(counters(s)).toEqual([
         ['counter', { x: 6, y: 6 }],
-        ['pickup', { x: 5, y: 6 }],
-        ['condiments', { x: 4, y: 6 }],
+        ['pickup', { x: 4, y: 6 }],
+        ['condiments', { x: 5, y: 6 }],
         ['sink', layoutFor(tier).sink], // FB2 A3: the back sink is a counter-kind fixed spot too
         ['supply', layoutFor(tier).supply], // Round 5 block 4: milk & cream by the sink
         ['trayTable', layoutFor(tier).trayTable], // FB2 B7: so is the tray table
@@ -51,7 +51,7 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
         ...(tier === 'stand' ? [] : [['fridge', { x: 1, y: 3 }]]),
       ]);
       const spot = s.stations.find((x) => x.id === 'pickup')!;
-      expect(spot).toEqual({ id: 'pickup', kind: 'counter', pos: { x: 5, y: 6 }, busyTicksLeft: 0, output: null, occupiedBy: null });
+      expect(spot).toEqual({ id: 'pickup', kind: 'counter', pos: { x: 4, y: 6 }, busyTicksLeft: 0, output: null, occupiedBy: null });
     }
     expect(createRun({ seed: 7, hostId: 'p1', players: [] }).stations.filter((x) => x.kind === 'counter')).toHaveLength(1);
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
@@ -67,7 +67,7 @@ describe('the pickup counter and condiment bar spots (Task 2)', () => {
     ]);
     for (const tier of ['stand', 'cart', 'cafe'] as const) {
       const l = layoutFor(tier);
-      expect([l.pickup, l.condiments]).toEqual([{ x: 5, y: 6 }, { x: 4, y: 6 }]);
+      expect([l.pickup, l.condiments]).toEqual([{ x: 4, y: 6 }, { x: 5, y: 6 }]);
       expect(l.boxCorner).toEqual({ x: l.mopHome.x - 2, y: l.mopHome.y });
     }
   });

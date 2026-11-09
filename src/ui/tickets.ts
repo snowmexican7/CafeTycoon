@@ -136,6 +136,7 @@ export function ticketsHtml(orders: readonly OrderTicket[], o: TicketOpts): stri
         const steps = open
           ? `<div class="steps">${ticketSteps(t.drink, o.pods, o.gear).map((s, k) => `<span class="${k === next ? 'next' : ''}">${s}</span>`).join('')}</div>`
           : clickable ? '<div class="peek">Click for steps</div>' : '';
+        const how = `<button type="button" class="ticket-how" data-howto="${t.drink}">How to make it</button>`;
         const n = stackCount(t);
         const asks = ticketAsks(t);
         const cls = ['ticket', n > 1 ? `stack stack-${Math.min(n, 3)}` : '', t.pickup ? 'rung' : '', t.patience < URGENT ? 'urgent' : '', t.tag ? `kind-${t.tag.tone}` : '', open ? 'open' : '', clickable ? 'tap' : ''].filter(Boolean).join(' ');
@@ -145,7 +146,7 @@ export function ticketsHtml(orders: readonly OrderTicket[], o: TicketOpts): stri
           ${n > 1 ? `<div class="stk-badge" aria-label="${n} drinks still to make">×${n}</div>` : ''}<div class="ic">${itemIcon(t.drink, 46)}</div><div class="nm">${DRINK_LABEL[t.drink]}</div>
           <div class="pr">${esc(o.prices[t.drink] ?? '')}</div>
           ${asks ? `<div class="asks">${esc(asks)}</div>` : ''}
-          ${t.items && t.items.length > 1 ? stackStrip(t) : ''}${steps}
+          ${t.items && t.items.length > 1 ? stackStrip(t) : ''}${steps}${how}
           <div class="pat"><i></i></div></div>`;
       })
       .join('') + (orders.length > MAX_TICKETS ? `<div class="more">+${orders.length - MAX_TICKETS} more</div>` : '')

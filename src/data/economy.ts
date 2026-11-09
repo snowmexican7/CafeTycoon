@@ -42,8 +42,12 @@ export const ECONOMY = {
     freshSeconds: 8,
     quietLeaveChance: 0.5,
   },
-  /** Doors lock at 0:00; whoever is inside can still be served for up to this long. */
-  closingGraceSeconds: 30,
+  /**
+   * Doors lock at 0:00. This is the wrap-up cap: finish whoever is left and the closing checklist.
+   * If the checklist is already done and nobody is left, the day ends straight away (see stepClosing).
+   * The cap still ends the day so it cannot hang.
+   */
+  closingGraceSeconds: 45,
   /** Round 6 block 5: for this long after the doors open nobody normal arrives (time to dump old coffee and stock milk);
    *  only a rare early-bird fan may: `chance` per day, never more than one, who waits `patience` x as long. */
   openGraceSeconds: 8,
@@ -69,10 +73,10 @@ export const ECONOMY = {
    * Overcooked-style bumps (src/sim/bumps.ts): two baristas closer than `bodyTiles` (centre to centre) who are walking
    * into each other stagger for `staggerSeconds` at `staggerSpeed` x their pace, can't bump again for `cooldownSeconds`,
    * are shoved `push` tiles apart each, and whoever is carrying something drops it with `spillChance`.
-   * Round 5: tighter body, harder bounce (`push` 0.25: flush at a station 0.8 + 0.25 stays inside `interactRangeTiles`),
-   * slightly longer/slower stagger; a separate unstick step keeps overlapped bodies apart even off cooldown.
+   * Playtest 2026-11-09: teammate bumps are a light brush (short, barely slower, small shove) so two people can share
+   * a machine or the pickup counter. Customer bumps below are unchanged.
    */
-  bump: { bodyTiles: 0.5, staggerSeconds: 0.75, staggerSpeed: 0.35, cooldownSeconds: 1.0, spillChance: 0.05, push: 0.25,
+  bump: { bodyTiles: 0.32, staggerSeconds: 0.22, staggerSpeed: 0.8, cooldownSeconds: 0.6, spillChance: 0.05, push: 0.08,
     /**
      * Round 4 c: a person walking into a customer (src/sim/bumps.ts `stepCustomerBumps`). Within `customerTiles` and heading
      * toward them: they lose `customerPatience` of their max patience, can't be bumped again for `customerCooldownSeconds`

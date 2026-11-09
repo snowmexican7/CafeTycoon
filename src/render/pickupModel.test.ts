@@ -8,7 +8,7 @@ const lay: SpotsLayout = {
   width: 12,
   queueSlots: [0, 1, 2, 3].map((i) => ({ x: 6 + i, y: 7.6 })),
   till: { x: 6, y: 6 },
-  pickup: { x: 5, y: 6 },
+  pickup: { x: 4, y: 6 },
 };
 
 describe('pickupModel (3.3.1)', () => {
@@ -34,8 +34,8 @@ describe('pickupModel (3.3.1)', () => {
     const s = customerSpots(cs, true, lay);
     expect(s[0]).toEqual({ x: 6, y: 7.6 });
     expect(s[2]!.x).toBeGreaterThan(6);
-    expect(s[1]).toEqual({ x: 5, y: PICKUP_Y });
-    expect(s[3]!.x).toBeLessThan(5);
+    expect(s[1]).toEqual({ x: lay.pickup.x, y: PICKUP_Y });
+    expect(s[3]!.x).toBeLessThan(lay.pickup.x);
     expect(s[4]!.x).toBeLessThan(s[3]!.x);
     const crowd = customerSpots(Array.from({ length: 12 }, () => ({ stage: 'pickup' })) as never[], true, lay);
     expect(Math.min(...crowd.map((p) => p.x))).toBeGreaterThanOrEqual(PICKUP_MIN_X);

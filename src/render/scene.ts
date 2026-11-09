@@ -220,6 +220,10 @@ export class Scene {
     const mods = computeModifiers(state);
     this.wall.setMenu(wallMenuRows(state, mods.price));
     const ring = ringBar(state);
+    const groupParent = (s: (typeof state.stations)[number]) =>
+      s.twin && s.kind === 'espresso'
+        ? state.stations.find((p) => !p.twin && p.kind === 'espresso' && p.gear === s.gear && Math.hypot(p.pos.x - s.pos.x, p.pos.y - s.pos.y) <= 1.2)
+        : undefined;
     const stations: StationOverlayState[] = state.stations.map((s) => {
       let progress: number | null = null;
       if (s.busyTicksLeft > 0 && s.kind !== 'counter' && s.kind !== 'trash') {
@@ -227,6 +231,8 @@ export class Scene {
         progress = Math.max(0, Math.min(1, 1 - s.busyTicksLeft / total));
       }
       const isTill = s.id === 'counter' || (s.kind === 'counter' && !state.stations.some((x) => x.id === 'pickup'));
+      const parent = groupParent(s);
+      const hasTwin = !s.twin && s.kind === 'espresso' && state.stations.some((t) => t.twin && t.kind === 'espresso' && t.gear === s.gear && Math.hypot(t.pos.x - s.pos.x, t.pos.y - s.pos.y) <= 1.2);
       return {
         kind: s.kind,
         pos: s.pos,
@@ -235,6 +241,8 @@ export class Scene {
         // ui-3.9.1: hopper doses show once, as the count over the grinder (countsModel / stationCountsLeft).
         cat: state.eggs?.cat?.stationId === s.id,
         smoke: state.eggs?.smoke?.stationId === s.id,
+        ...(parent ? { drawAt: parent.pos, nudgeX: -36 } : {}),
+        ...(hasTwin ? { nudgeX: 8 } : {}),
         ...(ring && isTill ? { ring: { progress: ring.progress, self: ring.self, label: ringBarLabel(ring.self) } } : {}),
       };
     });
@@ -244,7 +252,9 @@ export class Scene {
     let focus = null;
     if (me && me.connected && (state.phase === 'day' || state.phase === 'closing')) {
       const pos = view.baristaPositions[me.id] ?? me.pos;
-      focus = nearestStation(state, pos)?.pos ?? null;
+      const near = nearestStation(state, pos);
+      const parent = near ? groupParent(near) : undefined;
+      focus = (parent ?? near)?.pos ?? null;
     }
 
     this.stationOverlay.update(stations, focus, now);

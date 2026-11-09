@@ -16,9 +16,28 @@ when a build goes out, the line moves under its version with the date.
 
 ## Unreleased
 
-- On the stand, the drip machine by the door no longer covers the tray. The TRAY sign sits beside the tray, and the top of the drip stays clear of the board.
+_Nothing yet._
+
+## 3.11.1 — 2026-11-09 · Tray, milk shelf, co-op looks
+
+- On the stand, the drip machine by the door no longer covers the tray. The TRAY sign sits above the tray board, and the top of the drip stays clear of the board.
 - The milk counter's shelf shows how much milk is left. A full carton (or more) fills the shelf, a partly used carton leaves one jug and one carton, a splash leaves a short carton, and an empty counter shows a bare shelf.
 - In a co-op room, the barista you made (hair, skin, shirt and outfit) shows for everyone. That includes a friend who joins, comes back, or is given someone else's empty seat.
+
+## 3.11.0 — 2026-11-09 · Playtest feel
+
+Kennedy's Nov 7 playthrough. Five feel fixes. Protocol 71, snapshot 36. Also the co-op lag fix from the same day.
+
+- **Co-op: a joined player no longer falls further and further behind.** When the connection can't
+  keep up with 20 updates a second, the host now sends the latest café instead of a queue of old ones.
+  The host's own game was never waiting on that queue. If a send never finishes (someone's connection
+  dies mid-update), the host gives up after a second and a half and keeps updating everyone else.
+
+- **Milk drinks are one steam step.** Latte, cappuccino and the rest: no more filling the jug, then steaming. Press at the steam wand, stop the foam meter, and the drink is already in your hand. A better wand still makes that foam meter easier to hit.
+- **A two-group espresso machine is one spot.** Stand at the machine and pull a shot even while another shot is sitting there (it holds two). You pick the waiting shot up from the same spot. It no longer locks the machine.
+- **Closing gives you a wrap-up.** If the checklist is done and nobody is left, the day ends right away. If something is still out, or customers are still here, you get a wrap-up (up to 45 seconds) with a list of what is left. The timer is the cap, so the day cannot hang.
+- **Every new drink gets a how-to, and you can look one up later.** After the nightly profit screen, each drink you learned that day plays in order (several, if you learned several). A latte how-to says to steam the milk. "How to make it" is on the night menu and on each order ticket.
+- **Teammates bump more lightly, and the pickup counter is wider.** Brushing past another player is a short, small slowdown. Bumping a customer is the same as before. The pickup counter sits clear of the cashier's lane, wide enough for two people side by side, on the stand, the cart and the café.
 
 ## 3.10.0 — 2026-11-07 · Round 6 and the bot cut
 

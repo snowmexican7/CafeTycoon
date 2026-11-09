@@ -38,8 +38,6 @@ import { secondsToTicks } from './constants';
 import { emitLog } from './log';
 import { menuDrinks, recipeAllowed } from './unlocks';
 import type { DrinkId, GameState, ItemKind, Player, Station, StationKind, SupplyId } from './types';
-import { CASHIER_ID } from './cashier';
-
 export const FRIDGE = {
   /** Servings in a milk carton taken from the fridge. */
   carton: 8,
@@ -281,15 +279,15 @@ export function closingChecklist(state: GameState): ClosingChecklist {
 }
 
 /**
- * Closing waits for the bots to finish putting things away (Gear, closing soon, a bot on the crew, and the milk or the
- * bar still out). The grace timer still ends the day.
+ * Playtest 2026-11-09: closing stays open for a wrap-up while the checklist still has something on it
+ * (milk, the bar, a pot, the floor, or the pickup counter). The grace timer is the cap and still ends the day.
+ * An empty checklist does not hold the doors — with nobody left, the day ends straight away.
+ * People do this themselves; it no longer depends on a bot crew.
  */
 export function putAwayPending(state: GameState): boolean {
-  if (!closingSoon(state) || !state.stations.some(isFridge)) return false;
-  // The robot cashier (bot cut step 3) never puts anything away, so it doesn't hold the closing up.
-  if (!state.players.some((p) => p.bot && p.connected && p.id !== CASHIER_ID)) return false;
+  if (state.gear !== true || !closingSoon(state)) return false;
   const c = closingChecklist(state);
-  return !c.milkAway || !c.barAway;
+  return !c.milkAway || !c.barAway || !c.potsEmpty || !c.floorClean || !c.counterClear;
 }
 
 // ---------------------------------------------------------------------------------------------- hands
